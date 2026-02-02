@@ -16,7 +16,7 @@ class UberService {
   });
 
   /// Build the OAuth authorization URL for Uber login.
-  Uri buildAuthUrl({String scope = 'ride_widgets request'}) {
+  Uri buildAuthUrl({String scope = 'profile request'}) {
     return Uri.parse(_uberAuthUrl).replace(queryParameters: {
       'response_type': 'code',
       'client_id': clientId,

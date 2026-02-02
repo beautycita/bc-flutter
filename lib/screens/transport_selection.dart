@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../config/theme.dart';
 import '../models/curate_result.dart';
 import '../providers/booking_flow_provider.dart';
+import '../providers/user_preferences_provider.dart';
 import '../services/location_service.dart';
 import '../widgets/cinematic_question_text.dart';
 
@@ -49,6 +50,7 @@ class _TransportSelectionState extends ConsumerState<TransportSelection> {
     final bookingState = ref.watch(bookingFlowProvider);
     final bookingNotifier = ref.read(bookingFlowProvider.notifier);
     final serviceName = bookingState.serviceName ?? 'tu servicio';
+    final defaultTransport = ref.watch(userPrefsProvider).defaultTransport;
 
     return Scaffold(
       backgroundColor: BeautyCitaTheme.surfaceCream,
@@ -185,6 +187,7 @@ class _TransportSelectionState extends ConsumerState<TransportSelection> {
                         emoji: '\u{1F697}',
                         label: 'Mi auto',
                         subtitle: 'Manejo yo',
+                        isDefault: defaultTransport == 'car',
                         onTap: () => _selectTransport('car'),
                       ),
                     ),
@@ -194,6 +197,7 @@ class _TransportSelectionState extends ConsumerState<TransportSelection> {
                         emoji: '\u{1F695}',
                         label: 'Uber',
                         subtitle: 'Que me lleven',
+                        isDefault: defaultTransport == 'uber',
                         onTap: () => _selectTransport('uber'),
                       ),
                     ),
@@ -203,6 +207,7 @@ class _TransportSelectionState extends ConsumerState<TransportSelection> {
                         emoji: '\u{1F68C}',
                         label: 'Transporte',
                         subtitle: 'Me llevo yo',
+                        isDefault: defaultTransport == 'transit',
                         onTap: () => _selectTransport('transit'),
                       ),
                     ),
@@ -220,12 +225,14 @@ class _TransportCard extends StatefulWidget {
   final String emoji;
   final String label;
   final String subtitle;
+  final bool isDefault;
   final VoidCallback onTap;
 
   const _TransportCard({
     required this.emoji,
     required this.label,
     required this.subtitle,
+    this.isDefault = false,
     required this.onTap,
   });
 
@@ -252,13 +259,19 @@ class _TransportCardState extends State<_TransportCard> {
         transformAlignment: Alignment.center,
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 20),
         decoration: BoxDecoration(
-          color: _isPressed ? BeautyCitaTheme.surfaceCream : Colors.white,
+          color: _isPressed
+              ? BeautyCitaTheme.surfaceCream
+              : widget.isDefault
+                  ? BeautyCitaTheme.primaryRose.withValues(alpha: 0.04)
+                  : Colors.white,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: _isPressed
                 ? BeautyCitaTheme.primaryRose.withValues(alpha: 0.3)
-                : Colors.grey.withValues(alpha: 0.12),
-            width: 1.5,
+                : widget.isDefault
+                    ? BeautyCitaTheme.primaryRose.withValues(alpha: 0.4)
+                    : Colors.grey.withValues(alpha: 0.12),
+            width: widget.isDefault ? 2.0 : 1.5,
           ),
           boxShadow: _isPressed
               ? []

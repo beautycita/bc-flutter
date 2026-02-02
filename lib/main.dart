@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -7,6 +9,7 @@ import 'package:beautycita/services/supabase_client.dart';
 import 'package:beautycita/config/theme.dart';
 import 'package:beautycita/config/routes.dart';
 import 'package:beautycita/config/constants.dart';
+import 'package:beautycita/providers/uber_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -40,8 +43,48 @@ void main() async {
   );
 }
 
-class BeautyCitaApp extends StatelessWidget {
+class BeautyCitaApp extends ConsumerStatefulWidget {
   const BeautyCitaApp({super.key});
+
+  @override
+  ConsumerState<BeautyCitaApp> createState() => _BeautyCitaAppState();
+}
+
+class _BeautyCitaAppState extends ConsumerState<BeautyCitaApp> {
+  late final AppLinks _appLinks;
+  StreamSubscription<Uri>? _linkSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _appLinks = AppLinks();
+    _initDeepLinks();
+  }
+
+  void _initDeepLinks() {
+    // Handle links when app is already running
+    _linkSub = _appLinks.uriLinkStream.listen(_handleUri);
+
+    // Handle cold-start link
+    _appLinks.getInitialLink().then((uri) {
+      if (uri != null) _handleUri(uri);
+    });
+  }
+
+  void _handleUri(Uri uri) {
+    if (uri.scheme == 'beautycita' && uri.host == 'uber-callback') {
+      final code = uri.queryParameters['code'];
+      if (code != null) {
+        ref.read(uberLinkProvider.notifier).handleCallback(code);
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _linkSub?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
