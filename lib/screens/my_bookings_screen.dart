@@ -31,6 +31,9 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
     }
   }
 
+  bool _isCancelled(String status) =>
+      status == 'cancelled_customer' || status == 'cancelled_business';
+
   /// Filter bookings client-side based on the active tab.
   List<Booking> _filterBookings(List<Booking> bookings) {
     final now = DateTime.now();
@@ -39,20 +42,20 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
       case _BookingTab.proximas:
         return bookings
             .where((b) =>
-                b.status != 'cancelled' &&
+                !_isCancelled(b.status) &&
                 b.scheduledAt.isAfter(now))
             .toList()
           ..sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
       case _BookingTab.pasadas:
         return bookings
             .where((b) =>
-                b.status != 'cancelled' &&
+                !_isCancelled(b.status) &&
                 (b.scheduledAt.isBefore(now) || b.status == 'completed'))
             .toList()
           ..sort((a, b) => b.scheduledAt.compareTo(a.scheduledAt));
       case _BookingTab.canceladas:
         return bookings
-            .where((b) => b.status == 'cancelled')
+            .where((b) => _isCancelled(b.status))
             .toList()
           ..sort((a, b) => b.scheduledAt.compareTo(a.scheduledAt));
     }
@@ -75,8 +78,11 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
         return Colors.green.shade600;
       case 'completed':
         return Colors.blue.shade600;
-      case 'cancelled':
+      case 'cancelled_customer':
+      case 'cancelled_business':
         return Colors.red.shade600;
+      case 'no_show':
+        return Colors.grey.shade600;
       default:
         return BeautyCitaTheme.textLight;
     }
@@ -91,8 +97,12 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
         return 'Confirmada';
       case 'completed':
         return 'Completada';
-      case 'cancelled':
+      case 'cancelled_customer':
         return 'Cancelada';
+      case 'cancelled_business':
+        return 'Cancelada por salon';
+      case 'no_show':
+        return 'No asistio';
       default:
         return status;
     }

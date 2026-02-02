@@ -5,11 +5,13 @@ class ProviderRepository {
   /// Get providers whose service_categories contain the given category,
   /// ordered by rating descending.
   Future<List<Provider>> getProvidersByCategory(String category) async {
+    if (!SupabaseClientService.isInitialized) return [];
     final response = await SupabaseClientService.client
-        .from('providers')
+        .from('businesses')
         .select()
         .contains('service_categories', [category])
-        .order('rating', ascending: false);
+        .eq('is_active', true)
+        .order('average_rating', ascending: false);
 
     return (response as List)
         .map((json) => Provider.fromJson(json as Map<String, dynamic>))
@@ -29,7 +31,7 @@ class ProviderRepository {
   /// Get a single provider by ID.
   Future<Provider?> getProvider(String id) async {
     final response = await SupabaseClientService.client
-        .from('providers')
+        .from('businesses')
         .select()
         .eq('id', id)
         .maybeSingle();
@@ -44,15 +46,16 @@ class ProviderRepository {
     String? category,
   }) async {
     var query = SupabaseClientService.client
-        .from('provider_services')
+        .from('services')
         .select()
-        .eq('provider_id', providerId);
+        .eq('business_id', providerId)
+        .eq('is_active', true);
 
     if (category != null) {
       query = query.eq('category', category);
     }
 
-    final response = await query.order('category').order('service_name');
+    final response = await query.order('category').order('name');
 
     return (response as List)
         .map((json) => ProviderService.fromJson(json as Map<String, dynamic>))

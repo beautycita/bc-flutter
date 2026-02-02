@@ -48,13 +48,13 @@ class Provider {
       phone: json['phone'] as String?,
       whatsapp: json['whatsapp'] as String?,
       address: json['address'] as String?,
-      city: json['city'] as String,
-      state: json['state'] as String,
+      city: json['city'] as String? ?? 'Guadalajara',
+      state: json['state'] as String? ?? 'Jalisco',
       lat: (json['lat'] as num?)?.toDouble(),
       lng: (json['lng'] as num?)?.toDouble(),
       photoUrl: json['photo_url'] as String?,
-      rating: (json['rating'] as num?)?.toDouble(),
-      reviewsCount: (json['reviews_count'] as num?)?.toInt() ?? 0,
+      rating: (json['average_rating'] as num?)?.toDouble(),
+      reviewsCount: (json['total_reviews'] as num?)?.toInt() ?? 0,
       businessCategory: json['business_category'] as String?,
       serviceCategories: (json['service_categories'] as List<dynamic>?)
               ?.map((e) => e as String)
@@ -80,8 +80,8 @@ class Provider {
       'lat': lat,
       'lng': lng,
       'photo_url': photoUrl,
-      'rating': rating,
-      'reviews_count': reviewsCount,
+      'average_rating': rating,
+      'total_reviews': reviewsCount,
       'business_category': businessCategory,
       'service_categories': serviceCategories,
       'hours': hours,
@@ -117,25 +117,24 @@ class ProviderService {
   factory ProviderService.fromJson(Map<String, dynamic> json) {
     return ProviderService(
       id: json['id'] as String,
-      providerId: json['provider_id'] as String,
-      category: json['category'] as String,
-      subcategory: json['subcategory'] as String,
-      serviceName: json['service_name'] as String,
-      priceMin: (json['price_min'] as num?)?.toDouble(),
-      priceMax: (json['price_max'] as num?)?.toDouble(),
-      durationMinutes: (json['duration_minutes'] as num).toInt(),
+      providerId: json['business_id'] as String,
+      category: json['category'] as String? ?? '',
+      subcategory: json['subcategory'] as String? ?? '',
+      serviceName: json['name'] as String,
+      priceMin: (json['price'] as num?)?.toDouble(),
+      priceMax: null,
+      durationMinutes: (json['duration_minutes'] as num?)?.toInt() ?? 60,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'provider_id': providerId,
+      'business_id': providerId,
       'category': category,
       'subcategory': subcategory,
-      'service_name': serviceName,
-      'price_min': priceMin,
-      'price_max': priceMax,
+      'name': serviceName,
+      'price': priceMin,
       'duration_minutes': durationMinutes,
     };
   }

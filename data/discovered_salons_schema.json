@@ -1,0 +1,139 @@
+{
+  "description": "Schema for discovered_salons CSV import. Each row represents a beauty business scraped from an external source.",
+  "fields": {
+    "source": {
+      "type": "string",
+      "required": true,
+      "enum": ["google_maps", "facebook", "bing", "foursquare", "seccion_amarilla", "manual"],
+      "description": "Source platform where the listing was found"
+    },
+    "source_id": {
+      "type": "string",
+      "required": false,
+      "description": "Unique ID from the source platform (e.g. Google Place ID)"
+    },
+    "name": {
+      "type": "string",
+      "required": true,
+      "min_length": 2,
+      "description": "Business name as displayed on the source"
+    },
+    "phone": {
+      "type": "string",
+      "required": false,
+      "format": "E.164",
+      "description": "Phone number in E.164 format (e.g. +523312345678)"
+    },
+    "whatsapp": {
+      "type": "string",
+      "required": false,
+      "format": "E.164",
+      "description": "WhatsApp number. Defaults to phone if not specified."
+    },
+    "address": {
+      "type": "string",
+      "required": false,
+      "description": "Full street address"
+    },
+    "city": {
+      "type": "string",
+      "required": true,
+      "description": "City name (e.g. Guadalajara, Puerto Vallarta, Cabo San Lucas)"
+    },
+    "state": {
+      "type": "string",
+      "required": true,
+      "description": "State name (e.g. Jalisco, Baja California Sur)"
+    },
+    "country": {
+      "type": "string",
+      "required": false,
+      "default": "MX",
+      "description": "ISO country code"
+    },
+    "lat": {
+      "type": "number",
+      "required": false,
+      "min": -90,
+      "max": 90,
+      "description": "Latitude (WGS84)"
+    },
+    "lng": {
+      "type": "number",
+      "required": false,
+      "min": -180,
+      "max": 180,
+      "description": "Longitude (WGS84)"
+    },
+    "photo_url": {
+      "type": "string",
+      "required": false,
+      "format": "url",
+      "description": "URL to a business photo. Will be downloaded to R2 at import."
+    },
+    "rating": {
+      "type": "number",
+      "required": false,
+      "min": 1.0,
+      "max": 5.0,
+      "description": "Average rating on the source platform"
+    },
+    "reviews_count": {
+      "type": "integer",
+      "required": false,
+      "min": 0,
+      "description": "Number of reviews on the source platform"
+    },
+    "business_category": {
+      "type": "string",
+      "required": false,
+      "description": "Category as listed on source (e.g. 'salon de belleza', 'estetica')"
+    },
+    "service_categories": {
+      "type": "string",
+      "required": false,
+      "format": "semicolon-separated",
+      "description": "BeautyCita categories this business offers, semicolon-separated (e.g. 'unas;cabello;maquillaje')",
+      "valid_values": ["unas", "cabello", "pestanas_cejas", "maquillaje", "facial", "cuerpo_spa", "cuidado_especializado"]
+    },
+    "hours": {
+      "type": "string",
+      "required": false,
+      "description": "Operating hours as free text (e.g. 'L-V 9:00-19:00; S 9:00-15:00')"
+    },
+    "website": {
+      "type": "string",
+      "required": false,
+      "format": "url",
+      "description": "Business website URL"
+    },
+    "facebook_url": {
+      "type": "string",
+      "required": false,
+      "format": "url",
+      "description": "Facebook page URL"
+    },
+    "instagram_handle": {
+      "type": "string",
+      "required": false,
+      "description": "Instagram handle (with or without @)"
+    },
+    "scraped_at": {
+      "type": "string",
+      "required": true,
+      "format": "ISO 8601",
+      "description": "Timestamp when the data was scraped"
+    }
+  },
+  "deduplication": {
+    "strategy": "phone + coordinates",
+    "description": "Same phone number within ~100m (3 decimal places of lat/lng) = same business. The database generates a dedup_key column automatically.",
+    "unique_constraint": "source + source_id (prevents duplicate imports from same source)"
+  },
+  "import_notes": [
+    "Use the 'import' action on the outreach-discovered-salon edge function to bulk import",
+    "service_categories in CSV is semicolon-separated; convert to array for JSON import",
+    "whatsapp defaults to phone if not provided",
+    "country defaults to MX if not provided"
+  ]
+}

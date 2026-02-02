@@ -7,6 +7,11 @@ import 'package:beautycita/screens/provider_list_screen.dart';
 import 'package:beautycita/screens/provider_detail_screen.dart';
 import 'package:beautycita/screens/booking_screen.dart';
 import 'package:beautycita/screens/my_bookings_screen.dart';
+import 'package:beautycita/screens/booking_flow_screen.dart';
+import 'package:beautycita/screens/admin/admin_shell_screen.dart';
+import 'package:beautycita/screens/invite_salon_screen.dart';
+import 'package:beautycita/screens/salon_onboarding_screen.dart';
+import 'package:beautycita/screens/settings_screen.dart';
 
 class AppRoutes {
   static const String splash = '/';
@@ -17,6 +22,11 @@ class AppRoutes {
   static const String booking = '/booking/:providerId/:serviceId';
   static const String bookingNoService = '/booking/:providerId';
   static const String myBookings = '/my-bookings';
+  static const String book = '/book';
+  static const String admin = '/admin';
+  static const String inviteSalon = '/invite';
+  static const String settings = '/settings';
+  static const String salonOnboarding = '/registro';
 
   static final GoRouter router = GoRouter(
     initialLocation: splash,
@@ -155,6 +165,22 @@ class AppRoutes {
         },
       ),
       GoRoute(
+        path: '/book',
+        name: 'book',
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const BookingFlowScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            final tween = Tween(begin: const Offset(0.0, 1.0), end: Offset.zero)
+                .chain(CurveTween(curve: Curves.easeInOutCubic));
+            return SlideTransition(
+              position: animation.drive(tween),
+              child: child,
+            );
+          },
+        ),
+      ),
+      GoRoute(
         path: '/my-bookings',
         name: 'my-bookings',
         pageBuilder: (context, state) {
@@ -171,6 +197,72 @@ class AppRoutes {
             },
           );
         },
+      ),
+      GoRoute(
+        path: admin,
+        name: 'admin',
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const AdminShellScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
+                .chain(CurveTween(curve: Curves.easeInOutCubic));
+            return SlideTransition(
+              position: animation.drive(tween),
+              child: child,
+            );
+          },
+        ),
+      ),
+      GoRoute(
+        path: inviteSalon,
+        name: 'invite',
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const InviteSalonScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            final tween = Tween(begin: const Offset(0.0, 1.0), end: Offset.zero)
+                .chain(CurveTween(curve: Curves.easeInOutCubic));
+            return SlideTransition(
+              position: animation.drive(tween),
+              child: child,
+            );
+          },
+        ),
+      ),
+      GoRoute(
+        path: settings,
+        name: 'settings',
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const SettingsScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
+                .chain(CurveTween(curve: Curves.easeInOutCubic));
+            return SlideTransition(
+              position: animation.drive(tween),
+              child: child,
+            );
+          },
+        ),
+      ),
+      GoRoute(
+        path: salonOnboarding,
+        name: 'registro',
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: SalonOnboardingScreen(
+            refCode: state.uri.queryParameters['ref'],
+          ),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            final tween = Tween(begin: const Offset(0.0, 1.0), end: Offset.zero)
+                .chain(CurveTween(curve: Curves.easeInOutCubic));
+            return SlideTransition(
+              position: animation.drive(tween),
+              child: child,
+            );
+          },
+        ),
       ),
     ],
     errorPageBuilder: (context, state) => MaterialPage(

@@ -107,10 +107,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final username = UsernameGenerator.generateUsernameWithSuffix();
 
       // Create anonymous Supabase session
-      try {
-        await SupabaseClientService.client.auth.signInAnonymously();
-      } catch (_) {
-        // Supabase auth is best-effort; app works offline too
+      if (SupabaseClientService.isInitialized) {
+        try {
+          await SupabaseClientService.client.auth.signInAnonymously();
+        } catch (_) {
+          // Supabase auth is best-effort; app works offline too
+        }
       }
 
       // Save to local session
@@ -165,7 +167,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await _userSession.updateLastLogin();
 
       // Restore or create Supabase session
-      if (!SupabaseClientService.isAuthenticated) {
+      if (SupabaseClientService.isInitialized && !SupabaseClientService.isAuthenticated) {
         try {
           await SupabaseClientService.client.auth.signInAnonymously();
         } catch (_) {

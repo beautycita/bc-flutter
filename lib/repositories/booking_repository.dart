@@ -18,21 +18,23 @@ class BookingRepository {
       throw Exception('User not authenticated');
     }
 
+    final endsAt = scheduledAt.add(Duration(minutes: durationMinutes));
+
     final data = {
       'user_id': userId,
-      'provider_id': providerId,
-      'provider_service_id': providerServiceId,
+      'business_id': providerId,
+      'service_id': providerServiceId,
       'service_name': serviceName,
-      'category': category,
-      'scheduled_at': scheduledAt.toIso8601String(),
-      'duration_minutes': durationMinutes,
+      'service_type': category,
+      'starts_at': scheduledAt.toUtc().toIso8601String(),
+      'ends_at': endsAt.toUtc().toIso8601String(),
       'price': price,
       'notes': notes,
       'status': 'pending',
     };
 
     final response = await SupabaseClientService.client
-        .from('bookings')
+        .from('appointments')
         .insert(data)
         .select()
         .single();
@@ -41,23 +43,23 @@ class BookingRepository {
   }
 
   /// Get the current user's bookings, optionally filtered by status,
-  /// joined with the provider name, ordered by scheduled_at descending.
+  /// joined with the business name, ordered by starts_at descending.
   Future<List<Booking>> getUserBookings({String? status}) async {
     final userId = SupabaseClientService.currentUserId;
     if (userId == null) {
-      throw Exception('User not authenticated');
+      return [];
     }
 
     var query = SupabaseClientService.client
-        .from('bookings')
-        .select('*, providers(name)')
+        .from('appointments')
+        .select('*, businesses(name)')
         .eq('user_id', userId);
 
     if (status != null) {
       query = query.eq('status', status);
     }
 
-    final response = await query.order('scheduled_at', ascending: false);
+    final response = await query.order('starts_at', ascending: false);
 
     return (response as List)
         .map((json) => Booking.fromJson(json as Map<String, dynamic>))
@@ -68,36 +70,36 @@ class BookingRepository {
   Future<List<Booking>> getUpcomingBookings() async {
     final userId = SupabaseClientService.currentUserId;
     if (userId == null) {
-      throw Exception('User not authenticated');
+      return [];
     }
 
-    final now = DateTime.now().toIso8601String();
+    final now = DateTime.now().toUtc().toIso8601String();
 
     final response = await SupabaseClientService.client
-        .from('bookings')
-        .select('*, providers(name)')
+        .from('appointments')
+        .select('*, businesses(name)')
         .eq('user_id', userId)
-        .neq('status', 'cancelled')
-        .gte('scheduled_at', now)
-        .order('scheduled_at');
+        .not('status', 'in', '(cancelled_customer,cancelled_business)')
+        .gte('starts_at', now)
+        .order('starts_at');
 
     return (response as List)
         .map((json) => Booking.fromJson(json as Map<String, dynamic>))
         .toList();
   }
 
-  /// Cancel a booking by setting its status to 'cancelled'.
+  /// Cancel a booking by setting its status to 'cancelled_customer'.
   Future<void> cancelBooking(String bookingId) async {
     await SupabaseClientService.client
-        .from('bookings')
-        .update({'status': 'cancelled'})
+        .from('appointments')
+        .update({'status': 'cancelled_customer'})
         .eq('id', bookingId);
   }
 
   /// Update the status of a booking.
   Future<void> updateBookingStatus(String bookingId, String status) async {
     await SupabaseClientService.client
-        .from('bookings')
+        .from('appointments')
         .update({'status': status})
         .eq('id', bookingId);
   }

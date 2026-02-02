@@ -1,0 +1,2 @@
+source,source_id,name,phone,whatsapp,address,city,state,country,lat,lng,photo_url,rating,reviews_count,business_category,service_categories,hours,website,facebook_url,instagram_handle,scraped_at
+google_maps,ChIJ_example1,"Salon Rosa","+523312345678","+523312345678","Av. Vallarta 1234, Col. Americana","Guadalajara","Jalisco","MX",20.6736,-103.3645,"https://example.com/photo1.jpg",4.6,127,"salon de belleza","unas;cabello;maquillaje","L-V 9:00-19:00; S 9:00-15:00","https://salonrosa.com","https://facebook.com/salonrosa","@salonrosa","2026-02-01T12:00:00Z"

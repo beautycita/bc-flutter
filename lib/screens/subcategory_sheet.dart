@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../models/category.dart';
 import '../config/theme.dart';
 import '../config/constants.dart';
+import '../providers/booking_flow_provider.dart';
 
 class SubcategorySheet extends StatelessWidget {
   final ServiceCategory category;
@@ -14,64 +17,71 @@ class SubcategorySheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final textTheme = theme.textTheme;
     return DraggableScrollableSheet(
       expand: false,
-      initialChildSize: 0.7,
-      minChildSize: 0.5,
+      initialChildSize: 0.65,
+      minChildSize: 0.45,
       maxChildSize: AppConstants.bottomSheetMaxHeight,
       builder: (context, scrollController) {
         return Container(
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             color: BeautyCitaTheme.backgroundWhite,
-            borderRadius: BorderRadius.vertical(
-              top: Radius.circular(BeautyCitaTheme.radiusXL),
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(28),
             ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 20,
+                offset: const Offset(0, -4),
+              ),
+            ],
           ),
           child: Column(
             children: [
               // Drag handle
               Container(
-                margin: const EdgeInsets.symmetric(
-                  vertical: BeautyCitaTheme.spaceMD,
-                ),
-                width: AppConstants.bottomSheetDragHandleWidth,
-                height: AppConstants.bottomSheetDragHandleHeight,
+                margin: const EdgeInsets.only(top: 12, bottom: 8),
+                width: 40,
+                height: 4,
                 decoration: BoxDecoration(
-                  color: BeautyCitaTheme.dividerLight,
-                  borderRadius: BorderRadius.circular(
-                    AppConstants.bottomSheetDragHandleRadius,
-                  ),
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
 
-              // Header
+              // Header with category icon and title
               Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: BeautyCitaTheme.spaceLG,
-                  vertical: BeautyCitaTheme.spaceMD,
-                ),
+                padding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
                 child: Row(
                   children: [
-                    // Category icon
+                    // Category emoji in colored circle
                     Container(
                       width: 56,
                       height: 56,
                       decoration: BoxDecoration(
-                        color: category.color.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(
-                          BeautyCitaTheme.radiusMedium,
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(
+                          colors: [
+                            category.color.withValues(alpha: 0.15),
+                            category.color.withValues(alpha: 0.08),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        border: Border.all(
+                          color: category.color.withValues(alpha: 0.2),
+                          width: 1.5,
                         ),
                       ),
                       child: Center(
                         child: Text(
                           category.icon,
-                          style: const TextStyle(fontSize: 32),
+                          style: const TextStyle(fontSize: 28),
                         ),
                       ),
                     ),
-                    const SizedBox(width: BeautyCitaTheme.spaceMD),
+                    const SizedBox(width: 16),
 
                     // Title
                     Expanded(
@@ -79,17 +89,21 @@ class SubcategorySheet extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '¿Qué tipo de servicio?',
-                            style: textTheme.titleMedium?.copyWith(
-                              color: BeautyCitaTheme.textLight,
+                            category.nameEs,
+                            style: GoogleFonts.poppins(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w700,
+                              color: category.color,
+                              height: 1.2,
                             ),
                           ),
-                          const SizedBox(height: BeautyCitaTheme.spaceXS),
+                          const SizedBox(height: 2),
                           Text(
-                            category.nameEs,
-                            style: textTheme.headlineSmall?.copyWith(
-                              color: category.color,
-                              fontWeight: FontWeight.bold,
+                            'Elige tu servicio',
+                            style: GoogleFonts.nunito(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: BeautyCitaTheme.textLight,
                             ),
                           ),
                         ],
@@ -99,19 +113,17 @@ class SubcategorySheet extends StatelessWidget {
                 ),
               ),
 
-              const Divider(height: 1),
-
               // Subcategories list
               Expanded(
                 child: ListView(
                   controller: scrollController,
-                  padding: const EdgeInsets.all(BeautyCitaTheme.spaceLG),
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
                   children: [
                     Wrap(
-                      spacing: BeautyCitaTheme.spaceMD,
-                      runSpacing: BeautyCitaTheme.spaceMD,
+                      spacing: 10,
+                      runSpacing: 10,
                       children: category.subcategories.map((subcategory) {
-                        return _SubcategoryChip(
+                        return _SubcategoryPill(
                           subcategory: subcategory,
                           categoryColor: category.color,
                         );
@@ -128,27 +140,35 @@ class SubcategorySheet extends StatelessWidget {
   }
 }
 
-class _SubcategoryChip extends StatelessWidget {
+class _SubcategoryPill extends StatefulWidget {
   final ServiceSubcategory subcategory;
   final Color categoryColor;
 
-  const _SubcategoryChip({
+  const _SubcategoryPill({
     required this.subcategory,
     required this.categoryColor,
   });
 
+  @override
+  State<_SubcategoryPill> createState() => _SubcategoryPillState();
+}
+
+class _SubcategoryPillState extends State<_SubcategoryPill> {
+  bool _isPressed = false;
+
   bool _hasItems() {
-    return subcategory.items != null && subcategory.items!.isNotEmpty;
+    return widget.subcategory.items != null &&
+        widget.subcategory.items!.isNotEmpty;
   }
 
   void _handleTap(BuildContext context) {
     if (_hasItems()) {
       _showItemsSheet(context);
     } else {
-      // Navigate to provider list for this subcategory
-      Navigator.of(context).pop(); // close bottom sheet
-      final colorValue = categoryColor.value;
-      context.push('/providers?category=${Uri.encodeComponent(subcategory.categoryId)}&subcategory=${Uri.encodeComponent(subcategory.nameEs)}&color=$colorValue');
+      Navigator.of(context).pop();
+      final colorValue = widget.categoryColor.value;
+      context.push(
+          '/providers?category=${Uri.encodeComponent(widget.subcategory.categoryId)}&subcategory=${Uri.encodeComponent(widget.subcategory.nameEs)}&color=$colorValue');
     }
   }
 
@@ -158,55 +178,63 @@ class _SubcategoryChip extends StatelessWidget {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => _ServiceItemsSheet(
-        subcategory: subcategory,
-        categoryColor: categoryColor,
+        subcategory: widget.subcategory,
+        categoryColor: widget.categoryColor,
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final textTheme = theme.textTheme;
+    final color = widget.categoryColor;
 
-    return Material(
-      color: categoryColor.withOpacity(0.1),
-      borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusLarge),
-      child: InkWell(
-        onTap: () => _handleTap(context),
-        borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusLarge),
-        child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: BeautyCitaTheme.spaceLG,
-            vertical: BeautyCitaTheme.spaceMD,
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _isPressed = true),
+      onTapUp: (_) {
+        setState(() => _isPressed = false);
+        _handleTap(context);
+      },
+      onTapCancel: () => setState(() => _isPressed = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 100),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        decoration: BoxDecoration(
+          color: _isPressed ? color.withValues(alpha: 0.12) : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: color.withValues(alpha: _isPressed ? 0.4 : 0.18),
+            width: 1.5,
           ),
-          decoration: BoxDecoration(
-            border: Border.all(
-              color: categoryColor.withOpacity(0.3),
-              width: 1.5,
-            ),
-            borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusLarge),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                subcategory.nameEs,
-                style: textTheme.titleMedium?.copyWith(
-                  color: categoryColor,
-                  fontWeight: FontWeight.w600,
-                ),
+          boxShadow: _isPressed
+              ? []
+              : [
+                  BoxShadow(
+                    color: color.withValues(alpha: 0.08),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              widget.subcategory.nameEs,
+              style: GoogleFonts.poppins(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: color.withValues(alpha: 0.85),
               ),
-              if (_hasItems()) ...[
-                const SizedBox(width: BeautyCitaTheme.spaceXS),
-                Icon(
-                  Icons.chevron_right,
-                  color: categoryColor,
-                  size: AppConstants.iconSizeSM,
-                ),
-              ],
+            ),
+            if (_hasItems()) ...[
+              const SizedBox(width: 4),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: color.withValues(alpha: 0.5),
+                size: 20,
+              ),
             ],
-          ),
+          ],
         ),
       ),
     );
@@ -224,59 +252,60 @@ class _ServiceItemsSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final textTheme = theme.textTheme;
-
     return DraggableScrollableSheet(
       expand: false,
-      initialChildSize: 0.6,
-      minChildSize: 0.4,
+      initialChildSize: 0.55,
+      minChildSize: 0.35,
       maxChildSize: AppConstants.bottomSheetMaxHeight,
       builder: (context, scrollController) {
         return Container(
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             color: BeautyCitaTheme.backgroundWhite,
-            borderRadius: BorderRadius.vertical(
-              top: Radius.circular(BeautyCitaTheme.radiusXL),
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(28),
             ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 20,
+                offset: const Offset(0, -4),
+              ),
+            ],
           ),
           child: Column(
             children: [
               // Drag handle
               Container(
-                margin: const EdgeInsets.symmetric(
-                  vertical: BeautyCitaTheme.spaceMD,
-                ),
-                width: AppConstants.bottomSheetDragHandleWidth,
-                height: AppConstants.bottomSheetDragHandleHeight,
+                margin: const EdgeInsets.only(top: 12, bottom: 8),
+                width: 40,
+                height: 4,
                 decoration: BoxDecoration(
-                  color: BeautyCitaTheme.dividerLight,
-                  borderRadius: BorderRadius.circular(
-                    AppConstants.bottomSheetDragHandleRadius,
-                  ),
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
 
               // Header
               Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: BeautyCitaTheme.spaceLG,
-                  vertical: BeautyCitaTheme.spaceMD,
-                ),
+                padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       subcategory.nameEs,
-                      style: textTheme.headlineSmall?.copyWith(
+                      style: GoogleFonts.poppins(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
                         color: categoryColor,
-                        fontWeight: FontWeight.bold,
+                        height: 1.2,
                       ),
                     ),
-                    const SizedBox(height: BeautyCitaTheme.spaceXS),
+                    const SizedBox(height: 4),
                     Text(
-                      'Selecciona un servicio específico',
-                      style: textTheme.bodyMedium?.copyWith(
+                      'Elige el tipo exacto',
+                      style: GoogleFonts.nunito(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
                         color: BeautyCitaTheme.textLight,
                       ),
                     ),
@@ -284,22 +313,20 @@ class _ServiceItemsSheet extends StatelessWidget {
                 ),
               ),
 
-              const Divider(height: 1),
-
               // Items list
               Expanded(
-                child: ListView.separated(
+                child: ListView.builder(
                   controller: scrollController,
-                  padding: const EdgeInsets.all(BeautyCitaTheme.spaceLG),
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
                   itemCount: subcategory.items?.length ?? 0,
-                  separatorBuilder: (context, index) => const SizedBox(
-                    height: BeautyCitaTheme.spaceSM,
-                  ),
                   itemBuilder: (context, index) {
                     final item = subcategory.items![index];
-                    return _ServiceItemTile(
-                      item: item,
-                      categoryColor: categoryColor,
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: _ServiceItemTile(
+                        item: item,
+                        categoryColor: categoryColor,
+                      ),
                     );
                   },
                 ),
@@ -312,7 +339,7 @@ class _ServiceItemsSheet extends StatelessWidget {
   }
 }
 
-class _ServiceItemTile extends StatelessWidget {
+class _ServiceItemTile extends ConsumerStatefulWidget {
   final ServiceItem item;
   final Color categoryColor;
 
@@ -321,61 +348,81 @@ class _ServiceItemTile extends StatelessWidget {
     required this.categoryColor,
   });
 
+  @override
+  ConsumerState<_ServiceItemTile> createState() => _ServiceItemTileState();
+}
+
+class _ServiceItemTileState extends ConsumerState<_ServiceItemTile> {
+  bool _isPressed = false;
+
   void _handleTap(BuildContext context) {
-    // Close both bottom sheets then navigate to provider list
     Navigator.of(context).pop();
     Navigator.of(context).pop();
-    final colorValue = categoryColor.value;
-    context.push('/providers?category=${Uri.encodeComponent(item.subcategoryId)}&subcategory=${Uri.encodeComponent(item.nameEs)}&color=$colorValue');
+    context.push('/book');
+
+    ref
+        .read(bookingFlowProvider.notifier)
+        .selectService(widget.item.serviceType, widget.item.nameEs);
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final textTheme = theme.textTheme;
+    final color = widget.categoryColor;
 
-    return Material(
-      color: BeautyCitaTheme.surfaceCream,
-      borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
-      child: InkWell(
-        onTap: () => _handleTap(context),
-        borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
-        child: Container(
-          padding: const EdgeInsets.all(BeautyCitaTheme.spaceMD),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _isPressed = true),
+      onTapUp: (_) {
+        setState(() => _isPressed = false);
+        _handleTap(context);
+      },
+      onTapCancel: () => setState(() => _isPressed = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 100),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        decoration: BoxDecoration(
+          color: _isPressed
+              ? color.withValues(alpha: 0.06)
+              : BeautyCitaTheme.surfaceCream,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: _isPressed
+                ? color.withValues(alpha: 0.2)
+                : Colors.transparent,
+            width: 1,
           ),
-          child: Row(
-            children: [
-              // Icon indicator
-              Container(
-                width: 8,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: categoryColor,
-                  borderRadius: BorderRadius.circular(4.0),
+        ),
+        child: Row(
+          children: [
+            // Colored accent bar
+            Container(
+              width: 4,
+              height: 36,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.6),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(width: 14),
+
+            // Item name
+            Expanded(
+              child: Text(
+                widget.item.nameEs,
+                style: GoogleFonts.nunito(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: BeautyCitaTheme.textDark,
                 ),
               ),
-              const SizedBox(width: BeautyCitaTheme.spaceMD),
+            ),
 
-              // Item name
-              Expanded(
-                child: Text(
-                  item.nameEs,
-                  style: textTheme.titleMedium?.copyWith(
-                    color: BeautyCitaTheme.textDark,
-                  ),
-                ),
-              ),
-
-              // Chevron
-              Icon(
-                Icons.arrow_forward_ios,
-                color: categoryColor.withOpacity(0.5),
-                size: AppConstants.iconSizeSM,
-              ),
-            ],
-          ),
+            // Chevron
+            Icon(
+              Icons.arrow_forward_ios_rounded,
+              color: color.withValues(alpha: 0.35),
+              size: 16,
+            ),
+          ],
         ),
       ),
     );
