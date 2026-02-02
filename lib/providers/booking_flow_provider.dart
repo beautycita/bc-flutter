@@ -71,6 +71,7 @@ class BookingFlowState {
     LatLng? userLocation,
     CurateResponse? curateResponse,
     OverrideWindow? overrideWindow,
+    bool clearOverrideWindow = false,
     ResultCard? selectedResult,
     String? error,
     List<FollowUpQuestion>? followUpQuestions,
@@ -84,7 +85,7 @@ class BookingFlowState {
       transportMode: transportMode ?? this.transportMode,
       userLocation: userLocation ?? this.userLocation,
       curateResponse: curateResponse ?? this.curateResponse,
-      overrideWindow: overrideWindow ?? this.overrideWindow,
+      overrideWindow: clearOverrideWindow ? null : (overrideWindow ?? this.overrideWindow),
       selectedResult: selectedResult ?? this.selectedResult,
       error: error,
       followUpQuestions: followUpQuestions ?? this.followUpQuestions,
@@ -175,6 +176,15 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
       overrideWindow: window,
     );
 
+    await _fetchResults();
+  }
+
+  /// User tapped "Quitar filtro" — clear time override and re-fetch.
+  Future<void> clearOverride() async {
+    state = state.copyWith(
+      step: BookingFlowStep.loading,
+      clearOverrideWindow: true,
+    );
     await _fetchResults();
   }
 

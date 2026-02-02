@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../config/theme.dart';
 import '../models/curate_result.dart';
 import '../providers/booking_flow_provider.dart';
+import '../providers/favorites_provider.dart';
 import '../widgets/cinematic_question_text.dart';
 import 'time_override_sheet.dart';
 
@@ -20,8 +20,8 @@ class ResultCardsScreen extends ConsumerStatefulWidget {
 class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
     with TickerProviderStateMixin {
   int _currentIndex = 0;
+  int _totalCards = 0;
   Offset _dragOffset = Offset.zero;
-  bool _isDragging = false;
 
   // Animated dismiss: fly-off controller
   late AnimationController _dismissController;
@@ -49,7 +49,15 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
     )..addStatusListener((status) {
         if (status == AnimationStatus.completed) {
           setState(() {
-            _currentIndex++;
+            if (_totalCards > 0) {
+              if (_dismissDirection > 0) {
+                // Right swipe = advance
+                _currentIndex = (_currentIndex + 1) % _totalCards;
+              } else {
+                // Left swipe = go back
+                _currentIndex = (_currentIndex - 1 + _totalCards) % _totalCards;
+              }
+            }
             _dragOffset = Offset.zero;
             _isDismissing = false;
           });
@@ -80,10 +88,6 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
         setState(() {
           _dragOffset = _snapBackAnimation.value;
         });
-      })..addStatusListener((status) {
-        if (status == AnimationStatus.completed) {
-          setState(() => _isDragging = false);
-        }
       });
 
     _snapBackAnimation = Tween<Offset>(
@@ -111,7 +115,6 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
     if (_isDismissing) return;
     _snapBackController.stop();
     setState(() {
-      _isDragging = true;
       // Full horizontal, damped vertical
       _dragOffset += Offset(
         details.delta.dx,
@@ -248,6 +251,7 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
 
     if (bookingState.curateResponse == null ||
         bookingState.curateResponse!.results.isEmpty) {
+      final hasOverride = bookingState.overrideWindow != null;
       return Scaffold(
         appBar: AppBar(
           leading: IconButton(
@@ -261,16 +265,70 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
             ),
           ),
         ),
-        body: const Center(
-          child: Text('No hay resultados disponibles'),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  'No hay resultados disponibles',
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    color: BeautyCitaTheme.textDark,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                if (hasOverride) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    'El filtro de horario no encontro opciones',
+                    style: GoogleFonts.nunito(
+                      fontSize: 14,
+                      color: BeautyCitaTheme.textLight,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    onPressed: () => bookingNotifier.clearOverride(),
+                    icon: const Icon(Icons.filter_alt_off, size: 20),
+                    label: Text(
+                      'Quitar filtro',
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: BeautyCitaTheme.primaryRose,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 14,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(
+                          BeautyCitaTheme.radiusMedium,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
         ),
       );
     }
 
     final results = bookingState.curateResponse!.results;
     final serviceName = bookingState.serviceName ?? 'tu servicio';
+    _totalCards = results.length;
 
-    final remainingCards = results.length - _currentIndex;
+    // Clamp index in case results changed
+    if (_currentIndex >= _totalCards) {
+      _currentIndex = 0;
+    }
 
     return Scaffold(
       backgroundColor: BeautyCitaTheme.surfaceCream,
@@ -299,61 +357,22 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
               fontSize: 24,
             ),
           ),
-          Expanded(
-            child: remainingCards == 0
-                ? _buildNoMoreCards()
-                : _buildCardStack(results, _currentIndex),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNoMoreCards() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 96,
-              height: 96,
-              decoration: BoxDecoration(
-                color: BeautyCitaTheme.surfaceCream,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: BeautyCitaTheme.dividerLight,
-                  width: 2,
-                ),
-              ),
-              child: const Center(
-                child: Text(
-                  '\u{1F50D}',
-                  style: TextStyle(fontSize: 40),
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'Esas son tus opciones',
+          // Position indicator
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              '${_currentIndex + 1}/$_totalCards',
               style: GoogleFonts.poppins(
-                fontSize: 22,
-                fontWeight: FontWeight.w600,
-                color: BeautyCitaTheme.textDark,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Desliza hacia atras para volver a ver',
-              style: GoogleFonts.nunito(
-                fontSize: 15,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
                 color: BeautyCitaTheme.textLight,
               ),
-              textAlign: TextAlign.center,
             ),
-          ],
-        ),
+          ),
+          Expanded(
+            child: _buildCardStack(results, _currentIndex),
+          ),
+        ],
       ),
     );
   }
@@ -378,10 +397,14 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
         final frontOpacity = _isDismissing ? _dismissOpacity.value : 1.0;
         final rotation = (frontOffset.dx / cardWidth) * _maxRotation;
 
+        final total = results.length;
+        final nextIndex = (currentIndex + 1) % total;
+        final nextNextIndex = (currentIndex + 2) % total;
+
         return Stack(
           children: [
-            // Card 3 (bottom)
-            if (currentIndex + 2 < results.length)
+            // Card 3 (bottom) — only show if 3+ cards
+            if (total >= 3)
               Positioned(
                 top: card3Top,
                 left: 10,
@@ -390,13 +413,13 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
                   scale: card3Scale.clamp(0.85, 0.95),
                   child: Opacity(
                     opacity: card3Opacity.clamp(0.4, 0.7),
-                    child: _buildCard(results[currentIndex + 2], false),
+                    child: _buildCard(results[nextNextIndex], false),
                   ),
                 ),
               ),
 
-            // Card 2 (middle)
-            if (currentIndex + 1 < results.length)
+            // Card 2 (middle) — only show if 2+ cards
+            if (total >= 2)
               Positioned(
                 top: card2Top.clamp(0.0, 10.0),
                 left: 5,
@@ -405,7 +428,7 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
                   scale: card2Scale.clamp(0.9, 1.0),
                   child: Opacity(
                     opacity: card2Opacity.clamp(0.6, 1.0),
-                    child: _buildCard(results[currentIndex + 1], false),
+                    child: _buildCard(results[nextIndex], false),
                   ),
                 ),
               ),
@@ -744,13 +767,19 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
   }
 
   Widget _buildActionButtons(ResultCard result) {
+    final favorites = ref.watch(favoritesProvider);
+    final isFavorited = favorites.contains(result.business.id);
+
     return Row(
       children: [
         IconButton(
           onPressed: () {
-            debugPrint('TODO: Toggle favorite for ${result.business.name}');
+            HapticFeedback.lightImpact();
+            ref.read(favoritesProvider.notifier).toggle(result.business.id);
           },
-          icon: const Icon(Icons.favorite_border),
+          icon: Icon(
+            isFavorited ? Icons.favorite : Icons.favorite_border,
+          ),
           color: BeautyCitaTheme.primaryRose,
         ),
         const SizedBox(width: 12),
