@@ -1,4 +1,6 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -16,35 +18,159 @@ class ResultCardsScreen extends ConsumerStatefulWidget {
 }
 
 class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   int _currentIndex = 0;
   Offset _dragOffset = Offset.zero;
   bool _isDragging = false;
 
-  void _onCardDismissed() {
-    setState(() {
-      _currentIndex++;
-      _dragOffset = Offset.zero;
-      _isDragging = false;
-    });
+  // Animated dismiss: fly-off controller
+  late AnimationController _dismissController;
+  late Animation<Offset> _dismissAnimation;
+  late Animation<double> _dismissOpacity;
+  bool _isDismissing = false;
+  int _dismissDirection = 1; // 1 = right, -1 = left
+
+  // Snap-back spring controller
+  late AnimationController _snapBackController;
+  late Animation<Offset> _snapBackAnimation;
+
+  static const double _dismissThreshold = 0.25; // 25% of card width
+  static const double _velocityThreshold = 800.0; // px/s flick speed
+  static const double _maxRotation = 0.15; // radians (~8.5 degrees)
+  static const double _verticalDamping = 0.3; // reduce vertical movement
+
+  @override
+  void initState() {
+    super.initState();
+
+    _dismissController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    )..addStatusListener((status) {
+        if (status == AnimationStatus.completed) {
+          setState(() {
+            _currentIndex++;
+            _dragOffset = Offset.zero;
+            _isDismissing = false;
+          });
+          _dismissController.reset();
+        }
+      });
+
+    _dismissAnimation = Tween<Offset>(
+      begin: Offset.zero,
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _dismissController,
+      curve: Curves.easeOut,
+    ));
+
+    _dismissOpacity = Tween<double>(
+      begin: 1.0,
+      end: 0.0,
+    ).animate(CurvedAnimation(
+      parent: _dismissController,
+      curve: const Interval(0.5, 1.0),
+    ));
+
+    _snapBackController = AnimationController(
+      duration: const Duration(milliseconds: 400),
+      vsync: this,
+    )..addListener(() {
+        setState(() {
+          _dragOffset = _snapBackAnimation.value;
+        });
+      })..addStatusListener((status) {
+        if (status == AnimationStatus.completed) {
+          setState(() => _isDragging = false);
+        }
+      });
+
+    _snapBackAnimation = Tween<Offset>(
+      begin: Offset.zero,
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _snapBackController,
+      curve: Curves.elasticOut,
+    ));
+  }
+
+  @override
+  void dispose() {
+    _dismissController.dispose();
+    _snapBackController.dispose();
+    super.dispose();
+  }
+
+  /// Drag progress as fraction of card width (0-1+)
+  double _dragProgress(double cardWidth) {
+    return cardWidth > 0 ? (_dragOffset.dx.abs() / cardWidth).clamp(0.0, 1.5) : 0.0;
   }
 
   void _onDragUpdate(DragUpdateDetails details, double cardWidth) {
+    if (_isDismissing) return;
+    _snapBackController.stop();
     setState(() {
       _isDragging = true;
-      _dragOffset += details.delta;
+      // Full horizontal, damped vertical
+      _dragOffset += Offset(
+        details.delta.dx,
+        details.delta.dy * _verticalDamping,
+      );
     });
   }
 
   void _onDragEnd(DragEndDetails details, double cardWidth) {
-    if (_dragOffset.dx.abs() > cardWidth * 0.4) {
-      _onCardDismissed();
+    if (_isDismissing) return;
+
+    final velocity = details.velocity.pixelsPerSecond.dx;
+    final distanceThresholdMet = _dragOffset.dx.abs() > cardWidth * _dismissThreshold;
+    final velocityThresholdMet = velocity.abs() > _velocityThreshold;
+
+    if (distanceThresholdMet || velocityThresholdMet) {
+      // Determine direction from drag offset or velocity
+      _dismissDirection = (_dragOffset.dx != 0 ? _dragOffset.dx : velocity) > 0 ? 1 : -1;
+      _animateDismiss(cardWidth);
     } else {
-      setState(() {
-        _dragOffset = Offset.zero;
-        _isDragging = false;
-      });
+      _animateSnapBack();
     }
+  }
+
+  void _animateDismiss(double cardWidth) {
+    HapticFeedback.lightImpact();
+
+    final flyOffX = _dismissDirection * (cardWidth * 1.5);
+    final flyOffY = _dragOffset.dy * 0.5;
+
+    _dismissAnimation = Tween<Offset>(
+      begin: _dragOffset,
+      end: Offset(flyOffX, flyOffY),
+    ).animate(CurvedAnimation(
+      parent: _dismissController,
+      curve: Curves.easeOut,
+    ));
+
+    _dismissOpacity = Tween<double>(
+      begin: 1.0,
+      end: 0.0,
+    ).animate(CurvedAnimation(
+      parent: _dismissController,
+      curve: const Interval(0.4, 1.0),
+    ));
+
+    setState(() => _isDismissing = true);
+    _dismissController.forward(from: 0);
+  }
+
+  void _animateSnapBack() {
+    _snapBackAnimation = Tween<Offset>(
+      begin: _dragOffset,
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _snapBackController,
+      curve: Curves.elasticOut,
+    ));
+    _snapBackController.forward(from: 0);
   }
 
   String _formatBadge(String badgeKey) {
@@ -236,19 +362,34 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
     return LayoutBuilder(
       builder: (context, constraints) {
         final cardWidth = constraints.maxWidth;
+        final progress = _dragProgress(cardWidth);
+
+        // Back cards react: scale up and fade in as front card is dragged
+        final card2Scale = 0.95 + 0.05 * progress.clamp(0.0, 1.0);
+        final card2Opacity = 0.7 + 0.3 * progress.clamp(0.0, 1.0);
+        final card2Top = 10.0 - 10.0 * progress.clamp(0.0, 1.0);
+
+        final card3Scale = 0.90 + 0.05 * progress.clamp(0.0, 1.0);
+        final card3Opacity = 0.5 + 0.2 * progress.clamp(0.0, 1.0);
+        final card3Top = 20.0 - 10.0 * progress.clamp(0.0, 1.0);
+
+        // Front card: current offset (drag or dismiss animation)
+        final frontOffset = _isDismissing ? _dismissAnimation.value : _dragOffset;
+        final frontOpacity = _isDismissing ? _dismissOpacity.value : 1.0;
+        final rotation = (frontOffset.dx / cardWidth) * _maxRotation;
 
         return Stack(
           children: [
             // Card 3 (bottom)
             if (currentIndex + 2 < results.length)
               Positioned(
-                top: 20,
+                top: card3Top,
                 left: 10,
                 right: 10,
                 child: Transform.scale(
-                  scale: 0.90,
+                  scale: card3Scale.clamp(0.85, 0.95),
                   child: Opacity(
-                    opacity: 0.5,
+                    opacity: card3Opacity.clamp(0.4, 0.7),
                     child: _buildCard(results[currentIndex + 2], false),
                   ),
                 ),
@@ -257,31 +398,32 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
             // Card 2 (middle)
             if (currentIndex + 1 < results.length)
               Positioned(
-                top: 10,
+                top: card2Top.clamp(0.0, 10.0),
                 left: 5,
                 right: 5,
                 child: Transform.scale(
-                  scale: 0.95,
+                  scale: card2Scale.clamp(0.9, 1.0),
                   child: Opacity(
-                    opacity: 0.7,
+                    opacity: card2Opacity.clamp(0.6, 1.0),
                     child: _buildCard(results[currentIndex + 1], false),
                   ),
                 ),
               ),
 
             // Card 1 (top, draggable)
-            AnimatedPositioned(
-              duration: _isDragging ? Duration.zero : const Duration(milliseconds: 300),
-              curve: Curves.easeOut,
-              top: _dragOffset.dy,
-              left: _dragOffset.dx,
-              right: -_dragOffset.dx,
+            Positioned(
+              top: frontOffset.dy,
+              left: frontOffset.dx,
+              right: -frontOffset.dx,
               child: GestureDetector(
                 onPanUpdate: (details) => _onDragUpdate(details, cardWidth),
                 onPanEnd: (details) => _onDragEnd(details, cardWidth),
-                child: Transform.rotate(
-                  angle: _dragOffset.dx / 1000,
-                  child: _buildCard(results[currentIndex], true),
+                child: Opacity(
+                  opacity: frontOpacity.clamp(0.0, 1.0),
+                  child: Transform.rotate(
+                    angle: rotation,
+                    child: _buildCard(results[currentIndex], true),
+                  ),
                 ),
               ),
             ),
