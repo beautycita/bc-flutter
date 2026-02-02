@@ -35,6 +35,10 @@ class BookingFlowScreen extends ConsumerWidget {
         ),
       BookingFlowStep.results => const ResultCardsScreen(),
       BookingFlowStep.confirmation => const ConfirmationScreen(),
+      BookingFlowStep.booking => _LoadingView(
+          serviceName: 'Reservando tu cita...',
+        ),
+      BookingFlowStep.booked => const ConfirmationScreen(),
       BookingFlowStep.error => _ErrorView(
           error: state.error ?? 'Error desconocido',
           onRetry: () =>

@@ -1,8 +1,12 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/curate_result.dart';
 import '../models/follow_up_question.dart';
+import '../repositories/booking_repository.dart';
 import '../services/curate_service.dart';
 import '../services/follow_up_service.dart';
+import '../services/uber_service.dart';
 import 'package:beautycita/services/supabase_client.dart';
 
 // ---------------------------------------------------------------------------
@@ -11,6 +15,12 @@ import 'package:beautycita/services/supabase_client.dart';
 
 final curateServiceProvider = Provider((ref) => CurateService());
 final followUpServiceProvider = Provider((ref) => FollowUpService());
+final bookingRepositoryProvider = Provider((ref) => BookingRepository());
+final uberServiceProvider = Provider((ref) {
+  final clientId = dotenv.env['UBER_CLIENT_ID'] ?? '';
+  final redirectUri = dotenv.env['UBER_REDIRECT_URI'] ?? 'beautycita://uber-callback';
+  return UberService(clientId: clientId, redirectUri: redirectUri);
+});
 
 // ---------------------------------------------------------------------------
 // Booking Flow State
@@ -24,6 +34,8 @@ enum BookingFlowStep {
   loading,
   results,
   confirmation,
+  booking,  // creating appointment + scheduling rides
+  booked,   // success — booking confirmed
   error,
 }
 
@@ -40,6 +52,8 @@ class BookingFlowState {
   final List<FollowUpQuestion> followUpQuestions;
   final int currentQuestionIndex;
   final Map<String, String> followUpAnswers;
+  final String? bookingId;
+  final bool uberScheduled;
 
   const BookingFlowState({
     this.step = BookingFlowStep.categorySelect,
@@ -54,6 +68,8 @@ class BookingFlowState {
     this.followUpQuestions = const [],
     this.currentQuestionIndex = 0,
     this.followUpAnswers = const {},
+    this.bookingId,
+    this.uberScheduled = false,
   });
 
   FollowUpQuestion? get currentQuestion {
@@ -77,6 +93,8 @@ class BookingFlowState {
     List<FollowUpQuestion>? followUpQuestions,
     int? currentQuestionIndex,
     Map<String, String>? followUpAnswers,
+    String? bookingId,
+    bool? uberScheduled,
   }) {
     return BookingFlowState(
       step: step ?? this.step,
@@ -91,6 +109,8 @@ class BookingFlowState {
       followUpQuestions: followUpQuestions ?? this.followUpQuestions,
       currentQuestionIndex: currentQuestionIndex ?? this.currentQuestionIndex,
       followUpAnswers: followUpAnswers ?? this.followUpAnswers,
+      bookingId: bookingId ?? this.bookingId,
+      uberScheduled: uberScheduled ?? this.uberScheduled,
     );
   }
 }
@@ -102,9 +122,15 @@ class BookingFlowState {
 class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
   final CurateService _curateService;
   final FollowUpService _followUpService;
+  final BookingRepository _bookingRepo;
+  final UberService _uberService;
 
-  BookingFlowNotifier(this._curateService, this._followUpService)
-      : super(const BookingFlowState());
+  BookingFlowNotifier(
+    this._curateService,
+    this._followUpService,
+    this._bookingRepo,
+    this._uberService,
+  ) : super(const BookingFlowState());
 
   /// User selected a service type from the category tree.
   /// Checks for follow-up questions before proceeding.
@@ -196,6 +222,63 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
     );
   }
 
+  /// User confirmed the booking — create appointment + schedule Uber if needed.
+  Future<void> confirmBooking() async {
+    final result = state.selectedResult;
+    if (result == null) return;
+
+    state = state.copyWith(step: BookingFlowStep.booking);
+
+    try {
+      // 1. Create the appointment
+      final booking = await _bookingRepo.createBooking(
+        providerId: result.business.id,
+        providerServiceId: result.service.id,
+        serviceName: result.service.name,
+        category: state.serviceType ?? '',
+        scheduledAt: result.slot.startTime,
+        durationMinutes: result.service.durationMinutes,
+        price: result.service.price,
+      );
+
+      bool uberOk = false;
+
+      // 2. If transport is uber, schedule rides
+      if (state.transportMode == 'uber' && state.userLocation != null) {
+        try {
+          final uberResult = await _uberService.scheduleRides(
+            appointmentId: booking.id,
+            pickupLat: state.userLocation!.lat,
+            pickupLng: state.userLocation!.lng,
+            salonLat: result.business.lat,
+            salonLng: result.business.lng,
+            salonAddress: result.business.address,
+            appointmentAt: result.slot.startTime.toUtc().toIso8601String(),
+            durationMinutes: result.service.durationMinutes,
+          );
+          uberOk = uberResult.scheduled;
+          if (!uberOk) {
+            debugPrint('Uber scheduling skipped: ${uberResult.reason}');
+          }
+        } catch (e) {
+          debugPrint('Uber scheduling error: $e');
+          // Booking was created, Uber just didn't work — don't fail the whole thing
+        }
+      }
+
+      state = state.copyWith(
+        step: BookingFlowStep.booked,
+        bookingId: booking.id,
+        uberScheduled: uberOk,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        step: BookingFlowStep.error,
+        error: 'No se pudo crear la cita: $e',
+      );
+    }
+  }
+
   /// Reset back to category selection.
   void reset() {
     state = const BookingFlowState();
@@ -243,6 +326,9 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
           step: BookingFlowStep.results,
           selectedResult: null,
         );
+      case BookingFlowStep.booked:
+        // After booking is confirmed, go home (can't un-book from here)
+        break;
       default:
         break;
     }
@@ -283,5 +369,12 @@ final bookingFlowProvider =
     StateNotifierProvider<BookingFlowNotifier, BookingFlowState>((ref) {
   final curateService = ref.watch(curateServiceProvider);
   final followUpService = ref.watch(followUpServiceProvider);
-  return BookingFlowNotifier(curateService, followUpService);
+  final bookingRepo = ref.watch(bookingRepositoryProvider);
+  final uberService = ref.watch(uberServiceProvider);
+  return BookingFlowNotifier(
+    curateService,
+    followUpService,
+    bookingRepo,
+    uberService,
+  );
 });

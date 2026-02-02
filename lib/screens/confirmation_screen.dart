@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -17,73 +18,166 @@ class ConfirmationScreen extends ConsumerWidget {
     final result = state.selectedResult;
 
     if (result == null) {
-      return const Scaffold(body: Center(child: Text('Sin selección')));
+      return const Scaffold(body: Center(child: Text('Sin seleccion')));
     }
+
+    final isBooked = state.step == BookingFlowStep.booked;
 
     return Scaffold(
       backgroundColor: BeautyCitaTheme.surfaceCream,
       appBar: AppBar(
         backgroundColor: BeautyCitaTheme.surfaceCream,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios,
-              color: BeautyCitaTheme.textDark),
-          onPressed: () => notifier.goBack(),
-        ),
+        leading: isBooked
+            ? null
+            : IconButton(
+                icon: const Icon(Icons.arrow_back_ios,
+                    color: BeautyCitaTheme.textDark),
+                onPressed: () => notifier.goBack(),
+              ),
+        automaticallyImplyLeading: false,
         title: const SizedBox.shrink(),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(BeautyCitaTheme.spaceLG),
         child: Column(
           children: [
-            const CinematicQuestionText(
-              text: 'Confirma tu cita',
-              fontSize: 24,
-              accentColor: BeautyCitaTheme.secondaryGold,
-            ),
-            const SizedBox(height: BeautyCitaTheme.spaceMD),
+            if (isBooked) ...[
+              const _SuccessBanner(),
+              const SizedBox(height: BeautyCitaTheme.spaceMD),
+            ] else ...[
+              const CinematicQuestionText(
+                text: 'Confirma tu cita',
+                fontSize: 24,
+                accentColor: BeautyCitaTheme.secondaryGold,
+              ),
+              const SizedBox(height: BeautyCitaTheme.spaceMD),
+            ],
             _SummaryCard(result: result),
             const SizedBox(height: BeautyCitaTheme.spaceMD),
-            _TransportCard(result: result),
+            _TransportCard(result: result, isBooked: isBooked, uberScheduled: state.uberScheduled),
             const SizedBox(height: BeautyCitaTheme.spaceMD),
             _PriceBreakdown(result: result),
             const SizedBox(height: BeautyCitaTheme.spaceXL),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  debugPrint(
-                      'TODO: Create booking for ${result.business.id}');
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: BeautyCitaTheme.primaryRose,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                      vertical: BeautyCitaTheme.spaceMD),
-                  shape: RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius.circular(BeautyCitaTheme.radiusLarge),
+            if (isBooked) ...[
+              // Success actions
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    HapticFeedback.mediumImpact();
+                    notifier.reset();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: BeautyCitaTheme.primaryRose,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                        vertical: BeautyCitaTheme.spaceMD),
+                    shape: RoundedRectangleBorder(
+                      borderRadius:
+                          BorderRadius.circular(BeautyCitaTheme.radiusLarge),
+                    ),
+                    elevation: 0,
                   ),
-                  elevation: 0,
-                ),
-                child: Text(
-                  result.transport.mode == 'uber'
-                      ? 'CONFIRMAR TODO'
-                      : 'CONFIRMAR RESERVA',
-                  style: GoogleFonts.poppins(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.2,
+                  child: Text(
+                    'LISTO',
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.2,
+                    ),
                   ),
                 ),
               ),
-            ),
+            ] else ...[
+              // Confirm button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    HapticFeedback.mediumImpact();
+                    notifier.confirmBooking();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: BeautyCitaTheme.primaryRose,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                        vertical: BeautyCitaTheme.spaceMD),
+                    shape: RoundedRectangleBorder(
+                      borderRadius:
+                          BorderRadius.circular(BeautyCitaTheme.radiusLarge),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: Text(
+                    result.transport.mode == 'uber'
+                        ? 'CONFIRMAR TODO'
+                        : 'CONFIRMAR RESERVA',
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// Success banner (shown after booking)
+// ---------------------------------------------------------------------------
+
+class _SuccessBanner extends StatelessWidget {
+  const _SuccessBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Container(
+          width: 72,
+          height: 72,
+          decoration: BoxDecoration(
+            color: const Color(0xFF4CAF50).withValues(alpha: 0.12),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(
+            Icons.check_circle_rounded,
+            color: Color(0xFF4CAF50),
+            size: 48,
+          ),
+        ),
+        const SizedBox(height: BeautyCitaTheme.spaceMD),
+        Text(
+          'Cita reservada',
+          style: GoogleFonts.poppins(
+            fontSize: 24,
+            fontWeight: FontWeight.w700,
+            color: BeautyCitaTheme.textDark,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Te enviamos la confirmacion',
+          style: GoogleFonts.nunito(
+            fontSize: 14,
+            color: BeautyCitaTheme.textLight,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Summary card
+// ---------------------------------------------------------------------------
 
 class _SummaryCard extends StatelessWidget {
   final ResultCard result;
@@ -195,10 +289,20 @@ class _SummaryCard extends StatelessWidget {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Transport card
+// ---------------------------------------------------------------------------
+
 class _TransportCard extends StatelessWidget {
   final ResultCard result;
+  final bool isBooked;
+  final bool uberScheduled;
 
-  const _TransportCard({required this.result});
+  const _TransportCard({
+    required this.result,
+    this.isBooked = false,
+    this.uberScheduled = false,
+  });
 
   IconData _icon(String mode) {
     switch (mode) {
@@ -263,6 +367,48 @@ class _TransportCard extends StatelessWidget {
             if (isUber && hasEstimate) ...[
               const SizedBox(height: BeautyCitaTheme.spaceMD),
 
+              // Uber status badge (after booking)
+              if (isBooked) ...[
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: uberScheduled
+                        ? const Color(0xFF4CAF50).withValues(alpha: 0.1)
+                        : Colors.orange.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        uberScheduled
+                            ? Icons.check_circle
+                            : Icons.info_outline,
+                        size: 16,
+                        color: uberScheduled
+                            ? const Color(0xFF4CAF50)
+                            : Colors.orange,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        uberScheduled
+                            ? 'Viajes programados'
+                            : 'Vincula Uber para programar viajes',
+                        style: GoogleFonts.nunito(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: uberScheduled
+                              ? const Color(0xFF4CAF50)
+                              : Colors.orange,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: BeautyCitaTheme.spaceSM),
+              ],
+
               // Outbound leg
               _UberLegRow(
                 label: 'Ida',
@@ -283,38 +429,13 @@ class _TransportCard extends StatelessWidget {
               _UberLegRow(
                 label: 'Vuelta',
                 icon: Icons.arrow_back,
-                destination: 'Tu ubicación',
+                destination: 'Tu ubicacion',
                 pickupTime: _formatReturnPickupTime(
                   result.slot.startTime,
                   result.service.durationMinutes,
                 ),
                 fareMin: t.uberEstimateMin!,
                 fareMax: t.uberEstimateMax!,
-              ),
-
-              const SizedBox(height: BeautyCitaTheme.spaceMD),
-
-              // Return destination change button
-              OutlinedButton.icon(
-                onPressed: () {
-                  // TODO: Open destination picker
-                  debugPrint('Change return destination');
-                },
-                icon: const Icon(Icons.location_on_outlined, size: 18),
-                label: Text(
-                  '¿Volver a otra dirección?',
-                  style: GoogleFonts.nunito(fontSize: 13),
-                ),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: BeautyCitaTheme.primaryRose,
-                  side: BorderSide(
-                    color: BeautyCitaTheme.primaryRose.withValues(alpha: 0.3),
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius.circular(BeautyCitaTheme.radiusMedium),
-                  ),
-                ),
               ),
             ] else ...[
               const SizedBox(height: 4),
@@ -358,6 +479,10 @@ class _TransportCard extends StatelessWidget {
     return '~${DateFormat('h:mm a').format(pickup)}';
   }
 }
+
+// ---------------------------------------------------------------------------
+// Uber leg row
+// ---------------------------------------------------------------------------
 
 class _UberLegRow extends StatelessWidget {
   final String label;
@@ -442,6 +567,10 @@ class _UberLegRow extends StatelessWidget {
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// Price breakdown
+// ---------------------------------------------------------------------------
 
 class _PriceBreakdown extends StatelessWidget {
   final ResultCard result;

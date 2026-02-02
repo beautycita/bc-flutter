@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../config/theme.dart';
+import '../models/curate_result.dart';
+import '../services/location_service.dart';
 import '../services/supabase_client.dart';
 
 // WhatsApp-inspired colors
@@ -45,16 +47,31 @@ class InviteSalonScreen extends ConsumerStatefulWidget {
 class _InviteSalonScreenState extends ConsumerState<InviteSalonScreen> {
   String _searchQuery = '';
   final Set<String> _invitedIds = {};
+  LatLng? _userLocation;
+  bool _locationLoading = true;
 
-  // Default to Guadalajara center — will be replaced with user's actual location
-  static const _defaultLat = 20.6597;
-  static const _defaultLng = -103.3496;
+  @override
+  void initState() {
+    super.initState();
+    _fetchLocation();
+  }
+
+  Future<void> _fetchLocation() async {
+    final location = await LocationService.getCurrentLocation();
+    if (!mounted) return;
+    setState(() {
+      _userLocation = location;
+      _locationLoading = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final salonsAsync = ref.watch(
-      _nearbySalonsProvider((lat: _defaultLat, lng: _defaultLng)),
-    );
+    final salonsAsync = _userLocation != null
+        ? ref.watch(
+            _nearbySalonsProvider((lat: _userLocation!.lat, lng: _userLocation!.lng)),
+          )
+        : null;
 
     return Scaffold(
       backgroundColor: _waGreen,
@@ -128,7 +145,63 @@ class _InviteSalonScreenState extends ConsumerState<InviteSalonScreen> {
                   top: Radius.circular(BeautyCitaTheme.radiusLarge),
                 ),
               ),
-              child: salonsAsync.when(
+              child: _locationLoading
+                  ? Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const CircularProgressIndicator(color: _waLightGreen),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Obteniendo tu ubicacion...',
+                            style: GoogleFonts.nunito(
+                              fontSize: 14,
+                              color: BeautyCitaTheme.textLight,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : _userLocation == null
+                      ? Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(BeautyCitaTheme.spaceLG),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.location_off_rounded,
+                                    size: 48, color: _waGreen),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'Activa el GPS para ver estilistas cerca de ti',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                    color: BeautyCitaTheme.textDark,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 16),
+                                ElevatedButton.icon(
+                                  onPressed: () {
+                                    setState(() => _locationLoading = true);
+                                    _fetchLocation();
+                                  },
+                                  icon: const Icon(Icons.refresh, size: 18),
+                                  label: const Text('Reintentar'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: _waLightGreen,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      : salonsAsync!.when(
                 data: (salons) {
                   final filtered = _searchQuery.isEmpty
                       ? salons
@@ -220,8 +293,8 @@ class _InviteSalonScreenState extends ConsumerState<InviteSalonScreen> {
       final message = Uri.encodeComponent(
         'Hola! Soy clienta tuya y me encantaría poder reservar '
         'contigo desde BeautyCita. Es gratis para ti y te llegan '
-        'clientes nuevos. Regístrate en 60 seg: '
-        'https://beautycita.com/registro?ref=${salon.id}',
+        'clientes nuevos. Registrate en 60 seg: '
+        'https://beautycita.com/supabase/functions/v1/salon-registro?ref=${salon.id}',
       );
       final waUrl = Uri.parse('https://wa.me/${phone.replaceAll('+', '')}?text=$message');
       launchUrl(waUrl, mode: LaunchMode.externalApplication);
