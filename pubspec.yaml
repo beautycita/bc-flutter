@@ -24,6 +24,7 @@ dependencies:
   flutter_dotenv: ^5.2.1
   table_calendar: ^3.2.0
   flutter_animate: ^4.5.2
+  geolocator: ^14.0.2
 
 dev_dependencies:
   flutter_test:
