@@ -6,6 +6,24 @@ import '../models/category.dart';
 import '../config/theme.dart';
 import '../config/constants.dart';
 import '../providers/booking_flow_provider.dart';
+import '../widgets/cinematic_question_text.dart';
+
+String _getCategoryQuestion(String categoryId) {
+  switch (categoryId) {
+    case 'nails':
+      return 'Manicure, pedicure o algo mas?';
+    case 'hair':
+      return 'Corte, color o tratamiento?';
+    case 'skin':
+      return 'Facial, limpieza o tratamiento?';
+    case 'lashes':
+      return 'Extensiones, lifting o tinte?';
+    case 'body':
+      return 'Masaje, depilacion o tratamiento?';
+    default:
+      return 'Que servicio te interesa?';
+  }
+}
 
 class SubcategorySheet extends StatelessWidget {
   final ServiceCategory category;
@@ -83,30 +101,13 @@ class SubcategorySheet extends StatelessWidget {
                     ),
                     const SizedBox(width: 16),
 
-                    // Title
+                    // Cinematic question text
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            category.nameEs,
-                            style: GoogleFonts.poppins(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w700,
-                              color: category.color,
-                              height: 1.2,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'Elige tu servicio',
-                            style: GoogleFonts.nunito(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              color: BeautyCitaTheme.textLight,
-                            ),
-                          ),
-                        ],
+                      child: CinematicQuestionText(
+                        text: _getCategoryQuestion(category.id),
+                        primaryColor: category.color,
+                        accentColor: BeautyCitaTheme.secondaryGold,
+                        fontSize: 22,
                       ),
                     ),
                   ],

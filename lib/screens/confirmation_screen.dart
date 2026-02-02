@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../config/theme.dart';
 import '../models/curate_result.dart';
 import '../providers/booking_flow_provider.dart';
+import '../widgets/cinematic_question_text.dart';
 
 class ConfirmationScreen extends ConsumerWidget {
   const ConfirmationScreen({super.key});
@@ -29,19 +30,18 @@ class ConfirmationScreen extends ConsumerWidget {
               color: BeautyCitaTheme.textDark),
           onPressed: () => notifier.goBack(),
         ),
-        title: Text(
-          'Resumen de Reserva',
-          style: GoogleFonts.poppins(
-            fontWeight: FontWeight.w600,
-            color: BeautyCitaTheme.textDark,
-            fontSize: 18,
-          ),
-        ),
+        title: const SizedBox.shrink(),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(BeautyCitaTheme.spaceLG),
         child: Column(
           children: [
+            const CinematicQuestionText(
+              text: 'Confirma tu cita',
+              fontSize: 24,
+              accentColor: BeautyCitaTheme.secondaryGold,
+            ),
+            const SizedBox(height: BeautyCitaTheme.spaceMD),
             _SummaryCard(result: result),
             const SizedBox(height: BeautyCitaTheme.spaceMD),
             _TransportCard(result: result),

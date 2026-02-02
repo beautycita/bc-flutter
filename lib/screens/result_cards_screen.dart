@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../config/theme.dart';
 import '../models/curate_result.dart';
 import '../providers/booking_flow_provider.dart';
+import '../widgets/cinematic_question_text.dart';
 import 'time_override_sheet.dart';
 
 class ResultCardsScreen extends ConsumerStatefulWidget {
@@ -163,9 +164,22 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
           ),
         ),
       ),
-      body: remainingCards == 0
-          ? _buildNoMoreCards()
-          : _buildCardStack(results, _currentIndex),
+      body: Column(
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
+            child: CinematicQuestionText(
+              text: 'Elige tu mejor opcion',
+              fontSize: 24,
+            ),
+          ),
+          Expanded(
+            child: remainingCards == 0
+                ? _buildNoMoreCards()
+                : _buildCardStack(results, _currentIndex),
+          ),
+        ],
+      ),
     );
   }
 

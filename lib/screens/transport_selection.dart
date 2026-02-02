@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../config/theme.dart';
 import '../models/curate_result.dart';
 import '../providers/booking_flow_provider.dart';
+import '../widgets/cinematic_question_text.dart';
 
 class TransportSelection extends ConsumerWidget {
   const TransportSelection({super.key});
@@ -40,20 +41,15 @@ class TransportSelection extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Como llegas?',
-                style: GoogleFonts.poppins(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w700,
-                  color: BeautyCitaTheme.textDark,
-                  height: 1.2,
-                ),
+              const CinematicQuestionText(
+                text: 'Como llegas a tu cita?',
+                fontSize: 26,
               ),
               const SizedBox(height: 8),
               Text(
-                'Para tu cita de $serviceName',
+                serviceName,
                 style: GoogleFonts.nunito(
-                  fontSize: 16,
+                  fontSize: 14,
                   fontWeight: FontWeight.w500,
                   color: BeautyCitaTheme.textLight,
                 ),

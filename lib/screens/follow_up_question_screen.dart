@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../config/theme.dart';
 import '../models/follow_up_question.dart';
 import '../providers/booking_flow_provider.dart';
+import '../widgets/cinematic_question_text.dart';
 
 class FollowUpQuestionScreen extends ConsumerWidget {
   const FollowUpQuestionScreen({super.key});
@@ -59,14 +60,9 @@ class FollowUpQuestionScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                question.questionTextEs,
-                style: GoogleFonts.poppins(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w600,
-                  color: BeautyCitaTheme.textDark,
-                  height: 1.3,
-                ),
+              CinematicQuestionText(
+                text: question.questionTextEs,
+                fontSize: 26,
               ),
               const SizedBox(height: BeautyCitaTheme.spaceXL),
               Expanded(
