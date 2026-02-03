@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'supabase_client.dart';
 import '../models/curate_result.dart';
 
@@ -15,6 +16,9 @@ class CurateService {
       'curate-results',
       body: request.toJson(),
     );
+
+    debugPrint('[CURATE-SVC] status: ${response.status}, data type: ${response.data.runtimeType}');
+    debugPrint('[CURATE-SVC] data: ${response.data}');
 
     if (response.status != 200) {
       final errorBody = response.data;

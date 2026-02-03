@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/curate_result.dart';
 import '../models/follow_up_question.dart';
@@ -250,13 +251,19 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
         overrideWindow: state.overrideWindow,
       );
 
+      debugPrint('[CURATE] request: ${request.toJson()}');
+
       final response = await _curateService.curateResults(request);
+
+      debugPrint('[CURATE] results count: ${response.results.length}');
 
       state = state.copyWith(
         step: BookingFlowStep.results,
         curateResponse: response,
       );
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint('[CURATE] ERROR: $e');
+      debugPrint('[CURATE] STACK: $st');
       state = state.copyWith(
         step: BookingFlowStep.error,
         error: e.toString(),
