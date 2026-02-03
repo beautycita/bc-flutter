@@ -242,6 +242,47 @@ class AphroditeService {
     );
   }
 
+  /// Inserts a local message into a thread (no edge function call).
+  /// Used for onboarding flow messages that are client-side only.
+  Future<ChatMessage> insertLocalMessage({
+    required String threadId,
+    required String senderType,
+    String contentType = 'text',
+    String? textContent,
+    Map<String, dynamic> metadata = const {},
+  }) async {
+    final client = SupabaseClientService.client;
+    final now = DateTime.now().toUtc();
+    final msgId = _uuid.v4();
+
+    await client.from('chat_messages').insert({
+      'id': msgId,
+      'thread_id': threadId,
+      'sender_type': senderType,
+      'content_type': contentType,
+      'text_content': textContent,
+      'metadata': metadata,
+      'created_at': now.toIso8601String(),
+    });
+
+    if (textContent != null) {
+      await client.from('chat_threads').update({
+        'last_message_text': textContent,
+        'last_message_at': now.toIso8601String(),
+      }).eq('id', threadId);
+    }
+
+    return ChatMessage(
+      id: msgId,
+      threadId: threadId,
+      senderType: senderType,
+      contentType: contentType,
+      textContent: textContent,
+      metadata: metadata,
+      createdAt: now,
+    );
+  }
+
   /// Gets or creates the Aphrodite thread for the current user.
   Future<ChatThread> getOrCreateAphroditeThread() async {
     final client = SupabaseClientService.client;

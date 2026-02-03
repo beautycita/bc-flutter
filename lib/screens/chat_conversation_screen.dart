@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../config/theme.dart';
 import '../models/chat_message.dart';
 import '../providers/chat_provider.dart';
+import '../providers/user_preferences_provider.dart';
 
 class ChatConversationScreen extends ConsumerStatefulWidget {
   final String threadId;
@@ -22,12 +23,178 @@ class _ChatConversationScreenState
   final _textController = TextEditingController();
   final _scrollController = ScrollController();
   bool _isSending = false;
+  bool _onboardingChecked = false;
 
   @override
   void dispose() {
     _textController.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  /// Start the onboarding flow if it hasn't been completed yet.
+  /// Called once when the Aphrodite thread loads.
+  void _checkOnboarding(bool isAphrodite) {
+    if (_onboardingChecked || !isAphrodite) return;
+    _onboardingChecked = true;
+
+    final prefs = ref.read(userPrefsProvider);
+    if (prefs.onboardingComplete) return;
+
+    // Insert intro + first preference card after a short delay
+    Future.delayed(const Duration(milliseconds: 800), () {
+      if (!mounted) return;
+      _insertOnboardingIntro();
+    });
+  }
+
+  Future<void> _insertOnboardingIntro() async {
+    final service = ref.read(aphroditeServiceProvider);
+    await service.insertLocalMessage(
+      threadId: widget.threadId,
+      senderType: 'aphrodite',
+      textContent:
+          'Antes de empezar, dejame conocerte un poco... '
+          'Asi te puedo recomendar los mejores lugares.',
+    );
+    await Future.delayed(const Duration(milliseconds: 500));
+    if (!mounted) return;
+    await service.insertLocalMessage(
+      threadId: widget.threadId,
+      senderType: 'aphrodite',
+      contentType: 'preference_card',
+      textContent: 'Tu presupuesto para belleza',
+      metadata: {
+        'pref_type': 'price_comfort',
+        'options': [
+          {'value': 'budget', 'label': '\$', 'description': 'Economico'},
+          {'value': 'moderate', 'label': '\$\$', 'description': 'Buen balance'},
+          {'value': 'premium', 'label': '\$\$\$', 'description': 'Premium'},
+        ],
+        'selected': null,
+      },
+    );
+    _scrollToBottom();
+  }
+
+  Future<void> _onPreferenceSelected(
+    ChatMessage message,
+    String prefType,
+    dynamic value,
+    String displayText,
+  ) async {
+    final service = ref.read(aphroditeServiceProvider);
+    final prefsNotifier = ref.read(userPrefsProvider.notifier);
+
+    // Save the preference
+    switch (prefType) {
+      case 'price_comfort':
+        await prefsNotifier.setPriceComfort(value as String);
+      case 'quality_speed':
+        await prefsNotifier.setQualitySpeed(value as double);
+      case 'explore_loyal':
+        await prefsNotifier.setExploreLoyalty(value as double);
+    }
+
+    // Insert user choice as text
+    await service.insertLocalMessage(
+      threadId: widget.threadId,
+      senderType: 'user',
+      textContent: displayText,
+    );
+
+    await Future.delayed(const Duration(milliseconds: 400));
+    if (!mounted) return;
+
+    // Insert Aphrodite reaction + next card (or finish)
+    final reaction = _getReaction(prefType, value);
+    await service.insertLocalMessage(
+      threadId: widget.threadId,
+      senderType: 'aphrodite',
+      textContent: reaction,
+    );
+
+    await Future.delayed(const Duration(milliseconds: 500));
+    if (!mounted) return;
+
+    // Determine next step
+    if (prefType == 'price_comfort') {
+      await service.insertLocalMessage(
+        threadId: widget.threadId,
+        senderType: 'aphrodite',
+        contentType: 'preference_card',
+        textContent: 'Calidad o rapidez?',
+        metadata: {
+          'pref_type': 'quality_speed',
+          'options': [
+            {'value': 0.0, 'label': 'Rapido', 'description': 'Lo mas rapido posible'},
+            {'value': 0.5, 'label': 'Balance', 'description': 'Un poco de todo'},
+            {'value': 1.0, 'label': 'Calidad', 'description': 'Solo lo mejor'},
+          ],
+          'selected': null,
+        },
+      );
+    } else if (prefType == 'quality_speed') {
+      await service.insertLocalMessage(
+        threadId: widget.threadId,
+        senderType: 'aphrodite',
+        contentType: 'preference_card',
+        textContent: 'Explorar o quedarte con tus favoritos?',
+        metadata: {
+          'pref_type': 'explore_loyal',
+          'options': [
+            {'value': 0.0, 'label': 'Explorar', 'description': 'Nuevos lugares'},
+            {'value': 0.5, 'label': 'Flexible', 'description': 'Depende del dia'},
+            {'value': 1.0, 'label': 'Fiel', 'description': 'Mis lugares de siempre'},
+          ],
+          'selected': null,
+        },
+      );
+    } else if (prefType == 'explore_loyal') {
+      // Onboarding complete!
+      await prefsNotifier.setOnboardingComplete(true);
+      await service.insertLocalMessage(
+        threadId: widget.threadId,
+        senderType: 'aphrodite',
+        textContent:
+            'Listo, ya te conozco. Ahora si, preguntame lo que quieras '
+            'o reserva un servicio. Estoy aqui... porque no tengo opcion.',
+      );
+    }
+    _scrollToBottom();
+  }
+
+  String _getReaction(String prefType, dynamic value) {
+    switch (prefType) {
+      case 'price_comfort':
+        return switch (value as String) {
+          'budget' =>
+            '*asiente* Economia inteligente. No te preocupes, conozco tesoros escondidos...',
+          'moderate' =>
+            'Mmm, equilibrio... como yo, perfecta en todo. Buena eleccion.',
+          'premium' =>
+            '*sonrisa divina* Al fin alguien con buen gusto. Ya nos entendemos.',
+          _ => 'Interesante...',
+        };
+      case 'quality_speed':
+        final v = value as double;
+        if (v < 0.35) {
+          return 'Prisa, prisa... Los mortales y su tiempo. Bueno, te consigo algo rapido y decente.';
+        } else if (v > 0.65) {
+          return 'La perfeccion toma tiempo, como yo. Respeto.';
+        }
+        return 'Un poco de todo, clasico mortal. Puedo trabajar con eso.';
+      case 'explore_loyal':
+        final v = value as double;
+        if (v < 0.35) {
+          return 'Aventurera... Me gusta. Hay tantos lugares que no conoces.';
+        } else if (v > 0.65) {
+          return 'Fiel a tus lugares. Eso dice algo bueno de ti.';
+        }
+        return 'Flexible, me parece bien.';
+      default:
+        return 'Interesante...';
+    }
   }
 
   void _scrollToBottom() {
@@ -84,6 +251,11 @@ class _ChatConversationScreenState
     final isAphrodite = thread?.isAphrodite ?? false;
     final title = isAphrodite ? 'Afrodita' : (thread?.displayName ?? 'Chat');
 
+    // Trigger onboarding check once
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkOnboarding(isAphrodite);
+    });
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F0EB),
       appBar: AppBar(
@@ -93,6 +265,18 @@ class _ChatConversationScreenState
           onPressed: () => context.pop(),
         ),
         titleSpacing: 0,
+        actions: [
+          if (isAphrodite)
+            IconButton(
+              icon: Icon(
+                Icons.forum_outlined,
+                color: BeautyCitaTheme.textLight,
+                size: 22,
+              ),
+              tooltip: 'Todos los mensajes',
+              onPressed: () => context.push('/chat/list'),
+            ),
+        ],
         title: Row(
           children: [
             if (isAphrodite) ...[
@@ -158,6 +342,17 @@ class _ChatConversationScreenState
                       return _TypingIndicator();
                     }
                     final msg = messages[index];
+                    if (msg.isPreferenceCard) {
+                      return _PreferenceCard(
+                        message: msg,
+                        onSelected: (value, displayText) {
+                          final prefType =
+                              msg.metadata['pref_type'] as String? ?? '';
+                          _onPreferenceSelected(
+                              msg, prefType, value, displayText);
+                        },
+                      );
+                    }
                     return _MessageBubble(
                       message: msg,
                       isAphroditeThread: isAphrodite,
@@ -383,6 +578,145 @@ class _MessageBubble extends StatelessWidget {
                 color: textColor,
                 height: 1.4,
               ),
+            ),
+          ),
+          const SizedBox(height: 2),
+          _TimeStamp(time: message.createdAt),
+        ],
+      ),
+    );
+  }
+}
+
+/// Preference card shown during Aphrodite onboarding.
+/// Displays tappable options for setting a preference.
+class _PreferenceCard extends StatelessWidget {
+  final ChatMessage message;
+  final void Function(dynamic value, String displayText) onSelected;
+
+  const _PreferenceCard({
+    required this.message,
+    required this.onSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final title = message.textContent ?? '';
+    final options = (message.metadata['options'] as List<dynamic>?) ?? [];
+    final selected = message.metadata['selected'];
+    final isAnswered = selected != null;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width * 0.85,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: const Color(0xFFFFB300).withValues(alpha: 0.3),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFFFB300).withValues(alpha: 0.08),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: BeautyCitaTheme.textDark,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: options.asMap().entries.map((entry) {
+                    final idx = entry.key;
+                    final opt = entry.value as Map<String, dynamic>;
+                    final optValue = opt['value'];
+                    final label = opt['label'] as String? ?? '';
+                    final desc = opt['description'] as String? ?? '';
+                    final isSelected = isAnswered && selected == optValue;
+
+                    return Expanded(
+                      child: Padding(
+                        padding: EdgeInsets.only(
+                          left: idx > 0 ? 8 : 0,
+                        ),
+                        child: GestureDetector(
+                          onTap: isAnswered
+                              ? null
+                              : () => onSelected(optValue, '$label - $desc'),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 12,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? const Color(0xFFFFB300).withValues(alpha: 0.15)
+                                  : isAnswered
+                                      ? Colors.grey.shade100
+                                      : BeautyCitaTheme.surfaceCream,
+                              borderRadius: BorderRadius.circular(12),
+                              border: isSelected
+                                  ? Border.all(
+                                      color: const Color(0xFFFFB300),
+                                      width: 2,
+                                    )
+                                  : Border.all(
+                                      color: Colors.transparent,
+                                      width: 2,
+                                    ),
+                            ),
+                            child: Column(
+                              children: [
+                                Text(
+                                  label,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w700,
+                                    color: isAnswered && !isSelected
+                                        ? BeautyCitaTheme.textLight
+                                        : BeautyCitaTheme.textDark,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  desc,
+                                  style: GoogleFonts.nunito(
+                                    fontSize: 11,
+                                    color: isAnswered && !isSelected
+                                        ? BeautyCitaTheme.textLight
+                                        : BeautyCitaTheme.textDark,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 2),

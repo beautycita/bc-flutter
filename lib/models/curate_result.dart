@@ -7,6 +7,9 @@ class CurateRequest {
   final String transportMode; // "car" | "uber" | "transit"
   final Map<String, String>? followUpAnswers;
   final OverrideWindow? overrideWindow;
+  final String? priceComfort;
+  final double? qualitySpeed;
+  final double? exploreLoyalty;
 
   const CurateRequest({
     required this.serviceType,
@@ -15,6 +18,9 @@ class CurateRequest {
     required this.transportMode,
     this.followUpAnswers,
     this.overrideWindow,
+    this.priceComfort,
+    this.qualitySpeed,
+    this.exploreLoyalty,
   });
 
   Map<String, dynamic> toJson() => {
@@ -24,6 +30,9 @@ class CurateRequest {
         'transport_mode': transportMode,
         if (followUpAnswers != null) 'follow_up_answers': followUpAnswers,
         if (overrideWindow != null) 'override_window': overrideWindow!.toJson(),
+        if (priceComfort != null) 'price_comfort': priceComfort,
+        if (qualitySpeed != null) 'quality_speed': qualitySpeed,
+        if (exploreLoyalty != null) 'explore_loyalty': exploreLoyalty,
       };
 }
 

@@ -60,4 +60,7 @@ class ChatMessage {
 
   /// Whether this is a try-on result
   bool get isTryOnResult => contentType == 'tryon_result';
+
+  /// Whether this is a preference card for onboarding
+  bool get isPreferenceCard => contentType == 'preference_card';
 }

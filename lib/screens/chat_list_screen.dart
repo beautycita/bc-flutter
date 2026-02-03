@@ -38,7 +38,7 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () => context.pop(),
+          onPressed: () => context.go('/home'),
         ),
         actions: [
           IconButton(
