@@ -383,7 +383,7 @@ final bookingFlowProvider =
   final followUpService = ref.watch(followUpServiceProvider);
   final bookingRepo = ref.watch(bookingRepositoryProvider);
   final uberService = ref.watch(uberServiceProvider);
-  final userPrefs = ref.watch(userPrefsProvider);
+  final userPrefs = ref.read(userPrefsProvider);
   return BookingFlowNotifier(
     curateService,
     followUpService,

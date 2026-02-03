@@ -429,72 +429,76 @@ class SettingsScreen extends ConsumerWidget {
 
   // ── Price comfort bottom sheet ──
   void _showPriceSheet(BuildContext context, WidgetRef ref, String current) {
+    String selected = current;
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Tu presupuesto para belleza',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            void pick(String value) {
+              setSheetState(() => selected = value);
+              ref.read(userPrefsProvider.notifier).setPriceComfort(value);
+              Future.delayed(const Duration(milliseconds: 350), () {
+                if (ctx.mounted) Navigator.pop(ctx);
+              });
+            }
+
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
                       ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Tu presupuesto para belleza',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                    const SizedBox(height: 16),
+                    _TransportOption(
+                      emoji: '\$',
+                      label: 'Economico',
+                      subtitle: 'Lo mejor al mejor precio',
+                      selected: selected == 'budget',
+                      onTap: () => pick('budget'),
+                    ),
+                    const SizedBox(height: 8),
+                    _TransportOption(
+                      emoji: '\$\$',
+                      label: 'Moderado',
+                      subtitle: 'Buen balance calidad-precio',
+                      selected: selected == 'moderate',
+                      onTap: () => pick('moderate'),
+                    ),
+                    const SizedBox(height: 8),
+                    _TransportOption(
+                      emoji: '\$\$\$',
+                      label: 'Premium',
+                      subtitle: 'La mejor experiencia sin importar el costo',
+                      selected: selected == 'premium',
+                      onTap: () => pick('premium'),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 16),
-                _TransportOption(
-                  emoji: '\$',
-                  label: 'Economico',
-                  subtitle: 'Lo mejor al mejor precio',
-                  selected: current == 'budget',
-                  onTap: () {
-                    ref.read(userPrefsProvider.notifier).setPriceComfort('budget');
-                    Navigator.pop(ctx);
-                  },
-                ),
-                const SizedBox(height: 8),
-                _TransportOption(
-                  emoji: '\$\$',
-                  label: 'Moderado',
-                  subtitle: 'Buen balance calidad-precio',
-                  selected: current == 'moderate',
-                  onTap: () {
-                    ref.read(userPrefsProvider.notifier).setPriceComfort('moderate');
-                    Navigator.pop(ctx);
-                  },
-                ),
-                const SizedBox(height: 8),
-                _TransportOption(
-                  emoji: '\$\$\$',
-                  label: 'Premium',
-                  subtitle: 'La mejor experiencia sin importar el costo',
-                  selected: current == 'premium',
-                  onTap: () {
-                    ref.read(userPrefsProvider.notifier).setPriceComfort('premium');
-                    Navigator.pop(ctx);
-                  },
-                ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
     );

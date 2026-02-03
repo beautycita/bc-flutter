@@ -54,3 +54,4 @@ keys/
 .env
 .env.*
 .keystore-password
+.worktrees/
