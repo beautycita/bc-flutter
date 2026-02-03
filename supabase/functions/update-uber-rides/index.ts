@@ -10,7 +10,10 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const UBER_API_BASE = "https://api.uber.com";
+const UBER_SANDBOX = Deno.env.get("UBER_SANDBOX") === "true";
+const UBER_API_BASE = UBER_SANDBOX
+  ? "https://sandbox-api.uber.com"
+  : "https://api.uber.com";
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -281,6 +284,100 @@ async function updateReturnDestination(
 }
 
 // ---------------------------------------------------------------------------
+// Update outbound pickup
+// ---------------------------------------------------------------------------
+
+async function updateOutboundPickup(
+  supabase: ReturnType<typeof createClient>,
+  accessToken: string | null,
+  appointmentId: string,
+  newLat: number,
+  newLng: number,
+  newAddress: string | null,
+) {
+  const { data: ride } = await supabase
+    .from("uber_scheduled_rides")
+    .select("*")
+    .eq("appointment_id", appointmentId)
+    .eq("leg", "outbound")
+    .neq("status", "cancelled")
+    .neq("status", "completed")
+    .single();
+
+  if (!ride) {
+    return { error: "No active outbound ride found" };
+  }
+
+  // Update via Uber API — cancel and re-create with new pickup
+  if (ride.uber_request_id && accessToken) {
+    try {
+      await uberFetch(
+        `/v1.2/requests/${ride.uber_request_id}`,
+        accessToken,
+        { method: "DELETE" },
+      );
+
+      const newResp = await uberFetch("/v1.2/requests", accessToken, {
+        method: "POST",
+        body: JSON.stringify({
+          start_latitude: newLat,
+          start_longitude: newLng,
+          end_latitude: ride.dropoff_lat,
+          end_longitude: ride.dropoff_lng,
+          scheduled_at: ride.scheduled_pickup_at,
+        }),
+      });
+
+      if (newResp.ok) {
+        const newData = await newResp.json();
+        await supabase
+          .from("uber_scheduled_rides")
+          .update({
+            uber_request_id: newData.request_id,
+            pickup_lat: newLat,
+            pickup_lng: newLng,
+            pickup_address: newAddress,
+          })
+          .eq("id", ride.id);
+      } else {
+        console.error("Failed to re-create outbound ride:", await newResp.text());
+        // Still update coordinates locally — don't cancel the ride
+        await supabase
+          .from("uber_scheduled_rides")
+          .update({
+            pickup_lat: newLat,
+            pickup_lng: newLng,
+            pickup_address: newAddress,
+          })
+          .eq("id", ride.id);
+      }
+    } catch (err) {
+      console.error("Uber pickup update error:", err);
+      // Update coordinates even if API failed
+      await supabase
+        .from("uber_scheduled_rides")
+        .update({
+          pickup_lat: newLat,
+          pickup_lng: newLng,
+          pickup_address: newAddress,
+        })
+        .eq("id", ride.id);
+    }
+  } else {
+    await supabase
+      .from("uber_scheduled_rides")
+      .update({
+        pickup_lat: newLat,
+        pickup_lng: newLng,
+        pickup_address: newAddress,
+      })
+      .eq("id", ride.id);
+  }
+
+  return { updated: true };
+}
+
+// ---------------------------------------------------------------------------
 // Get ride status
 // ---------------------------------------------------------------------------
 
@@ -387,11 +484,31 @@ Deno.serve(async (req: Request) => {
     const action: string = body.action;
     const appointmentId: string = body.appointment_id;
 
+    const accessToken = await getUberAccessToken(supabase, user.id);
+
+    // 'places' action doesn't require appointment_id
+    if (action === "places") {
+      if (!accessToken) {
+        return json({ places: [] });
+      }
+      const places = [];
+      for (const placeId of ["home", "work"]) {
+        try {
+          const resp = await uberFetch(`/v1.2/places/${placeId}`, accessToken);
+          if (resp.ok) {
+            const data = await resp.json();
+            if (data.address) {
+              places.push({ id: placeId, address: data.address });
+            }
+          }
+        } catch (_) {}
+      }
+      return json({ places });
+    }
+
     if (!appointmentId) {
       return json({ error: "appointment_id required" }, 400);
     }
-
-    const accessToken = await getUberAccessToken(supabase, user.id);
 
     switch (action) {
       case "cancel": {
@@ -427,6 +544,21 @@ Deno.serve(async (req: Request) => {
           body.return_lat,
           body.return_lng,
           body.return_address ?? null,
+        );
+        return json(result);
+      }
+
+      case "update_pickup": {
+        if (!body.pickup_lat || !body.pickup_lng) {
+          return json({ error: "pickup_lat and pickup_lng required" }, 400);
+        }
+        const result = await updateOutboundPickup(
+          supabase,
+          accessToken,
+          appointmentId,
+          body.pickup_lat,
+          body.pickup_lng,
+          body.pickup_address ?? null,
         );
         return json(result);
       }

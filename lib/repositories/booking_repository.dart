@@ -1,4 +1,5 @@
 import 'package:beautycita/models/booking.dart';
+import 'package:beautycita/models/uber_ride.dart';
 import 'package:beautycita/services/supabase_client.dart';
 
 class BookingRepository {
@@ -102,5 +103,46 @@ class BookingRepository {
         .from('appointments')
         .update({'status': status})
         .eq('id', bookingId);
+  }
+
+  /// Get a single booking by ID with joined business name.
+  Future<Booking?> getBookingById(String id) async {
+    final response = await SupabaseClientService.client
+        .from('appointments')
+        .select('*, businesses(name)')
+        .eq('id', id)
+        .maybeSingle();
+
+    if (response == null) return null;
+    return Booking.fromJson(response);
+  }
+
+  /// Update the notes field on a booking.
+  Future<void> updateNotes(String id, String notes) async {
+    await SupabaseClientService.client
+        .from('appointments')
+        .update({'notes': notes})
+        .eq('id', id);
+  }
+
+  /// Get Uber rides for an appointment, ordered by leg.
+  Future<List<UberRide>> getUberRides(String appointmentId) async {
+    final response = await SupabaseClientService.client
+        .from('uber_scheduled_rides')
+        .select()
+        .eq('appointment_id', appointmentId)
+        .order('leg');
+
+    return (response as List)
+        .map((json) => UberRide.fromJson(json as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// Update the transport_mode field on an appointment.
+  Future<void> updateTransportMode(String id, String mode) async {
+    await SupabaseClientService.client
+        .from('appointments')
+        .update({'transport_mode': mode})
+        .eq('id', id);
   }
 }

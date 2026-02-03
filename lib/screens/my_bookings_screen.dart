@@ -5,6 +5,7 @@ import 'package:beautycita/config/theme.dart';
 import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/models/booking.dart';
 import 'package:beautycita/providers/booking_provider.dart';
+import 'package:go_router/go_router.dart';
 
 /// Filter tabs for the user's bookings list.
 enum _BookingTab { proximas, pasadas, canceladas }
@@ -333,10 +334,16 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
     final canCancel =
         booking.status == 'pending' || booking.status == 'confirmed';
 
-    return Container(
+    return GestureDetector(
+      onTap: () => context.push('/appointment/${booking.id}'),
+      child: Container(
       decoration: BoxDecoration(
         color: BeautyCitaTheme.surfaceCream,
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+        border: Border.all(
+          color: BeautyCitaTheme.dividerLight,
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -451,6 +458,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
           ],
         ),
       ),
+    ),
     );
   }
 

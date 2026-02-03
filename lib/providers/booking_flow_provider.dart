@@ -6,6 +6,7 @@ import '../models/follow_up_question.dart';
 import '../repositories/booking_repository.dart';
 import '../services/curate_service.dart';
 import '../services/follow_up_service.dart';
+import '../services/places_service.dart';
 import '../services/uber_service.dart';
 import 'package:beautycita/services/supabase_client.dart';
 import 'user_preferences_provider.dart';
@@ -17,10 +18,14 @@ import 'user_preferences_provider.dart';
 final curateServiceProvider = Provider((ref) => CurateService());
 final followUpServiceProvider = Provider((ref) => FollowUpService());
 final bookingRepositoryProvider = Provider((ref) => BookingRepository());
+final placesServiceProvider = Provider<PlacesService>((ref) {
+  return PlacesService();
+});
 final uberServiceProvider = Provider((ref) {
   final clientId = dotenv.env['UBER_CLIENT_ID'] ?? '';
   final redirectUri = dotenv.env['UBER_REDIRECT_URI'] ?? 'beautycita://uber-callback';
-  return UberService(clientId: clientId, redirectUri: redirectUri);
+  final sandbox = dotenv.env['UBER_SANDBOX'] == 'true';
+  return UberService(clientId: clientId, redirectUri: redirectUri, sandbox: sandbox);
 });
 
 // ---------------------------------------------------------------------------
