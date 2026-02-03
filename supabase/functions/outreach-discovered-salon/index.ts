@@ -173,7 +173,7 @@ serve(async (req: Request) => {
 
         if (salon && canSendOutreach(salon)) {
           // Queue outreach (in production, this would call Twilio)
-          const registrationLink = `https://beautycita.com/registro?ref=${discovered_salon_id}`;
+          const registrationLink = `https://beautycita.com/supabase/functions/v1/salon-registro?ref=${discovered_salon_id}`;
           const message = getOutreachMessage(interestCount, salon.name, registrationLink);
 
           // Update outreach tracking

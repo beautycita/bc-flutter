@@ -16,7 +16,7 @@ class UberService {
   });
 
   /// Build the OAuth authorization URL for Uber login.
-  Uri buildAuthUrl({String scope = 'ride_widgets request'}) {
+  Uri buildAuthUrl({String scope = 'profile request'}) {
     return Uri.parse(_uberAuthUrl).replace(queryParameters: {
       'response_type': 'code',
       'client_id': clientId,
@@ -83,6 +83,67 @@ class UberService {
     }
   }
 
+  /// Schedule outbound + return Uber rides for an appointment.
+  /// Returns the scheduling result or null on failure.
+  /// If user's Uber is not linked, returns a result with scheduled=false.
+  Future<UberScheduleResult> scheduleRides({
+    required String appointmentId,
+    required double pickupLat,
+    required double pickupLng,
+    required double salonLat,
+    required double salonLng,
+    String? salonAddress,
+    required String appointmentAt,
+    required int durationMinutes,
+  }) async {
+    try {
+      final client = SupabaseClientService.client;
+      final response = await client.functions.invoke(
+        'schedule-uber',
+        body: {
+          'action': 'schedule',
+          'appointment_id': appointmentId,
+          'pickup_lat': pickupLat,
+          'pickup_lng': pickupLng,
+          'salon_lat': salonLat,
+          'salon_lng': salonLng,
+          'salon_address': salonAddress,
+          'appointment_at': appointmentAt,
+          'duration_minutes': durationMinutes,
+        },
+      );
+
+      if (response.status == 401) {
+        // Uber not linked or token expired
+        return const UberScheduleResult(
+          scheduled: false,
+          reason: 'uber_not_linked',
+        );
+      }
+
+      if (response.status != 200) {
+        debugPrint('schedule-uber failed: ${response.status}');
+        return const UberScheduleResult(
+          scheduled: false,
+          reason: 'api_error',
+        );
+      }
+
+      final data = jsonDecode(response.data as String);
+      return UberScheduleResult(
+        scheduled: data['scheduled'] == true,
+        outboundRequestId: data['outbound']?['uber_request_id'] as String?,
+        returnRequestId: data['return_ride']?['uber_request_id'] as String?,
+      );
+    } catch (e) {
+      debugPrint('Uber schedule error: $e');
+      return UberScheduleResult(
+        scheduled: false,
+        reason: e.toString(),
+      );
+    }
+  }
+
   /// Get a fare estimate for a ride (calls Uber Estimates API via edge function).
   Future<FareEstimate?> getFareEstimate({
     required double startLat,
@@ -138,4 +199,18 @@ class FareEstimate {
       distanceKm: (json['distance_km'] as num?)?.toDouble() ?? 0,
     );
   }
+}
+
+class UberScheduleResult {
+  final bool scheduled;
+  final String? outboundRequestId;
+  final String? returnRequestId;
+  final String? reason;
+
+  const UberScheduleResult({
+    required this.scheduled,
+    this.outboundRequestId,
+    this.returnRequestId,
+    this.reason,
+  });
 }

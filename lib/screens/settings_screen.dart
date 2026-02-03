@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:beautycita/config/theme.dart';
 import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/providers/auth_provider.dart';
+import 'package:beautycita/providers/uber_provider.dart';
+import 'package:beautycita/providers/user_preferences_provider.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -11,7 +13,23 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authStateProvider);
+    final uberState = ref.watch(uberLinkProvider);
+    final prefsState = ref.watch(userPrefsProvider);
     final textTheme = Theme.of(context).textTheme;
+
+    // Show snackbar when Uber just linked
+    ref.listen<UberLinkState>(uberLinkProvider, (prev, next) {
+      if (next.justLinked && !(prev?.justLinked ?? false)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Uber vinculado exitosamente'),
+            backgroundColor: Colors.green.shade600,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    });
 
     return Scaffold(
       backgroundColor: BeautyCitaTheme.backgroundWhite,
@@ -22,7 +40,7 @@ class SettingsScreen extends ConsumerWidget {
           vertical: BeautyCitaTheme.spaceMD,
         ),
         children: [
-          // User profile card
+          // ── Profile Card ──
           Container(
             padding: const EdgeInsets.all(AppConstants.paddingLG),
             decoration: BoxDecoration(
@@ -68,8 +86,30 @@ class SettingsScreen extends ConsumerWidget {
 
           const SizedBox(height: BeautyCitaTheme.spaceLG),
 
-          // Section: General
-          _SectionHeader(label: 'General'),
+          // ── Section: Transporte ──
+          const _SectionHeader(label: 'Transporte'),
+          const SizedBox(height: BeautyCitaTheme.spaceXS),
+
+          // Uber link/unlink tile
+          _UberTile(uberState: uberState, ref: ref),
+
+          // Default transport selector
+          _SettingsTile(
+            icon: _transportIcon(prefsState.defaultTransport),
+            label: 'Transporte favorito',
+            trailing: Text(
+              _transportLabel(prefsState.defaultTransport),
+              style: textTheme.bodyMedium?.copyWith(
+                color: BeautyCitaTheme.textLight,
+              ),
+            ),
+            onTap: () => _showTransportSheet(context, ref, prefsState.defaultTransport),
+          ),
+
+          const SizedBox(height: BeautyCitaTheme.spaceLG),
+
+          // ── Section: General ──
+          const _SectionHeader(label: 'General'),
           const SizedBox(height: BeautyCitaTheme.spaceXS),
 
           _SettingsTile(
@@ -78,15 +118,56 @@ class SettingsScreen extends ConsumerWidget {
             onTap: () => context.push('/my-bookings'),
           ),
           _SettingsTile(
+            icon: Icons.favorite_outline_rounded,
+            label: 'Mis favoritos',
+            onTap: () {
+              // Future route — show snackbar for now
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Favoritos disponible pronto'),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            },
+          ),
+          _SettingsTile(
             icon: Icons.storefront_rounded,
             label: 'Invitar un salon',
             onTap: () => context.push('/invite'),
           ),
+          _SettingsTile(
+            icon: Icons.radar_rounded,
+            label: 'Radio de busqueda',
+            trailing: Text(
+              '${prefsState.searchRadiusKm} km',
+              style: textTheme.bodyMedium?.copyWith(
+                color: BeautyCitaTheme.textLight,
+              ),
+            ),
+            onTap: () => _showRadiusSheet(context, ref, prefsState.searchRadiusKm),
+          ),
 
           const SizedBox(height: BeautyCitaTheme.spaceLG),
 
-          // Section: About
-          _SectionHeader(label: 'Acerca de'),
+          // ── Section: Notificaciones ──
+          const _SectionHeader(label: 'Notificaciones'),
+          const SizedBox(height: BeautyCitaTheme.spaceXS),
+
+          _SettingsTile(
+            icon: Icons.notifications_outlined,
+            label: 'Notificaciones',
+            trailing: Switch(
+              value: prefsState.notificationsEnabled,
+              activeColor: BeautyCitaTheme.primaryRose,
+              onChanged: (_) =>
+                  ref.read(userPrefsProvider.notifier).toggleNotifications(),
+            ),
+          ),
+
+          const SizedBox(height: BeautyCitaTheme.spaceLG),
+
+          // ── Section: Acerca de ──
+          const _SectionHeader(label: 'Acerca de'),
           const SizedBox(height: BeautyCitaTheme.spaceXS),
 
           _SettingsTile(
@@ -102,7 +183,7 @@ class SettingsScreen extends ConsumerWidget {
 
           const SizedBox(height: BeautyCitaTheme.spaceXL),
 
-          // Logout
+          // ── Logout ──
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
@@ -158,7 +239,338 @@ class SettingsScreen extends ConsumerWidget {
       ),
     );
   }
+
+  // ── Transport selector bottom sheet ──
+  void _showTransportSheet(BuildContext context, WidgetRef ref, String current) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Transporte favorito',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                const SizedBox(height: 16),
+                _TransportOption(
+                  emoji: '\u{1F697}',
+                  label: 'Mi auto',
+                  subtitle: 'Manejo yo',
+                  selected: current == 'car',
+                  onTap: () {
+                    ref.read(userPrefsProvider.notifier).setDefaultTransport('car');
+                    Navigator.pop(ctx);
+                  },
+                ),
+                const SizedBox(height: 8),
+                _TransportOption(
+                  emoji: '\u{1F695}',
+                  label: 'Uber',
+                  subtitle: 'Que me lleven',
+                  selected: current == 'uber',
+                  onTap: () {
+                    ref.read(userPrefsProvider.notifier).setDefaultTransport('uber');
+                    Navigator.pop(ctx);
+                  },
+                ),
+                const SizedBox(height: 8),
+                _TransportOption(
+                  emoji: '\u{1F68C}',
+                  label: 'Transporte',
+                  subtitle: 'Me llevo yo',
+                  selected: current == 'transit',
+                  onTap: () {
+                    ref.read(userPrefsProvider.notifier).setDefaultTransport('transit');
+                    Navigator.pop(ctx);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // ── Search radius bottom sheet ──
+  void _showRadiusSheet(BuildContext context, WidgetRef ref, int currentKm) {
+    double sliderValue = currentKm.toDouble();
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Radio de busqueda',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                    const SizedBox(height: 8),
+                    Center(
+                      child: Text(
+                        '${sliderValue.round()} km',
+                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: BeautyCitaTheme.primaryRose,
+                            ),
+                      ),
+                    ),
+                    Slider(
+                      value: sliderValue,
+                      min: 5,
+                      max: 100,
+                      divisions: 19,
+                      activeColor: BeautyCitaTheme.primaryRose,
+                      label: '${sliderValue.round()} km',
+                      onChanged: (v) {
+                        setSheetState(() => sliderValue = v);
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          ref
+                              .read(userPrefsProvider.notifier)
+                              .setSearchRadius(sliderValue.round());
+                          Navigator.pop(ctx);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: BeautyCitaTheme.primaryRose,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(AppConstants.radiusSM),
+                          ),
+                        ),
+                        child: const Text('Guardar'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  static IconData _transportIcon(String mode) {
+    return switch (mode) {
+      'uber' => Icons.local_taxi_rounded,
+      'transit' => Icons.directions_bus_rounded,
+      _ => Icons.directions_car_rounded,
+    };
+  }
+
+  static String _transportLabel(String mode) {
+    return switch (mode) {
+      'uber' => 'Uber',
+      'transit' => 'Transporte',
+      _ => 'Mi auto',
+    };
+  }
 }
+
+// ---------------------------------------------------------------------------
+// Uber Tile
+// ---------------------------------------------------------------------------
+
+class _UberTile extends StatelessWidget {
+  final UberLinkState uberState;
+  final WidgetRef ref;
+
+  const _UberTile({required this.uberState, required this.ref});
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
+    if (uberState.isLoading) {
+      return _SettingsTile(
+        icon: Icons.local_taxi_rounded,
+        label: 'Uber',
+        trailing: const SizedBox(
+          width: 20,
+          height: 20,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      );
+    }
+
+    if (uberState.isLinked) {
+      return _SettingsTile(
+        icon: Icons.local_taxi_rounded,
+        iconColor: Colors.green.shade600,
+        label: 'Uber vinculado',
+        trailing: TextButton(
+          onPressed: () => _confirmUnlink(context),
+          child: Text(
+            'Desvincular',
+            style: textTheme.bodySmall?.copyWith(
+              color: Colors.red.shade400,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return _SettingsTile(
+      icon: Icons.local_taxi_rounded,
+      label: 'Vincular Uber',
+      onTap: () => ref.read(uberLinkProvider.notifier).initiateLink(),
+    );
+  }
+
+  void _confirmUnlink(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+        ),
+        title: const Text('Desvincular Uber'),
+        content: const Text(
+          'Ya no se programaran viajes automaticamente. Puedes volver a vincular en cualquier momento.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade600,
+            ),
+            child: const Text('Desvincular'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      ref.read(uberLinkProvider.notifier).unlink();
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Transport Option (for bottom sheet)
+// ---------------------------------------------------------------------------
+
+class _TransportOption extends StatelessWidget {
+  final String emoji;
+  final String label;
+  final String subtitle;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _TransportOption({
+    required this.emoji,
+    required this.label,
+    required this.subtitle,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: selected
+          ? BeautyCitaTheme.primaryRose.withValues(alpha: 0.08)
+          : Colors.transparent,
+      borderRadius: BorderRadius.circular(AppConstants.radiusSM),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppConstants.radiusSM),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+          child: Row(
+            children: [
+              Text(emoji, style: const TextStyle(fontSize: 24)),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                    Text(
+                      subtitle,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: BeautyCitaTheme.textLight,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+              if (selected)
+                Icon(
+                  Icons.check_circle_rounded,
+                  color: BeautyCitaTheme.primaryRose,
+                  size: 24,
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Section Header
+// ---------------------------------------------------------------------------
 
 class _SectionHeader extends StatelessWidget {
   final String label;
@@ -176,8 +588,13 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Settings Tile
+// ---------------------------------------------------------------------------
+
 class _SettingsTile extends StatelessWidget {
   final IconData icon;
+  final Color? iconColor;
   final String label;
   final VoidCallback? onTap;
   final Widget? trailing;
@@ -185,6 +602,7 @@ class _SettingsTile extends StatelessWidget {
   const _SettingsTile({
     required this.icon,
     required this.label,
+    this.iconColor,
     this.onTap,
     this.trailing,
   });
@@ -208,7 +626,7 @@ class _SettingsTile extends StatelessWidget {
               Icon(
                 icon,
                 size: AppConstants.iconSizeMD,
-                color: BeautyCitaTheme.primaryRose,
+                color: iconColor ?? BeautyCitaTheme.primaryRose,
               ),
               const SizedBox(width: BeautyCitaTheme.spaceMD),
               Expanded(

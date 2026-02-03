@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../config/theme.dart';
 import '../models/curate_result.dart';
 import '../providers/booking_flow_provider.dart';
+import '../providers/favorites_provider.dart';
+import '../widgets/cinematic_question_text.dart';
 import 'time_override_sheet.dart';
 
 class ResultCardsScreen extends ConsumerStatefulWidget {
@@ -15,35 +18,162 @@ class ResultCardsScreen extends ConsumerStatefulWidget {
 }
 
 class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   int _currentIndex = 0;
+  int _totalCards = 0;
   Offset _dragOffset = Offset.zero;
-  bool _isDragging = false;
 
-  void _onCardDismissed() {
-    setState(() {
-      _currentIndex++;
-      _dragOffset = Offset.zero;
-      _isDragging = false;
-    });
+  // Animated dismiss: fly-off controller
+  late AnimationController _dismissController;
+  late Animation<Offset> _dismissAnimation;
+  late Animation<double> _dismissOpacity;
+  bool _isDismissing = false;
+  int _dismissDirection = 1; // 1 = right, -1 = left
+
+  // Snap-back spring controller
+  late AnimationController _snapBackController;
+  late Animation<Offset> _snapBackAnimation;
+
+  static const double _dismissThreshold = 0.25; // 25% of card width
+  static const double _velocityThreshold = 800.0; // px/s flick speed
+  static const double _maxRotation = 0.15; // radians (~8.5 degrees)
+  static const double _verticalDamping = 0.3; // reduce vertical movement
+
+  @override
+  void initState() {
+    super.initState();
+
+    _dismissController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    )..addStatusListener((status) {
+        if (status == AnimationStatus.completed) {
+          setState(() {
+            if (_totalCards > 0) {
+              if (_dismissDirection > 0) {
+                // Right swipe = advance
+                _currentIndex = (_currentIndex + 1) % _totalCards;
+              } else {
+                // Left swipe = go back
+                _currentIndex = (_currentIndex - 1 + _totalCards) % _totalCards;
+              }
+            }
+            _dragOffset = Offset.zero;
+            _isDismissing = false;
+          });
+          _dismissController.reset();
+        }
+      });
+
+    _dismissAnimation = Tween<Offset>(
+      begin: Offset.zero,
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _dismissController,
+      curve: Curves.easeOut,
+    ));
+
+    _dismissOpacity = Tween<double>(
+      begin: 1.0,
+      end: 0.0,
+    ).animate(CurvedAnimation(
+      parent: _dismissController,
+      curve: const Interval(0.5, 1.0),
+    ));
+
+    _snapBackController = AnimationController(
+      duration: const Duration(milliseconds: 400),
+      vsync: this,
+    )..addListener(() {
+        setState(() {
+          _dragOffset = _snapBackAnimation.value;
+        });
+      });
+
+    _snapBackAnimation = Tween<Offset>(
+      begin: Offset.zero,
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _snapBackController,
+      curve: Curves.elasticOut,
+    ));
+  }
+
+  @override
+  void dispose() {
+    _dismissController.dispose();
+    _snapBackController.dispose();
+    super.dispose();
+  }
+
+  /// Drag progress as fraction of card width (0-1+)
+  double _dragProgress(double cardWidth) {
+    return cardWidth > 0 ? (_dragOffset.dx.abs() / cardWidth).clamp(0.0, 1.5) : 0.0;
   }
 
   void _onDragUpdate(DragUpdateDetails details, double cardWidth) {
+    if (_isDismissing) return;
+    _snapBackController.stop();
     setState(() {
-      _isDragging = true;
-      _dragOffset += details.delta;
+      // Full horizontal, damped vertical
+      _dragOffset += Offset(
+        details.delta.dx,
+        details.delta.dy * _verticalDamping,
+      );
     });
   }
 
   void _onDragEnd(DragEndDetails details, double cardWidth) {
-    if (_dragOffset.dx.abs() > cardWidth * 0.4) {
-      _onCardDismissed();
+    if (_isDismissing) return;
+
+    final velocity = details.velocity.pixelsPerSecond.dx;
+    final distanceThresholdMet = _dragOffset.dx.abs() > cardWidth * _dismissThreshold;
+    final velocityThresholdMet = velocity.abs() > _velocityThreshold;
+
+    if (distanceThresholdMet || velocityThresholdMet) {
+      // Determine direction from drag offset or velocity
+      _dismissDirection = (_dragOffset.dx != 0 ? _dragOffset.dx : velocity) > 0 ? 1 : -1;
+      _animateDismiss(cardWidth);
     } else {
-      setState(() {
-        _dragOffset = Offset.zero;
-        _isDragging = false;
-      });
+      _animateSnapBack();
     }
+  }
+
+  void _animateDismiss(double cardWidth) {
+    HapticFeedback.lightImpact();
+
+    final flyOffX = _dismissDirection * (cardWidth * 1.5);
+    final flyOffY = _dragOffset.dy * 0.5;
+
+    _dismissAnimation = Tween<Offset>(
+      begin: _dragOffset,
+      end: Offset(flyOffX, flyOffY),
+    ).animate(CurvedAnimation(
+      parent: _dismissController,
+      curve: Curves.easeOut,
+    ));
+
+    _dismissOpacity = Tween<double>(
+      begin: 1.0,
+      end: 0.0,
+    ).animate(CurvedAnimation(
+      parent: _dismissController,
+      curve: const Interval(0.4, 1.0),
+    ));
+
+    setState(() => _isDismissing = true);
+    _dismissController.forward(from: 0);
+  }
+
+  void _animateSnapBack() {
+    _snapBackAnimation = Tween<Offset>(
+      begin: _dragOffset,
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _snapBackController,
+      curve: Curves.elasticOut,
+    ));
+    _snapBackController.forward(from: 0);
   }
 
   String _formatBadge(String badgeKey) {
@@ -121,6 +251,7 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
 
     if (bookingState.curateResponse == null ||
         bookingState.curateResponse!.results.isEmpty) {
+      final hasOverride = bookingState.overrideWindow != null;
       return Scaffold(
         appBar: AppBar(
           leading: IconButton(
@@ -134,16 +265,70 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
             ),
           ),
         ),
-        body: const Center(
-          child: Text('No hay resultados disponibles'),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  'No hay resultados disponibles',
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    color: BeautyCitaTheme.textDark,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                if (hasOverride) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    'El filtro de horario no encontro opciones',
+                    style: GoogleFonts.nunito(
+                      fontSize: 14,
+                      color: BeautyCitaTheme.textLight,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    onPressed: () => bookingNotifier.clearOverride(),
+                    icon: const Icon(Icons.filter_alt_off, size: 20),
+                    label: Text(
+                      'Quitar filtro',
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: BeautyCitaTheme.primaryRose,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 14,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(
+                          BeautyCitaTheme.radiusMedium,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
         ),
       );
     }
 
     final results = bookingState.curateResponse!.results;
     final serviceName = bookingState.serviceName ?? 'tu servicio';
+    _totalCards = results.length;
 
-    final remainingCards = results.length - _currentIndex;
+    // Clamp index in case results changed
+    if (_currentIndex >= _totalCards) {
+      _currentIndex = 0;
+    }
 
     return Scaffold(
       backgroundColor: BeautyCitaTheme.surfaceCream,
@@ -163,57 +348,31 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
           ),
         ),
       ),
-      body: remainingCards == 0
-          ? _buildNoMoreCards()
-          : _buildCardStack(results, _currentIndex),
-    );
-  }
-
-  Widget _buildNoMoreCards() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 96,
-              height: 96,
-              decoration: BoxDecoration(
-                color: BeautyCitaTheme.surfaceCream,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: BeautyCitaTheme.dividerLight,
-                  width: 2,
-                ),
-              ),
-              child: const Center(
-                child: Text(
-                  '\u{1F50D}',
-                  style: TextStyle(fontSize: 40),
-                ),
-              ),
+      body: Column(
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
+            child: CinematicQuestionText(
+              text: 'Elige tu mejor opcion',
+              fontSize: 24,
             ),
-            const SizedBox(height: 24),
-            Text(
-              'Esas son tus opciones',
+          ),
+          // Position indicator
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              '${_currentIndex + 1}/$_totalCards',
               style: GoogleFonts.poppins(
-                fontSize: 22,
-                fontWeight: FontWeight.w600,
-                color: BeautyCitaTheme.textDark,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Desliza hacia atras para volver a ver',
-              style: GoogleFonts.nunito(
-                fontSize: 15,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
                 color: BeautyCitaTheme.textLight,
               ),
-              textAlign: TextAlign.center,
             ),
-          ],
-        ),
+          ),
+          Expanded(
+            child: _buildCardStack(results, _currentIndex),
+          ),
+        ],
       ),
     );
   }
@@ -222,52 +381,72 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
     return LayoutBuilder(
       builder: (context, constraints) {
         final cardWidth = constraints.maxWidth;
+        final progress = _dragProgress(cardWidth);
+
+        // Back cards react: scale up and fade in as front card is dragged
+        final card2Scale = 0.95 + 0.05 * progress.clamp(0.0, 1.0);
+        final card2Opacity = 0.7 + 0.3 * progress.clamp(0.0, 1.0);
+        final card2Top = 10.0 - 10.0 * progress.clamp(0.0, 1.0);
+
+        final card3Scale = 0.90 + 0.05 * progress.clamp(0.0, 1.0);
+        final card3Opacity = 0.5 + 0.2 * progress.clamp(0.0, 1.0);
+        final card3Top = 20.0 - 10.0 * progress.clamp(0.0, 1.0);
+
+        // Front card: current offset (drag or dismiss animation)
+        final frontOffset = _isDismissing ? _dismissAnimation.value : _dragOffset;
+        final frontOpacity = _isDismissing ? _dismissOpacity.value : 1.0;
+        final rotation = (frontOffset.dx / cardWidth) * _maxRotation;
+
+        final total = results.length;
+        final nextIndex = (currentIndex + 1) % total;
+        final nextNextIndex = (currentIndex + 2) % total;
 
         return Stack(
           children: [
-            // Card 3 (bottom)
-            if (currentIndex + 2 < results.length)
+            // Card 3 (bottom) — only show if 3+ cards
+            if (total >= 3)
               Positioned(
-                top: 20,
+                top: card3Top,
                 left: 10,
                 right: 10,
                 child: Transform.scale(
-                  scale: 0.90,
+                  scale: card3Scale.clamp(0.85, 0.95),
                   child: Opacity(
-                    opacity: 0.5,
-                    child: _buildCard(results[currentIndex + 2], false),
+                    opacity: card3Opacity.clamp(0.4, 0.7),
+                    child: _buildCard(results[nextNextIndex], false),
                   ),
                 ),
               ),
 
-            // Card 2 (middle)
-            if (currentIndex + 1 < results.length)
+            // Card 2 (middle) — only show if 2+ cards
+            if (total >= 2)
               Positioned(
-                top: 10,
+                top: card2Top.clamp(0.0, 10.0),
                 left: 5,
                 right: 5,
                 child: Transform.scale(
-                  scale: 0.95,
+                  scale: card2Scale.clamp(0.9, 1.0),
                   child: Opacity(
-                    opacity: 0.7,
-                    child: _buildCard(results[currentIndex + 1], false),
+                    opacity: card2Opacity.clamp(0.6, 1.0),
+                    child: _buildCard(results[nextIndex], false),
                   ),
                 ),
               ),
 
             // Card 1 (top, draggable)
-            AnimatedPositioned(
-              duration: _isDragging ? Duration.zero : const Duration(milliseconds: 300),
-              curve: Curves.easeOut,
-              top: _dragOffset.dy,
-              left: _dragOffset.dx,
-              right: -_dragOffset.dx,
+            Positioned(
+              top: frontOffset.dy,
+              left: frontOffset.dx,
+              right: -frontOffset.dx,
               child: GestureDetector(
                 onPanUpdate: (details) => _onDragUpdate(details, cardWidth),
                 onPanEnd: (details) => _onDragEnd(details, cardWidth),
-                child: Transform.rotate(
-                  angle: _dragOffset.dx / 1000,
-                  child: _buildCard(results[currentIndex], true),
+                child: Opacity(
+                  opacity: frontOpacity.clamp(0.0, 1.0),
+                  child: Transform.rotate(
+                    angle: rotation,
+                    child: _buildCard(results[currentIndex], true),
+                  ),
                 ),
               ),
             ),
@@ -588,13 +767,19 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
   }
 
   Widget _buildActionButtons(ResultCard result) {
+    final favorites = ref.watch(favoritesProvider);
+    final isFavorited = favorites.contains(result.business.id);
+
     return Row(
       children: [
         IconButton(
           onPressed: () {
-            debugPrint('TODO: Toggle favorite for ${result.business.name}');
+            HapticFeedback.lightImpact();
+            ref.read(favoritesProvider.notifier).toggle(result.business.id);
           },
-          icon: const Icon(Icons.favorite_border),
+          icon: Icon(
+            isFavorited ? Icons.favorite : Icons.favorite_border,
+          ),
           color: BeautyCitaTheme.primaryRose,
         ),
         const SizedBox(width: 12),

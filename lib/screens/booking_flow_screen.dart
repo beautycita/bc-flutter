@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../config/theme.dart';
 import '../providers/booking_flow_provider.dart';
+import '../widgets/cinematic_question_text.dart';
 import 'transport_selection.dart';
 import 'follow_up_question_screen.dart';
 import 'result_cards_screen.dart';
@@ -34,6 +35,10 @@ class BookingFlowScreen extends ConsumerWidget {
         ),
       BookingFlowStep.results => const ResultCardsScreen(),
       BookingFlowStep.confirmation => const ConfirmationScreen(),
+      BookingFlowStep.booking => _LoadingView(
+          serviceName: 'Reservando tu cita...',
+        ),
+      BookingFlowStep.booked => const ConfirmationScreen(),
       BookingFlowStep.error => _ErrorView(
           error: state.error ?? 'Error desconocido',
           onRetry: () =>
@@ -57,21 +62,17 @@ class _LoadingView extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            const CinematicQuestionText(
+              text: 'Buscando las mejores opciones...',
+              fontSize: 24,
+            ),
+            const SizedBox(height: BeautyCitaTheme.spaceLG),
             const SizedBox(
               width: 48,
               height: 48,
               child: CircularProgressIndicator(
                 color: BeautyCitaTheme.primaryRose,
                 strokeWidth: 3,
-              ),
-            ),
-            const SizedBox(height: BeautyCitaTheme.spaceLG),
-            Text(
-              'Buscando las mejores opciones...',
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: BeautyCitaTheme.textDark,
               ),
             ),
             const SizedBox(height: BeautyCitaTheme.spaceSM),

@@ -8,6 +8,7 @@ import '../providers/auth_provider.dart';
 import '../providers/category_provider.dart';
 import '../config/theme.dart';
 import '../config/constants.dart';
+import '../widgets/cinematic_question_text.dart';
 import 'subcategory_sheet.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -119,37 +120,24 @@ class HomeScreen extends ConsumerWidget {
                                 ],
                               ),
                               const Spacer(),
-                              // Brand text
+                              // Brand text (subtle)
                               Text(
                                 AppConstants.appName,
                                 style: GoogleFonts.poppins(
-                                  fontSize: 42,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.white,
-                                  letterSpacing: -1.5,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white.withValues(alpha: 0.8),
+                                  letterSpacing: -0.5,
                                   height: 1.1,
-                                  shadows: [
-                                    Shadow(
-                                      color: Colors.black.withValues(alpha: 0.15),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
                                 ),
                               ),
                               const SizedBox(height: BeautyCitaTheme.spaceSM),
-                              // Greeting
-                              Text(
-                                authState.username != null
-                                    ? '${_getGreeting()}, ${authState.username}'
-                                    : _getGreeting(),
-                                style: GoogleFonts.nunito(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w500,
-                                  color: Colors.white.withValues(alpha: 0.9),
-                                  letterSpacing: 0.3,
-                                ),
-                                textAlign: TextAlign.center,
+                              // Cinematic question text
+                              const CinematicQuestionText(
+                                text: 'Que buscas hoy?',
+                                primaryColor: Colors.white,
+                                accentColor: BeautyCitaTheme.secondaryGold,
+                                fontSize: 30,
                               ),
                               const SizedBox(height: 40), // space before curve
                             ],

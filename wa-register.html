@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Registra tu salon — BeautyCita</title>
+  <meta name="description" content="Registra tu salon de belleza en BeautyCita y recibe clientes nuevas. Gratis, 60 segundos, sin tarjeta.">
+  <meta name="theme-color" content="#E8788A">
+  <link rel="icon" href="/favicon.ico">
+  <meta property="og:title" content="Registra tu salon — BeautyCita">
+  <meta property="og:description" content="Recibe clientes nuevas por BeautyCita. Gratis, 60 segundos.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://beautycita.com/wa/register">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: #FFF8F0;
+      color: #2D2D2D;
+      min-height: 100vh;
+      min-height: 100dvh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ---- HEADER ---- */
+    .header {
+      background: linear-gradient(135deg, #E8788A 0%, #D4637A 100%);
+      padding: 36px 24px 30px;
+      text-align: center;
+      color: white;
+      position: relative;
+      overflow: hidden;
+    }
+    .header::after {
+      content: '';
+      position: absolute;
+      bottom: -20px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 120%;
+      height: 40px;
+      background: #FFF8F0;
+      border-radius: 50% 50% 0 0;
+    }
+    .logo {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      opacity: 0.85;
+      margin-bottom: 12px;
+    }
+    .header h1 {
+      font-size: 26px;
+      font-weight: 800;
+      margin-bottom: 6px;
+      line-height: 1.2;
+    }
+    .header p {
+      font-size: 15px;
+      opacity: 0.92;
+      font-weight: 400;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255,255,255,0.22);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      padding: 6px 18px;
+      border-radius: 24px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-top: 14px;
+      letter-spacing: 0.3px;
+    }
+    .badge span { opacity: 0.7; }
+
+    /* ---- FORM ---- */
+    .form-wrap {
+      padding: 20px 24px 40px;
+      max-width: 480px;
+      margin: 0 auto;
+    }
+    .field {
+      display: block;
+      margin-bottom: 22px;
+    }
+    .field .label {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #555;
+      margin-bottom: 8px;
+      display: block;
+    }
+    .field .label .optional {
+      font-weight: 400;
+      text-transform: none;
+      color: #999;
+      font-size: 12px;
+    }
+    input[type="text"], input[type="tel"] {
+      width: 100%;
+      padding: 15px 18px;
+      border: 2px solid transparent;
+      border-radius: 14px;
+      background: white;
+      font-size: 16px;
+      color: #2D2D2D;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      -webkit-appearance: none;
+    }
+    input:focus {
+      border-color: #E8788A;
+      box-shadow: 0 0 0 3px rgba(232,120,138,0.15);
+    }
+    input::placeholder { color: #bbb; }
+
+    /* ---- CATEGORIES ---- */
+    .cat-section { margin-bottom: 28px; }
+    .cat-label {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #555;
+      margin-bottom: 12px;
+    }
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .chip {
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .chip input { display: none; }
+    .chip span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 16px;
+      border-radius: 24px;
+      background: white;
+      font-size: 14px;
+      font-weight: 500;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+      border: 2px solid transparent;
+      transition: all 0.15s ease;
+    }
+    .chip input:checked + span {
+      background: #E8788A;
+      color: white;
+      border-color: #D4637A;
+      box-shadow: 0 4px 12px rgba(232,120,138,0.3);
+      transform: scale(1.03);
+    }
+    .chip span:active {
+      transform: scale(0.97);
+    }
+
+    /* ---- SUBMIT ---- */
+    .submit-btn {
+      width: 100%;
+      padding: 17px;
+      background: linear-gradient(135deg, #E8788A 0%, #D4637A 100%);
+      color: white;
+      border: none;
+      border-radius: 16px;
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: 0.8px;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+      box-shadow: 0 4px 16px rgba(232,120,138,0.35);
+    }
+    .submit-btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+    .submit-btn:active:not(:disabled) {
+      opacity: 0.85;
+      transform: scale(0.98);
+    }
+
+    /* ---- STATUS ---- */
+    .error-msg {
+      color: #D32F2F;
+      font-size: 13px;
+      font-weight: 500;
+      margin-top: 10px;
+      display: none;
+      text-align: center;
+    }
+    .note {
+      text-align: center;
+      font-size: 11px;
+      color: #999;
+      margin-top: 24px;
+      line-height: 1.6;
+    }
+    .note a { color: #E8788A; text-decoration: none; }
+
+    /* ---- SUCCESS ---- */
+    .success-view {
+      display: none;
+      min-height: 100vh;
+      min-height: 100dvh;
+      align-items: center;
+      justify-content: center;
+      background: #FFF8F0;
+      padding: 32px;
+      text-align: center;
+    }
+    .success-view.visible {
+      display: flex;
+    }
+    .success-icon {
+      width: 88px;
+      height: 88px;
+      border-radius: 50%;
+      background: rgba(76,175,80,0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 28px;
+    }
+    .success-view h1 {
+      font-size: 26px;
+      font-weight: 800;
+      color: #2D2D2D;
+      margin-bottom: 12px;
+    }
+    .success-view p {
+      font-size: 15px;
+      color: #666;
+      line-height: 1.7;
+      max-width: 320px;
+      margin: 0 auto;
+    }
+    .success-view .confetti {
+      font-size: 32px;
+      margin-bottom: 16px;
+    }
+
+    /* ---- LOADING SPINNER ---- */
+    .spinner {
+      display: inline-block;
+      width: 18px;
+      height: 18px;
+      border: 2.5px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ---- TRUST INDICATORS ---- */
+    .trust {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      margin-top: 20px;
+      padding: 16px 0;
+    }
+    .trust-item {
+      text-align: center;
+      font-size: 11px;
+      color: #888;
+    }
+    .trust-item .num {
+      font-size: 18px;
+      font-weight: 800;
+      color: #E8788A;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ============ REGISTRATION VIEW ============ -->
+  <div id="regView">
+    <div class="header">
+      <div class="logo">BeautyCita</div>
+      <h1>Registra tu salon</h1>
+      <p>Recibe clientes nuevas automaticamente</p>
+      <div class="badge">Gratis <span>&bull;</span> 60 seg <span>&bull;</span> Sin tarjeta</div>
+    </div>
+
+    <div class="form-wrap">
+      <form id="regForm" novalidate>
+        <input type="hidden" name="ref" id="refInput" value="">
+
+        <label class="field">
+          <span class="label">Nombre del salon</span>
+          <input type="text" name="name" id="nameInput"
+                 placeholder="Ej: Salon Rosa, Studio Bella"
+                 required minlength="2" autocomplete="organization"
+                 enterkeyhint="next">
+        </label>
+
+        <label class="field">
+          <span class="label">WhatsApp</span>
+          <input type="tel" name="phone" id="phoneInput"
+                 placeholder="+52 33 1234 5678"
+                 value="+52 "
+                 required autocomplete="tel"
+                 enterkeyhint="next">
+        </label>
+
+        <label class="field">
+          <span class="label">Direccion <span class="optional">(opcional)</span></span>
+          <input type="text" name="address" id="addressInput"
+                 placeholder="Calle, colonia, ciudad"
+                 autocomplete="street-address"
+                 enterkeyhint="done">
+        </label>
+
+        <div class="cat-section">
+          <div class="cat-label">Que servicios ofreces?</div>
+          <div class="chips">
+            <label class="chip"><input type="checkbox" name="categories" value="unas"><span>&#x1F485; Unas</span></label>
+            <label class="chip"><input type="checkbox" name="categories" value="cabello"><span>&#x2702;&#xFE0F; Cabello</span></label>
+            <label class="chip"><input type="checkbox" name="categories" value="pestanas_cejas"><span>&#x1F441;&#xFE0F; Pestanas y Cejas</span></label>
+            <label class="chip"><input type="checkbox" name="categories" value="maquillaje"><span>&#x1F3A8; Maquillaje</span></label>
+            <label class="chip"><input type="checkbox" name="categories" value="facial"><span>&#x1F9D6; Facial</span></label>
+            <label class="chip"><input type="checkbox" name="categories" value="cuerpo_spa"><span>&#x1F9D8; Cuerpo y Spa</span></label>
+            <label class="chip"><input type="checkbox" name="categories" value="cuidado_especializado"><span>&#x2B50; Especializado</span></label>
+          </div>
+        </div>
+
+        <button type="submit" class="submit-btn" id="submitBtn" disabled>
+          REGISTRARME GRATIS
+        </button>
+        <div class="error-msg" id="errorMsg"></div>
+      </form>
+
+      <div class="trust">
+        <div class="trust-item"><span class="num">$0</span> costo</div>
+        <div class="trust-item"><span class="num">60s</span> registro</div>
+        <div class="trust-item"><span class="num">24/7</span> visibilidad</div>
+      </div>
+
+      <p class="note">
+        Al registrarte aceptas los
+        <a href="https://beautycita.com/terms">terminos</a> y la
+        <a href="https://beautycita.com/privacy">privacidad</a>
+        de BeautyCita.
+      </p>
+    </div>
+  </div>
+
+  <!-- ============ SUCCESS VIEW ============ -->
+  <div class="success-view" id="successView">
+    <div>
+      <div class="confetti">&#x1F389;</div>
+      <div class="success-icon">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="#4CAF50">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+        </svg>
+      </div>
+      <h1>Bienvenido a BeautyCita!</h1>
+      <p>
+        Tu salon ya esta visible para clientas cercanas.
+        Te contactaremos por WhatsApp para completar tu perfil.
+      </p>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      'use strict';
+
+      // ---- CONFIG ----
+      var EDGE_FN_URL = 'https://beautycita.com/supabase/functions/v1/salon-registro';
+      var ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzM1Njg5NjAwLCJleHAiOjE4OTM0NTYwMDB9.rz0oLwpK6HMsRI3PStAW3K1gl79d6z1PqqW8lvCtF9Q';
+
+      // ---- DOM ----
+      var form = document.getElementById('regForm');
+      var btn = document.getElementById('submitBtn');
+      var errEl = document.getElementById('errorMsg');
+      var refInput = document.getElementById('refInput');
+      var nameInput = document.getElementById('nameInput');
+      var phoneInput = document.getElementById('phoneInput');
+      var regView = document.getElementById('regView');
+      var successView = document.getElementById('successView');
+
+      // ---- Read ?ref= from URL ----
+      var params = new URLSearchParams(window.location.search);
+      var ref = params.get('ref');
+      if (ref) refInput.value = ref;
+
+      // ---- Validation ----
+      function validate() {
+        var name = nameInput.value.trim();
+        var phone = phoneInput.value.replace(/[^\d]/g, '');
+        var cats = form.querySelectorAll('input[name="categories"]:checked');
+        btn.disabled = !(name.length >= 2 && phone.length >= 10 && cats.length > 0);
+      }
+
+      form.addEventListener('input', validate);
+      form.addEventListener('change', validate);
+
+      // ---- Phone formatting ----
+      phoneInput.addEventListener('focus', function() {
+        if (!this.value.trim()) this.value = '+52 ';
+      });
+
+      // ---- Submit ----
+      form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span>REGISTRANDO...';
+        errEl.style.display = 'none';
+
+        var cats = [];
+        var checked = form.querySelectorAll('input[name="categories"]:checked');
+        for (var i = 0; i < checked.length; i++) {
+          cats.push(checked[i].value);
+        }
+
+        var payload = {
+          name: nameInput.value.trim(),
+          phone: phoneInput.value.trim(),
+          address: document.getElementById('addressInput').value.trim() || null,
+          categories: cats,
+          ref: refInput.value || null
+        };
+
+        fetch(EDGE_FN_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + ANON_KEY
+          },
+          body: JSON.stringify(payload)
+        })
+        .then(function(resp) {
+          return resp.json().then(function(data) {
+            if (!resp.ok) throw new Error(data.error || 'Error al registrar');
+            return data;
+          });
+        })
+        .then(function() {
+          // Show success
+          regView.style.display = 'none';
+          successView.classList.add('visible');
+        })
+        .catch(function(err) {
+          errEl.textContent = err.message || 'Error de conexion. Intenta de nuevo.';
+          errEl.style.display = 'block';
+          btn.disabled = false;
+          btn.innerHTML = 'REGISTRARME GRATIS';
+        });
+      });
+    })();
+  </script>
+</body>
+</html>
