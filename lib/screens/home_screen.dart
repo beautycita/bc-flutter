@@ -108,8 +108,8 @@ class HomeScreen extends ConsumerWidget {
                                 mainAxisAlignment: MainAxisAlignment.end,
                                 children: [
                                   _HeaderButton(
-                                    icon: Icons.calendar_today_rounded,
-                                    onTap: () => context.push('/my-bookings'),
+                                    icon: Icons.chat_bubble_outline_rounded,
+                                    onTap: () => context.push('/chat'),
                                   ),
                                   const SizedBox(width: BeautyCitaTheme.spaceSM),
                                   _HeaderButton(

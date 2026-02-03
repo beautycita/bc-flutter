@@ -12,6 +12,8 @@ import 'package:beautycita/screens/admin/admin_shell_screen.dart';
 import 'package:beautycita/screens/invite_salon_screen.dart';
 import 'package:beautycita/screens/salon_onboarding_screen.dart';
 import 'package:beautycita/screens/settings_screen.dart';
+import 'package:beautycita/screens/chat_list_screen.dart';
+import 'package:beautycita/screens/chat_conversation_screen.dart';
 
 class AppRoutes {
   static const String splash = '/';
@@ -27,6 +29,8 @@ class AppRoutes {
   static const String inviteSalon = '/invite';
   static const String settings = '/settings';
   static const String salonOnboarding = '/registro';
+  static const String chat = '/chat';
+  static const String chatConversation = '/chat/:threadId';
 
   static final GoRouter router = GoRouter(
     initialLocation: splash,
@@ -263,6 +267,41 @@ class AppRoutes {
             );
           },
         ),
+      ),
+      GoRoute(
+        path: chat,
+        name: 'chat',
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const ChatListScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
+                .chain(CurveTween(curve: Curves.easeInOutCubic));
+            return SlideTransition(
+              position: animation.drive(tween),
+              child: child,
+            );
+          },
+        ),
+      ),
+      GoRoute(
+        path: chatConversation,
+        name: 'chat-conversation',
+        pageBuilder: (context, state) {
+          final threadId = state.pathParameters['threadId']!;
+          return CustomTransitionPage(
+            key: state.pageKey,
+            child: ChatConversationScreen(threadId: threadId),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
+                  .chain(CurveTween(curve: Curves.easeInOutCubic));
+              return SlideTransition(
+                position: animation.drive(tween),
+                child: child,
+              );
+            },
+          );
+        },
       ),
     ],
     errorPageBuilder: (context, state) => MaterialPage(

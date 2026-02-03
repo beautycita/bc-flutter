@@ -720,40 +720,81 @@ const List<ServiceCategory> allCategories = [
         nameEs: 'Blanqueamiento Dental',
       ),
       ServiceSubcategory(
-        id: 'barberia_premium',
+        id: 'consulta_virtual',
         categoryId: 'specialized',
-        nameEs: 'Barbería Premium',
+        nameEs: 'Consulta Virtual',
+      ),
+    ],
+  ),
+
+  // 💈 Barbería
+  ServiceCategory(
+    id: 'barberia',
+    nameEs: 'Barbería',
+    icon: '💈',
+    color: Color(0xFF37474F),
+    subcategories: [
+      ServiceSubcategory(
+        id: 'barberia_corte_hombre',
+        categoryId: 'barberia',
+        nameEs: 'Corte Hombre',
+      ),
+      ServiceSubcategory(
+        id: 'barberia_corte_barba',
+        categoryId: 'barberia',
+        nameEs: 'Corte + Barba',
         items: [
           ServiceItem(
-            id: 'barberia_corte_barba',
-            subcategoryId: 'barberia_premium',
-            nameEs: 'Corte + Barba',
+            id: 'barberia_corte_barba_clasico',
+            subcategoryId: 'barberia_corte_barba',
+            nameEs: 'Clásico',
             serviceType: 'barberia_corte_barba',
           ),
+        ],
+      ),
+      ServiceSubcategory(
+        id: 'barberia_afeitado',
+        categoryId: 'barberia',
+        nameEs: 'Afeitado Clásico',
+        items: [
           ServiceItem(
-            id: 'barberia_afeitado',
-            subcategoryId: 'barberia_premium',
-            nameEs: 'Afeitado',
+            id: 'barberia_afeitado_clasico',
+            subcategoryId: 'barberia_afeitado',
+            nameEs: 'Afeitado Clásico',
             serviceType: 'barberia_afeitado',
           ),
+        ],
+      ),
+      ServiceSubcategory(
+        id: 'barberia_diseno',
+        categoryId: 'barberia',
+        nameEs: 'Diseño Barba',
+        items: [
           ServiceItem(
-            id: 'barberia_diseno',
-            subcategoryId: 'barberia_premium',
+            id: 'barberia_diseno_barba',
+            subcategoryId: 'barberia_diseno',
             nameEs: 'Diseño Barba',
             serviceType: 'barberia_diseno',
           ),
+        ],
+      ),
+      ServiceSubcategory(
+        id: 'barberia_tratamiento',
+        categoryId: 'barberia',
+        nameEs: 'Tratamiento Barba',
+        items: [
           ServiceItem(
-            id: 'barberia_tratamiento',
-            subcategoryId: 'barberia_premium',
+            id: 'barberia_tratamiento_barba',
+            subcategoryId: 'barberia_tratamiento',
             nameEs: 'Tratamiento Barba',
             serviceType: 'barberia_tratamiento',
           ),
         ],
       ),
       ServiceSubcategory(
-        id: 'consulta_virtual',
-        categoryId: 'specialized',
-        nameEs: 'Consulta Virtual',
+        id: 'barberia_fade',
+        categoryId: 'barberia',
+        nameEs: 'Fade/Degradado',
       ),
     ],
   ),
