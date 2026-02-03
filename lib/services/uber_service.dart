@@ -1,19 +1,22 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:beautycita/models/uber_ride.dart';
 import 'supabase_client.dart';
 
 /// Client-side Uber integration service.
 /// Handles OAuth flow and provides helper methods for Uber-related operations.
 class UberService {
-  static const String _uberAuthUrl = 'https://login.uber.com/oauth/v2/authorize';
-
   final String clientId;
   final String redirectUri;
+  final bool sandbox;
 
   UberService({
     required this.clientId,
     required this.redirectUri,
+    this.sandbox = false,
   });
+
+  static const String _uberAuthUrl = 'https://login.uber.com/oauth/v2/authorize';
 
   /// Build the OAuth authorization URL for Uber login.
   Uri buildAuthUrl({String scope = 'profile request'}) {
@@ -144,6 +147,131 @@ class UberService {
     }
   }
 
+  /// Cancel all Uber rides for an appointment via update-uber-rides edge function.
+  Future<bool> cancelRides({required String appointmentId}) async {
+    try {
+      final client = SupabaseClientService.client;
+      final response = await client.functions.invoke(
+        'update-uber-rides',
+        body: {
+          'action': 'cancel',
+          'appointment_id': appointmentId,
+        },
+      );
+      return response.status == 200;
+    } catch (e) {
+      debugPrint('Uber cancelRides error: $e');
+      return false;
+    }
+  }
+
+  /// Get ride status for an appointment via update-uber-rides edge function.
+  Future<List<UberRide>> getRideStatus({required String appointmentId}) async {
+    try {
+      final client = SupabaseClientService.client;
+      final response = await client.functions.invoke(
+        'update-uber-rides',
+        body: {
+          'action': 'status',
+          'appointment_id': appointmentId,
+        },
+      );
+
+      if (response.status != 200) return [];
+
+      final data = jsonDecode(response.data as String);
+      final rides = data['rides'] as List? ?? [];
+      return rides
+          .map((r) => UberRide.fromJson(r as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      debugPrint('Uber getRideStatus error: $e');
+      return [];
+    }
+  }
+
+  /// Update the return ride destination via update-uber-rides edge function.
+  Future<bool> updateReturnDestination({
+    required String appointmentId,
+    required double lat,
+    required double lng,
+    required String address,
+  }) async {
+    try {
+      final client = SupabaseClientService.client;
+      final response = await client.functions.invoke(
+        'update-uber-rides',
+        body: {
+          'action': 'update_return',
+          'appointment_id': appointmentId,
+          'return_lat': lat,
+          'return_lng': lng,
+          'return_address': address,
+        },
+      );
+      return response.status == 200;
+    } catch (e) {
+      debugPrint('Uber updateReturnDestination error: $e');
+      return false;
+    }
+  }
+
+  /// Update the outbound ride pickup location via update-uber-rides edge function.
+  Future<bool> updatePickupLocation({
+    required String appointmentId,
+    required double lat,
+    required double lng,
+    required String address,
+  }) async {
+    try {
+      final client = SupabaseClientService.client;
+      final response = await client.functions.invoke(
+        'update-uber-rides',
+        body: {
+          'action': 'update_pickup',
+          'appointment_id': appointmentId,
+          'pickup_lat': lat,
+          'pickup_lng': lng,
+          'pickup_address': address,
+        },
+      );
+      return response.status == 200;
+    } catch (e) {
+      debugPrint('Uber updatePickupLocation error: $e');
+      return false;
+    }
+  }
+
+  /// Get Uber saved places (home/work) via update-uber-rides edge function.
+  Future<List<UberSavedPlace>> getSavedPlaces() async {
+    try {
+      final client = SupabaseClientService.client;
+      final response = await client.functions.invoke(
+        'update-uber-rides',
+        body: {'action': 'places'},
+      );
+
+      if (response.status != 200) return [];
+
+      final raw = response.data;
+      final data =
+          raw is String ? jsonDecode(raw) as Map<String, dynamic> : raw as Map<String, dynamic>;
+      final places = data['places'] as List? ?? [];
+      return places.map((p) {
+        final id = p['id'] as String;
+        return UberSavedPlace(
+          id: id,
+          address: p['address'] as String? ?? '',
+          label: id == 'home' ? 'Casa' : 'Trabajo',
+          icon: id == 'home' ? Icons.home_rounded : Icons.work_rounded,
+        );
+      }).toList();
+    } catch (e) {
+      debugPrint('Uber getSavedPlaces error: $e');
+      return [];
+    }
+  }
+
   /// Get a fare estimate for a ride (calls Uber Estimates API via edge function).
   Future<FareEstimate?> getFareEstimate({
     required double startLat,
@@ -212,5 +340,19 @@ class UberScheduleResult {
     this.outboundRequestId,
     this.returnRequestId,
     this.reason,
+  });
+}
+
+class UberSavedPlace {
+  final String id;
+  final String address;
+  final String label;
+  final IconData icon;
+
+  const UberSavedPlace({
+    required this.id,
+    required this.address,
+    required this.label,
+    required this.icon,
   });
 }

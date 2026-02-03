@@ -364,7 +364,7 @@ class _TransportCard extends StatelessWidget {
               ],
             ),
 
-            if (isUber && hasEstimate) ...[
+            if (isUber) ...[
               const SizedBox(height: BeautyCitaTheme.spaceMD),
 
               // Uber status badge (after booking)
@@ -416,8 +416,10 @@ class _TransportCard extends StatelessWidget {
                 destination: result.business.name,
                 pickupTime: _formatPickupTime(
                     result.slot.startTime, t.durationMin, 3),
-                fareMin: t.uberEstimateMin!,
-                fareMax: t.uberEstimateMax!,
+                fareMin: t.uberEstimateMin,
+                fareMax: t.uberEstimateMax,
+                durationMin: t.durationMin,
+                distanceKm: t.distanceKm,
               ),
 
               const Padding(
@@ -434,8 +436,10 @@ class _TransportCard extends StatelessWidget {
                   result.slot.startTime,
                   result.service.durationMinutes,
                 ),
-                fareMin: t.uberEstimateMin!,
-                fareMax: t.uberEstimateMax!,
+                fareMin: t.uberEstimateMin,
+                fareMax: t.uberEstimateMax,
+                durationMin: t.durationMin,
+                distanceKm: t.distanceKm,
               ),
             ] else ...[
               const SizedBox(height: 4),
@@ -489,20 +493,26 @@ class _UberLegRow extends StatelessWidget {
   final IconData icon;
   final String destination;
   final String pickupTime;
-  final double fareMin;
-  final double fareMax;
+  final double? fareMin;
+  final double? fareMax;
+  final int durationMin;
+  final double distanceKm;
 
   const _UberLegRow({
     required this.label,
     required this.icon,
     required this.destination,
     required this.pickupTime,
-    required this.fareMin,
-    required this.fareMax,
+    this.fareMin,
+    this.fareMax,
+    required this.durationMin,
+    required this.distanceKm,
   });
 
   @override
   Widget build(BuildContext context) {
+    final hasFare = fareMin != null && fareMax != null;
+
     return Padding(
       padding: const EdgeInsets.only(left: 36),
       child: Column(
@@ -545,19 +555,35 @@ class _UberLegRow extends StatelessWidget {
                   color: BeautyCitaTheme.textLight,
                 ),
               ),
+              const SizedBox(width: 8),
+              Text(
+                '${durationMin} min · ${distanceKm.toStringAsFixed(1)} km',
+                style: GoogleFonts.nunito(
+                  fontSize: 12,
+                  color: BeautyCitaTheme.textLight.withValues(alpha: 0.7),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 2),
           Row(
             children: [
-              const Icon(Icons.attach_money,
-                  size: 16, color: BeautyCitaTheme.textLight),
+              Icon(Icons.attach_money,
+                  size: 16,
+                  color: hasFare
+                      ? BeautyCitaTheme.primaryRose
+                      : BeautyCitaTheme.textLight),
               const SizedBox(width: 6),
               Text(
-                '~\$${fareMin.toStringAsFixed(0)}-\$${fareMax.toStringAsFixed(0)} MXN',
+                hasFare
+                    ? '~\$${fareMin!.toStringAsFixed(0)}-\$${fareMax!.toStringAsFixed(0)} MXN'
+                    : '~\$${_estimateFare(distanceKm, durationMin)} MXN',
                 style: GoogleFonts.nunito(
                   fontSize: 13,
-                  color: BeautyCitaTheme.textLight,
+                  fontWeight: FontWeight.w600,
+                  color: hasFare
+                      ? BeautyCitaTheme.primaryRose
+                      : BeautyCitaTheme.textLight,
                 ),
               ),
             ],
@@ -565,6 +591,14 @@ class _UberLegRow extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  /// Simple fare estimate based on Uber MX rates when API estimate unavailable.
+  /// Base ~28 MXN + ~5 MXN/km + ~1.5 MXN/min.
+  static String _estimateFare(double km, int min) {
+    final low = (28 + km * 4.5 + min * 1.2).round();
+    final high = (35 + km * 6.0 + min * 1.8).round();
+    return '\$$low-\$$high';
   }
 }
 
@@ -582,9 +616,18 @@ class _PriceBreakdown extends StatelessWidget {
     final t = result.transport;
     final servicePrice = result.service.price;
     final currency = result.service.currency;
-    final hasUber = t.mode == 'uber' &&
-        t.uberEstimateMin != null &&
-        t.uberEstimateMax != null;
+    final isUber = t.mode == 'uber';
+
+    // Use API estimates if available, otherwise compute local estimate
+    double uberLow;
+    double uberHigh;
+    if (t.uberEstimateMin != null && t.uberEstimateMax != null) {
+      uberLow = t.uberEstimateMin!;
+      uberHigh = t.uberEstimateMax!;
+    } else {
+      uberLow = 28 + t.distanceKm * 4.5 + t.durationMin * 1.2;
+      uberHigh = 35 + t.distanceKm * 6.0 + t.durationMin * 1.8;
+    }
 
     return Card(
       shape: RoundedRectangleBorder(
@@ -600,14 +643,6 @@ class _PriceBreakdown extends StatelessWidget {
               label: 'Servicio',
               value: '\$${servicePrice.toStringAsFixed(0)} $currency',
             ),
-            if (hasUber) ...[
-              const SizedBox(height: 8),
-              _PriceRow(
-                label: 'Uber (est.)',
-                value:
-                    '~\$${(t.uberEstimateMin! * 2).toStringAsFixed(0)}-${(t.uberEstimateMax! * 2).toStringAsFixed(0)} $currency',
-              ),
-            ],
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 12),
               child: Divider(height: 1),
@@ -616,7 +651,7 @@ class _PriceBreakdown extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  hasUber ? 'Total estimado' : 'Total',
+                  'Total',
                   style: GoogleFonts.poppins(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
@@ -624,9 +659,7 @@ class _PriceBreakdown extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  hasUber
-                      ? '~\$${(servicePrice + t.uberEstimateMin! * 2).toStringAsFixed(0)}-${(servicePrice + t.uberEstimateMax! * 2).toStringAsFixed(0)} $currency'
-                      : '\$${servicePrice.toStringAsFixed(0)} $currency',
+                  '\$${servicePrice.toStringAsFixed(0)} $currency',
                   style: GoogleFonts.poppins(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
@@ -635,6 +668,25 @@ class _PriceBreakdown extends StatelessWidget {
                 ),
               ],
             ),
+            if (isUber) ...[
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Icon(Icons.info_outline,
+                      size: 14, color: BeautyCitaTheme.textLight),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Uber cobra por separado: ~\$${(uberLow * 2).toStringAsFixed(0)}-\$${(uberHigh * 2).toStringAsFixed(0)} $currency ida y vuelta',
+                      style: GoogleFonts.nunito(
+                        fontSize: 12,
+                        color: BeautyCitaTheme.textLight,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),

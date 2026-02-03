@@ -13,6 +13,9 @@ class Booking {
   final String? notes;
   final DateTime createdAt;
   final String? providerName;
+  final String? transportMode;
+  final double? depositAmount;
+  final DateTime? updatedAt;
 
   const Booking({
     required this.id,
@@ -29,6 +32,9 @@ class Booking {
     this.notes,
     required this.createdAt,
     this.providerName,
+    this.transportMode,
+    this.depositAmount,
+    this.updatedAt,
   });
 
   factory Booking.fromJson(Map<String, dynamic> json) {
@@ -63,6 +69,11 @@ class Booking {
       notes: json['notes'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
       providerName: providerName,
+      transportMode: json['transport_mode'] as String?,
+      depositAmount: (json['deposit_amount'] as num?)?.toDouble(),
+      updatedAt: json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'] as String)
+          : null,
     );
   }
 
@@ -81,6 +92,34 @@ class Booking {
       'price': price,
       'notes': notes,
       'created_at': createdAt.toIso8601String(),
+      'transport_mode': transportMode,
+      'deposit_amount': depositAmount,
     };
+  }
+
+  Booking copyWith({
+    String? status,
+    String? notes,
+    String? transportMode,
+  }) {
+    return Booking(
+      id: id,
+      userId: userId,
+      businessId: businessId,
+      serviceId: serviceId,
+      serviceName: serviceName,
+      serviceType: serviceType,
+      status: status ?? this.status,
+      scheduledAt: scheduledAt,
+      endsAt: endsAt,
+      durationMinutes: durationMinutes,
+      price: price,
+      notes: notes ?? this.notes,
+      createdAt: createdAt,
+      providerName: providerName,
+      transportMode: transportMode ?? this.transportMode,
+      depositAmount: depositAmount,
+      updatedAt: updatedAt,
+    );
   }
 }

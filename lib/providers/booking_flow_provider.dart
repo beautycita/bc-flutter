@@ -6,6 +6,7 @@ import '../models/follow_up_question.dart';
 import '../repositories/booking_repository.dart';
 import '../services/curate_service.dart';
 import '../services/follow_up_service.dart';
+import '../services/places_service.dart';
 import '../services/uber_service.dart';
 import 'package:beautycita/services/supabase_client.dart';
 import 'user_preferences_provider.dart';
@@ -17,10 +18,15 @@ import 'user_preferences_provider.dart';
 final curateServiceProvider = Provider((ref) => CurateService());
 final followUpServiceProvider = Provider((ref) => FollowUpService());
 final bookingRepositoryProvider = Provider((ref) => BookingRepository());
+final placesServiceProvider = Provider<PlacesService>((ref) {
+  final apiKey = dotenv.env['GOOGLE_ANDROID_API_KEY'] ?? '';
+  return PlacesService(apiKey: apiKey);
+});
 final uberServiceProvider = Provider((ref) {
   final clientId = dotenv.env['UBER_CLIENT_ID'] ?? '';
   final redirectUri = dotenv.env['UBER_REDIRECT_URI'] ?? 'beautycita://uber-callback';
-  return UberService(clientId: clientId, redirectUri: redirectUri);
+  final sandbox = dotenv.env['UBER_SANDBOX'] == 'true';
+  return UberService(clientId: clientId, redirectUri: redirectUri, sandbox: sandbox);
 });
 
 // ---------------------------------------------------------------------------
@@ -46,6 +52,8 @@ class BookingFlowState {
   final String? serviceName;
   final String? transportMode;
   final LatLng? userLocation;
+  final LatLng? customPickupLocation;
+  final String? customPickupAddress;
   final CurateResponse? curateResponse;
   final OverrideWindow? overrideWindow;
   final ResultCard? selectedResult;
@@ -62,6 +70,8 @@ class BookingFlowState {
     this.serviceName,
     this.transportMode,
     this.userLocation,
+    this.customPickupLocation,
+    this.customPickupAddress,
     this.curateResponse,
     this.overrideWindow,
     this.selectedResult,
@@ -72,6 +82,9 @@ class BookingFlowState {
     this.bookingId,
     this.uberScheduled = false,
   });
+
+  /// Returns the pickup location: custom if set, otherwise user's GPS location.
+  LatLng? get pickupLocation => customPickupLocation ?? userLocation;
 
   FollowUpQuestion? get currentQuestion {
     if (currentQuestionIndex < followUpQuestions.length) {
@@ -86,6 +99,9 @@ class BookingFlowState {
     String? serviceName,
     String? transportMode,
     LatLng? userLocation,
+    LatLng? customPickupLocation,
+    String? customPickupAddress,
+    bool clearCustomPickup = false,
     CurateResponse? curateResponse,
     OverrideWindow? overrideWindow,
     bool clearOverrideWindow = false,
@@ -103,6 +119,8 @@ class BookingFlowState {
       serviceName: serviceName ?? this.serviceName,
       transportMode: transportMode ?? this.transportMode,
       userLocation: userLocation ?? this.userLocation,
+      customPickupLocation: clearCustomPickup ? null : (customPickupLocation ?? this.customPickupLocation),
+      customPickupAddress: clearCustomPickup ? null : (customPickupAddress ?? this.customPickupAddress),
       curateResponse: curateResponse ?? this.curateResponse,
       overrideWindow: clearOverrideWindow ? null : (overrideWindow ?? this.overrideWindow),
       selectedResult: selectedResult ?? this.selectedResult,
@@ -217,6 +235,14 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
     await _fetchResults();
   }
 
+  /// User changed the Uber pickup location from the result card.
+  void setPickupLocation(double lat, double lng, String address) {
+    state = state.copyWith(
+      customPickupLocation: LatLng(lat: lat, lng: lng),
+      customPickupAddress: address,
+    );
+  }
+
   /// User tapped RESERVAR on a result card.
   void selectResult(ResultCard result) {
     state = state.copyWith(
@@ -247,12 +273,13 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
       bool uberOk = false;
 
       // 2. If transport is uber, schedule rides
-      if (state.transportMode == 'uber' && state.userLocation != null) {
+      final pickup = state.pickupLocation;
+      if (state.transportMode == 'uber' && pickup != null) {
         try {
           final uberResult = await _uberService.scheduleRides(
             appointmentId: booking.id,
-            pickupLat: state.userLocation!.lat,
-            pickupLng: state.userLocation!.lng,
+            pickupLat: pickup.lat,
+            pickupLng: pickup.lng,
             salonLat: result.business.lat,
             salonLng: result.business.lng,
             salonAddress: result.business.address,

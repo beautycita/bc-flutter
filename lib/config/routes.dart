@@ -15,6 +15,7 @@ import 'package:beautycita/screens/settings_screen.dart';
 import 'package:beautycita/screens/chat_list_screen.dart';
 import 'package:beautycita/screens/chat_conversation_screen.dart';
 import 'package:beautycita/screens/chat_router_screen.dart';
+import 'package:beautycita/screens/booking_detail_screen.dart';
 
 class AppRoutes {
   static const String splash = '/';
@@ -32,6 +33,7 @@ class AppRoutes {
   static const String salonOnboarding = '/registro';
   static const String chat = '/chat';
   static const String chatList = '/chat/list';
+  static const String appointmentDetail = '/appointment/:id';
   static const String chatConversation = '/chat/:threadId';
 
   static final GoRouter router = GoRouter(
@@ -193,6 +195,25 @@ class AppRoutes {
           return CustomTransitionPage(
             key: state.pageKey,
             child: const MyBookingsScreen(),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
+                  .chain(CurveTween(curve: Curves.easeInOutCubic));
+              return SlideTransition(
+                position: animation.drive(tween),
+                child: child,
+              );
+            },
+          );
+        },
+      ),
+      GoRoute(
+        path: '/appointment/:id',
+        name: 'appointment-detail',
+        pageBuilder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return CustomTransitionPage(
+            key: state.pageKey,
+            child: BookingDetailScreen(bookingId: id),
             transitionsBuilder: (context, animation, secondaryAnimation, child) {
               final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
                   .chain(CurveTween(curve: Curves.easeInOutCubic));
