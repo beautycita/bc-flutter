@@ -8,6 +8,7 @@ import '../services/curate_service.dart';
 import '../services/follow_up_service.dart';
 import '../services/uber_service.dart';
 import 'package:beautycita/services/supabase_client.dart';
+import 'user_preferences_provider.dart';
 
 // ---------------------------------------------------------------------------
 // Service instances
@@ -124,12 +125,14 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
   final FollowUpService _followUpService;
   final BookingRepository _bookingRepo;
   final UberService _uberService;
+  final UserPrefsState _userPrefs;
 
   BookingFlowNotifier(
     this._curateService,
     this._followUpService,
     this._bookingRepo,
     this._uberService,
+    this._userPrefs,
   ) : super(const BookingFlowState());
 
   /// User selected a service type from the category tree.
@@ -344,6 +347,9 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
         followUpAnswers:
             state.followUpAnswers.isNotEmpty ? state.followUpAnswers : null,
         overrideWindow: state.overrideWindow,
+        priceComfort: _userPrefs.priceComfort,
+        qualitySpeed: _userPrefs.qualitySpeed,
+        exploreLoyalty: _userPrefs.exploreLoyalty,
       );
 
       debugPrint('[CURATE] request: ${request.toJson()}');
@@ -377,10 +383,12 @@ final bookingFlowProvider =
   final followUpService = ref.watch(followUpServiceProvider);
   final bookingRepo = ref.watch(bookingRepositoryProvider);
   final uberService = ref.watch(uberServiceProvider);
+  final userPrefs = ref.watch(userPrefsProvider);
   return BookingFlowNotifier(
     curateService,
     followUpService,
     bookingRepo,
     uberService,
+    userPrefs,
   );
 });

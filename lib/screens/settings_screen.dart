@@ -86,6 +86,46 @@ class SettingsScreen extends ConsumerWidget {
 
           const SizedBox(height: BeautyCitaTheme.spaceLG),
 
+          // ── Section: Preferencias ──
+          const _SectionHeader(label: 'Preferencias'),
+          const SizedBox(height: BeautyCitaTheme.spaceXS),
+
+          _SettingsTile(
+            icon: Icons.attach_money_rounded,
+            label: 'Presupuesto',
+            trailing: Text(
+              _priceLabel(prefsState.priceComfort),
+              style: textTheme.bodyMedium?.copyWith(
+                color: BeautyCitaTheme.textLight,
+              ),
+            ),
+            onTap: () => _showPriceSheet(context, ref, prefsState.priceComfort),
+          ),
+          _SettingsTile(
+            icon: Icons.speed_rounded,
+            label: 'Calidad vs Rapidez',
+            trailing: Text(
+              _qualityLabel(prefsState.qualitySpeed),
+              style: textTheme.bodyMedium?.copyWith(
+                color: BeautyCitaTheme.textLight,
+              ),
+            ),
+            onTap: () => _showQualitySheet(context, ref, prefsState.qualitySpeed),
+          ),
+          _SettingsTile(
+            icon: Icons.explore_rounded,
+            label: 'Explorar vs Lealtad',
+            trailing: Text(
+              _exploreLabel(prefsState.exploreLoyalty),
+              style: textTheme.bodyMedium?.copyWith(
+                color: BeautyCitaTheme.textLight,
+              ),
+            ),
+            onTap: () => _showExploreSheet(context, ref, prefsState.exploreLoyalty),
+          ),
+
+          const SizedBox(height: BeautyCitaTheme.spaceLG),
+
           // ── Section: Transporte ──
           const _SectionHeader(label: 'Transporte'),
           const SizedBox(height: BeautyCitaTheme.spaceXS),
@@ -116,19 +156,6 @@ class SettingsScreen extends ConsumerWidget {
             icon: Icons.calendar_today_rounded,
             label: 'Mis citas',
             onTap: () => context.push('/my-bookings'),
-          ),
-          _SettingsTile(
-            icon: Icons.favorite_outline_rounded,
-            label: 'Mis favoritos',
-            onTap: () {
-              // Future route — show snackbar for now
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Favoritos disponible pronto'),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            },
           ),
           _SettingsTile(
             icon: Icons.storefront_rounded,
@@ -398,6 +425,299 @@ class SettingsScreen extends ConsumerWidget {
         );
       },
     );
+  }
+
+  // ── Price comfort bottom sheet ──
+  void _showPriceSheet(BuildContext context, WidgetRef ref, String current) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Tu presupuesto para belleza',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                const SizedBox(height: 16),
+                _TransportOption(
+                  emoji: '\$',
+                  label: 'Economico',
+                  subtitle: 'Lo mejor al mejor precio',
+                  selected: current == 'budget',
+                  onTap: () {
+                    ref.read(userPrefsProvider.notifier).setPriceComfort('budget');
+                    Navigator.pop(ctx);
+                  },
+                ),
+                const SizedBox(height: 8),
+                _TransportOption(
+                  emoji: '\$\$',
+                  label: 'Moderado',
+                  subtitle: 'Buen balance calidad-precio',
+                  selected: current == 'moderate',
+                  onTap: () {
+                    ref.read(userPrefsProvider.notifier).setPriceComfort('moderate');
+                    Navigator.pop(ctx);
+                  },
+                ),
+                const SizedBox(height: 8),
+                _TransportOption(
+                  emoji: '\$\$\$',
+                  label: 'Premium',
+                  subtitle: 'La mejor experiencia sin importar el costo',
+                  selected: current == 'premium',
+                  onTap: () {
+                    ref.read(userPrefsProvider.notifier).setPriceComfort('premium');
+                    Navigator.pop(ctx);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // ── Quality vs Speed bottom sheet ──
+  void _showQualitySheet(BuildContext context, WidgetRef ref, double current) {
+    double sliderValue = current;
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Calidad vs Rapidez',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                    const SizedBox(height: 8),
+                    Center(
+                      child: Text(
+                        _qualityLabel(sliderValue),
+                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: BeautyCitaTheme.primaryRose,
+                            ),
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        Text('Lo mas rapido',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: BeautyCitaTheme.textLight,
+                                )),
+                        Expanded(
+                          child: Slider(
+                            value: sliderValue,
+                            min: 0.0,
+                            max: 1.0,
+                            divisions: 10,
+                            activeColor: BeautyCitaTheme.primaryRose,
+                            onChanged: (v) {
+                              setSheetState(() => sliderValue = v);
+                            },
+                          ),
+                        ),
+                        Text('Lo mejor',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: BeautyCitaTheme.textLight,
+                                )),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          ref
+                              .read(userPrefsProvider.notifier)
+                              .setQualitySpeed(sliderValue);
+                          Navigator.pop(ctx);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: BeautyCitaTheme.primaryRose,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(AppConstants.radiusSM),
+                          ),
+                        ),
+                        child: const Text('Guardar'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // ── Explore vs Loyalty bottom sheet ──
+  void _showExploreSheet(BuildContext context, WidgetRef ref, double current) {
+    double sliderValue = current;
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Explorar vs Lealtad',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                    const SizedBox(height: 8),
+                    Center(
+                      child: Text(
+                        _exploreLabel(sliderValue),
+                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: BeautyCitaTheme.primaryRose,
+                            ),
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        Text('Explorar nuevos',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: BeautyCitaTheme.textLight,
+                                )),
+                        Expanded(
+                          child: Slider(
+                            value: sliderValue,
+                            min: 0.0,
+                            max: 1.0,
+                            divisions: 10,
+                            activeColor: BeautyCitaTheme.primaryRose,
+                            onChanged: (v) {
+                              setSheetState(() => sliderValue = v);
+                            },
+                          ),
+                        ),
+                        Text('Mis favoritos',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: BeautyCitaTheme.textLight,
+                                )),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          ref
+                              .read(userPrefsProvider.notifier)
+                              .setExploreLoyalty(sliderValue);
+                          Navigator.pop(ctx);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: BeautyCitaTheme.primaryRose,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(AppConstants.radiusSM),
+                          ),
+                        ),
+                        child: const Text('Guardar'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  static String _priceLabel(String value) {
+    return switch (value) {
+      'budget' => '\$',
+      'premium' => '\$\$\$',
+      _ => '\$\$',
+    };
+  }
+
+  static String _qualityLabel(double value) {
+    if (value < 0.35) return 'Rapido';
+    if (value > 0.65) return 'Mejor calidad';
+    return 'Balanceado';
+  }
+
+  static String _exploreLabel(double value) {
+    if (value < 0.35) return 'Explorador';
+    if (value > 0.65) return 'Fiel';
+    return 'Balanceado';
   }
 
   static IconData _transportIcon(String mode) {
