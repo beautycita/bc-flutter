@@ -145,17 +145,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Brand icon circle
+                      // Brand icon
                       Container(
                         width: 88,
                         height: 88,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFFE91E63), Color(0xFFC2185B)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
                           boxShadow: [
                             BoxShadow(
                               color: BeautyCitaTheme.primaryRose
@@ -165,10 +160,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                             ),
                           ],
                         ),
-                        child: const Center(
-                          child: Text(
-                            '\u{2728}', // sparkles emoji
-                            style: TextStyle(fontSize: 40),
+                        child: ClipOval(
+                          child: Image.asset(
+                            'assets/images/app_icon.png',
+                            width: 88,
+                            height: 88,
+                            fit: BoxFit.cover,
                           ),
                         ),
                       ),

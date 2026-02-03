@@ -7,7 +7,9 @@ import '../config/theme.dart';
 import '../models/curate_result.dart';
 import '../providers/booking_flow_provider.dart';
 import '../providers/favorites_provider.dart';
+import '../services/places_service.dart';
 import '../widgets/cinematic_question_text.dart';
+import '../widgets/location_picker_sheet.dart';
 import 'time_override_sheet.dart';
 
 class ResultCardsScreen extends ConsumerStatefulWidget {
@@ -468,96 +470,35 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
       ),
       elevation: isTopCard ? 12 : 2,
       shadowColor: Colors.black.withValues(alpha: 0.15),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildPhoto(result),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildBusinessHeader(result),
-                const SizedBox(height: 12),
-                _buildStaffInfo(result),
-                const SizedBox(height: 16),
-                _buildTimeSlot(result),
-                const SizedBox(height: 16),
-                _buildPriceInfo(result),
-                const SizedBox(height: 12),
-                _buildTransportInfo(result),
-                if (result.reviewSnippet != null) ...[
-                  const SizedBox(height: 16),
-                  _buildReviewSnippet(result),
-                ],
-                if (result.badges.isNotEmpty) ...[
-                  const SizedBox(height: 16),
-                  _buildBadges(result),
-                ],
-                const SizedBox(height: 20),
-                _buildActionButtons(result),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPhoto(ResultCard result) {
-    return Container(
-      height: 200,
-      decoration: const BoxDecoration(
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(BeautyCitaTheme.radiusLarge),
-          topRight: Radius.circular(BeautyCitaTheme.radiusLarge),
-        ),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: result.business.photoUrl != null
-          ? ClipRRect(
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(BeautyCitaTheme.radiusLarge),
-                topRight: Radius.circular(BeautyCitaTheme.radiusLarge),
-              ),
-              child: Image.network(
-                result.business.photoUrl!,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) =>
-                    _buildPhotoPlaceholder(),
-              ),
-            )
-          : _buildPhotoPlaceholder(),
-    );
-  }
-
-  Widget _buildPhotoPlaceholder() {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFFF8BBD0), Color(0xFFFCE4EC), Color(0xFFFFF8E1)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: Center(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 72,
-              height: 72,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.6),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.storefront_rounded,
-                size: 36,
-                color: BeautyCitaTheme.primaryRose,
-              ),
-            ),
+            _buildBusinessHeader(result),
+            const SizedBox(height: 8),
+            _buildStaffInfo(result),
+            const SizedBox(height: 12),
+            _buildTimeSlot(result),
+            const SizedBox(height: 12),
+            _buildPriceInfo(result),
+            const SizedBox(height: 8),
+            _buildTransportInfo(result),
+            if (result.transport.mode == 'uber') ...[
+              const SizedBox(height: 4),
+              _buildPickupInfo(),
+            ],
+            if (result.reviewSnippet != null) ...[
+              const SizedBox(height: 10),
+              _buildReviewSnippet(result),
+            ],
+            if (result.badges.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              _buildBadges(result),
+            ],
+            const SizedBox(height: 14),
+            _buildActionButtons(result),
           ],
         ),
       ),
@@ -565,27 +506,56 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
   }
 
   Widget _buildBusinessHeader(ResultCard result) {
+    final avatarUrl = result.staff.avatarUrl ?? result.business.photoUrl;
+
     return Row(
       children: [
-        Expanded(
-          child: Text(
-            result.business.name,
-            style: GoogleFonts.poppins(
-              fontSize: 20,
-              fontWeight: FontWeight.w600,
-              color: BeautyCitaTheme.textDark,
-            ),
-          ),
+        // Avatar
+        CircleAvatar(
+          radius: 24,
+          backgroundColor: BeautyCitaTheme.primaryRose.withValues(alpha: 0.15),
+          backgroundImage:
+              avatarUrl != null ? NetworkImage(avatarUrl) : null,
+          child: avatarUrl == null
+              ? const Icon(
+                  Icons.storefront_rounded,
+                  size: 24,
+                  color: BeautyCitaTheme.primaryRose,
+                )
+              : null,
         ),
-        const SizedBox(width: 8),
-        const Icon(Icons.star, color: BeautyCitaTheme.secondaryGold, size: 20),
-        const SizedBox(width: 4),
-        Text(
-          '${result.staff.rating.toStringAsFixed(1)} (${result.staff.totalReviews})',
-          style: GoogleFonts.poppins(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: BeautyCitaTheme.textDark,
+        const SizedBox(width: 12),
+        // Name + rating
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                result.business.name,
+                style: GoogleFonts.poppins(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: BeautyCitaTheme.textDark,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              Row(
+                children: [
+                  const Icon(Icons.star,
+                      color: BeautyCitaTheme.secondaryGold, size: 16),
+                  const SizedBox(width: 3),
+                  Text(
+                    '${result.staff.rating.toStringAsFixed(1)} (${result.staff.totalReviews})',
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: BeautyCitaTheme.textLight,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
       ],
@@ -688,6 +658,68 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
         ),
       ],
     );
+  }
+
+  Widget _buildPickupInfo() {
+    final bookingState = ref.watch(bookingFlowProvider);
+    final hasCustomPickup = bookingState.customPickupAddress != null;
+    final label = hasCustomPickup
+        ? bookingState.customPickupAddress!
+        : 'Ubicacion actual';
+
+    return Row(
+      children: [
+        const SizedBox(width: 28), // align with transport icon
+        Icon(
+          Icons.trip_origin_rounded,
+          size: 14,
+          color: hasCustomPickup
+              ? Colors.green.shade600
+              : BeautyCitaTheme.textLight,
+        ),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            label,
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              color: BeautyCitaTheme.textLight,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        GestureDetector(
+          onTap: () => _showPickupPicker(),
+          child: Text(
+            'Cambiar',
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              color: BeautyCitaTheme.primaryRose,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _showPickupPicker() async {
+    final location = await showLocationPicker(
+      context: context,
+      ref: ref,
+      title: 'Punto de recogida',
+      currentAddress: ref.read(bookingFlowProvider).customPickupAddress,
+      showUberPlaces: true,
+    );
+
+    if (location != null) {
+      ref.read(bookingFlowProvider.notifier).setPickupLocation(
+            location.lat,
+            location.lng,
+            location.address,
+          );
+    }
   }
 
   Widget _buildReviewSnippet(ResultCard result) {

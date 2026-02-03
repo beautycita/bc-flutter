@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:beautycita/config/constants.dart';
@@ -103,7 +104,9 @@ class _LocationPickerBodyState extends State<_LocationPickerBody> {
     }
     setState(() => _loadingSearch = true);
     _debounce = Timer(const Duration(milliseconds: 400), () async {
+      debugPrint('[LocationPicker] searching: "${query.trim()}"');
       final results = await _placesService.searchPlaces(query.trim());
+      debugPrint('[LocationPicker] got ${results.length} results');
       if (mounted) {
         setState(() {
           _predictions = results;

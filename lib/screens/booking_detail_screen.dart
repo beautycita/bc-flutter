@@ -685,6 +685,10 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
       decoration: BoxDecoration(
         color: BeautyCitaTheme.surfaceCream,
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+        border: Border.all(
+          color: BeautyCitaTheme.dividerLight,
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -797,6 +801,10 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
       decoration: BoxDecoration(
         color: BeautyCitaTheme.surfaceCream,
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+        border: Border.all(
+          color: BeautyCitaTheme.dividerLight,
+          width: 1,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -890,6 +898,13 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
     );
   }
 
+  /// Extract street name from a full address (first part before the comma).
+  String _shortAddress(String? address) {
+    if (address == null || address.isEmpty) return 'Sin direccion';
+    final parts = address.split(',');
+    return parts.first.trim();
+  }
+
   Widget _buildUberRideCard(UberRide ride, TextTheme textTheme) {
     final isReturn = ride.leg == 'return';
     final legLabel = isReturn ? 'Regreso' : 'Ida';
@@ -910,6 +925,7 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header: leg label + status chip
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -939,10 +955,71 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
               ),
             ],
           ),
-          if (ride.scheduledPickupAt != null) ...[
-            const SizedBox(height: BeautyCitaTheme.spaceXS),
-            Row(
+
+          const SizedBox(height: BeautyCitaTheme.spaceSM),
+
+          // Pickup address
+          Row(
+            children: [
+              Icon(
+                Icons.trip_origin_rounded,
+                size: AppConstants.iconSizeSM,
+                color: Colors.green.shade600,
+              ),
+              const SizedBox(width: BeautyCitaTheme.spaceXS),
+              Expanded(
+                child: Text(
+                  _shortAddress(ride.pickupAddress),
+                  style: textTheme.bodySmall,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+
+          // Dotted connector
+          Padding(
+            padding: const EdgeInsets.only(left: 7),
+            child: Column(
               children: [
+                for (int i = 0; i < 2; i++)
+                  Container(
+                    width: 2,
+                    height: 4,
+                    margin: const EdgeInsets.symmetric(vertical: 1),
+                    color: BeautyCitaTheme.dividerLight,
+                  ),
+              ],
+            ),
+          ),
+
+          // Dropoff address
+          Row(
+            children: [
+              Icon(
+                Icons.location_on_rounded,
+                size: AppConstants.iconSizeSM,
+                color: Colors.red.shade500,
+              ),
+              const SizedBox(width: BeautyCitaTheme.spaceXS),
+              Expanded(
+                child: Text(
+                  _shortAddress(ride.dropoffAddress),
+                  style: textTheme.bodySmall,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: BeautyCitaTheme.spaceSM),
+
+          // Time + fare row
+          Row(
+            children: [
+              if (ride.scheduledPickupAt != null) ...[
                 const Icon(
                   Icons.schedule_rounded,
                   size: AppConstants.iconSizeSM,
@@ -954,18 +1031,27 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
                   style: textTheme.bodyMedium,
                 ),
               ],
-            ),
-          ],
-          if (ride.estimatedFareMin != null &&
-              ride.estimatedFareMax != null) ...[
-            const SizedBox(height: BeautyCitaTheme.spaceXS),
-            Text(
-              '\$${ride.estimatedFareMin!.toStringAsFixed(0)}-\$${ride.estimatedFareMax!.toStringAsFixed(0)} ${ride.currency}',
-              style: textTheme.bodySmall?.copyWith(
-                color: BeautyCitaTheme.textLight,
-              ),
-            ),
-          ],
+              if (ride.scheduledPickupAt != null &&
+                  ride.estimatedFareMin != null)
+                const SizedBox(width: BeautyCitaTheme.spaceMD),
+              if (ride.estimatedFareMin != null &&
+                  ride.estimatedFareMax != null) ...[
+                Icon(
+                  Icons.attach_money_rounded,
+                  size: AppConstants.iconSizeSM,
+                  color: BeautyCitaTheme.primaryRose,
+                ),
+                Text(
+                  '\$${ride.estimatedFareMin!.toStringAsFixed(0)}-\$${ride.estimatedFareMax!.toStringAsFixed(0)} ${ride.currency}',
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: BeautyCitaTheme.primaryRose,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ],
+          ),
+
           if (ride.isActive) ...[
             const SizedBox(height: BeautyCitaTheme.spaceSM),
             GestureDetector(

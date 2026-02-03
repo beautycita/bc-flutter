@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'supabase_client.dart';
+import 'package:http/http.dart' as http;
 
 class PlacePrediction {
   final String placeId;
@@ -28,12 +28,27 @@ class PlaceLocation {
   });
 }
 
-/// Calls Google Places API through the places-proxy edge function
-/// to avoid API key restrictions on direct device HTTP calls.
+/// Calls Google Places API (New) directly from the device using the
+/// Android-restricted API key with X-Android-Package/Cert headers.
 class PlacesService {
-  PlacesService();
+  final String apiKey;
+  final String packageName;
+  final String sha1Cert;
 
-  /// Search for places via the places-proxy edge function.
+  PlacesService({
+    required this.apiKey,
+    this.packageName = 'com.beautycita.beautycita',
+    this.sha1Cert = '3BB7776E83D63854B9ACEA059ED3D8B20E04CBD1',
+  });
+
+  Map<String, String> get _headers => {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': apiKey,
+        'X-Android-Package': packageName,
+        'X-Android-Cert': sha1Cert,
+      };
+
+  /// Search for places using Places API (New) Autocomplete.
   Future<List<PlacePrediction>> searchPlaces(
     String query, {
     double? lat,
@@ -41,40 +56,66 @@ class PlacesService {
   }) async {
     if (query.trim().isEmpty) return [];
 
+    debugPrint('[PlacesService] searchPlaces: "$query"');
+
     try {
-      final client = SupabaseClientService.client;
       final body = <String, dynamic>{
-        'action': 'autocomplete',
         'input': query.trim(),
+        'languageCode': 'es',
+        'includedRegionCodes': ['MX'],
       };
+
       if (lat != null && lng != null) {
-        body['lat'] = lat;
-        body['lng'] = lng;
+        body['locationBias'] = {
+          'circle': {
+            'center': {'latitude': lat, 'longitude': lng},
+            'radius': 50000.0,
+          },
+        };
       }
 
-      final response = await client.functions.invoke(
-        'places-proxy',
-        body: body,
+      final response = await http.post(
+        Uri.parse('https://places.googleapis.com/v1/places:autocomplete'),
+        headers: _headers,
+        body: jsonEncode(body),
       );
 
-      if (response.status != 200) {
-        debugPrint('[PlacesService] status=${response.status}');
+      debugPrint('[PlacesService] status=${response.statusCode}');
+
+      if (response.statusCode != 200) {
+        debugPrint('[PlacesService] error: ${response.body}');
         return [];
       }
 
-      final raw = response.data;
-      final data = raw is String
-          ? jsonDecode(raw) as Map<String, dynamic>
-          : raw as Map<String, dynamic>;
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final suggestions = data['suggestions'] as List? ?? [];
+      debugPrint('[PlacesService] got ${suggestions.length} suggestions');
 
-      final predictions = data['predictions'] as List? ?? [];
-      return predictions.map((p) {
-        final m = p as Map<String, dynamic>;
+      return suggestions
+          .where((s) =>
+              (s as Map<String, dynamic>).containsKey('placePrediction'))
+          .map((s) {
+        final pp = (s as Map<String, dynamic>)['placePrediction']
+            as Map<String, dynamic>;
+        final sf = (pp['structuredFormat'] ?? {}) as Map<String, dynamic>;
+        final mainText =
+            ((sf['mainText'] ?? {}) as Map<String, dynamic>)['text']
+                    as String? ??
+                '';
+        final secondaryText =
+            ((sf['secondaryText'] ?? {}) as Map<String, dynamic>)['text']
+                    as String? ??
+                '';
+        final fullText =
+            ((pp['text'] ?? {}) as Map<String, dynamic>)['text']
+                    as String? ??
+                '';
+
         return PlacePrediction(
-          placeId: m['place_id'] as String? ?? '',
-          mainText: m['main_text'] as String? ?? '',
-          secondaryText: m['secondary_text'] as String? ?? '',
-          fullText: m['description'] as String? ?? '',
+          placeId: pp['placeId'] as String? ?? '',
+          mainText: mainText,
+          secondaryText: secondaryText,
+          fullText: fullText,
         );
       }).toList();
     } catch (e) {
@@ -83,39 +124,40 @@ class PlacesService {
     }
   }
 
-  /// Get place details (coordinates + address) via the places-proxy edge function.
+  /// Get place details (coordinates + address) using Places API (New).
   Future<PlaceLocation?> getPlaceDetails(String placeId) async {
     if (placeId.isEmpty) return null;
 
     try {
-      final client = SupabaseClientService.client;
-      final response = await client.functions.invoke(
-        'places-proxy',
-        body: {
-          'action': 'details',
-          'place_id': placeId,
-        },
-      );
+      final uri =
+          Uri.parse('https://places.googleapis.com/v1/places/$placeId');
 
-      if (response.status != 200) {
-        debugPrint('[PlacesService] details status=${response.status}');
+      final headers = {
+        'X-Goog-Api-Key': apiKey,
+        'X-Goog-FieldMask': 'location,formattedAddress',
+        'X-Android-Package': packageName,
+        'X-Android-Cert': sha1Cert,
+      };
+
+      final response = await http.get(uri, headers: headers);
+
+      if (response.statusCode != 200) {
+        debugPrint('[PlacesService] details error: ${response.body}');
         return null;
       }
 
-      final raw = response.data;
-      final data = raw is String
-          ? jsonDecode(raw) as Map<String, dynamic>
-          : raw as Map<String, dynamic>;
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final location = data['location'] as Map<String, dynamic>?;
 
-      if (data['lat'] == null || data['lng'] == null) {
-        debugPrint('[PlacesService] details missing lat/lng: $data');
+      if (location == null) {
+        debugPrint('[PlacesService] details missing location: $data');
         return null;
       }
 
       return PlaceLocation(
-        lat: (data['lat'] as num).toDouble(),
-        lng: (data['lng'] as num).toDouble(),
-        address: data['address'] as String? ?? '',
+        lat: (location['latitude'] as num).toDouble(),
+        lng: (location['longitude'] as num).toDouble(),
+        address: data['formattedAddress'] as String? ?? '',
       );
     } catch (e) {
       debugPrint('[PlacesService] getPlaceDetails error: $e');
