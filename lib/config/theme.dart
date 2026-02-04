@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'constants.dart';
 
 class BeautyCitaTheme {
   // Brand Colors
@@ -24,28 +25,28 @@ class BeautyCitaTheme {
     end: Alignment.bottomRight,
   );
 
-  // Border Radius
-  static const double radiusSmall = 12.0;
-  static const double radiusMedium = 16.0;
-  static const double radiusLarge = 24.0;
-  static const double radiusXL = 32.0;
+  // Border Radius — delegates to AppConstants (single source of truth)
+  static const double radiusSmall = AppConstants.radiusSM;
+  static const double radiusMedium = AppConstants.radiusMD;
+  static const double radiusLarge = AppConstants.radiusLG;
+  static const double radiusXL = AppConstants.radiusXL;
 
-  // Spacing
-  static const double spaceXS = 4.0;
-  static const double spaceSM = 8.0;
-  static const double spaceMD = 16.0;
-  static const double spaceLG = 24.0;
-  static const double spaceXL = 32.0;
-  static const double spaceXXL = 48.0;
+  // Spacing — delegates to AppConstants
+  static const double spaceXS = AppConstants.paddingXS;
+  static const double spaceSM = AppConstants.paddingSM;
+  static const double spaceMD = AppConstants.paddingMD;
+  static const double spaceLG = AppConstants.paddingLG;
+  static const double spaceXL = AppConstants.paddingXL;
+  static const double spaceXXL = AppConstants.paddingXXL;
 
-  // Touch targets (thumb-friendly minimum)
-  static const double minTouchTarget = 56.0;
-  static const double largeTouchTarget = 72.0;
+  // Touch targets — delegates to AppConstants
+  static const double minTouchTarget = AppConstants.minTouchHeight;
+  static const double largeTouchTarget = AppConstants.largeTouchHeight;
 
-  // Elevation
-  static const double elevationCard = 2.0;
-  static const double elevationButton = 4.0;
-  static const double elevationSheet = 8.0;
+  // Elevation — delegates to AppConstants
+  static const double elevationCard = AppConstants.elevationLow;
+  static const double elevationButton = AppConstants.elevationMedium;
+  static const double elevationSheet = AppConstants.elevationHigh;
 
   // Light Theme
   static ThemeData get lightTheme {
