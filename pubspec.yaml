@@ -27,6 +27,7 @@ dependencies:
   geolocator: ^14.0.2
   app_links: ^6.4.0
   http: ^1.2.0
+  mobile_scanner: ^7.0.0
 
 dev_dependencies:
   flutter_test:

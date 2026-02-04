@@ -153,6 +153,11 @@ class SettingsScreen extends ConsumerWidget {
           const SizedBox(height: BeautyCitaTheme.spaceXS),
 
           _SettingsTile(
+            icon: Icons.qr_code_scanner_rounded,
+            label: 'Vincular sesion web',
+            onTap: () => context.push('/qr-scan'),
+          ),
+          _SettingsTile(
             icon: Icons.calendar_today_rounded,
             label: 'Mis citas',
             onTap: () => context.push('/my-bookings'),
