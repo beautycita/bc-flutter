@@ -10,6 +10,7 @@ import 'package:beautycita/config/theme.dart';
 import 'package:beautycita/config/routes.dart';
 import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/providers/uber_provider.dart';
+import 'package:beautycita/services/qr_auth_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -72,10 +73,50 @@ class _BeautyCitaAppState extends ConsumerState<BeautyCitaApp> {
   }
 
   void _handleUri(Uri uri) {
-    if (uri.scheme == 'beautycita' && uri.host == 'uber-callback') {
-      final code = uri.queryParameters['code'];
-      if (code != null) {
-        ref.read(uberLinkProvider.notifier).handleCallback(code);
+    if (uri.scheme != 'beautycita') return;
+
+    switch (uri.host) {
+      case 'uber-callback':
+        final code = uri.queryParameters['code'];
+        if (code != null) {
+          ref.read(uberLinkProvider.notifier).handleCallback(code);
+        }
+        break;
+      case 'auth':
+        if (uri.path == '/qr') {
+          final code = uri.queryParameters['code'];
+          final sessionId = uri.queryParameters['session'];
+          if (code != null && sessionId != null) {
+            _handleQrAuth(code, sessionId);
+          }
+        }
+        break;
+    }
+  }
+
+  Future<void> _handleQrAuth(String code, String sessionId) async {
+    try {
+      final service = QrAuthService();
+      final success = await service.authorizeSession(code, sessionId);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(success
+              ? 'Dispositivo vinculado exitosamente'
+              : 'Error al vincular dispositivo'),
+            backgroundColor: success ? Colors.green : Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     }
   }

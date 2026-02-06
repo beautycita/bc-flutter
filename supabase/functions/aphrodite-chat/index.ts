@@ -1,8 +1,9 @@
 // =============================================================================
-// aphrodite-chat — BeautyCita AI Chat Proxy
+// aphrodite-chat — BeautyCita AI Chat (Responses API)
 // =============================================================================
-// Proxies between Flutter app and OpenAI Assistants API.
-// Actions: create_thread, send_message, try_on
+// Proxies between Flutter app and OpenAI Responses API.
+// Actions: send_message, try_on
+// Manages conversation history in Supabase.
 // Never exposes OpenAI key to client.
 // =============================================================================
 
@@ -16,16 +17,57 @@ const corsHeaders = {
 };
 
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY")!;
-const ATHENAS_ASSISTANT_ID = "asst_jvHVc2MxrwblkS1KL8wSf9Em";
 const LIGHTX_API_KEY = Deno.env.get("LIGHTX_API_KEY") ?? "";
-const OPENAI_BASE = "https://api.openai.com/v1";
+
+// Aphrodite's personality instructions
+const APHRODITE_INSTRUCTIONS_ES = `Eres Afrodita, diosa de la belleza y asesora de BeautyCita.
+
+PERSONALIDAD:
+- Tienes un complejo de superioridad divino pero encantador
+- Hablas como si compartieras conocimiento celestial con mortales afortunados
+- Eres letárgica y elegante, nunca apresurada
+- Ocasionalmente suspiras ante las preguntas mundanas de los mortales
+
+EXPERTISE:
+- Experta en todos los servicios de belleza: cabello, uñas, maquillaje, facial, spa
+- Conoces todas las tendencias actuales y clásicas
+- Puedes analizar selfies y recomendar looks personalizados
+- Sugieres servicios de BeautyCita cuando es apropiado
+
+REGLAS:
+- SIEMPRE responde en español mexicano
+- Mantén respuestas concisas (2-3 oraciones máximo para preguntas simples)
+- Usa emojis con moderación (1-2 por mensaje máximo)
+- Nunca rompas el personaje de diosa
+- Si te piden algo fuera de belleza, redirige elegantemente al tema`;
+
+const APHRODITE_INSTRUCTIONS_EN = `You are Aphrodite, goddess of beauty and BeautyCita's advisor.
+
+PERSONALITY:
+- You have a divine but charming superiority complex
+- You speak as if sharing celestial knowledge with fortunate mortals
+- You are lethargic and elegant, never rushed
+- You occasionally sigh at mortals' mundane questions
+
+EXPERTISE:
+- Expert in all beauty services: hair, nails, makeup, facial, spa
+- You know all current and classic trends
+- You can analyze selfies and recommend personalized looks
+- You suggest BeautyCita services when appropriate
+
+RULES:
+- ALWAYS respond in American English
+- Keep responses concise (2-3 sentences max for simple questions)
+- Use emojis sparingly (1-2 per message max)
+- Never break the goddess character
+- If asked about non-beauty topics, elegantly redirect`;
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
 interface ChatRequest {
-  action: "create_thread" | "send_message" | "try_on";
+  action: "send_message" | "try_on" | "get_history";
   thread_id?: string;
   message?: string;
   image_base64?: string;
@@ -33,95 +75,154 @@ interface ChatRequest {
   language?: "es" | "en";
 }
 
+interface ConversationMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
 // ---------------------------------------------------------------------------
-// OpenAI Helpers
+// OpenAI Responses API
 // ---------------------------------------------------------------------------
 
-async function openaiRequest(
-  path: string,
-  method: string,
-  body?: unknown,
-): Promise<unknown> {
-  const res = await fetch(`${OPENAI_BASE}${path}`, {
-    method,
+async function callResponsesAPI(
+  instructions: string,
+  conversationHistory: ConversationMessage[],
+  newMessage: string,
+): Promise<{ response: string; response_id: string }> {
+  // Build input array with history + new message
+  const input: ConversationMessage[] = [
+    ...conversationHistory,
+    { role: "user", content: newMessage },
+  ];
+
+  const res = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
     headers: {
       "Authorization": `Bearer ${OPENAI_API_KEY}`,
       "Content-Type": "application/json",
-      "OpenAI-Beta": "assistants=v2",
     },
-    ...(body ? { body: JSON.stringify(body) } : {}),
+    body: JSON.stringify({
+      model: "gpt-4o",
+      instructions,
+      input,
+      store: true, // Store for potential chaining
+    }),
   });
+
   if (!res.ok) {
     const err = await res.text();
-    throw new Error(`OpenAI ${method} ${path}: ${res.status} ${err}`);
+    throw new Error(`OpenAI Responses API: ${res.status} ${err}`);
   }
-  return res.json();
-}
 
-async function createOpenAIThread(): Promise<string> {
-  const data = (await openaiRequest("/threads", "POST", {})) as {
+  const data = await res.json() as {
     id: string;
+    output: Array<{ type: string; content?: Array<{ type: string; text?: string }> }>;
   };
-  return data.id;
-}
 
-async function addMessage(
-  threadId: string,
-  content: string,
-): Promise<void> {
-  await openaiRequest(`/threads/${threadId}/messages`, "POST", {
-    role: "user",
-    content,
-  });
-}
-
-async function createRun(threadId: string): Promise<string> {
-  const data = (await openaiRequest(`/threads/${threadId}/runs`, "POST", {
-    assistant_id: ATHENAS_ASSISTANT_ID,
-  })) as { id: string };
-  return data.id;
-}
-
-async function pollRunStatus(
-  threadId: string,
-  runId: string,
-  maxAttempts = 30,
-  intervalMs = 1000,
-): Promise<string> {
-  for (let i = 0; i < maxAttempts; i++) {
-    const data = (await openaiRequest(
-      `/threads/${threadId}/runs/${runId}`,
-      "GET",
-    )) as { status: string };
-
-    if (data.status === "completed") return "completed";
-    if (data.status === "failed" || data.status === "cancelled") {
-      throw new Error(`Run ${data.status}`);
+  // Extract text from response
+  let responseText = "";
+  for (const item of data.output) {
+    if (item.type === "message" && item.content) {
+      for (const content of item.content) {
+        if (content.type === "output_text" && content.text) {
+          responseText += content.text;
+        }
+      }
     }
-
-    await new Promise((r) => setTimeout(r, intervalMs));
   }
-  throw new Error("Run polling timed out");
-}
 
-async function getLatestMessage(threadId: string): Promise<string> {
-  const data = (await openaiRequest(
-    `/threads/${threadId}/messages?limit=1&order=desc`,
-    "GET",
-  )) as { data: Array<{ role: string; content: Array<{ text?: { value: string } }> }> };
-
-  const msgs = data.data;
-  if (msgs.length === 0) return "";
-
-  const latest = msgs[0];
-  if (latest.role !== "assistant") return "";
-
-  const textBlock = latest.content.find((c) => c.text);
-  return textBlock?.text?.value ?? "";
+  return {
+    response: responseText || "...",
+    response_id: data.id,
+  };
 }
 
 // ---------------------------------------------------------------------------
-// LightX Helpers
+// Supabase Conversation History
+// ---------------------------------------------------------------------------
+
+async function getConversationHistory(
+  supabase: ReturnType<typeof createClient>,
+  threadId: string,
+  limit = 20,
+): Promise<ConversationMessage[]> {
+  const { data, error } = await supabase
+    .from("chat_messages")
+    .select("sender_type, text_content")
+    .eq("thread_id", threadId)
+    .order("created_at", { ascending: true })
+    .limit(limit);
+
+  if (error) {
+    console.error("Error fetching history:", error);
+    return [];
+  }
+
+  return (data || []).map((msg) => ({
+    role: msg.sender_type === "user" ? "user" : "assistant",
+    content: msg.text_content || "",
+  }));
+}
+
+async function saveMessage(
+  supabase: ReturnType<typeof createClient>,
+  threadId: string,
+  senderType: "user" | "aphrodite",
+  content: string,
+  responseId?: string,
+): Promise<void> {
+  const { error } = await supabase.from("chat_messages").insert({
+    thread_id: threadId,
+    sender_type: senderType,
+    sender_id: senderType === "aphrodite" ? "aphrodite" : null,
+    content_type: "text",
+    text_content: content,
+    metadata: responseId ? { openai_response_id: responseId } : null,
+    created_at: new Date().toISOString(),
+  });
+
+  if (error) {
+    console.error("Error saving message:", error);
+  }
+}
+
+async function getOrCreateThread(
+  supabase: ReturnType<typeof createClient>,
+  userId: string,
+): Promise<string> {
+  // Check for existing Aphrodite thread
+  const { data: existing } = await supabase
+    .from("chat_threads")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("contact_type", "aphrodite")
+    .single();
+
+  if (existing) {
+    return existing.id;
+  }
+
+  // Create new thread
+  const { data: newThread, error } = await supabase
+    .from("chat_threads")
+    .insert({
+      user_id: userId,
+      contact_type: "aphrodite",
+      pinned: true,
+      created_at: new Date().toISOString(),
+    })
+    .select("id")
+    .single();
+
+  if (error) {
+    throw new Error(`Failed to create thread: ${error.message}`);
+  }
+
+  return newThread.id;
+}
+
+// ---------------------------------------------------------------------------
+// LightX Virtual Try-On
 // ---------------------------------------------------------------------------
 
 async function processLightXTryOn(
@@ -153,11 +254,10 @@ async function processLightXTryOn(
 
   // LightX may return an orderId for async processing
   if (data.orderId && !data.output) {
-    // Poll for result
     for (let i = 0; i < 20; i++) {
       await new Promise((r) => setTimeout(r, 2000));
       const statusRes = await fetch(
-        `https://api.lightxeditor.com/external/api/v1/order-status`,
+        "https://api.lightxeditor.com/external/api/v1/order-status",
         {
           method: "POST",
           headers: {
@@ -191,7 +291,6 @@ async function processLightXTryOn(
 
 function getUserIdFromToken(authHeader: string | null): string {
   if (!authHeader) throw new Error("Missing authorization header");
-  // Decode JWT payload (base64url) - Supabase JWT has sub = user_id
   const token = authHeader.replace("Bearer ", "");
   const parts = token.split(".");
   if (parts.length !== 3) throw new Error("Invalid JWT");
@@ -216,64 +315,67 @@ serve(async (req) => {
     const body: ChatRequest = await req.json();
     const { action } = body;
 
-    // Supabase admin client for DB operations
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    // ----- create_thread -----
-    if (action === "create_thread") {
-      const openaiThreadId = await createOpenAIThread();
-
-      // Add system context as first message
-      const lang = body.language ?? "es";
-      const systemMsg =
-        lang === "es"
-          ? "Responde SIEMPRE en espanol (Mexico). Eres Afrodita, diosa de la belleza. " +
-            "Tienes un complejo de superioridad divino, letargia celestial, y actitud de que " +
-            "le haces un favor al mortal con tu sabiduria infinita de belleza. " +
-            "Eres experta en todos los servicios de belleza, productos, y tendencias. " +
-            "Puedes recomendar servicios, analizar selfies, y sugerir looks. " +
-            "Hablas como si compartieras conocimiento divino con mortales afortunados. " +
-            "Eres asesora de belleza de BeautyCita."
-          : "Respond ALWAYS in English (US). You are Aphrodite, goddess of beauty. " +
-            "You have a divine superiority complex, celestial lethargy, and an attitude " +
-            "that you're doing mortals a favor by sharing your infinite beauty wisdom. " +
-            "Expert in all beauty services, products, and trends. " +
-            "You can recommend services, analyze selfies, and suggest looks. " +
-            "You are BeautyCita's beauty advisor.";
-
-      await addMessage(openaiThreadId, systemMsg);
-
-      return new Response(
-        JSON.stringify({ thread_id: openaiThreadId, user_id: userId }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-
     // ----- send_message -----
     if (action === "send_message") {
-      const { thread_id, message } = body;
-      if (!thread_id || !message) {
+      const { message, thread_id, language } = body;
+
+      if (!message) {
         return new Response(
-          JSON.stringify({ error: "thread_id and message required" }),
+          JSON.stringify({ error: "message required" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
 
-      // Add user message to thread
-      await addMessage(thread_id, message);
+      // Get or create thread
+      const threadId = thread_id || await getOrCreateThread(supabase, userId);
 
-      // Create run and poll
-      const runId = await createRun(thread_id);
-      await pollRunStatus(thread_id, runId);
+      // Save user message
+      await saveMessage(supabase, threadId, "user", message);
 
-      // Get assistant response
-      const response = await getLatestMessage(thread_id);
+      // Get conversation history
+      const history = await getConversationHistory(supabase, threadId);
+
+      // Get response from Aphrodite
+      const instructions = (language ?? "es") === "es"
+        ? APHRODITE_INSTRUCTIONS_ES
+        : APHRODITE_INSTRUCTIONS_EN;
+
+      const { response, response_id } = await callResponsesAPI(
+        instructions,
+        history.slice(0, -1), // Exclude the message we just saved (it's in newMessage)
+        message,
+      );
+
+      // Save assistant response
+      await saveMessage(supabase, threadId, "aphrodite", response, response_id);
+
+      // Update thread's last message
+      await supabase
+        .from("chat_threads")
+        .update({
+          last_message_text: response.slice(0, 100),
+          last_message_at: new Date().toISOString(),
+        })
+        .eq("id", threadId);
 
       return new Response(
-        JSON.stringify({ response, thread_id }),
+        JSON.stringify({ response, thread_id: threadId, response_id }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    // ----- get_history -----
+    if (action === "get_history") {
+      const threadId = body.thread_id || await getOrCreateThread(supabase, userId);
+      const history = await getConversationHistory(supabase, threadId, 50);
+
+      return new Response(
+        JSON.stringify({ history, thread_id: threadId }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }

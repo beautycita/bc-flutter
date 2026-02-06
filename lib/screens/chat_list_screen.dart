@@ -371,9 +371,27 @@ class _EmptyState extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             Text(
+              'No tienes conversaciones',
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: BeautyCitaTheme.textDark,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Tus mensajes con salones aparecerán aquí',
+              style: GoogleFonts.nunito(
+                fontSize: 14,
+                color: BeautyCitaTheme.textLight,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            Text(
               'Conoce a Afrodita',
               style: GoogleFonts.poppins(
-                fontSize: 22,
+                fontSize: 20,
                 fontWeight: FontWeight.w600,
                 color: BeautyCitaTheme.textDark,
               ),

@@ -339,8 +339,8 @@ class _CategoryCardState extends State<_CategoryCard>
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: category.color.withValues(alpha: 0.12),
-              width: 1.5,
+              color: BeautyCitaTheme.dividerLight,
+              width: 1,
             ),
             boxShadow: [
               BoxShadow(

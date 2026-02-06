@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:typed_data';
-import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 import 'supabase_client.dart';
 import '../models/chat_thread.dart';
@@ -8,160 +7,49 @@ import '../models/chat_message.dart';
 
 /// Service for interacting with Aphrodite AI via the aphrodite-chat edge function.
 /// Uses Supabase for DB operations and edge function for AI proxy.
+///
+/// Updated for OpenAI Responses API - conversation history managed in Supabase.
 class AphroditeService {
   static const _uuid = Uuid();
 
-  /// Creates a new Aphrodite chat thread for the given user.
-  /// Calls the edge function to create an OpenAI thread, then inserts into DB.
-  Future<ChatThread> createThread(String userId) async {
+  /// Sends a text message to Aphrodite.
+  /// The edge function handles thread creation, message saving, and AI response.
+  /// Returns the AI response message.
+  Future<ChatMessage> sendMessage(String? threadId, String text) async {
     final client = SupabaseClientService.client;
 
-    // Call edge function to create OpenAI thread
-    final response = await client.functions.invoke(
-      'aphrodite-chat',
-      body: {'action': 'create_thread', 'language': 'es'},
-    );
-
-    if (response.status != 200) {
-      throw AphroditeException(
-        'Failed to create thread: ${response.status}',
-        statusCode: response.status,
-      );
-    }
-
-    final data = response.data as Map<String, dynamic>;
-    final openaiThreadId = data['thread_id'] as String;
-
-    // Insert thread into DB
-    final threadId = _uuid.v4();
-    final now = DateTime.now().toUtc();
-
-    await client.from('chat_threads').insert({
-      'id': threadId,
-      'user_id': userId,
-      'contact_type': 'aphrodite',
-      'openai_thread_id': openaiThreadId,
-      'pinned': true,
-      'last_message_at': now.toIso8601String(),
-      'created_at': now.toIso8601String(),
-    });
-
-    // Insert welcome message from Aphrodite
-    const welcomeText =
-        '*suspiro divino* Ay, otro mortal que busca mi guía... '
-        'Bueno, supongo que es mi deber celestial ayudarte. '
-        'Soy Afrodita, tu asesora de belleza. '
-        'Pregúntame lo que quieras sobre belleza, '
-        'o mándame una selfie y te digo qué hacer con... bueno, con todo eso. 💅✨';
-
-    await client.from('chat_messages').insert({
-      'id': _uuid.v4(),
-      'thread_id': threadId,
-      'sender_type': 'aphrodite',
-      'content_type': 'text',
-      'text_content': welcomeText,
-      'created_at': now.toIso8601String(),
-    });
-
-    // Update thread last message
-    await client.from('chat_threads').update({
-      'last_message_text': welcomeText,
-      'last_message_at': now.toIso8601String(),
-    }).eq('id', threadId);
-
-    return ChatThread(
-      id: threadId,
-      userId: userId,
-      contactType: 'aphrodite',
-      openaiThreadId: openaiThreadId,
-      lastMessageText: welcomeText,
-      lastMessageAt: now,
-      unreadCount: 1,
-      pinned: true,
-      createdAt: now,
-    );
-  }
-
-  /// Sends a text message to an Aphrodite thread.
-  /// Inserts user message, calls edge function, inserts response.
-  Future<ChatMessage> sendMessage(String threadId, String text) async {
-    final client = SupabaseClientService.client;
-    final userId = SupabaseClientService.currentUserId;
-    final now = DateTime.now().toUtc();
-
-    // Insert user message into DB
-    final userMsgId = _uuid.v4();
-    await client.from('chat_messages').insert({
-      'id': userMsgId,
-      'thread_id': threadId,
-      'sender_type': 'user',
-      'sender_id': userId,
-      'content_type': 'text',
-      'text_content': text,
-      'created_at': now.toIso8601String(),
-    });
-
-    // Update thread last message
-    await client.from('chat_threads').update({
-      'last_message_text': text,
-      'last_message_at': now.toIso8601String(),
-    }).eq('id', threadId);
-
-    // Get the OpenAI thread ID
-    final threadData = await client
-        .from('chat_threads')
-        .select('openai_thread_id')
-        .eq('id', threadId)
-        .single();
-    final openaiThreadId = threadData['openai_thread_id'] as String;
-
-    // Call edge function
+    // Call edge function - it handles everything
     final response = await client.functions.invoke(
       'aphrodite-chat',
       body: {
         'action': 'send_message',
-        'thread_id': openaiThreadId,
+        'thread_id': threadId,
         'message': text,
+        'language': 'es',
       },
     );
 
     if (response.status != 200) {
+      final error = response.data is Map ? response.data['error'] : 'Unknown error';
       throw AphroditeException(
-        'Failed to send message: ${response.status}',
+        'Failed to send message: $error',
         statusCode: response.status,
       );
     }
 
     final data = response.data as Map<String, dynamic>;
     final responseText = data['response'] as String;
+    final actualThreadId = data['thread_id'] as String;
+    final responseId = data['response_id'] as String?;
 
-    // Insert Aphrodite response into DB
-    final responseMsgId = _uuid.v4();
-    final responseTime = DateTime.now().toUtc();
-
-    await client.from('chat_messages').insert({
-      'id': responseMsgId,
-      'thread_id': threadId,
-      'sender_type': 'aphrodite',
-      'content_type': 'text',
-      'text_content': responseText,
-      'created_at': responseTime.toIso8601String(),
-    });
-
-    // Update thread
-    await client.from('chat_threads').update({
-      'last_message_text': responseText,
-      'last_message_at': responseTime.toIso8601String(),
-      'unread_count': 0,
-    }).eq('id', threadId);
-
+    // Return the response as a ChatMessage
     return ChatMessage(
-      id: responseMsgId,
-      threadId: threadId,
+      id: responseId ?? _uuid.v4(),
+      threadId: actualThreadId,
       senderType: 'aphrodite',
       contentType: 'text',
       textContent: responseText,
-      createdAt: responseTime,
+      createdAt: DateTime.now().toUtc(),
     );
   }
 
@@ -284,7 +172,8 @@ class AphroditeService {
   }
 
   /// Gets or creates the Aphrodite thread for the current user.
-  Future<ChatThread> getOrCreateAphroditeThread() async {
+  /// The edge function will create the thread if needed on first message.
+  Future<ChatThread?> getAphroditeThread() async {
     final client = SupabaseClientService.client;
     final userId = SupabaseClientService.currentUserId;
     if (userId == null) {
@@ -303,8 +192,69 @@ class AphroditeService {
       return ChatThread.fromJson(existing);
     }
 
-    // Create new one
-    return createThread(userId);
+    return null; // Thread will be created on first message
+  }
+
+  /// Creates Aphrodite thread with welcome message.
+  /// Called when user first opens Aphrodite chat.
+  Future<ChatThread> createAphroditeThread() async {
+    final client = SupabaseClientService.client;
+    final userId = SupabaseClientService.currentUserId;
+    if (userId == null) {
+      throw AphroditeException('Not authenticated');
+    }
+
+    final threadId = _uuid.v4();
+    final now = DateTime.now().toUtc();
+
+    // Welcome message from Aphrodite
+    const welcomeText =
+        '*suspiro divino* Ay, otro mortal que busca mi guía... '
+        'Bueno, supongo que es mi deber celestial ayudarte. '
+        'Soy Afrodita, tu asesora de belleza. '
+        'Pregúntame lo que quieras sobre belleza, '
+        'o mándame una selfie y te digo qué hacer con... bueno, con todo eso. 💅✨';
+
+    // Create thread
+    await client.from('chat_threads').insert({
+      'id': threadId,
+      'user_id': userId,
+      'contact_type': 'aphrodite',
+      'pinned': true,
+      'last_message_text': welcomeText,
+      'last_message_at': now.toIso8601String(),
+      'created_at': now.toIso8601String(),
+    });
+
+    // Insert welcome message
+    await client.from('chat_messages').insert({
+      'id': _uuid.v4(),
+      'thread_id': threadId,
+      'sender_type': 'aphrodite',
+      'content_type': 'text',
+      'text_content': welcomeText,
+      'created_at': now.toIso8601String(),
+    });
+
+    return ChatThread(
+      id: threadId,
+      userId: userId,
+      contactType: 'aphrodite',
+      lastMessageText: welcomeText,
+      lastMessageAt: now,
+      unreadCount: 1,
+      pinned: true,
+      createdAt: now,
+    );
+  }
+
+  /// Gets or creates the Aphrodite thread for the current user.
+  Future<ChatThread> getOrCreateAphroditeThread() async {
+    final existing = await getAphroditeThread();
+    if (existing != null) {
+      return existing;
+    }
+    return createAphroditeThread();
   }
 }
 

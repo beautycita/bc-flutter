@@ -158,6 +158,11 @@ class SettingsScreen extends ConsumerWidget {
             onTap: () => context.push('/qr-scan'),
           ),
           _SettingsTile(
+            icon: Icons.devices_rounded,
+            label: 'Dispositivos conectados',
+            onTap: () => context.push('/devices'),
+          ),
+          _SettingsTile(
             icon: Icons.calendar_today_rounded,
             label: 'Mis citas',
             onTap: () => context.push('/my-bookings'),
@@ -191,8 +196,35 @@ class SettingsScreen extends ConsumerWidget {
             trailing: Switch(
               value: prefsState.notificationsEnabled,
               activeColor: BeautyCitaTheme.primaryRose,
-              onChanged: (_) =>
-                  ref.read(userPrefsProvider.notifier).toggleNotifications(),
+              onChanged: (_) {
+                try {
+                  ref.read(userPrefsProvider.notifier).toggleNotifications();
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          prefsState.notificationsEnabled
+                              ? 'Notificaciones desactivadas'
+                              : 'Notificaciones activadas',
+                        ),
+                        backgroundColor: Colors.green.shade600,
+                        behavior: SnackBarBehavior.floating,
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Error al guardar: $e'),
+                        backgroundColor: Colors.red.shade600,
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                }
+              },
             ),
           ),
 
@@ -311,8 +343,31 @@ class SettingsScreen extends ConsumerWidget {
                   subtitle: 'Manejo yo',
                   selected: current == 'car',
                   onTap: () {
-                    ref.read(userPrefsProvider.notifier).setDefaultTransport('car');
-                    Navigator.pop(ctx);
+                    try {
+                      ref.read(userPrefsProvider.notifier).setDefaultTransport('car');
+                      Navigator.pop(ctx);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: const Text('Transporte favorito guardado'),
+                            backgroundColor: Colors.green.shade600,
+                            behavior: SnackBarBehavior.floating,
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      Navigator.pop(ctx);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Error al guardar: $e'),
+                            backgroundColor: Colors.red.shade600,
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      }
+                    }
                   },
                 ),
                 const SizedBox(height: 8),
@@ -322,8 +377,31 @@ class SettingsScreen extends ConsumerWidget {
                   subtitle: 'Que me lleven',
                   selected: current == 'uber',
                   onTap: () {
-                    ref.read(userPrefsProvider.notifier).setDefaultTransport('uber');
-                    Navigator.pop(ctx);
+                    try {
+                      ref.read(userPrefsProvider.notifier).setDefaultTransport('uber');
+                      Navigator.pop(ctx);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: const Text('Transporte favorito guardado'),
+                            backgroundColor: Colors.green.shade600,
+                            behavior: SnackBarBehavior.floating,
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      Navigator.pop(ctx);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Error al guardar: $e'),
+                            backgroundColor: Colors.red.shade600,
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      }
+                    }
                   },
                 ),
                 const SizedBox(height: 8),
@@ -333,8 +411,31 @@ class SettingsScreen extends ConsumerWidget {
                   subtitle: 'Me llevo yo',
                   selected: current == 'transit',
                   onTap: () {
-                    ref.read(userPrefsProvider.notifier).setDefaultTransport('transit');
-                    Navigator.pop(ctx);
+                    try {
+                      ref.read(userPrefsProvider.notifier).setDefaultTransport('transit');
+                      Navigator.pop(ctx);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: const Text('Transporte favorito guardado'),
+                            backgroundColor: Colors.green.shade600,
+                            behavior: SnackBarBehavior.floating,
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      Navigator.pop(ctx);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Error al guardar: $e'),
+                            backgroundColor: Colors.red.shade600,
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      }
+                    }
                   },
                 ),
               ],
@@ -406,10 +507,33 @@ class SettingsScreen extends ConsumerWidget {
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed: () {
-                          ref
-                              .read(userPrefsProvider.notifier)
-                              .setSearchRadius(sliderValue.round());
-                          Navigator.pop(ctx);
+                          try {
+                            ref
+                                .read(userPrefsProvider.notifier)
+                                .setSearchRadius(sliderValue.round());
+                            Navigator.pop(ctx);
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: const Text('Radio de busqueda guardado'),
+                                  backgroundColor: Colors.green.shade600,
+                                  behavior: SnackBarBehavior.floating,
+                                  duration: const Duration(seconds: 2),
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            Navigator.pop(ctx);
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Error al guardar: $e'),
+                                  backgroundColor: Colors.red.shade600,
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
+                          }
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: BeautyCitaTheme.primaryRose,
@@ -445,10 +569,35 @@ class SettingsScreen extends ConsumerWidget {
           builder: (ctx, setSheetState) {
             void pick(String value) {
               setSheetState(() => selected = value);
-              ref.read(userPrefsProvider.notifier).setPriceComfort(value);
-              Future.delayed(const Duration(milliseconds: 350), () {
+              try {
+                ref.read(userPrefsProvider.notifier).setPriceComfort(value);
+                Future.delayed(const Duration(milliseconds: 350), () {
+                  if (ctx.mounted) {
+                    Navigator.pop(ctx);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: const Text('Presupuesto guardado'),
+                          backgroundColor: Colors.green.shade600,
+                          behavior: SnackBarBehavior.floating,
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
+                    }
+                  }
+                });
+              } catch (e) {
                 if (ctx.mounted) Navigator.pop(ctx);
-              });
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error al guardar: $e'),
+                      backgroundColor: Colors.red.shade600,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              }
             }
 
             return SafeArea(
@@ -583,10 +732,33 @@ class SettingsScreen extends ConsumerWidget {
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed: () {
-                          ref
-                              .read(userPrefsProvider.notifier)
-                              .setQualitySpeed(sliderValue);
-                          Navigator.pop(ctx);
+                          try {
+                            ref
+                                .read(userPrefsProvider.notifier)
+                                .setQualitySpeed(sliderValue);
+                            Navigator.pop(ctx);
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: const Text('Preferencia guardada'),
+                                  backgroundColor: Colors.green.shade600,
+                                  behavior: SnackBarBehavior.floating,
+                                  duration: const Duration(seconds: 2),
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            Navigator.pop(ctx);
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Error al guardar: $e'),
+                                  backgroundColor: Colors.red.shade600,
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
+                          }
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: BeautyCitaTheme.primaryRose,
@@ -683,10 +855,33 @@ class SettingsScreen extends ConsumerWidget {
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed: () {
-                          ref
-                              .read(userPrefsProvider.notifier)
-                              .setExploreLoyalty(sliderValue);
-                          Navigator.pop(ctx);
+                          try {
+                            ref
+                                .read(userPrefsProvider.notifier)
+                                .setExploreLoyalty(sliderValue);
+                            Navigator.pop(ctx);
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: const Text('Preferencia guardada'),
+                                  backgroundColor: Colors.green.shade600,
+                                  behavior: SnackBarBehavior.floating,
+                                  duration: const Duration(seconds: 2),
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            Navigator.pop(ctx);
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Error al guardar: $e'),
+                                  backgroundColor: Colors.red.shade600,
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
+                          }
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: BeautyCitaTheme.primaryRose,

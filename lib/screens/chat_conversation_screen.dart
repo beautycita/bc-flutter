@@ -620,6 +620,7 @@ class _PreferenceCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: const Color(0xFFFFB300).withValues(alpha: 0.3),
+                width: 1,
               ),
               boxShadow: [
                 BoxShadow(
@@ -907,6 +908,7 @@ class _ActionChip extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: BeautyCitaTheme.primaryRose.withValues(alpha: 0.2),
+            width: 1,
           ),
         ),
         child: Row(
