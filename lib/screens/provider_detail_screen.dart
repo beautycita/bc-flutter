@@ -161,7 +161,7 @@ class ProviderDetailScreen extends ConsumerWidget {
           shape: BoxShape.circle,
         ),
         child: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 24),
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),

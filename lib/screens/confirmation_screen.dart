@@ -8,11 +8,18 @@ import '../models/curate_result.dart';
 import '../providers/booking_flow_provider.dart';
 import '../widgets/cinematic_question_text.dart';
 
-class ConfirmationScreen extends ConsumerWidget {
+class ConfirmationScreen extends ConsumerStatefulWidget {
   const ConfirmationScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ConfirmationScreen> createState() => _ConfirmationScreenState();
+}
+
+class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
+  bool _isConfirming = false;
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(bookingFlowProvider);
     final notifier = ref.read(bookingFlowProvider.notifier);
     final result = state.selectedResult;
@@ -31,8 +38,8 @@ class ConfirmationScreen extends ConsumerWidget {
         leading: isBooked
             ? null
             : IconButton(
-                icon: const Icon(Icons.arrow_back_ios,
-                    color: BeautyCitaTheme.textDark),
+                icon: const Icon(Icons.arrow_back_rounded,
+                    color: BeautyCitaTheme.textDark, size: 24),
                 onPressed: () => notifier.goBack(),
               ),
         automaticallyImplyLeading: false,
@@ -94,10 +101,17 @@ class ConfirmationScreen extends ConsumerWidget {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () {
-                    HapticFeedback.mediumImpact();
-                    notifier.confirmBooking();
-                  },
+                  onPressed: _isConfirming
+                      ? null
+                      : () async {
+                          setState(() => _isConfirming = true);
+                          try {
+                            HapticFeedback.mediumImpact();
+                            await notifier.confirmBooking();
+                          } finally {
+                            if (mounted) setState(() => _isConfirming = false);
+                          }
+                        },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: BeautyCitaTheme.primaryRose,
                     foregroundColor: Colors.white,
@@ -109,16 +123,25 @@ class ConfirmationScreen extends ConsumerWidget {
                     ),
                     elevation: 0,
                   ),
-                  child: Text(
-                    result.transport.mode == 'uber'
-                        ? 'CONFIRMAR TODO'
-                        : 'CONFIRMAR RESERVA',
-                    style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
+                  child: _isConfirming
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(
+                          result.transport.mode == 'uber'
+                              ? 'CONFIRMAR TODO'
+                              : 'CONFIRMAR RESERVA',
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
                 ),
               ),
             ],
@@ -430,7 +453,7 @@ class _TransportCard extends StatelessWidget {
               // Return leg
               _UberLegRow(
                 label: 'Vuelta',
-                icon: Icons.arrow_back,
+                icon: Icons.arrow_back_rounded,
                 destination: 'Tu ubicacion',
                 pickupTime: _formatReturnPickupTime(
                   result.slot.startTime,

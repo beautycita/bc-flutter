@@ -33,15 +33,46 @@ class _QrScanScreenState extends State<QrScanScreen> {
     final barcodes = capture.barcodes;
     if (barcodes.isEmpty) return;
 
-    final code = barcodes.first.rawValue;
-    if (code == null || code.isEmpty) return;
+    final rawValue = barcodes.first.rawValue;
+    if (rawValue == null || rawValue.isEmpty) return;
+
+    // Parse QR data: format is "beautycita://auth/qr?code=XXXXXX&session=uuid"
+    final uri = Uri.tryParse(rawValue);
+    if (uri == null || uri.scheme != 'beautycita' || uri.host != 'auth' || uri.path != '/qr') {
+      setState(() {
+        _status = ScanStatus.error;
+      });
+      await Future.delayed(const Duration(seconds: 2));
+      if (mounted) {
+        setState(() {
+          _status = ScanStatus.scanning;
+        });
+      }
+      return;
+    }
+
+    final code = uri.queryParameters['code'];
+    final sessionId = uri.queryParameters['session'];
+
+    if (code == null || sessionId == null) {
+      setState(() {
+        _status = ScanStatus.error;
+      });
+      await Future.delayed(const Duration(seconds: 2));
+      if (mounted) {
+        setState(() {
+          _status = ScanStatus.scanning;
+        });
+      }
+      return;
+    }
 
     setState(() {
       _isProcessing = true;
       _status = ScanStatus.processing;
     });
 
-    final success = await _authService.authorizeSession(code);
+    final success = await _authService.authorizeSession(code, sessionId);
 
     if (!mounted) return;
 

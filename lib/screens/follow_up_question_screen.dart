@@ -29,8 +29,8 @@ class FollowUpQuestionScreen extends ConsumerWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios,
-              color: BeautyCitaTheme.textDark),
+          icon: const Icon(Icons.arrow_back_rounded,
+              color: BeautyCitaTheme.textDark, size: 24),
           onPressed: () => notifier.goBack(),
         ),
         actions: [

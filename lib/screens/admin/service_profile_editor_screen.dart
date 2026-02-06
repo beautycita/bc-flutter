@@ -303,7 +303,7 @@ class _ServiceProfileEditorScreenState
         Row(
           children: [
             IconButton(
-              icon: const Icon(Icons.arrow_back_ios, size: 20),
+              icon: const Icon(Icons.arrow_back_rounded, size: 24),
               onPressed: () => setState(() => _editing = null),
             ),
             Expanded(

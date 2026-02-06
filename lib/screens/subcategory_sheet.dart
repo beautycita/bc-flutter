@@ -88,8 +88,8 @@ class SubcategorySheet extends StatelessWidget {
                           end: Alignment.bottomRight,
                         ),
                         border: Border.all(
-                          color: category.color.withValues(alpha: 0.2),
-                          width: 1.5,
+                          color: BeautyCitaTheme.dividerLight,
+                          width: 1,
                         ),
                       ),
                       child: Center(
@@ -203,8 +203,8 @@ class _SubcategoryPillState extends State<_SubcategoryPill> {
           color: _isPressed ? color.withValues(alpha: 0.12) : Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: color.withValues(alpha: _isPressed ? 0.4 : 0.18),
-            width: 1.5,
+            color: BeautyCitaTheme.dividerLight,
+            width: 1,
           ),
           boxShadow: _isPressed
               ? []

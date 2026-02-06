@@ -79,7 +79,7 @@ class _InviteSalonScreenState extends ConsumerState<InviteSalonScreen> {
         backgroundColor: _waGreen,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 24),
           onPressed: () => context.pop(),
         ),
         title: Text(

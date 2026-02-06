@@ -90,6 +90,20 @@ class _TimeOverrideSheetState extends State<TimeOverrideSheet> {
 
     Navigator.of(context).pop();
     widget.onSelect(window);
+
+    // Show snackbar after closing the sheet
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Hora seleccionada'),
+            backgroundColor: Colors.green.shade600,
+            duration: const Duration(seconds: 1),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    });
   }
 
   @override
@@ -248,7 +262,7 @@ class _Pill extends StatelessWidget {
             color: selected
                 ? BeautyCitaTheme.primaryRose
                 : BeautyCitaTheme.dividerLight,
-            width: 1.5,
+            width: 1,
           ),
         ),
         child: Row(

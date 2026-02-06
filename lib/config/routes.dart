@@ -17,6 +17,7 @@ import 'package:beautycita/screens/chat_conversation_screen.dart';
 import 'package:beautycita/screens/chat_router_screen.dart';
 import 'package:beautycita/screens/booking_detail_screen.dart';
 import 'package:beautycita/screens/qr_scan_screen.dart';
+import 'package:beautycita/screens/device_manager_screen.dart';
 
 class AppRoutes {
   static const String splash = '/';
@@ -37,6 +38,7 @@ class AppRoutes {
   static const String appointmentDetail = '/appointment/:id';
   static const String chatConversation = '/chat/:threadId';
   static const String qrScan = '/qr-scan';
+  static const String devices = '/devices';
 
   static final GoRouter router = GoRouter(
     initialLocation: splash,
@@ -359,6 +361,22 @@ class AppRoutes {
             },
           );
         },
+      ),
+      GoRoute(
+        path: devices,
+        name: 'devices',
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const DeviceManagerScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
+                .chain(CurveTween(curve: Curves.easeInOutCubic));
+            return SlideTransition(
+              position: animation.drive(tween),
+              child: child,
+            );
+          },
+        ),
       ),
     ],
     errorPageBuilder: (context, state) => MaterialPage(

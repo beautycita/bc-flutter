@@ -28,7 +28,7 @@ class ProviderListScreen extends ConsumerWidget {
       backgroundColor: BeautyCitaTheme.backgroundWhite,
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new),
+          icon: const Icon(Icons.arrow_back_rounded, size: 24),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
@@ -580,16 +580,16 @@ class _EmptyState extends StatelessWidget {
             ),
             const SizedBox(height: BeautyCitaTheme.spaceLG),
             Text(
-              'No hay salones disponibles\npara esta categoria',
+              'No encontramos salones',
               style: textTheme.titleMedium?.copyWith(
-                color: BeautyCitaTheme.textLight,
-                height: 1.5,
+                color: BeautyCitaTheme.textDark,
+                fontWeight: FontWeight.w600,
               ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: BeautyCitaTheme.spaceSM),
             Text(
-              'Pronto agregaremos mas opciones en $category.',
+              'Intenta ajustar tu búsqueda o ubicación',
               style: textTheme.bodySmall?.copyWith(
                 color: BeautyCitaTheme.textLight,
               ),

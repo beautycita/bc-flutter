@@ -119,7 +119,7 @@ class _SalonOnboardingScreenState
         backgroundColor: BeautyCitaTheme.surfaceCream,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.close, color: BeautyCitaTheme.textDark),
+          icon: const Icon(Icons.close_rounded, color: BeautyCitaTheme.textDark, size: 24),
           onPressed: () => context.pop(),
         ),
       ),

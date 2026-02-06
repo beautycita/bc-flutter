@@ -102,8 +102,8 @@ class _AdminContent extends ConsumerWidget {
         backgroundColor: BeautyCitaTheme.surfaceCream,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios,
-              color: BeautyCitaTheme.textDark),
+          icon: const Icon(Icons.arrow_back_rounded,
+              color: BeautyCitaTheme.textDark, size: 24),
           onPressed: () => context.go('/home'),
         ),
         title: Text(

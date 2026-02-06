@@ -59,8 +59,9 @@ class _TransportSelectionState extends ConsumerState<TransportSelection> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(
-            Icons.arrow_back_ios_rounded,
+            Icons.arrow_back_rounded,
             color: BeautyCitaTheme.textDark,
+            size: 24,
           ),
           onPressed: () => bookingNotifier.goBack(),
         ),
@@ -270,8 +271,8 @@ class _TransportCardState extends State<_TransportCard> {
                 ? BeautyCitaTheme.primaryRose.withValues(alpha: 0.3)
                 : widget.isDefault
                     ? BeautyCitaTheme.primaryRose.withValues(alpha: 0.4)
-                    : Colors.grey.withValues(alpha: 0.12),
-            width: widget.isDefault ? 2.0 : 1.5,
+                    : BeautyCitaTheme.dividerLight,
+            width: 1,
           ),
           boxShadow: _isPressed
               ? []

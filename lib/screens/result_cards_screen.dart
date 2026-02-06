@@ -24,6 +24,7 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
   int _currentIndex = 0;
   int _totalCards = 0;
   Offset _dragOffset = Offset.zero;
+  bool _isBooking = false;
 
   // Animated dismiss: fly-off controller
   late AnimationController _dismissController;
@@ -257,7 +258,7 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
       return Scaffold(
         appBar: AppBar(
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
+            icon: const Icon(Icons.arrow_back_rounded, size: 24),
             onPressed: () => bookingNotifier.goBack(),
           ),
           title: Text(
@@ -338,7 +339,7 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
         backgroundColor: BeautyCitaTheme.surfaceCream,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: BeautyCitaTheme.textDark),
+          icon: const Icon(Icons.arrow_back_rounded, color: BeautyCitaTheme.textDark, size: 24),
           onPressed: () => bookingNotifier.goBack(),
         ),
         title: Text(
@@ -808,6 +809,15 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
           onPressed: () {
             HapticFeedback.lightImpact();
             ref.read(favoritesProvider.notifier).toggle(result.business.id);
+            final isFavorited = ref.read(favoritesProvider).contains(result.business.id);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(isFavorited ? 'Agregado a favoritos' : 'Eliminado de favoritos'),
+                backgroundColor: isFavorited ? Colors.green.shade600 : BeautyCitaTheme.textLight,
+                duration: const Duration(seconds: 1),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
           },
           icon: Icon(
             isFavorited ? Icons.favorite : Icons.favorite_border,
@@ -817,9 +827,16 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
         const SizedBox(width: 12),
         Expanded(
           child: ElevatedButton(
-            onPressed: () {
-              ref.read(bookingFlowProvider.notifier).selectResult(result);
-            },
+            onPressed: _isBooking
+                ? null
+                : () async {
+                    setState(() => _isBooking = true);
+                    try {
+                      ref.read(bookingFlowProvider.notifier).selectResult(result);
+                    } finally {
+                      if (mounted) setState(() => _isBooking = false);
+                    }
+                  },
             style: ElevatedButton.styleFrom(
               backgroundColor: BeautyCitaTheme.primaryRose,
               foregroundColor: Colors.white,
@@ -830,14 +847,23 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
               ),
               elevation: 0,
             ),
-            child: Text(
-              'RESERVAR',
-              style: GoogleFonts.poppins(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 1.2,
-              ),
-            ),
+            child: _isBooking
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : Text(
+                    'RESERVAR',
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
           ),
         ),
       ],
