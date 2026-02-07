@@ -1,17 +1,14 @@
 // link-uber edge function
 // Handles Uber OAuth token exchange and account linking.
-// Keeps client_secret server-side (never on device).
+// Uses JWT assertion (RS256 asymmetric key) for Uber auth.
 // Supports: link (auth_code exchange), unlink, refresh.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { exchangeUberTokens, refreshUberTokens } from "../_shared/uber_jwt.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-const UBER_CLIENT_ID = Deno.env.get("UBER_CLIENT_ID") ?? "";
-const UBER_CLIENT_SECRET = Deno.env.get("UBER_CLIENT_SECRET") ?? "";
 const UBER_REDIRECT_URI = Deno.env.get("UBER_REDIRECT_URI") ?? "";
-const UBER_TOKEN_URL = "https://login.uber.com/oauth/v2/token";
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -82,36 +79,16 @@ Deno.serve(async (req: Request) => {
         return json({ error: "auth_code required" }, 400);
       }
 
-      if (!UBER_CLIENT_ID || !UBER_CLIENT_SECRET) {
-        return json(
-          { error: "Uber API not configured. Contact support." },
-          503,
-        );
-      }
+      // Exchange auth code for tokens via JWT assertion
+      const tokens = await exchangeUberTokens(authCode, UBER_REDIRECT_URI);
 
-      // Exchange auth code for tokens
-      const tokenResp = await fetch(UBER_TOKEN_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({
-          client_id: UBER_CLIENT_ID,
-          client_secret: UBER_CLIENT_SECRET,
-          grant_type: "authorization_code",
-          redirect_uri: UBER_REDIRECT_URI,
-          code: authCode,
-        }),
-      });
-
-      if (!tokenResp.ok) {
-        const errText = await tokenResp.text();
-        console.error("Uber token exchange failed:", errText);
+      if (!tokens) {
         return json(
           { error: "Failed to link Uber account. Please try again." },
           502,
         );
       }
 
-      const tokens = await tokenResp.json();
       const expiresAt = new Date(
         Date.now() + (tokens.expires_in ?? 3600) * 1000,
       ).toISOString();
@@ -147,18 +124,9 @@ Deno.serve(async (req: Request) => {
         return json({ error: "No refresh token found" }, 400);
       }
 
-      const tokenResp = await fetch(UBER_TOKEN_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({
-          client_id: UBER_CLIENT_ID,
-          client_secret: UBER_CLIENT_SECRET,
-          grant_type: "refresh_token",
-          refresh_token: profile.uber_refresh_token,
-        }),
-      });
+      const refreshedTokens = await refreshUberTokens(profile.uber_refresh_token);
 
-      if (!tokenResp.ok) {
+      if (!refreshedTokens) {
         // Refresh failed — unlink account
         await supabase
           .from("profiles")
@@ -176,23 +144,22 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      const tokens = await tokenResp.json();
-      const expiresAt = new Date(
-        Date.now() + (tokens.expires_in ?? 3600) * 1000,
+      const refreshExpiresAt = new Date(
+        Date.now() + (refreshedTokens.expires_in ?? 3600) * 1000,
       ).toISOString();
 
       await supabase
         .from("profiles")
         .update({
-          uber_access_token: tokens.access_token,
-          uber_refresh_token: tokens.refresh_token ?? profile.uber_refresh_token,
-          uber_token_expires_at: expiresAt,
+          uber_access_token: refreshedTokens.access_token,
+          uber_refresh_token: refreshedTokens.refresh_token ?? profile.uber_refresh_token,
+          uber_token_expires_at: refreshExpiresAt,
         })
         .eq("id", user.id);
 
       return json({
         refreshed: true,
-        expires_at: expiresAt,
+        expires_at: refreshExpiresAt,
       });
     }
 

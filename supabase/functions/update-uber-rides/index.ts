@@ -7,13 +7,11 @@
 //   - status: Gets current ride status from Uber API
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getUberApiBase, getValidUberAccessToken } from "../_shared/uber_jwt.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const UBER_SANDBOX = Deno.env.get("UBER_SANDBOX") === "true";
-const UBER_API_BASE = UBER_SANDBOX
-  ? "https://sandbox-api.uber.com"
-  : "https://api.uber.com";
+const UBER_API_BASE = getUberApiBase();
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -40,24 +38,6 @@ async function uberFetch(
       ...(options.headers ?? {}),
     },
   });
-}
-
-async function getUberAccessToken(
-  supabase: ReturnType<typeof createClient>,
-  userId: string,
-): Promise<string | null> {
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("uber_access_token, uber_token_expires_at, uber_linked")
-    .eq("id", userId)
-    .single();
-
-  if (!profile?.uber_linked || !profile.uber_access_token) return null;
-
-  const expiresAt = new Date(profile.uber_token_expires_at).getTime();
-  if (Date.now() > expiresAt - 300_000) return null;
-
-  return profile.uber_access_token;
 }
 
 // ---------------------------------------------------------------------------
@@ -484,7 +464,7 @@ Deno.serve(async (req: Request) => {
     const action: string = body.action;
     const appointmentId: string = body.appointment_id;
 
-    const accessToken = await getUberAccessToken(supabase, user.id);
+    const accessToken = await getValidUberAccessToken(supabase, user.id);
 
     // 'places' action doesn't require appointment_id
     if (action === "places") {

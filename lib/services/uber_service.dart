@@ -16,10 +16,12 @@ class UberService {
     this.sandbox = false,
   });
 
-  static const String _uberAuthUrl = 'https://login.uber.com/oauth/v2/authorize';
+  String get _uberAuthUrl => sandbox
+      ? 'https://sandbox-login.uber.com/oauth/v2/authorize'
+      : 'https://login.uber.com/oauth/v2/authorize';
 
   /// Build the OAuth authorization URL for Uber login.
-  Uri buildAuthUrl({String scope = 'profile request'}) {
+  Uri buildAuthUrl({String scope = 'profile request places partner-loyalty.link-account'}) {
     return Uri.parse(_uberAuthUrl).replace(queryParameters: {
       'response_type': 'code',
       'client_id': clientId,
