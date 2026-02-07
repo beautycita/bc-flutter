@@ -76,76 +76,124 @@ class _QrScanScreenState extends State<QrScanScreen> with SingleTickerProviderSt
     });
 
     // Show confirmation
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showModalBottomSheet<bool>(
       context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: BeautyCitaTheme.primaryRose.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(Icons.link_rounded, color: BeautyCitaTheme.primaryRose, size: 24),
+      isDismissible: false,
+      enableDrag: false,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+            top: Radius.circular(AppConstants.radiusXL)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppConstants.paddingLG,
+              AppConstants.paddingMD,
+              AppConstants.paddingLG,
+              AppConstants.paddingLG,
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                'Vincular dispositivo',
-                style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700),
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Vas a iniciar sesion en BeautyCita Web.',
-              style: GoogleFonts.nunito(fontSize: 15, color: BeautyCitaTheme.textDark),
-            ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.amber.shade50,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.amber.shade200),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.info_outline_rounded, color: Colors.amber.shade700, size: 20),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Se requiere tu huella o rostro para confirmar.',
-                      style: GoogleFonts.nunito(fontSize: 13, color: Colors.amber.shade900),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2),
                     ),
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: BeautyCitaTheme.spaceMD),
+                const Icon(
+                  Icons.link_rounded,
+                  size: AppConstants.iconSizeXL,
+                  color: BeautyCitaTheme.primaryRose,
+                ),
+                const SizedBox(height: BeautyCitaTheme.spaceSM),
+                Text(
+                  'Vincular dispositivo?',
+                  style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                const SizedBox(height: BeautyCitaTheme.spaceXS),
+                Text(
+                  'Vas a iniciar sesion en BeautyCita Web.',
+                  style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(
+                        color: BeautyCitaTheme.textLight,
+                      ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: BeautyCitaTheme.spaceSM),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.amber.shade200),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline_rounded, color: Colors.amber.shade700, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Se requiere tu huella o rostro para confirmar.',
+                          style: GoogleFonts.nunito(fontSize: 13, color: Colors.amber.shade900),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: BeautyCitaTheme.spaceLG),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize:
+                              const Size(0, AppConstants.minTouchHeight),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(
+                                AppConstants.radiusLG),
+                          ),
+                        ),
+                        child: const Text('Cancelar'),
+                      ),
+                    ),
+                    const SizedBox(width: BeautyCitaTheme.spaceSM),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: BeautyCitaTheme.primaryRose,
+                          minimumSize:
+                              const Size(0, AppConstants.minTouchHeight),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(
+                                AppConstants.radiusLG),
+                          ),
+                        ),
+                        child: const Text(
+                          'Vincular',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text('Cancelar', style: GoogleFonts.poppins(color: BeautyCitaTheme.textLight)),
           ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            style: FilledButton.styleFrom(
-              backgroundColor: BeautyCitaTheme.primaryRose,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            child: Text('Vincular', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
-          ),
-        ],
-      ),
+        );
+      },
     );
 
     if (confirmed != true || !mounted) {

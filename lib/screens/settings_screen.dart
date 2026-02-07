@@ -247,31 +247,101 @@ class SettingsScreen extends ConsumerWidget {
             width: double.infinity,
             child: OutlinedButton.icon(
               onPressed: () async {
-                final confirmed = await showDialog<bool>(
+                final confirmed = await showModalBottomSheet<bool>(
                   context: context,
-                  builder: (ctx) => AlertDialog(
-                    shape: RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.circular(AppConstants.radiusMD),
-                    ),
-                    title: const Text('Cerrar sesion'),
-                    content: const Text(
-                      'Se cerrara tu sesion y tendras que autenticarte de nuevo.',
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.of(ctx).pop(false),
-                        child: const Text('Cancelar'),
-                      ),
-                      ElevatedButton(
-                        onPressed: () => Navigator.of(ctx).pop(true),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red.shade600,
-                        ),
-                        child: const Text('Cerrar sesion'),
-                      ),
-                    ],
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.vertical(
+                        top: Radius.circular(AppConstants.radiusXL)),
                   ),
+                  builder: (ctx) {
+                    return SafeArea(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(
+                          AppConstants.paddingLG,
+                          AppConstants.paddingMD,
+                          AppConstants.paddingLG,
+                          AppConstants.paddingLG,
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Center(
+                              child: Container(
+                                width: 40,
+                                height: 4,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade300,
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: BeautyCitaTheme.spaceMD),
+                            Icon(
+                              Icons.logout_rounded,
+                              size: AppConstants.iconSizeXL,
+                              color: Colors.red.shade400,
+                            ),
+                            const SizedBox(height: BeautyCitaTheme.spaceSM),
+                            Text(
+                              'Cerrar sesion?',
+                              style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                            ),
+                            const SizedBox(height: BeautyCitaTheme.spaceXS),
+                            Text(
+                              'Se cerrara tu sesion y tendras que autenticarte de nuevo.',
+                              style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(
+                                    color: BeautyCitaTheme.textLight,
+                                  ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: BeautyCitaTheme.spaceLG),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton(
+                                    onPressed: () => Navigator.pop(ctx, false),
+                                    style: OutlinedButton.styleFrom(
+                                      minimumSize:
+                                          const Size(0, AppConstants.minTouchHeight),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(
+                                            AppConstants.radiusLG),
+                                      ),
+                                    ),
+                                    child: const Text('Cancelar'),
+                                  ),
+                                ),
+                                const SizedBox(width: BeautyCitaTheme.spaceSM),
+                                Expanded(
+                                  child: ElevatedButton(
+                                    onPressed: () => Navigator.pop(ctx, true),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.red.shade500,
+                                      minimumSize:
+                                          const Size(0, AppConstants.minTouchHeight),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(
+                                            AppConstants.radiusLG),
+                                      ),
+                                    ),
+                                    child: const Text(
+                                      'Cerrar sesion',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                 );
 
                 if (confirmed == true) {
@@ -987,30 +1057,101 @@ class _UberTile extends StatelessWidget {
   }
 
   void _confirmUnlink(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showModalBottomSheet<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-        ),
-        title: const Text('Desvincular Uber'),
-        content: const Text(
-          'Ya no se programaran viajes automaticamente. Puedes volver a vincular en cualquier momento.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red.shade600,
-            ),
-            child: const Text('Desvincular'),
-          ),
-        ],
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+            top: Radius.circular(AppConstants.radiusXL)),
       ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppConstants.paddingLG,
+              AppConstants.paddingMD,
+              AppConstants.paddingLG,
+              AppConstants.paddingLG,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: BeautyCitaTheme.spaceMD),
+                Icon(
+                  Icons.local_taxi_rounded,
+                  size: AppConstants.iconSizeXL,
+                  color: Colors.red.shade400,
+                ),
+                const SizedBox(height: BeautyCitaTheme.spaceSM),
+                Text(
+                  'Desvincular Uber?',
+                  style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                const SizedBox(height: BeautyCitaTheme.spaceXS),
+                Text(
+                  'Ya no se programaran viajes automaticamente. Puedes volver a vincular en cualquier momento.',
+                  style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(
+                        color: BeautyCitaTheme.textLight,
+                      ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: BeautyCitaTheme.spaceLG),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize:
+                              const Size(0, AppConstants.minTouchHeight),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(
+                                AppConstants.radiusLG),
+                          ),
+                        ),
+                        child: const Text('Cancelar'),
+                      ),
+                    ),
+                    const SizedBox(width: BeautyCitaTheme.spaceSM),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red.shade500,
+                          minimumSize:
+                              const Size(0, AppConstants.minTouchHeight),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(
+                                AppConstants.radiusLG),
+                          ),
+                        ),
+                        child: const Text(
+                          'Desvincular',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
 
     if (confirmed == true) {

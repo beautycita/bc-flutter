@@ -22,7 +22,7 @@ CREATE TABLE chat_messages (
   thread_id uuid REFERENCES chat_threads(id) ON DELETE CASCADE NOT NULL,
   sender_type text NOT NULL CHECK (sender_type IN ('user', 'aphrodite', 'salon', 'system')),
   sender_id uuid,
-  content_type text NOT NULL DEFAULT 'text' CHECK (content_type IN ('text', 'image', 'tryon_result', 'booking_card', 'system')),
+  content_type text NOT NULL DEFAULT 'text' CHECK (content_type IN ('text', 'image', 'tryon_result', 'booking_card', 'system', 'preference_card')),
   text_content text,
   media_url text,
   metadata jsonb DEFAULT '{}',

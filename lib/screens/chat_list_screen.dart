@@ -67,15 +67,29 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
             ),
             itemBuilder: (context, index) {
               final thread = threads[index];
-              if (thread.isAphrodite) {
-                return _AphroditeRow(
-                  thread: thread,
-                  onTap: () => context.push('/chat/${thread.id}'),
-                );
-              }
-              return _ThreadRow(
-                thread: thread,
-                onTap: () => context.push('/chat/${thread.id}'),
+              final row = thread.isAphrodite
+                  ? _AphroditeRow(
+                      thread: thread,
+                      onTap: () => context.push('/chat/${thread.id}'),
+                    )
+                  : _ThreadRow(
+                      thread: thread,
+                      onTap: () => context.push('/chat/${thread.id}'),
+                    );
+              return Dismissible(
+                key: ValueKey(thread.id),
+                direction: DismissDirection.endToStart,
+                background: Container(
+                  alignment: Alignment.centerRight,
+                  padding: const EdgeInsets.only(right: 24),
+                  color: Colors.red.shade400,
+                  child: const Icon(Icons.delete_outline, color: Colors.white, size: 28),
+                ),
+                confirmDismiss: (_) => _confirmDelete(context, thread.displayName),
+                onDismissed: (_) {
+                  ref.read(aphroditeServiceProvider).deleteThread(thread.id);
+                },
+                child: row,
               );
             },
           );
@@ -103,6 +117,70 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
         foregroundColor: BeautyCitaTheme.textDark,
       ),
     );
+  }
+
+  Future<bool> _confirmDelete(BuildContext context, String name) async {
+    final result = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        margin: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40, height: 4,
+              margin: const EdgeInsets.only(bottom: 20),
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Icon(Icons.delete_outline, size: 48, color: Colors.red.shade400),
+            const SizedBox(height: 12),
+            Text(
+              'Eliminar conversacion?',
+              style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Se eliminara la conversacion con $name y todos los mensajes.',
+              style: GoogleFonts.nunito(fontSize: 14, color: BeautyCitaTheme.textLight),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(false),
+                    child: Text('Cancelar', style: GoogleFonts.nunito(fontWeight: FontWeight.w600)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.of(ctx).pop(true),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red.shade400,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: Text('Eliminar', style: GoogleFonts.nunito(fontWeight: FontWeight.w700)),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+    return result ?? false;
   }
 
   void _openAphroditeChat() async {
