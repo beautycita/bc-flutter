@@ -180,6 +180,44 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  /// Sign in with email and password (hidden dev/test login)
+  Future<bool> signInWithEmail(String email, String password) async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      final response = await SupabaseClientService.client.auth
+          .signInWithPassword(email: email, password: password);
+      if (response.user == null) {
+        state = state.copyWith(
+          isLoading: false,
+          error: 'Credenciales incorrectas',
+        );
+        return false;
+      }
+      final displayName =
+          response.user!.userMetadata?['full_name'] as String? ??
+              response.user!.email?.split('@')[0] ??
+              'user';
+      await _userSession.saveSupabaseUserId(response.user!.id);
+      if (!await _userSession.isRegistered()) {
+        await _userSession.register(displayName);
+      }
+      await _userSession.updateLastLogin();
+      final username = await _userSession.getUsername();
+      state = state.copyWith(
+        isLoading: false,
+        isAuthenticated: true,
+        username: username,
+      );
+      return true;
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: e.toString(),
+      );
+      return false;
+    }
+  }
+
   /// Logout and clear session
   Future<void> logout() async {
     state = state.copyWith(isLoading: true, error: null);

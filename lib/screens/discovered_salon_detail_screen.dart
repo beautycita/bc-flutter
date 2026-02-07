@@ -315,7 +315,7 @@ class DiscoveredSalonDetailScreen extends StatelessWidget {
         'Hola! Soy clienta tuya y me encantaria poder reservar '
         'contigo desde BeautyCita. Es gratis para ti y te llegan '
         'clientes nuevos. Registrate en 60 seg: '
-        'https://beautycita.com/supabase/functions/v1/salon-registro?ref=${salon.id}',
+        'https://beautycita.com/salon/${salon.id}',
       );
       final waUrl = Uri.parse('https://wa.me/${phone.replaceAll('+', '')}?text=$message');
       launchUrl(waUrl, mode: LaunchMode.externalApplication);

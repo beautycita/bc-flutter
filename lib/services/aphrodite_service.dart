@@ -171,6 +171,21 @@ class AphroditeService {
     );
   }
 
+  /// Updates a message's metadata (e.g. to mark a preference card as answered).
+  Future<void> updateMessageMetadata(
+      String messageId, Map<String, dynamic> metadata) async {
+    final client = SupabaseClientService.client;
+    await client
+        .from('chat_messages')
+        .update({'metadata': metadata}).eq('id', messageId);
+  }
+
+  /// Deletes a thread and all its messages (cascade).
+  Future<void> deleteThread(String threadId) async {
+    final client = SupabaseClientService.client;
+    await client.from('chat_threads').delete().eq('id', threadId);
+  }
+
   /// Gets or creates the Aphrodite thread for the current user.
   /// The edge function will create the thread if needed on first message.
   Future<ChatThread?> getAphroditeThread() async {

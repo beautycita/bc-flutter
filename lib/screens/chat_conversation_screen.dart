@@ -86,6 +86,11 @@ class _ChatConversationScreenState
     final service = ref.read(aphroditeServiceProvider);
     final prefsNotifier = ref.read(userPrefsProvider.notifier);
 
+    // Mark the preference card as answered
+    final updatedMeta = Map<String, dynamic>.from(message.metadata);
+    updatedMeta['selected'] = value;
+    await service.updateMessageMetadata(message.id, updatedMeta);
+
     // Save the preference
     switch (prefType) {
       case 'price_comfort':
@@ -262,7 +267,7 @@ class _ChatConversationScreenState
         backgroundColor: BeautyCitaTheme.backgroundWhite,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () => context.pop(),
+          onPressed: () => context.go('/home'),
         ),
         titleSpacing: 0,
         actions: [

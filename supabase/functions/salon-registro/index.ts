@@ -1,7 +1,8 @@
 // salon-registro edge function
 // Serves a mobile-friendly registration page for salon owners.
-// Salon owners reach this via the WhatsApp invite link.
-// GET  → HTML registration form
+// Salon owners reach this via the WhatsApp invite link (beautycita.com/salon/<id>).
+// When ref param is provided, pre-populates form with discovered salon data.
+// GET  → HTML registration form (with prefill if ref found)
 // POST → Create business record + return success page
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -15,7 +16,7 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "content-type",
 };
 
-function html(body: string, status = 200) {
+function htmlResp(body: string, status = 200) {
   return new Response(body, {
     status,
     headers: { "Content-Type": "text/html; charset=utf-8", ...CORS_HEADERS },
@@ -34,34 +35,86 @@ function json(body: unknown, status = 200) {
 // ---------------------------------------------------------------------------
 
 const CATEGORIES = [
-  { slug: "unas", label: "Unas", emoji: "💅" },
-  { slug: "cabello", label: "Cabello", emoji: "✂️" },
-  { slug: "pestanas_cejas", label: "Pestanas y Cejas", emoji: "👁️" },
-  { slug: "maquillaje", label: "Maquillaje", emoji: "🎨" },
-  { slug: "facial", label: "Facial", emoji: "🧖" },
-  { slug: "cuerpo_spa", label: "Cuerpo y Spa", emoji: "🧘" },
-  { slug: "cuidado_especializado", label: "Especializado", emoji: "⭐" },
+  { slug: "unas", label: "Unas", emoji: "\u{1F485}" },
+  { slug: "cabello", label: "Cabello", emoji: "\u2702\uFE0F" },
+  { slug: "pestanas_cejas", label: "Pestanas y Cejas", emoji: "\u{1F441}\uFE0F" },
+  { slug: "maquillaje", label: "Maquillaje", emoji: "\u{1F3A8}" },
+  { slug: "facial", label: "Facial", emoji: "\u{1F9D6}" },
+  { slug: "cuerpo_spa", label: "Cuerpo y Spa", emoji: "\u{1F9D8}" },
+  { slug: "cuidado_especializado", label: "Especializado", emoji: "\u2B50" },
 ];
 
 // ---------------------------------------------------------------------------
-// HTML templates
+// Prefill data interface
 // ---------------------------------------------------------------------------
 
-function registrationPage(ref: string | null): string {
+interface Prefill {
+  name: string;
+  phone: string;
+  address: string;
+  categories: string[];
+  photoUrl: string | null;
+  rating: number | null;
+}
+
+const EMPTY_PREFILL: Prefill = {
+  name: "",
+  phone: "+52 ",
+  address: "",
+  categories: [],
+  photoUrl: null,
+  rating: null,
+};
+
+// Escape HTML to prevent XSS from salon data
+function esc(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+// ---------------------------------------------------------------------------
+// HTML template
+// ---------------------------------------------------------------------------
+
+function registrationPage(ref: string | null, prefill: Prefill): string {
+  const hasPrefill = prefill.name.length > 0;
+
   const categoryChips = CATEGORIES.map(
     (c) => `
     <label class="chip">
-      <input type="checkbox" name="categories" value="${c.slug}">
+      <input type="checkbox" name="categories" value="${c.slug}"${prefill.categories.includes(c.slug) ? " checked" : ""}>
       <span>${c.emoji} ${c.label}</span>
-    </label>`
+    </label>`,
   ).join("\n");
+
+  // Header content changes based on whether we have salon data
+  const photoHtml = prefill.photoUrl
+    ? `<img src="${esc(prefill.photoUrl)}" class="salon-photo" alt="${esc(prefill.name)}">`
+    : "";
+
+  const ratingHtml =
+    prefill.rating && prefill.rating > 0
+      ? `<div class="rating-badge">\u2605 ${prefill.rating.toFixed(1)}</div>`
+      : "";
+
+  const headerTitle = hasPrefill
+    ? `Hola, ${esc(prefill.name)}!`
+    : "Registra tu salon";
+
+  const headerSubtitle = hasPrefill
+    ? "Verifica tus datos y registrate en segundos"
+    : "Recibe clientes nuevas por BeautyCita";
 
   return `<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Registra tu salon - BeautyCita</title>
+  <title>${hasPrefill ? esc(prefill.name) + " - " : ""}Registra tu salon - BeautyCita</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -86,6 +139,23 @@ function registrationPage(ref: string | null): string {
       font-size: 12px;
       font-weight: 600;
       margin-top: 12px;
+    }
+    .salon-photo {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 3px solid rgba(255,255,255,0.5);
+      margin-bottom: 12px;
+    }
+    .rating-badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.3);
+      padding: 2px 10px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 600;
+      margin-top: 8px;
     }
     .form-wrap {
       padding: 24px;
@@ -165,8 +235,10 @@ function registrationPage(ref: string | null): string {
 </head>
 <body>
   <div class="header">
-    <h1>Registra tu salon</h1>
-    <p>Recibe clientes nuevas por BeautyCita</p>
+    ${photoHtml}
+    <h1>${headerTitle}</h1>
+    <p>${headerSubtitle}</p>
+    ${ratingHtml}
     <div class="badge">Gratis &middot; 60 segundos &middot; Sin tarjeta</div>
   </div>
 
@@ -176,25 +248,25 @@ function registrationPage(ref: string | null): string {
 
       <label class="field">
         <span class="label">Nombre del salon</span>
-        <input type="text" name="name" placeholder="Ej: Salon Rosa" required minlength="2" autocomplete="organization">
+        <input type="text" name="name" placeholder="Ej: Salon Rosa" value="${esc(prefill.name)}" required minlength="2" autocomplete="organization">
       </label>
 
       <label class="field">
         <span class="label">WhatsApp</span>
-        <input type="tel" name="phone" placeholder="+52 33 1234 5678" value="+52 " required autocomplete="tel">
+        <input type="tel" name="phone" placeholder="+52 33 1234 5678" value="${esc(prefill.phone)}" required autocomplete="tel">
       </label>
 
       <label class="field">
         <span class="label">Direccion (opcional)</span>
-        <input type="text" name="address" placeholder="Calle, colonia, ciudad" autocomplete="street-address">
+        <input type="text" name="address" placeholder="Calle, colonia, ciudad" value="${esc(prefill.address)}" autocomplete="street-address">
       </label>
 
-      <div class="cat-label">Que servicios ofreces?</div>
+      <div class="cat-label">${hasPrefill ? "Confirma tus servicios" : "Que servicios ofreces?"}</div>
       <div class="chips">
         ${categoryChips}
       </div>
 
-      <button type="submit" class="submit-btn" id="submitBtn" disabled>REGISTRARME GRATIS</button>
+      <button type="submit" class="submit-btn" id="submitBtn" disabled>${hasPrefill ? "CONFIRMAR Y REGISTRARME" : "REGISTRARME GRATIS"}</button>
       <div class="error" id="errorMsg"></div>
     </form>
 
@@ -221,6 +293,9 @@ function registrationPage(ref: string | null): string {
     form.addEventListener('input', validate);
     form.addEventListener('change', validate);
 
+    // Validate on load so prefilled forms enable the button immediately
+    validate();
+
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       btn.disabled = true;
@@ -239,7 +314,7 @@ function registrationPage(ref: string | null): string {
       };
 
       try {
-        const resp = await fetch(window.location.pathname, {
+        const resp = await fetch(window.location.pathname + window.location.search, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
@@ -269,7 +344,7 @@ function registrationPage(ref: string | null): string {
         errEl.textContent = err.message;
         errEl.style.display = 'block';
         btn.disabled = false;
-        btn.textContent = 'REGISTRARME GRATIS';
+        btn.textContent = '${hasPrefill ? "CONFIRMAR Y REGISTRARME" : "REGISTRARME GRATIS"}';
       }
     });
   </script>
@@ -289,19 +364,50 @@ Deno.serve(async (req: Request) => {
   const url = new URL(req.url);
   const ref = url.searchParams.get("ref");
 
-  // GET → serve registration page
+  // GET -> serve registration page (with prefill from discovered_salons if ref provided)
   if (req.method === "GET") {
-    return html(registrationPage(ref));
+    let prefill: Prefill = { ...EMPTY_PREFILL };
+
+    if (ref) {
+      try {
+        const supabase = createClient(supabaseUrl, serviceKey);
+        const { data: salon } = await supabase
+          .from("discovered_salons")
+          .select(
+            "name, phone, whatsapp, address, city, photo_url, rating, service_categories",
+          )
+          .eq("id", ref)
+          .single();
+
+        if (salon) {
+          prefill.name = salon.name ?? "";
+          prefill.phone = salon.whatsapp ?? salon.phone ?? "+52 ";
+          prefill.address =
+            [salon.address, salon.city].filter(Boolean).join(", ");
+          prefill.categories = salon.service_categories ?? [];
+          prefill.photoUrl = salon.photo_url ?? null;
+          prefill.rating = salon.rating ?? null;
+        }
+      } catch (err) {
+        console.warn("Could not fetch discovered salon for prefill:", err);
+        // Non-fatal — show empty form
+      }
+    }
+
+    return htmlResp(registrationPage(ref, prefill));
   }
 
-  // POST → create business record
+  // POST -> create business record
   if (req.method === "POST") {
     try {
       const body = await req.json();
       const { name, phone, address, categories, ref: refCode } = body;
 
       if (!name || name.trim().length < 2) {
-        return json({ error: "Nombre del salon es requerido (min 2 caracteres)" }, 400);
+        return json(
+          { error: "Nombre del salon es requerido (min 2 caracteres)" },
+          400,
+        );
       }
 
       const rawPhone = (phone || "").replace(/[^\d+]/g, "");
@@ -309,11 +415,17 @@ Deno.serve(async (req: Request) => {
         return json({ error: "Numero de WhatsApp invalido" }, 400);
       }
 
-      if (!categories || !Array.isArray(categories) || categories.length === 0) {
+      if (
+        !categories ||
+        !Array.isArray(categories) ||
+        categories.length === 0
+      ) {
         return json({ error: "Selecciona al menos un servicio" }, 400);
       }
 
-      const normalizedPhone = rawPhone.startsWith("+") ? rawPhone : `+52${rawPhone}`;
+      const normalizedPhone = rawPhone.startsWith("+")
+        ? rawPhone
+        : `+52${rawPhone}`;
 
       const supabase = createClient(supabaseUrl, serviceKey);
 
@@ -334,7 +446,10 @@ Deno.serve(async (req: Request) => {
 
       if (insertErr) {
         console.error("Business insert error:", insertErr);
-        return json({ error: "No se pudo registrar. Intenta de nuevo." }, 500);
+        return json(
+          { error: "No se pudo registrar. Intenta de nuevo." },
+          500,
+        );
       }
 
       // If ref code points to a discovered_salon, link it
