@@ -9,29 +9,35 @@ import '../services/location_service.dart';
 import '../services/supabase_client.dart';
 
 // WhatsApp-inspired colors
-const _waGreen = Color(0xFF075E54);
-const _waLightGreen = Color(0xFF25D366);
-const _waCardTint = Color(0xFFDCF8C6);
+const waGreen = Color(0xFF075E54);
+const waLightGreen = Color(0xFF25D366);
+const waCardTint = Color(0xFFDCF8C6);
 
 /// Provider that fetches nearby discovered salons.
-final _nearbySalonsProvider =
-    FutureProvider.family<List<_DiscoveredSalon>, ({double lat, double lng})>(
-  (ref, coords) async {
+final nearbySalonsProvider =
+    FutureProvider.family<List<DiscoveredSalon>, ({double lat, double lng, int limit, String? serviceQuery})>(
+  (ref, params) async {
+    final body = <String, dynamic>{
+      'action': 'list',
+      'lat': params.lat,
+      'lng': params.lng,
+      'radius_km': 50,
+      'limit': params.limit,
+    };
+    if (params.serviceQuery != null && params.serviceQuery!.isNotEmpty) {
+      body['service_query'] = params.serviceQuery;
+    }
+
     final response =
         await SupabaseClientService.client.functions.invoke(
       'outreach-discovered-salon',
-      body: {
-        'action': 'list',
-        'lat': coords.lat,
-        'lng': coords.lng,
-        'radius_km': 50,
-      },
+      body: body,
     );
 
     final data = response.data as Map<String, dynamic>;
     final salons = (data['salons'] as List?) ?? [];
     return salons
-        .map((s) => _DiscoveredSalon.fromJson(s as Map<String, dynamic>))
+        .map((s) => DiscoveredSalon.fromJson(s as Map<String, dynamic>))
         .toList();
   },
 );
@@ -69,14 +75,14 @@ class _InviteSalonScreenState extends ConsumerState<InviteSalonScreen> {
   Widget build(BuildContext context) {
     final salonsAsync = _userLocation != null
         ? ref.watch(
-            _nearbySalonsProvider((lat: _userLocation!.lat, lng: _userLocation!.lng)),
+            nearbySalonsProvider((lat: _userLocation!.lat, lng: _userLocation!.lng, limit: 50, serviceQuery: null)),
           )
         : null;
 
     return Scaffold(
-      backgroundColor: _waGreen,
+      backgroundColor: waGreen,
       appBar: AppBar(
-        backgroundColor: _waGreen,
+        backgroundColor: waGreen,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 24),
@@ -150,7 +156,7 @@ class _InviteSalonScreenState extends ConsumerState<InviteSalonScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const CircularProgressIndicator(color: _waLightGreen),
+                          const CircularProgressIndicator(color: waLightGreen),
                           const SizedBox(height: 16),
                           Text(
                             'Obteniendo tu ubicacion...',
@@ -170,7 +176,7 @@ class _InviteSalonScreenState extends ConsumerState<InviteSalonScreen> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 const Icon(Icons.location_off_rounded,
-                                    size: 48, color: _waGreen),
+                                    size: 48, color: waGreen),
                                 const SizedBox(height: 16),
                                 Text(
                                   'Activa el GPS para ver estilistas cerca de ti',
@@ -190,7 +196,7 @@ class _InviteSalonScreenState extends ConsumerState<InviteSalonScreen> {
                                   icon: const Icon(Icons.refresh, size: 18),
                                   label: const Text('Reintentar'),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: _waLightGreen,
+                                    backgroundColor: waLightGreen,
                                     foregroundColor: Colors.white,
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(20),
@@ -261,7 +267,7 @@ class _InviteSalonScreenState extends ConsumerState<InviteSalonScreen> {
                   );
                 },
                 loading: () => const Center(
-                  child: CircularProgressIndicator(color: _waLightGreen),
+                  child: CircularProgressIndicator(color: waLightGreen),
                 ),
                 error: (e, _) => Center(
                   child: Padding(
@@ -284,7 +290,7 @@ class _InviteSalonScreenState extends ConsumerState<InviteSalonScreen> {
     );
   }
 
-  Future<void> _handleInvite(_DiscoveredSalon salon) async {
+  Future<void> _handleInvite(DiscoveredSalon salon) async {
     setState(() => _invitedIds.add(salon.id));
 
     // 1. Open WhatsApp with pre-filled message
@@ -312,7 +318,7 @@ class _InviteSalonScreenState extends ConsumerState<InviteSalonScreen> {
 }
 
 class _SalonCard extends StatelessWidget {
-  final _DiscoveredSalon salon;
+  final DiscoveredSalon salon;
   final bool invited;
   final VoidCallback onInvite;
 
@@ -327,7 +333,7 @@ class _SalonCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: invited ? _waCardTint : Colors.white,
+        color: invited ? waCardTint : Colors.white,
         borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
       ),
       child: Padding(
@@ -411,7 +417,7 @@ class _SalonCard extends StatelessWidget {
                 ),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: invited ? Colors.grey[300] : _waLightGreen,
+                backgroundColor: invited ? Colors.grey[300] : waLightGreen,
                 foregroundColor: invited ? Colors.grey[600] : Colors.white,
                 elevation: 0,
                 padding:
@@ -433,15 +439,25 @@ class _SalonCard extends StatelessWidget {
       width: 50,
       height: 50,
       decoration: BoxDecoration(
-        color: _waGreen.withValues(alpha: 0.15),
+        color: waGreen.withValues(alpha: 0.15),
         shape: BoxShape.circle,
       ),
-      child: const Icon(Icons.store, color: _waGreen, size: 24),
+      child: const Icon(Icons.store, color: waGreen, size: 24),
     );
   }
 }
 
-class _DiscoveredSalon {
+/// Strip non-Latin characters from scraped data
+String _sanitizeLatin(String text) {
+  return text.replaceAll(
+    RegExp(r'[^\u0000-\u024F\u1E00-\u1EFF\u2000-\u206F\u2070-\u209F\u20A0-\u20CF\u2100-\u214F\s]'),
+    '',
+  ).trim();
+}
+
+String? _sanitizeLatinNullable(String? text) => text != null ? _sanitizeLatin(text) : null;
+
+class DiscoveredSalon {
   final String id;
   final String name;
   final String? phone;
@@ -454,7 +470,7 @@ class _DiscoveredSalon {
   final int interestCount;
   final double? distanceKm;
 
-  const _DiscoveredSalon({
+  const DiscoveredSalon({
     required this.id,
     required this.name,
     this.phone,
@@ -468,14 +484,14 @@ class _DiscoveredSalon {
     this.distanceKm,
   });
 
-  factory _DiscoveredSalon.fromJson(Map<String, dynamic> json) {
-    return _DiscoveredSalon(
+  factory DiscoveredSalon.fromJson(Map<String, dynamic> json) {
+    return DiscoveredSalon(
       id: json['id'] as String,
-      name: json['name'] as String,
+      name: _sanitizeLatin(json['name'] as String),
       phone: json['phone'] as String?,
       whatsapp: json['whatsapp'] as String?,
-      address: json['address'] as String?,
-      city: json['city'] as String?,
+      address: _sanitizeLatinNullable(json['address'] as String?),
+      city: _sanitizeLatinNullable(json['city'] as String?),
       photoUrl: json['photo_url'] as String?,
       rating: (json['rating'] as num?)?.toDouble(),
       reviewsCount: json['reviews_count'] as int?,

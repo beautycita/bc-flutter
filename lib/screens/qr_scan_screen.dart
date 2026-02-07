@@ -6,6 +6,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:beautycita/config/theme.dart';
 import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/services/qr_auth_service.dart';
+import 'package:beautycita/services/biometric_service.dart';
 
 class QrScanScreen extends StatefulWidget {
   const QrScanScreen({super.key});
@@ -14,17 +15,34 @@ class QrScanScreen extends StatefulWidget {
   State<QrScanScreen> createState() => _QrScanScreenState();
 }
 
-class _QrScanScreenState extends State<QrScanScreen> {
+class _QrScanScreenState extends State<QrScanScreen> with SingleTickerProviderStateMixin {
   final MobileScannerController _controller = MobileScannerController();
   final QrAuthService _authService = QrAuthService();
+  final BiometricService _biometricService = BiometricService();
+  final TextEditingController _codeController = TextEditingController();
 
   bool _isProcessing = false;
   ScanStatus _status = ScanStatus.scanning;
+  String? _errorMessage;
+  bool _showManualEntry = false;
 
   @override
   void dispose() {
     _controller.dispose();
+    _codeController.dispose();
     super.dispose();
+  }
+
+  /// Parse QR data and extract code + session
+  ({String code, String sessionId})? _parseQrData(String rawValue) {
+    final uri = Uri.tryParse(rawValue);
+    if (uri == null || uri.scheme != 'beautycita' || uri.host != 'auth' || uri.path != '/qr') {
+      return null;
+    }
+    final code = uri.queryParameters['code'];
+    final sessionId = uri.queryParameters['session'];
+    if (code == null || sessionId == null) return null;
+    return (code: code, sessionId: sessionId);
   }
 
   Future<void> _handleBarcode(BarcodeCapture capture) async {
@@ -36,62 +54,152 @@ class _QrScanScreenState extends State<QrScanScreen> {
     final rawValue = barcodes.first.rawValue;
     if (rawValue == null || rawValue.isEmpty) return;
 
-    // Parse QR data: format is "beautycita://auth/qr?code=XXXXXX&session=uuid"
-    final uri = Uri.tryParse(rawValue);
-    if (uri == null || uri.scheme != 'beautycita' || uri.host != 'auth' || uri.path != '/qr') {
+    final parsed = _parseQrData(rawValue);
+    if (parsed == null) {
       setState(() {
         _status = ScanStatus.error;
+        _errorMessage = 'Este QR no es de BeautyCita';
       });
       await Future.delayed(const Duration(seconds: 2));
-      if (mounted) {
-        setState(() {
-          _status = ScanStatus.scanning;
-        });
-      }
+      if (mounted) setState(() { _status = ScanStatus.scanning; _errorMessage = null; });
       return;
     }
 
-    final code = uri.queryParameters['code'];
-    final sessionId = uri.queryParameters['session'];
+    await _authorizeWithConfirmation(parsed.code, parsed.sessionId);
+  }
 
-    if (code == null || sessionId == null) {
-      setState(() {
-        _status = ScanStatus.error;
-      });
-      await Future.delayed(const Duration(seconds: 2));
-      if (mounted) {
-        setState(() {
-          _status = ScanStatus.scanning;
-        });
-      }
-      return;
-    }
-
+  /// Show confirmation dialog, require biometric, then authorize
+  Future<void> _authorizeWithConfirmation(String code, String sessionId) async {
     setState(() {
       _isProcessing = true;
-      _status = ScanStatus.processing;
+      _status = ScanStatus.confirming;
     });
 
-    final success = await _authService.authorizeSession(code, sessionId);
+    // Show confirmation
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: BeautyCitaTheme.primaryRose.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.link_rounded, color: BeautyCitaTheme.primaryRose, size: 24),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Vincular dispositivo',
+                style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Vas a iniciar sesion en BeautyCita Web.',
+              style: GoogleFonts.nunito(fontSize: 15, color: BeautyCitaTheme.textDark),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.amber.shade50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.amber.shade200),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline_rounded, color: Colors.amber.shade700, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Se requiere tu huella o rostro para confirmar.',
+                      style: GoogleFonts.nunito(fontSize: 13, color: Colors.amber.shade900),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text('Cancelar', style: GoogleFonts.poppins(color: BeautyCitaTheme.textLight)),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: BeautyCitaTheme.primaryRose,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: Text('Vincular', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) {
+      setState(() { _isProcessing = false; _status = ScanStatus.scanning; });
+      return;
+    }
+
+    // Biometric check
+    final authenticated = await _biometricService.authenticate();
+    if (!authenticated || !mounted) {
+      setState(() {
+        _isProcessing = false;
+        _status = ScanStatus.error;
+        _errorMessage = 'Autenticacion biometrica fallida';
+      });
+      await Future.delayed(const Duration(seconds: 2));
+      if (mounted) setState(() { _status = ScanStatus.scanning; _errorMessage = null; });
+      return;
+    }
+
+    // Authorize
+    setState(() { _status = ScanStatus.processing; });
+
+    final result = await _authService.authorizeSession(code, sessionId);
 
     if (!mounted) return;
 
-    setState(() {
-      _isProcessing = false;
-      _status = success ? ScanStatus.success : ScanStatus.error;
-    });
-
-    if (success) {
-      await Future.delayed(const Duration(milliseconds: 1500));
-      if (mounted) context.pop();
-    } else {
-      await Future.delayed(const Duration(seconds: 3));
-      if (mounted) {
+    switch (result) {
+      case QrAuthSuccess():
         setState(() {
-          _status = ScanStatus.scanning;
+          _isProcessing = false;
+          _status = ScanStatus.success;
         });
-      }
+        await Future.delayed(const Duration(milliseconds: 1500));
+        if (mounted) context.pop();
+      case QrAuthError(:final message):
+        setState(() {
+          _isProcessing = false;
+          _status = ScanStatus.error;
+          _errorMessage = message;
+        });
+        await Future.delayed(const Duration(seconds: 3));
+        if (mounted) setState(() { _status = ScanStatus.scanning; _errorMessage = null; });
     }
+  }
+
+  /// Handle manual code submission
+  Future<void> _submitManualCode() async {
+    final code = _codeController.text.trim();
+    if (code.length < 6) return;
+
+    // Manual entry doesn't have a session ID — the edge function
+    // finds the session by code alone
+    await _authorizeWithConfirmation(code, '');
   }
 
   @override
@@ -103,7 +211,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
         foregroundColor: Colors.white,
         elevation: 0,
         title: Text(
-          'Escanear QR',
+          'Vincular con la Web',
           style: GoogleFonts.poppins(
             fontSize: 20,
             fontWeight: FontWeight.w600,
@@ -115,51 +223,178 @@ class _QrScanScreenState extends State<QrScanScreen> {
           onPressed: () => context.pop(),
         ),
       ),
-      body: Stack(
+      body: Column(
         children: [
-          // Camera view
-          MobileScanner(
-            controller: _controller,
-            onDetect: _handleBarcode,
-          ),
-
-          // Overlay with viewfinder
-          CustomPaint(
-            painter: _ViewfinderPainter(),
-            size: Size.infinite,
-          ),
-
-          // Top instruction text
-          Positioned(
-            top: 40,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppConstants.paddingLG,
-                  vertical: AppConstants.paddingMD,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.6),
-                  borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-                ),
-                child: Text(
-                  'Escanea el codigo QR de la web',
-                  style: GoogleFonts.nunito(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
+          // Camera / scanner area
+          Expanded(
+            flex: 3,
+            child: Stack(
+              children: [
+                if (!_showManualEntry) ...[
+                  MobileScanner(
+                    controller: _controller,
+                    onDetect: _handleBarcode,
                   ),
-                  textAlign: TextAlign.center,
-                ),
+                  CustomPaint(
+                    painter: _ViewfinderPainter(),
+                    size: Size.infinite,
+                  ),
+                  // Instruction text
+                  Positioned(
+                    top: 40,
+                    left: 0,
+                    right: 0,
+                    child: Center(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppConstants.paddingLG,
+                          vertical: AppConstants.paddingMD,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.6),
+                          borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+                        ),
+                        child: Text(
+                          'Escanea el QR de beautycita.com',
+                          style: GoogleFonts.nunito(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                  ),
+                ] else ...[
+                  _buildManualEntry(),
+                ],
+                if (_status != ScanStatus.scanning && _status != ScanStatus.confirming)
+                  _buildStatusOverlay(),
+              ],
+            ),
+          ),
+          // Bottom toggle
+          Container(
+            color: Colors.black,
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            child: SafeArea(
+              top: false,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        setState(() { _showManualEntry = !_showManualEntry; });
+                      },
+                      icon: Icon(
+                        _showManualEntry ? Icons.qr_code_scanner_rounded : Icons.keyboard_rounded,
+                        color: Colors.white70,
+                        size: 20,
+                      ),
+                      label: Text(
+                        _showManualEntry ? 'Escanear QR' : 'Ingresar codigo manual',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.white70,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Colors.white24),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
-
-          // Status overlay
-          if (_status != ScanStatus.scanning) _buildStatusOverlay(),
         ],
+      ),
+    );
+  }
+
+  Widget _buildManualEntry() {
+    return Container(
+      color: Colors.black,
+      padding: const EdgeInsets.all(32),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: BeautyCitaTheme.primaryRose.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.keyboard_rounded, color: Colors.white, size: 40),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Ingresa el codigo que aparece\nen la pagina web',
+              style: GoogleFonts.nunito(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: 240,
+              child: TextField(
+                controller: _codeController,
+                textAlign: TextAlign.center,
+                maxLength: 8,
+                style: GoogleFonts.poppins(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                  letterSpacing: 4,
+                ),
+                decoration: InputDecoration(
+                  counterText: '',
+                  hintText: 'ABCD1234',
+                  hintStyle: GoogleFonts.poppins(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w400,
+                    color: Colors.white24,
+                    letterSpacing: 4,
+                  ),
+                  enabledBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.3), width: 2),
+                  ),
+                  focusedBorder: const UnderlineInputBorder(
+                    borderSide: BorderSide(color: BeautyCitaTheme.primaryRose, width: 2),
+                  ),
+                ),
+                textCapitalization: TextCapitalization.characters,
+                onSubmitted: (_) => _submitManualCode(),
+              ),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: 200,
+              height: 48,
+              child: FilledButton(
+                onPressed: _isProcessing ? null : _submitManualCode,
+                style: FilledButton.styleFrom(
+                  backgroundColor: BeautyCitaTheme.primaryRose,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: Text(
+                  'VINCULAR',
+                  style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -222,9 +457,9 @@ class _QrScanScreenState extends State<QrScanScreen> {
                     ? 'Vinculando...'
                     : isSuccess
                         ? 'Sesion vinculada!'
-                        : 'Codigo invalido o expirado',
+                        : _errorMessage ?? 'Error desconocido',
                 style: GoogleFonts.poppins(
-                  fontSize: 20,
+                  fontSize: isError ? 16 : 20,
                   fontWeight: FontWeight.w700,
                   color: isError ? Colors.red.shade700 : BeautyCitaTheme.textDark,
                 ),
@@ -240,6 +475,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
 
 enum ScanStatus {
   scanning,
+  confirming,
   processing,
   success,
   error,
@@ -252,7 +488,6 @@ class _ViewfinderPainter extends CustomPainter {
       ..color = Colors.black.withValues(alpha: 0.5)
       ..style = PaintingStyle.fill;
 
-    // Draw dark overlay with cutout
     final path = Path()
       ..addRect(Rect.fromLTWH(0, 0, size.width, size.height));
 
@@ -261,29 +496,20 @@ class _ViewfinderPainter extends CustomPainter {
     final viewfinderTop = (size.height - viewfinderSize) / 2;
 
     final cutoutRect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(
-        viewfinderLeft,
-        viewfinderTop,
-        viewfinderSize,
-        viewfinderSize,
-      ),
+      Rect.fromLTWH(viewfinderLeft, viewfinderTop, viewfinderSize, viewfinderSize),
       const Radius.circular(24),
     );
 
     path.addRRect(cutoutRect);
     path.fillType = PathFillType.evenOdd;
-
     canvas.drawPath(path, paint);
 
-    // Draw viewfinder border
     final borderPaint = Paint()
       ..color = Colors.white
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3;
-
     canvas.drawRRect(cutoutRect, borderPaint);
 
-    // Draw corner accents
     final accentPaint = Paint()
       ..color = BeautyCitaTheme.primaryRose
       ..style = PaintingStyle.stroke
@@ -292,7 +518,7 @@ class _ViewfinderPainter extends CustomPainter {
 
     const cornerLength = 30.0;
 
-    // Top-left corner
+    // Top-left
     canvas.drawLine(
       Offset(viewfinderLeft, viewfinderTop + 24),
       Offset(viewfinderLeft, viewfinderTop + 24 + cornerLength),
@@ -304,7 +530,7 @@ class _ViewfinderPainter extends CustomPainter {
       accentPaint,
     );
 
-    // Top-right corner
+    // Top-right
     canvas.drawLine(
       Offset(viewfinderLeft + viewfinderSize, viewfinderTop + 24),
       Offset(viewfinderLeft + viewfinderSize, viewfinderTop + 24 + cornerLength),
@@ -316,7 +542,7 @@ class _ViewfinderPainter extends CustomPainter {
       accentPaint,
     );
 
-    // Bottom-left corner
+    // Bottom-left
     canvas.drawLine(
       Offset(viewfinderLeft, viewfinderTop + viewfinderSize - 24),
       Offset(viewfinderLeft, viewfinderTop + viewfinderSize - 24 - cornerLength),
@@ -328,7 +554,7 @@ class _ViewfinderPainter extends CustomPainter {
       accentPaint,
     );
 
-    // Bottom-right corner
+    // Bottom-right
     canvas.drawLine(
       Offset(viewfinderLeft + viewfinderSize, viewfinderTop + viewfinderSize - 24),
       Offset(viewfinderLeft + viewfinderSize, viewfinderTop + viewfinderSize - 24 - cornerLength),

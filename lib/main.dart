@@ -95,29 +95,27 @@ class _BeautyCitaAppState extends ConsumerState<BeautyCitaApp> {
   }
 
   Future<void> _handleQrAuth(String code, String sessionId) async {
-    try {
-      final service = QrAuthService();
-      final success = await service.authorizeSession(code, sessionId);
+    final service = QrAuthService();
+    final result = await service.authorizeSession(code, sessionId);
 
-      if (mounted) {
+    if (!mounted) return;
+
+    switch (result) {
+      case QrAuthSuccess():
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(success
-              ? 'Dispositivo vinculado exitosamente'
-              : 'Error al vincular dispositivo'),
-            backgroundColor: success ? Colors.green : Colors.red,
+          const SnackBar(
+            content: Text('Dispositivo vinculado exitosamente'),
+            backgroundColor: Colors.green,
           ),
         );
-      }
-    } catch (e) {
-      if (mounted) {
+      case QrAuthError(:final message):
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: $e'),
+            content: Text(message),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
           ),
         );
-      }
     }
   }
 

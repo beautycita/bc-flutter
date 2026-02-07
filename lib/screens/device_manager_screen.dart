@@ -2,25 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:beautycita/config/theme.dart';
 import 'package:beautycita/config/constants.dart';
+import 'package:beautycita/services/supabase_client.dart';
 
-// Model for a device/session
 class DeviceSession {
   final String id;
   final String deviceName;
-  final String deviceType;
-  final DateTime lastActive;
-  final bool isCurrentDevice;
+  final DateTime linkedAt;
 
   DeviceSession({
     required this.id,
     required this.deviceName,
-    required this.deviceType,
-    required this.lastActive,
-    required this.isCurrentDevice,
+    required this.linkedAt,
   });
 }
 
-// Placeholder provider for device sessions
 final deviceSessionsProvider =
     StateNotifierProvider<DeviceSessionsNotifier, AsyncValue<List<DeviceSession>>>((ref) {
   return DeviceSessionsNotifier();
@@ -34,54 +29,59 @@ class DeviceSessionsNotifier extends StateNotifier<AsyncValue<List<DeviceSession
   Future<void> _loadSessions() async {
     state = const AsyncValue.loading();
 
-    // Simulate API call delay
-    await Future.delayed(const Duration(milliseconds: 500));
+    if (!SupabaseClientService.isInitialized || !SupabaseClientService.isAuthenticated) {
+      state = const AsyncValue.data([]);
+      return;
+    }
 
-    // Placeholder data - replace with actual Supabase query
-    state = AsyncValue.data([
-      DeviceSession(
-        id: '1',
-        deviceName: 'Galaxy S24',
-        deviceType: 'mobile',
-        lastActive: DateTime.now(),
-        isCurrentDevice: true,
-      ),
-      DeviceSession(
-        id: '2',
-        deviceName: 'Chrome en Windows',
-        deviceType: 'desktop',
-        lastActive: DateTime.now().subtract(const Duration(hours: 2)),
-        isCurrentDevice: false,
-      ),
-      DeviceSession(
-        id: '3',
-        deviceName: 'Safari en iPhone',
-        deviceType: 'mobile',
-        lastActive: DateTime.now().subtract(const Duration(days: 1)),
-        isCurrentDevice: false,
-      ),
-      DeviceSession(
-        id: '4',
-        deviceName: 'Chrome en Android',
-        deviceType: 'tablet',
-        lastActive: DateTime.now().subtract(const Duration(days: 7)),
-        isCurrentDevice: false,
-      ),
-    ]);
+    try {
+      final response = await SupabaseClientService.client.functions.invoke(
+        'qr-auth',
+        body: {'action': 'list_sessions'},
+      );
+
+      if (response.status != 200) {
+        state = const AsyncValue.data([]);
+        return;
+      }
+
+      final data = response.data as Map<String, dynamic>;
+      final sessions = (data['sessions'] as List<dynamic>?) ?? [];
+
+      state = AsyncValue.data(
+        sessions.map((s) {
+          final map = s as Map<String, dynamic>;
+          final linkedAt = DateTime.tryParse(map['linked_at'] as String? ?? '') ?? DateTime.now();
+          return DeviceSession(
+            id: map['id'] as String,
+            deviceName: 'Sesion Web',
+            linkedAt: linkedAt,
+          );
+        }).toList(),
+      );
+    } catch (e) {
+      state = AsyncValue.error(e, StackTrace.current);
+    }
   }
 
   Future<void> revokeSession(String sessionId) async {
     final currentSessions = state.value;
     if (currentSessions == null) return;
 
-    // Optimistically update UI
+    // Optimistic UI update
     state = AsyncValue.data(
-      currentSessions.where((session) => session.id != sessionId).toList(),
+      currentSessions.where((s) => s.id != sessionId).toList(),
     );
 
-    // TODO: Implement actual Supabase session revocation
-    // await supabase.auth.admin.deleteUser(sessionId);
-    await Future.delayed(const Duration(milliseconds: 300));
+    try {
+      await SupabaseClientService.client.functions.invoke(
+        'qr-auth',
+        body: {'action': 'revoke', 'session_id': sessionId},
+      );
+    } catch (_) {
+      // Reload to get accurate state
+      await _loadSessions();
+    }
   }
 
   Future<void> refresh() async {
@@ -112,34 +112,18 @@ class DeviceManagerScreen extends ConsumerWidget {
         ],
       ),
       body: sessionsAsync.when(
-        loading: () => const Center(
-          child: CircularProgressIndicator(),
-        ),
+        loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => Center(
           child: Padding(
             padding: const EdgeInsets.all(AppConstants.paddingLG),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  Icons.error_outline_rounded,
-                  size: 64,
-                  color: Colors.red.shade400,
-                ),
+                Icon(Icons.error_outline_rounded, size: 64, color: Colors.red.shade400),
                 const SizedBox(height: BeautyCitaTheme.spaceMD),
                 Text(
                   'Error al cargar dispositivos',
-                  style: textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: BeautyCitaTheme.spaceSM),
-                Text(
-                  error.toString(),
-                  style: textTheme.bodySmall?.copyWith(
-                    color: BeautyCitaTheme.textLight,
-                  ),
+                  style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
                   textAlign: TextAlign.center,
                 ),
               ],
@@ -147,56 +131,50 @@ class DeviceManagerScreen extends ConsumerWidget {
           ),
         ),
         data: (sessions) {
-          if (sessions.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(AppConstants.paddingLG),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.devices_other_rounded,
-                      size: 64,
-                      color: BeautyCitaTheme.textLight.withValues(alpha: 0.5),
-                    ),
-                    const SizedBox(height: BeautyCitaTheme.spaceMD),
-                    Text(
-                      'No hay dispositivos conectados',
-                      style: textTheme.titleMedium?.copyWith(
-                        color: BeautyCitaTheme.textLight,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }
-
           return ListView(
             padding: const EdgeInsets.symmetric(
               horizontal: AppConstants.screenPaddingHorizontal,
               vertical: BeautyCitaTheme.spaceMD,
             ),
             children: [
-              // Info text
-              Padding(
-                padding: const EdgeInsets.only(bottom: BeautyCitaTheme.spaceMD),
-                child: Text(
-                  'Gestiona las sesiones activas en tus dispositivos. Puedes cerrar sesion en cualquier dispositivo que no reconozcas.',
-                  style: textTheme.bodyMedium?.copyWith(
-                    color: BeautyCitaTheme.textLight,
+              // Current device (always shown)
+              _CurrentDeviceCard(),
+              const SizedBox(height: BeautyCitaTheme.spaceMD),
+
+              if (sessions.isNotEmpty) ...[
+                Padding(
+                  padding: const EdgeInsets.only(bottom: BeautyCitaTheme.spaceSM),
+                  child: Text(
+                    'Sesiones web vinculadas',
+                    style: textTheme.titleSmall?.copyWith(
+                      color: BeautyCitaTheme.textLight,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
-              ),
-              // Sessions list
-              ...sessions.map((session) {
-                return _DeviceSessionCard(
+                ...sessions.map((session) => _WebSessionCard(
                   session: session,
-                  onRevoke: () {
-                    _showRevokeConfirmation(context, ref, session);
-                  },
-                );
-              }),
+                  onRevoke: () => _showRevokeConfirmation(context, ref, session),
+                )),
+              ] else ...[
+                const SizedBox(height: 32),
+                Center(
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.devices_other_rounded,
+                        size: 48,
+                        color: BeautyCitaTheme.textLight.withValues(alpha: 0.4),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'No hay sesiones web vinculadas',
+                        style: textTheme.bodyMedium?.copyWith(color: BeautyCitaTheme.textLight),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ],
           );
         },
@@ -204,59 +182,33 @@ class DeviceManagerScreen extends ConsumerWidget {
     );
   }
 
-  void _showRevokeConfirmation(
-    BuildContext context,
-    WidgetRef ref,
-    DeviceSession session,
-  ) {
+  void _showRevokeConfirmation(BuildContext context, WidgetRef ref, DeviceSession session) {
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-        ),
-        title: const Text('Confirmacion'),
-        content: Text(
-          '¿Cerrar sesion en "${session.deviceName}"?',
-        ),
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppConstants.radiusMD)),
+        title: const Text('Cerrar sesion web'),
+        content: const Text('Esta sesion web se desvinculara. El navegador debera vincular de nuevo.'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
+            onPressed: () => Navigator.of(ctx).pop(),
             child: const Text('Cancelar'),
           ),
           ElevatedButton(
             onPressed: () async {
-              Navigator.of(dialogContext).pop();
-
-              try {
-                await ref
-                    .read(deviceSessionsProvider.notifier)
-                    .revokeSession(session.id);
-
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: const Text('Sesion cerrada exitosamente'),
-                      backgroundColor: Colors.green.shade600,
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Error al cerrar sesion: $e'),
-                      backgroundColor: Colors.red.shade600,
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                }
+              Navigator.of(ctx).pop();
+              await ref.read(deviceSessionsProvider.notifier).revokeSession(session.id);
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Text('Sesion cerrada'),
+                    backgroundColor: Colors.green.shade600,
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
               }
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red.shade600,
-            ),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade600),
             child: const Text('Cerrar sesion'),
           ),
         ],
@@ -265,38 +217,19 @@ class DeviceManagerScreen extends ConsumerWidget {
   }
 }
 
-class _DeviceSessionCard extends StatelessWidget {
-  final DeviceSession session;
-  final VoidCallback onRevoke;
-
-  const _DeviceSessionCard({
-    required this.session,
-    required this.onRevoke,
-  });
-
+class _CurrentDeviceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final timeAgo = _formatTimeAgo(session.lastActive);
     final textTheme = Theme.of(context).textTheme;
-
     return Container(
-      margin: const EdgeInsets.only(bottom: BeautyCitaTheme.spaceSM),
       padding: const EdgeInsets.all(AppConstants.paddingMD),
       decoration: BoxDecoration(
-        color: session.isCurrentDevice
-            ? BeautyCitaTheme.primaryRose.withValues(alpha: 0.05)
-            : Colors.white,
+        color: BeautyCitaTheme.primaryRose.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-        border: Border.all(
-          color: session.isCurrentDevice
-              ? BeautyCitaTheme.primaryRose.withValues(alpha: 0.2)
-              : Colors.grey.shade200,
-          width: 1,
-        ),
+        border: Border.all(color: BeautyCitaTheme.primaryRose.withValues(alpha: 0.2)),
       ),
       child: Row(
         children: [
-          // Device icon
           Container(
             width: 48,
             height: 48,
@@ -304,119 +237,104 @@ class _DeviceSessionCard extends StatelessWidget {
               color: BeautyCitaTheme.primaryRose.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(AppConstants.radiusSM),
             ),
-            child: Icon(
-              _getDeviceIcon(session.deviceType),
-              color: BeautyCitaTheme.primaryRose,
-              size: 24,
-            ),
+            child: const Icon(Icons.phone_android_rounded, color: BeautyCitaTheme.primaryRose, size: 24),
           ),
           const SizedBox(width: BeautyCitaTheme.spaceMD),
-          // Device info
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        session.deviceName,
-                        style: textTheme.bodyLarge?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                Text('Este dispositivo', style: textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600)),
                 const SizedBox(height: 4),
-                Text(
-                  'Activo hace $timeAgo',
-                  style: textTheme.bodySmall?.copyWith(
-                    color: BeautyCitaTheme.textLight,
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade50,
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: Colors.green.shade200),
+                  ),
+                  child: Text(
+                    'Activo',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: Colors.green.shade700,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
-                if (session.isCurrentDevice) ...[
-                  const SizedBox(height: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.green.shade50,
-                      borderRadius: BorderRadius.circular(4),
-                      border: Border.all(
-                        color: Colors.green.shade200,
-                        width: 1,
-                      ),
-                    ),
-                    child: Text(
-                      'Este dispositivo',
-                      style: textTheme.bodySmall?.copyWith(
-                        color: Colors.green.shade700,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
               ],
             ),
           ),
-          // Revoke button
-          if (!session.isCurrentDevice) ...[
-            const SizedBox(width: BeautyCitaTheme.spaceSM),
-            TextButton(
-              onPressed: onRevoke,
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.red.shade600,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-              ),
-              child: const Text('Cerrar'),
+        ],
+      ),
+    );
+  }
+}
+
+class _WebSessionCard extends StatelessWidget {
+  final DeviceSession session;
+  final VoidCallback onRevoke;
+
+  const _WebSessionCard({required this.session, required this.onRevoke});
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final timeAgo = _formatTimeAgo(session.linkedAt);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: BeautyCitaTheme.spaceSM),
+      padding: const EdgeInsets.all(AppConstants.paddingMD),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(AppConstants.radiusSM),
             ),
-          ],
+            child: Icon(Icons.computer_rounded, color: Colors.blue.shade400, size: 24),
+          ),
+          const SizedBox(width: BeautyCitaTheme.spaceMD),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(session.deviceName, style: textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600)),
+                const SizedBox(height: 4),
+                Text(
+                  'Vinculado hace $timeAgo',
+                  style: textTheme.bodySmall?.copyWith(color: BeautyCitaTheme.textLight),
+                ),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: onRevoke,
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.red.shade600,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            ),
+            child: const Text('Cerrar'),
+          ),
         ],
       ),
     );
   }
 
-  IconData _getDeviceIcon(String deviceType) {
-    switch (deviceType.toLowerCase()) {
-      case 'mobile':
-        return Icons.phone_android_rounded;
-      case 'tablet':
-        return Icons.tablet_rounded;
-      case 'desktop':
-        return Icons.computer_rounded;
-      default:
-        return Icons.devices_rounded;
-    }
-  }
-
   String _formatTimeAgo(DateTime dateTime) {
-    final now = DateTime.now();
-    final difference = now.difference(dateTime);
-
-    if (difference.inSeconds < 60) {
-      return 'unos segundos';
-    } else if (difference.inMinutes < 60) {
-      return '${difference.inMinutes} minuto${difference.inMinutes > 1 ? 's' : ''}';
-    } else if (difference.inHours < 24) {
-      return '${difference.inHours} hora${difference.inHours > 1 ? 's' : ''}';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays} dia${difference.inDays > 1 ? 's' : ''}';
-    } else if (difference.inDays < 30) {
-      final weeks = (difference.inDays / 7).floor();
-      return '$weeks semana${weeks > 1 ? 's' : ''}';
-    } else if (difference.inDays < 365) {
-      final months = (difference.inDays / 30).floor();
-      return '$months mes${months > 1 ? 'es' : ''}';
-    } else {
-      final years = (difference.inDays / 365).floor();
-      return '$years ano${years > 1 ? 's' : ''}';
-    }
+    final difference = DateTime.now().difference(dateTime);
+    if (difference.inSeconds < 60) return 'unos segundos';
+    if (difference.inMinutes < 60) return '${difference.inMinutes} min';
+    if (difference.inHours < 24) return '${difference.inHours}h';
+    if (difference.inDays < 7) return '${difference.inDays}d';
+    if (difference.inDays < 30) return '${(difference.inDays / 7).floor()} sem';
+    return '${(difference.inDays / 30).floor()} mes${(difference.inDays / 30).floor() > 1 ? 'es' : ''}';
   }
 }

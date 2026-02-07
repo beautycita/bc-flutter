@@ -179,6 +179,66 @@ serve(async (req) => {
       });
     }
 
+    // ===== LIST SESSIONS =====
+    if (action === "list_sessions") {
+      // Validate APK user's JWT
+      const authHeader = req.headers.get("Authorization") ?? "";
+      const token = authHeader.replace("Bearer ", "");
+      if (!token) return json({ error: "Authorization required" }, 401);
+
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser(token);
+      if (authError || !user) return json({ error: "Invalid token" }, 401);
+
+      // Get consumed (active) sessions for this user
+      const { data: sessions, error: sessError } = await supabase
+        .from("qr_auth_sessions")
+        .select("id, authorized_at, consumed_at")
+        .eq("user_id", user.id)
+        .eq("status", "consumed")
+        .order("consumed_at", { ascending: false });
+
+      if (sessError) throw sessError;
+
+      return json({
+        sessions: (sessions ?? []).map((s: any) => ({
+          id: s.id,
+          linked_at: s.consumed_at || s.authorized_at,
+        })),
+      });
+    }
+
+    // ===== REVOKE =====
+    if (action === "revoke") {
+      const { session_id } = body;
+      if (!session_id) return json({ error: "session_id is required" }, 400);
+
+      // Validate APK user's JWT
+      const authHeader = req.headers.get("Authorization") ?? "";
+      const token = authHeader.replace("Bearer ", "");
+      if (!token) return json({ error: "Authorization required" }, 401);
+
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser(token);
+      if (authError || !user) return json({ error: "Invalid token" }, 401);
+
+      // Mark session as revoked (only if owned by this user)
+      const { error: upError } = await supabase
+        .from("qr_auth_sessions")
+        .update({ status: "revoked" })
+        .eq("id", session_id)
+        .eq("user_id", user.id)
+        .eq("status", "consumed");
+
+      if (upError) throw upError;
+
+      return json({ success: true });
+    }
+
     // ===== CLEANUP =====
     if (action === "cleanup") {
       await supabase.rpc("cleanup_expired_qr_sessions");
