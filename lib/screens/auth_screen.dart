@@ -118,15 +118,16 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
     });
 
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFFFFF8F0), Color(0xFFFFF0F5), Color(0xFFFFF8F0)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
+      body: SizedBox.expand(
+        child: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFFFFF8F0), Color(0xFFFFF0F5), Color(0xFFFFF8F0)],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
           ),
-        ),
-        child: SafeArea(
+          child: SafeArea(
           child: Stack(
             children: [
               // Decorative circles
@@ -175,6 +176,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
               ),
             ],
           ),
+        ),
         ),
       ),
     );

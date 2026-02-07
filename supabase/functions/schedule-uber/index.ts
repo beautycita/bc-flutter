@@ -6,14 +6,12 @@
 // Called after book-appointment confirms the booking.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getUberApiBase, getValidUberAccessToken } from "../_shared/uber_jwt.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-const UBER_SANDBOX = Deno.env.get("UBER_SANDBOX") === "true";
-const UBER_API_BASE = UBER_SANDBOX
-  ? "https://sandbox-api.uber.com"
-  : "https://api.uber.com";
+const UBER_API_BASE = getUberApiBase();
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -46,32 +44,6 @@ async function uberFetch(
   });
 }
 
-async function getUberAccessToken(
-  supabase: ReturnType<typeof createClient>,
-  userId: string,
-): Promise<string | null> {
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select(
-      "uber_access_token, uber_refresh_token, uber_token_expires_at, uber_linked",
-    )
-    .eq("id", userId)
-    .single();
-
-  if (!profile?.uber_linked || !profile.uber_access_token) return null;
-
-  // Check if token is expired (with 5min buffer)
-  const expiresAt = new Date(profile.uber_token_expires_at).getTime();
-  if (Date.now() > expiresAt - 300_000) {
-    // Token expired — trigger refresh via link-uber function
-    // For now, return null and let caller handle re-auth
-    console.warn("Uber token expired for user", userId);
-    return null;
-  }
-
-  return profile.uber_access_token;
-}
-
 // ---------------------------------------------------------------------------
 // Fare estimate
 // ---------------------------------------------------------------------------
@@ -87,11 +59,6 @@ async function getFareEstimate(
   accessToken: string,
   req: EstimateRequest,
 ) {
-  const resp = await uberFetch("/v1.2/estimates/price", accessToken, {
-    method: "GET",
-  });
-
-  // Uber Estimates API uses GET with query params
   const params = new URLSearchParams({
     start_latitude: String(req.start_lat),
     start_longitude: String(req.start_lng),
@@ -357,8 +324,8 @@ Deno.serve(async (req: Request) => {
     const body = await req.json();
     const action = body.action ?? "schedule";
 
-    // Get user's Uber access token
-    const accessToken = await getUberAccessToken(supabase, user.id);
+    // Get user's Uber access token (auto-refreshes if expired)
+    const accessToken = await getValidUberAccessToken(supabase, user.id);
 
     if (action === "estimate") {
       if (!accessToken) {

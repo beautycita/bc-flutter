@@ -121,32 +121,104 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
     }
   }
 
-  /// Show a confirmation dialog before cancelling.
+  /// Show a confirmation bottom sheet before cancelling.
   Future<void> _cancelBooking(Booking booking) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showModalBottomSheet<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-        ),
-        title: const Text('Cancelar cita'),
-        content: Text(
-          '¿Estás seguro de que deseas cancelar tu cita de ${booking.serviceName}?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('No'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red.shade600,
-            ),
-            child: const Text('Sí, cancelar'),
-          ),
-        ],
+      shape: const RoundedRectangleBorder(
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(AppConstants.radiusXL)),
       ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppConstants.paddingLG,
+              AppConstants.paddingMD,
+              AppConstants.paddingLG,
+              AppConstants.paddingLG,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: BeautyCitaTheme.spaceMD),
+                Icon(
+                  Icons.cancel_outlined,
+                  size: AppConstants.iconSizeXL,
+                  color: Colors.red.shade400,
+                ),
+                const SizedBox(height: BeautyCitaTheme.spaceSM),
+                Text(
+                  'Cancelar esta cita?',
+                  style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                const SizedBox(height: BeautyCitaTheme.spaceXS),
+                Text(
+                  'Se cancelara tu cita de ${booking.serviceName}.'
+                  '${booking.transportMode == 'uber' ? ' Tambien se cancelaran tus viajes de Uber.' : ''}',
+                  style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(
+                        color: BeautyCitaTheme.textLight,
+                      ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: BeautyCitaTheme.spaceLG),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize:
+                              const Size(0, AppConstants.minTouchHeight),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(
+                                AppConstants.radiusLG),
+                          ),
+                        ),
+                        child: const Text('No, mantener'),
+                      ),
+                    ),
+                    const SizedBox(width: BeautyCitaTheme.spaceSM),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red.shade500,
+                          minimumSize:
+                              const Size(0, AppConstants.minTouchHeight),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(
+                                AppConstants.radiusLG),
+                          ),
+                        ),
+                        child: const Text(
+                          'Si, cancelar',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
 
     if (confirmed == true) {
