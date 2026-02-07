@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../config/theme.dart';
 import '../models/curate_result.dart';
 import '../providers/booking_flow_provider.dart';
 import '../providers/favorites_provider.dart';
 import '../services/places_service.dart';
+import '../services/supabase_client.dart';
 import '../widgets/cinematic_question_text.dart';
 import '../widgets/location_picker_sheet.dart';
+import 'invite_salon_screen.dart' show DiscoveredSalon, nearbySalonsProvider, waGreen, waLightGreen, waCardTint;
 import 'time_override_sheet.dart';
 
 class ResultCardsScreen extends ConsumerStatefulWidget {
@@ -255,72 +259,14 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
     if (bookingState.curateResponse == null ||
         bookingState.curateResponse!.results.isEmpty) {
       final hasOverride = bookingState.overrideWindow != null;
-      return Scaffold(
-        appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_rounded, size: 24),
-            onPressed: () => bookingNotifier.goBack(),
-          ),
-          title: Text(
-            'Resultados',
-            style: GoogleFonts.poppins(
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(32),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'No hay resultados disponibles',
-                  style: GoogleFonts.poppins(
-                    fontSize: 16,
-                    color: BeautyCitaTheme.textDark,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                if (hasOverride) ...[
-                  const SizedBox(height: 16),
-                  Text(
-                    'El filtro de horario no encontro opciones',
-                    style: GoogleFonts.nunito(
-                      fontSize: 14,
-                      color: BeautyCitaTheme.textLight,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton.icon(
-                    onPressed: () => bookingNotifier.clearOverride(),
-                    icon: const Icon(Icons.filter_alt_off, size: 20),
-                    label: Text(
-                      'Quitar filtro',
-                      style: GoogleFonts.poppins(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: BeautyCitaTheme.primaryRose,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 14,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(
-                          BeautyCitaTheme.radiusMedium,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
+      final userLoc = bookingState.userLocation;
+      return _NoResultsWithNearbySalons(
+        hasOverride: hasOverride,
+        userLocation: userLoc,
+        serviceType: bookingState.serviceType,
+        serviceName: bookingState.serviceName,
+        onGoBack: () => bookingNotifier.goBack(),
+        onClearOverride: () => bookingNotifier.clearOverride(),
       );
     }
 
@@ -867,6 +813,364 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
           ),
         ),
       ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// No-results: WhatsApp-styled nearby salons
+// ---------------------------------------------------------------------------
+
+/// Strip non-standard-Latin characters from scraped data
+String _sanitizeText(String text) {
+  return text.replaceAll(RegExp(r'[^\u0000-\u024F\u1E00-\u1EFF\u2000-\u206F\u2070-\u209F\u20A0-\u20CF\u2100-\u214F\s]'), '').trim();
+}
+
+class _NoResultsWithNearbySalons extends ConsumerStatefulWidget {
+  final bool hasOverride;
+  final LatLng? userLocation;
+  final String? serviceType;
+  final String? serviceName;
+  final VoidCallback onGoBack;
+  final VoidCallback onClearOverride;
+
+  const _NoResultsWithNearbySalons({
+    required this.hasOverride,
+    required this.userLocation,
+    this.serviceType,
+    this.serviceName,
+    required this.onGoBack,
+    required this.onClearOverride,
+  });
+
+  @override
+  ConsumerState<_NoResultsWithNearbySalons> createState() =>
+      _NoResultsWithNearbySalonsState();
+}
+
+class _NoResultsWithNearbySalonsState
+    extends ConsumerState<_NoResultsWithNearbySalons> {
+  final Set<String> _invitedIds = {};
+
+  @override
+  Widget build(BuildContext context) {
+    final loc = widget.userLocation;
+    // Build service query from serviceType (machine key) for keyword matching
+    final serviceQuery = widget.serviceType ?? widget.serviceName;
+    final salonsAsync = loc != null
+        ? ref.watch(nearbySalonsProvider((
+            lat: loc.lat,
+            lng: loc.lng,
+            limit: 10,
+            serviceQuery: serviceQuery,
+          )))
+        : null;
+
+    final displayService = widget.serviceName ?? 'este servicio';
+
+    return Scaffold(
+      backgroundColor: waGreen,
+      appBar: AppBar(
+        backgroundColor: waGreen,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 24),
+          onPressed: widget.onGoBack,
+        ),
+        title: Text(
+          'Estilistas de $displayService',
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+            fontSize: 16,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
+      body: Column(
+        children: [
+          // Subtitle
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Text(
+              'que aun no estan en BeautyCita',
+              style: GoogleFonts.nunito(fontSize: 13, color: Colors.white70),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Content
+          Expanded(
+            child: Container(
+              decoration: const BoxDecoration(
+                color: Color(0xFFECE5DD),
+                borderRadius: BorderRadius.vertical(
+                  top: Radius.circular(BeautyCitaTheme.radiusLarge),
+                ),
+              ),
+              child: _buildContent(salonsAsync),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContent(AsyncValue<List<DiscoveredSalon>>? salonsAsync) {
+    if (salonsAsync == null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Text(
+            'Activa el GPS para ver estilistas cerca de ti',
+            style: GoogleFonts.poppins(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: BeautyCitaTheme.textDark,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+
+    return salonsAsync.when(
+      loading: () => const Center(
+        child: CircularProgressIndicator(color: waLightGreen),
+      ),
+      error: (e, _) => Center(
+        child: Text(
+          'Error: $e',
+          style: GoogleFonts.nunito(color: BeautyCitaTheme.textLight),
+          textAlign: TextAlign.center,
+        ),
+      ),
+      data: (salons) {
+        return ListView(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          children: [
+            // Time override filter removal
+            if (widget.hasOverride) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.filter_alt_off, size: 18, color: BeautyCitaTheme.primaryRose),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'El filtro de horario no encontro opciones',
+                        style: GoogleFonts.nunito(fontSize: 13, color: BeautyCitaTheme.textLight),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: widget.onClearOverride,
+                      child: Text(
+                        'Quitar filtro',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: BeautyCitaTheme.primaryRose,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+
+            // Count header
+            if (salons.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text(
+                  '${salons.length} estilistas en tu zona',
+                  style: GoogleFonts.nunito(fontSize: 12, color: BeautyCitaTheme.textLight),
+                ),
+              ),
+
+            // Salon cards
+            ...salons.map((salon) => _NearbySalonCard(
+              salon: salon,
+              invited: _invitedIds.contains(salon.id),
+              onTap: () => context.push('/discovered-salon', extra: salon),
+              onInvite: () => _handleInvite(salon),
+            )),
+
+            if (salons.isEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 48),
+                child: Center(
+                  child: Text(
+                    'No se encontraron estilistas en tu zona',
+                    style: GoogleFonts.nunito(fontSize: 14, color: BeautyCitaTheme.textLight),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _handleInvite(DiscoveredSalon salon) {
+    setState(() => _invitedIds.add(salon.id));
+
+    final phone = salon.whatsapp ?? salon.phone;
+    if (phone != null) {
+      final message = Uri.encodeComponent(
+        'Hola! Soy clienta tuya y me encantaria poder reservar '
+        'contigo desde BeautyCita. Es gratis para ti y te llegan '
+        'clientes nuevos. Registrate en 60 seg: '
+        'https://beautycita.com/supabase/functions/v1/salon-registro?ref=${salon.id}',
+      );
+      final waUrl = Uri.parse('https://wa.me/${phone.replaceAll('+', '')}?text=$message');
+      launchUrl(waUrl, mode: LaunchMode.externalApplication);
+    }
+
+    // Record interest signal (fire and forget)
+    SupabaseClientService.client.functions.invoke(
+      'outreach-discovered-salon',
+      body: {
+        'action': 'invite',
+        'discovered_salon_id': salon.id,
+      },
+    );
+  }
+}
+
+class _NearbySalonCard extends StatelessWidget {
+  final DiscoveredSalon salon;
+  final bool invited;
+  final VoidCallback onTap;
+  final VoidCallback onInvite;
+
+  const _NearbySalonCard({
+    required this.salon,
+    required this.invited,
+    required this.onTap,
+    required this.onInvite,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        decoration: BoxDecoration(
+          color: invited ? waCardTint : Colors.white,
+          borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              // Photo / avatar
+              ClipRRect(
+                borderRadius: BorderRadius.circular(25),
+                child: salon.photoUrl != null
+                    ? Image.network(
+                        salon.photoUrl!,
+                        width: 50,
+                        height: 50,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => _defaultAvatar(),
+                      )
+                    : _defaultAvatar(),
+              ),
+              const SizedBox(width: 12),
+
+              // Info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _sanitizeText(salon.name),
+                      style: GoogleFonts.poppins(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: BeautyCitaTheme.textDark,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        if (salon.rating != null) ...[
+                          Icon(Icons.star, size: 14, color: BeautyCitaTheme.secondaryGold),
+                          const SizedBox(width: 2),
+                          Text(
+                            salon.rating!.toStringAsFixed(1),
+                            style: GoogleFonts.nunito(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: BeautyCitaTheme.textDark,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                        ],
+                        if (salon.distanceKm != null)
+                          Text(
+                            '${salon.distanceKm!.toStringAsFixed(1)} km',
+                            style: GoogleFonts.nunito(
+                              fontSize: 12,
+                              color: BeautyCitaTheme.textLight,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              // Chevron + Invite button
+              Column(
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: invited ? null : onInvite,
+                    icon: Icon(invited ? Icons.check : Icons.chat, size: 14),
+                    label: Text(
+                      invited ? 'ENVIADO' : 'INVITAR',
+                      style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: invited ? Colors.grey[300] : waLightGreen,
+                      foregroundColor: invited ? Colors.grey[600] : Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      minimumSize: const Size(0, 32),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _defaultAvatar() {
+    return Container(
+      width: 50,
+      height: 50,
+      decoration: BoxDecoration(
+        color: waGreen.withValues(alpha: 0.15),
+        shape: BoxShape.circle,
+      ),
+      child: const Icon(Icons.store, color: waGreen, size: 24),
     );
   }
 }

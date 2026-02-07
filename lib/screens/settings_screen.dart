@@ -168,11 +168,6 @@ class SettingsScreen extends ConsumerWidget {
             onTap: () => context.push('/my-bookings'),
           ),
           _SettingsTile(
-            icon: Icons.storefront_rounded,
-            label: 'Invitar un salon',
-            onTap: () => context.push('/invite'),
-          ),
-          _SettingsTile(
             icon: Icons.radar_rounded,
             label: 'Radio de busqueda',
             trailing: Text(

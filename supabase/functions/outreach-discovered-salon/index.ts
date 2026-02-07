@@ -65,45 +65,67 @@ serve(async (req: Request) => {
 
     // ───────── LIST: nearby discovered salons ─────────
     if (action === "list") {
-      const { lat, lng, radius_km = 50 } = params;
+      const { lat, lng, radius_km = 50, limit = 100, service_query } = params;
       if (!lat || !lng) {
         return jsonResponse({ error: "lat and lng required" }, 400);
       }
+
+      // Build service keywords for filtering
+      const serviceKeywords = service_query
+        ? buildServiceKeywords(service_query)
+        : null;
 
       // Use PostGIS to find nearby discovered salons not yet registered
       const { data, error } = await serviceClient.rpc("nearby_discovered_salons", {
         user_lat: lat,
         user_lng: lng,
         radius_km: radius_km,
-        max_results: 100,
+        max_results: serviceKeywords ? 500 : limit, // fetch more when filtering
       });
+
+      let results: any[];
 
       if (error) {
         // Fallback: plain query without PostGIS function
         const { data: fallback, error: fallbackErr } = await serviceClient
           .from("discovered_salons")
-          .select("id, name, phone, whatsapp, address, city, lat, lng, photo_url, rating, reviews_count, interest_count, status")
+          .select("id, name, phone, whatsapp, address, city, lat, lng, photo_url, rating, reviews_count, interest_count, business_category, service_categories, status")
           .in("status", ["discovered", "selected", "outreach_sent"])
           .not("lat", "is", null)
-          .limit(100);
+          .limit(serviceKeywords ? 500 : limit);
 
         if (fallbackErr) {
           return jsonResponse({ error: fallbackErr.message }, 500);
         }
 
         // Client-side distance filtering
-        const results = (fallback ?? [])
+        results = (fallback ?? [])
           .map((s: any) => ({
             ...s,
             distance_km: haversineKm(lat, lng, s.lat, s.lng),
           }))
           .filter((s: any) => s.distance_km <= radius_km)
           .sort((a: any, b: any) => a.distance_km - b.distance_km);
-
-        return jsonResponse({ salons: results, count: results.length });
+      } else {
+        results = data ?? [];
       }
 
-      return jsonResponse({ salons: data ?? [], count: (data ?? []).length });
+      // Apply service-type filtering if query provided
+      if (serviceKeywords && serviceKeywords.length > 0) {
+        results = results.filter((s: any) => matchesService(s, serviceKeywords));
+        // Sort: best keyword match first, then by distance
+        results.sort((a: any, b: any) => {
+          const scoreA = serviceMatchScore(a, serviceKeywords);
+          const scoreB = serviceMatchScore(b, serviceKeywords);
+          if (scoreB !== scoreA) return scoreB - scoreA;
+          return (a.distance_km ?? 999) - (b.distance_km ?? 999);
+        });
+      }
+
+      // Apply limit
+      results = results.slice(0, limit);
+
+      return jsonResponse({ salons: results, count: results.length });
     }
 
     // ───────── INVITE: record interest + evaluate outreach ─────────
@@ -312,6 +334,80 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): nu
       Math.cos((lat2 * Math.PI) / 180) *
       Math.sin(dLng / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// Service-type keyword mapping for better matching
+const SERVICE_KEYWORD_MAP: Record<string, string[]> = {
+  // Lashes
+  "ext_pestanas": ["pestana", "lash", "extension", "eyelash"],
+  "pestanas": ["pestana", "lash", "extension", "eyelash"],
+  // Nails
+  "manicure": ["manicure", "nail", "uña", "una", "gel", "acrilico"],
+  "pedicure": ["pedicure", "nail", "uña", "una", "pie"],
+  "unas": ["uña", "una", "nail", "acrilico", "gel"],
+  // Hair
+  "corte": ["corte", "cabello", "hair", "pelo", "salon", "estilista", "peluqueria", "barberia"],
+  "tinte": ["tinte", "color", "cabello", "hair", "salon", "estilista"],
+  "recogido": ["recogido", "peinado", "cabello", "hair", "salon", "estilista", "novia"],
+  "alisado": ["alisado", "keratina", "cabello", "hair", "salon"],
+  // Brows
+  "microblading": ["microblading", "micropigmentacion", "ceja", "brow"],
+  "cejas": ["ceja", "brow", "microblading", "micropigmentacion"],
+  // Makeup
+  "maquillaje": ["maquillaje", "makeup", "mua", "novia", "evento"],
+  // Waxing/removal
+  "depilacion": ["depilacion", "wax", "cera", "laser", "sugaring"],
+  // Facial
+  "facial": ["facial", "spa", "limpieza", "skin", "piel"],
+  // Body
+  "masaje": ["masaje", "massage", "spa", "body"],
+};
+
+function buildServiceKeywords(query: string): string[] {
+  const lower = query.toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, ""); // strip accents
+
+  // Check keyword map first
+  for (const [key, keywords] of Object.entries(SERVICE_KEYWORD_MAP)) {
+    if (lower.includes(key.normalize("NFD").replace(/[\u0300-\u036f]/g, ""))) {
+      return keywords;
+    }
+  }
+
+  // Fallback: split query into words, filter short words
+  return lower.split(/[\s_]+/)
+    .filter(w => w.length >= 3)
+    .slice(0, 5);
+}
+
+function normalizeText(text: string): string {
+  return text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+function matchesService(salon: any, keywords: string[]): boolean {
+  const searchable = normalizeText([
+    salon.name ?? "",
+    salon.business_category ?? "",
+    ...(Array.isArray(salon.service_categories) ? salon.service_categories : []),
+  ].join(" "));
+
+  return keywords.some(kw => searchable.includes(kw));
+}
+
+function serviceMatchScore(salon: any, keywords: string[]): number {
+  const name = normalizeText(salon.name ?? "");
+  const category = normalizeText(salon.business_category ?? "");
+  const cats = normalizeText(
+    (Array.isArray(salon.service_categories) ? salon.service_categories : []).join(" ")
+  );
+
+  let score = 0;
+  for (const kw of keywords) {
+    if (name.includes(kw)) score += 3;       // Name match is strongest
+    if (category.includes(kw)) score += 2;    // Category match
+    if (cats.includes(kw)) score += 1;        // Service categories match
+  }
+  return score;
 }
 
 function jsonResponse(body: unknown, status = 200): Response {

@@ -18,6 +18,8 @@ import 'package:beautycita/screens/chat_router_screen.dart';
 import 'package:beautycita/screens/booking_detail_screen.dart';
 import 'package:beautycita/screens/qr_scan_screen.dart';
 import 'package:beautycita/screens/device_manager_screen.dart';
+import 'package:beautycita/screens/discovered_salon_detail_screen.dart';
+import 'package:beautycita/screens/invite_salon_screen.dart' show DiscoveredSalon;
 
 class AppRoutes {
   static const String splash = '/';
@@ -39,6 +41,7 @@ class AppRoutes {
   static const String chatConversation = '/chat/:threadId';
   static const String qrScan = '/qr-scan';
   static const String devices = '/devices';
+  static const String discoveredSalon = '/discovered-salon';
 
   static final GoRouter router = GoRouter(
     initialLocation: splash,
@@ -351,6 +354,25 @@ class AppRoutes {
           return CustomTransitionPage(
             key: state.pageKey,
             child: ChatConversationScreen(threadId: threadId),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
+                  .chain(CurveTween(curve: Curves.easeInOutCubic));
+              return SlideTransition(
+                position: animation.drive(tween),
+                child: child,
+              );
+            },
+          );
+        },
+      ),
+      GoRoute(
+        path: discoveredSalon,
+        name: 'discovered-salon',
+        pageBuilder: (context, state) {
+          final salon = state.extra as DiscoveredSalon;
+          return CustomTransitionPage(
+            key: state.pageKey,
+            child: DiscoveredSalonDetailScreen(salon: salon),
             transitionsBuilder: (context, animation, secondaryAnimation, child) {
               final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
                   .chain(CurveTween(curve: Curves.easeInOutCubic));
