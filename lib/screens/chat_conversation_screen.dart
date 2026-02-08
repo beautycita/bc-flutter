@@ -1,12 +1,15 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import '../config/theme.dart';
 import '../models/chat_message.dart';
 import '../providers/chat_provider.dart';
 import '../providers/user_preferences_provider.dart';
+import '../services/lightx_service.dart';
 
 class ChatConversationScreen extends ConsumerStatefulWidget {
   final String threadId;
@@ -389,22 +392,47 @@ class _ChatConversationScreenState
   }
 
   Future<void> _handleCamera() async {
-    // Show try-on options bottom sheet
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1024,
+      imageQuality: 85,
+    );
+    if (picked == null || !mounted) return;
+    final imageBytes = await picked.readAsBytes();
+    if (!mounted) return;
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) => _TryOnOptionsSheet(
-        onSelect: (stylePrompt) {
+        onSelect: (toolType, prompt) {
           Navigator.pop(ctx);
-          // For now, send a text message about trying on
-          _textController.text = 'Quiero una prueba virtual: $stylePrompt';
-          _sendMessage();
+          _executeTryOn(imageBytes, toolType, prompt);
         },
       ),
     );
+  }
+
+  Future<void> _executeTryOn(Uint8List imageBytes, String toolType, String prompt) async {
+    if (_isSending) return;
+    setState(() => _isSending = true);
+
+    await ref.read(sendTryOnProvider.notifier).send(
+      widget.threadId,
+      imageBytes,
+      prompt,
+      toolType: toolType,
+    );
+
+    if (mounted) {
+      setState(() => _isSending = false);
+      _scrollToBottom();
+    }
   }
 }
 
@@ -1058,11 +1086,31 @@ class _InputBar extends StatelessWidget {
   }
 }
 
-/// Try-on options bottom sheet.
-class _TryOnOptionsSheet extends StatelessWidget {
-  final void Function(String stylePrompt) onSelect;
+/// Try-on options bottom sheet with v2 LightX tools.
+class _TryOnOptionsSheet extends StatefulWidget {
+  final void Function(String toolType, String prompt) onSelect;
 
   const _TryOnOptionsSheet({required this.onSelect});
+
+  @override
+  State<_TryOnOptionsSheet> createState() => _TryOnOptionsSheetState();
+}
+
+class _TryOnOptionsSheetState extends State<_TryOnOptionsSheet> {
+  String _selectedTool = 'hair_color';
+  final _promptController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _promptController.text = LightXService.tryOnTypes[_selectedTool]!.defaultPrompt;
+  }
+
+  @override
+  void dispose() {
+    _promptController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1071,11 +1119,12 @@ class _TryOnOptionsSheet extends StatelessWidget {
         left: 24,
         right: 24,
         top: 24,
-        bottom: MediaQuery.of(context).padding.bottom + 24,
+        bottom: MediaQuery.of(context).viewInsets.bottom +
+            MediaQuery.of(context).padding.bottom + 24,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Center(
             child: Container(
@@ -1089,40 +1138,59 @@ class _TryOnOptionsSheet extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           Text(
-            '✨ Prueba Virtual',
-            style: GoogleFonts.poppins(
-              fontSize: 20,
-              fontWeight: FontWeight.w600,
+            'Elige tu transformacion',
+            style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w600),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          ...LightXService.tryOnTypes.entries.map((entry) {
+            final tool = entry.value;
+            final isSelected = entry.key == _selectedTool;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: _TryOnOption(
+                icon: tool.icon,
+                title: tool.nameEs,
+                subtitle: tool.descriptionEs,
+                isSelected: isSelected,
+                onTap: () {
+                  setState(() {
+                    _selectedTool = entry.key;
+                    _promptController.text = tool.defaultPrompt;
+                  });
+                },
+              ),
+            );
+          }),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _promptController,
+            style: GoogleFonts.nunito(fontSize: 14),
+            decoration: InputDecoration(
+              labelText: 'Describe el look',
+              labelStyle: GoogleFonts.nunito(fontSize: 14),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            'Elige qué quieres probar',
-            style: GoogleFonts.nunito(
-              fontSize: 14,
-              color: BeautyCitaTheme.textLight,
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 48,
+            child: ElevatedButton(
+              onPressed: () {
+                final prompt = _promptController.text.trim();
+                if (prompt.isEmpty) return;
+                widget.onSelect(_selectedTool, prompt);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: BeautyCitaTheme.primaryRose,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: Text('Procesar', style: GoogleFonts.nunito(
+                fontSize: 16, fontWeight: FontWeight.w700,
+              )),
             ),
-          ),
-          const SizedBox(height: 20),
-          _TryOnOption(
-            icon: '🎨',
-            title: 'Prueba de Color',
-            subtitle: 'Prueba un nuevo color de cabello',
-            onTap: () => onSelect('Cambio de color de cabello'),
-          ),
-          const SizedBox(height: 12),
-          _TryOnOption(
-            icon: '💄',
-            title: 'Prueba de Maquillaje',
-            subtitle: 'Ve cómo te queda un look',
-            onTap: () => onSelect('Prueba de maquillaje'),
-          ),
-          const SizedBox(height: 12),
-          _TryOnOption(
-            icon: '💇',
-            title: 'Mi Nuevo Look',
-            subtitle: 'Transformación completa',
-            onTap: () => onSelect('Transformación de look completa'),
           ),
         ],
       ),
@@ -1134,12 +1202,14 @@ class _TryOnOption extends StatelessWidget {
   final String icon;
   final String title;
   final String subtitle;
+  final bool isSelected;
   final VoidCallback onTap;
 
   const _TryOnOption({
     required this.icon,
     required this.title,
     required this.subtitle,
+    this.isSelected = false,
     required this.onTap,
   });
 
@@ -1149,15 +1219,19 @@ class _TryOnOption extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: BeautyCitaTheme.surfaceCream,
+          color: isSelected ? BeautyCitaTheme.primaryRose.withValues(alpha: 0.1) : BeautyCitaTheme.surfaceCream,
           borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected ? BeautyCitaTheme.primaryRose : Colors.transparent,
+            width: isSelected ? 2 : 0,
+          ),
         ),
         child: Row(
           children: [
-            Text(icon, style: const TextStyle(fontSize: 32)),
-            const SizedBox(width: 16),
+            Text(icon, style: const TextStyle(fontSize: 28)),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1165,8 +1239,9 @@ class _TryOnOption extends StatelessWidget {
                   Text(
                     title,
                     style: GoogleFonts.poppins(
-                      fontSize: 16,
+                      fontSize: 15,
                       fontWeight: FontWeight.w600,
+                      color: isSelected ? BeautyCitaTheme.primaryRose : null,
                     ),
                   ),
                   Text(
@@ -1179,10 +1254,10 @@ class _TryOnOption extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(
-              Icons.chevron_right_rounded,
-              color: BeautyCitaTheme.textLight,
-            ),
+            if (isSelected)
+              const Icon(Icons.check_circle, color: BeautyCitaTheme.primaryRose, size: 20)
+            else
+              const Icon(Icons.chevron_right_rounded, color: BeautyCitaTheme.textLight),
           ],
         ),
       ),
