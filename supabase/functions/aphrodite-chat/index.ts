@@ -72,6 +72,7 @@ interface ChatRequest {
   message?: string;
   image_base64?: string;
   style_prompt?: string;
+  tool_type?: string;
   language?: "es" | "en";
 }
 
@@ -222,81 +223,139 @@ async function getOrCreateThread(
 }
 
 // ---------------------------------------------------------------------------
-// LightX Virtual Try-On
+// LightX Virtual Try-On (v2 API)
 // ---------------------------------------------------------------------------
 
-async function processLightXTryOn(
-  imageBase64: string,
-  stylePrompt: string,
-): Promise<string> {
-  if (!LIGHTX_API_KEY) {
-    throw new Error("LIGHTX_API_KEY not configured");
-  }
+const LIGHTX_BASE = "https://api.lightxeditor.com/external/api/v2";
 
-  const res = await fetch("https://api.lightxeditor.com/external/api/v1/avatar", {
+const LIGHTX_TOOL_ENDPOINTS: Record<string, string> = {
+  hair_color: "/haircolor/",
+  hairstyle: "/hairstyle",
+  headshot: "/headshot/",
+  avatar: "/avatar",
+  face_swap: "/face-swap",
+};
+
+async function uploadImageToLightX(imageBase64: string): Promise<string> {
+  if (!LIGHTX_API_KEY) throw new Error("LIGHTX_API_KEY not configured");
+
+  // Step 1: Get presigned upload URL
+  const uploadRes = await fetch(`${LIGHTX_BASE}/uploadImageUrl`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "x-api-key": LIGHTX_API_KEY,
     },
-    body: JSON.stringify({
-      imageUrl: `data:image/jpeg;base64,${imageBase64}`,
-      stylePrompt: stylePrompt,
-    }),
+    body: JSON.stringify({}),
+  });
+
+  if (!uploadRes.ok) {
+    const err = await uploadRes.text();
+    throw new Error(`LightX upload init failed: ${uploadRes.status} ${err}`);
+  }
+
+  const uploadData = (await uploadRes.json()) as {
+    body?: { uploadImage?: string; imageUrl?: string };
+  };
+
+  const presignedUrl = uploadData.body?.uploadImage;
+  const imageUrl = uploadData.body?.imageUrl;
+  if (!presignedUrl || !imageUrl) {
+    throw new Error("LightX upload: missing presigned URL or imageUrl");
+  }
+
+  // Step 2: Decode base64 and PUT binary to presigned URL
+  const binaryStr = atob(imageBase64);
+  const bytes = new Uint8Array(binaryStr.length);
+  for (let i = 0; i < binaryStr.length; i++) {
+    bytes[i] = binaryStr.charCodeAt(i);
+  }
+
+  const putRes = await fetch(presignedUrl, {
+    method: "PUT",
+    headers: { "Content-Type": "image/jpeg" },
+    body: bytes,
+  });
+
+  if (!putRes.ok) {
+    const err = await putRes.text();
+    throw new Error(`LightX image PUT failed: ${putRes.status} ${err}`);
+  }
+
+  return imageUrl;
+}
+
+async function callLightXTool(
+  tool: string,
+  imageUrl: string,
+  textPrompt: string,
+): Promise<string> {
+  const endpoint = LIGHTX_TOOL_ENDPOINTS[tool];
+  if (!endpoint) throw new Error(`Unknown LightX tool: ${tool}`);
+
+  const res = await fetch(`${LIGHTX_BASE}${endpoint}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": LIGHTX_API_KEY,
+    },
+    body: JSON.stringify({ imageUrl, textPrompt }),
   });
 
   if (!res.ok) {
     const err = await res.text();
-    throw new Error(`LightX error: ${res.status} ${err}`);
+    throw new Error(`LightX ${tool} failed: ${res.status} ${err}`);
   }
 
-  const data = (await res.json()) as { output?: string; orderId?: string };
+  const data = (await res.json()) as { body?: { orderId?: string } };
+  const orderId = data.body?.orderId;
+  if (!orderId) throw new Error(`LightX ${tool}: no orderId returned`);
 
-  // LightX may return an orderId for async processing
-  if (data.orderId && !data.output) {
-    for (let i = 0; i < 20; i++) {
-      await new Promise((r) => setTimeout(r, 2000));
-      const statusRes = await fetch(
-        "https://api.lightxeditor.com/external/api/v1/order-status",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key": LIGHTX_API_KEY,
-          },
-          body: JSON.stringify({ orderId: data.orderId }),
-        },
-      );
-      if (!statusRes.ok) continue;
-      const statusData = (await statusRes.json()) as {
-        status: string;
-        output?: string;
-      };
-      if (statusData.status === "active" && statusData.output) {
-        return statusData.output;
-      }
-      if (statusData.status === "failed") {
-        throw new Error("LightX processing failed");
-      }
-    }
-    throw new Error("LightX processing timed out");
+  return orderId;
+}
+
+async function pollLightXResult(orderId: string): Promise<string> {
+  for (let i = 0; i < 10; i++) {
+    await new Promise((r) => setTimeout(r, 3000));
+
+    const res = await fetch(`${LIGHTX_BASE}/order-status`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": LIGHTX_API_KEY,
+      },
+      body: JSON.stringify({ orderId }),
+    });
+
+    if (!res.ok) continue;
+
+    const data = (await res.json()) as {
+      body?: { status?: string; output?: string };
+    };
+
+    const status = data.body?.status;
+    const output = data.body?.output;
+
+    if (status === "active" && output) return output;
+    if (status === "failed") throw new Error("LightX processing failed");
   }
 
-  return data.output ?? "";
+  throw new Error("LightX processing timed out (30s)");
 }
 
 // ---------------------------------------------------------------------------
 // Auth Helper
 // ---------------------------------------------------------------------------
 
-function getUserIdFromToken(authHeader: string | null): string {
+async function getUserIdFromToken(
+  authHeader: string | null,
+  supabase: ReturnType<typeof createClient>,
+): Promise<string> {
   if (!authHeader) throw new Error("Missing authorization header");
   const token = authHeader.replace("Bearer ", "");
-  const parts = token.split(".");
-  if (parts.length !== 3) throw new Error("Invalid JWT");
-  const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
-  if (!payload.sub) throw new Error("Missing sub in JWT");
-  return payload.sub;
+  const { data: { user }, error } = await supabase.auth.getUser(token);
+  if (error || !user) throw new Error("Unauthorized");
+  return user.id;
 }
 
 // ---------------------------------------------------------------------------
@@ -309,16 +368,16 @@ serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get("authorization");
-    const userId = getUserIdFromToken(authHeader);
-
-    const body: ChatRequest = await req.json();
-    const { action } = body;
-
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
+
+    const authHeader = req.headers.get("authorization");
+    const userId = await getUserIdFromToken(authHeader, supabase);
+
+    const body: ChatRequest = await req.json();
+    const { action } = body;
 
     // ----- send_message -----
     if (action === "send_message") {
@@ -382,7 +441,7 @@ serve(async (req) => {
 
     // ----- try_on -----
     if (action === "try_on") {
-      const { image_base64, style_prompt } = body;
+      const { image_base64, style_prompt, tool_type } = body;
       if (!image_base64 || !style_prompt) {
         return new Response(
           JSON.stringify({ error: "image_base64 and style_prompt required" }),
@@ -390,10 +449,26 @@ serve(async (req) => {
         );
       }
 
-      const resultUrl = await processLightXTryOn(image_base64, style_prompt);
+      const tool = tool_type || "hair_color";
+      if (!LIGHTX_TOOL_ENDPOINTS[tool]) {
+        return new Response(
+          JSON.stringify({ error: `Unknown tool_type: ${tool}. Valid: ${Object.keys(LIGHTX_TOOL_ENDPOINTS).join(", ")}` }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      // v2 flow: upload → tool call → poll
+      const imageUrl = await uploadImageToLightX(image_base64);
+      const orderId = await callLightXTool(tool, imageUrl, style_prompt);
+      const resultUrl = await pollLightXResult(orderId);
+
+      // Save result to chat history
+      const threadId = body.thread_id || await getOrCreateThread(supabase, userId);
+      await saveMessage(supabase, threadId, "user", `[${tool}] ${style_prompt}`);
+      await saveMessage(supabase, threadId, "aphrodite", resultUrl);
 
       return new Response(
-        JSON.stringify({ result_url: resultUrl }),
+        JSON.stringify({ result_url: resultUrl, thread_id: threadId }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
