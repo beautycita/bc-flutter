@@ -58,8 +58,9 @@ class AphroditeService {
   Future<ChatMessage> requestTryOn(
     String threadId,
     Uint8List imageBytes,
-    String stylePrompt,
-  ) async {
+    String stylePrompt, {
+    String toolType = 'hair_color',
+  }) async {
     final client = SupabaseClientService.client;
     final now = DateTime.now().toUtc();
 
@@ -83,7 +84,9 @@ class AphroditeService {
       body: {
         'action': 'try_on',
         'image_base64': imageBase64,
+        'tool_type': toolType,
         'style_prompt': stylePrompt,
+        'thread_id': threadId,
       },
     );
 

@@ -101,11 +101,12 @@ class SendTryOnNotifier extends StateNotifier<AsyncValue<ChatMessage?>> {
   Future<ChatMessage?> send(
     String threadId,
     Uint8List imageBytes,
-    String stylePrompt,
-  ) async {
+    String stylePrompt, {
+    String toolType = 'hair_color',
+  }) async {
     state = const AsyncValue.loading();
     try {
-      final msg = await _service.requestTryOn(threadId, imageBytes, stylePrompt);
+      final msg = await _service.requestTryOn(threadId, imageBytes, stylePrompt, toolType: toolType);
       state = AsyncValue.data(msg);
       return msg;
     } catch (e, st) {

@@ -28,6 +28,7 @@ dependencies:
   app_links: ^6.4.0
   http: ^1.2.0
   mobile_scanner: ^7.0.0
+  image_picker: ^1.1.2
 
 dev_dependencies:
   flutter_test:
@@ -39,3 +40,4 @@ flutter:
   assets:
     - .env
     - assets/images/
+    - assets/google_fonts/
