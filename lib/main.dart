@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:beautycita/services/supabase_client.dart';
 import 'package:beautycita/config/theme.dart';
@@ -12,14 +13,17 @@ import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/providers/uber_provider.dart';
 import 'package:beautycita/services/qr_auth_service.dart';
 
+/// Completes when Supabase is ready (or failed). Splash screen awaits this.
+final Completer<void> supabaseReady = Completer<void>();
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Initialize Spanish locale data for intl date formatting
   await initializeDateFormatting('es');
 
-  // Initialize Supabase
-  await SupabaseClientService.initialize();
+  // Use bundled fonts only — never fetch from network
+  GoogleFonts.config.allowRuntimeFetching = false;
 
   // Portrait only for thumb-friendly design
   await SystemChrome.setPreferredOrientations([
@@ -36,6 +40,13 @@ void main() async {
       systemNavigationBarIconBrightness: Brightness.dark,
     ),
   );
+
+  // Start Supabase init in background — splash screen awaits supabaseReady
+  SupabaseClientService.initialize().then((_) {
+    supabaseReady.complete();
+  }).catchError((e) {
+    supabaseReady.complete(); // Complete even on error so splash doesn't hang
+  });
 
   runApp(
     const ProviderScope(
@@ -73,11 +84,18 @@ class _BeautyCitaAppState extends ConsumerState<BeautyCitaApp> {
   }
 
   void _handleUri(Uri uri) {
+    debugPrint('[DeepLink] Received URI: $uri');
+    debugPrint('[DeepLink] scheme=${uri.scheme} host=${uri.host} params=${uri.queryParameters}');
     if (uri.scheme != 'beautycita') return;
 
     switch (uri.host) {
       case 'uber-callback':
         final code = uri.queryParameters['code'];
+        final error = uri.queryParameters['error'];
+        debugPrint('[DeepLink] Uber callback - code=${code != null ? "${code.substring(0, code.length.clamp(0, 8) as int)}..." : "null"}, error=$error');
+        if (error != null) {
+          debugPrint('[DeepLink] Uber OAuth error: $error - ${uri.queryParameters['error_description']}');
+        }
         if (code != null) {
           ref.read(uberLinkProvider.notifier).handleCallback(code);
         }

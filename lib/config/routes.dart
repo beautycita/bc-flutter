@@ -20,6 +20,7 @@ import 'package:beautycita/screens/qr_scan_screen.dart';
 import 'package:beautycita/screens/device_manager_screen.dart';
 import 'package:beautycita/screens/discovered_salon_detail_screen.dart';
 import 'package:beautycita/screens/invite_salon_screen.dart' show DiscoveredSalon;
+import 'package:beautycita/screens/virtual_studio_screen.dart';
 
 class AppRoutes {
   static const String splash = '/';
@@ -42,6 +43,7 @@ class AppRoutes {
   static const String qrScan = '/qr-scan';
   static const String devices = '/devices';
   static const String discoveredSalon = '/discovered-salon';
+  static const String studio = '/studio';
 
   static final GoRouter router = GoRouter(
     initialLocation: splash,
@@ -356,6 +358,27 @@ class AppRoutes {
             child: ChatConversationScreen(threadId: threadId),
             transitionsBuilder: (context, animation, secondaryAnimation, child) {
               final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
+                  .chain(CurveTween(curve: Curves.easeInOutCubic));
+              return SlideTransition(
+                position: animation.drive(tween),
+                child: child,
+              );
+            },
+          );
+        },
+      ),
+      GoRoute(
+        path: studio,
+        name: 'studio',
+        pageBuilder: (context, state) {
+          final tabParam = state.uri.queryParameters['tab'];
+          const tabIds = ['hair_color', 'hairstyle', 'headshot', 'avatar', 'face_swap'];
+          final initialTab = tabParam != null ? tabIds.indexOf(tabParam).clamp(0, 4) : 0;
+          return CustomTransitionPage(
+            key: state.pageKey,
+            child: VirtualStudioScreen(initialTab: initialTab),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              final tween = Tween(begin: const Offset(0.0, 1.0), end: Offset.zero)
                   .chain(CurveTween(curve: Curves.easeInOutCubic));
               return SlideTransition(
                 position: animation.drive(tween),

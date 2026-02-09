@@ -93,6 +93,18 @@ Deno.serve(async (req: Request) => {
     });
   }
 
+  // Auth check
+  const authHeader = req.headers.get("authorization") ?? "";
+  const authToken = authHeader.replace("Bearer ", "");
+  const supabaseAuth = createClient(supabaseUrl, serviceKey);
+  const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(authToken);
+  if (authError || !user) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
   try {
     const body = await req.json();
 

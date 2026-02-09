@@ -79,9 +79,11 @@ class UberLinkNotifier extends StateNotifier<UberLinkState> {
   }
 
   Future<void> handleCallback(String code) async {
+    debugPrint('[UberLink] handleCallback called with code: ${code.substring(0, 8)}...');
     state = state.copyWith(isLoading: true, error: null);
     try {
       final success = await _uberService.linkAccount(code);
+      debugPrint('[UberLink] linkAccount result: $success');
       if (success) {
         state = state.copyWith(
           isLinked: true,

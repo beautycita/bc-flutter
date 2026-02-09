@@ -4,7 +4,7 @@
 // Supports: link (auth_code exchange), unlink, refresh.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { exchangeUberTokens, refreshUberTokens } from "../_shared/uber_jwt.ts";
+import { exchangeUberTokens, refreshUberTokens, getUberApiBase } from "../_shared/uber_jwt.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -57,7 +57,54 @@ Deno.serve(async (req: Request) => {
     const body = await req.json();
     const action = body.action ?? "link";
 
+    if (action === "oauth_url") {
+      const redirectUri = body.redirect_uri ?? UBER_REDIRECT_URI;
+      const scopes =
+        body.scopes ??
+        Deno.env.get("UBER_SCOPES") ??
+        "partner-loyalty.unlink-account partner-loyalty.flight-bookings";
+      const UBER_CLIENT_ID = Deno.env.get("UBER_CLIENT_ID") ?? "";
+      const UBER_SANDBOX = Deno.env.get("UBER_SANDBOX") === "true";
+      const loginBase = UBER_SANDBOX
+        ? "https://sandbox-login.uber.com"
+        : "https://login.uber.com";
+      const authUrl = `${loginBase}/oauth/v2/authorize?client_id=${encodeURIComponent(UBER_CLIENT_ID)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scopes)}`;
+      return json({ url: authUrl });
+    }
+
     if (action === "unlink") {
+      // Call Uber unlink-account endpoint first (best-effort)
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("uber_access_token")
+        .eq("id", user.id)
+        .single();
+
+      if (profile?.uber_access_token) {
+        try {
+          const unlinkResp = await fetch(
+            `${getUberApiBase()}/v1/identity/unlink-account`,
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${profile.uber_access_token}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({}),
+            },
+          );
+          if (!unlinkResp.ok) {
+            console.error(
+              "Uber unlink-account:",
+              unlinkResp.status,
+              await unlinkResp.text(),
+            );
+          }
+        } catch (e) {
+          console.error("Uber unlink-account error:", e);
+        }
+      }
+
       // Clear Uber tokens from profile
       const { error } = await supabase
         .from("profiles")
@@ -80,13 +127,39 @@ Deno.serve(async (req: Request) => {
       }
 
       // Exchange auth code for tokens via JWT assertion
-      const tokens = await exchangeUberTokens(authCode, UBER_REDIRECT_URI);
+      const redirectUri = body.redirect_uri ?? UBER_REDIRECT_URI;
+      const tokens = await exchangeUberTokens(authCode, redirectUri);
 
       if (!tokens) {
         return json(
           { error: "Failed to link Uber account. Please try again." },
           502,
         );
+      }
+
+      // Complete partner loyalty linking via Uber Identity API
+      const linkResp = await fetch(
+        `${getUberApiBase()}/v1/identity/link-account`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${tokens.access_token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({}),
+        },
+      );
+
+      if (!linkResp.ok) {
+        const linkErr = await linkResp.text();
+        console.error(
+          "Uber link-account call:",
+          linkResp.status,
+          linkErr,
+        );
+        // Log but don't fail — tokens are valid, linking may still work
+      } else {
+        console.log("Uber link-account succeeded");
       }
 
       const expiresAt = new Date(
