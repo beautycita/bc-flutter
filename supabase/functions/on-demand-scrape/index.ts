@@ -83,14 +83,17 @@ serve(async (req) => {
       );
     }
 
-    // Extract user ID from auth header (if present)
+    // Auth check (required)
     const authHeader = req.headers.get("Authorization") ?? "";
     const token = authHeader.replace("Bearer ", "");
-    let userId = null;
-    if (token) {
-      const { data: { user } } = await supabase.auth.getUser(token);
-      userId = user?.id ?? null;
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
+    const userId = user.id;
 
     // Create new scrape request
     const { data: newRequest, error: insertError } = await supabase

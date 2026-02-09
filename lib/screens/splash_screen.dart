@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../config/theme.dart';
 import '../config/constants.dart';
+import '../main.dart' show supabaseReady;
 import '../providers/auth_provider.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
@@ -61,6 +62,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   }
 
   Future<void> _checkAuthAndNavigate() async {
+    // Wait for Supabase to finish initializing (runs in background since main)
+    await supabaseReady.future;
+
     try {
       await ref.read(authStateProvider.notifier).checkRegistration();
     } catch (_) {}
