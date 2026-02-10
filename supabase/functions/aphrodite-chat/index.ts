@@ -71,6 +71,7 @@ interface ChatRequest {
   thread_id?: string;
   message?: string;
   image_base64?: string;
+  target_image_base64?: string; // Face swap: reference photo (target body/hairstyle)
   style_prompt?: string;
   tool_type?: string;
   language?: "es" | "en";
@@ -230,23 +231,33 @@ const LIGHTX_BASE = "https://api.lightxeditor.com/external/api/v2";
 
 const LIGHTX_TOOL_ENDPOINTS: Record<string, string> = {
   hair_color: "/haircolor/",
-  hairstyle: "/hairstyle",
+  hairstyle: "/hairstyle/",
   headshot: "/headshot/",
-  avatar: "/avatar",
-  face_swap: "/face-swap",
+  face_swap: "/face-swap/",
 };
 
 async function uploadImageToLightX(imageBase64: string): Promise<string> {
   if (!LIGHTX_API_KEY) throw new Error("LIGHTX_API_KEY not configured");
 
-  // Step 1: Get presigned upload URL
+  // Decode base64 to binary first so we know the size
+  const binaryStr = atob(imageBase64);
+  const bytes = new Uint8Array(binaryStr.length);
+  for (let i = 0; i < binaryStr.length; i++) {
+    bytes[i] = binaryStr.charCodeAt(i);
+  }
+
+  // Step 1: Get presigned upload URL (requires uploadType, size, contentType)
   const uploadRes = await fetch(`${LIGHTX_BASE}/uploadImageUrl`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "x-api-key": LIGHTX_API_KEY,
     },
-    body: JSON.stringify({}),
+    body: JSON.stringify({
+      uploadType: "imageUrl",
+      size: bytes.length,
+      contentType: "image/jpeg",
+    }),
   });
 
   if (!uploadRes.ok) {
@@ -264,13 +275,7 @@ async function uploadImageToLightX(imageBase64: string): Promise<string> {
     throw new Error("LightX upload: missing presigned URL or imageUrl");
   }
 
-  // Step 2: Decode base64 and PUT binary to presigned URL
-  const binaryStr = atob(imageBase64);
-  const bytes = new Uint8Array(binaryStr.length);
-  for (let i = 0; i < binaryStr.length; i++) {
-    bytes[i] = binaryStr.charCodeAt(i);
-  }
-
+  // Step 2: PUT binary to presigned URL
   const putRes = await fetch(presignedUrl, {
     method: "PUT",
     headers: { "Content-Type": "image/jpeg" },
@@ -289,9 +294,15 @@ async function callLightXTool(
   tool: string,
   imageUrl: string,
   textPrompt: string,
+  modelReferenceUrl?: string,
 ): Promise<string> {
   const endpoint = LIGHTX_TOOL_ENDPOINTS[tool];
   if (!endpoint) throw new Error(`Unknown LightX tool: ${tool}`);
+
+  // Face swap requires two images: imageUrl (target) + modelReferenceUrl (user's face)
+  const bodyPayload = tool === "face_swap" && modelReferenceUrl
+    ? { imageUrl, modelReferenceUrl }
+    : { imageUrl, textPrompt };
 
   const res = await fetch(`${LIGHTX_BASE}${endpoint}`, {
     method: "POST",
@@ -299,7 +310,7 @@ async function callLightXTool(
       "Content-Type": "application/json",
       "x-api-key": LIGHTX_API_KEY,
     },
-    body: JSON.stringify({ imageUrl, textPrompt }),
+    body: JSON.stringify(bodyPayload),
   });
 
   if (!res.ok) {
@@ -441,15 +452,26 @@ serve(async (req) => {
 
     // ----- try_on -----
     if (action === "try_on") {
-      const { image_base64, style_prompt, tool_type } = body;
-      if (!image_base64 || !style_prompt) {
-        return new Response(
-          JSON.stringify({ error: "image_base64 and style_prompt required" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
+      const { image_base64, target_image_base64, style_prompt, tool_type } = body;
+      const tool = tool_type || "hair_color";
+
+      // Face swap needs two images; other tools need image + prompt
+      if (tool === "face_swap") {
+        if (!image_base64 || !target_image_base64) {
+          return new Response(
+            JSON.stringify({ error: "face_swap requires image_base64 (your face) and target_image_base64 (reference photo)" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          );
+        }
+      } else {
+        if (!image_base64 || !style_prompt) {
+          return new Response(
+            JSON.stringify({ error: "image_base64 and style_prompt required" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          );
+        }
       }
 
-      const tool = tool_type || "hair_color";
       if (!LIGHTX_TOOL_ENDPOINTS[tool]) {
         return new Response(
           JSON.stringify({ error: `Unknown tool_type: ${tool}. Valid: ${Object.keys(LIGHTX_TOOL_ENDPOINTS).join(", ")}` }),
@@ -459,7 +481,11 @@ serve(async (req) => {
 
       // v2 flow: upload → tool call → poll
       const imageUrl = await uploadImageToLightX(image_base64);
-      const orderId = await callLightXTool(tool, imageUrl, style_prompt);
+      let modelReferenceUrl: string | undefined;
+      if (tool === "face_swap" && target_image_base64) {
+        modelReferenceUrl = await uploadImageToLightX(target_image_base64);
+      }
+      const orderId = await callLightXTool(tool, imageUrl, style_prompt || "", modelReferenceUrl);
       const resultUrl = await pollLightXResult(orderId);
 
       // Save result to chat history

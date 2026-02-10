@@ -6,12 +6,15 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:beautycita/services/supabase_client.dart';
 import 'package:beautycita/config/theme.dart';
 import 'package:beautycita/config/routes.dart';
 import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/providers/uber_provider.dart';
 import 'package:beautycita/services/qr_auth_service.dart';
+import 'package:go_router/go_router.dart';
 
 /// Completes when Supabase is ready (or failed). Splash screen awaits this.
 final Completer<void> supabaseReady = Completer<void>();
@@ -40,6 +43,14 @@ void main() async {
       systemNavigationBarIconBrightness: Brightness.dark,
     ),
   );
+
+  // Initialize Stripe (needs dotenv loaded first, which SupabaseClientService does)
+  await dotenv.load(fileName: '.env');
+  final stripeKey = dotenv.env['STRIPE_PUBLIC_KEY'] ?? '';
+  if (stripeKey.isNotEmpty) {
+    Stripe.publishableKey = stripeKey;
+    Stripe.merchantIdentifier = 'merchant.com.beautycita';
+  }
 
   // Start Supabase init in background — splash screen awaits supabaseReady
   SupabaseClientService.initialize().then((_) {
@@ -145,11 +156,15 @@ class _BeautyCitaAppState extends ConsumerState<BeautyCitaApp> {
 
   @override
   Widget build(BuildContext context) {
+    final router = AppRoutes.router;
     return MaterialApp.router(
       title: AppConstants.appName,
       debugShowCheckedModeBanner: false,
       theme: BeautyCitaTheme.lightTheme,
-      routerConfig: AppRoutes.router,
+      routerDelegate: router.routerDelegate,
+      routeInformationParser: router.routeInformationParser,
+      routeInformationProvider: router.routeInformationProvider,
+      backButtonDispatcher: _SafeBackButtonDispatcher(router),
       locale: const Locale('es', 'MX'),
       supportedLocales: const [
         Locale('es', 'MX'),
@@ -171,5 +186,27 @@ class _BeautyCitaAppState extends ConsumerState<BeautyCitaApp> {
         );
       },
     );
+  }
+}
+
+/// Prevents system back button from closing the app on non-home screens.
+/// If there's a route to pop, pops it. Otherwise navigates to /home.
+/// Only allows app exit from /home, /, or /auth.
+class _SafeBackButtonDispatcher extends RootBackButtonDispatcher {
+  final GoRouter _router;
+  _SafeBackButtonDispatcher(this._router);
+
+  @override
+  Future<bool> didPopRoute() async {
+    if (_router.canPop()) {
+      _router.pop();
+      return true;
+    }
+    final location = _router.routeInformationProvider.value.uri.path;
+    if (location == '/home' || location == '/' || location == '/auth') {
+      return false; // Let system handle — exits the app
+    }
+    _router.go('/home');
+    return true;
   }
 }
