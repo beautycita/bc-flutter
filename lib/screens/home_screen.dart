@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -8,6 +7,7 @@ import '../providers/auth_provider.dart';
 import '../providers/category_provider.dart';
 import '../config/theme.dart';
 import '../config/constants.dart';
+import '../widgets/animated_city_map.dart';
 import '../widgets/cinematic_question_text.dart';
 import 'subcategory_sheet.dart';
 
@@ -57,42 +57,9 @@ class HomeScreen extends ConsumerWidget {
                   ),
                   child: Stack(
                     children: [
-                      // Decorative circles
-                      Positioned(
-                        top: -40,
-                        right: -30,
-                        child: Container(
-                          width: 160,
-                          height: 160,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.white.withValues(alpha: 0.06),
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        top: 60,
-                        left: -50,
-                        child: Container(
-                          width: 120,
-                          height: 120,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.white.withValues(alpha: 0.04),
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        bottom: 20,
-                        right: screenWidth * 0.3,
-                        child: Container(
-                          width: 80,
-                          height: 80,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.white.withValues(alpha: 0.05),
-                          ),
-                        ),
+                      // Animated city map background
+                      const Positioned.fill(
+                        child: AnimatedCityMap(),
                       ),
 
                       // Safe area content
