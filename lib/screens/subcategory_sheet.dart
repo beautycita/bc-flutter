@@ -14,12 +14,18 @@ String _getCategoryQuestion(String categoryId) {
       return 'Manicure, pedicure o algo mas?';
     case 'hair':
       return 'Corte, color o tratamiento?';
-    case 'skin':
+    case 'facial':
       return 'Facial, limpieza o tratamiento?';
-    case 'lashes':
+    case 'lashes_brows':
       return 'Extensiones, lifting o tinte?';
-    case 'body':
+    case 'body_spa':
       return 'Masaje, depilacion o tratamiento?';
+    case 'makeup':
+      return 'Que tipo de maquillaje?';
+    case 'specialized':
+      return 'Que tratamiento necesitas?';
+    case 'barberia':
+      return 'Corte, barba o afeitado?';
     default:
       return 'Que servicio te interesa?';
   }
@@ -45,7 +51,7 @@ class SubcategorySheet extends StatelessWidget {
           decoration: BoxDecoration(
             color: BeautyCitaTheme.backgroundWhite,
             borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(28),
+              top: Radius.circular(BeautyCitaTheme.radiusXL),
             ),
             boxShadow: [
               BoxShadow(
@@ -107,7 +113,7 @@ class SubcategorySheet extends StatelessWidget {
                         text: _getCategoryQuestion(category.id),
                         primaryColor: category.color,
                         accentColor: BeautyCitaTheme.secondaryGold,
-                        fontSize: 22,
+                        fontSize: 19,
                       ),
                     ),
                   ],
@@ -263,7 +269,7 @@ class _ServiceItemsSheet extends StatelessWidget {
           decoration: BoxDecoration(
             color: BeautyCitaTheme.backgroundWhite,
             borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(28),
+              top: Radius.circular(BeautyCitaTheme.radiusXL),
             ),
             boxShadow: [
               BoxShadow(

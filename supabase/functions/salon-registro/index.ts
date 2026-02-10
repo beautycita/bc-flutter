@@ -374,19 +374,19 @@ Deno.serve(async (req: Request) => {
         const { data: salon } = await supabase
           .from("discovered_salons")
           .select(
-            "name, phone, whatsapp, address, city, photo_url, rating, service_categories",
+            "business_name, phone, whatsapp, location_address, location_city, feature_image_url, rating_average, specialties",
           )
           .eq("id", ref)
           .single();
 
         if (salon) {
-          prefill.name = salon.name ?? "";
+          prefill.name = salon.business_name ?? "";
           prefill.phone = salon.whatsapp ?? salon.phone ?? "+52 ";
           prefill.address =
-            [salon.address, salon.city].filter(Boolean).join(", ");
-          prefill.categories = salon.service_categories ?? [];
-          prefill.photoUrl = salon.photo_url ?? null;
-          prefill.rating = salon.rating ?? null;
+            [salon.location_address, salon.location_city].filter(Boolean).join(", ");
+          prefill.categories = salon.specialties ?? [];
+          prefill.photoUrl = salon.feature_image_url ?? null;
+          prefill.rating = salon.rating_average ?? null;
         }
       } catch (err) {
         console.warn("Could not fetch discovered salon for prefill:", err);

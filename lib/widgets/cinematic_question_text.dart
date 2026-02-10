@@ -200,50 +200,72 @@ class _CinematicContent extends StatelessWidget {
   }
 
   Widget _buildCharacterRow(List<String> characters, int totalChars, double staggerFraction) {
-    // After entrance completes, show shimmer effect
+    // Split text into words so wrapping only happens at word boundaries
+    final words = text.split(' ');
+    int charIndex = 0;
+
     Widget textContent = Wrap(
       alignment: WrapAlignment.center,
-      children: List.generate(totalChars, (i) {
-        final charStart = totalChars > 1
-            ? (i / totalChars) * staggerFraction.clamp(0.0, 0.85)
-            : 0.0;
-        final charEnd = (charStart + (1.0 - staggerFraction.clamp(0.0, 0.85))).clamp(0.0, 1.0);
+      children: words.map((word) {
+        final wordChars = word.characters.toList();
+        final wordWidgets = <Widget>[];
 
-        final charProgress = Interval(
-          charStart,
-          charEnd,
-          curve: Curves.easeOutBack,
-        ).transform(entranceController.value);
+        for (final char in wordChars) {
+          final i = charIndex;
+          charIndex++;
 
-        // 3D transform: starts far away and rotated, ends at identity
-        final zOffset = -200.0 * (1.0 - charProgress);
-        final xRotation = (pi / 6) * (1.0 - charProgress);
-        final yRotation = (pi / 8) * (1.0 - charProgress) * (i.isEven ? 1 : -1);
-        final opacity = charProgress.clamp(0.0, 1.0);
+          final charStart = totalChars > 1
+              ? (i / totalChars) * staggerFraction.clamp(0.0, 0.85)
+              : 0.0;
+          final charEnd = (charStart + (1.0 - staggerFraction.clamp(0.0, 0.85))).clamp(0.0, 1.0);
 
-        final matrix = Matrix4.identity()
-          ..setEntry(3, 2, 0.001)
-          ..translate(0.0, 0.0, zOffset)
-          ..rotateX(xRotation)
-          ..rotateY(yRotation);
+          final charProgress = Interval(
+            charStart,
+            charEnd,
+            curve: Curves.easeOutBack,
+          ).transform(entranceController.value);
 
-        return Opacity(
-          opacity: opacity,
-          child: Transform(
-            transform: matrix,
-            alignment: Alignment.center,
-            child: Text(
-              characters[i],
-              style: GoogleFonts.poppins(
-                fontSize: fontSize,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-                height: 1.2,
+          final zOffset = -200.0 * (1.0 - charProgress);
+          final xRotation = (pi / 6) * (1.0 - charProgress);
+          final yRotation = (pi / 8) * (1.0 - charProgress) * (i.isEven ? 1 : -1);
+          final opacity = charProgress.clamp(0.0, 1.0);
+
+          final matrix = Matrix4.identity()
+            ..setEntry(3, 2, 0.001)
+            ..translate(0.0, 0.0, zOffset)
+            ..rotateX(xRotation)
+            ..rotateY(yRotation);
+
+          wordWidgets.add(Opacity(
+            opacity: opacity,
+            child: Transform(
+              transform: matrix,
+              alignment: Alignment.center,
+              child: Text(
+                char,
+                style: GoogleFonts.poppins(
+                  fontSize: fontSize,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  height: 1.2,
+                ),
               ),
             ),
+          ));
+        }
+
+        // Account for the space character between words
+        charIndex++;
+
+        // Row keeps word characters together; trailing space allows Wrap to break between words
+        return Padding(
+          padding: const EdgeInsets.only(right: 6),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: wordWidgets,
           ),
         );
-      }),
+      }).toList(),
     );
 
     // Shimmer sweep after entrance completes

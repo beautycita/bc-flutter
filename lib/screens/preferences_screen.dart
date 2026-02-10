@@ -151,7 +151,7 @@ class PreferencesScreen extends ConsumerWidget {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppConstants.radiusLG)),
       ),
       builder: (ctx) {
         return SafeArea(
@@ -217,7 +217,7 @@ class PreferencesScreen extends ConsumerWidget {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppConstants.radiusLG)),
       ),
       builder: (ctx) {
         return StatefulBuilder(
@@ -297,7 +297,7 @@ class PreferencesScreen extends ConsumerWidget {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppConstants.radiusLG)),
       ),
       builder: (ctx) {
         return StatefulBuilder(
@@ -355,7 +355,7 @@ class PreferencesScreen extends ConsumerWidget {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppConstants.radiusLG)),
       ),
       builder: (ctx) {
         return StatefulBuilder(
@@ -414,7 +414,7 @@ class PreferencesScreen extends ConsumerWidget {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppConstants.radiusLG)),
       ),
       builder: (ctx) {
         return StatefulBuilder(

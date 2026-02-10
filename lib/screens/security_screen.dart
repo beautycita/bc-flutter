@@ -106,11 +106,16 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
           // Email
           SettingsTile(
             icon: Icons.email_outlined,
-            iconColor: sec.isEmailAdded ? Colors.green.shade600 : null,
+            iconColor: sec.isEmailConfirmed ? Colors.green.shade600 : sec.isEmailAdded ? Colors.orange.shade600 : null,
             label: sec.isEmailAdded ? (sec.email ?? 'Email agregado') : 'Agregar email',
-            trailing: sec.isEmailAdded
+            trailing: sec.isEmailConfirmed
                 ? Icon(Icons.check_circle, color: Colors.green.shade600, size: 20)
-                : null,
+                : sec.isEmailAdded
+                    ? Text(
+                        'Pendiente',
+                        style: textTheme.bodySmall?.copyWith(color: Colors.orange.shade600),
+                      )
+                    : null,
             onTap: sec.isEmailAdded ? null : () => _showEmailSheet(context),
           ),
 
@@ -121,15 +126,15 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
             label: sec.hasPassword ? 'Contrasena configurada' : 'Agregar contrasena',
             trailing: sec.hasPassword
                 ? Icon(Icons.check_circle, color: Colors.green.shade600, size: 20)
-                : !sec.isEmailAdded
+                : !sec.isEmailConfirmed
                     ? Text(
-                        'Requiere email',
+                        sec.isEmailAdded ? 'Confirma email' : 'Requiere email',
                         style: textTheme.bodySmall?.copyWith(color: BeautyCitaTheme.textLight),
                       )
                     : null,
             onTap: sec.hasPassword
                 ? null
-                : sec.isEmailAdded
+                : sec.isEmailConfirmed
                     ? () => _showPasswordSheet(context)
                     : null,
           ),

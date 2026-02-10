@@ -167,12 +167,12 @@ class _SuccessBanner extends StatelessWidget {
           width: 72,
           height: 72,
           decoration: BoxDecoration(
-            color: const Color(0xFF4CAF50).withValues(alpha: 0.12),
+            color: BeautyCitaTheme.secondaryGold.withValues(alpha: 0.12),
             shape: BoxShape.circle,
           ),
           child: const Icon(
             Icons.check_circle_rounded,
-            color: Color(0xFF4CAF50),
+            color: BeautyCitaTheme.secondaryGold,
             size: 48,
           ),
         ),
