@@ -72,7 +72,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(24),
+                  borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusLarge),
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -205,7 +205,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                               backgroundColor: BeautyCitaTheme.primaryRose,
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusSmall),
                               ),
                               padding: const EdgeInsets.symmetric(vertical: 14),
                             ),

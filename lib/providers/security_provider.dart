@@ -7,6 +7,7 @@ import 'package:beautycita/services/supabase_client.dart';
 class SecurityState {
   final bool isGoogleLinked;
   final bool isEmailAdded;
+  final bool isEmailConfirmed;
   final bool hasPassword;
   final String? email;
   final bool isLoading;
@@ -16,6 +17,7 @@ class SecurityState {
   const SecurityState({
     this.isGoogleLinked = false,
     this.isEmailAdded = false,
+    this.isEmailConfirmed = false,
     this.hasPassword = false,
     this.email,
     this.isLoading = false,
@@ -26,6 +28,7 @@ class SecurityState {
   SecurityState copyWith({
     bool? isGoogleLinked,
     bool? isEmailAdded,
+    bool? isEmailConfirmed,
     bool? hasPassword,
     String? email,
     bool? isLoading,
@@ -35,6 +38,7 @@ class SecurityState {
     return SecurityState(
       isGoogleLinked: isGoogleLinked ?? this.isGoogleLinked,
       isEmailAdded: isEmailAdded ?? this.isEmailAdded,
+      isEmailConfirmed: isEmailConfirmed ?? this.isEmailConfirmed,
       hasPassword: hasPassword ?? this.hasPassword,
       email: email ?? this.email,
       isLoading: isLoading ?? this.isLoading,
@@ -57,6 +61,13 @@ class SecurityNotifier extends StateNotifier<SecurityState> {
     state = state.copyWith(isLoading: true, error: null, successMessage: null);
 
     try {
+      // Refresh session to get latest user data (email confirmation status, etc.)
+      try {
+        await SupabaseClientService.client.auth.refreshSession();
+      } catch (_) {
+        // Non-fatal: use cached user if refresh fails
+      }
+
       final user = SupabaseClientService.client.auth.currentUser;
       if (user == null) {
         state = const SecurityState();
@@ -66,12 +77,13 @@ class SecurityNotifier extends StateNotifier<SecurityState> {
       final identities = user.identities ?? [];
       final hasGoogle = identities.any((id) => id.provider == 'google');
       final hasEmail = user.email != null && user.email!.isNotEmpty;
-      // If user has email identity and phone/email confirmed, they likely have a password
+      final emailConfirmed = user.emailConfirmedAt != null;
       final hasEmailIdentity = identities.any((id) => id.provider == 'email');
 
       state = SecurityState(
         isGoogleLinked: hasGoogle,
         isEmailAdded: hasEmail,
+        isEmailConfirmed: emailConfirmed,
         hasPassword: hasEmailIdentity,
         email: user.email,
       );
@@ -177,7 +189,13 @@ class SecurityNotifier extends StateNotifier<SecurityState> {
     if (!SupabaseClientService.isInitialized) return;
     if (!state.isEmailAdded) {
       state = state.copyWith(
-        error: 'Primero agrega y verifica tu email',
+        error: 'Primero agrega tu email',
+      );
+      return;
+    }
+    if (!state.isEmailConfirmed) {
+      state = state.copyWith(
+        error: 'Confirma tu email primero (revisa tu bandeja de entrada)',
       );
       return;
     }

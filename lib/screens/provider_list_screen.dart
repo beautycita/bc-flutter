@@ -37,6 +37,8 @@ class ProviderListScreen extends ConsumerWidget {
             color: categoryColor,
             fontWeight: FontWeight.bold,
           ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
         centerTitle: true,
         elevation: 0,

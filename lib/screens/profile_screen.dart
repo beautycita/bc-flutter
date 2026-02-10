@@ -610,9 +610,9 @@ class _AvatarCropEditorState extends State<_AvatarCropEditor> {
     final circleSize = screenWidth * 0.80;
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: BeautyCitaTheme.textDark,
       appBar: AppBar(
-        backgroundColor: Colors.black,
+        backgroundColor: BeautyCitaTheme.textDark,
         foregroundColor: Colors.white,
         title: const Text('Recortar foto'),
         leading: IconButton(

@@ -10,7 +10,7 @@ final _pipelineStatsProvider =
     FutureProvider<Map<String, dynamic>>((ref) async {
   final response = await SupabaseClientService.client
       .from('discovered_salons')
-      .select('status, city, interest_count');
+      .select('status, location_city, interest_count');
 
   final rows = response as List;
   final statusCounts = <String, int>{};
@@ -19,7 +19,7 @@ final _pipelineStatsProvider =
 
   for (final row in rows) {
     final status = row['status'] as String? ?? 'discovered';
-    final city = row['city'] as String? ?? 'Unknown';
+    final city = row['location_city'] as String? ?? 'Unknown';
     statusCounts[status] = (statusCounts[status] ?? 0) + 1;
     cityCounts[city] = (cityCounts[city] ?? 0) + 1;
 
@@ -256,7 +256,7 @@ class _SalonManagementScreenState
                       children: [
                         Expanded(
                           child: Text(
-                            s['name'] as String? ?? '-',
+                            s['business_name'] as String? ?? '-',
                             style: GoogleFonts.nunito(
                               fontSize: 13,
                               color: BeautyCitaTheme.textDark,

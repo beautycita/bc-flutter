@@ -65,7 +65,7 @@ serve(async (req: Request) => {
 
     // ───────── LIST: nearby discovered salons ─────────
     if (action === "list") {
-      const { lat, lng, radius_km = 50, limit = 100, service_query } = params;
+      const { lat, lng, radius_km = 50, limit = 20, service_query } = params;
       if (!lat || !lng) {
         return jsonResponse({ error: "lat and lng required" }, 400);
       }
@@ -75,12 +75,15 @@ serve(async (req: Request) => {
         ? buildServiceKeywords(service_query)
         : null;
 
+      // Fetch a large candidate pool to rank from
+      const candidatePool = 500;
+
       // Use PostGIS to find nearby discovered salons not yet registered
       const { data, error } = await serviceClient.rpc("nearby_discovered_salons", {
         user_lat: lat,
         user_lng: lng,
         radius_km: radius_km,
-        max_results: serviceKeywords ? 500 : limit, // fetch more when filtering
+        max_results: candidatePool,
       });
 
       let results: any[];
@@ -89,10 +92,10 @@ serve(async (req: Request) => {
         // Fallback: plain query without PostGIS function
         const { data: fallback, error: fallbackErr } = await serviceClient
           .from("discovered_salons")
-          .select("id, name, phone, whatsapp, address, city, lat, lng, photo_url, rating, reviews_count, interest_count, business_category, service_categories, status")
+          .select("id, business_name, phone, whatsapp, location_address, location_city, latitude, longitude, feature_image_url, rating_average, rating_count, interest_count, categories, specialties, status, created_at")
           .in("status", ["discovered", "selected", "outreach_sent"])
-          .not("lat", "is", null)
-          .limit(serviceKeywords ? 500 : limit);
+          .not("latitude", "is", null)
+          .limit(candidatePool);
 
         if (fallbackErr) {
           return jsonResponse({ error: fallbackErr.message }, 500);
@@ -102,25 +105,27 @@ serve(async (req: Request) => {
         results = (fallback ?? [])
           .map((s: any) => ({
             ...s,
-            distance_km: haversineKm(lat, lng, s.lat, s.lng),
+            distance_km: haversineKm(lat, lng, s.latitude, s.longitude),
           }))
-          .filter((s: any) => s.distance_km <= radius_km)
-          .sort((a: any, b: any) => a.distance_km - b.distance_km);
+          .filter((s: any) => s.distance_km <= radius_km);
       } else {
-        results = data ?? [];
+        results = (data ?? []).map((s: any) => ({
+          ...s,
+          distance_km: s.distance_km ?? haversineKm(lat, lng, s.latitude, s.longitude),
+        }));
       }
 
       // Apply service-type filtering if query provided
       if (serviceKeywords && serviceKeywords.length > 0) {
         results = results.filter((s: any) => matchesService(s, serviceKeywords));
-        // Sort: best keyword match first, then by distance
-        results.sort((a: any, b: any) => {
-          const scoreA = serviceMatchScore(a, serviceKeywords);
-          const scoreB = serviceMatchScore(b, serviceKeywords);
-          if (scoreB !== scoreA) return scoreB - scoreA;
-          return (a.distance_km ?? 999) - (b.distance_km ?? 999);
-        });
       }
+
+      // Quality-weighted ranking: best salons first, not just closest
+      results.sort((a: any, b: any) => {
+        const scoreA = qualityScore(a, serviceKeywords);
+        const scoreB = qualityScore(b, serviceKeywords);
+        return scoreB - scoreA;
+      });
 
       // Apply limit
       results = results.slice(0, limit);
@@ -196,7 +201,7 @@ serve(async (req: Request) => {
         if (salon && canSendOutreach(salon)) {
           // Queue outreach (in production, this would call Twilio)
           const registrationLink = `https://beautycita.com/salon/${discovered_salon_id}`;
-          const message = getOutreachMessage(interestCount, salon.name, registrationLink);
+          const message = getOutreachMessage(interestCount, salon.business_name, registrationLink);
 
           // Update outreach tracking
           await serviceClient
@@ -212,7 +217,7 @@ serve(async (req: Request) => {
           outreachSent = true;
 
           // Log the outreach message (would be sent via Twilio in production)
-          console.log(`[OUTREACH] Salon: ${salon.name}, Count: ${interestCount}, Channel: ${salon.whatsapp ? 'whatsapp' : 'sms'}, Message: ${message}`);
+          console.log(`[OUTREACH] Salon: ${salon.business_name}, Count: ${interestCount}, Channel: ${salon.whatsapp ? 'whatsapp' : 'sms'}, Message: ${message}`);
         }
       }
 
@@ -255,33 +260,39 @@ serve(async (req: Request) => {
 
       for (const salon of salons) {
         // Validate required fields
-        if (!salon.name || !salon.city || !salon.state || !salon.source) {
+        if (!salon.business_name || !salon.location_city || !salon.location_state || !salon.source) {
           skipped++;
-          errors.push(`Missing required fields: ${salon.name ?? "unnamed"}`);
+          errors.push(`Missing required fields: ${salon.business_name ?? "unnamed"}`);
           continue;
         }
 
         const record = {
           source: salon.source,
           source_id: salon.source_id ?? null,
-          name: salon.name,
+          business_name: salon.business_name,
+          slug: salon.slug ?? null,
+          bio: salon.bio ?? null,
           phone: salon.phone ?? null,
+          phone_raw: salon.phone_raw ?? null,
           whatsapp: salon.whatsapp ?? salon.phone ?? null,
-          address: salon.address ?? null,
-          city: salon.city,
-          state: salon.state,
+          email: salon.email ?? null,
+          location_address: salon.location_address ?? null,
+          location_city: salon.location_city,
+          location_state: salon.location_state,
+          location_zip: salon.location_zip ?? null,
           country: salon.country ?? "MX",
-          lat: salon.lat ?? null,
-          lng: salon.lng ?? null,
-          photo_url: salon.photo_url ?? null,
-          rating: salon.rating ?? null,
-          reviews_count: salon.reviews_count ?? null,
-          business_category: salon.business_category ?? null,
-          service_categories: salon.service_categories ?? null,
-          hours: salon.hours ?? null,
+          latitude: salon.latitude ?? null,
+          longitude: salon.longitude ?? null,
+          feature_image_url: salon.feature_image_url ?? null,
+          rating_average: salon.rating_average ?? null,
+          rating_count: salon.rating_count ?? null,
+          categories: salon.categories ?? null,
+          specialties: salon.specialties ?? null,
+          working_hours: salon.working_hours ?? null,
           website: salon.website ?? null,
           facebook_url: salon.facebook_url ?? null,
-          instagram_handle: salon.instagram_handle ?? null,
+          instagram_url: salon.instagram_url ?? null,
+          portfolio_images: salon.portfolio_images ?? null,
           scraped_at: salon.scraped_at ?? new Date().toISOString(),
         };
 
@@ -291,7 +302,7 @@ serve(async (req: Request) => {
 
         if (upsertError) {
           skipped++;
-          errors.push(`${salon.name}: ${upsertError.message}`);
+          errors.push(`${salon.business_name}: ${upsertError.message}`);
         } else {
           imported++;
         }
@@ -305,6 +316,47 @@ serve(async (req: Request) => {
     return jsonResponse({ error: String(err) }, 500);
   }
 });
+
+// Quality-weighted ranking score.
+// Factors: rating, review count (proxy for client volume), interest signals,
+// longevity (time since first scraped), and proximity.
+// Proximity matters but doesn't dominate — a 4.9-star salon 8km away
+// ranks above a 3.5-star salon 2km away.
+function qualityScore(salon: any, serviceKeywords: string[] | null): number {
+  let score = 0;
+
+  // Rating (0-5) — normalized to 0-30 points, heavily weighted
+  const rating = salon.rating_average ?? 0;
+  score += (rating / 5) * 30;
+
+  // Review count — logarithmic scale, proxy for client volume
+  // 1 review = 0, 10 = 6.9, 50 = 11.7, 200 = 15.9, 1000 = 20.7
+  const reviews = salon.rating_count ?? 0;
+  score += reviews > 0 ? Math.log(reviews + 1) * 3 : 0;
+
+  // Interest signals from BeautyCita users (0-10 points)
+  const interest = salon.interest_count ?? 0;
+  score += Math.min(interest * 2, 10);
+
+  // Proximity — inverse distance, max 20 points
+  // 0 km = 20, 5 km = 15, 10 km = 10, 25 km = 5, 50+ km = 0
+  const dist = salon.distance_km ?? 50;
+  score += Math.max(0, 20 - (dist * 0.4));
+
+  // Service keyword match bonus (0-10 points)
+  if (serviceKeywords && serviceKeywords.length > 0) {
+    score += serviceMatchScore(salon, serviceKeywords) * 2;
+  }
+
+  // Data completeness bonus (0-5 points) — salons with more info rank higher
+  if (salon.feature_image_url) score += 1;
+  if (salon.location_address) score += 1;
+  if (salon.working_hours) score += 1;
+  if (salon.website || salon.facebook_url || salon.instagram_url) score += 1;
+  if (salon.specialties && Array.isArray(salon.specialties) && salon.specialties.length > 0) score += 1;
+
+  return score;
+}
 
 function canSendOutreach(salon: any): boolean {
   // Don't send if declined or unreachable
@@ -386,19 +438,19 @@ function normalizeText(text: string): string {
 
 function matchesService(salon: any, keywords: string[]): boolean {
   const searchable = normalizeText([
-    salon.name ?? "",
-    salon.business_category ?? "",
-    ...(Array.isArray(salon.service_categories) ? salon.service_categories : []),
+    salon.business_name ?? "",
+    salon.categories ?? "",
+    ...(Array.isArray(salon.specialties) ? salon.specialties : []),
   ].join(" "));
 
   return keywords.some(kw => searchable.includes(kw));
 }
 
 function serviceMatchScore(salon: any, keywords: string[]): number {
-  const name = normalizeText(salon.name ?? "");
-  const category = normalizeText(salon.business_category ?? "");
+  const name = normalizeText(salon.business_name ?? "");
+  const category = normalizeText(salon.categories ?? "");
   const cats = normalizeText(
-    (Array.isArray(salon.service_categories) ? salon.service_categories : []).join(" ")
+    (Array.isArray(salon.specialties) ? salon.specialties : []).join(" ")
   );
 
   let score = 0;

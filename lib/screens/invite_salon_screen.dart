@@ -75,7 +75,7 @@ class _InviteSalonScreenState extends ConsumerState<InviteSalonScreen> {
   Widget build(BuildContext context) {
     final salonsAsync = _userLocation != null
         ? ref.watch(
-            nearbySalonsProvider((lat: _userLocation!.lat, lng: _userLocation!.lng, limit: 50, serviceQuery: null)),
+            nearbySalonsProvider((lat: _userLocation!.lat, lng: _userLocation!.lng, limit: 20, serviceQuery: null)),
           )
         : null;
 
@@ -485,16 +485,17 @@ class DiscoveredSalon {
   });
 
   factory DiscoveredSalon.fromJson(Map<String, dynamic> json) {
+    // Support both old and new column names for compatibility
     return DiscoveredSalon(
       id: json['id'] as String,
-      name: _sanitizeLatin(json['name'] as String),
+      name: _sanitizeLatin((json['business_name'] ?? json['name'] ?? '') as String),
       phone: json['phone'] as String?,
       whatsapp: json['whatsapp'] as String?,
-      address: _sanitizeLatinNullable(json['address'] as String?),
-      city: _sanitizeLatinNullable(json['city'] as String?),
-      photoUrl: json['photo_url'] as String?,
-      rating: (json['rating'] as num?)?.toDouble(),
-      reviewsCount: json['reviews_count'] as int?,
+      address: _sanitizeLatinNullable((json['location_address'] ?? json['address']) as String?),
+      city: _sanitizeLatinNullable((json['location_city'] ?? json['city']) as String?),
+      photoUrl: (json['feature_image_url'] ?? json['photo_url']) as String?,
+      rating: ((json['rating_average'] ?? json['rating']) as num?)?.toDouble(),
+      reviewsCount: (json['rating_count'] ?? json['reviews_count']) as int?,
       interestCount: json['interest_count'] as int? ?? 0,
       distanceKm: (json['distance_km'] as num?)?.toDouble(),
     );

@@ -6,6 +6,7 @@ import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/models/booking.dart';
 import 'package:beautycita/providers/booking_provider.dart';
 import 'package:go_router/go_router.dart';
+import 'package:beautycita/widgets/cinematic_question_text.dart';
 
 /// Filter tabs for the user's bookings list.
 enum _BookingTab { proximas, pasadas, canceladas }
@@ -258,11 +259,19 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
 
     return Scaffold(
       backgroundColor: BeautyCitaTheme.backgroundWhite,
-      appBar: AppBar(
-        title: const Text('Mis Citas'),
-      ),
+      appBar: AppBar(),
       body: Column(
         children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(20, 0, 20, 8),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: CinematicQuestionText(
+                text: 'Mis Citas',
+                fontSize: 24,
+              ),
+            ),
+          ),
           // -- Filter Chips --
           _buildFilterChips(textTheme),
 

@@ -12,6 +12,12 @@ class BeautyCitaTheme {
   static const Color textLight = Color(0xFF757575);
   static const Color dividerLight = Color(0xFFEEEEEE);
 
+  // Light color variants (for cards, backgrounds, transport modes)
+  static const Color primaryRoseLight = Color(0xFFFCE4EC);
+  static const Color secondaryGoldLight = Color(0xFFFFF8E1);
+  static const Color accentTeal = Color(0xFF00897B);
+  static const Color accentTealLight = Color(0xFFE0F2F1);
+
   // Gradients
   static const LinearGradient primaryGradient = LinearGradient(
     colors: [primaryRose, Color(0xFFD81B60)],
