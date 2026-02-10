@@ -21,6 +21,10 @@ import 'package:beautycita/screens/device_manager_screen.dart';
 import 'package:beautycita/screens/discovered_salon_detail_screen.dart';
 import 'package:beautycita/screens/invite_salon_screen.dart' show DiscoveredSalon;
 import 'package:beautycita/screens/virtual_studio_screen.dart';
+import 'package:beautycita/screens/media_manager_screen.dart';
+import 'package:beautycita/screens/preferences_screen.dart';
+import 'package:beautycita/screens/profile_screen.dart';
+import 'package:beautycita/screens/security_screen.dart';
 
 class AppRoutes {
   static const String splash = '/';
@@ -44,6 +48,10 @@ class AppRoutes {
   static const String devices = '/devices';
   static const String discoveredSalon = '/discovered-salon';
   static const String studio = '/studio';
+  static const String mediaManager = '/media-manager';
+  static const String preferences = '/settings/preferences';
+  static const String profile = '/settings/profile';
+  static const String security = '/settings/security';
 
   static final GoRouter router = GoRouter(
     initialLocation: splash,
@@ -372,8 +380,8 @@ class AppRoutes {
         name: 'studio',
         pageBuilder: (context, state) {
           final tabParam = state.uri.queryParameters['tab'];
-          const tabIds = ['hair_color', 'hairstyle', 'headshot', 'avatar', 'face_swap'];
-          final initialTab = tabParam != null ? tabIds.indexOf(tabParam).clamp(0, 4) : 0;
+          const tabIds = ['hair_color', 'hairstyle', 'headshot', 'face_swap'];
+          final initialTab = tabParam != null ? tabIds.indexOf(tabParam).clamp(0, 3) : 0;
           return CustomTransitionPage(
             key: state.pageKey,
             child: VirtualStudioScreen(initialTab: initialTab),
@@ -413,6 +421,70 @@ class AppRoutes {
         pageBuilder: (context, state) => CustomTransitionPage(
           key: state.pageKey,
           child: const DeviceManagerScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
+                .chain(CurveTween(curve: Curves.easeInOutCubic));
+            return SlideTransition(
+              position: animation.drive(tween),
+              child: child,
+            );
+          },
+        ),
+      ),
+      GoRoute(
+        path: mediaManager,
+        name: 'media-manager',
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const MediaManagerScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
+                .chain(CurveTween(curve: Curves.easeInOutCubic));
+            return SlideTransition(
+              position: animation.drive(tween),
+              child: child,
+            );
+          },
+        ),
+      ),
+      GoRoute(
+        path: preferences,
+        name: 'preferences',
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const PreferencesScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
+                .chain(CurveTween(curve: Curves.easeInOutCubic));
+            return SlideTransition(
+              position: animation.drive(tween),
+              child: child,
+            );
+          },
+        ),
+      ),
+      GoRoute(
+        path: profile,
+        name: 'profile',
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const ProfileScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
+                .chain(CurveTween(curve: Curves.easeInOutCubic));
+            return SlideTransition(
+              position: animation.drive(tween),
+              child: child,
+            );
+          },
+        ),
+      ),
+      GoRoute(
+        path: security,
+        name: 'security',
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const SecurityScreen(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
                 .chain(CurveTween(curve: Curves.easeInOutCubic));

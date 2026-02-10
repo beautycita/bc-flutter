@@ -1,10 +1,12 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import '../config/theme.dart';
 import '../services/lightx_service.dart';
+import '../services/media_service.dart';
 
 /// Tool metadata for each studio tab.
 class _StudioTool {
@@ -27,8 +29,7 @@ const _tools = [
   _StudioTool(id: 'hair_color', icon: Icons.palette, label: 'Color', description: 'Prueba un nuevo color de cabello', defaultPrompt: 'Rubio platino'),
   _StudioTool(id: 'hairstyle', icon: Icons.content_cut, label: 'Peinado', description: 'Prueba un peinado diferente', defaultPrompt: 'Bob corto moderno'),
   _StudioTool(id: 'headshot', icon: Icons.camera_alt, label: 'Retrato', description: 'Foto profesional estilo headshot', defaultPrompt: 'Professional corporate headshot'),
-  _StudioTool(id: 'avatar', icon: Icons.face, label: 'Avatar', description: 'Crea un avatar estilizado', defaultPrompt: 'Glamorous portrait style'),
-  _StudioTool(id: 'face_swap', icon: Icons.swap_horiz, label: 'Cambio', description: 'Prueba un look completamente nuevo', defaultPrompt: 'Celebrity glam look'),
+  _StudioTool(id: 'face_swap', icon: Icons.swap_horiz, label: 'Cambio', description: 'Tu cara sobre una foto de referencia', defaultPrompt: ''),
 ];
 
 class VirtualStudioScreen extends ConsumerStatefulWidget {
@@ -96,7 +97,11 @@ class _VirtualStudioScreenState extends ConsumerState<VirtualStudioScreen>
       ),
       body: TabBarView(
         controller: _tabController,
-        children: _tools.map((tool) => _ToolView(tool: tool)).toList(),
+        children: _tools.map((tool) =>
+          tool.id == 'face_swap'
+            ? _FaceSwapView(tool: tool)
+            : _ToolView(tool: tool),
+        ).toList(),
       ),
     );
   }
@@ -210,6 +215,8 @@ class _ToolViewState extends ConsumerState<_ToolView>
           _resultUrl = url;
           _isProcessing = false;
         });
+        // Auto-save to gallery and user_media
+        _autoSave(url, widget.tool.id, prompt);
       }
     } catch (e) {
       if (mounted) {
@@ -218,6 +225,75 @@ class _ToolViewState extends ConsumerState<_ToolView>
           _isProcessing = false;
         });
       }
+    }
+  }
+
+  void _autoSave(String resultUrl, String toolType, String stylePrompt) async {
+    try {
+      final mediaService = MediaService();
+      final saved = await mediaService.saveLightXResult(
+        resultUrl: resultUrl,
+        toolType: toolType,
+        stylePrompt: stylePrompt,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              saved != null ? 'Guardado automaticamente' : 'No se pudo guardar (inicia sesion)',
+              style: GoogleFonts.nunito(),
+            ),
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: saved != null ? BeautyCitaTheme.primaryRose : Colors.orange,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Auto-save error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al guardar: $e', style: GoogleFonts.nunito()),
+            duration: const Duration(seconds: 3),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.red.shade400,
+          ),
+        );
+      }
+    }
+  }
+
+  void _saveToGallery() async {
+    if (_resultUrl == null) return;
+    try {
+      final mediaService = MediaService();
+      final success = await mediaService.saveUrlToGallery(_resultUrl!);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              success ? 'Guardado en galeria' : 'Error al guardar',
+              style: GoogleFonts.nunito(),
+            ),
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: success ? BeautyCitaTheme.primaryRose : Colors.red.shade400,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Save to gallery error: $e');
+    }
+  }
+
+  void _shareResult() async {
+    if (_resultUrl == null) return;
+    try {
+      final mediaService = MediaService();
+      await mediaService.shareImage(_resultUrl!, text: 'Mi look en BeautyCita');
+    } catch (e) {
+      debugPrint('Share error: $e');
     }
   }
 
@@ -523,14 +599,30 @@ class _ToolViewState extends ConsumerState<_ToolView>
           ),
           const SizedBox(height: 24),
 
-          // Actions
+          // Actions row 1: Save & Share
           Row(
             children: [
               Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _saveToGallery,
+                  icon: const Icon(Icons.download, size: 20),
+                  label: Text('Guardar', style: GoogleFonts.nunito(fontWeight: FontWeight.w700)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: BeautyCitaTheme.primaryRose,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: _reset,
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Probar otro'),
+                  onPressed: _shareResult,
+                  icon: const Icon(Icons.share, size: 20),
+                  label: Text('Compartir', style: GoogleFonts.nunito(fontWeight: FontWeight.w700)),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: BeautyCitaTheme.primaryRose,
                     side: const BorderSide(color: BeautyCitaTheme.primaryRose),
@@ -542,6 +634,642 @@ class _ToolViewState extends ConsumerState<_ToolView>
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 12),
+          // Actions row 2: Try another
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _reset,
+                  icon: const Icon(Icons.refresh, size: 20),
+                  label: Text('Probar otro', style: GoogleFonts.nunito(fontWeight: FontWeight.w700)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: BeautyCitaTheme.textLight,
+                    side: BorderSide(color: BeautyCitaTheme.textLight.withValues(alpha: 0.4)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Hairstyle sample: preview shown to user + hair-only template sent to API.
+class _HairstyleSample {
+  final String id;
+  final String label;
+  final String previewAsset;   // Full model photo (shown in UI)
+  final String templateAsset;  // Hair-only PNG (sent to LightX)
+
+  const _HairstyleSample({
+    required this.id,
+    required this.label,
+    required this.previewAsset,
+    required this.templateAsset,
+  });
+}
+
+const _hairstyleSamples = [
+  _HairstyleSample(
+    id: 'hair0',
+    label: 'Balayage Largo',
+    previewAsset: 'assets/hairstyles/hair0.jpg',
+    templateAsset: 'assets/hairstyles/hair0.jpg',
+  ),
+  _HairstyleSample(
+    id: 'hair2',
+    label: 'Rizos Medianos',
+    previewAsset: 'assets/hairstyles/hair2.jpg',
+    templateAsset: 'assets/hairstyles/hair2.jpg',
+  ),
+  _HairstyleSample(
+    id: 'hair3',
+    label: 'Rubio Ondulado',
+    previewAsset: 'assets/hairstyles/hair3.jpg',
+    templateAsset: 'assets/hairstyles/hair3.jpg',
+  ),
+  _HairstyleSample(
+    id: 'hair4',
+    label: 'Lacio Largo',
+    previewAsset: 'assets/hairstyles/hair4.jpg',
+    templateAsset: 'assets/hairstyles/hair4.jpg',
+  ),
+  _HairstyleSample(
+    id: 'hair5',
+    label: 'Bob Ondulado',
+    previewAsset: 'assets/hairstyles/hair5.jpg',
+    templateAsset: 'assets/hairstyles/hair5.jpg',
+  ),
+  _HairstyleSample(
+    id: 'hair6',
+    label: 'Pixie Elegante',
+    previewAsset: 'assets/hairstyles/hair6.jpg',
+    templateAsset: 'assets/hairstyles/hair6.jpg',
+  ),
+];
+
+/// Look Swap view: selfie upload → pick hairstyle from samples or upload custom → process.
+class _FaceSwapView extends ConsumerStatefulWidget {
+  final _StudioTool tool;
+
+  const _FaceSwapView({required this.tool});
+
+  @override
+  ConsumerState<_FaceSwapView> createState() => _FaceSwapViewState();
+}
+
+class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
+    with AutomaticKeepAliveClientMixin {
+  Uint8List? _selfieBytes;
+  _HairstyleSample? _selectedSample;
+  Uint8List? _customReferenceBytes; // If user uploads their own
+  String? _resultUrl;
+  bool _isProcessing = false;
+  String? _error;
+
+  @override
+  bool get wantKeepAlive => true;
+
+  Future<void> _pickSelfie({ImageSource source = ImageSource.gallery}) async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(
+      source: source,
+      maxWidth: 1024,
+      imageQuality: 85,
+      preferredCameraDevice: CameraDevice.front,
+    );
+    if (picked == null || !mounted) return;
+    final bytes = await picked.readAsBytes();
+    if (!mounted) return;
+    setState(() {
+      _selfieBytes = bytes;
+      _resultUrl = null;
+      _error = null;
+    });
+  }
+
+  void _showSelfiePicker() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.camera_alt, color: BeautyCitaTheme.primaryRose),
+                title: Text('Tomar selfie', style: GoogleFonts.nunito(fontSize: 16, fontWeight: FontWeight.w600)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickSelfie(source: ImageSource.camera);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library, color: BeautyCitaTheme.primaryRose),
+                title: Text('Elegir de galeria', style: GoogleFonts.nunito(fontSize: 16, fontWeight: FontWeight.w600)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickSelfie(source: ImageSource.gallery);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickCustomReference() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: ImageSource.gallery, maxWidth: 1024, imageQuality: 85);
+    if (picked == null || !mounted) return;
+    final bytes = await picked.readAsBytes();
+    if (!mounted) return;
+    setState(() {
+      _customReferenceBytes = bytes;
+      _selectedSample = null;
+      _resultUrl = null;
+      _error = null;
+    });
+  }
+
+  void _selectSample(_HairstyleSample sample) {
+    setState(() {
+      _selectedSample = sample;
+      _customReferenceBytes = null;
+      _resultUrl = null;
+      _error = null;
+    });
+  }
+
+  bool get _canProcess =>
+      _selfieBytes != null && (_selectedSample != null || _customReferenceBytes != null);
+
+  Future<void> _process() async {
+    if (!_canProcess || _isProcessing) return;
+
+    setState(() {
+      _isProcessing = true;
+      _error = null;
+    });
+
+    try {
+      final service = LightXService();
+      Uint8List referenceBytes;
+
+      if (_selectedSample != null) {
+        // Load the hair-only template from assets (NOT the preview)
+        final data = await rootBundle.load(_selectedSample!.templateAsset);
+        referenceBytes = data.buffer.asUint8List();
+      } else {
+        referenceBytes = _customReferenceBytes!;
+      }
+
+      // imageUrl = user's photo (base), modelReferenceUrl = hairstyle reference
+      final url = await service.processTryOn(
+        imageBytes: _selfieBytes!,
+        stylePrompt: '',
+        tryOnTypeId: 'face_swap',
+        targetImageBytes: referenceBytes,
+      );
+      if (mounted) {
+        setState(() {
+          _resultUrl = url;
+          _isProcessing = false;
+        });
+        _autoSave(url);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _isProcessing = false;
+        });
+      }
+    }
+  }
+
+  void _autoSave(String resultUrl) async {
+    try {
+      final mediaService = MediaService();
+      final saved = await mediaService.saveLightXResult(
+        resultUrl: resultUrl,
+        toolType: 'face_swap',
+        stylePrompt: _selectedSample?.label ?? 'Custom look swap',
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              saved != null ? 'Guardado automaticamente' : 'No se pudo guardar (inicia sesion)',
+              style: GoogleFonts.nunito(),
+            ),
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: saved != null ? BeautyCitaTheme.primaryRose : Colors.orange,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Auto-save error: $e');
+    }
+  }
+
+  void _saveToGallery() async {
+    if (_resultUrl == null) return;
+    try {
+      final mediaService = MediaService();
+      final success = await mediaService.saveUrlToGallery(_resultUrl!);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(success ? 'Guardado en galeria' : 'Error al guardar', style: GoogleFonts.nunito()),
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: success ? BeautyCitaTheme.primaryRose : Colors.red.shade400,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Save to gallery error: $e');
+    }
+  }
+
+  void _shareResult() async {
+    if (_resultUrl == null) return;
+    try {
+      final mediaService = MediaService();
+      await mediaService.shareImage(_resultUrl!, text: 'Mi look en BeautyCita');
+    } catch (e) {
+      debugPrint('Share error: $e');
+    }
+  }
+
+  void _reset() {
+    setState(() {
+      _selfieBytes = null;
+      _selectedSample = null;
+      _customReferenceBytes = null;
+      _resultUrl = null;
+      _error = null;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+
+    if (_resultUrl != null) return _buildResult();
+    if (_isProcessing) return _buildProcessing();
+    return _buildUpload();
+  }
+
+  Widget _buildUpload() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'Sube tu foto y elige un peinado para ver como te queda',
+            style: GoogleFonts.nunito(fontSize: 15, color: BeautyCitaTheme.textLight),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 20),
+
+          // Step 1: Selfie
+          Text(
+            '1. Tu foto',
+            style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 8),
+          GestureDetector(
+            onTap: _showSelfiePicker,
+            child: Container(
+              height: 160,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: _selfieBytes != null
+                    ? Border.all(color: BeautyCitaTheme.primaryRose, width: 2)
+                    : null,
+              ),
+              child: _selfieBytes != null
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(15),
+                      child: Stack(
+                        children: [
+                          Center(child: Image.memory(_selfieBytes!, fit: BoxFit.contain, height: 156)),
+                          Positioned(
+                            top: 8, right: 8,
+                            child: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                              child: const Icon(Icons.edit, color: Colors.white, size: 16),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : CustomPaint(
+                      painter: _DashedBorderPainter(
+                        color: BeautyCitaTheme.textLight.withValues(alpha: 0.3),
+                        radius: 16,
+                      ),
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.face, size: 40, color: BeautyCitaTheme.primaryRose.withValues(alpha: 0.5)),
+                            const SizedBox(height: 8),
+                            Text('Tomar selfie o elegir foto', style: GoogleFonts.nunito(fontSize: 14, fontWeight: FontWeight.w600, color: BeautyCitaTheme.textLight)),
+                          ],
+                        ),
+                      ),
+                    ),
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Step 2: Choose hairstyle
+          Text(
+            '2. Elige un peinado',
+            style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 8),
+
+          // Sample hairstyles grid
+          SizedBox(
+            height: 130,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: [
+                ..._hairstyleSamples.map((sample) => Padding(
+                  padding: const EdgeInsets.only(right: 10),
+                  child: GestureDetector(
+                    onTap: () => _selectSample(sample),
+                    child: Container(
+                      width: 90,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: _selectedSample?.id == sample.id
+                              ? BeautyCitaTheme.primaryRose
+                              : BeautyCitaTheme.dividerLight,
+                          width: _selectedSample?.id == sample.id ? 3 : 1,
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          Expanded(
+                            child: ClipRRect(
+                              borderRadius: const BorderRadius.vertical(top: Radius.circular(11)),
+                              child: Image.asset(
+                                sample.previewAsset,
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                              ),
+                            ),
+                          ),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            decoration: BoxDecoration(
+                              color: _selectedSample?.id == sample.id
+                                  ? BeautyCitaTheme.primaryRose
+                                  : BeautyCitaTheme.surfaceCream,
+                              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(11)),
+                            ),
+                            child: Text(
+                              sample.label,
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.nunito(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: _selectedSample?.id == sample.id ? Colors.white : BeautyCitaTheme.textDark,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                )),
+                // "Upload custom" option
+                GestureDetector(
+                  onTap: _pickCustomReference,
+                  child: Container(
+                    width: 90,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: _customReferenceBytes != null
+                            ? BeautyCitaTheme.primaryRose
+                            : BeautyCitaTheme.dividerLight,
+                        width: _customReferenceBytes != null ? 3 : 1,
+                      ),
+                    ),
+                    child: _customReferenceBytes != null
+                        ? Column(
+                            children: [
+                              Expanded(
+                                child: ClipRRect(
+                                  borderRadius: const BorderRadius.vertical(top: Radius.circular(11)),
+                                  child: Image.memory(_customReferenceBytes!, fit: BoxFit.cover, width: double.infinity),
+                                ),
+                              ),
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: BeautyCitaTheme.primaryRose,
+                                  borderRadius: const BorderRadius.vertical(bottom: Radius.circular(11)),
+                                ),
+                                child: Text(
+                                  'Tu foto',
+                                  textAlign: TextAlign.center,
+                                  style: GoogleFonts.nunito(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white),
+                                ),
+                              ),
+                            ],
+                          )
+                        : Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.add_photo_alternate_outlined, size: 32, color: BeautyCitaTheme.primaryRose.withValues(alpha: 0.5)),
+                                const SizedBox(height: 4),
+                                Text('Subir\nreferencia', textAlign: TextAlign.center, style: GoogleFonts.nunito(fontSize: 10, fontWeight: FontWeight.w600, color: BeautyCitaTheme.textLight)),
+                              ],
+                            ),
+                          ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          if (_error != null) ...[
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                _error!,
+                style: GoogleFonts.nunito(fontSize: 13, color: Colors.red.shade700),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+
+          // Process button
+          SizedBox(
+            height: 50,
+            child: ElevatedButton(
+              onPressed: _canProcess ? _process : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: BeautyCitaTheme.primaryRose,
+                foregroundColor: Colors.white,
+                disabledBackgroundColor: BeautyCitaTheme.dividerLight,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: Text(
+                'Procesar',
+                style: GoogleFonts.nunito(fontSize: 16, fontWeight: FontWeight.w700),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProcessing() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          if (_selfieBytes != null)
+            Container(
+              width: 100, height: 100,
+              decoration: BoxDecoration(borderRadius: BorderRadius.circular(12)),
+              child: ClipRRect(borderRadius: BorderRadius.circular(12), child: Image.memory(_selfieBytes!, fit: BoxFit.cover)),
+            ),
+          const SizedBox(height: 24),
+          const CircularProgressIndicator(color: BeautyCitaTheme.primaryRose),
+          const SizedBox(height: 16),
+          Text(
+            'Procesando cambio de look...',
+            style: GoogleFonts.nunito(fontSize: 16, color: BeautyCitaTheme.textLight, fontStyle: FontStyle.italic),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildResult() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  children: [
+                    Text('Tu foto', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: BeautyCitaTheme.textLight)),
+                    const SizedBox(height: 8),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: AspectRatio(aspectRatio: 3 / 4, child: Image.memory(_selfieBytes!, fit: BoxFit.contain)),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  children: [
+                    Text('Resultado', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: BeautyCitaTheme.primaryRose)),
+                    const SizedBox(height: 8),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: AspectRatio(
+                        aspectRatio: 3 / 4,
+                        child: Image.network(
+                          _resultUrl!,
+                          fit: BoxFit.contain,
+                          errorBuilder: (_, __, ___) => Container(
+                            color: BeautyCitaTheme.surfaceCream,
+                            child: const Center(child: Icon(Icons.broken_image, size: 48)),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _saveToGallery,
+                  icon: const Icon(Icons.download, size: 20),
+                  label: Text('Guardar', style: GoogleFonts.nunito(fontWeight: FontWeight.w700)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: BeautyCitaTheme.primaryRose,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _shareResult,
+                  icon: const Icon(Icons.share, size: 20),
+                  label: Text('Compartir', style: GoogleFonts.nunito(fontWeight: FontWeight.w700)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: BeautyCitaTheme.primaryRose,
+                    side: const BorderSide(color: BeautyCitaTheme.primaryRose),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: _reset,
+            icon: const Icon(Icons.refresh, size: 20),
+            label: Text('Probar otro', style: GoogleFonts.nunito(fontWeight: FontWeight.w700)),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: BeautyCitaTheme.textLight,
+              side: BorderSide(color: BeautyCitaTheme.textLight.withValues(alpha: 0.4)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+            ),
           ),
         ],
       ),

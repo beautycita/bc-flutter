@@ -28,28 +28,23 @@ class LightXService {
       descriptionEs: 'Foto profesional estilo headshot',
       defaultPrompt: 'Professional corporate headshot',
     ),
-    'avatar': TryOnType(
-      id: 'avatar',
-      nameEs: 'Mi Avatar',
-      icon: '🎭',
-      descriptionEs: 'Crea un avatar estilizado',
-      defaultPrompt: 'Glamorous portrait style',
-    ),
     'face_swap': TryOnType(
       id: 'face_swap',
-      nameEs: 'Cambio de Cara',
+      nameEs: 'Cambio de Look',
       icon: '🔄',
-      descriptionEs: 'Prueba un look completamente nuevo',
-      defaultPrompt: 'Celebrity glam look',
+      descriptionEs: 'Tu cara sobre una foto de referencia',
+      defaultPrompt: '',
     ),
   };
 
   /// Requests a virtual try-on through the edge function.
   /// Returns the URL of the processed image.
+  /// For face_swap, [targetImageBytes] is the reference photo (body/hairstyle to swap onto).
   Future<String> processTryOn({
     required Uint8List imageBytes,
     required String stylePrompt,
     required String tryOnTypeId,
+    Uint8List? targetImageBytes,
   }) async {
     if (!SupabaseClientService.isInitialized) {
       throw LightXException('Supabase not initialized');
@@ -57,14 +52,19 @@ class LightXService {
 
     final client = SupabaseClientService.client;
 
+    final body = <String, dynamic>{
+      'action': 'try_on',
+      'image_base64': base64Encode(imageBytes),
+      'tool_type': tryOnTypeId,
+      'style_prompt': stylePrompt,
+    };
+    if (targetImageBytes != null) {
+      body['target_image_base64'] = base64Encode(targetImageBytes);
+    }
+
     final response = await client.functions.invoke(
       'aphrodite-chat',
-      body: {
-        'action': 'try_on',
-        'image_base64': base64Encode(imageBytes),
-        'tool_type': tryOnTypeId,
-        'style_prompt': stylePrompt,
-      },
+      body: body,
     );
 
     if (response.status != 200) {

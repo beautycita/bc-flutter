@@ -23,7 +23,7 @@ class ChatRouterScreen extends ConsumerWidget {
         if (unreadCount > 0) {
           // Has unreads — show chat list
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (context.mounted) context.go('/chat/list');
+            if (context.mounted) context.pushReplacement('/chat/list');
           });
         } else {
           // No unreads — go straight to Aphrodite
@@ -31,9 +31,9 @@ class ChatRouterScreen extends ConsumerWidget {
             if (!context.mounted) return;
             final aphThread = await ref.read(aphroditeThreadProvider.future);
             if (aphThread != null && context.mounted) {
-              context.go('/chat/${aphThread.id}');
+              context.pushReplacement('/chat/${aphThread.id}');
             } else if (context.mounted) {
-              context.go('/chat/list');
+              context.pushReplacement('/chat/list');
             }
           });
         }
@@ -45,7 +45,7 @@ class ChatRouterScreen extends ConsumerWidget {
       error: (_, __) {
         // Fallback to chat list on error
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (context.mounted) context.go('/chat/list');
+          if (context.mounted) context.pushReplacement('/chat/list');
         });
         return _LoadingView();
       },

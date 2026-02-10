@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import '../config/theme.dart';
 import '../models/chat_message.dart';
@@ -201,14 +202,6 @@ class _ChatConversationScreenState
   }
 
   void _handleCamera() {
-    const tools = [
-      ('hair_color', 'Color de Cabello', Icons.palette, 'Prueba un nuevo color'),
-      ('hairstyle', 'Nuevo Peinado', Icons.content_cut, 'Prueba un estilo diferente'),
-      ('headshot', 'Retrato Pro', Icons.camera_alt, 'Foto profesional'),
-      ('avatar', 'Mi Avatar', Icons.face, 'Crea un avatar estilizado'),
-      ('face_swap', 'Cambio de Look', Icons.swap_horiz, 'Look completamente nuevo'),
-    ];
-
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
@@ -236,91 +229,110 @@ class _ChatConversationScreenState
               ),
             ),
             const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFFE91E63), Color(0xFFC2185B)],
-                ),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.auto_awesome, color: Colors.white, size: 24),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Estudio Virtual',
-                        style: GoogleFonts.poppins(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
-                      Text(
-                        'Prueba un nuevo look con inteligencia artificial',
-                        style: GoogleFonts.nunito(
-                          fontSize: 12,
-                          color: Colors.white70,
-                        ),
-                      ),
-                    ],
+            InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () {
+                Navigator.pop(ctx);
+                context.push('/studio');
+              },
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFE91E63), Color(0xFFC2185B)],
                   ),
-                ],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.auto_awesome, color: Colors.white, size: 24),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Estudio Virtual',
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                          Text(
+                            'Prueba un nuevo look con IA',
+                            style: GoogleFonts.nunito(
+                              fontSize: 12,
+                              color: Colors.white70,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.chevron_right_rounded, color: Colors.white70),
+                  ],
+                ),
               ),
             ),
-            const SizedBox(height: 16),
-            ...tools.map((tool) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(12),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  context.push('/studio?tab=${tool.$1}');
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: BeautyCitaTheme.surfaceCream,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(tool.$3, color: BeautyCitaTheme.primaryRose, size: 24),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              tool.$2,
-                              style: GoogleFonts.poppins(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                              ),
+            const SizedBox(height: 10),
+            InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () {
+                Navigator.pop(ctx);
+                _pickAndSendAttachment();
+              },
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: BeautyCitaTheme.surfaceCream,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.attach_file_rounded, color: BeautyCitaTheme.primaryRose, size: 24),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Adjuntar archivo',
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
                             ),
-                            Text(
-                              tool.$4,
-                              style: GoogleFonts.nunito(
-                                fontSize: 12,
-                                color: BeautyCitaTheme.textLight,
-                              ),
+                          ),
+                          Text(
+                            'Enviar una foto o imagen',
+                            style: GoogleFonts.nunito(
+                              fontSize: 12,
+                              color: BeautyCitaTheme.textLight,
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                      const Icon(Icons.chevron_right_rounded, color: BeautyCitaTheme.textLight),
-                    ],
-                  ),
+                    ),
+                    const Icon(Icons.chevron_right_rounded, color: BeautyCitaTheme.textLight),
+                  ],
                 ),
               ),
-            )),
+            ),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _pickAndSendAttachment() async {
+    final picker = ImagePicker();
+    final image = await picker.pickImage(source: ImageSource.gallery, maxWidth: 1200);
+    if (image == null) return;
+    // TODO: upload image and send as chat message
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Adjuntos disponibles pronto')),
+      );
+    }
   }
 }
 

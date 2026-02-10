@@ -29,6 +29,11 @@ dependencies:
   http: ^1.2.0
   mobile_scanner: ^7.0.0
   image_picker: ^1.1.2
+  image_gallery_saver_plus: ^4.0.1
+  share_plus: ^10.1.4
+  path_provider: ^2.1.5
+  google_sign_in: ^6.2.2
+  flutter_stripe: ^11.4.0
 
 dev_dependencies:
   flutter_test:
@@ -41,3 +46,4 @@ flutter:
     - .env
     - assets/images/
     - assets/google_fonts/
+    - assets/hairstyles/

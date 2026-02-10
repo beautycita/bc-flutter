@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:beautycita/services/supabase_client.dart';
 import '../services/biometric_service.dart';
 import '../services/user_session.dart';
@@ -216,6 +217,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
       );
       return false;
     }
+  }
+
+  /// Update the username in local session and state
+  Future<void> updateUsername(String username) async {
+    final prefs = await _userSession.getUsername(); // verify session exists
+    if (prefs == null) return;
+    // Update SharedPreferences directly
+    final sp = await SharedPreferences.getInstance();
+    await sp.setString('username', username);
+    state = state.copyWith(username: username);
   }
 
   /// Logout and clear session
