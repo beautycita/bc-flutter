@@ -9,6 +9,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:beautycita/services/supabase_client.dart';
+import 'package:beautycita/services/notification_service.dart';
 import 'package:beautycita/config/theme.dart';
 import 'package:beautycita/config/routes.dart';
 import 'package:beautycita/config/constants.dart';
@@ -53,7 +54,9 @@ void main() async {
   }
 
   // Start Supabase init in background — splash screen awaits supabaseReady
-  SupabaseClientService.initialize().then((_) {
+  SupabaseClientService.initialize().then((_) async {
+    // Initialize push notifications after Supabase is ready
+    await NotificationService().initialize();
     supabaseReady.complete();
   }).catchError((e) {
     supabaseReady.complete(); // Complete even on error so splash doesn't hang
@@ -92,6 +95,20 @@ class _BeautyCitaAppState extends ConsumerState<BeautyCitaApp> {
     _appLinks.getInitialLink().then((uri) {
       if (uri != null) _handleUri(uri);
     });
+
+    // Check for pending notification navigation after a brief delay
+    Future.delayed(const Duration(milliseconds: 500), _checkNotificationNavigation);
+  }
+
+  void _checkNotificationNavigation() {
+    final pending = NotificationService().consumePendingNavigation();
+    if (pending != null && mounted) {
+      final route = pending['route'] as String?;
+      if (route != null && route.isNotEmpty) {
+        debugPrint('[Notification] Navigating to: $route');
+        AppRoutes.router.go(route);
+      }
+    }
   }
 
   void _handleUri(Uri uri) {
@@ -103,7 +120,7 @@ class _BeautyCitaAppState extends ConsumerState<BeautyCitaApp> {
       case 'uber-callback':
         final code = uri.queryParameters['code'];
         final error = uri.queryParameters['error'];
-        debugPrint('[DeepLink] Uber callback - code=${code != null ? "${code.substring(0, code.length.clamp(0, 8) as int)}..." : "null"}, error=$error');
+        debugPrint('[DeepLink] Uber callback - code=${code != null ? "${code.substring(0, code.length.clamp(0, 8))}..." : "null"}, error=$error');
         if (error != null) {
           debugPrint('[DeepLink] Uber OAuth error: $error - ${uri.queryParameters['error_description']}');
         }

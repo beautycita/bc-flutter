@@ -679,40 +679,40 @@ class _HairstyleSample {
 
 const _hairstyleSamples = [
   _HairstyleSample(
-    id: 'hair0',
-    label: 'Balayage Largo',
-    previewAsset: 'assets/hairstyles/hair0.jpg',
-    templateAsset: 'assets/hairstyles/hair0.jpg',
-  ),
-  _HairstyleSample(
-    id: 'hair2',
-    label: 'Rizos Medianos',
-    previewAsset: 'assets/hairstyles/hair2.jpg',
-    templateAsset: 'assets/hairstyles/hair2.jpg',
-  ),
-  _HairstyleSample(
-    id: 'hair3',
+    id: 'rubioOndulado',
     label: 'Rubio Ondulado',
-    previewAsset: 'assets/hairstyles/hair3.jpg',
-    templateAsset: 'assets/hairstyles/hair3.jpg',
+    previewAsset: 'assets/hairstyles/rubioOndulado.png',
+    templateAsset: 'assets/hairstyles/rubioOndulado.png',
   ),
   _HairstyleSample(
-    id: 'hair4',
-    label: 'Lacio Largo',
-    previewAsset: 'assets/hairstyles/hair4.jpg',
-    templateAsset: 'assets/hairstyles/hair4.jpg',
+    id: 'balayageLargo',
+    label: 'Balayage Largo',
+    previewAsset: 'assets/hairstyles/balayageLargo.png',
+    templateAsset: 'assets/hairstyles/balayageLargo.png',
   ),
   _HairstyleSample(
-    id: 'hair5',
+    id: 'bobOndulado',
     label: 'Bob Ondulado',
-    previewAsset: 'assets/hairstyles/hair5.jpg',
-    templateAsset: 'assets/hairstyles/hair5.jpg',
+    previewAsset: 'assets/hairstyles/bobOndulado.png',
+    templateAsset: 'assets/hairstyles/bobOndulado.png',
   ),
   _HairstyleSample(
-    id: 'hair6',
+    id: 'lacioLargo',
+    label: 'Lacio Largo',
+    previewAsset: 'assets/hairstyles/lacioLargo.png',
+    templateAsset: 'assets/hairstyles/lacioLargo.png',
+  ),
+  _HairstyleSample(
+    id: 'pixieElegante',
     label: 'Pixie Elegante',
-    previewAsset: 'assets/hairstyles/hair6.jpg',
-    templateAsset: 'assets/hairstyles/hair6.jpg',
+    previewAsset: 'assets/hairstyles/pixieElegante.png',
+    templateAsset: 'assets/hairstyles/pixieElegante.png',
+  ),
+  _HairstyleSample(
+    id: 'rizosMedianos',
+    label: 'Rizos Medianos',
+    previewAsset: 'assets/hairstyles/rizosMedianos.png',
+    templateAsset: 'assets/hairstyles/rizosMedianos.png',
   ),
 ];
 

@@ -77,9 +77,11 @@ class _TransportSelectionState extends ConsumerState<TransportSelection> {
               ),
 
               // Gradient animated title
-              const CinematicQuestionText(
-                text: 'Como llegaras?',
-                fontSize: 26,
+              const Center(
+                child: CinematicQuestionText(
+                  text: 'Como llegaras?',
+                  fontSize: 26,
+                ),
               ),
               const SizedBox(height: 8),
               Text(
@@ -88,6 +90,7 @@ class _TransportSelectionState extends ConsumerState<TransportSelection> {
                   fontSize: 14,
                   color: BeautyCitaTheme.textLight,
                 ),
+                textAlign: TextAlign.center,
               ),
 
               const Spacer(),

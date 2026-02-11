@@ -4,6 +4,19 @@
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.beautycita.beautycita</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>beautycita</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleDisplayName</key>
 	<string>Beautycita</string>
 	<key>CFBundleExecutable</key>
@@ -45,5 +58,22 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+		<string>remote-notification</string>
+	</array>
+	<key>FirebaseAppDelegateProxyEnabled</key>
+	<false/>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>BeautyCita necesita tu ubicación para encontrar salones cercanos</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>BeautyCita necesita tu ubicación para encontrar salones cercanos</string>
+	<key>NSCameraUsageDescription</key>
+	<string>BeautyCita necesita acceso a la cámara para escanear códigos QR</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>BeautyCita necesita acceso a tus fotos para seleccionar imágenes de perfil</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>BeautyCita usa Face ID para autenticación segura</string>
 </dict>
 </plist>
