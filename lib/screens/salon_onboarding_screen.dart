@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../config/theme.dart';
 import '../services/supabase_client.dart';
 
@@ -24,6 +25,10 @@ class _SalonOnboardingScreenState
   final Set<String> _selectedCategories = {};
   bool _submitting = false;
   bool _registered = false;
+  bool _loadingPrefill = false;
+  String? _photoUrl;
+  Map<String, dynamic>? _discoveredSalonData;
+  String? _businessId; // Stored after registration for Stripe setup
 
   static const _categories = <_CategoryOption>[
     _CategoryOption(slug: 'unas', label: 'Unas', icon: Icons.brush),
@@ -38,6 +43,90 @@ class _SalonOnboardingScreenState
         label: 'Cuidado Especializado',
         icon: Icons.star),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDiscoveredSalonData();
+  }
+
+  /// Fetch discovered_salon data by refCode and pre-fill form fields
+  Future<void> _loadDiscoveredSalonData() async {
+    if (widget.refCode == null || widget.refCode!.isEmpty) return;
+
+    setState(() => _loadingPrefill = true);
+
+    try {
+      final response = await SupabaseClientService.client
+          .from('discovered_salons')
+          .select()
+          .eq('id', widget.refCode!)
+          .maybeSingle();
+
+      if (response != null && mounted) {
+        _discoveredSalonData = response;
+
+        // Pre-fill name (try business_name first, then name)
+        final name = response['business_name'] ?? response['name'];
+        if (name != null && name.toString().isNotEmpty) {
+          _nameCtrl.text = _sanitizeLatin(name.toString());
+        }
+
+        // Pre-fill phone (prefer whatsapp, then phone)
+        final phone = response['whatsapp'] ?? response['phone'];
+        if (phone != null && phone.toString().isNotEmpty) {
+          _phoneCtrl.text = phone.toString();
+        }
+
+        // Pre-fill address (try location_address first, then address)
+        final address = response['location_address'] ?? response['address'];
+        if (address != null && address.toString().isNotEmpty) {
+          _addressCtrl.text = _sanitizeLatin(address.toString());
+        }
+
+        // Store photo URL for display
+        _photoUrl = response['feature_image_url'] ?? response['photo_url'];
+
+        // Try to infer categories from service_types or keywords if available
+        final serviceTypes = response['service_types'];
+        if (serviceTypes is List) {
+          for (final svc in serviceTypes) {
+            final svcStr = svc.toString().toLowerCase();
+            if (svcStr.contains('una') || svcStr.contains('nail')) {
+              _selectedCategories.add('unas');
+            }
+            if (svcStr.contains('cabello') || svcStr.contains('hair') || svcStr.contains('corte')) {
+              _selectedCategories.add('cabello');
+            }
+            if (svcStr.contains('pestana') || svcStr.contains('ceja') || svcStr.contains('lash') || svcStr.contains('brow')) {
+              _selectedCategories.add('pestanas_cejas');
+            }
+            if (svcStr.contains('maquillaje') || svcStr.contains('makeup')) {
+              _selectedCategories.add('maquillaje');
+            }
+            if (svcStr.contains('facial') || svcStr.contains('face')) {
+              _selectedCategories.add('facial');
+            }
+            if (svcStr.contains('spa') || svcStr.contains('cuerpo') || svcStr.contains('body') || svcStr.contains('massage')) {
+              _selectedCategories.add('cuerpo_spa');
+            }
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('[SalonOnboarding] Error loading prefill data: $e');
+    } finally {
+      if (mounted) setState(() => _loadingPrefill = false);
+    }
+  }
+
+  /// Strip non-Latin characters from scraped data
+  String _sanitizeLatin(String text) {
+    return text.replaceAll(
+      RegExp(r'[^\u0000-\u024F\u1E00-\u1EFF\u2000-\u206F\u2070-\u209F\u20A0-\u20CF\u2100-\u214F\s]'),
+      '',
+    ).trim();
+  }
 
   @override
   void dispose() {
@@ -62,20 +151,47 @@ class _SalonOnboardingScreenState
       final phone =
           rawPhone.startsWith('+') ? rawPhone : '+52$rawPhone';
 
+      // Build business record with pre-filled data where available
+      final businessData = <String, dynamic>{
+        'name': _nameCtrl.text.trim(),
+        'phone': phone,
+        'whatsapp': phone,
+        'address': _addressCtrl.text.trim().isEmpty
+            ? null
+            : _addressCtrl.text.trim(),
+        'tier': 1,
+        'is_active': true,
+        'service_categories': _selectedCategories.toList(),
+      };
+
+      // Include photo URL from discovered salon if available
+      if (_photoUrl != null) {
+        businessData['photo_url'] = _photoUrl;
+      }
+
+      // Include location coordinates from discovered salon if available
+      if (_discoveredSalonData != null) {
+        final lat = _discoveredSalonData!['location_lat'] ?? _discoveredSalonData!['lat'];
+        final lng = _discoveredSalonData!['location_lng'] ?? _discoveredSalonData!['lng'];
+        if (lat != null && lng != null) {
+          businessData['location'] = 'POINT($lng $lat)';
+        }
+        // Include city if available
+        final city = _discoveredSalonData!['location_city'] ?? _discoveredSalonData!['city'];
+        if (city != null) {
+          businessData['city'] = city;
+        }
+        // Include rating if available (as initial rating)
+        final rating = _discoveredSalonData!['rating_average'] ?? _discoveredSalonData!['rating'];
+        if (rating != null) {
+          businessData['initial_rating'] = rating;
+        }
+      }
+
       // Create business record (Tier 1)
       final response = await SupabaseClientService.client
           .from('businesses')
-          .insert({
-            'name': _nameCtrl.text.trim(),
-            'phone': phone,
-            'whatsapp': phone,
-            'address': _addressCtrl.text.trim().isEmpty
-                ? null
-                : _addressCtrl.text.trim(),
-            'tier': 1,
-            'is_active': true,
-            'service_categories': _selectedCategories.toList(),
-          })
+          .insert(businessData)
           .select('id')
           .single();
 
@@ -93,7 +209,10 @@ class _SalonOnboardingScreenState
             .eq('id', widget.refCode!);
       }
 
-      setState(() => _registered = true);
+      setState(() {
+        _businessId = businessId;
+        _registered = true;
+      });
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -109,7 +228,31 @@ class _SalonOnboardingScreenState
   Widget build(BuildContext context) {
     if (_registered) {
       return _SuccessScreen(
+        businessId: _businessId,
+        businessName: _nameCtrl.text.trim(),
         onDone: () => context.go('/home'),
+      );
+    }
+
+    if (_loadingPrefill) {
+      return Scaffold(
+        backgroundColor: BeautyCitaTheme.surfaceCream,
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(color: BeautyCitaTheme.primaryRose),
+              const SizedBox(height: 16),
+              Text(
+                'Cargando datos de tu salon...',
+                style: GoogleFonts.nunito(
+                  fontSize: 14,
+                  color: BeautyCitaTheme.textLight,
+                ),
+              ),
+            ],
+          ),
+        ),
       );
     }
 
@@ -128,6 +271,35 @@ class _SalonOnboardingScreenState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Photo preview (if available from discovered_salons)
+            if (_photoUrl != null) ...[
+              Center(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusLarge),
+                  child: Image.network(
+                    _photoUrl!,
+                    width: 120,
+                    height: 120,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                      width: 120,
+                      height: 120,
+                      decoration: BoxDecoration(
+                        color: BeautyCitaTheme.primaryRose.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusLarge),
+                      ),
+                      child: const Icon(
+                        Icons.store,
+                        size: 48,
+                        color: BeautyCitaTheme.primaryRose,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: BeautyCitaTheme.spaceMD),
+            ],
+
             // Header
             Text(
               'Registra tu salon',
@@ -145,6 +317,33 @@ class _SalonOnboardingScreenState
                 color: BeautyCitaTheme.textLight,
               ),
             ),
+
+            // Pre-fill notice
+            if (_discoveredSalonData != null) ...[
+              const SizedBox(height: BeautyCitaTheme.spaceSM),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.green.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.auto_awesome, size: 18, color: Colors.green.shade700),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Datos pre-llenados. Puedes editarlos si algo esta mal.',
+                        style: GoogleFonts.nunito(
+                          fontSize: 13,
+                          color: Colors.green.shade700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: BeautyCitaTheme.spaceXL),
 
             // Business name
@@ -310,20 +509,76 @@ class _SalonOnboardingScreenState
       );
 }
 
-class _SuccessScreen extends StatelessWidget {
+class _SuccessScreen extends StatefulWidget {
+  final String? businessId;
+  final String businessName;
   final VoidCallback onDone;
-  const _SuccessScreen({required this.onDone});
+
+  const _SuccessScreen({
+    required this.businessId,
+    required this.businessName,
+    required this.onDone,
+  });
+
+  @override
+  State<_SuccessScreen> createState() => _SuccessScreenState();
+}
+
+class _SuccessScreenState extends State<_SuccessScreen> {
+  bool _loadingStripe = false;
+
+  Future<void> _setupStripe() async {
+    if (widget.businessId == null) return;
+
+    setState(() => _loadingStripe = true);
+
+    try {
+      // Call edge function to get Stripe onboarding URL
+      final response = await SupabaseClientService.client.functions.invoke(
+        'stripe-connect-onboard',
+        body: {
+          'action': 'get-onboard-link',
+          'business_id': widget.businessId,
+        },
+      );
+
+      final data = response.data as Map<String, dynamic>;
+      final onboardingUrl = data['onboarding_url'] as String?;
+
+      if (onboardingUrl != null) {
+        // Launch Stripe onboarding in browser
+        final uri = Uri.parse(onboardingUrl);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        }
+      } else {
+        throw Exception('No onboarding URL returned');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loadingStripe = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: BeautyCitaTheme.surfaceCream,
-      body: Center(
-        child: Padding(
+      body: SafeArea(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(BeautyCitaTheme.spaceXL),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              const SizedBox(height: 48),
               Container(
                 width: 80,
                 height: 80,
@@ -349,8 +604,7 @@ class _SuccessScreen extends StatelessWidget {
               ),
               const SizedBox(height: BeautyCitaTheme.spaceSM),
               Text(
-                'Tu salon ya esta visible para clientas cercanas. '
-                'Te contactaran por WhatsApp.',
+                'Tu salon "${widget.businessName}" ya esta registrado.',
                 style: GoogleFonts.nunito(
                   fontSize: 15,
                   color: BeautyCitaTheme.textLight,
@@ -359,14 +613,145 @@ class _SuccessScreen extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: BeautyCitaTheme.spaceXL),
-              ElevatedButton(
-                onPressed: onDone,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: BeautyCitaTheme.primaryRose,
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size(200, 48),
+
+              // Stripe setup card
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(BeautyCitaTheme.spaceLG),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusLarge),
+                  border: Border.all(
+                    color: const Color(0xFF635BFF).withValues(alpha: 0.3), // Stripe purple
+                    width: 2,
+                  ),
                 ),
-                child: const Text('CONTINUAR'),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF635BFF).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(
+                            Icons.account_balance_wallet,
+                            color: Color(0xFF635BFF),
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Configurar pagos',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: BeautyCitaTheme.textDark,
+                                ),
+                              ),
+                              Text(
+                                'Para recibir pagos de clientes',
+                                style: GoogleFonts.nunito(
+                                  fontSize: 13,
+                                  color: BeautyCitaTheme.textLight,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: BeautyCitaTheme.spaceMD),
+                    Text(
+                      'Conecta tu cuenta bancaria para recibir el pago de cada reserva directamente. Solo toma 2 minutos.',
+                      style: GoogleFonts.nunito(
+                        fontSize: 14,
+                        color: BeautyCitaTheme.textLight,
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: BeautyCitaTheme.spaceMD),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: _loadingStripe ? null : _setupStripe,
+                        icon: _loadingStripe
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(Icons.arrow_forward, size: 18),
+                        label: Text(
+                          _loadingStripe ? 'Abriendo...' : 'CONFIGURAR AHORA',
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF635BFF), // Stripe purple
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: BeautyCitaTheme.spaceMD),
+
+              // Skip option
+              TextButton(
+                onPressed: widget.onDone,
+                child: Text(
+                  'Configurar despues',
+                  style: GoogleFonts.nunito(
+                    fontSize: 14,
+                    color: BeautyCitaTheme.textLight,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: BeautyCitaTheme.spaceLG),
+
+              // Info note
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.amber.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, size: 20, color: Colors.amber.shade700),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Sin configurar pagos, las clientas te contactaran por WhatsApp pero no podran pagar en la app.',
+                        style: GoogleFonts.nunito(
+                          fontSize: 12,
+                          color: Colors.amber.shade900,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),

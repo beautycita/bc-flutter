@@ -1,4 +1,4 @@
-package com.beautycita.beautycita
+package com.beautycita
 
 import io.flutter.embedding.android.FlutterFragmentActivity
 

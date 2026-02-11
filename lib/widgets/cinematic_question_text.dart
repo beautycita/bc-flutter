@@ -181,12 +181,28 @@ class _CinematicContent extends StatelessWidget {
                   ),
                 ),
 
-              // Character-by-character text with 3D fly-in
+              // Character-by-character text with 3D fly-in + realistic 24kt polished gold shader
               ShaderMask(
                 shaderCallback: (bounds) {
-                  return LinearGradient(
-                    colors: [primaryColor, accentColor, primaryColor],
-                    stops: const [0.0, 0.5, 1.0],
+                  return const LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Color(0xFF8B6914), // Deep shadow edge
+                      Color(0xFFD4AF37), // Rich gold
+                      Color(0xFFFFF8DC), // Bright highlight (cornsilk)
+                      Color(0xFFFFD700), // Pure gold
+                      Color(0xFFC19A26), // Mid gold
+                      Color(0xFFF5D547), // Light gold
+                      Color(0xFFFFFFE0), // Near-white specular
+                      Color(0xFFD4AF37), // Rich gold
+                      Color(0xFFA67C00), // Bronze shadow
+                      Color(0xFFCDAD38), // Warm gold
+                      Color(0xFFFFF8DC), // Bright highlight
+                      Color(0xFFB8860B), // Dark goldenrod
+                      Color(0xFF8B6914), // Deep shadow edge
+                    ],
+                    stops: [0.0, 0.08, 0.15, 0.25, 0.35, 0.45, 0.50, 0.58, 0.68, 0.78, 0.85, 0.93, 1.0],
                   ).createShader(bounds);
                 },
                 blendMode: BlendMode.srcIn,
@@ -268,14 +284,14 @@ class _CinematicContent extends StatelessWidget {
       }).toList(),
     );
 
-    // Shimmer sweep after entrance completes
+    // Continuous gold specular sweep — like light catching polished 24kt
     if (entranceController.isCompleted) {
       textContent = textContent
-          .animate(onComplete: (controller) => controller.stop())
+          .animate(onPlay: (controller) => controller.repeat())
           .shimmer(
-            duration: const Duration(milliseconds: 800),
-            color: Colors.white.withValues(alpha: 0.4),
-            delay: const Duration(milliseconds: 100),
+            duration: const Duration(milliseconds: 3000),
+            color: const Color(0xFFFFF8DC).withValues(alpha: 0.6),
+            delay: const Duration(milliseconds: 500),
           );
     }
 

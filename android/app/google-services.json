@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "925456539297",
+    "project_id": "beautycita-472406",
+    "storage_bucket": "beautycita-472406.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:925456539297:android:0578ed8632117802b39ae0",
+        "android_client_info": {
+          "package_name": "com.beautycita"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "925456539297-48gjim6slsnke7e9lc5h4ca9dhhpqb1e.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCv92Hc3BGfCLKcJOf3hVnDbxRlxfaordI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "925456539297-48gjim6slsnke7e9lc5h4ca9dhhpqb1e.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
