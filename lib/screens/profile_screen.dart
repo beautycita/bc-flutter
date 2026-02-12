@@ -114,6 +114,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               child: Stack(
                 children: [
                   CircleAvatar(
+                    key: ValueKey(profile.avatarUrl),
                     radius: 48,
                     backgroundColor: BeautyCitaTheme.surfaceCream,
                     backgroundImage: profile.avatarUrl != null
@@ -210,9 +211,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           else
             SettingsTile(
               icon: Icons.badge_outlined,
+              iconColor: profile.fullName != null ? Colors.green.shade600 : null,
               label: profile.fullName ?? 'Agregar nombre',
               trailing: profile.fullName != null
-                  ? Icon(Icons.edit_outlined, size: 16, color: BeautyCitaTheme.textLight)
+                  ? Icon(Icons.check_circle, size: 20, color: Colors.green.shade600)
                   : Text(
                       'Agregar',
                       style: textTheme.bodySmall
@@ -248,7 +250,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final current = ref.read(authStateProvider).username ?? '';
     _usernameController.text = current;
     _usernameSuggestions =
-        UsernameGenerator.generateSuggestions(count: 4, withSuffix: true);
+        UsernameGenerator.generateSuggestions(count: 4, withSuffix: false);
     setState(() {
       _editingUsername = true;
       _usernameError = null;

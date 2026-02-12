@@ -15,6 +15,7 @@ import 'package:beautycita/config/routes.dart';
 import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/providers/uber_provider.dart';
 import 'package:beautycita/services/qr_auth_service.dart';
+import 'package:beautycita/services/toast_service.dart';
 import 'package:go_router/go_router.dart';
 
 /// Completes when Supabase is ready (or failed). Splash screen awaits this.
@@ -45,12 +46,17 @@ void main() async {
     ),
   );
 
-  // Initialize Stripe (needs dotenv loaded first, which SupabaseClientService does)
+  // Initialize dotenv
   await dotenv.load(fileName: '.env');
+
+  // Configure Stripe (lazy initialization - settings applied when SDK is used)
   final stripeKey = dotenv.env['STRIPE_PUBLIC_KEY'] ?? '';
   if (stripeKey.isNotEmpty) {
     Stripe.publishableKey = stripeKey;
     Stripe.merchantIdentifier = 'merchant.com.beautycita';
+    debugPrint('[Stripe] Configured with key: ${stripeKey.substring(0, 20)}...');
+  } else {
+    debugPrint('[Stripe] WARNING: No publishable key found in .env');
   }
 
   // Start Supabase init in background — splash screen awaits supabaseReady
@@ -195,11 +201,14 @@ class _BeautyCitaAppState extends ConsumerState<BeautyCitaApp> {
       builder: (context, child) {
         final scaler = MediaQuery.of(context).textScaler;
         final scale = scaler.scale(1.0).clamp(0.8, 1.2);
-        return MediaQuery(
-          data: MediaQuery.of(context).copyWith(
-            textScaler: TextScaler.linear(scale),
+        return ScaffoldMessenger(
+          key: ToastService.messengerKey,
+          child: MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              textScaler: TextScaler.linear(scale),
+            ),
+            child: child ?? const SizedBox.shrink(),
           ),
-          child: child ?? const SizedBox.shrink(),
         );
       },
     );

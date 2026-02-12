@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:beautycita/services/supabase_client.dart';
+import 'package:beautycita/services/toast_service.dart';
 import '../services/biometric_service.dart';
 import '../services/user_session.dart';
 import '../services/username_generator.dart';
@@ -70,10 +71,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
         );
       }
     } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: 'Error al verificar registro: ${e.toString()}',
-      );
+      final msg = 'Error al verificar registro';
+      ToastService.showError(msg);
+      state = state.copyWith(isLoading: false, error: msg);
     }
   }
 
@@ -86,10 +86,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final isAvailable = await _biometricService.isBiometricAvailable();
 
       if (!isAvailable) {
-        state = state.copyWith(
-          isLoading: false,
-          error: 'Tu dispositivo no tiene biometría disponible',
-        );
+        const msg = 'Tu dispositivo no tiene biometria disponible';
+        ToastService.showError(msg);
+        state = state.copyWith(isLoading: false, error: msg);
         return false;
       }
 
@@ -97,10 +96,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final authenticated = await _biometricService.authenticate();
 
       if (!authenticated) {
-        state = state.copyWith(
-          isLoading: false,
-          error: 'Autenticación biométrica fallida',
-        );
+        const msg = 'Autenticacion biometrica fallida';
+        ToastService.showError(msg);
+        state = state.copyWith(isLoading: false, error: msg);
         return false;
       }
 
@@ -122,10 +120,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
       return true;
     } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: 'Error al registrar: ${e.toString()}',
-      );
+      final msg = ToastService.friendlyError(e);
+      ToastService.showError(msg);
+      state = state.copyWith(isLoading: false, error: msg);
       return false;
     }
   }
@@ -139,10 +136,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final isRegistered = await _userSession.isRegistered();
 
       if (!isRegistered) {
-        state = state.copyWith(
-          isLoading: false,
-          error: 'Usuario no registrado',
-        );
+        const msg = 'Usuario no registrado';
+        ToastService.showError(msg);
+        state = state.copyWith(isLoading: false, error: msg);
         return false;
       }
 
@@ -150,10 +146,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final authenticated = await _biometricService.authenticate();
 
       if (!authenticated) {
-        state = state.copyWith(
-          isLoading: false,
-          error: 'Autenticación biométrica fallida',
-        );
+        const msg = 'Autenticacion biometrica fallida';
+        ToastService.showError(msg);
+        state = state.copyWith(isLoading: false, error: msg);
         return false;
       }
 
@@ -173,10 +168,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
       return true;
     } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: 'Error al iniciar sesión: ${e.toString()}',
-      );
+      final msg = ToastService.friendlyError(e);
+      ToastService.showError(msg);
+      state = state.copyWith(isLoading: false, error: msg);
       return false;
     }
   }
@@ -188,10 +182,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final response = await SupabaseClientService.client.auth
           .signInWithPassword(email: email, password: password);
       if (response.user == null) {
-        state = state.copyWith(
-          isLoading: false,
-          error: 'Credenciales incorrectas',
-        );
+        const msg = 'Credenciales incorrectas';
+        ToastService.showError(msg);
+        state = state.copyWith(isLoading: false, error: msg);
         return false;
       }
       final displayName =
@@ -211,10 +204,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
       );
       return true;
     } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: e.toString(),
-      );
+      final msg = ToastService.friendlyError(e);
+      ToastService.showError(msg);
+      state = state.copyWith(isLoading: false, error: msg);
       return false;
     }
   }
@@ -241,10 +233,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
         isAuthenticated: false,
       );
     } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: 'Error al cerrar sesión: ${e.toString()}',
-      );
+      final msg = ToastService.friendlyError(e);
+      ToastService.showError(msg);
+      state = state.copyWith(isLoading: false, error: msg);
     }
   }
 }

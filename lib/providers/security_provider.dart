@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:beautycita/services/supabase_client.dart';
+import 'package:beautycita/services/toast_service.dart';
 
 class SecurityState {
   final bool isGoogleLinked;
@@ -89,7 +90,9 @@ class SecurityNotifier extends StateNotifier<SecurityState> {
       );
     } catch (e) {
       debugPrint('SecurityNotifier.checkIdentities error: $e');
-      state = state.copyWith(isLoading: false, error: e.toString());
+      final msg = ToastService.friendlyError(e);
+      ToastService.showError(msg);
+      state = state.copyWith(isLoading: false, error: msg);
     }
   }
 
@@ -113,10 +116,9 @@ class SecurityNotifier extends StateNotifier<SecurityState> {
       final googleAuth = await googleUser.authentication;
       final idToken = googleAuth.idToken;
       if (idToken == null) {
-        state = state.copyWith(
-          isLoading: false,
-          error: 'No se pudo obtener el token de Google',
-        );
+        const msg = 'No se pudo obtener el token de Google';
+        ToastService.showError(msg);
+        state = state.copyWith(isLoading: false, error: msg);
         return;
       }
 
@@ -153,10 +155,9 @@ class SecurityNotifier extends StateNotifier<SecurityState> {
       }
     } catch (e) {
       debugPrint('SecurityNotifier.linkGoogle error: $e');
-      state = state.copyWith(
-        isLoading: false,
-        error: 'Error al vincular Google: ${e.toString()}',
-      );
+      final msg = ToastService.friendlyError(e);
+      ToastService.showError(msg);
+      state = state.copyWith(isLoading: false, error: msg);
     }
   }
 
@@ -177,10 +178,9 @@ class SecurityNotifier extends StateNotifier<SecurityState> {
       );
     } catch (e) {
       debugPrint('SecurityNotifier.addEmail error: $e');
-      state = state.copyWith(
-        isLoading: false,
-        error: 'Error al agregar email: ${e.toString()}',
-      );
+      final msg = ToastService.friendlyError(e);
+      ToastService.showError(msg);
+      state = state.copyWith(isLoading: false, error: msg);
     }
   }
 
@@ -188,15 +188,15 @@ class SecurityNotifier extends StateNotifier<SecurityState> {
   Future<void> addPassword(String password) async {
     if (!SupabaseClientService.isInitialized) return;
     if (!state.isEmailAdded) {
-      state = state.copyWith(
-        error: 'Primero agrega tu email',
-      );
+      const msg = 'Primero agrega tu email';
+      ToastService.showError(msg);
+      state = state.copyWith(error: msg);
       return;
     }
     if (!state.isEmailConfirmed) {
-      state = state.copyWith(
-        error: 'Confirma tu email primero (revisa tu bandeja de entrada)',
-      );
+      const msg = 'Confirma tu email primero (revisa tu bandeja de entrada)';
+      ToastService.showError(msg);
+      state = state.copyWith(error: msg);
       return;
     }
 
@@ -213,10 +213,9 @@ class SecurityNotifier extends StateNotifier<SecurityState> {
       );
     } catch (e) {
       debugPrint('SecurityNotifier.addPassword error: $e');
-      state = state.copyWith(
-        isLoading: false,
-        error: 'Error al configurar contrasena: ${e.toString()}',
-      );
+      final msg = ToastService.friendlyError(e);
+      ToastService.showError(msg);
+      state = state.copyWith(isLoading: false, error: msg);
     }
   }
 

@@ -86,6 +86,7 @@ class _MediaManagerScreenState extends ConsumerState<MediaManagerScreen>
   }
 
   Future<void> _onUpload() async {
+    debugPrint('MediaManager: _onUpload called');
     // Determine section based on current tab index
     // 0 = personal, 1 = business, 2 = chats (don't upload to chats)
     final tabIndex = _tabController.index;
@@ -106,10 +107,15 @@ class _MediaManagerScreenState extends ConsumerState<MediaManagerScreen>
     }
 
     final section = tabIndex == 0 ? 'personal' : 'business';
+    debugPrint('MediaManager: section = $section');
 
     // Show image picker
     final result = await showBCImagePicker(context: context, ref: ref);
-    if (result == null || !mounted) return;
+    debugPrint('MediaManager: picker result = ${result?.source}, bytes = ${result?.bytes.length}');
+    if (result == null || !mounted) {
+      debugPrint('MediaManager: result null or not mounted');
+      return;
+    }
 
     // Show loading snackbar
     HapticFeedback.lightImpact();

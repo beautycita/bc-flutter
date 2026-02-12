@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:beautycita/services/supabase_client.dart';
+import 'package:beautycita/services/toast_service.dart';
 
 class ProfileState {
   final String? avatarUrl;
@@ -75,7 +76,9 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
       }
     } catch (e) {
       debugPrint('ProfileNotifier.load error: $e');
-      state = state.copyWith(isLoading: false, error: e.toString());
+      final msg = ToastService.friendlyError(e);
+      ToastService.showError(msg);
+      state = state.copyWith(isLoading: false, error: msg);
     }
   }
 
@@ -92,7 +95,9 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
       state = state.copyWith(fullName: name, isLoading: false);
     } catch (e) {
       debugPrint('ProfileNotifier.updateFullName error: $e');
-      state = state.copyWith(isLoading: false, error: e.toString());
+      final msg = ToastService.friendlyError(e);
+      ToastService.showError(msg);
+      state = state.copyWith(isLoading: false, error: msg);
     }
   }
 
@@ -109,29 +114,47 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
       state = state.copyWith(avatarUrl: url, isLoading: false);
     } catch (e) {
       debugPrint('ProfileNotifier.updateAvatar error: $e');
-      state = state.copyWith(isLoading: false, error: e.toString());
+      final msg = ToastService.friendlyError(e);
+      ToastService.showError(msg);
+      state = state.copyWith(isLoading: false, error: msg);
     }
   }
 
   Future<String?> uploadAvatar(Uint8List bytes, String fileName) async {
-    if (!SupabaseClientService.isInitialized) return null;
+    debugPrint('ProfileNotifier.uploadAvatar: called with ${bytes.length} bytes, fileName=$fileName');
+    if (!SupabaseClientService.isInitialized) {
+      debugPrint('ProfileNotifier.uploadAvatar: Supabase not initialized');
+      return null;
+    }
     final userId = SupabaseClientService.currentUserId;
-    if (userId == null) return null;
+    if (userId == null) {
+      debugPrint('ProfileNotifier.uploadAvatar: userId is null');
+      return null;
+    }
+    debugPrint('ProfileNotifier.uploadAvatar: userId=$userId');
 
     try {
       final path = '$userId/$fileName';
       final contentType = fileName.endsWith('.png') ? 'image/png' : 'image/jpeg';
+      debugPrint('ProfileNotifier.uploadAvatar: uploading to avatars/$path');
       await SupabaseClientService.client.storage
           .from('avatars')
           .uploadBinary(path, bytes, fileOptions: FileOptions(upsert: true, contentType: contentType));
-      final url = SupabaseClientService.client.storage
+      debugPrint('ProfileNotifier.uploadAvatar: upload success');
+      final baseUrl = SupabaseClientService.client.storage
           .from('avatars')
           .getPublicUrl(path);
+      // Add cache-busting query param to ensure new image loads
+      final url = '$baseUrl?t=${DateTime.now().millisecondsSinceEpoch}';
+      debugPrint('ProfileNotifier.uploadAvatar: publicUrl=$url');
       await updateAvatar(url);
+      debugPrint('ProfileNotifier.uploadAvatar: updateAvatar complete, state.avatarUrl=${state.avatarUrl}');
       return url;
     } catch (e) {
       debugPrint('ProfileNotifier.uploadAvatar error: $e');
-      state = state.copyWith(error: e.toString());
+      final msg = ToastService.friendlyError(e);
+      ToastService.showError(msg);
+      state = state.copyWith(error: msg);
       return null;
     }
   }
@@ -161,7 +184,9 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
       );
     } catch (e) {
       debugPrint('ProfileNotifier.updateHomeLocation error: $e');
-      state = state.copyWith(isLoading: false, error: e.toString());
+      final msg = ToastService.friendlyError(e);
+      ToastService.showError(msg);
+      state = state.copyWith(isLoading: false, error: msg);
     }
   }
 
@@ -179,7 +204,9 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
       return true;
     } catch (e) {
       debugPrint('ProfileNotifier.updateUsername error: $e');
-      state = state.copyWith(isLoading: false, error: e.toString());
+      final msg = ToastService.friendlyError(e);
+      ToastService.showError(msg);
+      state = state.copyWith(isLoading: false, error: msg);
       return false;
     }
   }
@@ -187,15 +214,10 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
   Future<bool> checkUsernameAvailable(String username) async {
     if (!SupabaseClientService.isInitialized) return false;
     try {
-      final data = await SupabaseClientService.client
-          .from('profiles')
-          .select('id')
-          .eq('username', username)
-          .maybeSingle();
-      if (data == null) return true;
-      // If it's the current user's own username, it's available
-      final userId = SupabaseClientService.currentUserId;
-      return data['id'] == userId;
+      // Use RPC function that bypasses RLS to check all usernames
+      final result = await SupabaseClientService.client
+          .rpc('check_username_available', params: {'username_to_check': username});
+      return result == true;
     } catch (e) {
       debugPrint('ProfileNotifier.checkUsernameAvailable error: $e');
       return false;
