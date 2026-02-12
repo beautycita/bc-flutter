@@ -310,18 +310,21 @@ class _TransportCardState extends State<_TransportCard> {
                 children: [
                   Row(
                     children: [
-                      Text(
-                        widget.label,
-                        style: GoogleFonts.poppins(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w600,
-                          color: BeautyCitaTheme.textDark,
+                      Flexible(
+                        child: Text(
+                          widget.label,
+                          style: GoogleFonts.poppins(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w600,
+                            color: BeautyCitaTheme.textDark,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       if (widget.isRecommended) ...[
-                        const SizedBox(width: 10),
+                        const SizedBox(width: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
                             color: widget.iconBgColor,
                             borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusSmall),
@@ -329,7 +332,7 @@ class _TransportCardState extends State<_TransportCard> {
                           child: Text(
                             'Recomendado',
                             style: GoogleFonts.poppins(
-                              fontSize: 11,
+                              fontSize: 10,
                               fontWeight: FontWeight.w600,
                               color: widget.iconColor,
                             ),

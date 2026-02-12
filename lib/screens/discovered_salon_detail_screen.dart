@@ -5,21 +5,62 @@ import '../config/theme.dart';
 import '../services/supabase_client.dart';
 import 'invite_salon_screen.dart' show DiscoveredSalon, waGreen, waLightGreen;
 
+/// WhatsApp chat background color
+const _waChatBg = Color(0xFFECE5DD);
+
 /// Strip non-standard-Latin characters (keeps Latin letters, digits, punctuation, spaces)
 String _sanitize(String text) {
   // Keep: Basic Latin, Latin-1 Supplement, Latin Extended-A/B, common punctuation, digits, spaces
   return text.replaceAll(RegExp(r'[^\u0000-\u024F\u1E00-\u1EFF\u2000-\u206F\u2070-\u209F\u20A0-\u20CF\u2100-\u214F\s]'), '').trim();
 }
 
-class DiscoveredSalonDetailScreen extends StatelessWidget {
+class DiscoveredSalonDetailScreen extends StatefulWidget {
   final DiscoveredSalon salon;
 
   const DiscoveredSalonDetailScreen({super.key, required this.salon});
 
   @override
+  State<DiscoveredSalonDetailScreen> createState() => _DiscoveredSalonDetailScreenState();
+}
+
+class _DiscoveredSalonDetailScreenState extends State<DiscoveredSalonDetailScreen>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _breathingController;
+  late Animation<double> _breathingAnimation;
+  late Animation<double> _glowAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _breathingController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
+    );
+    _breathingAnimation = Tween<double>(begin: 1.0, end: 1.02).animate(
+      CurvedAnimation(
+        parent: _breathingController,
+        curve: Curves.easeInOut,
+      ),
+    );
+    _glowAnimation = Tween<double>(begin: 0.3, end: 0.6).animate(
+      CurvedAnimation(
+        parent: _breathingController,
+        curve: Curves.easeInOut,
+      ),
+    );
+    _breathingController.repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _breathingController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFECE5DD),
+      backgroundColor: _waChatBg,
       appBar: AppBar(
         backgroundColor: waGreen,
         elevation: 0,
@@ -28,7 +69,7 @@ class DiscoveredSalonDetailScreen extends StatelessWidget {
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
-          _sanitize(salon.name),
+          _sanitize(widget.salon.name),
           style: GoogleFonts.poppins(
             fontWeight: FontWeight.w600,
             color: Colors.white,
@@ -41,94 +82,153 @@ class DiscoveredSalonDetailScreen extends StatelessWidget {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Hero section
-            Container(
-              width: double.infinity,
-              color: waGreen,
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
-              child: Column(
-                children: [
-                  // Avatar
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(50),
-                    child: salon.photoUrl != null
-                        ? Image.network(
-                            salon.photoUrl!,
-                            width: 100,
-                            height: 100,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => _defaultAvatar(),
-                          )
-                        : _defaultAvatar(),
-                  ),
-                  const SizedBox(height: 16),
-                  // Name
-                  Text(
-                    _sanitize(salon.name),
-                    style: GoogleFonts.poppins(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                  // Rating + reviews + distance row
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+            // Hero section with extended green background to prevent clipping
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                // Green background that extends down
+                Container(
+                  width: double.infinity,
+                  color: waGreen,
+                  padding: const EdgeInsets.fromLTRB(24, 16, 24, 80),
+                  child: Column(
                     children: [
-                      if (salon.rating != null) ...[
-                        const Icon(Icons.star, size: 18, color: BeautyCitaTheme.secondaryGold),
-                        const SizedBox(width: 4),
-                        Text(
-                          salon.rating!.toStringAsFixed(1),
-                          style: GoogleFonts.poppins(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
+                      // Avatar with shadow - not clipped
+                      Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.3),
+                              blurRadius: 20,
+                              offset: const Offset(0, 8),
+                              spreadRadius: 2,
+                            ),
+                          ],
                         ),
-                        if (salon.reviewsCount != null) ...[
-                          const SizedBox(width: 4),
-                          Text(
-                            '(${_formatReviewCount(salon.reviewsCount!)})',
-                            style: GoogleFonts.nunito(
-                              fontSize: 13,
-                              color: Colors.white70,
+                        child: Container(
+                          width: 110,
+                          height: 110,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.3),
+                              width: 3,
                             ),
                           ),
-                        ],
-                        const SizedBox(width: 16),
-                      ],
-                      if (salon.distanceKm != null) ...[
-                        const Icon(Icons.location_on_outlined, size: 16, color: Colors.white70),
-                        const SizedBox(width: 2),
-                        Text(
-                          '${salon.distanceKm!.toStringAsFixed(1)} km',
-                          style: GoogleFonts.nunito(
-                            fontSize: 13,
-                            color: Colors.white70,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(55),
+                            child: widget.salon.photoUrl != null
+                                ? Image.network(
+                                    widget.salon.photoUrl!,
+                                    width: 104,
+                                    height: 104,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => _defaultAvatar(),
+                                  )
+                                : _defaultAvatar(),
                           ),
                         ),
-                      ],
+                      ),
+                      const SizedBox(height: 18),
+                      // Name
+                      Text(
+                        _sanitize(widget.salon.name),
+                        style: GoogleFonts.poppins(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 10),
+                      // Rating + reviews + distance row with pill background
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (widget.salon.rating != null) ...[
+                              const Icon(Icons.star, size: 18, color: BeautyCitaTheme.secondaryGold),
+                              const SizedBox(width: 4),
+                              Text(
+                                widget.salon.rating!.toStringAsFixed(1),
+                                style: GoogleFonts.poppins(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              if (widget.salon.reviewsCount != null) ...[
+                                const SizedBox(width: 4),
+                                Text(
+                                  '(${_formatReviewCount(widget.salon.reviewsCount!)})',
+                                  style: GoogleFonts.nunito(
+                                    fontSize: 13,
+                                    color: Colors.white70,
+                                  ),
+                                ),
+                              ],
+                              if (widget.salon.distanceKm != null)
+                                Container(
+                                  width: 1,
+                                  height: 16,
+                                  margin: const EdgeInsets.symmetric(horizontal: 12),
+                                  color: Colors.white38,
+                                ),
+                            ],
+                            if (widget.salon.distanceKm != null) ...[
+                              const Icon(Icons.location_on_outlined, size: 16, color: Colors.white70),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${widget.salon.distanceKm!.toStringAsFixed(1)} km',
+                                style: GoogleFonts.nunito(
+                                  fontSize: 13,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
                     ],
                   ),
-                ],
-              ),
+                ),
+                // Curved transition overlay
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: Container(
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: _waChatBg,
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(BeautyCitaTheme.radiusLarge),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
 
-            // Content cards
+            // Content cards with shadows
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               child: Column(
                 children: [
                   // Location card
-                  if (salon.address != null || salon.city != null)
+                  if (widget.salon.address != null || widget.salon.city != null)
                     _InfoCard(
                       icon: Icons.storefront_rounded,
                       title: 'Ubicacion',
                       child: Text(
-                        _sanitize([salon.address, salon.city].where((s) => s != null).join(', ')),
+                        _sanitize([widget.salon.address, widget.salon.city].where((s) => s != null).join(', ')),
                         style: GoogleFonts.nunito(
                           fontSize: 14,
                           color: BeautyCitaTheme.textDark,
@@ -136,7 +236,7 @@ class DiscoveredSalonDetailScreen extends StatelessWidget {
                       ),
                     ),
 
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
 
                   // About card with narrative
                   _InfoCard(
@@ -152,90 +252,123 @@ class DiscoveredSalonDetailScreen extends StatelessWidget {
                     ),
                   ),
 
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
 
-                  // BC pitch card
+                  // Invite pitch card
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
-                      color: waLightGreen.withValues(alpha: 0.1),
+                      color: Colors.white,
                       borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
-                      border: Border.all(color: waLightGreen.withValues(alpha: 0.3)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.06),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.favorite_rounded, size: 18, color: waGreen),
-                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: BeautyCitaTheme.primaryRose.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(Icons.send_rounded, size: 20, color: BeautyCitaTheme.primaryRose),
+                            ),
+                            const SizedBox(width: 12),
                             Text(
-                              'Ayudanos a traerlos',
+                              'Invitalo a unirse',
                               style: GoogleFonts.poppins(
-                                fontSize: 15,
+                                fontSize: 16,
                                 fontWeight: FontWeight.w600,
-                                color: waGreen,
+                                color: BeautyCitaTheme.textDark,
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 12),
                         Text(
-                          'Nos encantaria tener a este estilista en la red de BeautyCita '
-                          'para organizar sus citas y promover su servicio a mas personas. '
-                          'Enviale una invitacion por WhatsApp para que se registre gratis.',
+                          'Este estilista aun no acepta reservas por BeautyCita. '
+                          'Mandales un mensaje y diles que quieres agendar con ellos desde la app. '
+                          'Es gratis para ambos.',
                           style: GoogleFonts.nunito(
                             fontSize: 14,
-                            color: BeautyCitaTheme.textDark,
-                            height: 1.5,
+                            color: BeautyCitaTheme.textLight,
+                            height: 1.55,
                           ),
                         ),
                       ],
                     ),
                   ),
 
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 28),
 
-                  // INVITAR button
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () => _handleInvite(),
-                      icon: const Icon(Icons.chat, size: 20),
-                      label: Text(
-                        'INVITAR POR WHATSAPP',
-                        style: GoogleFonts.poppins(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.5,
+                  // Breathing INVITAR button - subtle glow
+                  AnimatedBuilder(
+                    animation: _breathingAnimation,
+                    builder: (context, child) {
+                      return Transform.scale(
+                        scale: _breathingAnimation.value,
+                        child: Container(
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+                            boxShadow: [
+                              BoxShadow(
+                                color: waGreen.withValues(alpha: 0.25),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: ElevatedButton.icon(
+                            onPressed: () => _handleInvite(),
+                            icon: const Icon(Icons.chat, size: 22),
+                            label: Text(
+                              'INVITAR POR WHATSAPP',
+                              style: GoogleFonts.poppins(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: waLightGreen,
+                              foregroundColor: Colors.white,
+                              elevation: 4,
+                              shadowColor: waGreen,
+                              padding: const EdgeInsets.symmetric(vertical: 18),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: waLightGreen,
-                        foregroundColor: Colors.white,
-                        elevation: 2,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
-                        ),
-                      ),
-                    ),
+                      );
+                    },
                   ),
 
-                  if (salon.interestCount > 0) ...[
-                    const SizedBox(height: 12),
-                    Text(
-                      '${salon.interestCount} personas han pedido que se una',
-                      style: GoogleFonts.nunito(
-                        fontSize: 12,
-                        color: BeautyCitaTheme.textLight,
+                  if (widget.salon.interestCount > 0) ...[
+                    const SizedBox(height: 14),
+                    Center(
+                      child: Text(
+                        '${widget.salon.interestCount} clientes esperando que se registre',
+                        style: GoogleFonts.nunito(
+                          fontSize: 13,
+                          color: BeautyCitaTheme.textLight,
+                        ),
                       ),
-                      textAlign: TextAlign.center,
                     ),
                   ],
 
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 28),
                 ],
               ),
             ),
@@ -247,8 +380,8 @@ class DiscoveredSalonDetailScreen extends StatelessWidget {
 
   Widget _defaultAvatar() {
     return Container(
-      width: 100,
-      height: 100,
+      width: 104,
+      height: 104,
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.2),
         shape: BoxShape.circle,
@@ -258,47 +391,37 @@ class DiscoveredSalonDetailScreen extends StatelessWidget {
   }
 
   String _buildNarrative() {
-    final parts = <String>[];
+    // Build an engaging, unique description based on available data
+    final rating = widget.salon.rating;
+    final reviews = widget.salon.reviewsCount;
 
-    // Rating narrative
-    if (salon.rating != null && salon.reviewsCount != null) {
-      final ratingDesc = salon.rating! >= 4.5
-          ? 'excelente'
-          : salon.rating! >= 4.0
-              ? 'muy buena'
-              : 'buena';
-      parts.add(
-        'Tiene una calificacion $ratingDesc de '
-        '${salon.rating!.toStringAsFixed(1)} estrellas '
-        'con ${_formatReviewCount(salon.reviewsCount!)} resenas.',
-      );
-    } else if (salon.rating != null) {
-      parts.add(
-        'Tiene una calificacion de ${salon.rating!.toStringAsFixed(1)} estrellas.',
-      );
-    }
-
-    // Location narrative
-    if (salon.address != null) {
-      parts.add('Su salon se encuentra en ${salon.address}.');
-    } else if (salon.city != null) {
-      parts.add('Se encuentra en ${salon.city}.');
-    }
-
-    // Distance narrative
-    if (salon.distanceKm != null) {
-      if (salon.distanceKm! < 5) {
-        parts.add('Esta muy cerca de ti, a solo ${salon.distanceKm!.toStringAsFixed(1)} km.');
-      } else {
-        parts.add('Esta a ${salon.distanceKm!.toStringAsFixed(1)} km de tu ubicacion.');
+    if (rating != null && reviews != null && reviews > 50) {
+      if (rating >= 4.5) {
+        return 'Uno de los favoritos de la zona con clientas muy satisfechas. '
+               'Sus resenas hablan de atencion personalizada y resultados que superan expectativas.';
+      } else if (rating >= 4.0) {
+        return 'Estilista con buena reputacion entre sus clientas. '
+               'Conocido por su profesionalismo y trato amable.';
       }
     }
 
-    if (parts.isEmpty) {
-      parts.add('Este es un estilista en tu zona que aun no esta en BeautyCita.');
+    if (rating != null && rating >= 4.5) {
+      return 'Altamente recomendado por quienes lo han visitado. '
+             'Un profesional que se toma el tiempo para entender lo que buscas.';
     }
 
-    return parts.join(' ');
+    if (rating != null && rating >= 4.0) {
+      return 'Estilista confiable con clientas recurrentes. '
+             'Ofrece un servicio consistente y de calidad.';
+    }
+
+    if (reviews != null && reviews > 20) {
+      return 'Con una base de clientas establecida en la zona. '
+             'Invitalo a BeautyCita para que puedas reservar facilmente.';
+    }
+
+    return 'Descubierto en tu zona. Aun no sabemos mucho de este estilista, '
+           'pero podria ser justo lo que buscas. Invitalo a unirse.';
   }
 
   String _formatReviewCount(int count) {
@@ -309,13 +432,13 @@ class DiscoveredSalonDetailScreen extends StatelessWidget {
   }
 
   void _handleInvite() {
-    final phone = salon.whatsapp ?? salon.phone;
+    final phone = widget.salon.whatsapp ?? widget.salon.phone;
     if (phone != null) {
       final message = Uri.encodeComponent(
         'Hola! Soy clienta tuya y me encantaria poder reservar '
         'contigo desde BeautyCita. Es gratis para ti y te llegan '
         'clientes nuevos. Registrate en 60 seg: '
-        'https://beautycita.com/salon/${salon.id}',
+        'https://beautycita.com/salon/${widget.salon.id}',
       );
       final waUrl = Uri.parse('https://wa.me/${phone.replaceAll('+', '')}?text=$message');
       launchUrl(waUrl, mode: LaunchMode.externalApplication);
@@ -326,7 +449,7 @@ class DiscoveredSalonDetailScreen extends StatelessWidget {
       'outreach-discovered-salon',
       body: {
         'action': 'invite',
-        'discovered_salon_id': salon.id,
+        'discovered_salon_id': widget.salon.id,
       },
     );
   }
@@ -347,18 +470,39 @@ class _InfoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
+            spreadRadius: 0,
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+            spreadRadius: 0,
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(icon, size: 18, color: waGreen),
-              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: waGreen.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, size: 18, color: waGreen),
+              ),
+              const SizedBox(width: 12),
               Text(
                 title,
                 style: GoogleFonts.poppins(
@@ -369,7 +513,7 @@ class _InfoCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           child,
         ],
       ),

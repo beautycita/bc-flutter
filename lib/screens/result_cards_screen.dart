@@ -953,15 +953,29 @@ class _NoResultsWithNearbySalonsState
             // Time override filter removal
             if (widget.hasOverride) ...[
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.06),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.filter_alt_off, size: 18, color: BeautyCitaTheme.primaryRose),
-                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: BeautyCitaTheme.primaryRose.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.filter_alt_off, size: 18, color: BeautyCitaTheme.primaryRose),
+                    ),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         'El filtro de horario no encontro opciones',
@@ -970,6 +984,13 @@ class _NoResultsWithNearbySalonsState
                     ),
                     TextButton(
                       onPressed: widget.onClearOverride,
+                      style: TextButton.styleFrom(
+                        backgroundColor: BeautyCitaTheme.primaryRose.withValues(alpha: 0.1),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      ),
                       child: Text(
                         'Quitar filtro',
                         style: GoogleFonts.poppins(
@@ -982,7 +1003,7 @@ class _NoResultsWithNearbySalonsState
                   ],
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
             ],
 
             // Count header
@@ -1045,7 +1066,7 @@ class _NoResultsWithNearbySalonsState
   }
 }
 
-class _NearbySalonCard extends StatelessWidget {
+class _NearbySalonCard extends StatefulWidget {
   final DiscoveredSalon salon;
   final bool invited;
   final VoidCallback onTap;
@@ -1059,33 +1080,103 @@ class _NearbySalonCard extends StatelessWidget {
   });
 
   @override
+  State<_NearbySalonCard> createState() => _NearbySalonCardState();
+}
+
+class _NearbySalonCardState extends State<_NearbySalonCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _breathingController;
+  late Animation<double> _breathingAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _breathingController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    );
+    _breathingAnimation = Tween<double>(begin: 1.0, end: 1.03).animate(
+      CurvedAnimation(
+        parent: _breathingController,
+        curve: Curves.easeInOut,
+      ),
+    );
+    if (!widget.invited) {
+      _breathingController.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void didUpdateWidget(_NearbySalonCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.invited && !oldWidget.invited) {
+      _breathingController.stop();
+      _breathingController.reset();
+    } else if (!widget.invited && oldWidget.invited) {
+      _breathingController.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void dispose() {
+    _breathingController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: widget.onTap,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
+        margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
-          color: invited ? waCardTint : Colors.white,
+          color: widget.invited ? waCardTint : Colors.white,
           borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+              spreadRadius: 0,
+            ),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+              spreadRadius: 0,
+            ),
+          ],
         ),
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(14),
           child: Row(
             children: [
-              // Photo / avatar
-              ClipRRect(
-                borderRadius: BorderRadius.circular(25),
-                child: salon.photoUrl != null
-                    ? Image.network(
-                        salon.photoUrl!,
-                        width: 50,
-                        height: 50,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => _defaultAvatar(),
-                      )
-                    : _defaultAvatar(),
+              // Photo / avatar with subtle shadow
+              Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.1),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(27),
+                  child: widget.salon.photoUrl != null
+                      ? Image.network(
+                          widget.salon.photoUrl!,
+                          width: 54,
+                          height: 54,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => _defaultAvatar(),
+                        )
+                      : _defaultAvatar(),
+                ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 14),
 
               // Info
               Expanded(
@@ -1093,7 +1184,7 @@ class _NearbySalonCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _sanitizeText(salon.name),
+                      _sanitizeText(widget.salon.name),
                       style: GoogleFonts.poppins(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
@@ -1102,25 +1193,25 @@ class _NearbySalonCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 4),
                     Row(
                       children: [
-                        if (salon.rating != null) ...[
+                        if (widget.salon.rating != null) ...[
                           Icon(Icons.star, size: 14, color: BeautyCitaTheme.secondaryGold),
-                          const SizedBox(width: 2),
+                          const SizedBox(width: 3),
                           Text(
-                            salon.rating!.toStringAsFixed(1),
+                            widget.salon.rating!.toStringAsFixed(1),
                             style: GoogleFonts.nunito(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                               color: BeautyCitaTheme.textDark,
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 10),
                         ],
-                        if (salon.distanceKm != null)
+                        if (widget.salon.distanceKm != null)
                           Text(
-                            '${salon.distanceKm!.toStringAsFixed(1)} km',
+                            '${widget.salon.distanceKm!.toStringAsFixed(1)} km',
                             style: GoogleFonts.nunito(
                               fontSize: 12,
                               color: BeautyCitaTheme.textLight,
@@ -1132,28 +1223,33 @@ class _NearbySalonCard extends StatelessWidget {
                 ),
               ),
 
-              // Chevron + Invite button
-              Column(
-                children: [
-                  ElevatedButton.icon(
-                    onPressed: invited ? null : onInvite,
-                    icon: Icon(invited ? Icons.check : Icons.chat, size: 14),
-                    label: Text(
-                      invited ? 'ENVIADO' : 'INVITAR',
-                      style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: invited ? Colors.grey[300] : waLightGreen,
-                      foregroundColor: invited ? Colors.grey[600] : Colors.white,
-                      elevation: 0,
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
+              // Breathing invite button - subtle animation
+              AnimatedBuilder(
+                animation: _breathingAnimation,
+                builder: (context, child) {
+                  return Transform.scale(
+                    scale: widget.invited ? 1.0 : _breathingAnimation.value,
+                    child: ElevatedButton.icon(
+                      onPressed: widget.invited ? null : widget.onInvite,
+                      icon: Icon(widget.invited ? Icons.check : Icons.chat, size: 14),
+                      label: Text(
+                        widget.invited ? 'ENVIADO' : 'INVITAR',
+                        style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600),
                       ),
-                      minimumSize: const Size(0, 32),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: widget.invited ? Colors.grey[300] : waLightGreen,
+                        foregroundColor: widget.invited ? Colors.grey[600] : Colors.white,
+                        elevation: widget.invited ? 0 : 3,
+                        shadowColor: Colors.black.withValues(alpha: 0.2),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        minimumSize: const Size(0, 34),
+                      ),
                     ),
-                  ),
-                ],
+                  );
+                },
               ),
             ],
           ),
@@ -1164,13 +1260,13 @@ class _NearbySalonCard extends StatelessWidget {
 
   Widget _defaultAvatar() {
     return Container(
-      width: 50,
-      height: 50,
+      width: 54,
+      height: 54,
       decoration: BoxDecoration(
         color: waGreen.withValues(alpha: 0.15),
         shape: BoxShape.circle,
       ),
-      child: const Icon(Icons.store, color: waGreen, size: 24),
+      child: const Icon(Icons.store, color: waGreen, size: 26),
     );
   }
 }
