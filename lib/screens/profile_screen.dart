@@ -17,6 +17,55 @@ import 'package:beautycita/services/media_service.dart';
 import 'package:beautycita/services/username_generator.dart';
 import 'package:beautycita/widgets/settings_widgets.dart';
 
+// ── AI Avatar Style Model ──
+
+class _AIAvatarStyle {
+  final String id;
+  final String name;
+  final IconData icon;
+  final String prompt;
+  final Color color;
+
+  const _AIAvatarStyle({
+    required this.id,
+    required this.name,
+    required this.icon,
+    required this.prompt,
+    required this.color,
+  });
+}
+
+const _aiAvatarStyles = [
+  _AIAvatarStyle(
+    id: 'professional',
+    name: 'Profesional',
+    icon: Icons.work_outline,
+    prompt: 'Professional corporate headshot, clean background, studio lighting, confident expression, business attire',
+    color: Color(0xFF1976D2),
+  ),
+  _AIAvatarStyle(
+    id: 'artistic',
+    name: 'Artistico',
+    icon: Icons.palette_outlined,
+    prompt: 'Stylized artistic portrait, vibrant colors, painterly effect, creative lighting, artistic interpretation',
+    color: Color(0xFFE91E63),
+  ),
+  _AIAvatarStyle(
+    id: 'cyberpunk',
+    name: 'Cyberpunk',
+    icon: Icons.electric_bolt,
+    prompt: 'Cyberpunk sci-fi portrait, neon lights, futuristic style, holographic effects, dystopian aesthetic, tech vibes',
+    color: Color(0xFF00BCD4),
+  ),
+  _AIAvatarStyle(
+    id: 'fantasy',
+    name: 'Fantasia',
+    icon: Icons.auto_awesome,
+    prompt: 'Fantasy mythical portrait, ethereal glow, magical aura, enchanted forest background, fairy tale aesthetic',
+    color: Color(0xFF9C27B0),
+  ),
+];
+
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
@@ -430,10 +479,51 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     if (cropped == null || !mounted) return;
 
     if (useAI) {
-      await _processAIAvatar(cropped);
+      await _showAIStylePicker(cropped);
     } else {
       await _uploadCroppedAvatar(cropped);
     }
+  }
+
+  Future<void> _showAIStylePicker(Uint8List croppedBytes) async {
+    final selectedStyle = await showModalBottomSheet<_AIAvatarStyle>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(AppConstants.radiusXL)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppConstants.paddingLG,
+              AppConstants.paddingMD,
+              AppConstants.paddingLG,
+              AppConstants.paddingLG,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                buildSheetHeader(ctx, 'Elige un estilo'),
+                ..._aiAvatarStyles.map((style) => ListTile(
+                      leading: Icon(style.icon, color: style.color, size: 28),
+                      title: Text(
+                        style.name,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      trailing: Icon(Icons.chevron_right,
+                          color: BeautyCitaTheme.textLight),
+                      onTap: () => Navigator.pop(ctx, style),
+                    )),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (selectedStyle == null || !mounted) return;
+    await _processAIAvatar(croppedBytes, selectedStyle.prompt);
   }
 
   Future<void> _uploadCroppedAvatar(Uint8List bytes) async {
@@ -471,7 +561,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     }
   }
 
-  Future<void> _processAIAvatar(Uint8List croppedBytes) async {
+  Future<void> _processAIAvatar(Uint8List croppedBytes, String stylePrompt) async {
     if (!mounted) return;
     showDialog(
       context: context,
@@ -498,7 +588,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       final resultUrl = await lightx.processTryOn(
         imageBytes: croppedBytes,
         tryOnTypeId: 'headshot',
-        stylePrompt: 'Professional beauty headshot',
+        stylePrompt: stylePrompt,
       );
 
       // Download the result image so we can upload to permanent storage
@@ -529,7 +619,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         await mediaService.saveLightXResult(
           resultUrl: permanentUrl,
           toolType: 'headshot',
-          stylePrompt: 'Professional beauty headshot',
+          stylePrompt: stylePrompt,
         );
       } catch (_) {
         // Non-critical — avatar is already saved
