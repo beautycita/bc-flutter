@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:image_gallery_saver_plus/image_gallery_saver_plus.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:io';
 import 'supabase_client.dart';
 
@@ -198,6 +199,61 @@ class MediaService {
     if (!SupabaseClientService.isInitialized) return;
     final client = SupabaseClientService.client;
     await client.from('user_media').delete().eq('id', mediaId);
+  }
+
+  /// Upload media to user-media bucket and create user_media record.
+  /// Returns the created MediaItem on success, null on failure.
+  Future<MediaItem?> uploadMedia({
+    required Uint8List bytes,
+    required String section, // 'personal' or 'business'
+    String? description,
+  }) async {
+    if (!SupabaseClientService.isInitialized) return null;
+    final userId = SupabaseClientService.currentUserId;
+    if (userId == null) return null;
+
+    final client = SupabaseClientService.client;
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final fileName = '$userId/$section/$timestamp.jpg';
+
+    try {
+      // Upload to storage bucket
+      await client.storage.from('user-media').uploadBinary(
+            fileName,
+            bytes,
+            fileOptions: const FileOptions(
+              contentType: 'image/jpeg',
+              upsert: false,
+            ),
+          );
+
+      // Get public URL
+      final publicUrl =
+          client.storage.from('user-media').getPublicUrl(fileName);
+
+      // Insert record into user_media table
+      final row = {
+        'user_id': userId,
+        'media_type': 'image',
+        'source': 'upload',
+        'url': publicUrl,
+        'metadata': {
+          if (description != null) 'description': description,
+        },
+        'section': section,
+      };
+
+      final result = await client
+          .from('user_media')
+          .insert(row)
+          .select()
+          .single();
+
+      return MediaItem.fromJson(result);
+    } catch (e) {
+      debugPrint('MediaService: Failed to upload media: $e');
+      return null;
+    }
   }
 
   /// Fetch media items for a section.

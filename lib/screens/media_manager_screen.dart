@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../config/theme.dart';
 import '../providers/media_provider.dart';
 import '../services/media_service.dart';
+import '../widgets/bc_image_picker_sheet.dart';
 import '../widgets/media_grid.dart';
 
 class MediaManagerScreen extends ConsumerStatefulWidget {
@@ -83,6 +85,99 @@ class _MediaManagerScreenState extends ConsumerState<MediaManagerScreen>
     }
   }
 
+  Future<void> _onUpload() async {
+    // Determine section based on current tab index
+    // 0 = personal, 1 = business, 2 = chats (don't upload to chats)
+    final tabIndex = _tabController.index;
+    if (tabIndex == 2) {
+      // Chats tab - show info snackbar
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'No puedes subir a chats',
+            style: GoogleFonts.nunito(),
+          ),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: BeautyCitaTheme.textLight,
+        ),
+      );
+      return;
+    }
+
+    final section = tabIndex == 0 ? 'personal' : 'business';
+
+    // Show image picker
+    final result = await showBCImagePicker(context: context, ref: ref);
+    if (result == null || !mounted) return;
+
+    // Show loading snackbar
+    HapticFeedback.lightImpact();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text('Subiendo...', style: GoogleFonts.nunito()),
+          ],
+        ),
+        duration: const Duration(seconds: 30),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: BeautyCitaTheme.primaryRose,
+      ),
+    );
+
+    // Upload
+    final service = ref.read(mediaServiceProvider);
+    final uploaded = await service.uploadMedia(
+      bytes: result.bytes,
+      section: section,
+    );
+
+    if (!mounted) return;
+
+    // Clear loading snackbar and show result
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+    if (uploaded != null) {
+      // Invalidate providers to refresh the grid
+      ref.invalidate(personalMediaProvider);
+      ref.invalidate(businessMediaProvider);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Subido exitosamente',
+            style: GoogleFonts.nunito(),
+          ),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: BeautyCitaTheme.primaryRose,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Error al subir',
+            style: GoogleFonts.nunito(),
+          ),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.red.shade400,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -135,6 +230,14 @@ class _MediaManagerScreenState extends ConsumerState<MediaManagerScreen>
             onSaveToGallery: _onSaveToGallery,
           ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _onUpload,
+        backgroundColor: BeautyCitaTheme.primaryRose,
+        child: const Icon(
+          Icons.add_photo_alternate,
+          color: Colors.white,
+        ),
       ),
     );
   }
