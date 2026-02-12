@@ -181,39 +181,36 @@ class _CinematicContent extends StatelessWidget {
                   ),
                 ),
 
-              // Character-by-character text with 3D fly-in + realistic 24kt polished gold shader
-              ShaderMask(
-                shaderCallback: (bounds) {
-                  return const LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Color(0xFF8B6914), // Deep shadow edge
-                      Color(0xFFD4AF37), // Rich gold
-                      Color(0xFFFFF8DC), // Bright highlight (cornsilk)
-                      Color(0xFFFFD700), // Pure gold
-                      Color(0xFFC19A26), // Mid gold
-                      Color(0xFFF5D547), // Light gold
-                      Color(0xFFFFFFE0), // Near-white specular
-                      Color(0xFFD4AF37), // Rich gold
-                      Color(0xFFA67C00), // Bronze shadow
-                      Color(0xFFCDAD38), // Warm gold
-                      Color(0xFFFFF8DC), // Bright highlight
-                      Color(0xFFB8860B), // Dark goldenrod
-                      Color(0xFF8B6914), // Deep shadow edge
-                    ],
-                    stops: [0.0, 0.08, 0.15, 0.25, 0.35, 0.45, 0.50, 0.58, 0.68, 0.78, 0.85, 0.93, 1.0],
-                  ).createShader(bounds);
-                },
-                blendMode: BlendMode.srcIn,
-                child: _buildCharacterRow(characters, totalChars, staggerFraction),
-              ),
+              // Character-by-character text with 3D fly-in + gold shader per word
+              _buildCharacterRow(characters, totalChars, staggerFraction),
             ],
           ),
         );
       },
     );
   }
+
+  // Gold gradient applied per-word so each line gets full effect when wrapping
+  static const _goldGradient = LinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: [
+      Color(0xFF8B6914), // Deep shadow edge
+      Color(0xFFD4AF37), // Rich gold
+      Color(0xFFFFF8DC), // Bright highlight (cornsilk)
+      Color(0xFFFFD700), // Pure gold
+      Color(0xFFC19A26), // Mid gold
+      Color(0xFFF5D547), // Light gold
+      Color(0xFFFFFFE0), // Near-white specular
+      Color(0xFFD4AF37), // Rich gold
+      Color(0xFFA67C00), // Bronze shadow
+      Color(0xFFCDAD38), // Warm gold
+      Color(0xFFFFF8DC), // Bright highlight
+      Color(0xFFB8860B), // Dark goldenrod
+      Color(0xFF8B6914), // Deep shadow edge
+    ],
+    stops: [0.0, 0.08, 0.15, 0.25, 0.35, 0.45, 0.50, 0.58, 0.68, 0.78, 0.85, 0.93, 1.0],
+  );
 
   Widget _buildCharacterRow(List<String> characters, int totalChars, double staggerFraction) {
     // Split text into words so wrapping only happens at word boundaries
@@ -273,12 +270,16 @@ class _CinematicContent extends StatelessWidget {
         // Account for the space character between words
         charIndex++;
 
-        // Row keeps word characters together; trailing space allows Wrap to break between words
+        // Each word gets its own gold shader so wrapped lines look correct
         return Padding(
           padding: const EdgeInsets.only(right: 6),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: wordWidgets,
+          child: ShaderMask(
+            shaderCallback: (bounds) => _goldGradient.createShader(bounds),
+            blendMode: BlendMode.srcIn,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: wordWidgets,
+            ),
           ),
         );
       }).toList(),
