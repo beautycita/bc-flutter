@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:beautycita/services/toast_service.dart';
 import '../services/uber_service.dart';
 import 'booking_flow_provider.dart';
 
@@ -54,7 +55,9 @@ class UberLinkNotifier extends StateNotifier<UberLinkState> {
       state = state.copyWith(isLinked: linked, isLoading: false);
     } catch (e) {
       debugPrint('Uber status check error: $e');
-      state = state.copyWith(isLoading: false, error: e.toString());
+      final msg = ToastService.friendlyError(e);
+      ToastService.showError(msg);
+      state = state.copyWith(isLoading: false, error: msg);
     }
   }
 
@@ -64,17 +67,18 @@ class UberLinkNotifier extends StateNotifier<UberLinkState> {
       final url = _uberService.buildAuthUrl();
       final launched = await launchUrl(url, mode: LaunchMode.externalApplication);
       if (!launched) {
-        state = state.copyWith(
-          isLoading: false,
-          error: 'No se pudo abrir el navegador',
-        );
+        const msg = 'No se pudo abrir el navegador';
+        ToastService.showError(msg);
+        state = state.copyWith(isLoading: false, error: msg);
       } else {
         // Keep loading state — will resolve when callback arrives
         state = state.copyWith(isLoading: false);
       }
     } catch (e) {
       debugPrint('Uber link initiate error: $e');
-      state = state.copyWith(isLoading: false, error: e.toString());
+      final msg = ToastService.friendlyError(e);
+      ToastService.showError(msg);
+      state = state.copyWith(isLoading: false, error: msg);
     }
   }
 
@@ -96,14 +100,15 @@ class UberLinkNotifier extends StateNotifier<UberLinkState> {
           state = state.copyWith(justLinked: false);
         }
       } else {
-        state = state.copyWith(
-          isLoading: false,
-          error: 'No se pudo vincular Uber',
-        );
+        const msg = 'No se pudo vincular Uber';
+        ToastService.showError(msg);
+        state = state.copyWith(isLoading: false, error: msg);
       }
     } catch (e) {
       debugPrint('Uber callback error: $e');
-      state = state.copyWith(isLoading: false, error: e.toString());
+      final msg = ToastService.friendlyError(e);
+      ToastService.showError(msg);
+      state = state.copyWith(isLoading: false, error: msg);
     }
   }
 
@@ -114,14 +119,15 @@ class UberLinkNotifier extends StateNotifier<UberLinkState> {
       if (success) {
         state = state.copyWith(isLinked: false, isLoading: false);
       } else {
-        state = state.copyWith(
-          isLoading: false,
-          error: 'No se pudo desvincular Uber',
-        );
+        const msg = 'No se pudo desvincular Uber';
+        ToastService.showError(msg);
+        state = state.copyWith(isLoading: false, error: msg);
       }
     } catch (e) {
       debugPrint('Uber unlink error: $e');
-      state = state.copyWith(isLoading: false, error: e.toString());
+      final msg = ToastService.friendlyError(e);
+      ToastService.showError(msg);
+      state = state.copyWith(isLoading: false, error: msg);
     }
   }
 }

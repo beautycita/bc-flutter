@@ -4,10 +4,10 @@ import '../services/media_service.dart';
 /// Singleton MediaService provider.
 final mediaServiceProvider = Provider<MediaService>((ref) => MediaService());
 
-/// Personal media (section = 'personal').
+/// All user media (for "Tus Medios" / BC media library tab).
 final personalMediaProvider = FutureProvider<List<MediaItem>>((ref) async {
   final service = ref.read(mediaServiceProvider);
-  return service.fetchMedia('personal');
+  return service.fetchAllUserMedia();
 });
 
 /// Business media (section = 'business').

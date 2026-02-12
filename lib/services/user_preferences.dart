@@ -8,6 +8,21 @@ class UserPreferences {
   static const _keyQualitySpeed = 'pref_quality_speed';
   static const _keyExploreLoyalty = 'pref_explore_loyal';
   static const _keyOnboardingComplete = 'pref_onboarding_complete';
+  static const _keyNotifyBookingReminders = 'pref_notify_booking_reminders';
+  static const _keyNotifyPromotions = 'pref_notify_promotions';
+  static const _keyNotifyMessages = 'pref_notify_messages';
+  static const _keyNotifyAppointmentUpdates = 'pref_notify_appointment_updates';
+
+  // Generic bool getter/setter for flexibility
+  Future<bool> getBool(String key, {bool defaultValue = true}) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(key) ?? defaultValue;
+  }
+
+  Future<void> setBool(String key, bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(key, value);
+  }
 
   Future<String> getDefaultTransport() async {
     final prefs = await SharedPreferences.getInstance();
@@ -77,5 +92,26 @@ class UserPreferences {
   Future<void> setOnboardingComplete(bool value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_keyOnboardingComplete, value);
+  }
+
+  // Notification type getters
+  Future<bool> getNotifyBookingReminders() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_keyNotifyBookingReminders) ?? true;
+  }
+
+  Future<bool> getNotifyPromotions() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_keyNotifyPromotions) ?? true;
+  }
+
+  Future<bool> getNotifyMessages() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_keyNotifyMessages) ?? true;
+  }
+
+  Future<bool> getNotifyAppointmentUpdates() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_keyNotifyAppointmentUpdates) ?? true;
   }
 }

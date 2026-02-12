@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:beautycita/services/supabase_client.dart';
+import 'package:beautycita/services/toast_service.dart';
 
 class SavedCard {
   final String id;
@@ -105,7 +107,9 @@ class PaymentMethodsNotifier extends StateNotifier<PaymentMethodsState> {
           [];
       state = state.copyWith(cards: cards, isLoading: false);
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      final msg = ToastService.friendlyError(e);
+      ToastService.showError(msg);
+      state = state.copyWith(isLoading: false, error: msg);
     }
   }
 
@@ -116,13 +120,26 @@ class PaymentMethodsNotifier extends StateNotifier<PaymentMethodsState> {
       // 1. Get setup intent from backend
       final data = await _callEdge({'action': 'setup-intent'});
       if (data == null) {
-        state = state.copyWith(isLoading: false, error: 'No se pudo conectar');
+        const msg = 'No se pudo conectar';
+        ToastService.showError(msg);
+        state = state.copyWith(isLoading: false, error: msg);
         return false;
       }
 
-      final setupIntentSecret = data['setupIntent'] as String;
-      final ephemeralKey = data['ephemeralKey'] as String;
-      final customerId = data['customer'] as String;
+      final setupIntentSecret = data['setupIntent'] as String?;
+      final ephemeralKey = data['ephemeralKey'] as String?;
+      final customerId = data['customer'] as String?;
+
+      debugPrint('[PaymentMethods] setupIntent: ${setupIntentSecret?.substring(0, 20)}...');
+      debugPrint('[PaymentMethods] customerId: $customerId');
+      debugPrint('[PaymentMethods] ephemeralKey: ${ephemeralKey?.substring(0, 20)}...');
+
+      if (setupIntentSecret == null || ephemeralKey == null || customerId == null) {
+        const msg = 'Respuesta incompleta del servidor';
+        ToastService.showError(msg);
+        state = state.copyWith(isLoading: false, error: msg);
+        return false;
+      }
 
       // 2. Init PaymentSheet in setup mode
       await Stripe.instance.initPaymentSheet(
@@ -131,6 +148,13 @@ class PaymentMethodsNotifier extends StateNotifier<PaymentMethodsState> {
           merchantDisplayName: 'BeautyCita',
           customerId: customerId,
           customerEphemeralKeySecret: ephemeralKey,
+          style: ThemeMode.system,
+          returnURL: 'beautycita://stripe-redirect',
+          billingDetailsCollectionConfiguration: const BillingDetailsCollectionConfiguration(
+            name: CollectionMode.automatic,
+            email: CollectionMode.automatic,
+            address: AddressCollectionMode.automatic,
+          ),
         ),
       );
 
@@ -138,6 +162,7 @@ class PaymentMethodsNotifier extends StateNotifier<PaymentMethodsState> {
       await Stripe.instance.presentPaymentSheet();
 
       // 4. Refresh card list
+      ToastService.showSuccess('Tarjeta agregada exitosamente');
       state = state.copyWith(
         isLoading: false,
         successMessage: 'Tarjeta agregada exitosamente',
@@ -149,13 +174,14 @@ class PaymentMethodsNotifier extends StateNotifier<PaymentMethodsState> {
         state = state.copyWith(isLoading: false);
         return false;
       }
-      state = state.copyWith(
-        isLoading: false,
-        error: e.error.localizedMessage ?? 'Error de Stripe',
-      );
+      final msg = e.error.localizedMessage ?? 'Error de Stripe';
+      ToastService.showError(msg);
+      state = state.copyWith(isLoading: false, error: msg);
       return false;
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      final msg = ToastService.friendlyError(e);
+      ToastService.showError(msg);
+      state = state.copyWith(isLoading: false, error: msg);
       return false;
     }
   }
@@ -173,7 +199,9 @@ class PaymentMethodsNotifier extends StateNotifier<PaymentMethodsState> {
         successMessage: 'Tarjeta eliminada',
       );
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      final msg = ToastService.friendlyError(e);
+      ToastService.showError(msg);
+      state = state.copyWith(isLoading: false, error: msg);
     }
   }
 

@@ -123,7 +123,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
           SettingsTile(
             icon: Icons.lock_outline_rounded,
             iconColor: sec.hasPassword ? Colors.green.shade600 : null,
-            label: sec.hasPassword ? 'Contrasena configurada' : 'Agregar contrasena',
+            label: sec.hasPassword ? 'Cambiar contrasena' : 'Agregar contrasena',
             trailing: sec.hasPassword
                 ? Icon(Icons.check_circle, color: Colors.green.shade600, size: 20)
                 : !sec.isEmailConfirmed
@@ -132,11 +132,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
                         style: textTheme.bodySmall?.copyWith(color: BeautyCitaTheme.textLight),
                       )
                     : null,
-            onTap: sec.hasPassword
-                ? null
-                : sec.isEmailConfirmed
-                    ? () => _showPasswordSheet(context)
-                    : null,
+            onTap: sec.isEmailConfirmed ? () => _showPasswordSheet(context) : null,
           ),
 
           const SizedBox(height: BeautyCitaTheme.spaceLG),

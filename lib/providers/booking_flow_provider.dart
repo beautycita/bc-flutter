@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:beautycita/services/toast_service.dart';
 import '../models/curate_result.dart';
 import '../models/follow_up_question.dart';
 import '../repositories/booking_repository.dart';
@@ -302,9 +303,11 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
         uberScheduled: uberOk,
       );
     } catch (e) {
+      final msg = ToastService.friendlyError(e);
+      ToastService.showError(msg);
       state = state.copyWith(
         step: BookingFlowStep.error,
-        error: 'No se pudo crear la cita: $e',
+        error: msg,
       );
     }
   }
@@ -392,9 +395,11 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
     } catch (e, st) {
       debugPrint('[CURATE] ERROR: $e');
       debugPrint('[CURATE] STACK: $st');
+      final msg = ToastService.friendlyError(e);
+      ToastService.showError(msg);
       state = state.copyWith(
         step: BookingFlowStep.error,
-        error: e.toString(),
+        error: msg,
       );
     }
   }

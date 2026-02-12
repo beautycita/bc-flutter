@@ -87,7 +87,7 @@ class PreferencesScreen extends ConsumerWidget {
           _UberTile(uberState: uberState, ref: ref),
           SettingsTile(
             icon: _transportIcon(prefsState.defaultTransport),
-            label: 'Transporte favorito',
+            label: 'Transporte preferido',
             trailing: Text(
               _transportLabel(prefsState.defaultTransport),
               style: textTheme.bodyMedium?.copyWith(color: BeautyCitaTheme.textLight),
@@ -101,43 +101,66 @@ class PreferencesScreen extends ConsumerWidget {
           const SectionHeader(label: 'Notificaciones'),
           const SizedBox(height: BeautyCitaTheme.spaceXS),
 
+          // Master notifications toggle
           SettingsTile(
             icon: Icons.notifications_outlined,
-            label: 'Notificaciones',
+            label: 'Todas las notificaciones',
             trailing: Switch(
               value: prefsState.notificationsEnabled,
               activeColor: BeautyCitaTheme.primaryRose,
               onChanged: (_) {
-                try {
-                  ref.read(userPrefsProvider.notifier).toggleNotifications();
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          prefsState.notificationsEnabled
-                              ? 'Notificaciones desactivadas'
-                              : 'Notificaciones activadas',
-                        ),
-                        backgroundColor: Colors.green.shade600,
-                        behavior: SnackBarBehavior.floating,
-                        duration: const Duration(seconds: 2),
-                      ),
-                    );
-                  }
-                } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Error al guardar: $e'),
-                        backgroundColor: Colors.red.shade600,
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
-                  }
-                }
+                ref.read(userPrefsProvider.notifier).toggleNotifications();
               },
             ),
           ),
+
+          // Individual notification toggles (only show if master is enabled)
+          if (prefsState.notificationsEnabled) ...[
+            SettingsTile(
+              icon: Icons.calendar_today_outlined,
+              label: 'Recordatorios de citas',
+              trailing: Switch(
+                value: prefsState.notifyBookingReminders,
+                activeColor: BeautyCitaTheme.primaryRose,
+                onChanged: (_) {
+                  ref.read(userPrefsProvider.notifier).toggleBookingReminders();
+                },
+              ),
+            ),
+            SettingsTile(
+              icon: Icons.update_outlined,
+              label: 'Cambios en citas',
+              trailing: Switch(
+                value: prefsState.notifyAppointmentUpdates,
+                activeColor: BeautyCitaTheme.primaryRose,
+                onChanged: (_) {
+                  ref.read(userPrefsProvider.notifier).toggleAppointmentUpdates();
+                },
+              ),
+            ),
+            SettingsTile(
+              icon: Icons.chat_bubble_outline,
+              label: 'Mensajes',
+              trailing: Switch(
+                value: prefsState.notifyMessages,
+                activeColor: BeautyCitaTheme.primaryRose,
+                onChanged: (_) {
+                  ref.read(userPrefsProvider.notifier).toggleMessages();
+                },
+              ),
+            ),
+            SettingsTile(
+              icon: Icons.local_offer_outlined,
+              label: 'Promociones',
+              trailing: Switch(
+                value: prefsState.notifyPromotions,
+                activeColor: BeautyCitaTheme.primaryRose,
+                onChanged: (_) {
+                  ref.read(userPrefsProvider.notifier).togglePromotions();
+                },
+              ),
+            ),
+          ],
 
           const SizedBox(height: BeautyCitaTheme.spaceLG),
         ],
@@ -161,7 +184,7 @@ class PreferencesScreen extends ConsumerWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                buildSheetHeader(context, 'Transporte favorito'),
+                buildSheetHeader(context, 'Transporte preferido'),
                 _buildTransportOption(ctx, ref, context, '\u{1F697}', 'Mi auto', 'Manejo yo', 'car', current),
                 const SizedBox(height: 8),
                 _buildTransportOption(ctx, ref, context, '\u{1F695}', 'Uber', 'Que me lleven', 'uber', current),
@@ -585,13 +608,20 @@ class _UberTile extends StatelessWidget {
       return SettingsTile(
         icon: Icons.local_taxi_rounded,
         iconColor: Colors.green.shade600,
-        label: 'Uber vinculado',
-        trailing: TextButton(
-          onPressed: () => _confirmUnlink(context),
-          child: Text(
-            'Desvincular',
-            style: textTheme.bodySmall?.copyWith(color: Colors.red.shade400),
-          ),
+        label: 'Uber',
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.check_circle, color: Colors.green.shade600, size: 20),
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTap: () => _confirmUnlink(context),
+              child: Text(
+                'Desvincular',
+                style: textTheme.bodySmall?.copyWith(color: Colors.red.shade400),
+              ),
+            ),
+          ],
         ),
       );
     }

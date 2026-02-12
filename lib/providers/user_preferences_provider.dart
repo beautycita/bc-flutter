@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:beautycita/services/toast_service.dart';
 import '../services/user_preferences.dart';
 
 // ---------------------------------------------------------------------------
@@ -9,6 +10,10 @@ import '../services/user_preferences.dart';
 class UserPrefsState {
   final String defaultTransport; // 'car', 'uber', 'transit'
   final bool notificationsEnabled;
+  final bool notifyBookingReminders;
+  final bool notifyPromotions;
+  final bool notifyMessages;
+  final bool notifyAppointmentUpdates;
   final int searchRadiusKm;
   final String priceComfort; // 'budget', 'moderate', 'premium'
   final double qualitySpeed; // 0.0 (fastest) to 1.0 (best quality)
@@ -18,6 +23,10 @@ class UserPrefsState {
   const UserPrefsState({
     this.defaultTransport = 'car',
     this.notificationsEnabled = true,
+    this.notifyBookingReminders = true,
+    this.notifyPromotions = true,
+    this.notifyMessages = true,
+    this.notifyAppointmentUpdates = true,
     this.searchRadiusKm = 50,
     this.priceComfort = 'moderate',
     this.qualitySpeed = 0.7,
@@ -28,6 +37,10 @@ class UserPrefsState {
   UserPrefsState copyWith({
     String? defaultTransport,
     bool? notificationsEnabled,
+    bool? notifyBookingReminders,
+    bool? notifyPromotions,
+    bool? notifyMessages,
+    bool? notifyAppointmentUpdates,
     int? searchRadiusKm,
     String? priceComfort,
     double? qualitySpeed,
@@ -37,6 +50,10 @@ class UserPrefsState {
     return UserPrefsState(
       defaultTransport: defaultTransport ?? this.defaultTransport,
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
+      notifyBookingReminders: notifyBookingReminders ?? this.notifyBookingReminders,
+      notifyPromotions: notifyPromotions ?? this.notifyPromotions,
+      notifyMessages: notifyMessages ?? this.notifyMessages,
+      notifyAppointmentUpdates: notifyAppointmentUpdates ?? this.notifyAppointmentUpdates,
       searchRadiusKm: searchRadiusKm ?? this.searchRadiusKm,
       priceComfort: priceComfort ?? this.priceComfort,
       qualitySpeed: qualitySpeed ?? this.qualitySpeed,
@@ -61,6 +78,10 @@ class UserPrefsNotifier extends StateNotifier<UserPrefsState> {
     try {
       final transport = await _prefs.getDefaultTransport();
       final notifications = await _prefs.getNotificationsEnabled();
+      final notifyBookingReminders = await _prefs.getNotifyBookingReminders();
+      final notifyPromotions = await _prefs.getNotifyPromotions();
+      final notifyMessages = await _prefs.getNotifyMessages();
+      final notifyAppointmentUpdates = await _prefs.getNotifyAppointmentUpdates();
       final radius = await _prefs.getSearchRadius();
       final priceComfort = await _prefs.getPriceComfort();
       final qualitySpeed = await _prefs.getQualitySpeed();
@@ -69,6 +90,10 @@ class UserPrefsNotifier extends StateNotifier<UserPrefsState> {
       state = UserPrefsState(
         defaultTransport: transport,
         notificationsEnabled: notifications,
+        notifyBookingReminders: notifyBookingReminders,
+        notifyPromotions: notifyPromotions,
+        notifyMessages: notifyMessages,
+        notifyAppointmentUpdates: notifyAppointmentUpdates,
         searchRadiusKm: radius,
         priceComfort: priceComfort,
         qualitySpeed: qualitySpeed,
@@ -77,6 +102,7 @@ class UserPrefsNotifier extends StateNotifier<UserPrefsState> {
       );
     } catch (e) {
       debugPrint('Failed to load user prefs: $e');
+      ToastService.showError(ToastService.friendlyError(e));
     }
   }
 
@@ -89,6 +115,30 @@ class UserPrefsNotifier extends StateNotifier<UserPrefsState> {
     final newValue = !state.notificationsEnabled;
     await _prefs.setNotificationsEnabled(newValue);
     state = state.copyWith(notificationsEnabled: newValue);
+  }
+
+  Future<void> toggleBookingReminders() async {
+    final newValue = !state.notifyBookingReminders;
+    await _prefs.setBool('pref_notify_booking_reminders', newValue);
+    state = state.copyWith(notifyBookingReminders: newValue);
+  }
+
+  Future<void> togglePromotions() async {
+    final newValue = !state.notifyPromotions;
+    await _prefs.setBool('pref_notify_promotions', newValue);
+    state = state.copyWith(notifyPromotions: newValue);
+  }
+
+  Future<void> toggleMessages() async {
+    final newValue = !state.notifyMessages;
+    await _prefs.setBool('pref_notify_messages', newValue);
+    state = state.copyWith(notifyMessages: newValue);
+  }
+
+  Future<void> toggleAppointmentUpdates() async {
+    final newValue = !state.notifyAppointmentUpdates;
+    await _prefs.setBool('pref_notify_appointment_updates', newValue);
+    state = state.copyWith(notifyAppointmentUpdates: newValue);
   }
 
   Future<void> setSearchRadius(int km) async {

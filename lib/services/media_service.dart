@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:io';
 import 'supabase_client.dart';
+import 'toast_service.dart';
 
 /// Represents a media item from user_media table or chat_messages.
 class MediaItem {
@@ -155,6 +156,7 @@ class MediaService {
       return result['isSuccess'] == true;
     } catch (e) {
       debugPrint('MediaService: Failed to save to gallery: $e');
+      ToastService.showError('Error al guardar imagen');
       return false;
     }
   }
@@ -170,6 +172,7 @@ class MediaService {
       return result['isSuccess'] == true;
     } catch (e) {
       debugPrint('MediaService: Failed to save to gallery: $e');
+      ToastService.showError('Error al guardar imagen');
       return false;
     }
   }
@@ -191,6 +194,7 @@ class MediaService {
       );
     } catch (e) {
       debugPrint('MediaService: Failed to share: $e');
+      ToastService.showError('Error al compartir');
     }
   }
 
@@ -208,16 +212,45 @@ class MediaService {
     required String section, // 'personal' or 'business'
     String? description,
   }) async {
-    if (!SupabaseClientService.isInitialized) return null;
+    debugPrint('MediaService.uploadMedia: called with ${bytes.length} bytes, section=$section');
+    if (!SupabaseClientService.isInitialized) {
+      debugPrint('MediaService.uploadMedia: Supabase not initialized');
+      return null;
+    }
     final userId = SupabaseClientService.currentUserId;
-    if (userId == null) return null;
+    if (userId == null) {
+      debugPrint('MediaService.uploadMedia: userId is null');
+      return null;
+    }
+    debugPrint('MediaService.uploadMedia: userId=$userId');
 
     final client = SupabaseClientService.client;
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     final fileName = '$userId/$section/$timestamp.jpg';
+    debugPrint('MediaService.uploadMedia: fileName=$fileName');
 
     try {
+      // Log storage URL for debugging
+      debugPrint('MediaService.uploadMedia: bucket=user-media, path=$fileName');
+
+      // First, test raw HTTP to storage endpoint to see exact response
+      final testUrl = 'https://beautycita.com/supabase/storage/v1/bucket';
+      final accessToken = client.auth.currentSession?.accessToken ?? '';
+      debugPrint('MediaService.uploadMedia: testing raw HTTP to $testUrl');
+      debugPrint('MediaService.uploadMedia: accessToken length=${accessToken.length}');
+      try {
+        final testResponse = await http.get(Uri.parse(testUrl));
+        debugPrint('MediaService.uploadMedia: test status=${testResponse.statusCode}');
+        final bodyPreview = testResponse.body.length > 200
+            ? testResponse.body.substring(0, 200)
+            : testResponse.body;
+        debugPrint('MediaService.uploadMedia: test body=$bodyPreview...');
+      } catch (e) {
+        debugPrint('MediaService.uploadMedia: test error=$e');
+      }
+
       // Upload to storage bucket
+      debugPrint('MediaService.uploadMedia: uploading to storage...');
       await client.storage.from('user-media').uploadBinary(
             fileName,
             bytes,
@@ -226,10 +259,12 @@ class MediaService {
               upsert: false,
             ),
           );
+      debugPrint('MediaService.uploadMedia: storage upload success');
 
       // Get public URL
       final publicUrl =
           client.storage.from('user-media').getPublicUrl(fileName);
+      debugPrint('MediaService.uploadMedia: publicUrl=$publicUrl');
 
       // Insert record into user_media table
       final row = {
@@ -242,16 +277,19 @@ class MediaService {
         },
         'section': section,
       };
+      debugPrint('MediaService.uploadMedia: inserting into user_media...');
 
       final result = await client
           .from('user_media')
           .insert(row)
           .select()
           .single();
+      debugPrint('MediaService.uploadMedia: insert success, id=${result['id']}');
 
       return MediaItem.fromJson(result);
     } catch (e) {
-      debugPrint('MediaService: Failed to upload media: $e');
+      debugPrint('MediaService.uploadMedia: FAILED: $e');
+      ToastService.showError(ToastService.friendlyError(e));
       return null;
     }
   }
@@ -268,6 +306,23 @@ class MediaService {
         .select()
         .eq('user_id', userId)
         .eq('section', section)
+        .order('created_at', ascending: false)
+        .limit(limit);
+
+    return (data as List).map((r) => MediaItem.fromJson(r)).toList();
+  }
+
+  /// Fetch ALL user media regardless of section (for "Tus Medios" tab).
+  Future<List<MediaItem>> fetchAllUserMedia({int limit = 200}) async {
+    if (!SupabaseClientService.isInitialized) return [];
+    final userId = SupabaseClientService.currentUserId;
+    if (userId == null) return [];
+
+    final client = SupabaseClientService.client;
+    final data = await client
+        .from('user_media')
+        .select()
+        .eq('user_id', userId)
         .order('created_at', ascending: false)
         .limit(limit);
 

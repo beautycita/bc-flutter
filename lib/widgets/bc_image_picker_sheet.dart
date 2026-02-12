@@ -361,6 +361,7 @@ class _BCImagePickerBodyState extends State<_BCImagePickerBody> {
   }
 
   Future<void> _pickFromGallery() async {
+    debugPrint('BCImagePicker: _pickFromGallery called');
     setState(() => _loading = true);
     try {
       final XFile? file = await _picker.pickImage(
@@ -369,15 +370,26 @@ class _BCImagePickerBodyState extends State<_BCImagePickerBody> {
         maxHeight: 2048,
         imageQuality: 90,
       );
+      debugPrint('BCImagePicker: picked file = ${file?.path}');
 
       if (file != null && mounted) {
         final bytes = await file.readAsBytes();
+        debugPrint('BCImagePicker: read ${bytes.length} bytes');
+        if (!mounted) {
+          debugPrint('BCImagePicker: not mounted after readAsBytes');
+          return;
+        }
         HapticFeedback.lightImpact();
+        debugPrint('BCImagePicker: popping with result');
         Navigator.of(context).pop(BCImagePickerResult(
           bytes: bytes,
           source: BCImageSource.gallery,
         ));
+      } else {
+        debugPrint('BCImagePicker: file null or not mounted');
       }
+    } catch (e) {
+      debugPrint('BCImagePicker: gallery error: $e');
     } finally {
       if (mounted) setState(() => _loading = false);
     }

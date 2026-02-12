@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:beautycita/repositories/favorites_repository.dart';
+import 'package:beautycita/services/toast_service.dart';
 
 final favoritesRepositoryProvider = Provider<FavoritesRepository>((ref) {
   return FavoritesRepository();
@@ -24,6 +25,7 @@ class FavoritesNotifier extends StateNotifier<Set<String>> {
       state = await _repository.getFavoriteBusinessIds();
     } catch (e) {
       debugPrint('FavoritesNotifier: failed to load favorites ($e)');
+      ToastService.showError(ToastService.friendlyError(e));
     }
   }
 
@@ -49,6 +51,7 @@ class FavoritesNotifier extends StateNotifier<Set<String>> {
       // Revert on failure
       state = previous;
       debugPrint('FavoritesNotifier: toggle failed ($e)');
+      ToastService.showError(ToastService.friendlyError(e));
     }
   }
 }
