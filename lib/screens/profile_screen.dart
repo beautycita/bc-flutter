@@ -6,8 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:beautycita/config/theme.dart';
+import 'package:beautycita/widgets/bc_image_picker_sheet.dart';
 import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/providers/auth_provider.dart';
 import 'package:beautycita/providers/profile_provider.dart';
@@ -414,22 +414,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Future<void> _pickAndCropAvatar({required bool useAI}) async {
-    final picker = ImagePicker();
-    final image = await picker.pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 1024,
-      maxHeight: 1024,
-      imageQuality: 90,
+    final result = await showBCImagePicker(
+      context: context,
+      ref: ref,
     );
-    if (image == null || !mounted) return;
+    if (result == null || !mounted) return;
 
-    final bytes = await image.readAsBytes();
-
-    // Show crop editor
+    // Show crop editor with the picked image bytes
     final cropped = await Navigator.of(context).push<Uint8List>(
       MaterialPageRoute(
         fullscreenDialog: true,
-        builder: (_) => _AvatarCropEditor(imageBytes: bytes),
+        builder: (_) => _AvatarCropEditor(imageBytes: result.bytes),
       ),
     );
     if (cropped == null || !mounted) return;
