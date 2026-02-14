@@ -1,10 +1,9 @@
 // link-uber edge function
 // Handles Uber OAuth token exchange and account linking.
-// Uses JWT assertion (RS256 asymmetric key) for Uber auth.
-// Supports: link (auth_code exchange), unlink, refresh.
+// Uses client_secret auth. Supports: link, unlink, refresh, oauth_url.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { exchangeUberTokens, refreshUberTokens, getUberApiBase } from "../_shared/uber_jwt.ts";
+import { exchangeUberTokens, refreshUberTokens, getUberApiBase, getUberLoginBase } from "../_shared/uber_jwt.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -64,10 +63,7 @@ Deno.serve(async (req: Request) => {
         Deno.env.get("UBER_SCOPES") ??
         "profile request places history";
       const UBER_CLIENT_ID = Deno.env.get("UBER_CLIENT_ID") ?? "";
-      const UBER_SANDBOX = Deno.env.get("UBER_SANDBOX") === "true";
-      const loginBase = UBER_SANDBOX
-        ? "https://sandbox-login.uber.com"
-        : "https://login.uber.com";
+      const loginBase = getUberLoginBase();
       const authUrl = `${loginBase}/oauth/v2/authorize?client_id=${encodeURIComponent(UBER_CLIENT_ID)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scopes)}`;
       return json({ url: authUrl });
     }
