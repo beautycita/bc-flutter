@@ -28,8 +28,7 @@ final placesServiceProvider = Provider<PlacesService>((ref) {
 final uberServiceProvider = Provider((ref) {
   final clientId = dotenv.env['UBER_CLIENT_ID'] ?? '';
   final redirectUri = dotenv.env['UBER_REDIRECT_URI'] ?? 'beautycita://uber-callback';
-  final sandbox = dotenv.env['UBER_SANDBOX'] == 'true';
-  return UberService(clientId: clientId, redirectUri: redirectUri, sandbox: sandbox);
+  return UberService(clientId: clientId, redirectUri: redirectUri);
 });
 
 // ---------------------------------------------------------------------------
