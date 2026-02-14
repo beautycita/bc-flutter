@@ -148,12 +148,41 @@ class PaymentMethodsNotifier extends StateNotifier<PaymentMethodsState> {
           merchantDisplayName: 'BeautyCita',
           customerId: customerId,
           customerEphemeralKeySecret: ephemeralKey,
-          style: ThemeMode.system,
+          style: ThemeMode.light,
           returnURL: 'beautycita://stripe-redirect',
+          allowsDelayedPaymentMethods: true,
           billingDetailsCollectionConfiguration: const BillingDetailsCollectionConfiguration(
             name: CollectionMode.automatic,
-            email: CollectionMode.automatic,
-            address: AddressCollectionMode.automatic,
+            email: CollectionMode.never,
+            phone: CollectionMode.never,
+            address: AddressCollectionMode.never,
+          ),
+          appearance: const PaymentSheetAppearance(
+            colors: PaymentSheetAppearanceColors(
+              primary: Color(0xFFC2185B),
+              background: Color(0xFFF9F9F9),
+              componentBackground: Color(0xFFF5F5F5),
+              componentBorder: Color(0xFFBDBDBD),
+              componentDivider: Color(0xFFE0E0E0),
+              primaryText: Color(0xFF000000),
+              secondaryText: Color(0xFF424242),
+              placeholderText: Color(0xFF9E9E9E),
+              icon: Color(0xFFC2185B),
+              error: Color(0xFFD32F2F),
+            ),
+            shapes: PaymentSheetShape(
+              borderRadius: 12,
+              borderWidth: 1.0,
+            ),
+            primaryButton: PaymentSheetPrimaryButtonAppearance(
+              colors: PaymentSheetPrimaryButtonTheme(
+                light: PaymentSheetPrimaryButtonThemeColors(
+                  background: Color(0xFFC2185B),
+                  text: Color(0xFFFFFFFF),
+                  border: Color(0xFFC2185B),
+                ),
+              ),
+            ),
           ),
         ),
       );

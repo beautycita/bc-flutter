@@ -5,6 +5,7 @@ import '../config/theme.dart';
 import '../models/curate_result.dart';
 import '../widgets/cinematic_question_text.dart';
 import '../providers/booking_flow_provider.dart';
+import '../providers/profile_provider.dart';
 import '../providers/user_preferences_provider.dart';
 import '../services/location_service.dart';
 
@@ -28,6 +29,16 @@ class _TransportSelectionState extends ConsumerState<TransportSelection> {
   }
 
   Future<void> _fetchLocation() async {
+    // Check for temporary search location override first
+    final tempLocation = ref.read(tempSearchLocationProvider);
+    if (tempLocation != null) {
+      setState(() {
+        _userLocation = LatLng(lat: tempLocation.lat, lng: tempLocation.lng);
+        _locationLoading = false;
+        _locationFailed = false;
+      });
+      return;
+    }
     final location = await LocationService.getCurrentLocation();
     if (!mounted) return;
     setState(() {

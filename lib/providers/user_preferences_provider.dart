@@ -76,6 +76,8 @@ class UserPrefsNotifier extends StateNotifier<UserPrefsState> {
 
   Future<void> _load() async {
     try {
+      // Load server prefs first (merges into SharedPreferences)
+      await _prefs.loadFromServer();
       final transport = await _prefs.getDefaultTransport();
       final notifications = await _prefs.getNotificationsEnabled();
       final notifyBookingReminders = await _prefs.getNotifyBookingReminders();

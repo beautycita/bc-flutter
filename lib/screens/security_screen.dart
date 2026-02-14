@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:beautycita/config/theme.dart';
 import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/providers/security_provider.dart';
-import 'package:beautycita/providers/payment_methods_provider.dart';
 import 'package:beautycita/widgets/settings_widgets.dart';
 
 class SecurityScreen extends ConsumerStatefulWidget {
@@ -20,7 +19,6 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
     super.initState();
     Future.microtask(() {
       ref.read(securityProvider.notifier).checkIdentities();
-      ref.read(paymentMethodsProvider.notifier).loadCards();
     });
   }
 
@@ -28,30 +26,6 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
   Widget build(BuildContext context) {
     final sec = ref.watch(securityProvider);
     final textTheme = Theme.of(context).textTheme;
-
-    // Listen for payment method messages
-    ref.listen<PaymentMethodsState>(paymentMethodsProvider, (prev, next) {
-      if (next.successMessage != null && next.successMessage != prev?.successMessage) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(next.successMessage!),
-            backgroundColor: Colors.green.shade600,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-        ref.read(paymentMethodsProvider.notifier).clearMessages();
-      }
-      if (next.error != null && next.error != prev?.error) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(next.error!),
-            backgroundColor: Colors.red.shade600,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-        ref.read(paymentMethodsProvider.notifier).clearMessages();
-      }
-    });
 
     // Listen for success/error messages
     ref.listen<SecurityState>(securityProvider, (prev, next) {
@@ -120,20 +94,40 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
           ),
 
           // Password
-          SettingsTile(
-            icon: Icons.lock_outline_rounded,
-            iconColor: sec.hasPassword ? Colors.green.shade600 : null,
-            label: sec.hasPassword ? 'Cambiar contrasena' : 'Agregar contrasena',
-            trailing: sec.hasPassword
-                ? Icon(Icons.check_circle, color: Colors.green.shade600, size: 20)
-                : !sec.isEmailConfirmed
-                    ? Text(
-                        sec.isEmailAdded ? 'Confirma email' : 'Requiere email',
-                        style: textTheme.bodySmall?.copyWith(color: BeautyCitaTheme.textLight),
-                      )
-                    : null,
-            onTap: sec.isEmailConfirmed ? () => _showPasswordSheet(context) : null,
-          ),
+          if (sec.hasPassword)
+            SettingsTile(
+              icon: Icons.lock_rounded,
+              iconColor: Colors.green.shade600,
+              label: 'Protegida',
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'cambiar',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: BeautyCitaTheme.textLight,
+                      fontSize: 11,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(Icons.check_circle, color: Colors.green.shade600, size: 20),
+                ],
+              ),
+              onTap: () => _showPasswordSheet(context),
+            )
+          else
+            SettingsTile(
+              icon: Icons.lock_open_rounded,
+              iconColor: Colors.red.shade400,
+              label: 'Agregar contrasena',
+              trailing: !sec.isEmailConfirmed
+                  ? Text(
+                      sec.isEmailAdded ? 'Confirma email' : 'Requiere email',
+                      style: textTheme.bodySmall?.copyWith(color: BeautyCitaTheme.textLight),
+                    )
+                  : null,
+              onTap: sec.isEmailConfirmed ? () => _showPasswordSheet(context) : null,
+            ),
 
           const SizedBox(height: BeautyCitaTheme.spaceLG),
 
@@ -151,14 +145,6 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
             label: 'Vincular sesion web',
             onTap: () => context.push('/qr-scan'),
           ),
-
-          const SizedBox(height: BeautyCitaTheme.spaceLG),
-
-          // ── Pagos ──
-          const SectionHeader(label: 'Metodos de pago'),
-          const SizedBox(height: BeautyCitaTheme.spaceXS),
-
-          _PaymentMethodsSection(ref: ref),
 
           const SizedBox(height: BeautyCitaTheme.spaceLG),
 
@@ -251,15 +237,6 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
         );
       },
     );
-  }
-
-  IconData _cardBrandIcon(String brand) {
-    return switch (brand) {
-      'visa' => Icons.credit_card,
-      'mastercard' => Icons.credit_card,
-      'amex' => Icons.credit_card,
-      _ => Icons.credit_card,
-    };
   }
 
   void _showPasswordSheet(BuildContext context) {
@@ -363,160 +340,5 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
         );
       },
     );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Payment Methods Section
-// ---------------------------------------------------------------------------
-
-class _PaymentMethodsSection extends StatelessWidget {
-  final WidgetRef ref;
-
-  const _PaymentMethodsSection({required this.ref});
-
-  @override
-  Widget build(BuildContext context) {
-    final pm = ref.watch(paymentMethodsProvider);
-    final textTheme = Theme.of(context).textTheme;
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Saved cards
-        if (pm.isLoading && pm.cards.isEmpty)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 16),
-            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-          )
-        else if (pm.cards.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppConstants.paddingSM,
-              vertical: AppConstants.paddingSM,
-            ),
-            child: Text(
-              'No tienes tarjetas guardadas',
-              style: textTheme.bodyMedium?.copyWith(color: BeautyCitaTheme.textLight),
-            ),
-          )
-        else
-          ...pm.cards.map((card) => _CardTile(card: card, ref: ref)),
-
-        // Add card button
-        SettingsTile(
-          icon: Icons.add_card_rounded,
-          label: 'Agregar tarjeta',
-          trailing: pm.isLoading
-              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-              : null,
-          onTap: pm.isLoading ? null : () => ref.read(paymentMethodsProvider.notifier).addCard(),
-        ),
-      ],
-    );
-  }
-}
-
-class _CardTile extends StatelessWidget {
-  final SavedCard card;
-  final WidgetRef ref;
-
-  const _CardTile({required this.card, required this.ref});
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
-    return SettingsTile(
-      icon: Icons.credit_card_rounded,
-      iconColor: Colors.green.shade600,
-      label: '${card.displayBrand} ****${card.last4}',
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            card.expiry,
-            style: textTheme.bodySmall?.copyWith(color: BeautyCitaTheme.textLight),
-          ),
-          const SizedBox(width: 8),
-          GestureDetector(
-            onTap: () => _confirmRemove(context),
-            child: Icon(Icons.close_rounded, size: 18, color: Colors.red.shade400),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _confirmRemove(BuildContext context) async {
-    final confirmed = await showModalBottomSheet<bool>(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppConstants.radiusXL)),
-      ),
-      builder: (ctx) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppConstants.paddingLG,
-              AppConstants.paddingMD,
-              AppConstants.paddingLG,
-              AppConstants.paddingLG,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                buildSheetHeader(context, 'Eliminar tarjeta?'),
-                Text(
-                  '${card.displayBrand} terminada en ${card.last4}',
-                  style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(
-                        color: BeautyCitaTheme.textLight,
-                      ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: BeautyCitaTheme.spaceLG),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => Navigator.pop(ctx, false),
-                        style: OutlinedButton.styleFrom(
-                          minimumSize: const Size(0, AppConstants.minTouchHeight),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(AppConstants.radiusLG),
-                          ),
-                        ),
-                        child: const Text('Cancelar'),
-                      ),
-                    ),
-                    const SizedBox(width: BeautyCitaTheme.spaceSM),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () => Navigator.pop(ctx, true),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red.shade500,
-                          minimumSize: const Size(0, AppConstants.minTouchHeight),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(AppConstants.radiusLG),
-                          ),
-                        ),
-                        child: const Text(
-                          'Eliminar',
-                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-
-    if (confirmed == true) {
-      ref.read(paymentMethodsProvider.notifier).removeCard(card.id);
-    }
   }
 }

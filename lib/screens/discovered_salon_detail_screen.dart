@@ -434,11 +434,21 @@ class _DiscoveredSalonDetailScreenState extends State<DiscoveredSalonDetailScree
   void _handleInvite() {
     final phone = widget.salon.whatsapp ?? widget.salon.phone;
     if (phone != null) {
+      final params = <String, String>{
+        if (widget.salon.name.isNotEmpty) 'name': widget.salon.name,
+        if (phone != null) 'phone': phone,
+        if (widget.salon.address != null) 'address': widget.salon.address!,
+        if (widget.salon.city != null) 'city': widget.salon.city!,
+        if (widget.salon.photoUrl != null) 'avatar': widget.salon.photoUrl!,
+        if (widget.salon.rating != null) 'rating': widget.salon.rating!.toStringAsFixed(1),
+        'ref': widget.salon.id,
+      };
+      final regUrl = Uri.https('beautycita.com', '/registro', params);
       final message = Uri.encodeComponent(
-        'Hola! Soy clienta tuya y me encantaria poder reservar '
-        'contigo desde BeautyCita. Es gratis para ti y te llegan '
-        'clientes nuevos. Registrate en 60 seg: '
-        'https://beautycita.com/salon/${widget.salon.id}',
+        'Hola! Queria hacer una cita contigo pero no te encontre '
+        'en BeautyCita. Deberias estar ahi, te llegan mas clientes '
+        'y es gratis: $regUrl '
+        'Manana te busco en la app si no ando muy ocupada!',
       );
       final waUrl = Uri.parse('https://wa.me/${phone.replaceAll('+', '')}?text=$message');
       launchUrl(waUrl, mode: LaunchMode.externalApplication);

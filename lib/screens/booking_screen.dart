@@ -6,6 +6,7 @@ import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/models/provider.dart' as models;
 import 'package:beautycita/providers/provider_provider.dart';
 import 'package:beautycita/providers/booking_provider.dart';
+import 'package:beautycita/providers/payment_methods_provider.dart';
 
 class BookingScreen extends ConsumerStatefulWidget {
   final String providerId;
@@ -26,6 +27,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
   String? _selectedTime;
   final TextEditingController _notesController = TextEditingController();
   bool _isSubmitting = false;
+  String _selectedPaymentMethod = 'card'; // 'card', 'oxxo', 'bitcoin'
 
   /// Generate the next 14 days starting from today.
   List<DateTime> get _availableDates {
@@ -277,6 +279,18 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
                 ),
 
                 const SizedBox(height: BeautyCitaTheme.spaceLG),
+
+                // -- Payment Method Section --
+                Text(
+                  'Metodo de pago',
+                  style: textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: BeautyCitaTheme.spaceSM),
+                _buildPaymentMethods(textTheme),
+
+                const SizedBox(height: BeautyCitaTheme.spaceLG),
               ],
             ),
           ),
@@ -498,6 +512,47 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
     );
   }
 
+  Widget _buildPaymentMethods(TextTheme textTheme) {
+    final pm = ref.watch(paymentMethodsProvider);
+    final defaultCard = pm.cards.isNotEmpty ? pm.cards.first : null;
+
+    return Column(
+      children: [
+        // Card option (default)
+        _PaymentOptionTile(
+          icon: Icons.credit_card_rounded,
+          iconColor: const Color(0xFF1A73E8),
+          label: defaultCard != null
+              ? '${defaultCard.displayBrand} ****${defaultCard.last4}'
+              : 'Tarjeta de credito/debito',
+          subtitle: defaultCard != null ? 'Predeterminado' : 'Agregar tarjeta al pagar',
+          selected: _selectedPaymentMethod == 'card',
+          onTap: () => setState(() => _selectedPaymentMethod = 'card'),
+        ),
+        const SizedBox(height: 8),
+        // OXXO
+        _PaymentOptionTile(
+          icon: Icons.store_rounded,
+          iconColor: const Color(0xFFCC0000),
+          label: 'Pago en efectivo',
+          subtitle: 'OXXO, 7-Eleven',
+          selected: _selectedPaymentMethod == 'oxxo',
+          onTap: () => setState(() => _selectedPaymentMethod = 'oxxo'),
+        ),
+        const SizedBox(height: 8),
+        // Bitcoin
+        _PaymentOptionTile(
+          icon: Icons.currency_bitcoin_rounded,
+          iconColor: const Color(0xFFF7931A),
+          label: 'Bitcoin',
+          subtitle: 'Pago con criptomoneda',
+          selected: _selectedPaymentMethod == 'bitcoin',
+          onTap: () => setState(() => _selectedPaymentMethod = 'bitcoin'),
+        ),
+      ],
+    );
+  }
+
   Widget _buildBottomBar(
     TextTheme textTheme,
     String priceText,
@@ -578,6 +633,91 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _PaymentOptionTile extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final String label;
+  final String subtitle;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _PaymentOptionTile({
+    required this.icon,
+    required this.iconColor,
+    required this.label,
+    required this.subtitle,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: AppConstants.shortAnimation,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        decoration: BoxDecoration(
+          color: selected
+              ? BeautyCitaTheme.primaryRose.withValues(alpha: 0.06)
+              : BeautyCitaTheme.surfaceCream,
+          borderRadius: BorderRadius.circular(AppConstants.radiusSM),
+          border: Border.all(
+            color: selected
+                ? BeautyCitaTheme.primaryRose
+                : Colors.transparent,
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: iconColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, color: iconColor, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Text(
+                    subtitle,
+                    style: textTheme.bodySmall?.copyWith(
+                      color: BeautyCitaTheme.textLight,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              selected
+                  ? Icons.radio_button_checked_rounded
+                  : Icons.radio_button_off_rounded,
+              color: selected
+                  ? BeautyCitaTheme.primaryRose
+                  : BeautyCitaTheme.textLight.withValues(alpha: 0.4),
+              size: 22,
+            ),
+          ],
+        ),
       ),
     );
   }

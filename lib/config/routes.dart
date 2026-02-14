@@ -25,6 +25,8 @@ import 'package:beautycita/screens/media_manager_screen.dart';
 import 'package:beautycita/screens/preferences_screen.dart';
 import 'package:beautycita/screens/profile_screen.dart';
 import 'package:beautycita/screens/security_screen.dart';
+import 'package:beautycita/screens/payment_methods_screen.dart';
+
 
 class AppRoutes {
   static const String splash = '/';
@@ -52,6 +54,8 @@ class AppRoutes {
   static const String preferences = '/settings/preferences';
   static const String profile = '/settings/profile';
   static const String security = '/settings/security';
+  static const String paymentMethods = '/settings/payment-methods';
+
 
   static final GoRouter router = GoRouter(
     initialLocation: splash,
@@ -469,6 +473,22 @@ class AppRoutes {
         pageBuilder: (context, state) => CustomTransitionPage(
           key: state.pageKey,
           child: const ProfileScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
+                .chain(CurveTween(curve: Curves.easeInOutCubic));
+            return SlideTransition(
+              position: animation.drive(tween),
+              child: child,
+            );
+          },
+        ),
+      ),
+      GoRoute(
+        path: paymentMethods,
+        name: 'payment-methods',
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const PaymentMethodsScreen(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
                 .chain(CurveTween(curve: Curves.easeInOutCubic));

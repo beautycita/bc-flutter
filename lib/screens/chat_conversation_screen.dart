@@ -4,9 +4,11 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:uuid/uuid.dart';
 import '../config/theme.dart';
 import '../models/chat_message.dart';
 import '../providers/chat_provider.dart';
+import '../services/supabase_client.dart';
 
 class ChatConversationScreen extends ConsumerStatefulWidget {
   final String threadId;
@@ -23,6 +25,7 @@ class _ChatConversationScreenState
   final _textController = TextEditingController();
   final _scrollController = ScrollController();
   bool _isSending = false;
+  final List<ChatMessage> _optimisticMessages = [];
 
   @override
   void dispose() {
@@ -50,12 +53,30 @@ class _ChatConversationScreenState
     if (text.isEmpty || _isSending) return;
 
     _textController.clear();
-    setState(() => _isSending = true);
+
+    // Optimistically show user's message immediately
+    final optimisticMsg = ChatMessage(
+      id: const Uuid().v4(),
+      threadId: widget.threadId,
+      senderType: 'user',
+      senderId: SupabaseClientService.currentUserId,
+      contentType: 'text',
+      textContent: text,
+      createdAt: DateTime.now().toUtc(),
+    );
+    setState(() {
+      _optimisticMessages.add(optimisticMsg);
+      _isSending = true;
+    });
+    _scrollToBottom();
 
     await ref.read(sendMessageProvider.notifier).send(widget.threadId, text);
 
     if (mounted) {
-      setState(() => _isSending = false);
+      setState(() {
+        _optimisticMessages.clear();
+        _isSending = false;
+      });
       _scrollToBottom();
     }
   }
@@ -154,6 +175,18 @@ class _ChatConversationScreenState
           Expanded(
             child: messagesAsync.when(
               data: (messages) {
+                // Merge stream messages with optimistic ones (dedup by matching text+sender)
+                final streamIds = messages.map((m) => m.id).toSet();
+                final pendingOptimistic = _optimisticMessages
+                    .where((o) => !streamIds.contains(o.id) &&
+                        !messages.any((m) =>
+                            m.senderType == 'user' &&
+                            m.textContent == o.textContent &&
+                            m.createdAt.difference(o.createdAt).inSeconds.abs() < 10))
+                    .toList();
+                final allMessages = [...messages, ...pendingOptimistic];
+                allMessages.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   _scrollToBottom();
                 });
@@ -164,12 +197,12 @@ class _ChatConversationScreenState
                     horizontal: 12,
                     vertical: 16,
                   ),
-                  itemCount: messages.length + (_isSending ? 1 : 0),
+                  itemCount: allMessages.length + (_isSending ? 1 : 0),
                   itemBuilder: (context, index) {
-                    if (index == messages.length && _isSending) {
+                    if (index == allMessages.length && _isSending) {
                       return _TypingIndicator();
                     }
-                    final msg = messages[index];
+                    final msg = allMessages[index];
                     return _MessageBubble(
                       message: msg,
                       isAphroditeThread: isAphrodite,

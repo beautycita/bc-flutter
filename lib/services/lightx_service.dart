@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'supabase_client.dart';
 
 /// Client-side wrapper for LightX virtual try-on, rebranded as BeautyCita features.
@@ -46,15 +47,21 @@ class LightXService {
     required String tryOnTypeId,
     Uint8List? targetImageBytes,
   }) async {
+    debugPrint('[LightX] processTryOn called — tool=$tryOnTypeId, imageSize=${imageBytes.length}, prompt=$stylePrompt');
+
     if (!SupabaseClientService.isInitialized) {
+      debugPrint('[LightX] ERROR: Supabase not initialized');
       throw LightXException('Supabase not initialized');
     }
 
     final client = SupabaseClientService.client;
 
+    final imageB64 = base64Encode(imageBytes);
+    debugPrint('[LightX] Base64 encoded image: ${imageB64.length} chars');
+
     final body = <String, dynamic>{
       'action': 'try_on',
-      'image_base64': base64Encode(imageBytes),
+      'image_base64': imageB64,
       'tool_type': tryOnTypeId,
       'style_prompt': stylePrompt,
     };
@@ -62,18 +69,22 @@ class LightXService {
       body['target_image_base64'] = base64Encode(targetImageBytes);
     }
 
+    debugPrint('[LightX] Invoking aphrodite-chat edge function...');
     final response = await client.functions.invoke(
       'aphrodite-chat',
       body: body,
     );
+    debugPrint('[LightX] Edge function response status: ${response.status}');
 
     if (response.status != 200) {
       final errorBody = response.data;
+      debugPrint('[LightX] ERROR response body: $errorBody');
       final message = errorBody is Map ? errorBody['error'] : 'Unknown error';
       throw LightXException('Try-on failed: $message');
     }
 
     final data = response.data as Map<String, dynamic>;
+    debugPrint('[LightX] Success — result_url: ${data['result_url']}');
     return data['result_url'] as String;
   }
 }

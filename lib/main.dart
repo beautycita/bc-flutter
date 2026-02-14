@@ -16,6 +16,7 @@ import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/providers/uber_provider.dart';
 import 'package:beautycita/services/qr_auth_service.dart';
 import 'package:beautycita/services/toast_service.dart';
+import 'package:beautycita/services/debug_log.dart';
 import 'package:go_router/go_router.dart';
 
 /// Completes when Supabase is ready (or failed). Splash screen awaits this.
@@ -46,6 +47,9 @@ void main() async {
     ),
   );
 
+  // Install debug log capture (before anything else that uses debugPrint)
+  DebugLog.instance.install();
+
   // Initialize dotenv
   await dotenv.load(fileName: '.env');
 
@@ -61,10 +65,13 @@ void main() async {
 
   // Start Supabase init in background — splash screen awaits supabaseReady
   SupabaseClientService.initialize().then((_) async {
+    debugPrint('[Init] Supabase initialized successfully');
     // Initialize push notifications after Supabase is ready
     await NotificationService().initialize();
+    debugPrint('[Init] Notifications initialized');
     supabaseReady.complete();
   }).catchError((e) {
+    debugPrint('[Init] ERROR: Supabase initialization failed: $e');
     supabaseReady.complete(); // Complete even on error so splash doesn't hang
   });
 

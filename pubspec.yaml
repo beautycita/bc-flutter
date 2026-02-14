@@ -1,7 +1,7 @@
 name: beautycita
 description: "BeautyCita — Intelligent Beauty Booking Agent"
 publish_to: 'none'
-version: 0.1.0+1
+version: 0.20.1+2002
 
 environment:
   sdk: ^3.10.8
@@ -50,5 +50,4 @@ flutter:
     - .env
     - assets/images/
     - assets/google_fonts/
-    - assets/hairstyles/
     - assets/videos/
