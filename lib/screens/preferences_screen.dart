@@ -114,51 +114,31 @@ class PreferencesScreen extends ConsumerWidget {
             ),
           ),
 
-          // Individual notification toggles (only show if master is enabled)
+          // Individual notification toggles (nested under master)
           if (prefsState.notificationsEnabled) ...[
-            SettingsTile(
+            _NotifChildTile(
               icon: Icons.calendar_today_outlined,
               label: 'Recordatorios de citas',
-              trailing: Switch(
-                value: prefsState.notifyBookingReminders,
-                activeColor: BeautyCitaTheme.primaryRose,
-                onChanged: (_) {
-                  ref.read(userPrefsProvider.notifier).toggleBookingReminders();
-                },
-              ),
+              value: prefsState.notifyBookingReminders,
+              onChanged: (_) => ref.read(userPrefsProvider.notifier).toggleBookingReminders(),
             ),
-            SettingsTile(
+            _NotifChildTile(
               icon: Icons.update_outlined,
               label: 'Cambios en citas',
-              trailing: Switch(
-                value: prefsState.notifyAppointmentUpdates,
-                activeColor: BeautyCitaTheme.primaryRose,
-                onChanged: (_) {
-                  ref.read(userPrefsProvider.notifier).toggleAppointmentUpdates();
-                },
-              ),
+              value: prefsState.notifyAppointmentUpdates,
+              onChanged: (_) => ref.read(userPrefsProvider.notifier).toggleAppointmentUpdates(),
             ),
-            SettingsTile(
+            _NotifChildTile(
               icon: Icons.chat_bubble_outline,
               label: 'Mensajes',
-              trailing: Switch(
-                value: prefsState.notifyMessages,
-                activeColor: BeautyCitaTheme.primaryRose,
-                onChanged: (_) {
-                  ref.read(userPrefsProvider.notifier).toggleMessages();
-                },
-              ),
+              value: prefsState.notifyMessages,
+              onChanged: (_) => ref.read(userPrefsProvider.notifier).toggleMessages(),
             ),
-            SettingsTile(
+            _NotifChildTile(
               icon: Icons.local_offer_outlined,
               label: 'Promociones',
-              trailing: Switch(
-                value: prefsState.notifyPromotions,
-                activeColor: BeautyCitaTheme.primaryRose,
-                onChanged: (_) {
-                  ref.read(userPrefsProvider.notifier).togglePromotions();
-                },
-              ),
+              value: prefsState.notifyPromotions,
+              onChanged: (_) => ref.read(userPrefsProvider.notifier).togglePromotions(),
             ),
           ],
 
@@ -575,6 +555,71 @@ class PreferencesScreen extends ConsumerWidget {
       'transit' => 'Transporte',
       _ => 'Mi auto',
     };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Uber Tile (moved from settings_screen.dart)
+// ---------------------------------------------------------------------------
+
+/// Compact, indented notification child toggle.
+class _NotifChildTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  const _NotifChildTile({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 32),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppConstants.radiusSM),
+        onTap: () => onChanged(!value),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppConstants.paddingSM,
+            vertical: 8,
+          ),
+          child: Row(
+            children: [
+              Icon(
+                icon,
+                size: 18,
+                color: BeautyCitaTheme.textLight,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  label,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w400,
+                    color: BeautyCitaTheme.textDark,
+                  ),
+                ),
+              ),
+              SizedBox(
+                height: 28,
+                child: FittedBox(
+                  child: Switch(
+                    value: value,
+                    activeColor: BeautyCitaTheme.primaryRose,
+                    onChanged: onChanged,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

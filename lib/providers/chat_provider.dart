@@ -24,7 +24,10 @@ final chatThreadsProvider = StreamProvider<List<ChatThread>>((ref) {
       .stream(primaryKey: ['id'])
       .eq('user_id', userId)
       .map((rows) {
-    final threads = rows.map((r) => ChatThread.fromJson(r)).toList();
+    final threads = rows
+        .where((r) => r['archived_at'] == null) // Hide archived threads
+        .map((r) => ChatThread.fromJson(r))
+        .toList();
     // Sort: pinned first, then by last_message_at descending
     threads.sort((a, b) {
       if (a.pinned && !b.pinned) return -1;

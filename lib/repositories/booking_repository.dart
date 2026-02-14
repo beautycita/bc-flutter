@@ -13,6 +13,8 @@ class BookingRepository {
     int durationMinutes = 60,
     double? price,
     String? notes,
+    String? paymentIntentId,
+    String? paymentStatus,
   }) async {
     final userId = SupabaseClientService.currentUserId;
     if (userId == null) {
@@ -31,7 +33,9 @@ class BookingRepository {
       'ends_at': endsAt.toUtc().toIso8601String(),
       'price': price,
       'notes': notes,
-      'status': 'pending',
+      'status': paymentStatus == 'paid' ? 'confirmed' : 'pending',
+      if (paymentIntentId != null) 'payment_intent_id': paymentIntentId,
+      if (paymentStatus != null) 'payment_status': paymentStatus,
     };
 
     final response = await SupabaseClientService.client

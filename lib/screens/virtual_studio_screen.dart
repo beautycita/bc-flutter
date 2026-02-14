@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import '../config/theme.dart';
@@ -666,53 +666,55 @@ class _ToolViewState extends ConsumerState<_ToolView>
 class _HairstyleSample {
   final String id;
   final String label;
-  final String previewAsset;   // Full model photo (shown in UI)
-  final String templateAsset;  // Hair-only PNG (sent to LightX)
+  final String previewUrl;    // Full model photo (shown in UI)
+  final String templateUrl;   // Hair-only PNG (sent to LightX)
 
   const _HairstyleSample({
     required this.id,
     required this.label,
-    required this.previewAsset,
-    required this.templateAsset,
+    required this.previewUrl,
+    required this.templateUrl,
   });
 }
+
+const _r2 = 'https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/media/hairstyles';
 
 const _hairstyleSamples = [
   _HairstyleSample(
     id: 'rubioOndulado',
     label: 'Rubio Ondulado',
-    previewAsset: 'assets/hairstyles/rubioOndulado.png',
-    templateAsset: 'assets/hairstyles/rubioOndulado.png',
+    previewUrl: '$_r2/rubioOndulado.png',
+    templateUrl: '$_r2/rubioOndulado.png',
   ),
   _HairstyleSample(
     id: 'balayageLargo',
     label: 'Balayage Largo',
-    previewAsset: 'assets/hairstyles/balayageLargo.png',
-    templateAsset: 'assets/hairstyles/balayageLargo.png',
+    previewUrl: '$_r2/balayageLargo.png',
+    templateUrl: '$_r2/balayageLargo.png',
   ),
   _HairstyleSample(
     id: 'bobOndulado',
     label: 'Bob Ondulado',
-    previewAsset: 'assets/hairstyles/bobOndulado.png',
-    templateAsset: 'assets/hairstyles/bobOndulado.png',
+    previewUrl: '$_r2/bobOndulado.png',
+    templateUrl: '$_r2/bobOndulado.png',
   ),
   _HairstyleSample(
     id: 'lacioLargo',
     label: 'Lacio Largo',
-    previewAsset: 'assets/hairstyles/lacioLargo.png',
-    templateAsset: 'assets/hairstyles/lacioLargo.png',
+    previewUrl: '$_r2/lacioLargo.png',
+    templateUrl: '$_r2/lacioLargo.png',
   ),
   _HairstyleSample(
     id: 'pixieElegante',
     label: 'Pixie Elegante',
-    previewAsset: 'assets/hairstyles/pixieElegante.png',
-    templateAsset: 'assets/hairstyles/pixieElegante.png',
+    previewUrl: '$_r2/pixieElegante.png',
+    templateUrl: '$_r2/pixieElegante.png',
   ),
   _HairstyleSample(
     id: 'rizosMedianos',
     label: 'Rizos Medianos',
-    previewAsset: 'assets/hairstyles/rizosMedianos.png',
-    templateAsset: 'assets/hairstyles/rizosMedianos.png',
+    previewUrl: '$_r2/rizosMedianos.png',
+    templateUrl: '$_r2/rizosMedianos.png',
   ),
 ];
 
@@ -830,9 +832,8 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
       Uint8List referenceBytes;
 
       if (_selectedSample != null) {
-        // Load the hair-only template from assets (NOT the preview)
-        final data = await rootBundle.load(_selectedSample!.templateAsset);
-        referenceBytes = data.buffer.asUint8List();
+        final response = await http.get(Uri.parse(_selectedSample!.templateUrl));
+        referenceBytes = response.bodyBytes;
       } else {
         referenceBytes = _customReferenceBytes!;
       }
@@ -1016,6 +1017,60 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
             child: ListView(
               scrollDirection: Axis.horizontal,
               children: [
+                // "Upload custom" option — first
+                Padding(
+                  padding: const EdgeInsets.only(right: 10),
+                  child: GestureDetector(
+                    onTap: _pickCustomReference,
+                    child: Container(
+                      width: 90,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: _customReferenceBytes != null
+                              ? BeautyCitaTheme.primaryRose
+                              : BeautyCitaTheme.dividerLight,
+                          width: _customReferenceBytes != null ? 3 : 1,
+                        ),
+                      ),
+                      child: _customReferenceBytes != null
+                          ? Column(
+                              children: [
+                                Expanded(
+                                  child: ClipRRect(
+                                    borderRadius: const BorderRadius.vertical(top: Radius.circular(11)),
+                                    child: Image.memory(_customReferenceBytes!, fit: BoxFit.cover, width: double.infinity),
+                                  ),
+                                ),
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: BeautyCitaTheme.primaryRose,
+                                    borderRadius: const BorderRadius.vertical(bottom: Radius.circular(11)),
+                                  ),
+                                  child: Text(
+                                    'Tu foto',
+                                    textAlign: TextAlign.center,
+                                    style: GoogleFonts.nunito(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white),
+                                  ),
+                                ),
+                              ],
+                            )
+                          : Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.add_photo_alternate_outlined, size: 32, color: BeautyCitaTheme.primaryRose.withValues(alpha: 0.5)),
+                                  const SizedBox(height: 4),
+                                  Text('Subir\nreferencia', textAlign: TextAlign.center, style: GoogleFonts.nunito(fontSize: 10, fontWeight: FontWeight.w600, color: BeautyCitaTheme.textLight)),
+                                ],
+                              ),
+                            ),
+                    ),
+                  ),
+                ),
+                // Samples
                 ..._hairstyleSamples.map((sample) => Padding(
                   padding: const EdgeInsets.only(right: 10),
                   child: GestureDetector(
@@ -1036,16 +1091,19 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
                           Expanded(
                             child: ClipRRect(
                               borderRadius: const BorderRadius.vertical(top: Radius.circular(11)),
-                              child: Image.asset(
-                                sample.previewAsset,
+                              child: Image.network(
+                                sample.previewUrl,
                                 fit: BoxFit.cover,
                                 width: double.infinity,
+                                errorBuilder: (_, __, ___) => const Center(
+                                  child: Icon(Icons.broken_image, size: 24),
+                                ),
                               ),
                             ),
                           ),
                           Container(
                             width: double.infinity,
-                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
                             decoration: BoxDecoration(
                               color: _selectedSample?.id == sample.id
                                   ? BeautyCitaTheme.primaryRose
@@ -1055,6 +1113,8 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
                             child: Text(
                               sample.label,
                               textAlign: TextAlign.center,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: GoogleFonts.nunito(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w700,
@@ -1067,56 +1127,6 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
                     ),
                   ),
                 )),
-                // "Upload custom" option
-                GestureDetector(
-                  onTap: _pickCustomReference,
-                  child: Container(
-                    width: 90,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: _customReferenceBytes != null
-                            ? BeautyCitaTheme.primaryRose
-                            : BeautyCitaTheme.dividerLight,
-                        width: _customReferenceBytes != null ? 3 : 1,
-                      ),
-                    ),
-                    child: _customReferenceBytes != null
-                        ? Column(
-                            children: [
-                              Expanded(
-                                child: ClipRRect(
-                                  borderRadius: const BorderRadius.vertical(top: Radius.circular(11)),
-                                  child: Image.memory(_customReferenceBytes!, fit: BoxFit.cover, width: double.infinity),
-                                ),
-                              ),
-                              Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.symmetric(vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: BeautyCitaTheme.primaryRose,
-                                  borderRadius: const BorderRadius.vertical(bottom: Radius.circular(11)),
-                                ),
-                                child: Text(
-                                  'Tu foto',
-                                  textAlign: TextAlign.center,
-                                  style: GoogleFonts.nunito(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white),
-                                ),
-                              ),
-                            ],
-                          )
-                        : Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.add_photo_alternate_outlined, size: 32, color: BeautyCitaTheme.primaryRose.withValues(alpha: 0.5)),
-                                const SizedBox(height: 4),
-                                Text('Subir\nreferencia', textAlign: TextAlign.center, style: GoogleFonts.nunito(fontSize: 10, fontWeight: FontWeight.w600, color: BeautyCitaTheme.textLight)),
-                              ],
-                            ),
-                          ),
-                  ),
-                ),
               ],
             ),
           ),

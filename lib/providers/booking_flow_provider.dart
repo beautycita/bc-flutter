@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart' show Color, ThemeMode;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:beautycita/services/toast_service.dart';
 import '../models/curate_result.dart';
 import '../models/follow_up_question.dart';
@@ -252,7 +254,7 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
     );
   }
 
-  /// User confirmed the booking — create appointment + schedule Uber if needed.
+  /// User confirmed the booking — collect payment, create appointment, schedule Uber.
   Future<void> confirmBooking() async {
     final result = state.selectedResult;
     if (result == null) return;
@@ -260,7 +262,89 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
     state = state.copyWith(step: BookingFlowStep.booking);
 
     try {
-      // 1. Create the appointment
+      // 1. Create PaymentIntent via edge function
+      String? paymentIntentId;
+      final serviceId = result.service.id;
+
+      if (serviceId.isNotEmpty && result.service.price > 0) {
+        debugPrint('[PAYMENT] Creating PaymentIntent for service $serviceId');
+
+        final piResponse = await SupabaseClientService.client.functions.invoke(
+          'create-payment-intent',
+          body: {
+            'service_id': serviceId,
+            'scheduled_at': result.slot.startTime.toUtc().toIso8601String(),
+            'payment_type': 'full',
+          },
+        );
+
+        if (piResponse.status != 200) {
+          final error = piResponse.data is Map
+              ? piResponse.data['error'] ?? 'Payment error'
+              : 'Payment error';
+          throw Exception(error);
+        }
+
+        final piData = piResponse.data as Map<String, dynamic>;
+        final clientSecret = piData['client_secret'] as String;
+        paymentIntentId = piData['payment_intent_id'] as String;
+        final customerId = piData['customer_id'] as String?;
+        final ephemeralKey = piData['ephemeral_key'] as String?;
+
+        debugPrint('[PAYMENT] PaymentIntent created: $paymentIntentId');
+        debugPrint('[PAYMENT] Customer: $customerId, ephemeral key: ${ephemeralKey != null ? "present" : "missing"}');
+
+        // 2. Present Stripe Payment Sheet (themed to match BeautyCita)
+        await Stripe.instance.initPaymentSheet(
+          paymentSheetParameters: SetupPaymentSheetParameters(
+            paymentIntentClientSecret: clientSecret,
+            customerId: customerId,
+            customerEphemeralKeySecret: ephemeralKey,
+            merchantDisplayName: 'BeautyCita',
+            returnURL: 'beautycita://stripe-redirect',
+            allowsDelayedPaymentMethods: true,
+            billingDetailsCollectionConfiguration: const BillingDetailsCollectionConfiguration(
+              name: CollectionMode.automatic,
+              email: CollectionMode.never,
+              phone: CollectionMode.never,
+              address: AddressCollectionMode.never,
+            ),
+            style: ThemeMode.light,
+            appearance: const PaymentSheetAppearance(
+              colors: PaymentSheetAppearanceColors(
+                primary: Color(0xFFC2185B),
+                background: Color(0xFFF9F9F9),
+                componentBackground: Color(0xFFF5F5F5),
+                componentBorder: Color(0xFFBDBDBD),
+                componentDivider: Color(0xFFE0E0E0),
+                primaryText: Color(0xFF000000),
+                secondaryText: Color(0xFF424242),
+                placeholderText: Color(0xFF9E9E9E),
+                icon: Color(0xFFC2185B),
+                error: Color(0xFFD32F2F),
+              ),
+              shapes: PaymentSheetShape(
+                borderRadius: 12,
+                borderWidth: 1.0,
+              ),
+              primaryButton: PaymentSheetPrimaryButtonAppearance(
+                colors: PaymentSheetPrimaryButtonTheme(
+                  light: PaymentSheetPrimaryButtonThemeColors(
+                    background: Color(0xFFC2185B),
+                    text: Color(0xFFFFFFFF),
+                    border: Color(0xFFC2185B),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+
+        await Stripe.instance.presentPaymentSheet();
+        debugPrint('[PAYMENT] Payment completed successfully');
+      }
+
+      // 3. Create the appointment (only after payment succeeds)
       final booking = await _bookingRepo.createBooking(
         providerId: result.business.id,
         providerServiceId: result.service.id,
@@ -269,11 +353,13 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
         scheduledAt: result.slot.startTime,
         durationMinutes: result.service.durationMinutes,
         price: result.service.price,
+        paymentIntentId: paymentIntentId,
+        paymentStatus: paymentIntentId != null ? 'paid' : null,
       );
 
       bool uberOk = false;
 
-      // 2. If transport is uber, schedule rides
+      // 4. If transport is uber, schedule rides
       final pickup = state.pickupLocation;
       if (state.transportMode == 'uber' && pickup != null) {
         try {
@@ -301,6 +387,17 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
         step: BookingFlowStep.booked,
         bookingId: booking.id,
         uberScheduled: uberOk,
+      );
+    } on StripeException catch (e) {
+      // User cancelled the payment sheet or payment failed
+      debugPrint('[PAYMENT] Stripe error: ${e.error.localizedMessage}');
+      final msg = e.error.code == FailureCode.Canceled
+          ? 'Pago cancelado'
+          : 'Error de pago: ${e.error.localizedMessage}';
+      ToastService.showError(msg);
+      state = state.copyWith(
+        step: BookingFlowStep.confirmation,
+        error: msg,
       );
     } catch (e) {
       final msg = ToastService.friendlyError(e);

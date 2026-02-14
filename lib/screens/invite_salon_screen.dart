@@ -296,11 +296,21 @@ class _InviteSalonScreenState extends ConsumerState<InviteSalonScreen> {
     // 1. Open WhatsApp with pre-filled message
     final phone = salon.whatsapp ?? salon.phone;
     if (phone != null) {
+      final params = <String, String>{
+        if (salon.name.isNotEmpty) 'name': salon.name,
+        if (phone != null) 'phone': phone,
+        if (salon.address != null) 'address': salon.address!,
+        if (salon.city != null) 'city': salon.city!,
+        if (salon.photoUrl != null) 'avatar': salon.photoUrl!,
+        if (salon.rating != null) 'rating': salon.rating!.toStringAsFixed(1),
+        'ref': salon.id,
+      };
+      final regUrl = Uri.https('beautycita.com', '/registro', params);
       final message = Uri.encodeComponent(
-        'Hola! Soy clienta tuya y me encantaría poder reservar '
-        'contigo desde BeautyCita. Es gratis para ti y te llegan '
-        'clientes nuevos. Registrate en 60 seg: '
-        'https://beautycita.com/salon/${salon.id}',
+        'Hola! Queria hacer una cita contigo pero no te encontre '
+        'en BeautyCita. Deberias estar ahi, te llegan mas clientes '
+        'y es gratis: $regUrl '
+        'Manana te busco en la app si no ando muy ocupada!',
       );
       final waUrl = Uri.parse('https://wa.me/${phone.replaceAll('+', '')}?text=$message');
       launchUrl(waUrl, mode: LaunchMode.externalApplication);

@@ -16,6 +16,28 @@ import '../widgets/location_picker_sheet.dart';
 import 'invite_salon_screen.dart' show DiscoveredSalon, nearbySalonsProvider, waGreen, waLightGreen, waCardTint;
 import 'time_override_sheet.dart';
 
+/// 13-stop real gold gradient for card borders and button.
+const _goldGradient = LinearGradient(
+  begin: Alignment.topLeft,
+  end: Alignment.bottomRight,
+  colors: [
+    Color(0xFF8B6914),
+    Color(0xFFD4AF37),
+    Color(0xFFFFF8DC),
+    Color(0xFFFFD700),
+    Color(0xFFC19A26),
+    Color(0xFFF5D547),
+    Color(0xFFFFFFE0),
+    Color(0xFFD4AF37),
+    Color(0xFFA67C00),
+    Color(0xFFCDAD38),
+    Color(0xFFFFF8DC),
+    Color(0xFFB8860B),
+    Color(0xFF8B6914),
+  ],
+  stops: [0.0, 0.08, 0.15, 0.25, 0.35, 0.45, 0.50, 0.58, 0.68, 0.78, 0.85, 0.93, 1.0],
+);
+
 class ResultCardsScreen extends ConsumerStatefulWidget {
   const ResultCardsScreen({super.key});
 
@@ -406,18 +428,25 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
   }
 
   Widget _buildCard(ResultCard result, bool isTopCard) {
-    return Card(
+    return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      shape: RoundedRectangleBorder(
+      decoration: BoxDecoration(
+        gradient: _goldGradient,
         borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusLarge),
-        side: BorderSide(
-          color: Colors.grey.withValues(alpha: 0.08),
-          width: 1,
-        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isTopCard ? 0.15 : 0.05),
+            blurRadius: isTopCard ? 12 : 4,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      elevation: isTopCard ? 12 : 2,
-      shadowColor: Colors.black.withValues(alpha: 0.15),
-      child: Padding(
+      child: Container(
+        margin: const EdgeInsets.all(3),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusLarge - 3),
+        ),
         padding: const EdgeInsets.all(16),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -772,8 +801,8 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
         ),
         const SizedBox(width: 12),
         Expanded(
-          child: ElevatedButton(
-            onPressed: _isBooking
+          child: GestureDetector(
+            onTap: _isBooking
                 ? null
                 : () async {
                     setState(() => _isBooking = true);
@@ -783,36 +812,107 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
                       if (mounted) setState(() => _isBooking = false);
                     }
                   },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: BeautyCitaTheme.primaryRose,
-              foregroundColor: Colors.white,
+            child: Container(
               padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius:
-                    BorderRadius.circular(BeautyCitaTheme.radiusMedium),
-              ),
-              elevation: 0,
-            ),
-            child: _isBooking
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
-                : Text(
-                    'RESERVAR',
-                    style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 1.2,
-                    ),
+              decoration: BoxDecoration(
+                gradient: _goldGradient,
+                borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFD4AF37).withValues(alpha: 0.4),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
                   ),
+                ],
+              ),
+              alignment: Alignment.center,
+              child: _isBooking
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const _GoldShimmerButtonText(text: 'RESERVAR'),
+            ),
           ),
         ),
       ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Gold shimmer text for the RESERVAR button
+// ---------------------------------------------------------------------------
+
+class _GoldShimmerButtonText extends StatefulWidget {
+  final String text;
+  const _GoldShimmerButtonText({required this.text});
+
+  @override
+  State<_GoldShimmerButtonText> createState() => _GoldShimmerButtonTextState();
+}
+
+class _GoldShimmerButtonTextState extends State<_GoldShimmerButtonText>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 2500),
+      vsync: this,
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        final shimmerOffset = _controller.value * 3.0 - 1.0;
+        return ShaderMask(
+          shaderCallback: (bounds) {
+            return LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: const [
+                Color(0xFF1A1400),
+                Color(0xFFFFF8DC),
+                Color(0xFFFFFFFF),
+                Color(0xFFFFF8DC),
+                Color(0xFF1A1400),
+              ],
+              stops: [
+                (shimmerOffset - 0.2).clamp(0.0, 1.0),
+                (shimmerOffset - 0.05).clamp(0.0, 1.0),
+                shimmerOffset.clamp(0.0, 1.0),
+                (shimmerOffset + 0.05).clamp(0.0, 1.0),
+                (shimmerOffset + 0.2).clamp(0.0, 1.0),
+              ],
+            ).createShader(bounds);
+          },
+          child: Text(
+            widget.text,
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.2,
+              color: Colors.white,
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -1045,11 +1145,21 @@ class _NoResultsWithNearbySalonsState
 
     final phone = salon.whatsapp ?? salon.phone;
     if (phone != null) {
+      final params = <String, String>{
+        if (salon.name.isNotEmpty) 'name': salon.name,
+        if (phone != null) 'phone': phone,
+        if (salon.address != null) 'address': salon.address!,
+        if (salon.city != null) 'city': salon.city!,
+        if (salon.photoUrl != null) 'avatar': salon.photoUrl!,
+        if (salon.rating != null) 'rating': salon.rating!.toStringAsFixed(1),
+        'ref': salon.id,
+      };
+      final regUrl = Uri.https('beautycita.com', '/registro', params);
       final message = Uri.encodeComponent(
-        'Hola! Soy clienta tuya y me encantaria poder reservar '
-        'contigo desde BeautyCita. Es gratis para ti y te llegan '
-        'clientes nuevos. Registrate en 60 seg: '
-        'https://beautycita.com/salon/${salon.id}',
+        'Hola! Queria hacer una cita contigo pero no te encontre '
+        'en BeautyCita. Deberias estar ahi, te llegan mas clientes '
+        'y es gratis: $regUrl '
+        'Manana te busco en la app si no ando muy ocupada!',
       );
       final waUrl = Uri.parse('https://wa.me/${phone.replaceAll('+', '')}?text=$message');
       launchUrl(waUrl, mode: LaunchMode.externalApplication);

@@ -62,7 +62,7 @@ Deno.serve(async (req: Request) => {
       const scopes =
         body.scopes ??
         Deno.env.get("UBER_SCOPES") ??
-        "partner-loyalty.unlink-account partner-loyalty.flight-bookings";
+        "profile request places history";
       const UBER_CLIENT_ID = Deno.env.get("UBER_CLIENT_ID") ?? "";
       const UBER_SANDBOX = Deno.env.get("UBER_SANDBOX") === "true";
       const loginBase = UBER_SANDBOX

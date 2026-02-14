@@ -80,12 +80,14 @@ class SecurityNotifier extends StateNotifier<SecurityState> {
       final hasEmail = user.email != null && user.email!.isNotEmpty;
       final emailConfirmed = user.emailConfirmedAt != null;
       final hasEmailIdentity = identities.any((id) => id.provider == 'email');
+      // Also check user_metadata flag (set when password added via updateUser on Google-first accounts)
+      final metadataHasPassword = user.userMetadata?['has_password'] == true;
 
       state = SecurityState(
         isGoogleLinked: hasGoogle,
         isEmailAdded: hasEmail,
         isEmailConfirmed: emailConfirmed,
-        hasPassword: hasEmailIdentity,
+        hasPassword: hasEmailIdentity || metadataHasPassword,
         email: user.email,
       );
     } catch (e) {
@@ -204,7 +206,10 @@ class SecurityNotifier extends StateNotifier<SecurityState> {
 
     try {
       await SupabaseClientService.client.auth.updateUser(
-        UserAttributes(password: password),
+        UserAttributes(
+          password: password,
+          data: {'has_password': true},
+        ),
       );
       state = state.copyWith(
         isLoading: false,

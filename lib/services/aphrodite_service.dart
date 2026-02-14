@@ -183,10 +183,12 @@ class AphroditeService {
         .update({'metadata': metadata}).eq('id', messageId);
   }
 
-  /// Deletes a thread and all its messages (cascade).
+  /// Archives a thread (soft-delete). Messages stay in DB but thread is hidden.
   Future<void> deleteThread(String threadId) async {
     final client = SupabaseClientService.client;
-    await client.from('chat_threads').delete().eq('id', threadId);
+    await client.from('chat_threads').update({
+      'archived_at': DateTime.now().toUtc().toIso8601String(),
+    }).eq('id', threadId);
   }
 
   /// Gets or creates the Aphrodite thread for the current user.
@@ -198,12 +200,13 @@ class AphroditeService {
       throw AphroditeException('Not authenticated');
     }
 
-    // Check if aphrodite thread already exists
+    // Check if aphrodite thread already exists (non-archived)
     final existing = await client
         .from('chat_threads')
         .select()
         .eq('user_id', userId)
         .eq('contact_type', 'aphrodite')
+        .isFilter('archived_at', null)
         .maybeSingle();
 
     if (existing != null) {

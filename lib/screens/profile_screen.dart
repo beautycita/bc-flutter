@@ -11,7 +11,9 @@ import 'package:beautycita/widgets/bc_image_picker_sheet.dart';
 import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/providers/auth_provider.dart';
 import 'package:beautycita/providers/profile_provider.dart';
+import 'package:beautycita/widgets/location_picker_sheet.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 import 'package:beautycita/services/lightx_service.dart';
 import 'package:beautycita/services/media_service.dart';
 import 'package:beautycita/services/username_generator.dart';
@@ -225,6 +227,68 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 setState(() => _editingName = true);
               },
             ),
+
+          // ── Phone ──
+          SettingsTile(
+            icon: Icons.phone_outlined,
+            iconColor: profile.hasVerifiedPhone
+                ? Colors.green.shade600
+                : profile.phone != null ? Colors.orange.shade600 : null,
+            label: profile.phone ?? 'Agregar telefono',
+            trailing: profile.hasVerifiedPhone
+                ? Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('Verificado', style: textTheme.bodySmall?.copyWith(
+                        color: Colors.green.shade600, fontSize: 11)),
+                      const SizedBox(width: 6),
+                      Icon(Icons.check_circle, color: Colors.green.shade600, size: 18),
+                    ],
+                  )
+                : profile.phone != null
+                    ? GestureDetector(
+                        onTap: () => _showOtpSheet(context),
+                        child: Text('Verificar', style: textTheme.bodySmall?.copyWith(
+                          color: BeautyCitaTheme.primaryRose, fontWeight: FontWeight.w600)),
+                      )
+                    : Text('Requerido', style: textTheme.bodySmall?.copyWith(
+                        color: Colors.red.shade400, fontSize: 11)),
+            onTap: () => _showPhoneSheet(context),
+          ),
+
+          // ── Birthday ──
+          SettingsTile(
+            icon: Icons.cake_outlined,
+            iconColor: profile.birthday != null ? Colors.green.shade600 : null,
+            label: profile.birthday != null
+                ? DateFormat('d MMM yyyy', 'es').format(profile.birthday!)
+                : 'Fecha de nacimiento',
+            trailing: profile.birthday != null
+                ? Icon(Icons.check_circle, size: 18, color: Colors.green.shade600)
+                : null,
+            onTap: () => _showBirthdayPicker(context),
+          ),
+
+          // ── Gender ──
+          SettingsTile(
+            icon: Icons.person_outline_rounded,
+            iconColor: profile.gender != null ? Colors.green.shade600 : null,
+            label: profile.gender != null
+                ? _genderLabel(profile.gender!)
+                : 'Genero',
+            trailing: profile.gender != null
+                ? Icon(Icons.check_circle, size: 18, color: Colors.green.shade600)
+                : null,
+            onTap: () => _showGenderSheet(context),
+          ),
+
+          const SizedBox(height: BeautyCitaTheme.spaceLG),
+
+          // ── Ubicacion temporal ──
+          const SectionHeader(label: 'Buscar desde otra ubicacion'),
+          const SizedBox(height: BeautyCitaTheme.spaceXS),
+
+          _buildTempLocationTile(context, textTheme),
 
           const SizedBox(height: BeautyCitaTheme.spaceLG),
 
@@ -565,6 +629,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   Future<void> _processAIAvatar(Uint8List croppedBytes, String stylePrompt) async {
     if (!mounted) return;
+    debugPrint('[Avatar] Starting AI avatar creation — ${croppedBytes.length} bytes, style: $stylePrompt');
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -586,23 +651,28 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
 
     try {
+      debugPrint('[Avatar] Calling LightX edge function (headshot)...');
       final lightx = LightXService();
       final resultUrl = await lightx.processTryOn(
         imageBytes: croppedBytes,
         tryOnTypeId: 'headshot',
         stylePrompt: stylePrompt,
       );
+      debugPrint('[Avatar] LightX returned result: $resultUrl');
 
       // Download the result image so we can upload to permanent storage
+      debugPrint('[Avatar] Downloading result image...');
       final response = await http.get(Uri.parse(resultUrl));
       if (response.statusCode != 200) {
-        throw Exception('Failed to download AI result');
+        throw Exception('Failed to download AI result (HTTP ${response.statusCode})');
       }
       final resultBytes = response.bodyBytes;
+      debugPrint('[Avatar] Downloaded ${resultBytes.length} bytes');
 
       if (!mounted) return;
 
       // Upload to Supabase storage as permanent avatar
+      debugPrint('[Avatar] Uploading to Supabase storage...');
       final fileName = 'avatar_ai_${DateTime.now().millisecondsSinceEpoch}.jpg';
       final permanentUrl = await ref
           .read(profileProvider.notifier)
@@ -614,6 +684,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       if (permanentUrl == null) {
         throw Exception('Failed to upload avatar');
       }
+      debugPrint('[Avatar] Avatar saved: $permanentUrl');
 
       // Save to user_media for media manager
       try {
@@ -635,7 +706,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           behavior: SnackBarBehavior.floating,
         ),
       );
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint('[Avatar] ERROR: $e');
+      debugPrint('[Avatar] Stack trace: $st');
       if (!mounted) return;
       Navigator.of(context).pop(); // dismiss loading
       ScaffoldMessenger.of(context).showSnackBar(
@@ -643,9 +716,314 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           content: Text('Error: $e'),
           backgroundColor: Colors.red.shade600,
           behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 8),
         ),
       );
     }
+  }
+
+  // ── Temp location tile ──
+
+  Widget _buildTempLocationTile(BuildContext context, TextTheme textTheme) {
+    final tempLoc = ref.watch(tempSearchLocationProvider);
+
+    if (tempLoc != null) {
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: AppConstants.paddingSM),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.amber.shade50,
+          borderRadius: BorderRadius.circular(AppConstants.radiusSM),
+          border: Border.all(color: Colors.amber.shade200),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.location_on, color: Colors.amber.shade700, size: 22),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(tempLoc.address,
+                    style: textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                    maxLines: 2, overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 2),
+                  Text('Temporal — se reinicia al cerrar la app',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: Colors.amber.shade800, fontSize: 11)),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTap: () => ref.read(tempSearchLocationProvider.notifier).state = null,
+              child: Icon(Icons.close_rounded, color: Colors.grey.shade500, size: 20),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppConstants.paddingSM),
+          child: Text(
+            'Si estaras en otro lugar (boda, viaje, etc.), busca estilistas cerca de esa direccion. Se reinicia al cerrar la app.',
+            style: textTheme.bodySmall?.copyWith(color: BeautyCitaTheme.textLight),
+          ),
+        ),
+        const SizedBox(height: 8),
+        SettingsTile(
+          icon: Icons.add_location_alt_outlined,
+          label: 'Elegir ubicacion temporal',
+          onTap: () => _pickTempLocation(context),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _pickTempLocation(BuildContext context) async {
+    final location = await showLocationPicker(
+      context: context,
+      ref: ref,
+      title: 'Buscar desde esta ubicacion',
+    );
+    if (location != null && mounted) {
+      ref.read(tempSearchLocationProvider.notifier).state = location;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Buscando desde: ${location.address}'),
+          backgroundColor: Colors.green.shade600,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  // ── Phone ──
+
+  void _showPhoneSheet(BuildContext context) {
+    final controller = TextEditingController(
+      text: ref.read(profileProvider).phone ?? '+52 ',
+    );
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return Padding(
+          padding: EdgeInsets.fromLTRB(
+            24, 16, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              buildSheetHeader(context, 'Telefono'),
+              Text(
+                'Necesario para confirmar reservas y recibir alertas por SMS.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: BeautyCitaTheme.textLight),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: controller,
+                keyboardType: TextInputType.phone,
+                autofocus: true,
+                decoration: const InputDecoration(
+                  hintText: '+52 33 1234 5678',
+                  prefixIcon: Icon(Icons.phone_outlined),
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    final phone = controller.text.trim().replaceAll(' ', '');
+                    if (phone.length < 12) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: const Text('Numero invalido'),
+                          backgroundColor: Colors.red.shade600,
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                      return;
+                    }
+                    Navigator.pop(ctx);
+                    final success = await ref.read(profileProvider.notifier).updatePhone(phone);
+                    if (success && mounted) {
+                      _showOtpSheet(context);
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: BeautyCitaTheme.primaryRose,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppConstants.radiusSM)),
+                  ),
+                  child: const Text('Guardar y verificar'),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showOtpSheet(BuildContext context) async {
+    final sent = await ref.read(profileProvider.notifier).sendPhoneOtp();
+    if (!sent || !mounted) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('No se pudo enviar el codigo'),
+            backgroundColor: Colors.red.shade600,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
+    }
+
+    if (!mounted) return;
+    final otpController = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return Padding(
+          padding: EdgeInsets.fromLTRB(
+            24, 16, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              buildSheetHeader(context, 'Verificar telefono'),
+              Text(
+                'Ingresa el codigo de 6 digitos que enviamos a ${ref.read(profileProvider).phone}',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: BeautyCitaTheme.textLight),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: otpController,
+                keyboardType: TextInputType.number,
+                autofocus: true,
+                maxLength: 6,
+                decoration: const InputDecoration(
+                  hintText: '000000',
+                  prefixIcon: Icon(Icons.sms_outlined),
+                  counterText: '',
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    final otp = otpController.text.trim();
+                    if (otp.length != 6) return;
+                    Navigator.pop(ctx);
+                    final ok = await ref.read(profileProvider.notifier).verifyPhoneOtp(otp);
+                    if (ok && mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: const Text('Telefono verificado'),
+                          backgroundColor: Colors.green.shade600,
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: BeautyCitaTheme.primaryRose,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppConstants.radiusSM)),
+                  ),
+                  child: const Text('Verificar'),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // ── Birthday ──
+
+  Future<void> _showBirthdayPicker(BuildContext context) async {
+    final current = ref.read(profileProvider).birthday;
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: current ?? DateTime(1990, 1, 1),
+      firstDate: DateTime(1920),
+      lastDate: DateTime.now().subtract(const Duration(days: 365 * 13)),
+      locale: const Locale('es'),
+    );
+    if (picked != null && mounted) {
+      await ref.read(profileProvider.notifier).updateBirthday(picked);
+    }
+  }
+
+  // ── Gender ──
+
+  String _genderLabel(String gender) {
+    switch (gender) {
+      case 'female': return 'Mujer';
+      case 'male': return 'Hombre';
+      case 'non_binary': return 'No binario';
+      case 'prefer_not_say': return 'Prefiero no decir';
+      default: return gender;
+    }
+  }
+
+  void _showGenderSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                buildSheetHeader(context, 'Genero'),
+                for (final g in ['female', 'male', 'non_binary', 'prefer_not_say'])
+                  OptionTile(
+                    emoji: g == 'female' ? '♀' : g == 'male' ? '♂' : g == 'non_binary' ? '⚧' : '—',
+                    label: _genderLabel(g),
+                    subtitle: '',
+                    selected: ref.read(profileProvider).gender == g,
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      ref.read(profileProvider.notifier).updateGender(g);
+                    },
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   // ── Name editing ──

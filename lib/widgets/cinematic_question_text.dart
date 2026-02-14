@@ -1,6 +1,5 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../config/theme.dart';
 import 'flare_particle_painter.dart';
@@ -284,17 +283,6 @@ class _CinematicContent extends StatelessWidget {
         );
       }).toList(),
     );
-
-    // Continuous gold specular sweep — like light catching polished 24kt
-    if (entranceController.isCompleted) {
-      textContent = textContent
-          .animate(onPlay: (controller) => controller.repeat())
-          .shimmer(
-            duration: const Duration(milliseconds: 3000),
-            color: const Color(0xFFFFF8DC).withValues(alpha: 0.6),
-            delay: const Duration(milliseconds: 500),
-          );
-    }
 
     return textContent;
   }
