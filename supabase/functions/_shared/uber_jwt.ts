@@ -1,7 +1,6 @@
-// Shared Uber JWT assertion utilities for all edge functions.
-// Generates RS256-signed JWTs for Uber's asymmetric key authentication.
+// Shared Uber auth utilities for all edge functions.
+// Uses client_secret for token exchange (simpler than RSA JWT assertion).
 
-import * as jose from "https://deno.land/x/jose@v5.2.0/index.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 // ---------------------------------------------------------------------------
@@ -9,59 +8,28 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 // ---------------------------------------------------------------------------
 
 const UBER_CLIENT_ID = Deno.env.get("UBER_CLIENT_ID") ?? "";
-const UBER_APP_ID = Deno.env.get("UBER_APP_ID") ?? "";
-const UBER_ASYMMETRIC_UUID = Deno.env.get("UBER_ASYMMETRIC_UUID") ?? "";
-const UBER_RSA_PRIVATE_KEY = (Deno.env.get("UBER_RSA_PRIVATE_KEY") ?? "").replace(
-  /\\n/g,
-  "\n",
-);
+const UBER_CLIENT_SECRET = Deno.env.get("UBER_CLIENT_SECRET") ?? "";
 const UBER_SANDBOX = Deno.env.get("UBER_SANDBOX") === "true";
-const UBER_REDIRECT_URI = Deno.env.get("UBER_REDIRECT_URI") ?? "beautycita://uber-callback";
+const UBER_REDIRECT_URI = Deno.env.get("UBER_REDIRECT_URI") ?? "https://beautycita.com/auth/uber-callback";
 
 // ---------------------------------------------------------------------------
 // URL helpers
+// Auth always uses production URLs (sandbox doesn't support token generation).
+// Only ride/API requests use sandbox endpoints.
 // ---------------------------------------------------------------------------
 
 export function getUberTokenUrl(): string {
-  return UBER_SANDBOX
-    ? "https://sandbox-login.uber.com/oauth/v2/token"
-    : "https://login.uber.com/oauth/v2/token";
+  return "https://login.uber.com/oauth/v2/token";
+}
+
+export function getUberLoginBase(): string {
+  return "https://login.uber.com";
 }
 
 export function getUberApiBase(): string {
   return UBER_SANDBOX
-    ? "https://test-api.uber.com"
+    ? "https://sandbox-api.uber.com"
     : "https://api.uber.com";
-}
-
-// ---------------------------------------------------------------------------
-// JWT assertion generation
-// ---------------------------------------------------------------------------
-
-export async function generateUberJwtAssertion(): Promise<string> {
-  if (!UBER_RSA_PRIVATE_KEY || !UBER_ASYMMETRIC_UUID || !UBER_APP_ID) {
-    throw new Error(
-      "Missing Uber JWT config: UBER_RSA_PRIVATE_KEY, UBER_APP_ID, or UBER_ASYMMETRIC_UUID",
-    );
-  }
-
-  const privateKey = await jose.importPKCS8(UBER_RSA_PRIVATE_KEY, "RS256");
-
-  const jwt = await new jose.SignJWT({
-    iss: UBER_APP_ID,
-    sub: UBER_APP_ID,
-    aud: "auth.uber.com",
-    jti: crypto.randomUUID(),
-  })
-    .setProtectedHeader({
-      alg: "RS256",
-      typ: "JWT",
-      kid: UBER_ASYMMETRIC_UUID,
-    })
-    .setExpirationTime("5m")
-    .sign(privateKey);
-
-  return jwt;
 }
 
 // ---------------------------------------------------------------------------
@@ -77,16 +45,12 @@ export async function exchangeUberTokens(
   expires_in: number;
   scope: string;
 } | null> {
-  const assertion = await generateUberJwtAssertion();
-
   const resp = await fetch(getUberTokenUrl(), {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       client_id: UBER_CLIENT_ID,
-      client_assertion: assertion,
-      client_assertion_type:
-        "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+      client_secret: UBER_CLIENT_SECRET,
       grant_type: "authorization_code",
       redirect_uri: redirectUri ?? UBER_REDIRECT_URI,
       code: authCode,
@@ -113,16 +77,12 @@ export async function refreshUberTokens(
   refresh_token?: string;
   expires_in: number;
 } | null> {
-  const assertion = await generateUberJwtAssertion();
-
   const resp = await fetch(getUberTokenUrl(), {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       client_id: UBER_CLIENT_ID,
-      client_assertion: assertion,
-      client_assertion_type:
-        "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+      client_secret: UBER_CLIENT_SECRET,
       grant_type: "refresh_token",
       refresh_token: refreshToken,
     }),
