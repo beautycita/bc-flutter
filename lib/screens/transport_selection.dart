@@ -9,6 +9,28 @@ import '../providers/profile_provider.dart';
 import '../providers/user_preferences_provider.dart';
 import '../services/location_service.dart';
 
+/// 13-stop real gold gradient for card borders.
+const _goldGradient = LinearGradient(
+  begin: Alignment.topLeft,
+  end: Alignment.bottomRight,
+  colors: [
+    Color(0xFF8B6914),
+    Color(0xFFD4AF37),
+    Color(0xFFFFF8DC),
+    Color(0xFFFFD700),
+    Color(0xFFC19A26),
+    Color(0xFFF5D547),
+    Color(0xFFFFFFE0),
+    Color(0xFFD4AF37),
+    Color(0xFFA67C00),
+    Color(0xFFCDAD38),
+    Color(0xFFFFF8DC),
+    Color(0xFFB8860B),
+    Color(0xFF8B6914),
+  ],
+  stops: [0.0, 0.08, 0.15, 0.25, 0.35, 0.45, 0.50, 0.58, 0.68, 0.78, 0.85, 0.93, 1.0],
+);
+
 class TransportSelection extends ConsumerStatefulWidget {
   const TransportSelection({super.key});
 
@@ -255,10 +277,6 @@ class _TransportCardState extends State<_TransportCard> {
 
   @override
   Widget build(BuildContext context) {
-    final effectiveBorder = widget.isRecommended
-        ? (widget.borderColor ?? widget.iconColor)
-        : BeautyCitaTheme.dividerLight;
-
     return GestureDetector(
       onTapDown: (_) => setState(() => _isPressed = true),
       onTapUp: (_) {
@@ -272,31 +290,29 @@ class _TransportCardState extends State<_TransportCard> {
           // ignore: deprecated_member_use
           ..scale(_isPressed ? 0.97 : 1.0, _isPressed ? 0.97 : 1.0),
         transformAlignment: Alignment.center,
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
         decoration: BoxDecoration(
-          color: _isPressed
-              ? widget.iconBgColor
-              : widget.isRecommended
-                  ? widget.iconBgColor.withValues(alpha: 0.5)
-                  : Colors.white,
+          gradient: _goldGradient,
           borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusLarge),
-          border: Border.all(
-            color: _isPressed
-                ? widget.iconColor.withValues(alpha: 0.4)
-                : effectiveBorder.withValues(alpha: widget.isRecommended ? 0.5 : 1.0),
-            width: widget.isRecommended ? 1.5 : 1,
-          ),
           boxShadow: _isPressed
               ? []
               : [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04),
+                    color: const Color(0xFFD4AF37).withValues(alpha: 0.3),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
                 ],
         ),
-        child: Row(
+        child: Container(
+          margin: const EdgeInsets.all(3),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+          decoration: BoxDecoration(
+            color: _isPressed
+                ? widget.iconBgColor
+                : Colors.white,
+            borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusLarge - 3),
+          ),
+          child: Row(
           children: [
             // Colored circle icon
             Container(
@@ -371,6 +387,7 @@ class _TransportCardState extends State<_TransportCard> {
               size: 24,
             ),
           ],
+        ),
         ),
       ),
     );

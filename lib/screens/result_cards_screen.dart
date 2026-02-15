@@ -8,7 +8,6 @@ import 'package:url_launcher/url_launcher.dart';
 import '../config/theme.dart';
 import '../models/curate_result.dart';
 import '../providers/booking_flow_provider.dart';
-import '../providers/favorites_provider.dart';
 import '../services/places_service.dart';
 import '../services/supabase_client.dart';
 import '../widgets/cinematic_question_text.dart';
@@ -775,71 +774,42 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
   }
 
   Widget _buildActionButtons(ResultCard result) {
-    final favorites = ref.watch(favoritesProvider);
-    final isFavorited = favorites.contains(result.business.id);
-
-    return Row(
-      children: [
-        IconButton(
-          onPressed: () {
-            HapticFeedback.lightImpact();
-            ref.read(favoritesProvider.notifier).toggle(result.business.id);
-            final isFavorited = ref.read(favoritesProvider).contains(result.business.id);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(isFavorited ? 'Agregado a favoritos' : 'Eliminado de favoritos'),
-                backgroundColor: isFavorited ? Colors.green.shade600 : BeautyCitaTheme.textLight,
-                duration: const Duration(seconds: 1),
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          },
-          icon: Icon(
-            isFavorited ? Icons.favorite : Icons.favorite_border,
-          ),
-          color: BeautyCitaTheme.primaryRose,
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: GestureDetector(
-            onTap: _isBooking
-                ? null
-                : () async {
-                    setState(() => _isBooking = true);
-                    try {
-                      ref.read(bookingFlowProvider.notifier).selectResult(result);
-                    } finally {
-                      if (mounted) setState(() => _isBooking = false);
-                    }
-                  },
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              decoration: BoxDecoration(
-                gradient: _goldGradient,
-                borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFFD4AF37).withValues(alpha: 0.4),
-                    blurRadius: 8,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
-              alignment: Alignment.center,
-              child: _isBooking
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const _GoldShimmerButtonText(text: 'RESERVAR'),
+    return GestureDetector(
+      onTap: _isBooking
+          ? null
+          : () async {
+              setState(() => _isBooking = true);
+              try {
+                ref.read(bookingFlowProvider.notifier).selectResult(result);
+              } finally {
+                if (mounted) setState(() => _isBooking = false);
+              }
+            },
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          gradient: _goldGradient,
+          borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFD4AF37).withValues(alpha: 0.4),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
             ),
-          ),
+          ],
         ),
-      ],
+        alignment: Alignment.center,
+        child: _isBooking
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
+            : const _GoldShimmerButtonText(text: 'RESERVAR'),
+      ),
     );
   }
 }

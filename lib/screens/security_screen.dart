@@ -118,15 +118,29 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
           else
             SettingsTile(
               icon: Icons.lock_open_rounded,
-              iconColor: Colors.red.shade400,
+              iconColor: _canAddPassword(sec) ? Colors.orange.shade600 : Colors.red.shade400,
               label: 'Agregar contrasena',
-              trailing: !sec.isEmailConfirmed
+              trailing: !_canAddPassword(sec)
                   ? Text(
                       sec.isEmailAdded ? 'Confirma email' : 'Requiere email',
-                      style: textTheme.bodySmall?.copyWith(color: BeautyCitaTheme.textLight),
+                      style: textTheme.bodySmall?.copyWith(color: Colors.red.shade400, fontSize: 11),
                     )
-                  : null,
-              onTap: sec.isEmailConfirmed ? () => _showPasswordSheet(context) : null,
+                  : const Icon(Icons.chevron_right, size: 20, color: BeautyCitaTheme.textLight),
+              onTap: _canAddPassword(sec)
+                  ? () => _showPasswordSheet(context)
+                  : () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            sec.isEmailAdded
+                                ? 'Confirma tu email primero (revisa tu bandeja)'
+                                : 'Agrega tu email primero',
+                          ),
+                          backgroundColor: Colors.orange.shade700,
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    },
             ),
 
           const SizedBox(height: BeautyCitaTheme.spaceLG),
@@ -165,6 +179,13 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
         ],
       ),
     );
+  }
+
+  /// Google users can always add a password (email verified by Google).
+  /// Email-only users need confirmed email first.
+  bool _canAddPassword(SecurityState sec) {
+    if (sec.isGoogleLinked) return true;
+    return sec.isEmailConfirmed;
   }
 
   void _showEmailSheet(BuildContext context) {

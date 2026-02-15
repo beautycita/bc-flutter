@@ -8,6 +8,28 @@ import '../models/curate_result.dart';
 import '../providers/booking_flow_provider.dart';
 import '../widgets/cinematic_question_text.dart';
 
+/// 13-stop real gold gradient for card borders and buttons.
+const _goldGradient = LinearGradient(
+  begin: Alignment.topLeft,
+  end: Alignment.bottomRight,
+  colors: [
+    Color(0xFF8B6914),
+    Color(0xFFD4AF37),
+    Color(0xFFFFF8DC),
+    Color(0xFFFFD700),
+    Color(0xFFC19A26),
+    Color(0xFFF5D547),
+    Color(0xFFFFFFE0),
+    Color(0xFFD4AF37),
+    Color(0xFFA67C00),
+    Color(0xFFCDAD38),
+    Color(0xFFFFF8DC),
+    Color(0xFFB8860B),
+    Color(0xFF8B6914),
+  ],
+  stops: [0.0, 0.08, 0.15, 0.25, 0.35, 0.45, 0.50, 0.58, 0.68, 0.78, 0.85, 0.93, 1.0],
+);
+
 class ConfirmationScreen extends ConsumerStatefulWidget {
   const ConfirmationScreen({super.key});
 
@@ -67,62 +89,65 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
             _PriceBreakdown(result: result),
             const SizedBox(height: BeautyCitaTheme.spaceXL),
             if (isBooked) ...[
-              // Success actions
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    HapticFeedback.mediumImpact();
-                    notifier.reset();
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: BeautyCitaTheme.primaryRose,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                        vertical: BeautyCitaTheme.spaceMD),
-                    shape: RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.circular(BeautyCitaTheme.radiusLarge),
-                    ),
-                    elevation: 0,
+              // Success actions — gold gradient button
+              GestureDetector(
+                onTap: () {
+                  HapticFeedback.mediumImpact();
+                  notifier.reset();
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: BeautyCitaTheme.spaceMD),
+                  decoration: BoxDecoration(
+                    gradient: _goldGradient,
+                    borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusLarge),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFD4AF37).withValues(alpha: 0.4),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
                   ),
+                  alignment: Alignment.center,
                   child: Text(
                     'LISTO',
                     style: GoogleFonts.poppins(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 1.2,
+                      color: const Color(0xFF1A1400),
                     ),
                   ),
                 ),
               ),
             ] else ...[
-              // Confirm button
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _isConfirming
-                      ? null
-                      : () async {
-                          setState(() => _isConfirming = true);
-                          try {
-                            HapticFeedback.mediumImpact();
-                            await notifier.confirmBooking();
-                          } finally {
-                            if (mounted) setState(() => _isConfirming = false);
-                          }
-                        },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: BeautyCitaTheme.primaryRose,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                        vertical: BeautyCitaTheme.spaceMD),
-                    shape: RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.circular(BeautyCitaTheme.radiusLarge),
-                    ),
-                    elevation: 0,
+              // Confirm button — gold gradient
+              GestureDetector(
+                onTap: _isConfirming
+                    ? null
+                    : () async {
+                        setState(() => _isConfirming = true);
+                        try {
+                          HapticFeedback.mediumImpact();
+                          await notifier.confirmBooking();
+                        } finally {
+                          if (mounted) setState(() => _isConfirming = false);
+                        }
+                      },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: BeautyCitaTheme.spaceMD),
+                  decoration: BoxDecoration(
+                    gradient: _goldGradient,
+                    borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusLarge),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFD4AF37).withValues(alpha: 0.4),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
                   ),
+                  alignment: Alignment.center,
                   child: _isConfirming
                       ? const SizedBox(
                           width: 20,
@@ -140,6 +165,7 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
                             letterSpacing: 1.2,
+                            color: const Color(0xFF1A1400),
                           ),
                         ),
                 ),
@@ -213,14 +239,25 @@ class _SummaryCard extends StatelessWidget {
     final dateStr = formatter.format(result.slot.startTime);
     final capitalizedDate = dateStr[0].toUpperCase() + dateStr.substring(1);
 
-    return Card(
-      shape: RoundedRectangleBorder(
+    return Container(
+      decoration: BoxDecoration(
+        gradient: _goldGradient,
         borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFD4AF37).withValues(alpha: 0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      elevation: 0,
-      color: Colors.white,
-      child: Padding(
+      child: Container(
+        margin: const EdgeInsets.all(3),
         padding: const EdgeInsets.all(BeautyCitaTheme.spaceLG),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium - 3),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -359,14 +396,25 @@ class _TransportCard extends StatelessWidget {
     final isUber = t.mode == 'uber';
     final hasEstimate = t.uberEstimateMin != null && t.uberEstimateMax != null;
 
-    return Card(
-      shape: RoundedRectangleBorder(
+    return Container(
+      decoration: BoxDecoration(
+        gradient: _goldGradient,
         borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFD4AF37).withValues(alpha: 0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      elevation: 0,
-      color: Colors.white,
-      child: Padding(
+      child: Container(
+        margin: const EdgeInsets.all(3),
         padding: const EdgeInsets.all(BeautyCitaTheme.spaceLG),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium - 3),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -652,14 +700,25 @@ class _PriceBreakdown extends StatelessWidget {
       uberHigh = 35 + t.distanceKm * 6.0 + t.durationMin * 1.8;
     }
 
-    return Card(
-      shape: RoundedRectangleBorder(
+    return Container(
+      decoration: BoxDecoration(
+        gradient: _goldGradient,
         borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFD4AF37).withValues(alpha: 0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      elevation: 0,
-      color: Colors.white,
-      child: Padding(
+      child: Container(
+        margin: const EdgeInsets.all(3),
         padding: const EdgeInsets.all(BeautyCitaTheme.spaceLG),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium - 3),
+        ),
         child: Column(
           children: [
             _PriceRow(
