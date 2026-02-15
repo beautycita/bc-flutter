@@ -186,20 +186,26 @@ class SecurityNotifier extends StateNotifier<SecurityState> {
     }
   }
 
-  /// Add password (requires verified email first).
+  /// Add or change password.
+  /// Google users can set a password directly (their email is already verified).
+  /// Email-only users must confirm email first.
   Future<void> addPassword(String password) async {
     if (!SupabaseClientService.isInitialized) return;
-    if (!state.isEmailAdded) {
-      const msg = 'Primero agrega tu email';
-      ToastService.showError(msg);
-      state = state.copyWith(error: msg);
-      return;
-    }
-    if (!state.isEmailConfirmed) {
-      const msg = 'Confirma tu email primero (revisa tu bandeja de entrada)';
-      ToastService.showError(msg);
-      state = state.copyWith(error: msg);
-      return;
+
+    // Google users always have a verified email — allow password immediately
+    if (!state.isGoogleLinked) {
+      if (!state.isEmailAdded) {
+        const msg = 'Primero agrega tu email';
+        ToastService.showError(msg);
+        state = state.copyWith(error: msg);
+        return;
+      }
+      if (!state.isEmailConfirmed) {
+        const msg = 'Confirma tu email primero (revisa tu bandeja de entrada)';
+        ToastService.showError(msg);
+        state = state.copyWith(error: msg);
+        return;
+      }
     }
 
     state = state.copyWith(isLoading: true, error: null, successMessage: null);
