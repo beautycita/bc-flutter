@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../config/theme.dart';
 
 /// Shimmer loading widget for skeleton states
 class BCShimmer extends StatefulWidget {
@@ -112,7 +111,7 @@ class _BCLoadingDotsState extends State<BCLoadingDots>
               height: 10,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: BeautyCitaTheme.primaryRose.withValues(
+                color: Theme.of(context).colorScheme.primary.withValues(
                   alpha: 0.3 + _controllers[i].value * 0.7,
                 ),
               ),
@@ -133,9 +132,9 @@ class BCLoadingSpinner extends StatelessWidget {
     return Center(
       child: Semantics(
         label: 'Cargando',
-        child: const CircularProgressIndicator(
+        child: CircularProgressIndicator(
           valueColor: AlwaysStoppedAnimation<Color>(
-            BeautyCitaTheme.primaryRose,
+            Theme.of(context).colorScheme.primary,
           ),
         ),
       ),

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:beautycita/config/theme.dart';
 import 'package:beautycita/config/constants.dart';
 
 /// Reusable section header for settings sub-screens.
@@ -12,7 +11,7 @@ class SectionHeader extends StatelessWidget {
     return Text(
       label,
       style: Theme.of(context).textTheme.labelLarge?.copyWith(
-            color: BeautyCitaTheme.textLight,
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
             fontWeight: FontWeight.w600,
           ),
     );
@@ -55,9 +54,9 @@ class SettingsTile extends StatelessWidget {
               Icon(
                 icon,
                 size: AppConstants.iconSizeMD,
-                color: iconColor ?? BeautyCitaTheme.primaryRose,
+                color: iconColor ?? Theme.of(context).colorScheme.primary,
               ),
-              const SizedBox(width: BeautyCitaTheme.spaceMD),
+              const SizedBox(width: AppConstants.paddingMD),
               Expanded(
                 child: Text(
                   label,
@@ -71,7 +70,7 @@ class SettingsTile extends StatelessWidget {
               else if (onTap != null)
                 Icon(
                   Icons.chevron_right_rounded,
-                  color: BeautyCitaTheme.textLight.withValues(alpha: 0.5),
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.25),
                 ),
             ],
           ),
@@ -102,7 +101,7 @@ class OptionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: selected
-          ? BeautyCitaTheme.primaryRose.withValues(alpha: 0.08)
+          ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.08)
           : Colors.transparent,
       borderRadius: BorderRadius.circular(AppConstants.radiusSM),
       child: InkWell(
@@ -127,7 +126,7 @@ class OptionTile extends StatelessWidget {
                     Text(
                       subtitle,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: BeautyCitaTheme.textLight,
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                           ),
                     ),
                   ],
@@ -136,7 +135,7 @@ class OptionTile extends StatelessWidget {
               if (selected)
                 Icon(
                   Icons.check_circle_rounded,
-                  color: BeautyCitaTheme.primaryRose,
+                  color: Theme.of(context).colorScheme.primary,
                   size: 24,
                 ),
             ],

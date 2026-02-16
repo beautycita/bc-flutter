@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../config/theme.dart';
+import '../config/theme_extension.dart';
 
 enum BCButtonVariant { primary, outline, gold }
 
@@ -29,17 +29,20 @@ class BCButton extends StatelessWidget {
     final isOutline = variant == BCButtonVariant.outline;
     final isDisabled = onPressed == null && !loading;
 
+    final colorScheme = Theme.of(context).colorScheme;
+    final ext = Theme.of(context).extension<BCThemeExtension>()!;
+
     return SizedBox(
       width: fullWidth ? double.infinity : null,
       child: Container(
         decoration: isPrimary
             ? BoxDecoration(
-                gradient: BeautyCitaTheme.primaryGradient,
+                gradient: ext.primaryGradient,
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: !isDisabled
                     ? [
                         BoxShadow(
-                          color: BeautyCitaTheme.primaryRose.withValues(alpha: 0.3),
+                          color: colorScheme.primary.withValues(alpha: 0.3),
                           blurRadius: 12,
                           offset: const Offset(0, 4),
                         ),
@@ -48,12 +51,12 @@ class BCButton extends StatelessWidget {
               )
             : isGold
                 ? BoxDecoration(
-                    gradient: BeautyCitaTheme.accentGradient,
+                    gradient: ext.accentGradient,
                     borderRadius: BorderRadius.circular(24),
                     boxShadow: !isDisabled
                         ? [
                             BoxShadow(
-                              color: BeautyCitaTheme.secondaryGold.withValues(alpha: 0.2),
+                              color: colorScheme.secondary.withValues(alpha: 0.2),
                               blurRadius: 8,
                               offset: const Offset(0, 4),
                             ),
@@ -63,8 +66,8 @@ class BCButton extends StatelessWidget {
                 : BoxDecoration(
                     border: Border.all(
                       color: isDisabled
-                          ? BeautyCitaTheme.textLight
-                          : BeautyCitaTheme.primaryRose,
+                          ? colorScheme.onSurface.withValues(alpha: 0.5)
+                          : colorScheme.primary,
                       width: 2,
                     ),
                     borderRadius: BorderRadius.circular(24),
@@ -89,7 +92,7 @@ class BCButton extends StatelessWidget {
                         height: 20,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: isOutline ? BeautyCitaTheme.primaryRose : Colors.white,
+                          color: isOutline ? colorScheme.primary : Colors.white,
                         ),
                       ),
                     )
@@ -101,11 +104,11 @@ class BCButton extends StatelessWidget {
                           Icon(
                             icon,
                             color: isDisabled
-                                ? BeautyCitaTheme.textLight
+                                ? colorScheme.onSurface.withValues(alpha: 0.5)
                                 : isOutline
-                                    ? BeautyCitaTheme.primaryRose
+                                    ? colorScheme.primary
                                     : isGold
-                                        ? BeautyCitaTheme.textDark
+                                        ? colorScheme.onSurface
                                         : Colors.white,
                             size: 20,
                           ),
@@ -115,11 +118,11 @@ class BCButton extends StatelessWidget {
                           label,
                           style: Theme.of(context).textTheme.labelLarge?.copyWith(
                                 color: isDisabled
-                                    ? BeautyCitaTheme.textLight
+                                    ? colorScheme.onSurface.withValues(alpha: 0.5)
                                     : isOutline
-                                        ? BeautyCitaTheme.primaryRose
+                                        ? colorScheme.primary
                                         : isGold
-                                            ? BeautyCitaTheme.textDark
+                                            ? colorScheme.onSurface
                                             : Colors.white,
                                 fontWeight: FontWeight.w700,
                                 letterSpacing: 0.5,
