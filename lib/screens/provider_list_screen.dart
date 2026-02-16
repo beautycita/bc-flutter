@@ -4,28 +4,29 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:beautycita/models/provider.dart' as models;
 import 'package:beautycita/providers/provider_provider.dart';
-import 'package:beautycita/config/theme.dart';
 import 'package:beautycita/config/constants.dart';
+import 'package:beautycita/config/palettes.dart';
 
 class ProviderListScreen extends ConsumerWidget {
   final String category;
   final String? subcategory;
-  final Color categoryColor;
+  final Color? categoryColor;
 
   const ProviderListScreen({
     super.key,
     required this.category,
     this.subcategory,
-    this.categoryColor = BeautyCitaTheme.primaryRose,
+    this.categoryColor,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final providersAsync = ref.watch(providersByCategoryProvider(category));
     final textTheme = Theme.of(context).textTheme;
+    final effectiveColor = categoryColor ?? Theme.of(context).colorScheme.primary;
 
     return Scaffold(
-      backgroundColor: BeautyCitaTheme.backgroundWhite,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded, size: 24),
@@ -34,7 +35,7 @@ class ProviderListScreen extends ConsumerWidget {
         title: Text(
           subcategory ?? category,
           style: textTheme.titleLarge?.copyWith(
-            color: categoryColor,
+            color: effectiveColor,
             fontWeight: FontWeight.bold,
           ),
           maxLines: 1,
@@ -42,7 +43,7 @@ class ProviderListScreen extends ConsumerWidget {
         ),
         centerTitle: true,
         elevation: 0,
-        backgroundColor: BeautyCitaTheme.backgroundWhite,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         surfaceTintColor: Colors.transparent,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
@@ -51,9 +52,9 @@ class ProviderListScreen extends ConsumerWidget {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  categoryColor.withOpacity(0.0),
-                  categoryColor.withOpacity(0.3),
-                  categoryColor.withOpacity(0.0),
+                  effectiveColor.withOpacity(0.0),
+                  effectiveColor.withOpacity(0.3),
+                  effectiveColor.withOpacity(0.0),
                 ],
               ),
             ),
@@ -63,19 +64,19 @@ class ProviderListScreen extends ConsumerWidget {
       body: providersAsync.when(
         loading: () => Center(
           child: CircularProgressIndicator(
-            color: BeautyCitaTheme.primaryRose,
+            color: Theme.of(context).colorScheme.primary,
             strokeWidth: 3,
           ),
         ),
         error: (error, stack) => _ErrorState(
           onRetry: () => ref.invalidate(providersByCategoryProvider(category)),
-          categoryColor: categoryColor,
+          categoryColor: effectiveColor,
         ),
         data: (providers) {
           if (providers.isEmpty) {
             return _EmptyState(
               category: category,
-              categoryColor: categoryColor,
+              categoryColor: effectiveColor,
             );
           }
 
@@ -96,7 +97,7 @@ class ProviderListScreen extends ConsumerWidget {
                 ),
                 child: _ProviderCard(
                   provider: provider,
-                  categoryColor: categoryColor,
+                  categoryColor: effectiveColor,
                   category: category,
                   onTap: () => context.push('/provider/${provider.id}'),
                 ),
@@ -145,22 +146,23 @@ class _ProviderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Card(
-      elevation: BeautyCitaTheme.elevationCard,
+      elevation: AppConstants.elevationLow,
       shadowColor: categoryColor.withOpacity(0.15),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
       ),
-      color: BeautyCitaTheme.backgroundWhite,
+      color: Theme.of(context).scaffoldBackgroundColor,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
         splashColor: categoryColor.withOpacity(0.08),
         highlightColor: categoryColor.withOpacity(0.04),
         child: Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+            borderRadius: BorderRadius.circular(AppConstants.radiusMD),
             border: Border(
               left: BorderSide(
                 color: categoryColor,
@@ -168,7 +170,7 @@ class _ProviderCard extends StatelessWidget {
               ),
             ),
           ),
-          padding: const EdgeInsets.all(BeautyCitaTheme.spaceMD),
+          padding: const EdgeInsets.all(AppConstants.paddingMD),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -182,7 +184,7 @@ class _ProviderCard extends StatelessWidget {
                     name: provider.name,
                     categoryColor: categoryColor,
                   ),
-                  const SizedBox(width: BeautyCitaTheme.spaceMD),
+                  const SizedBox(width: AppConstants.paddingMD),
 
                   // Name, rating, address
                   Expanded(
@@ -197,14 +199,14 @@ class _ProviderCard extends StatelessWidget {
                                 provider.name,
                                 style: textTheme.titleMedium?.copyWith(
                                   fontWeight: FontWeight.bold,
-                                  color: BeautyCitaTheme.textDark,
+                                  color: colorScheme.onSurface,
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
                             if (provider.isVerified) ...[
-                              const SizedBox(width: BeautyCitaTheme.spaceXS),
+                              const SizedBox(width: AppConstants.paddingXS),
                               Icon(
                                 Icons.verified,
                                 color: categoryColor,
@@ -213,7 +215,7 @@ class _ProviderCard extends StatelessWidget {
                             ],
                           ],
                         ),
-                        const SizedBox(height: BeautyCitaTheme.spaceXS),
+                        const SizedBox(height: AppConstants.paddingXS),
 
                         // Rating row
                         _RatingRow(
@@ -221,7 +223,7 @@ class _ProviderCard extends StatelessWidget {
                           reviewsCount: provider.reviewsCount,
                           accentColor: categoryColor,
                         ),
-                        const SizedBox(height: BeautyCitaTheme.spaceXS),
+                        const SizedBox(height: AppConstants.paddingXS),
 
                         // Address
                         if (provider.address != null &&
@@ -231,14 +233,14 @@ class _ProviderCard extends StatelessWidget {
                               Icon(
                                 Icons.location_on_outlined,
                                 size: AppConstants.iconSizeSM - 4,
-                                color: BeautyCitaTheme.textLight,
+                                color: colorScheme.onSurface.withValues(alpha: 0.5),
                               ),
-                              const SizedBox(width: BeautyCitaTheme.spaceXS),
+                              const SizedBox(width: AppConstants.paddingXS),
                               Flexible(
                                 child: Text(
                                   '${provider.address}, ${provider.city}',
                                   style: textTheme.bodySmall?.copyWith(
-                                    color: BeautyCitaTheme.textLight,
+                                    color: colorScheme.onSurface.withValues(alpha: 0.5),
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -252,13 +254,13 @@ class _ProviderCard extends StatelessWidget {
                 ],
               ),
 
-              const SizedBox(height: BeautyCitaTheme.spaceMD),
+              const SizedBox(height: AppConstants.paddingMD),
 
               // Row 2: Service category chips
               if (provider.serviceCategories.isNotEmpty)
                 Wrap(
-                  spacing: BeautyCitaTheme.spaceSM,
-                  runSpacing: BeautyCitaTheme.spaceXS,
+                  spacing: AppConstants.paddingSM,
+                  runSpacing: AppConstants.paddingXS,
                   children: provider.serviceCategories.map((cat) {
                     final isCurrentCategory =
                         cat.toLowerCase() == category.toLowerCase();
@@ -270,13 +272,13 @@ class _ProviderCard extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: isCurrentCategory
                             ? categoryColor.withOpacity(0.15)
-                            : BeautyCitaTheme.surfaceCream,
+                            : colorScheme.surface,
                         borderRadius:
                             BorderRadius.circular(AppConstants.radiusSM),
                         border: Border.all(
                           color: isCurrentCategory
                               ? categoryColor.withOpacity(0.4)
-                              : BeautyCitaTheme.dividerLight,
+                              : Theme.of(context).dividerColor,
                           width: 1,
                         ),
                       ),
@@ -285,7 +287,7 @@ class _ProviderCard extends StatelessWidget {
                         style: textTheme.labelSmall?.copyWith(
                           color: isCurrentCategory
                               ? categoryColor
-                              : BeautyCitaTheme.textLight,
+                              : colorScheme.onSurface.withValues(alpha: 0.5),
                           fontWeight: isCurrentCategory
                               ? FontWeight.w700
                               : FontWeight.w500,
@@ -298,12 +300,12 @@ class _ProviderCard extends StatelessWidget {
 
               // Row 3: Contact actions
               if (provider.phone != null || provider.whatsapp != null) ...[
-                const SizedBox(height: BeautyCitaTheme.spaceMD),
+                const SizedBox(height: AppConstants.paddingMD),
                 Divider(
                   height: 1,
-                  color: BeautyCitaTheme.dividerLight,
+                  color: Theme.of(context).dividerColor,
                 ),
-                const SizedBox(height: BeautyCitaTheme.spaceSM),
+                const SizedBox(height: AppConstants.paddingSM),
                 Row(
                   children: [
                     // Phone number text
@@ -311,14 +313,14 @@ class _ProviderCard extends StatelessWidget {
                       Icon(
                         Icons.phone_outlined,
                         size: AppConstants.iconSizeSM - 2,
-                        color: BeautyCitaTheme.textLight,
+                        color: colorScheme.onSurface.withValues(alpha: 0.5),
                       ),
-                      const SizedBox(width: BeautyCitaTheme.spaceXS),
+                      const SizedBox(width: AppConstants.paddingXS),
                       Expanded(
                         child: Text(
                           provider.phone!,
                           style: textTheme.bodySmall?.copyWith(
-                            color: BeautyCitaTheme.textLight,
+                            color: colorScheme.onSurface.withValues(alpha: 0.5),
                           ),
                         ),
                       ),
@@ -329,12 +331,12 @@ class _ProviderCard extends StatelessWidget {
                     if (provider.whatsapp != null)
                       _ContactButton(
                         icon: Icons.chat_outlined,
-                        color: const Color(0xFF25D366),
+                        color: kWhatsAppGreen,
                         tooltip: 'WhatsApp',
                         onTap: () => _launchWhatsApp(provider.whatsapp!),
                       ),
                     if (provider.whatsapp != null && provider.phone != null)
-                      const SizedBox(width: BeautyCitaTheme.spaceSM),
+                      const SizedBox(width: AppConstants.paddingSM),
                     if (provider.phone != null)
                       _ContactButton(
                         icon: Icons.phone,
@@ -444,12 +446,13 @@ class _RatingRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final colorScheme = Theme.of(context).colorScheme;
 
     if (rating == null || rating == 0) {
       return Text(
         'Sin calificaciones',
         style: textTheme.bodySmall?.copyWith(
-          color: BeautyCitaTheme.textLight,
+          color: colorScheme.onSurface.withValues(alpha: 0.5),
           fontStyle: FontStyle.italic,
         ),
       );
@@ -471,28 +474,28 @@ class _RatingRow extends StatelessWidget {
           return Icon(
             icon,
             size: AppConstants.iconSizeSM - 2,
-            color: BeautyCitaTheme.secondaryGold,
+            color: colorScheme.secondary,
           );
         }),
 
-        const SizedBox(width: BeautyCitaTheme.spaceXS),
+        const SizedBox(width: AppConstants.paddingXS),
 
         // Rating number
         Text(
           rating!.toStringAsFixed(1),
           style: textTheme.labelSmall?.copyWith(
             fontWeight: FontWeight.bold,
-            color: BeautyCitaTheme.textDark,
+            color: colorScheme.onSurface,
           ),
         ),
 
-        const SizedBox(width: BeautyCitaTheme.spaceXS),
+        const SizedBox(width: AppConstants.paddingXS),
 
         // Review count
         Text(
           '($reviewsCount)',
           style: textTheme.labelSmall?.copyWith(
-            color: BeautyCitaTheme.textLight,
+            color: colorScheme.onSurface.withValues(alpha: 0.5),
           ),
         ),
       ],
@@ -558,6 +561,7 @@ class _EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Center(
       child: Padding(
@@ -580,20 +584,20 @@ class _EmptyState extends StatelessWidget {
                 color: categoryColor.withOpacity(0.5),
               ),
             ),
-            const SizedBox(height: BeautyCitaTheme.spaceLG),
+            const SizedBox(height: AppConstants.paddingLG),
             Text(
               'No encontramos salones',
               style: textTheme.titleMedium?.copyWith(
-                color: BeautyCitaTheme.textDark,
+                color: colorScheme.onSurface,
                 fontWeight: FontWeight.w600,
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: BeautyCitaTheme.spaceSM),
+            const SizedBox(height: AppConstants.paddingSM),
             Text(
               'Intenta ajustar tu búsqueda o ubicación',
               style: textTheme.bodySmall?.copyWith(
-                color: BeautyCitaTheme.textLight,
+                color: colorScheme.onSurface.withValues(alpha: 0.5),
               ),
               textAlign: TextAlign.center,
             ),
@@ -620,6 +624,7 @@ class _ErrorState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Center(
       child: Padding(
@@ -642,23 +647,23 @@ class _ErrorState extends StatelessWidget {
                 color: Colors.red.withOpacity(0.5),
               ),
             ),
-            const SizedBox(height: BeautyCitaTheme.spaceLG),
+            const SizedBox(height: AppConstants.paddingLG),
             Text(
               AppConstants.errorGeneric,
               style: textTheme.titleMedium?.copyWith(
-                color: BeautyCitaTheme.textDark,
+                color: colorScheme.onSurface,
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: BeautyCitaTheme.spaceSM),
+            const SizedBox(height: AppConstants.paddingSM),
             Text(
               'Verifica tu conexion e intenta de nuevo.',
               style: textTheme.bodySmall?.copyWith(
-                color: BeautyCitaTheme.textLight,
+                color: colorScheme.onSurface.withValues(alpha: 0.5),
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: BeautyCitaTheme.spaceXL),
+            const SizedBox(height: AppConstants.paddingXL),
             SizedBox(
               width: 200,
               child: ElevatedButton.icon(

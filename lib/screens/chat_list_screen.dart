@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import '../config/theme.dart';
+import '../config/theme_extension.dart';
 import '../models/chat_thread.dart';
 import '../providers/chat_provider.dart';
 
@@ -26,8 +26,10 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
   Widget build(BuildContext context) {
     final threadsAsync = ref.watch(chatThreadsProvider);
 
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Scaffold(
-      backgroundColor: BeautyCitaTheme.backgroundWhite,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
           'Mensajes',
@@ -113,8 +115,8 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
           'Habla con Afrodita',
           style: GoogleFonts.nunito(fontWeight: FontWeight.w700),
         ),
-        backgroundColor: BeautyCitaTheme.secondaryGold,
-        foregroundColor: BeautyCitaTheme.textDark,
+        backgroundColor: colorScheme.secondary,
+        foregroundColor: colorScheme.onSurface,
       ),
     );
   }
@@ -150,7 +152,7 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
             const SizedBox(height: 8),
             Text(
               'Se eliminara la conversacion con $name y todos los mensajes.',
-              style: GoogleFonts.nunito(fontSize: 14, color: BeautyCitaTheme.textLight),
+              style: GoogleFonts.nunito(fontSize: 14, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 20),
@@ -212,14 +214,10 @@ class _AphroditeRow extends StatelessWidget {
               height: 56,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: const LinearGradient(
-                  colors: [Color(0xFFFFB300), Color(0xFFFFC107), Color(0xFFFFD54F)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+                gradient: Theme.of(context).extension<BCThemeExtension>()!.accentGradient,
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFFFFB300).withValues(alpha: 0.3),
+                    color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.3),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -242,14 +240,14 @@ class _AphroditeRow extends StatelessWidget {
                         style: GoogleFonts.poppins(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: BeautyCitaTheme.textDark,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                       const SizedBox(width: 4),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFFB300).withValues(alpha: 0.2),
+                          color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
@@ -257,7 +255,7 @@ class _AphroditeRow extends StatelessWidget {
                           style: GoogleFonts.poppins(
                             fontSize: 10,
                             fontWeight: FontWeight.w700,
-                            color: const Color(0xFFFF8F00),
+                            color: Theme.of(context).colorScheme.secondary,
                           ),
                         ),
                       ),
@@ -268,7 +266,7 @@ class _AphroditeRow extends StatelessWidget {
                     thread.lastMessageText ?? 'Tu asesora de belleza divina',
                     style: GoogleFonts.nunito(
                       fontSize: 14,
-                      color: BeautyCitaTheme.textLight,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                       fontWeight: thread.unreadCount > 0
                           ? FontWeight.w700
                           : FontWeight.w400,
@@ -289,8 +287,8 @@ class _AphroditeRow extends StatelessWidget {
                   style: GoogleFonts.nunito(
                     fontSize: 12,
                     color: thread.unreadCount > 0
-                        ? BeautyCitaTheme.primaryRose
-                        : BeautyCitaTheme.textLight,
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                   ),
                 ),
                 if (thread.unreadCount > 0) ...[
@@ -298,7 +296,7 @@ class _AphroditeRow extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                     decoration: BoxDecoration(
-                      color: BeautyCitaTheme.primaryRose,
+                      color: Theme.of(context).colorScheme.primary,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
@@ -338,7 +336,7 @@ class _ThreadRow extends StatelessWidget {
             // Avatar
             CircleAvatar(
               radius: 28,
-              backgroundColor: BeautyCitaTheme.surfaceCream,
+              backgroundColor: Theme.of(context).colorScheme.surface,
               child: Text(
                 thread.contactType == 'salon' ? '💇' : '👤',
                 style: const TextStyle(fontSize: 24),
@@ -354,7 +352,7 @@ class _ThreadRow extends StatelessWidget {
                     style: GoogleFonts.poppins(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: BeautyCitaTheme.textDark,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -362,7 +360,7 @@ class _ThreadRow extends StatelessWidget {
                     thread.lastMessageText ?? '',
                     style: GoogleFonts.nunito(
                       fontSize: 14,
-                      color: BeautyCitaTheme.textLight,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                       fontWeight: thread.unreadCount > 0
                           ? FontWeight.w700
                           : FontWeight.w400,
@@ -381,7 +379,7 @@ class _ThreadRow extends StatelessWidget {
                   _formatTime(thread.lastMessageAt),
                   style: GoogleFonts.nunito(
                     fontSize: 12,
-                    color: BeautyCitaTheme.textLight,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                   ),
                 ),
                 if (thread.unreadCount > 0) ...[
@@ -389,7 +387,7 @@ class _ThreadRow extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                     decoration: BoxDecoration(
-                      color: BeautyCitaTheme.primaryRose,
+                      color: Theme.of(context).colorScheme.primary,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
@@ -430,14 +428,10 @@ class _EmptyState extends StatelessWidget {
               height: 96,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: const LinearGradient(
-                  colors: [Color(0xFFFFB300), Color(0xFFFFD54F)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+                gradient: Theme.of(context).extension<BCThemeExtension>()!.accentGradient,
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFFFFB300).withValues(alpha: 0.3),
+                    color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.3),
                     blurRadius: 16,
                     offset: const Offset(0, 4),
                   ),
@@ -453,7 +447,7 @@ class _EmptyState extends StatelessWidget {
               style: GoogleFonts.poppins(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
-                color: BeautyCitaTheme.textDark,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 8),
@@ -461,7 +455,7 @@ class _EmptyState extends StatelessWidget {
               'Tus mensajes con salones aparecerán aquí',
               style: GoogleFonts.nunito(
                 fontSize: 14,
-                color: BeautyCitaTheme.textLight,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
               ),
               textAlign: TextAlign.center,
             ),
@@ -471,7 +465,7 @@ class _EmptyState extends StatelessWidget {
               style: GoogleFonts.poppins(
                 fontSize: 20,
                 fontWeight: FontWeight.w600,
-                color: BeautyCitaTheme.textDark,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 8),
@@ -479,7 +473,7 @@ class _EmptyState extends StatelessWidget {
               'Tu asesora de belleza con actitud divina.\nPregúntale lo que quieras.',
               style: GoogleFonts.nunito(
                 fontSize: 16,
-                color: BeautyCitaTheme.textLight,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                 height: 1.5,
               ),
               textAlign: TextAlign.center,
@@ -488,8 +482,8 @@ class _EmptyState extends StatelessWidget {
             ElevatedButton(
               onPressed: onTapAphrodite,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFFB300),
-                foregroundColor: BeautyCitaTheme.textDark,
+                backgroundColor: Theme.of(context).colorScheme.secondary,
+                foregroundColor: Theme.of(context).colorScheme.onSurface,
               ),
               child: Text(
                 'Habla con Afrodita',

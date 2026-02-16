@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../config/theme.dart';
+import '../config/constants.dart';
+import '../config/palettes.dart';
 import '../services/supabase_client.dart';
-import 'invite_salon_screen.dart' show DiscoveredSalon, waGreen, waLightGreen;
+import 'invite_salon_screen.dart' show DiscoveredSalon;
 
 /// WhatsApp chat background color
 const _waChatBg = Color(0xFFECE5DD);
@@ -62,7 +63,7 @@ class _DiscoveredSalonDetailScreenState extends State<DiscoveredSalonDetailScree
     return Scaffold(
       backgroundColor: _waChatBg,
       appBar: AppBar(
-        backgroundColor: waGreen,
+        backgroundColor: kWhatsAppDarkGreen,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
@@ -89,7 +90,7 @@ class _DiscoveredSalonDetailScreenState extends State<DiscoveredSalonDetailScree
                 // Green background that extends down
                 Container(
                   width: double.infinity,
-                  color: waGreen,
+                  color: kWhatsAppDarkGreen,
                   padding: const EdgeInsets.fromLTRB(24, 16, 24, 80),
                   child: Column(
                     children: [
@@ -153,7 +154,7 @@ class _DiscoveredSalonDetailScreenState extends State<DiscoveredSalonDetailScree
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             if (widget.salon.rating != null) ...[
-                              const Icon(Icons.star, size: 18, color: BeautyCitaTheme.secondaryGold),
+                              Icon(Icons.star, size: 18, color: Theme.of(context).colorScheme.secondary),
                               const SizedBox(width: 4),
                               Text(
                                 widget.salon.rating!.toStringAsFixed(1),
@@ -209,7 +210,7 @@ class _DiscoveredSalonDetailScreenState extends State<DiscoveredSalonDetailScree
                     decoration: BoxDecoration(
                       color: _waChatBg,
                       borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(BeautyCitaTheme.radiusLarge),
+                        top: Radius.circular(AppConstants.radiusLG),
                       ),
                     ),
                   ),
@@ -231,7 +232,7 @@ class _DiscoveredSalonDetailScreenState extends State<DiscoveredSalonDetailScree
                         _sanitize([widget.salon.address, widget.salon.city].where((s) => s != null).join(', ')),
                         style: GoogleFonts.nunito(
                           fontSize: 14,
-                          color: BeautyCitaTheme.textDark,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                     ),
@@ -246,7 +247,7 @@ class _DiscoveredSalonDetailScreenState extends State<DiscoveredSalonDetailScree
                       _buildNarrative(),
                       style: GoogleFonts.nunito(
                         fontSize: 14,
-                        color: BeautyCitaTheme.textDark,
+                        color: Theme.of(context).colorScheme.onSurface,
                         height: 1.5,
                       ),
                     ),
@@ -260,7 +261,7 @@ class _DiscoveredSalonDetailScreenState extends State<DiscoveredSalonDetailScree
                     padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+                      borderRadius: BorderRadius.circular(AppConstants.radiusMD),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withValues(alpha: 0.06),
@@ -277,10 +278,10 @@ class _DiscoveredSalonDetailScreenState extends State<DiscoveredSalonDetailScree
                             Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: BeautyCitaTheme.primaryRose.withValues(alpha: 0.12),
+                                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.12),
                                 borderRadius: BorderRadius.circular(10),
                               ),
-                              child: Icon(Icons.send_rounded, size: 20, color: BeautyCitaTheme.primaryRose),
+                              child: Icon(Icons.send_rounded, size: 20, color: Theme.of(context).colorScheme.primary),
                             ),
                             const SizedBox(width: 12),
                             Text(
@@ -288,7 +289,7 @@ class _DiscoveredSalonDetailScreenState extends State<DiscoveredSalonDetailScree
                               style: GoogleFonts.poppins(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
-                                color: BeautyCitaTheme.textDark,
+                                color: Theme.of(context).colorScheme.onSurface,
                               ),
                             ),
                           ],
@@ -300,7 +301,7 @@ class _DiscoveredSalonDetailScreenState extends State<DiscoveredSalonDetailScree
                           'Es gratis para ambos.',
                           style: GoogleFonts.nunito(
                             fontSize: 14,
-                            color: BeautyCitaTheme.textLight,
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                             height: 1.55,
                           ),
                         ),
@@ -319,10 +320,10 @@ class _DiscoveredSalonDetailScreenState extends State<DiscoveredSalonDetailScree
                         child: Container(
                           width: double.infinity,
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+                            borderRadius: BorderRadius.circular(AppConstants.radiusMD),
                             boxShadow: [
                               BoxShadow(
-                                color: waGreen.withValues(alpha: 0.25),
+                                color: kWhatsAppDarkGreen.withValues(alpha: 0.25),
                                 blurRadius: 8,
                                 offset: const Offset(0, 4),
                               ),
@@ -340,13 +341,13 @@ class _DiscoveredSalonDetailScreenState extends State<DiscoveredSalonDetailScree
                               ),
                             ),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: waLightGreen,
+                              backgroundColor: kWhatsAppGreen,
                               foregroundColor: Colors.white,
                               elevation: 4,
-                              shadowColor: waGreen,
+                              shadowColor: kWhatsAppDarkGreen,
                               padding: const EdgeInsets.symmetric(vertical: 18),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+                                borderRadius: BorderRadius.circular(AppConstants.radiusMD),
                               ),
                             ),
                           ),
@@ -362,7 +363,7 @@ class _DiscoveredSalonDetailScreenState extends State<DiscoveredSalonDetailScree
                         '${widget.salon.interestCount} clientes esperando que se registre',
                         style: GoogleFonts.nunito(
                           fontSize: 13,
-                          color: BeautyCitaTheme.textLight,
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                         ),
                       ),
                     ),
@@ -483,7 +484,7 @@ class _InfoCard extends StatelessWidget {
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.08),
@@ -507,10 +508,10 @@ class _InfoCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: waGreen.withValues(alpha: 0.1),
+                  color: kWhatsAppDarkGreen.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(icon, size: 18, color: waGreen),
+                child: Icon(icon, size: 18, color: kWhatsAppDarkGreen),
               ),
               const SizedBox(width: 12),
               Text(
@@ -518,7 +519,7 @@ class _InfoCard extends StatelessWidget {
                 style: GoogleFonts.poppins(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
-                  color: BeautyCitaTheme.textDark,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
             ],
