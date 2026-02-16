@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../config/theme.dart';
+import '../../config/constants.dart';
 import '../../providers/admin_provider.dart';
 import '../../services/supabase_client.dart';
 
@@ -68,13 +68,15 @@ class _SalonManagementScreenState
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
     return Column(
       children: [
         TabBar(
           controller: _tabCtrl,
-          labelColor: BeautyCitaTheme.primaryRose,
-          unselectedLabelColor: BeautyCitaTheme.textLight,
-          indicatorColor: BeautyCitaTheme.primaryRose,
+          labelColor: colors.primary,
+          unselectedLabelColor: colors.onSurface.withValues(alpha: 0.5),
+          indicatorColor: colors.primary,
           labelStyle: GoogleFonts.poppins(
               fontSize: 13, fontWeight: FontWeight.w600),
           tabs: const [
@@ -97,6 +99,7 @@ class _SalonManagementScreenState
 
   Widget _buildSalonsList() {
     final bizAsync = ref.watch(adminBusinessesProvider);
+    final colors = Theme.of(context).colorScheme;
 
     return bizAsync.when(
       data: (businesses) {
@@ -112,7 +115,7 @@ class _SalonManagementScreenState
         return Column(
           children: [
             Padding(
-              padding: const EdgeInsets.all(BeautyCitaTheme.spaceMD),
+              padding: const EdgeInsets.all(AppConstants.paddingMD),
               child: Row(
                 children: [
                   Expanded(
@@ -133,8 +136,8 @@ class _SalonManagementScreenState
                     icon: Icon(
                       Icons.filter_list,
                       color: _tierFilter != null
-                          ? BeautyCitaTheme.primaryRose
-                          : BeautyCitaTheme.textLight,
+                          ? colors.primary
+                          : colors.onSurface.withValues(alpha: 0.5),
                     ),
                     onSelected: (v) => setState(() => _tierFilter = v),
                     itemBuilder: (_) => [
@@ -149,13 +152,14 @@ class _SalonManagementScreenState
             ),
             Padding(
               padding: const EdgeInsets.symmetric(
-                  horizontal: BeautyCitaTheme.spaceLG),
+                  horizontal: AppConstants.paddingLG),
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
                   '${filtered.length} salones',
                   style: GoogleFonts.nunito(
-                      fontSize: 13, color: BeautyCitaTheme.textLight),
+                      fontSize: 13,
+                      color: colors.onSurface.withValues(alpha: 0.5)),
                 ),
               ),
             ),
@@ -163,7 +167,7 @@ class _SalonManagementScreenState
             Expanded(
               child: ListView.builder(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: BeautyCitaTheme.spaceMD),
+                    horizontal: AppConstants.paddingMD),
                 itemCount: filtered.length,
                 itemBuilder: (context, i) =>
                     _SalonTile(business: filtered[i]),
@@ -175,13 +179,15 @@ class _SalonManagementScreenState
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(
         child: Text('Error: $e',
-            style: GoogleFonts.nunito(color: BeautyCitaTheme.textLight)),
+            style: GoogleFonts.nunito(
+                color: colors.onSurface.withValues(alpha: 0.5))),
       ),
     );
   }
 
   Widget _buildPipeline() {
     final statsAsync = ref.watch(_pipelineStatsProvider);
+    final colors = Theme.of(context).colorScheme;
 
     return statsAsync.when(
       data: (stats) {
@@ -191,7 +197,7 @@ class _SalonManagementScreenState
             stats['top_interest'] as List<Map<String, dynamic>>;
 
         return ListView(
-          padding: const EdgeInsets.all(BeautyCitaTheme.spaceMD),
+          padding: const EdgeInsets.all(AppConstants.paddingMD),
           children: [
             // Funnel
             _PipelineCard(
@@ -231,12 +237,12 @@ class _SalonManagementScreenState
                               Text(e.key,
                                   style: GoogleFonts.nunito(
                                       fontSize: 13,
-                                      color: BeautyCitaTheme.textDark)),
+                                      color: colors.onSurface)),
                               Text('${e.value}',
                                   style: GoogleFonts.nunito(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w700,
-                                      color: BeautyCitaTheme.textDark)),
+                                      color: colors.onSurface)),
                             ],
                           ),
                         ))
@@ -259,7 +265,7 @@ class _SalonManagementScreenState
                             s['business_name'] as String? ?? '-',
                             style: GoogleFonts.nunito(
                               fontSize: 13,
-                              color: BeautyCitaTheme.textDark,
+                              color: colors.onSurface,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -269,7 +275,7 @@ class _SalonManagementScreenState
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
-                            color: BeautyCitaTheme.primaryRose
+                            color: colors.primary
                                 .withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
@@ -278,7 +284,7 @@ class _SalonManagementScreenState
                             style: GoogleFonts.nunito(
                               fontSize: 11,
                               fontWeight: FontWeight.w700,
-                              color: BeautyCitaTheme.primaryRose,
+                              color: colors.primary,
                             ),
                           ),
                         ),
@@ -293,7 +299,8 @@ class _SalonManagementScreenState
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(
         child: Text('Error: $e',
-            style: GoogleFonts.nunito(color: BeautyCitaTheme.textLight)),
+            style: GoogleFonts.nunito(
+                color: colors.onSurface.withValues(alpha: 0.5))),
       ),
     );
   }
@@ -303,30 +310,32 @@ class _SalonTile extends StatelessWidget {
   final AdminBusiness business;
   const _SalonTile({required this.business});
 
-  Color _tierColor(int? tier) {
+  Color _tierColor(int? tier, ColorScheme colors) {
     switch (tier) {
       case 1:
         return Colors.grey;
       case 2:
         return Colors.blue;
       case 3:
-        return BeautyCitaTheme.secondaryGold;
+        return colors.secondary;
       default:
-        return BeautyCitaTheme.textLight;
+        return colors.onSurface.withValues(alpha: 0.5);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
     return Card(
       elevation: 0,
       color: Colors.white,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusSmall),
+        borderRadius: BorderRadius.circular(AppConstants.radiusSM),
       ),
       margin: const EdgeInsets.only(bottom: 4),
       child: Padding(
-        padding: const EdgeInsets.all(BeautyCitaTheme.spaceMD),
+        padding: const EdgeInsets.all(AppConstants.paddingMD),
         child: Row(
           children: [
             Container(
@@ -347,7 +356,7 @@ class _SalonTile extends StatelessWidget {
                     style: GoogleFonts.poppins(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
-                      color: BeautyCitaTheme.textDark,
+                      color: colors.onSurface,
                     ),
                   ),
                   if (business.avgRating != null)
@@ -355,13 +364,13 @@ class _SalonTile extends StatelessWidget {
                       children: [
                         Icon(Icons.star,
                             size: 14,
-                            color: BeautyCitaTheme.secondaryGold),
+                            color: colors.secondary),
                         const SizedBox(width: 4),
                         Text(
                           '${business.avgRating!.toStringAsFixed(1)} (${business.reviewCount ?? 0})',
                           style: GoogleFonts.nunito(
                             fontSize: 12,
-                            color: BeautyCitaTheme.textLight,
+                            color: colors.onSurface.withValues(alpha: 0.5),
                           ),
                         ),
                       ],
@@ -374,7 +383,7 @@ class _SalonTile extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: _tierColor(business.tier).withValues(alpha: 0.15),
+                  color: _tierColor(business.tier, colors).withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -382,7 +391,7 @@ class _SalonTile extends StatelessWidget {
                   style: GoogleFonts.nunito(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
-                    color: _tierColor(business.tier),
+                    color: _tierColor(business.tier, colors),
                   ),
                 ),
               ),
@@ -406,33 +415,35 @@ class _PipelineCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
     return Card(
       elevation: 0,
       color: Colors.white,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
       ),
-      margin: const EdgeInsets.only(bottom: BeautyCitaTheme.spaceMD),
+      margin: const EdgeInsets.only(bottom: AppConstants.paddingMD),
       child: Padding(
-        padding: const EdgeInsets.all(BeautyCitaTheme.spaceMD),
+        padding: const EdgeInsets.all(AppConstants.paddingMD),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Icon(icon, color: BeautyCitaTheme.primaryRose, size: 22),
+                Icon(icon, color: colors.primary, size: 22),
                 const SizedBox(width: 10),
                 Text(
                   title,
                   style: GoogleFonts.poppins(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    color: BeautyCitaTheme.textDark,
+                    color: colors.onSurface,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: BeautyCitaTheme.spaceMD),
+            const SizedBox(height: AppConstants.paddingMD),
             child,
           ],
         ),
@@ -450,6 +461,8 @@ class _FunnelRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
@@ -468,7 +481,7 @@ class _FunnelRow extends StatelessWidget {
               label,
               style: GoogleFonts.nunito(
                 fontSize: 13,
-                color: BeautyCitaTheme.textDark,
+                color: colors.onSurface,
               ),
             ),
           ),
@@ -477,7 +490,7 @@ class _FunnelRow extends StatelessWidget {
             style: GoogleFonts.nunito(
               fontSize: 14,
               fontWeight: FontWeight.w700,
-              color: BeautyCitaTheme.textDark,
+              color: colors.onSurface,
             ),
           ),
         ],

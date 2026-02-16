@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../config/theme.dart';
+import '../../config/constants.dart';
 import '../../providers/admin_provider.dart';
 import 'service_profile_editor_screen.dart';
 import 'engine_settings_editor_screen.dart';
@@ -32,36 +32,38 @@ class AdminShellScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isAdmin = ref.watch(isAdminProvider);
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
 
     return isAdmin.when(
       data: (admin) {
         if (!admin) {
           return Scaffold(
-            backgroundColor: BeautyCitaTheme.surfaceCream,
+            backgroundColor: colors.surface,
             body: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.lock,
-                      size: 64, color: BeautyCitaTheme.textLight),
-                  const SizedBox(height: BeautyCitaTheme.spaceLG),
+                  Icon(Icons.lock,
+                      size: 64, color: colors.onSurface.withValues(alpha: 0.5)),
+                  const SizedBox(height: AppConstants.paddingLG),
                   Text(
                     'Acceso restringido',
                     style: GoogleFonts.poppins(
                       fontSize: 20,
                       fontWeight: FontWeight.w600,
-                      color: BeautyCitaTheme.textDark,
+                      color: colors.onSurface,
                     ),
                   ),
-                  const SizedBox(height: BeautyCitaTheme.spaceSM),
+                  const SizedBox(height: AppConstants.paddingSM),
                   Text(
                     'No tienes permisos de administrador.',
                     style: GoogleFonts.nunito(
                       fontSize: 14,
-                      color: BeautyCitaTheme.textLight,
+                      color: colors.onSurface.withValues(alpha: 0.5),
                     ),
                   ),
-                  const SizedBox(height: BeautyCitaTheme.spaceXL),
+                  const SizedBox(height: AppConstants.paddingXL),
                   ElevatedButton(
                     onPressed: () => context.go('/home'),
                     child: const Text('Volver'),
@@ -81,7 +83,8 @@ class AdminShellScreen extends ConsumerWidget {
         body: Center(
           child: Text(
             'Error verificando permisos',
-            style: GoogleFonts.poppins(color: BeautyCitaTheme.textLight),
+            style: GoogleFonts.poppins(
+                color: colors.onSurface.withValues(alpha: 0.5)),
           ),
         ),
       ),
@@ -95,22 +98,24 @@ class _AdminContent extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedTab = ref.watch(adminTabProvider);
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
 
     return Scaffold(
-      backgroundColor: BeautyCitaTheme.surfaceCream,
+      backgroundColor: colors.surface,
       appBar: AppBar(
-        backgroundColor: BeautyCitaTheme.surfaceCream,
+        backgroundColor: colors.surface,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded,
-              color: BeautyCitaTheme.textDark, size: 24),
+          icon: Icon(Icons.arrow_back_rounded,
+              color: colors.onSurface, size: 24),
           onPressed: () => context.go('/home'),
         ),
         title: Text(
           'Motor de Inteligencia',
           style: GoogleFonts.poppins(
             fontWeight: FontWeight.w600,
-            color: BeautyCitaTheme.textDark,
+            color: colors.onSurface,
             fontSize: 18,
           ),
         ),
@@ -168,34 +173,37 @@ class _AdminDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+
     return Drawer(
-      backgroundColor: BeautyCitaTheme.backgroundWhite,
+      backgroundColor: theme.scaffoldBackgroundColor,
       child: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header
             Padding(
-              padding: const EdgeInsets.all(BeautyCitaTheme.spaceLG),
+              padding: const EdgeInsets.all(AppConstants.paddingLG),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.settings,
-                      size: 32, color: BeautyCitaTheme.primaryRose),
-                  const SizedBox(height: BeautyCitaTheme.spaceSM),
+                  Icon(Icons.settings,
+                      size: 32, color: colors.primary),
+                  const SizedBox(height: AppConstants.paddingSM),
                   Text(
                     'Admin Panel',
                     style: GoogleFonts.poppins(
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
-                      color: BeautyCitaTheme.textDark,
+                      color: colors.onSurface,
                     ),
                   ),
                   Text(
                     'Motor de Inteligencia',
                     style: GoogleFonts.nunito(
                       fontSize: 13,
-                      color: BeautyCitaTheme.textLight,
+                      color: colors.onSurface.withValues(alpha: 0.5),
                     ),
                   ),
                 ],
@@ -206,7 +214,7 @@ class _AdminDrawer extends StatelessWidget {
             Expanded(
               child: ListView.builder(
                 padding: const EdgeInsets.symmetric(
-                    vertical: BeautyCitaTheme.spaceSM),
+                    vertical: AppConstants.paddingSM),
                 itemCount: AdminShellScreen._tabs.length,
                 itemBuilder: (context, index) {
                   final tab = AdminShellScreen._tabs[index];
@@ -216,8 +224,8 @@ class _AdminDrawer extends StatelessWidget {
                     leading: Icon(
                       tab.icon,
                       color: isSelected
-                          ? BeautyCitaTheme.primaryRose
-                          : BeautyCitaTheme.textLight,
+                          ? colors.primary
+                          : colors.onSurface.withValues(alpha: 0.5),
                       size: 22,
                     ),
                     title: Text(
@@ -227,16 +235,16 @@ class _AdminDrawer extends StatelessWidget {
                         fontWeight:
                             isSelected ? FontWeight.w600 : FontWeight.w400,
                         color: isSelected
-                            ? BeautyCitaTheme.primaryRose
-                            : BeautyCitaTheme.textDark,
+                            ? colors.primary
+                            : colors.onSurface,
                       ),
                     ),
                     selected: isSelected,
                     selectedTileColor:
-                        BeautyCitaTheme.primaryRose.withValues(alpha: 0.08),
+                        colors.primary.withValues(alpha: 0.08),
                     shape: RoundedRectangleBorder(
                       borderRadius:
-                          BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+                          BorderRadius.circular(AppConstants.radiusMD),
                     ),
                     onTap: () => onSelect(index),
                   );
@@ -257,26 +265,28 @@ class _PlaceholderTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tab = AdminShellScreen._tabs[index];
+    final colors = Theme.of(context).colorScheme;
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(tab.icon, size: 48, color: BeautyCitaTheme.primaryRose),
-          const SizedBox(height: BeautyCitaTheme.spaceMD),
+          Icon(tab.icon, size: 48, color: colors.primary),
+          const SizedBox(height: AppConstants.paddingMD),
           Text(
             tab.label,
             style: GoogleFonts.poppins(
               fontSize: 18,
               fontWeight: FontWeight.w600,
-              color: BeautyCitaTheme.textDark,
+              color: colors.onSurface,
             ),
           ),
-          const SizedBox(height: BeautyCitaTheme.spaceSM),
+          const SizedBox(height: AppConstants.paddingSM),
           Text(
             'Próximamente',
             style: GoogleFonts.nunito(
               fontSize: 14,
-              color: BeautyCitaTheme.textLight,
+              color: colors.onSurface.withValues(alpha: 0.5),
             ),
           ),
         ],

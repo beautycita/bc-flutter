@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../config/theme.dart';
+import '../../config/constants.dart';
 import '../../providers/admin_provider.dart';
 import '../../services/supabase_client.dart';
 
@@ -114,7 +114,7 @@ class _ServiceProfileEditorScreenState
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('${_editing!.serviceType} guardado'),
-            backgroundColor: BeautyCitaTheme.primaryRose,
+            backgroundColor: Theme.of(context).colorScheme.primary,
           ),
         );
         setState(() => _editing = null);
@@ -136,6 +136,7 @@ class _ServiceProfileEditorScreenState
   @override
   Widget build(BuildContext context) {
     final profilesAsync = ref.watch(serviceProfilesProvider);
+    final colors = Theme.of(context).colorScheme;
 
     if (_editing != null) {
       return _buildEditor();
@@ -146,12 +147,15 @@ class _ServiceProfileEditorScreenState
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(
         child: Text('Error: $e',
-            style: GoogleFonts.nunito(color: BeautyCitaTheme.textLight)),
+            style: GoogleFonts.nunito(
+                color: colors.onSurface.withValues(alpha: 0.5))),
       ),
     );
   }
 
   Widget _buildCategoryTree(List<ServiceProfileAdmin> profiles) {
+    final colors = Theme.of(context).colorScheme;
+
     // Group by category -> subcategory -> profiles
     final tree = <String, Map<String, List<ServiceProfileAdmin>>>{};
     for (final p in profiles) {
@@ -165,7 +169,7 @@ class _ServiceProfileEditorScreenState
     final categories = tree.keys.toList()..sort();
 
     return ListView.builder(
-      padding: const EdgeInsets.all(BeautyCitaTheme.spaceMD),
+      padding: const EdgeInsets.all(AppConstants.paddingMD),
       itemCount: categories.length,
       itemBuilder: (context, i) {
         final cat = categories[i];
@@ -177,9 +181,9 @@ class _ServiceProfileEditorScreenState
           color: Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius:
-                BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+                BorderRadius.circular(AppConstants.radiusMD),
           ),
-          margin: const EdgeInsets.only(bottom: BeautyCitaTheme.spaceSM),
+          margin: const EdgeInsets.only(bottom: AppConstants.paddingSM),
           child: Column(
             children: [
               // Category header
@@ -189,14 +193,14 @@ class _ServiceProfileEditorScreenState
                   _expandedSubcategory = null;
                 }),
                 borderRadius:
-                    BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+                    BorderRadius.circular(AppConstants.radiusMD),
                 child: Padding(
-                  padding: const EdgeInsets.all(BeautyCitaTheme.spaceMD),
+                  padding: const EdgeInsets.all(AppConstants.paddingMD),
                   child: Row(
                     children: [
                       Icon(
                         _categoryIcon(cat),
-                        color: BeautyCitaTheme.primaryRose,
+                        color: colors.primary,
                         size: 24,
                       ),
                       const SizedBox(width: 12),
@@ -206,7 +210,7 @@ class _ServiceProfileEditorScreenState
                           style: GoogleFonts.poppins(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
-                            color: BeautyCitaTheme.textDark,
+                            color: colors.onSurface,
                           ),
                         ),
                       ),
@@ -214,7 +218,7 @@ class _ServiceProfileEditorScreenState
                         '${subs.values.fold<int>(0, (s, l) => s + l.length)}',
                         style: GoogleFonts.nunito(
                           fontSize: 13,
-                          color: BeautyCitaTheme.textLight,
+                          color: colors.onSurface.withValues(alpha: 0.5),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -222,7 +226,7 @@ class _ServiceProfileEditorScreenState
                         isExpanded
                             ? Icons.expand_less
                             : Icons.expand_more,
-                        color: BeautyCitaTheme.textLight,
+                        color: colors.onSurface.withValues(alpha: 0.5),
                       ),
                     ],
                   ),
@@ -244,8 +248,8 @@ class _ServiceProfileEditorScreenState
                         }),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: BeautyCitaTheme.spaceLG,
-                            vertical: BeautyCitaTheme.spaceSM,
+                            horizontal: AppConstants.paddingLG,
+                            vertical: AppConstants.paddingSM,
                           ),
                           child: Row(
                             children: [
@@ -256,7 +260,7 @@ class _ServiceProfileEditorScreenState
                                   style: GoogleFonts.poppins(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w500,
-                                    color: BeautyCitaTheme.textDark,
+                                    color: colors.onSurface,
                                   ),
                                 ),
                               ),
@@ -264,7 +268,7 @@ class _ServiceProfileEditorScreenState
                                 '${sub.value.length}',
                                 style: GoogleFonts.nunito(
                                   fontSize: 12,
-                                  color: BeautyCitaTheme.textLight,
+                                  color: colors.onSurface.withValues(alpha: 0.5),
                                 ),
                               ),
                               const SizedBox(width: 8),
@@ -272,7 +276,7 @@ class _ServiceProfileEditorScreenState
                                 subExpanded
                                     ? Icons.expand_less
                                     : Icons.expand_more,
-                                color: BeautyCitaTheme.textLight,
+                                color: colors.onSurface.withValues(alpha: 0.5),
                                 size: 20,
                               ),
                             ],
@@ -296,8 +300,10 @@ class _ServiceProfileEditorScreenState
 
   Widget _buildEditor() {
     final p = _editing!;
+    final colors = Theme.of(context).colorScheme;
+
     return ListView(
-      padding: const EdgeInsets.all(BeautyCitaTheme.spaceMD),
+      padding: const EdgeInsets.all(AppConstants.paddingMD),
       children: [
         // Header
         Row(
@@ -312,7 +318,7 @@ class _ServiceProfileEditorScreenState
                 style: GoogleFonts.poppins(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
-                  color: BeautyCitaTheme.textDark,
+                  color: colors.onSurface,
                 ),
               ),
             ),
@@ -325,11 +331,11 @@ class _ServiceProfileEditorScreenState
               '${_formatLabel(p.category!)} > ${_formatLabel(p.subcategory ?? 'general')}',
               style: GoogleFonts.nunito(
                 fontSize: 13,
-                color: BeautyCitaTheme.textLight,
+                color: colors.onSurface.withValues(alpha: 0.5),
               ),
             ),
           ),
-        const SizedBox(height: BeautyCitaTheme.spaceLG),
+        const SizedBox(height: AppConstants.paddingLG),
 
         // --- Characteristics ---
         _SectionHeader(title: 'Características del Servicio'),
@@ -361,12 +367,12 @@ class _ServiceProfileEditorScreenState
           onChanged: (v) => setState(() => _portfolioImportance = v),
         ),
 
-        const SizedBox(height: BeautyCitaTheme.spaceSM),
+        const SizedBox(height: AppConstants.paddingSM),
 
         // Lead time dropdown
         Padding(
           padding:
-              const EdgeInsets.symmetric(vertical: BeautyCitaTheme.spaceSM),
+              const EdgeInsets.symmetric(vertical: AppConstants.paddingSM),
           child: Row(
             children: [
               Expanded(
@@ -374,7 +380,7 @@ class _ServiceProfileEditorScreenState
                   'Tiempo de Anticipación',
                   style: GoogleFonts.nunito(
                     fontSize: 14,
-                    color: BeautyCitaTheme.textDark,
+                    color: colors.onSurface,
                   ),
                 ),
               ),
@@ -383,7 +389,7 @@ class _ServiceProfileEditorScreenState
                 underline: const SizedBox(),
                 style: GoogleFonts.nunito(
                   fontSize: 14,
-                  color: BeautyCitaTheme.textDark,
+                  color: colors.onSurface,
                 ),
                 items: const [
                   DropdownMenuItem(
@@ -411,7 +417,7 @@ class _ServiceProfileEditorScreenState
           onChanged: (v) => setState(() => _isEventService = v),
         ),
 
-        const SizedBox(height: BeautyCitaTheme.spaceLG),
+        const SizedBox(height: AppConstants.paddingLG),
 
         // --- Search settings ---
         _SectionHeader(title: 'Configuración de Búsqueda'),
@@ -437,24 +443,24 @@ class _ServiceProfileEditorScreenState
           onChanged: (v) => setState(() => _radiusMaxMultiplier = v),
         ),
 
-        const SizedBox(height: BeautyCitaTheme.spaceLG),
+        const SizedBox(height: AppConstants.paddingLG),
 
         // --- Ranking weights ---
         _SectionHeader(title: 'Pesos del Ranking'),
         // Weight sum indicator
         Container(
           margin:
-              const EdgeInsets.only(bottom: BeautyCitaTheme.spaceSM),
+              const EdgeInsets.only(bottom: AppConstants.paddingSM),
           padding: const EdgeInsets.symmetric(
-            horizontal: BeautyCitaTheme.spaceMD,
-            vertical: BeautyCitaTheme.spaceSM,
+            horizontal: AppConstants.paddingMD,
+            vertical: AppConstants.paddingSM,
           ),
           decoration: BoxDecoration(
             color: _weightsValid
                 ? Colors.green.withValues(alpha: 0.1)
                 : Colors.red.withValues(alpha: 0.1),
             borderRadius:
-                BorderRadius.circular(BeautyCitaTheme.radiusSmall),
+                BorderRadius.circular(AppConstants.radiusSM),
           ),
           child: Row(
             children: [
@@ -501,7 +507,7 @@ class _ServiceProfileEditorScreenState
           onChanged: (v) => setState(() => _weightPortfolio = v),
         ),
 
-        const SizedBox(height: BeautyCitaTheme.spaceLG),
+        const SizedBox(height: AppConstants.paddingLG),
 
         // --- Display toggles ---
         _SectionHeader(title: 'Opciones de Visualización'),
@@ -531,7 +537,7 @@ class _ServiceProfileEditorScreenState
           onChanged: (v) => setState(() => _showWalkinIndicator = v),
         ),
 
-        const SizedBox(height: BeautyCitaTheme.spaceXL),
+        const SizedBox(height: AppConstants.paddingXL),
 
         // --- Buttons ---
         Row(
@@ -540,24 +546,24 @@ class _ServiceProfileEditorScreenState
               child: OutlinedButton(
                 onPressed: () => _startEditing(p),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: BeautyCitaTheme.textLight,
-                  side: const BorderSide(color: BeautyCitaTheme.dividerLight),
+                  foregroundColor: colors.onSurface.withValues(alpha: 0.5),
+                  side: BorderSide(color: Theme.of(context).dividerColor),
                   minimumSize: const Size(0, 48),
                 ),
                 child: const Text('RESTABLECER'),
               ),
             ),
-            const SizedBox(width: BeautyCitaTheme.spaceMD),
+            const SizedBox(width: AppConstants.paddingMD),
             Expanded(
               child: ElevatedButton(
                 onPressed:
                     _weightsValid && !_saving ? _save : null,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: BeautyCitaTheme.primaryRose,
+                  backgroundColor: colors.primary,
                   foregroundColor: Colors.white,
                   minimumSize: const Size(0, 48),
                   disabledBackgroundColor:
-                      BeautyCitaTheme.primaryRose.withValues(alpha: 0.3),
+                      colors.primary.withValues(alpha: 0.3),
                 ),
                 child: _saving
                     ? const SizedBox(
@@ -574,7 +580,7 @@ class _ServiceProfileEditorScreenState
             ),
           ],
         ),
-        const SizedBox(height: BeautyCitaTheme.spaceXL),
+        const SizedBox(height: AppConstants.paddingXL),
       ],
     );
   }
@@ -620,13 +626,13 @@ class _SectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: BeautyCitaTheme.spaceSM),
+      padding: const EdgeInsets.only(bottom: AppConstants.paddingSM),
       child: Text(
         title,
         style: GoogleFonts.poppins(
           fontSize: 15,
           fontWeight: FontWeight.w600,
-          color: BeautyCitaTheme.primaryRose,
+          color: Theme.of(context).colorScheme.primary,
         ),
       ),
     );
@@ -652,6 +658,8 @@ class _SliderRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
@@ -662,7 +670,7 @@ class _SliderRow extends StatelessWidget {
               label,
               style: GoogleFonts.nunito(
                 fontSize: 13,
-                color: BeautyCitaTheme.textDark,
+                color: colors.onSurface,
               ),
             ),
           ),
@@ -672,9 +680,9 @@ class _SliderRow extends StatelessWidget {
               value: value.clamp(min, max),
               min: min,
               max: max,
-              activeColor: BeautyCitaTheme.primaryRose,
+              activeColor: colors.primary,
               inactiveColor:
-                  BeautyCitaTheme.primaryRose.withValues(alpha: 0.15),
+                  colors.primary.withValues(alpha: 0.15),
               onChanged: onChanged,
             ),
           ),
@@ -686,7 +694,7 @@ class _SliderRow extends StatelessWidget {
               style: GoogleFonts.nunito(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: BeautyCitaTheme.textDark,
+                color: colors.onSurface,
               ),
             ),
           ),
@@ -713,6 +721,8 @@ class _IntSliderRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
@@ -723,7 +733,7 @@ class _IntSliderRow extends StatelessWidget {
               label,
               style: GoogleFonts.nunito(
                 fontSize: 13,
-                color: BeautyCitaTheme.textDark,
+                color: colors.onSurface,
               ),
             ),
           ),
@@ -734,9 +744,9 @@ class _IntSliderRow extends StatelessWidget {
               min: min.toDouble(),
               max: max.toDouble(),
               divisions: max - min,
-              activeColor: BeautyCitaTheme.primaryRose,
+              activeColor: colors.primary,
               inactiveColor:
-                  BeautyCitaTheme.primaryRose.withValues(alpha: 0.15),
+                  colors.primary.withValues(alpha: 0.15),
               onChanged: (v) => onChanged(v.round()),
             ),
           ),
@@ -748,7 +758,7 @@ class _IntSliderRow extends StatelessWidget {
               style: GoogleFonts.nunito(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: BeautyCitaTheme.textDark,
+                color: colors.onSurface,
               ),
             ),
           ),
@@ -771,6 +781,8 @@ class _ToggleRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
@@ -780,13 +792,13 @@ class _ToggleRow extends StatelessWidget {
               label,
               style: GoogleFonts.nunito(
                 fontSize: 13,
-                color: BeautyCitaTheme.textDark,
+                color: colors.onSurface,
               ),
             ),
           ),
           Switch(
             value: value,
-            activeColor: BeautyCitaTheme.primaryRose,
+            activeColor: colors.primary,
             onChanged: onChanged,
           ),
         ],
@@ -803,12 +815,14 @@ class _ServiceTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
     return InkWell(
       onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(
-          horizontal: BeautyCitaTheme.spaceLG + 12,
-          vertical: BeautyCitaTheme.spaceSM,
+          horizontal: AppConstants.paddingLG + 12,
+          vertical: AppConstants.paddingSM,
         ),
         child: Row(
           children: [
@@ -819,7 +833,7 @@ class _ServiceTile extends StatelessWidget {
                 shape: BoxShape.circle,
                 color: profile.isActive
                     ? Colors.green
-                    : BeautyCitaTheme.textLight,
+                    : colors.onSurface.withValues(alpha: 0.5),
               ),
             ),
             const SizedBox(width: 12),
@@ -828,14 +842,14 @@ class _ServiceTile extends StatelessWidget {
                 profile.serviceType.replaceAll('_', ' '),
                 style: GoogleFonts.nunito(
                   fontSize: 14,
-                  color: BeautyCitaTheme.textDark,
+                  color: colors.onSurface,
                 ),
               ),
             ),
             Icon(
               Icons.chevron_right,
               size: 18,
-              color: BeautyCitaTheme.textLight,
+              color: colors.onSurface.withValues(alpha: 0.5),
             ),
           ],
         ),

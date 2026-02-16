@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../config/theme.dart';
+import '../../config/constants.dart';
 import '../../providers/admin_provider.dart';
 import '../../services/supabase_client.dart';
 
@@ -53,13 +53,14 @@ class _NotificationTemplatesScreenState
       case 'email':
         return Colors.purple;
       default:
-        return BeautyCitaTheme.textLight;
+        return Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final templatesAsync = ref.watch(notificationTemplatesProvider);
+    final colors = Theme.of(context).colorScheme;
 
     return templatesAsync.when(
       data: (templates) {
@@ -72,7 +73,7 @@ class _NotificationTemplatesScreenState
         final events = groups.keys.toList()..sort();
 
         return ListView.builder(
-          padding: const EdgeInsets.all(BeautyCitaTheme.spaceMD),
+          padding: const EdgeInsets.all(AppConstants.paddingMD),
           itemCount: events.length,
           itemBuilder: (context, i) {
             final event = events[i];
@@ -102,7 +103,8 @@ class _NotificationTemplatesScreenState
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(
         child: Text('Error: $e',
-            style: GoogleFonts.nunito(color: BeautyCitaTheme.textLight)),
+            style: GoogleFonts.nunito(
+                color: colors.onSurface.withValues(alpha: 0.5))),
       ),
     );
   }
@@ -123,9 +125,9 @@ class _NotificationTemplatesScreenState
       if (mounted) {
         setState(() => _editingId = null);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Plantilla guardada'),
-            backgroundColor: BeautyCitaTheme.primaryRose,
+          SnackBar(
+            content: const Text('Plantilla guardada'),
+            backgroundColor: Theme.of(context).colorScheme.primary,
           ),
         );
       }
@@ -170,15 +172,17 @@ class _EventGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
     return Card(
       elevation: 0,
       color: Colors.white,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
       ),
-      margin: const EdgeInsets.only(bottom: BeautyCitaTheme.spaceSM),
+      margin: const EdgeInsets.only(bottom: AppConstants.paddingSM),
       child: Padding(
-        padding: const EdgeInsets.all(BeautyCitaTheme.spaceMD),
+        padding: const EdgeInsets.all(AppConstants.paddingMD),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -187,7 +191,7 @@ class _EventGroup extends StatelessWidget {
               style: GoogleFonts.poppins(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: BeautyCitaTheme.primaryRose,
+                color: colors.primary,
                 letterSpacing: 0.5,
               ),
             ),
@@ -219,7 +223,7 @@ class _EventGroup extends StatelessWidget {
                               t.bodyEs,
                               style: GoogleFonts.nunito(
                                 fontSize: 13,
-                                color: BeautyCitaTheme.textDark,
+                                color: colors.onSurface,
                               ),
                               maxLines: isEditing ? null : 1,
                               overflow:
@@ -229,7 +233,7 @@ class _EventGroup extends StatelessWidget {
                           if (!isEditing)
                             Icon(Icons.edit_outlined,
                                 size: 16,
-                                color: BeautyCitaTheme.textLight),
+                                color: colors.onSurface.withValues(alpha: 0.5)),
                         ],
                       ),
                     ),
@@ -261,7 +265,7 @@ class _EventGroup extends StatelessWidget {
                       'Variables: {{user_name}}, {{salon_name}}, {{service}}, {{date}}, {{time}}',
                       style: GoogleFonts.nunito(
                         fontSize: 11,
-                        color: BeautyCitaTheme.textLight,
+                        color: colors.onSurface.withValues(alpha: 0.5),
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -276,7 +280,7 @@ class _EventGroup extends StatelessWidget {
                         ElevatedButton(
                           onPressed: saving ? null : () => onSave(t),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: BeautyCitaTheme.primaryRose,
+                            backgroundColor: colors.primary,
                             foregroundColor: Colors.white,
                             minimumSize: const Size(80, 36),
                           ),
