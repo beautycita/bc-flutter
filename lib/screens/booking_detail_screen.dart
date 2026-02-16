@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:beautycita/config/theme.dart';
 import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/models/booking.dart';
 import 'package:beautycita/models/uber_ride.dart';
@@ -49,7 +48,7 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
       case 'no_show':
         return Colors.grey.shade600;
       default:
-        return BeautyCitaTheme.textLight;
+        return Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
     }
   }
 
@@ -115,7 +114,7 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
       case 'cancelled':
         return Colors.red.shade600;
       default:
-        return BeautyCitaTheme.textLight;
+        return Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
     }
   }
 
@@ -134,6 +133,7 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
 
   Future<void> _editNotes(Booking booking) async {
     final controller = TextEditingController(text: booking.notes ?? '');
+    final colorScheme = Theme.of(context).colorScheme;
 
     await showModalBottomSheet(
       context: context,
@@ -164,14 +164,14 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: BeautyCitaTheme.spaceMD),
+              const SizedBox(height: AppConstants.paddingMD),
               Text(
                 'Notas de la cita',
                 style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
               ),
-              const SizedBox(height: BeautyCitaTheme.spaceSM),
+              const SizedBox(height: AppConstants.paddingSM),
               TextField(
                 controller: controller,
                 maxLines: 4,
@@ -182,10 +182,10 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
                         BorderRadius.circular(AppConstants.radiusSM),
                   ),
                   filled: true,
-                  fillColor: BeautyCitaTheme.surfaceCream,
+                  fillColor: Theme.of(ctx).colorScheme.surface,
                 ),
               ),
-              const SizedBox(height: BeautyCitaTheme.spaceMD),
+              const SizedBox(height: AppConstants.paddingMD),
               SizedBox(
                 width: double.infinity,
                 height: AppConstants.minTouchHeight,
@@ -207,7 +207,7 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
                     }
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: BeautyCitaTheme.primaryRose,
+                    backgroundColor: colorScheme.primary,
                     shape: RoundedRectangleBorder(
                       borderRadius:
                           BorderRadius.circular(AppConstants.radiusLG),
@@ -258,29 +258,29 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(height: BeautyCitaTheme.spaceMD),
+                const SizedBox(height: AppConstants.paddingMD),
                 Icon(
                   Icons.cancel_outlined,
                   size: AppConstants.iconSizeXL,
                   color: Colors.red.shade400,
                 ),
-                const SizedBox(height: BeautyCitaTheme.spaceSM),
+                const SizedBox(height: AppConstants.paddingSM),
                 Text(
                   'Cancelar esta cita?',
                   style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
                 ),
-                const SizedBox(height: BeautyCitaTheme.spaceXS),
+                const SizedBox(height: AppConstants.paddingXS),
                 Text(
                   'Se cancelara tu cita de ${booking.serviceName}.'
                   '${booking.transportMode == 'uber' ? ' Tambien se cancelaran tus viajes de Uber.' : ''}',
                   style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(
-                        color: BeautyCitaTheme.textLight,
+                        color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.5),
                       ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: BeautyCitaTheme.spaceLG),
+                const SizedBox(height: AppConstants.paddingLG),
                 Row(
                   children: [
                     Expanded(
@@ -297,7 +297,7 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
                         child: const Text('No, mantener'),
                       ),
                     ),
-                    const SizedBox(width: BeautyCitaTheme.spaceSM),
+                    const SizedBox(width: AppConstants.paddingSM),
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () => Navigator.pop(ctx, true),
@@ -370,6 +370,7 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
 
   Future<void> _addUber(Booking booking) async {
     setState(() => _isAddingUber = true);
+    final colorScheme = Theme.of(context).colorScheme;
 
     try {
       final location = await LocationService.getCurrentLocation();
@@ -425,30 +426,30 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: BeautyCitaTheme.spaceMD),
-                  const Icon(
+                  const SizedBox(height: AppConstants.paddingMD),
+                  Icon(
                     Icons.local_taxi_rounded,
                     size: AppConstants.iconSizeXL,
-                    color: BeautyCitaTheme.primaryRose,
+                    color: colorScheme.primary,
                   ),
-                  const SizedBox(height: BeautyCitaTheme.spaceSM),
+                  const SizedBox(height: AppConstants.paddingSM),
                   Text(
                     'Agregar Uber?',
                     style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w700,
                         ),
                   ),
-                  const SizedBox(height: BeautyCitaTheme.spaceXS),
+                  const SizedBox(height: AppConstants.paddingXS),
                   Text(
                     estimate != null
                         ? 'Estimado: \$${estimate.fareMin.toStringAsFixed(0)}-\$${estimate.fareMax.toStringAsFixed(0)} ${estimate.currency} (ida y vuelta)'
                         : 'Se programaran viajes de ida y vuelta',
                     style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(
-                          color: BeautyCitaTheme.textLight,
+                          color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.5),
                         ),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: BeautyCitaTheme.spaceLG),
+                  const SizedBox(height: AppConstants.paddingLG),
                   Row(
                     children: [
                       Expanded(
@@ -465,12 +466,12 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
                           child: const Text('No'),
                         ),
                       ),
-                      const SizedBox(width: BeautyCitaTheme.spaceSM),
+                      const SizedBox(width: AppConstants.paddingSM),
                       Expanded(
                         child: ElevatedButton(
                           onPressed: () => Navigator.pop(ctx, true),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: BeautyCitaTheme.primaryRose,
+                            backgroundColor: colorScheme.primary,
                             minimumSize:
                                 const Size(0, AppConstants.minTouchHeight),
                             shape: RoundedRectangleBorder(
@@ -608,9 +609,10 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
   Widget build(BuildContext context) {
     final bookingAsync = ref.watch(bookingDetailProvider(widget.bookingId));
     final textTheme = Theme.of(context).textTheme;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: BeautyCitaTheme.backgroundWhite,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Detalle de Cita'),
       ),
@@ -632,7 +634,7 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
               child: Text(
                 'Cita no encontrada',
                 style: textTheme.bodyLarge
-                    ?.copyWith(color: BeautyCitaTheme.textLight),
+                    ?.copyWith(color: colorScheme.onSurface.withValues(alpha: 0.5)),
               ),
             );
           }
@@ -644,25 +646,25 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
                   physics: const BouncingScrollPhysics(),
                   padding: const EdgeInsets.symmetric(
                     horizontal: AppConstants.screenPaddingHorizontal,
-                    vertical: BeautyCitaTheme.spaceMD,
+                    vertical: AppConstants.paddingMD,
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildServiceInfoCard(booking, textTheme),
-                      const SizedBox(height: BeautyCitaTheme.spaceMD),
+                      const SizedBox(height: AppConstants.paddingMD),
                       _buildDateRow(booking, textTheme),
-                      const SizedBox(height: BeautyCitaTheme.spaceSM),
+                      const SizedBox(height: AppConstants.paddingSM),
                       _buildStatusChip(booking.status, textTheme),
-                      const SizedBox(height: BeautyCitaTheme.spaceMD),
+                      const SizedBox(height: AppConstants.paddingMD),
                       _buildNotesSection(booking, textTheme),
-                      const SizedBox(height: BeautyCitaTheme.spaceMD),
+                      const SizedBox(height: AppConstants.paddingMD),
                       _buildTransportSection(booking, textTheme),
                       if (booking.transportMode == 'uber') ...[
-                        const SizedBox(height: BeautyCitaTheme.spaceMD),
+                        const SizedBox(height: AppConstants.paddingMD),
                         _buildUberRidesSection(textTheme),
                       ],
-                      const SizedBox(height: BeautyCitaTheme.spaceLG),
+                      const SizedBox(height: AppConstants.paddingLG),
                     ],
                   ),
                 ),
@@ -679,14 +681,16 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
   // ── Sections ──
 
   Widget _buildServiceInfoCard(Booking booking, TextTheme textTheme) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppConstants.paddingMD),
       decoration: BoxDecoration(
-        color: BeautyCitaTheme.surfaceCream,
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
         border: Border.all(
-          color: BeautyCitaTheme.dividerLight,
+          color: Theme.of(context).dividerColor,
           width: 1,
         ),
         boxShadow: [
@@ -706,41 +710,41 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
               fontWeight: FontWeight.w700,
             ),
           ),
-          const SizedBox(height: BeautyCitaTheme.spaceXS),
+          const SizedBox(height: AppConstants.paddingXS),
           Text(
             booking.serviceName,
             style: textTheme.bodyLarge?.copyWith(
-              color: BeautyCitaTheme.textLight,
+              color: colorScheme.onSurface.withValues(alpha: 0.5),
             ),
           ),
-          const SizedBox(height: BeautyCitaTheme.spaceSM),
+          const SizedBox(height: AppConstants.paddingSM),
           Row(
             children: [
               if (booking.price != null) ...[
                 Icon(
                   Icons.attach_money_rounded,
                   size: AppConstants.iconSizeSM,
-                  color: BeautyCitaTheme.primaryRose,
+                  color: colorScheme.primary,
                 ),
                 Text(
                   '\$${booking.price!.toStringAsFixed(0)} MXN',
                   style: textTheme.bodyMedium?.copyWith(
-                    color: BeautyCitaTheme.primaryRose,
+                    color: colorScheme.primary,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(width: BeautyCitaTheme.spaceMD),
+                const SizedBox(width: AppConstants.paddingMD),
               ],
               Icon(
                 Icons.timer_outlined,
                 size: AppConstants.iconSizeSM,
-                color: BeautyCitaTheme.textLight,
+                color: colorScheme.onSurface.withValues(alpha: 0.5),
               ),
-              const SizedBox(width: BeautyCitaTheme.spaceXS),
+              const SizedBox(width: AppConstants.paddingXS),
               Text(
                 '${booking.durationMinutes} min',
                 style: textTheme.bodyMedium?.copyWith(
-                  color: BeautyCitaTheme.textLight,
+                  color: colorScheme.onSurface.withValues(alpha: 0.5),
                 ),
               ),
             ],
@@ -751,14 +755,16 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
   }
 
   Widget _buildDateRow(Booking booking, TextTheme textTheme) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Row(
       children: [
-        const Icon(
+        Icon(
           Icons.calendar_today_rounded,
           size: AppConstants.iconSizeMD,
-          color: BeautyCitaTheme.primaryRose,
+          color: colorScheme.primary,
         ),
-        const SizedBox(width: BeautyCitaTheme.spaceSM),
+        const SizedBox(width: AppConstants.paddingSM),
         Expanded(
           child: Text(
             _formatDate(booking.scheduledAt),
@@ -795,14 +801,16 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
   }
 
   Widget _buildNotesSection(Booking booking, TextTheme textTheme) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppConstants.paddingMD),
       decoration: BoxDecoration(
-        color: BeautyCitaTheme.surfaceCream,
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
         border: Border.all(
-          color: BeautyCitaTheme.dividerLight,
+          color: Theme.of(context).dividerColor,
           width: 1,
         ),
       ),
@@ -820,23 +828,23 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
               ),
               GestureDetector(
                 onTap: () => _editNotes(booking),
-                child: const Icon(
+                child: Icon(
                   Icons.edit_rounded,
                   size: AppConstants.iconSizeSM,
-                  color: BeautyCitaTheme.primaryRose,
+                  color: colorScheme.primary,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: BeautyCitaTheme.spaceXS),
+          const SizedBox(height: AppConstants.paddingXS),
           Text(
             booking.notes?.isNotEmpty == true
                 ? booking.notes!
                 : 'Sin notas',
             style: textTheme.bodyMedium?.copyWith(
               color: booking.notes?.isNotEmpty == true
-                  ? BeautyCitaTheme.textDark
-                  : BeautyCitaTheme.textLight,
+                  ? colorScheme.onSurface
+                  : colorScheme.onSurface.withValues(alpha: 0.5),
             ),
           ),
         ],
@@ -845,14 +853,16 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
   }
 
   Widget _buildTransportSection(Booking booking, TextTheme textTheme) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Row(
       children: [
         Icon(
           _transportIcon(booking.transportMode),
           size: AppConstants.iconSizeMD,
-          color: BeautyCitaTheme.primaryRose,
+          color: colorScheme.primary,
         ),
-        const SizedBox(width: BeautyCitaTheme.spaceSM),
+        const SizedBox(width: AppConstants.paddingSM),
         Text(
           _transportLabel(booking.transportMode),
           style: textTheme.bodyLarge?.copyWith(
@@ -890,7 +900,7 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
                 fontWeight: FontWeight.w700,
               ),
             ),
-            const SizedBox(height: BeautyCitaTheme.spaceSM),
+            const SizedBox(height: AppConstants.paddingSM),
             ...rides.map((ride) => _buildUberRideCard(ride, textTheme)),
           ],
         );
@@ -906,19 +916,20 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
   }
 
   Widget _buildUberRideCard(UberRide ride, TextTheme textTheme) {
+    final colorScheme = Theme.of(context).colorScheme;
     final isReturn = ride.leg == 'return';
     final legLabel = isReturn ? 'Regreso' : 'Ida';
     final statusColor = _uberStatusColor(ride.status);
 
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.only(bottom: BeautyCitaTheme.spaceSM),
+      margin: const EdgeInsets.only(bottom: AppConstants.paddingSM),
       padding: const EdgeInsets.all(AppConstants.paddingMD),
       decoration: BoxDecoration(
-        color: BeautyCitaTheme.surfaceCream,
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
         border: Border.all(
-          color: BeautyCitaTheme.dividerLight,
+          color: Theme.of(context).dividerColor,
           width: 1,
         ),
       ),
@@ -956,7 +967,7 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
             ],
           ),
 
-          const SizedBox(height: BeautyCitaTheme.spaceSM),
+          const SizedBox(height: AppConstants.paddingSM),
 
           // Pickup address
           Row(
@@ -966,7 +977,7 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
                 size: AppConstants.iconSizeSM,
                 color: Colors.green.shade600,
               ),
-              const SizedBox(width: BeautyCitaTheme.spaceXS),
+              const SizedBox(width: AppConstants.paddingXS),
               Expanded(
                 child: Text(
                   _shortAddress(ride.pickupAddress),
@@ -988,7 +999,7 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
                     width: 2,
                     height: 4,
                     margin: const EdgeInsets.symmetric(vertical: 1),
-                    color: BeautyCitaTheme.dividerLight,
+                    color: Theme.of(context).dividerColor,
                   ),
               ],
             ),
@@ -1002,7 +1013,7 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
                 size: AppConstants.iconSizeSM,
                 color: Colors.red.shade500,
               ),
-              const SizedBox(width: BeautyCitaTheme.spaceXS),
+              const SizedBox(width: AppConstants.paddingXS),
               Expanded(
                 child: Text(
                   _shortAddress(ride.dropoffAddress),
@@ -1014,18 +1025,18 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
             ],
           ),
 
-          const SizedBox(height: BeautyCitaTheme.spaceSM),
+          const SizedBox(height: AppConstants.paddingSM),
 
           // Time + fare row
           Row(
             children: [
               if (ride.scheduledPickupAt != null) ...[
-                const Icon(
+                Icon(
                   Icons.schedule_rounded,
                   size: AppConstants.iconSizeSM,
-                  color: BeautyCitaTheme.textLight,
+                  color: colorScheme.onSurface.withValues(alpha: 0.5),
                 ),
-                const SizedBox(width: BeautyCitaTheme.spaceXS),
+                const SizedBox(width: AppConstants.paddingXS),
                 Text(
                   DateFormat('HH:mm').format(ride.scheduledPickupAt!),
                   style: textTheme.bodyMedium,
@@ -1033,18 +1044,18 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
               ],
               if (ride.scheduledPickupAt != null &&
                   ride.estimatedFareMin != null)
-                const SizedBox(width: BeautyCitaTheme.spaceMD),
+                const SizedBox(width: AppConstants.paddingMD),
               if (ride.estimatedFareMin != null &&
                   ride.estimatedFareMax != null) ...[
                 Icon(
                   Icons.attach_money_rounded,
                   size: AppConstants.iconSizeSM,
-                  color: BeautyCitaTheme.primaryRose,
+                  color: colorScheme.primary,
                 ),
                 Text(
                   '\$${ride.estimatedFareMin!.toStringAsFixed(0)}-\$${ride.estimatedFareMax!.toStringAsFixed(0)} ${ride.currency}',
                   style: textTheme.bodyMedium?.copyWith(
-                    color: BeautyCitaTheme.primaryRose,
+                    color: colorScheme.primary,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -1053,22 +1064,22 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
           ),
 
           if (ride.isActive) ...[
-            const SizedBox(height: BeautyCitaTheme.spaceSM),
+            const SizedBox(height: AppConstants.paddingSM),
             GestureDetector(
               onTap: () => _editRideLocation(ride),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.edit_location_alt_rounded,
                     size: AppConstants.iconSizeSM,
-                    color: BeautyCitaTheme.primaryRose,
+                    color: colorScheme.primary,
                   ),
-                  const SizedBox(width: BeautyCitaTheme.spaceXS),
+                  const SizedBox(width: AppConstants.paddingXS),
                   Text(
                     isReturn ? 'Cambiar destino' : 'Cambiar recogida',
                     style: textTheme.bodySmall?.copyWith(
-                      color: BeautyCitaTheme.primaryRose,
+                      color: colorScheme.primary,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -1082,6 +1093,8 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
   }
 
   Widget _buildBottomActions(Booking booking, TextTheme textTheme) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Container(
       padding: EdgeInsets.fromLTRB(
         AppConstants.screenPaddingHorizontal,
@@ -1090,7 +1103,7 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
         MediaQuery.of(context).padding.bottom + AppConstants.paddingSM,
       ),
       decoration: BoxDecoration(
-        color: BeautyCitaTheme.backgroundWhite,
+        color: Theme.of(context).scaffoldBackgroundColor,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.06),
@@ -1119,13 +1132,13 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
                     borderRadius:
                         BorderRadius.circular(AppConstants.radiusLG),
                   ),
-                  side: const BorderSide(color: BeautyCitaTheme.primaryRose),
-                  foregroundColor: BeautyCitaTheme.primaryRose,
+                  side: BorderSide(color: colorScheme.primary),
+                  foregroundColor: colorScheme.primary,
                 ),
               ),
             ),
           if (_canAddUber(booking) && _canCancel(booking.status))
-            const SizedBox(width: BeautyCitaTheme.spaceSM),
+            const SizedBox(width: AppConstants.paddingSM),
           if (_canCancel(booking.status))
             Expanded(
               child: TextButton.icon(
