@@ -10,9 +10,9 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:beautycita/services/supabase_client.dart';
 import 'package:beautycita/services/notification_service.dart';
-import 'package:beautycita/config/theme.dart';
 import 'package:beautycita/config/routes.dart';
 import 'package:beautycita/config/constants.dart';
+import 'package:beautycita/providers/theme_provider.dart';
 import 'package:beautycita/providers/uber_provider.dart';
 import 'package:beautycita/services/qr_auth_service.dart';
 import 'package:beautycita/services/toast_service.dart';
@@ -36,16 +36,6 @@ void main() async {
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
-
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.dark,
-      statusBarBrightness: Brightness.light,
-      systemNavigationBarColor: Colors.white,
-      systemNavigationBarIconBrightness: Brightness.dark,
-    ),
-  );
 
   // Install debug log capture (before anything else that uses debugPrint)
   DebugLog.instance.install();
@@ -187,10 +177,13 @@ class _BeautyCitaAppState extends ConsumerState<BeautyCitaApp> {
   @override
   Widget build(BuildContext context) {
     final router = AppRoutes.router;
+    final themeState = ref.watch(themeProvider);
     return MaterialApp.router(
       title: AppConstants.appName,
       debugShowCheckedModeBanner: false,
-      theme: BeautyCitaTheme.lightTheme,
+      theme: themeState.themeData,
+      darkTheme: themeState.palette.brightness == Brightness.dark ? themeState.themeData : null,
+      themeMode: themeState.palette.brightness == Brightness.dark ? ThemeMode.dark : ThemeMode.light,
       routerDelegate: router.routerDelegate,
       routeInformationParser: router.routeInformationParser,
       routeInformationProvider: router.routeInformationProvider,
