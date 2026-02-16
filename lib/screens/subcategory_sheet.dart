@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/category.dart';
-import '../config/theme.dart';
 import '../config/constants.dart';
 import '../providers/booking_flow_provider.dart';
 import '../widgets/cinematic_question_text.dart';
@@ -41,6 +40,8 @@ class SubcategorySheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = Theme.of(context).colorScheme;
+
     return DraggableScrollableSheet(
       expand: false,
       initialChildSize: 0.65,
@@ -49,9 +50,9 @@ class SubcategorySheet extends StatelessWidget {
       builder: (context, scrollController) {
         return Container(
           decoration: BoxDecoration(
-            color: BeautyCitaTheme.backgroundWhite,
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(BeautyCitaTheme.radiusXL),
+            color: Theme.of(context).scaffoldBackgroundColor,
+            borderRadius: BorderRadius.vertical(
+              top: Radius.circular(AppConstants.radiusXL),
             ),
             boxShadow: [
               BoxShadow(
@@ -69,7 +70,7 @@ class SubcategorySheet extends StatelessWidget {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: BeautyCitaTheme.dividerLight,
+                  color: Theme.of(context).dividerColor,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -94,7 +95,7 @@ class SubcategorySheet extends StatelessWidget {
                           end: Alignment.bottomRight,
                         ),
                         border: Border.all(
-                          color: BeautyCitaTheme.dividerLight,
+                          color: Theme.of(context).dividerColor,
                           width: 1,
                         ),
                       ),
@@ -112,7 +113,7 @@ class SubcategorySheet extends StatelessWidget {
                       child: CinematicQuestionText(
                         text: _getCategoryQuestion(category.id),
                         primaryColor: category.color,
-                        accentColor: BeautyCitaTheme.secondaryGold,
+                        accentColor: palette.secondary,
                         fontSize: 19,
                       ),
                     ),
@@ -209,7 +210,7 @@ class _SubcategoryPillState extends State<_SubcategoryPill> {
           color: _isPressed ? color.withValues(alpha: 0.12) : Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: BeautyCitaTheme.dividerLight,
+            color: Theme.of(context).dividerColor,
             width: 1,
           ),
           boxShadow: _isPressed
@@ -259,6 +260,8 @@ class _ServiceItemsSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = Theme.of(context).colorScheme;
+
     return DraggableScrollableSheet(
       expand: false,
       initialChildSize: 0.55,
@@ -267,9 +270,9 @@ class _ServiceItemsSheet extends StatelessWidget {
       builder: (context, scrollController) {
         return Container(
           decoration: BoxDecoration(
-            color: BeautyCitaTheme.backgroundWhite,
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(BeautyCitaTheme.radiusXL),
+            color: Theme.of(context).scaffoldBackgroundColor,
+            borderRadius: BorderRadius.vertical(
+              top: Radius.circular(AppConstants.radiusXL),
             ),
             boxShadow: [
               BoxShadow(
@@ -287,7 +290,7 @@ class _ServiceItemsSheet extends StatelessWidget {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: BeautyCitaTheme.dividerLight,
+                  color: Theme.of(context).dividerColor,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -313,7 +316,7 @@ class _ServiceItemsSheet extends StatelessWidget {
                       style: GoogleFonts.nunito(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
-                        color: BeautyCitaTheme.textLight,
+                        color: palette.onSurface.withValues(alpha: 0.5),
                       ),
                     ),
                   ],
@@ -375,6 +378,7 @@ class _ServiceItemTileState extends ConsumerState<_ServiceItemTile> {
   @override
   Widget build(BuildContext context) {
     final color = widget.categoryColor;
+    final palette = Theme.of(context).colorScheme;
 
     return GestureDetector(
       onTapDown: (_) => setState(() => _isPressed = true),
@@ -389,7 +393,7 @@ class _ServiceItemTileState extends ConsumerState<_ServiceItemTile> {
         decoration: BoxDecoration(
           color: _isPressed
               ? color.withValues(alpha: 0.06)
-              : BeautyCitaTheme.surfaceCream,
+              : palette.surface,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: _isPressed
@@ -418,7 +422,7 @@ class _ServiceItemTileState extends ConsumerState<_ServiceItemTile> {
                 style: GoogleFonts.nunito(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: BeautyCitaTheme.textDark,
+                  color: palette.onSurface,
                 ),
               ),
             ),

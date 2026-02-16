@@ -3,32 +3,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import '../config/theme.dart';
+import '../config/constants.dart';
+import '../config/theme_extension.dart';
 import '../models/curate_result.dart';
 import '../providers/booking_flow_provider.dart';
 import '../widgets/cinematic_question_text.dart';
-
-/// 13-stop real gold gradient for card borders and buttons.
-const _goldGradient = LinearGradient(
-  begin: Alignment.topLeft,
-  end: Alignment.bottomRight,
-  colors: [
-    Color(0xFF8B6914),
-    Color(0xFFD4AF37),
-    Color(0xFFFFF8DC),
-    Color(0xFFFFD700),
-    Color(0xFFC19A26),
-    Color(0xFFF5D547),
-    Color(0xFFFFFFE0),
-    Color(0xFFD4AF37),
-    Color(0xFFA67C00),
-    Color(0xFFCDAD38),
-    Color(0xFFFFF8DC),
-    Color(0xFFB8860B),
-    Color(0xFF8B6914),
-  ],
-  stops: [0.0, 0.08, 0.15, 0.25, 0.35, 0.45, 0.50, 0.58, 0.68, 0.78, 0.85, 0.93, 1.0],
-);
 
 class ConfirmationScreen extends ConsumerStatefulWidget {
   const ConfirmationScreen({super.key});
@@ -45,6 +24,8 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
     final state = ref.watch(bookingFlowProvider);
     final notifier = ref.read(bookingFlowProvider.notifier);
     final result = state.selectedResult;
+    final palette = Theme.of(context).colorScheme;
+    final ext = Theme.of(context).extension<BCThemeExtension>()!;
 
     if (result == null) {
       return const Scaffold(body: Center(child: Text('Sin seleccion')));
@@ -53,60 +34,60 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
     final isBooked = state.step == BookingFlowStep.booked;
 
     return Scaffold(
-      backgroundColor: BeautyCitaTheme.surfaceCream,
+      backgroundColor: palette.surface,
       appBar: AppBar(
-        backgroundColor: BeautyCitaTheme.surfaceCream,
+        backgroundColor: palette.surface,
         elevation: 0,
         leading: isBooked
             ? null
             : IconButton(
-                icon: const Icon(Icons.arrow_back_rounded,
-                    color: BeautyCitaTheme.textDark, size: 24),
+                icon: Icon(Icons.arrow_back_rounded,
+                    color: palette.onSurface, size: 24),
                 onPressed: () => notifier.goBack(),
               ),
         automaticallyImplyLeading: false,
         title: const SizedBox.shrink(),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(BeautyCitaTheme.spaceLG),
+        padding: const EdgeInsets.all(AppConstants.paddingLG),
         child: Column(
           children: [
             if (isBooked) ...[
               _SuccessBanner(paymentMethod: state.paymentMethod),
-              const SizedBox(height: BeautyCitaTheme.spaceMD),
+              const SizedBox(height: AppConstants.paddingMD),
             ] else ...[
-              const CinematicQuestionText(
+              CinematicQuestionText(
                 text: 'Confirma tu cita',
                 fontSize: 24,
-                accentColor: BeautyCitaTheme.secondaryGold,
+                accentColor: palette.secondary,
               ),
-              const SizedBox(height: BeautyCitaTheme.spaceMD),
+              const SizedBox(height: AppConstants.paddingMD),
             ],
             _SummaryCard(result: result),
-            const SizedBox(height: BeautyCitaTheme.spaceMD),
+            const SizedBox(height: AppConstants.paddingMD),
             _TransportCard(result: result, isBooked: isBooked, uberScheduled: state.uberScheduled),
-            const SizedBox(height: BeautyCitaTheme.spaceMD),
+            const SizedBox(height: AppConstants.paddingMD),
             _PriceBreakdown(result: result),
             if (!isBooked) ...[
-              const SizedBox(height: BeautyCitaTheme.spaceMD),
+              const SizedBox(height: AppConstants.paddingMD),
               _PaymentMethodSelector(
                 selected: state.paymentMethod,
                 onSelect: (method) => notifier.selectPaymentMethod(method),
               ),
             ],
-            const SizedBox(height: BeautyCitaTheme.spaceXL),
+            const SizedBox(height: AppConstants.paddingXL),
             if (isBooked) ...[
-              // Success actions — gold gradient button
+              // Success actions -- gold gradient button
               GestureDetector(
                 onTap: () {
                   HapticFeedback.mediumImpact();
                   notifier.reset();
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: BeautyCitaTheme.spaceMD),
+                  padding: const EdgeInsets.symmetric(vertical: AppConstants.paddingMD),
                   decoration: BoxDecoration(
-                    gradient: _goldGradient,
-                    borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusLarge),
+                    gradient: ext.goldGradientDirectional(),
+                    borderRadius: BorderRadius.circular(AppConstants.radiusLG),
                     boxShadow: [
                       BoxShadow(
                         color: const Color(0xFFD4AF37).withValues(alpha: 0.4),
@@ -128,7 +109,7 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
                 ),
               ),
             ] else ...[
-              // Confirm button — gold gradient
+              // Confirm button -- gold gradient
               GestureDetector(
                 onTap: _isConfirming
                     ? null
@@ -142,10 +123,10 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
                         }
                       },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: BeautyCitaTheme.spaceMD),
+                  padding: const EdgeInsets.symmetric(vertical: AppConstants.paddingMD),
                   decoration: BoxDecoration(
-                    gradient: _goldGradient,
-                    borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusLarge),
+                    gradient: ext.goldGradientDirectional(),
+                    borderRadius: BorderRadius.circular(AppConstants.radiusLG),
                     boxShadow: [
                       BoxShadow(
                         color: const Color(0xFFD4AF37).withValues(alpha: 0.4),
@@ -196,6 +177,7 @@ class _SuccessBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = Theme.of(context).colorScheme;
     final isPending = paymentMethod == 'oxxo' || paymentMethod == 'bitcoin';
 
     String subtitle;
@@ -216,22 +198,22 @@ class _SuccessBanner extends StatelessWidget {
           decoration: BoxDecoration(
             color: isPending
                 ? Colors.orange.withValues(alpha: 0.12)
-                : BeautyCitaTheme.secondaryGold.withValues(alpha: 0.12),
+                : palette.secondary.withValues(alpha: 0.12),
             shape: BoxShape.circle,
           ),
           child: Icon(
             isPending ? Icons.schedule_rounded : Icons.check_circle_rounded,
-            color: isPending ? Colors.orange : BeautyCitaTheme.secondaryGold,
+            color: isPending ? Colors.orange : palette.secondary,
             size: 48,
           ),
         ),
-        const SizedBox(height: BeautyCitaTheme.spaceMD),
+        const SizedBox(height: AppConstants.paddingMD),
         Text(
           isPending ? 'Pago pendiente' : 'Cita reservada',
           style: GoogleFonts.poppins(
             fontSize: 24,
             fontWeight: FontWeight.w700,
-            color: BeautyCitaTheme.textDark,
+            color: palette.onSurface,
           ),
         ),
         const SizedBox(height: 4),
@@ -240,7 +222,7 @@ class _SuccessBanner extends StatelessWidget {
           textAlign: TextAlign.center,
           style: GoogleFonts.nunito(
             fontSize: 14,
-            color: isPending ? Colors.orange.shade700 : BeautyCitaTheme.textLight,
+            color: isPending ? Colors.orange.shade700 : palette.onSurface.withValues(alpha: 0.5),
           ),
         ),
       ],
@@ -259,14 +241,16 @@ class _SummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = Theme.of(context).colorScheme;
+    final ext = Theme.of(context).extension<BCThemeExtension>()!;
     final formatter = DateFormat("EEEE d 'de' MMMM, HH:mm", 'es');
     final dateStr = formatter.format(result.slot.startTime);
     final capitalizedDate = dateStr[0].toUpperCase() + dateStr.substring(1);
 
     return Container(
       decoration: BoxDecoration(
-        gradient: _goldGradient,
-        borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+        gradient: ext.goldGradientDirectional(),
+        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
         boxShadow: [
           BoxShadow(
             color: const Color(0xFFD4AF37).withValues(alpha: 0.3),
@@ -277,10 +261,10 @@ class _SummaryCard extends StatelessWidget {
       ),
       child: Container(
         margin: const EdgeInsets.all(3),
-        padding: const EdgeInsets.all(BeautyCitaTheme.spaceLG),
+        padding: const EdgeInsets.all(AppConstants.paddingLG),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium - 3),
+          borderRadius: BorderRadius.circular(AppConstants.radiusMD - 3),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -288,8 +272,8 @@ class _SummaryCard extends StatelessWidget {
             // Business name
             Row(
               children: [
-                const Icon(Icons.location_on,
-                    color: BeautyCitaTheme.primaryRose, size: 20),
+                Icon(Icons.location_on,
+                    color: palette.primary, size: 20),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -297,7 +281,7 @@ class _SummaryCard extends StatelessWidget {
                     style: GoogleFonts.poppins(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
-                      color: BeautyCitaTheme.textDark,
+                      color: palette.onSurface,
                     ),
                   ),
                 ),
@@ -310,18 +294,18 @@ class _SummaryCard extends StatelessWidget {
                   result.business.address!,
                   style: GoogleFonts.nunito(
                     fontSize: 13,
-                    color: BeautyCitaTheme.textLight,
+                    color: palette.onSurface.withValues(alpha: 0.5),
                   ),
                 ),
               ),
             ],
-            const SizedBox(height: BeautyCitaTheme.spaceMD),
+            const SizedBox(height: AppConstants.paddingMD),
 
             // Service + staff
             Row(
               children: [
-                const Icon(Icons.content_cut,
-                    color: BeautyCitaTheme.primaryRose, size: 20),
+                Icon(Icons.content_cut,
+                    color: palette.primary, size: 20),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -329,31 +313,31 @@ class _SummaryCard extends StatelessWidget {
                     style: GoogleFonts.poppins(
                       fontSize: 15,
                       fontWeight: FontWeight.w500,
-                      color: BeautyCitaTheme.textDark,
+                      color: palette.onSurface,
                     ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: BeautyCitaTheme.spaceSM),
+            const SizedBox(height: AppConstants.paddingSM),
 
             // Date/time
             Row(
               children: [
-                const Icon(Icons.calendar_today,
-                    color: BeautyCitaTheme.primaryRose, size: 20),
+                Icon(Icons.calendar_today,
+                    color: palette.primary, size: 20),
                 const SizedBox(width: 8),
                 Text(
                   capitalizedDate,
                   style: GoogleFonts.poppins(
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
-                    color: BeautyCitaTheme.textDark,
+                    color: palette.onSurface,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: BeautyCitaTheme.spaceXS),
+            const SizedBox(height: AppConstants.paddingXS),
 
             // Duration
             Padding(
@@ -362,7 +346,7 @@ class _SummaryCard extends StatelessWidget {
                 '${result.service.durationMinutes} min',
                 style: GoogleFonts.nunito(
                   fontSize: 13,
-                  color: BeautyCitaTheme.textLight,
+                  color: palette.onSurface.withValues(alpha: 0.5),
                 ),
               ),
             ),
@@ -416,14 +400,15 @@ class _TransportCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = Theme.of(context).colorScheme;
+    final ext = Theme.of(context).extension<BCThemeExtension>()!;
     final t = result.transport;
     final isUber = t.mode == 'uber';
-    final hasEstimate = t.uberEstimateMin != null && t.uberEstimateMax != null;
 
     return Container(
       decoration: BoxDecoration(
-        gradient: _goldGradient,
-        borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+        gradient: ext.goldGradientDirectional(),
+        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
         boxShadow: [
           BoxShadow(
             color: const Color(0xFFD4AF37).withValues(alpha: 0.3),
@@ -434,10 +419,10 @@ class _TransportCard extends StatelessWidget {
       ),
       child: Container(
         margin: const EdgeInsets.all(3),
-        padding: const EdgeInsets.all(BeautyCitaTheme.spaceLG),
+        padding: const EdgeInsets.all(AppConstants.paddingLG),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium - 3),
+          borderRadius: BorderRadius.circular(AppConstants.radiusMD - 3),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -446,21 +431,21 @@ class _TransportCard extends StatelessWidget {
             Row(
               children: [
                 Icon(_icon(t.mode),
-                    color: BeautyCitaTheme.primaryRose, size: 24),
+                    color: palette.primary, size: 24),
                 const SizedBox(width: 12),
                 Text(
                   _modeLabel(t.mode),
                   style: GoogleFonts.poppins(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    color: BeautyCitaTheme.textDark,
+                    color: palette.onSurface,
                   ),
                 ),
               ],
             ),
 
             if (isUber) ...[
-              const SizedBox(height: BeautyCitaTheme.spaceMD),
+              const SizedBox(height: AppConstants.paddingMD),
 
               // Uber status badge (after booking)
               if (isBooked) ...[
@@ -501,7 +486,7 @@ class _TransportCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(height: BeautyCitaTheme.spaceSM),
+                const SizedBox(height: AppConstants.paddingSM),
               ],
 
               // Outbound leg
@@ -544,7 +529,7 @@ class _TransportCard extends StatelessWidget {
                   '${t.durationMin} min · ${t.distanceKm.toStringAsFixed(1)} km',
                   style: GoogleFonts.nunito(
                     fontSize: 13,
-                    color: BeautyCitaTheme.textLight,
+                    color: palette.onSurface.withValues(alpha: 0.5),
                   ),
                 ),
               ),
@@ -555,7 +540,7 @@ class _TransportCard extends StatelessWidget {
                     t.transitSummary!,
                     style: GoogleFonts.nunito(
                       fontSize: 13,
-                      color: BeautyCitaTheme.textLight,
+                      color: palette.onSurface.withValues(alpha: 0.5),
                     ),
                   ),
                 ),
@@ -606,6 +591,7 @@ class _UberLegRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = Theme.of(context).colorScheme;
     final hasFare = fareMin != null && fareMax != null;
 
     return Padding(
@@ -618,20 +604,20 @@ class _UberLegRow extends StatelessWidget {
             style: GoogleFonts.poppins(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: BeautyCitaTheme.textDark,
+              color: palette.onSurface,
             ),
           ),
           const SizedBox(height: 4),
           Row(
             children: [
-              Icon(icon, size: 16, color: BeautyCitaTheme.textLight),
+              Icon(icon, size: 16, color: palette.onSurface.withValues(alpha: 0.5)),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
                   destination,
                   style: GoogleFonts.nunito(
                     fontSize: 13,
-                    color: BeautyCitaTheme.textLight,
+                    color: palette.onSurface.withValues(alpha: 0.5),
                   ),
                 ),
               ),
@@ -640,22 +626,22 @@ class _UberLegRow extends StatelessWidget {
           const SizedBox(height: 2),
           Row(
             children: [
-              const Icon(Icons.access_time,
-                  size: 16, color: BeautyCitaTheme.textLight),
+              Icon(Icons.access_time,
+                  size: 16, color: palette.onSurface.withValues(alpha: 0.5)),
               const SizedBox(width: 6),
               Text(
                 'Recogida: $pickupTime',
                 style: GoogleFonts.nunito(
                   fontSize: 13,
-                  color: BeautyCitaTheme.textLight,
+                  color: palette.onSurface.withValues(alpha: 0.5),
                 ),
               ),
               const SizedBox(width: 8),
               Text(
-                '${durationMin} min · ${distanceKm.toStringAsFixed(1)} km',
+                '$durationMin min · ${distanceKm.toStringAsFixed(1)} km',
                 style: GoogleFonts.nunito(
                   fontSize: 12,
-                  color: BeautyCitaTheme.textLight.withValues(alpha: 0.7),
+                  color: palette.onSurface.withValues(alpha: 0.35),
                 ),
               ),
             ],
@@ -666,8 +652,8 @@ class _UberLegRow extends StatelessWidget {
               Icon(Icons.attach_money,
                   size: 16,
                   color: hasFare
-                      ? BeautyCitaTheme.primaryRose
-                      : BeautyCitaTheme.textLight),
+                      ? palette.primary
+                      : palette.onSurface.withValues(alpha: 0.5)),
               const SizedBox(width: 6),
               Text(
                 hasFare
@@ -677,8 +663,8 @@ class _UberLegRow extends StatelessWidget {
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                   color: hasFare
-                      ? BeautyCitaTheme.primaryRose
-                      : BeautyCitaTheme.textLight,
+                      ? palette.primary
+                      : palette.onSurface.withValues(alpha: 0.5),
                 ),
               ),
             ],
@@ -708,6 +694,8 @@ class _PriceBreakdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = Theme.of(context).colorScheme;
+    final ext = Theme.of(context).extension<BCThemeExtension>()!;
     final t = result.transport;
     final servicePrice = result.service.price;
     final currency = result.service.currency;
@@ -726,8 +714,8 @@ class _PriceBreakdown extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        gradient: _goldGradient,
-        borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+        gradient: ext.goldGradientDirectional(),
+        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
         boxShadow: [
           BoxShadow(
             color: const Color(0xFFD4AF37).withValues(alpha: 0.3),
@@ -738,10 +726,10 @@ class _PriceBreakdown extends StatelessWidget {
       ),
       child: Container(
         margin: const EdgeInsets.all(3),
-        padding: const EdgeInsets.all(BeautyCitaTheme.spaceLG),
+        padding: const EdgeInsets.all(AppConstants.paddingLG),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium - 3),
+          borderRadius: BorderRadius.circular(AppConstants.radiusMD - 3),
         ),
         child: Column(
           children: [
@@ -761,7 +749,7 @@ class _PriceBreakdown extends StatelessWidget {
                   style: GoogleFonts.poppins(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
-                    color: BeautyCitaTheme.textDark,
+                    color: palette.onSurface,
                   ),
                 ),
                 Text(
@@ -769,7 +757,7 @@ class _PriceBreakdown extends StatelessWidget {
                   style: GoogleFonts.poppins(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
-                    color: BeautyCitaTheme.primaryRose,
+                    color: palette.primary,
                   ),
                 ),
               ],
@@ -779,14 +767,14 @@ class _PriceBreakdown extends StatelessWidget {
               Row(
                 children: [
                   Icon(Icons.info_outline,
-                      size: 14, color: BeautyCitaTheme.textLight),
+                      size: 14, color: palette.onSurface.withValues(alpha: 0.5)),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
                       'Uber cobra por separado: ~\$${(uberLow * 2).toStringAsFixed(0)}-\$${(uberHigh * 2).toStringAsFixed(0)} $currency ida y vuelta',
                       style: GoogleFonts.nunito(
                         fontSize: 12,
-                        color: BeautyCitaTheme.textLight,
+                        color: palette.onSurface.withValues(alpha: 0.5),
                       ),
                     ),
                   ),
@@ -867,6 +855,9 @@ class _PaymentMethodCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = Theme.of(context).colorScheme;
+    final ext = Theme.of(context).extension<BCThemeExtension>()!;
+
     return Expanded(
       child: GestureDetector(
         onTap: () {
@@ -875,8 +866,8 @@ class _PaymentMethodCard extends StatelessWidget {
         },
         child: Container(
           decoration: BoxDecoration(
-            gradient: _goldGradient,
-            borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+            gradient: ext.goldGradientDirectional(),
+            borderRadius: BorderRadius.circular(AppConstants.radiusMD),
             boxShadow: isSelected
                 ? [
                     BoxShadow(
@@ -892,7 +883,7 @@ class _PaymentMethodCard extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),
             decoration: BoxDecoration(
               color: isSelected ? const Color(0xFFFFF8DC) : Colors.white,
-              borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium - 2),
+              borderRadius: BorderRadius.circular(AppConstants.radiusMD - 2),
             ),
             child: Column(
               children: [
@@ -901,7 +892,7 @@ class _PaymentMethodCard extends StatelessWidget {
                   size: 28,
                   color: isSelected
                       ? const Color(0xFFB8860B)
-                      : BeautyCitaTheme.textLight,
+                      : palette.onSurface.withValues(alpha: 0.5),
                 ),
                 const SizedBox(height: 6),
                 Text(
@@ -911,7 +902,7 @@ class _PaymentMethodCard extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                     color: isSelected
                         ? const Color(0xFF8B6914)
-                        : BeautyCitaTheme.textDark,
+                        : palette.onSurface,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -922,7 +913,7 @@ class _PaymentMethodCard extends StatelessWidget {
                     fontSize: 10,
                     color: isSelected
                         ? const Color(0xFFA67C00)
-                        : BeautyCitaTheme.textLight,
+                        : palette.onSurface.withValues(alpha: 0.5),
                   ),
                 ),
               ],
@@ -942,6 +933,8 @@ class _PriceRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = Theme.of(context).colorScheme;
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -949,7 +942,7 @@ class _PriceRow extends StatelessWidget {
           label,
           style: GoogleFonts.nunito(
             fontSize: 14,
-            color: BeautyCitaTheme.textLight,
+            color: palette.onSurface.withValues(alpha: 0.5),
           ),
         ),
         Text(
@@ -957,7 +950,7 @@ class _PriceRow extends StatelessWidget {
           style: GoogleFonts.poppins(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: BeautyCitaTheme.textDark,
+            color: palette.onSurface,
           ),
         ),
       ],

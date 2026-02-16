@@ -3,10 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/category.dart';
-import '../providers/auth_provider.dart';
 import '../providers/category_provider.dart';
-import '../config/theme.dart';
 import '../config/constants.dart';
+import '../config/theme_extension.dart';
 import '../widgets/animated_city_map.dart';
 import '../widgets/cinematic_question_text.dart';
 import 'subcategory_sheet.dart';
@@ -14,29 +13,17 @@ import 'subcategory_sheet.dart';
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
-  String _getGreeting() {
-    final hour = DateTime.now().hour;
-
-    if (hour >= 5 && hour < 12) {
-      return 'Buenos dias';
-    } else if (hour >= 12 && hour < 19) {
-      return 'Buenas tardes';
-    } else {
-      return 'Buenas noches';
-    }
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final authState = ref.watch(authStateProvider);
     final categories = ref.watch(categoriesProvider);
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
+    final palette = Theme.of(context).colorScheme;
 
     final topSectionHeight = screenHeight * 0.34;
 
     return Scaffold(
-      backgroundColor: BeautyCitaTheme.backgroundWhite,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Column(
         children: [
           // Header with gradient, decorative shapes, and curved bottom
@@ -48,9 +35,9 @@ class HomeScreen extends ConsumerWidget {
                 // Gradient background with decorative circles
                 Container(
                   height: topSectionHeight,
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [Color(0xFFE91E63), Color(0xFFC2185B), Color(0xFFAD1457)],
+                      colors: [Color(0xFFE91E63), palette.primary, Color(0xFFAD1457)],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
@@ -79,7 +66,7 @@ class HomeScreen extends ConsumerWidget {
                                     icon: Icons.chat_bubble_outline_rounded,
                                     onTap: () => context.push('/chat'),
                                   ),
-                                  const SizedBox(width: BeautyCitaTheme.spaceSM),
+                                  const SizedBox(width: AppConstants.paddingSM),
                                   _HeaderButton(
                                     icon: Icons.settings_outlined,
                                     onTap: () => context.push('/settings'),
@@ -98,12 +85,12 @@ class HomeScreen extends ConsumerWidget {
                                   height: 1.1,
                                 ),
                               ),
-                              const SizedBox(height: BeautyCitaTheme.spaceSM),
+                              const SizedBox(height: AppConstants.paddingSM),
                               // Cinematic question text
-                              const CinematicQuestionText(
+                              CinematicQuestionText(
                                 text: 'Que buscas hoy?',
                                 primaryColor: Colors.white,
-                                accentColor: BeautyCitaTheme.secondaryGold,
+                                accentColor: palette.secondary,
                                 fontSize: 30,
                               ),
                               const SizedBox(height: 40), // space before curve
@@ -133,7 +120,7 @@ class HomeScreen extends ConsumerWidget {
           Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(
-                horizontal: BeautyCitaTheme.spaceMD,
+                horizontal: AppConstants.paddingMD,
               ),
               child: GridView.builder(
                 padding: const EdgeInsets.only(top: 4, bottom: 16),
@@ -278,6 +265,11 @@ class _CategoryCardState extends State<_CategoryCard>
   @override
   Widget build(BuildContext context) {
     final category = widget.category;
+    final palette = Theme.of(context).colorScheme;
+    final ext = Theme.of(context).extension<BCThemeExtension>()!;
+    final categoryColor = ext.categoryColors.length > widget.index
+        ? ext.categoryColors[widget.index]
+        : palette.primary;
 
     return AnimatedBuilder(
       animation: _scaleAnimation,
@@ -306,12 +298,12 @@ class _CategoryCardState extends State<_CategoryCard>
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: BeautyCitaTheme.dividerLight,
+              color: Theme.of(context).dividerColor,
               width: 1,
             ),
             boxShadow: [
               BoxShadow(
-                color: category.color.withValues(alpha: _isPressed ? 0.15 : 0.10),
+                color: categoryColor.withValues(alpha: _isPressed ? 0.15 : 0.10),
                 blurRadius: _isPressed ? 8 : 16,
                 offset: Offset(0, _isPressed ? 2 : 6),
                 spreadRadius: _isPressed ? -2 : 0,
@@ -334,8 +326,8 @@ class _CategoryCardState extends State<_CategoryCard>
                   shape: BoxShape.circle,
                   gradient: LinearGradient(
                     colors: [
-                      category.color.withValues(alpha: 0.12),
-                      category.color.withValues(alpha: 0.06),
+                      categoryColor.withValues(alpha: 0.12),
+                      categoryColor.withValues(alpha: 0.06),
                     ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
@@ -360,7 +352,7 @@ class _CategoryCardState extends State<_CategoryCard>
                   style: GoogleFonts.poppins(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: category.color.withValues(alpha: 0.85),
+                    color: categoryColor.withValues(alpha: 0.85),
                     height: 1.2,
                   ),
                   textAlign: TextAlign.center,

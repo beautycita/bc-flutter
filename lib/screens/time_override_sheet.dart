@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../config/theme.dart';
+import '../config/constants.dart';
 import '../models/curate_result.dart';
 
 class TimeOverrideSheet extends StatefulWidget {
@@ -19,13 +19,13 @@ class _TimeOverrideSheetState extends State<TimeOverrideSheet> {
 
   static const _ranges = [
     ('today', 'Hoy'),
-    ('tomorrow', 'Mañana'),
+    ('tomorrow', 'Manana'),
     ('this_week', 'Esta semana'),
-    ('next_week', 'Próx. semana'),
+    ('next_week', 'Prox. semana'),
   ];
 
   static const _timesOfDay = [
-    ('morning', 'Mañana'),
+    ('morning', 'Manana'),
     ('afternoon', 'Tarde'),
     ('evening', 'Noche'),
   ];
@@ -50,6 +50,7 @@ class _TimeOverrideSheetState extends State<TimeOverrideSheet> {
   }
 
   Future<void> _pickDate() async {
+    final palette = Theme.of(context).colorScheme;
     final now = DateTime.now();
     final picked = await showDatePicker(
       context: context,
@@ -61,7 +62,7 @@ class _TimeOverrideSheetState extends State<TimeOverrideSheet> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: Theme.of(context).colorScheme.copyWith(
-                  primary: BeautyCitaTheme.primaryRose,
+                  primary: palette.primary,
                 ),
           ),
           child: child!,
@@ -108,14 +109,16 @@ class _TimeOverrideSheetState extends State<TimeOverrideSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = Theme.of(context).colorScheme;
+
     return Container(
-      decoration: const BoxDecoration(
-        color: BeautyCitaTheme.backgroundWhite,
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
         borderRadius: BorderRadius.vertical(
-          top: Radius.circular(BeautyCitaTheme.radiusXL),
+          top: Radius.circular(AppConstants.radiusXL),
         ),
       ),
-      padding: const EdgeInsets.all(BeautyCitaTheme.spaceLG),
+      padding: const EdgeInsets.all(AppConstants.paddingLG),
       child: SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -127,28 +130,28 @@ class _TimeOverrideSheetState extends State<TimeOverrideSheet> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: BeautyCitaTheme.dividerLight,
+                  color: Theme.of(context).dividerColor,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
             ),
-            const SizedBox(height: BeautyCitaTheme.spaceLG),
+            const SizedBox(height: AppConstants.paddingLG),
 
             // Title
             Text(
-              '¿Cuándo prefieres?',
+              'Cuando prefieres?',
               style: GoogleFonts.poppins(
                 fontSize: 22,
                 fontWeight: FontWeight.w600,
-                color: BeautyCitaTheme.textDark,
+                color: palette.onSurface,
               ),
             ),
-            const SizedBox(height: BeautyCitaTheme.spaceLG),
+            const SizedBox(height: AppConstants.paddingLG),
 
             // Day range pills
             Wrap(
-              spacing: BeautyCitaTheme.spaceSM,
-              runSpacing: BeautyCitaTheme.spaceSM,
+              spacing: AppConstants.paddingSM,
+              runSpacing: AppConstants.paddingSM,
               children: [
                 ..._ranges.map((r) => _Pill(
                       label: r.$2,
@@ -165,7 +168,7 @@ class _TimeOverrideSheetState extends State<TimeOverrideSheet> {
                 ),
               ],
             ),
-            const SizedBox(height: BeautyCitaTheme.spaceLG),
+            const SizedBox(height: AppConstants.paddingLG),
 
             // Time of day
             Text(
@@ -173,17 +176,17 @@ class _TimeOverrideSheetState extends State<TimeOverrideSheet> {
               style: GoogleFonts.poppins(
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
-                color: BeautyCitaTheme.textLight,
+                color: palette.onSurface.withValues(alpha: 0.5),
               ),
             ),
-            const SizedBox(height: BeautyCitaTheme.spaceSM),
+            const SizedBox(height: AppConstants.paddingSM),
             Row(
               children: _timesOfDay.map((t) {
                 return Expanded(
                   child: Padding(
                     padding: EdgeInsets.only(
                       right: t != _timesOfDay.last
-                          ? BeautyCitaTheme.spaceSM
+                          ? AppConstants.paddingSM
                           : 0,
                     ),
                     child: _Pill(
@@ -195,7 +198,7 @@ class _TimeOverrideSheetState extends State<TimeOverrideSheet> {
                 );
               }).toList(),
             ),
-            const SizedBox(height: BeautyCitaTheme.spaceLG),
+            const SizedBox(height: AppConstants.paddingLG),
 
             // Confirm button
             SizedBox(
@@ -203,15 +206,15 @@ class _TimeOverrideSheetState extends State<TimeOverrideSheet> {
               child: ElevatedButton(
                 onPressed: _canConfirm ? _confirm : null,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: BeautyCitaTheme.primaryRose,
+                  backgroundColor: palette.primary,
                   foregroundColor: Colors.white,
                   disabledBackgroundColor:
-                      BeautyCitaTheme.primaryRose.withValues(alpha: 0.3),
+                      palette.primary.withValues(alpha: 0.3),
                   padding:
-                      const EdgeInsets.symmetric(vertical: BeautyCitaTheme.spaceMD),
+                      const EdgeInsets.symmetric(vertical: AppConstants.paddingMD),
                   shape: RoundedRectangleBorder(
                     borderRadius:
-                        BorderRadius.circular(BeautyCitaTheme.radiusLarge),
+                        BorderRadius.circular(AppConstants.radiusLG),
                   ),
                 ),
                 child: Text(
@@ -245,23 +248,25 @@ class _Pill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = Theme.of(context).colorScheme;
+
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(
-          horizontal: BeautyCitaTheme.spaceMD,
+          horizontal: AppConstants.paddingMD,
           vertical: 12,
         ),
         decoration: BoxDecoration(
           color: selected
-              ? BeautyCitaTheme.primaryRose
-              : BeautyCitaTheme.surfaceCream,
-          borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusLarge),
+              ? palette.primary
+              : palette.surface,
+          borderRadius: BorderRadius.circular(AppConstants.radiusLG),
           border: Border.all(
             color: selected
-                ? BeautyCitaTheme.primaryRose
-                : BeautyCitaTheme.dividerLight,
+                ? palette.primary
+                : Theme.of(context).dividerColor,
             width: 1,
           ),
         ),
@@ -273,7 +278,7 @@ class _Pill extends StatelessWidget {
               Icon(
                 icon,
                 size: 16,
-                color: selected ? Colors.white : BeautyCitaTheme.textLight,
+                color: selected ? Colors.white : palette.onSurface.withValues(alpha: 0.5),
               ),
               const SizedBox(width: 6),
             ],
@@ -282,7 +287,7 @@ class _Pill extends StatelessWidget {
               style: GoogleFonts.poppins(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
-                color: selected ? Colors.white : BeautyCitaTheme.textDark,
+                color: selected ? Colors.white : palette.onSurface,
               ),
             ),
           ],

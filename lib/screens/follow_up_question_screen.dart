@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../config/theme.dart';
+import '../config/constants.dart';
 import '../models/follow_up_question.dart';
 import '../providers/booking_flow_provider.dart';
 import '../widgets/cinematic_question_text.dart';
@@ -14,6 +14,7 @@ class FollowUpQuestionScreen extends ConsumerWidget {
     final state = ref.watch(bookingFlowProvider);
     final notifier = ref.read(bookingFlowProvider.notifier);
     final question = state.currentQuestion;
+    final palette = Theme.of(context).colorScheme;
 
     if (question == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
@@ -24,13 +25,13 @@ class FollowUpQuestionScreen extends ConsumerWidget {
         : null;
 
     return Scaffold(
-      backgroundColor: BeautyCitaTheme.surfaceCream,
+      backgroundColor: palette.surface,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded,
-              color: BeautyCitaTheme.textDark, size: 24),
+          icon: Icon(Icons.arrow_back_rounded,
+              color: palette.onSurface, size: 24),
           onPressed: () => notifier.goBack(),
         ),
         actions: [
@@ -38,12 +39,12 @@ class FollowUpQuestionScreen extends ConsumerWidget {
             Center(
               child: Padding(
                 padding:
-                    const EdgeInsets.only(right: BeautyCitaTheme.spaceMD),
+                    const EdgeInsets.only(right: AppConstants.paddingMD),
                 child: Text(
                   progress,
                   style: GoogleFonts.nunito(
                     fontSize: 14,
-                    color: BeautyCitaTheme.textLight,
+                    color: palette.onSurface.withValues(alpha: 0.5),
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -54,8 +55,8 @@ class FollowUpQuestionScreen extends ConsumerWidget {
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(
-            horizontal: BeautyCitaTheme.spaceLG,
-            vertical: BeautyCitaTheme.spaceMD,
+            horizontal: AppConstants.paddingLG,
+            vertical: AppConstants.paddingMD,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -64,7 +65,7 @@ class FollowUpQuestionScreen extends ConsumerWidget {
                 text: question.questionTextEs,
                 fontSize: 26,
               ),
-              const SizedBox(height: BeautyCitaTheme.spaceXL),
+              const SizedBox(height: AppConstants.paddingXL),
               Expanded(
                 child: _buildAnswerWidget(question, notifier),
               ),
@@ -116,8 +117,8 @@ class _VisualCardsAnswer extends StatelessWidget {
     return GridView.builder(
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: crossAxisCount,
-        crossAxisSpacing: BeautyCitaTheme.spaceMD,
-        mainAxisSpacing: BeautyCitaTheme.spaceMD,
+        crossAxisSpacing: AppConstants.paddingMD,
+        mainAxisSpacing: AppConstants.paddingMD,
         childAspectRatio: 1.0,
       ),
       itemCount: options.length,
@@ -146,15 +147,17 @@ class _OptionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = Theme.of(context).colorScheme;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+          borderRadius: BorderRadius.circular(AppConstants.radiusMD),
           boxShadow: [
             BoxShadow(
-              color: BeautyCitaTheme.primaryRose.withValues(alpha: 0.08),
+              color: palette.primary.withValues(alpha: 0.08),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -166,30 +169,30 @@ class _OptionCard extends StatelessWidget {
             if (imageUrl != null) ...[
               ClipRRect(
                 borderRadius:
-                    BorderRadius.circular(BeautyCitaTheme.radiusSmall),
+                    BorderRadius.circular(AppConstants.radiusSM),
                 child: Image.network(
                   imageUrl!,
                   width: 64,
                   height: 64,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => _placeholder(),
+                  errorBuilder: (_, __, ___) => _placeholder(context),
                 ),
               ),
-              const SizedBox(height: BeautyCitaTheme.spaceSM),
+              const SizedBox(height: AppConstants.paddingSM),
             ] else ...[
-              _placeholder(),
-              const SizedBox(height: BeautyCitaTheme.spaceSM),
+              _placeholder(context),
+              const SizedBox(height: AppConstants.paddingSM),
             ],
             Padding(
               padding: const EdgeInsets.symmetric(
-                  horizontal: BeautyCitaTheme.spaceSM),
+                  horizontal: AppConstants.paddingSM),
               child: Text(
                 label,
                 textAlign: TextAlign.center,
                 style: GoogleFonts.poppins(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: BeautyCitaTheme.textDark,
+                  color: palette.onSurface,
                 ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
@@ -201,17 +204,19 @@ class _OptionCard extends StatelessWidget {
     );
   }
 
-  Widget _placeholder() {
+  Widget _placeholder(BuildContext context) {
+    final palette = Theme.of(context).colorScheme;
+
     return Container(
       width: 64,
       height: 64,
       decoration: BoxDecoration(
-        color: BeautyCitaTheme.primaryRose.withValues(alpha: 0.1),
+        color: palette.primary.withValues(alpha: 0.1),
         shape: BoxShape.circle,
       ),
-      child: const Icon(
+      child: Icon(
         Icons.auto_awesome,
-        color: BeautyCitaTheme.primaryRose,
+        color: palette.primary,
         size: 28,
       ),
     );
@@ -227,17 +232,17 @@ class _YesNoAnswer extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        const SizedBox(height: BeautyCitaTheme.spaceXL),
+        const SizedBox(height: AppConstants.paddingXL),
         Row(
           children: [
             Expanded(
               child: _BigButton(
-                label: 'Sí',
+                label: 'Si',
                 icon: Icons.check_circle_outline,
                 onTap: () => onSelect('yes'),
               ),
             ),
-            const SizedBox(width: BeautyCitaTheme.spaceMD),
+            const SizedBox(width: AppConstants.paddingMD),
             Expanded(
               child: _BigButton(
                 label: 'No',
@@ -265,16 +270,18 @@ class _BigButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = Theme.of(context).colorScheme;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
         height: 120,
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+          borderRadius: BorderRadius.circular(AppConstants.radiusMD),
           boxShadow: [
             BoxShadow(
-              color: BeautyCitaTheme.primaryRose.withValues(alpha: 0.08),
+              color: palette.primary.withValues(alpha: 0.08),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -283,14 +290,14 @@ class _BigButton extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 40, color: BeautyCitaTheme.primaryRose),
-            const SizedBox(height: BeautyCitaTheme.spaceSM),
+            Icon(icon, size: 40, color: palette.primary),
+            const SizedBox(height: AppConstants.paddingSM),
             Text(
               label,
               style: GoogleFonts.poppins(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
-                color: BeautyCitaTheme.textDark,
+                color: palette.onSurface,
               ),
             ),
           ],
@@ -307,6 +314,8 @@ class _DatePickerAnswer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = Theme.of(context).colorScheme;
+
     // Show date picker immediately
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _showPicker(context);
@@ -316,18 +325,18 @@ class _DatePickerAnswer extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.calendar_today,
-              size: 48, color: BeautyCitaTheme.primaryRose),
-          const SizedBox(height: BeautyCitaTheme.spaceMD),
+          Icon(Icons.calendar_today,
+              size: 48, color: palette.primary),
+          const SizedBox(height: AppConstants.paddingMD),
           Text(
             'Selecciona una fecha',
             style: GoogleFonts.poppins(
               fontSize: 18,
               fontWeight: FontWeight.w500,
-              color: BeautyCitaTheme.textLight,
+              color: palette.onSurface.withValues(alpha: 0.5),
             ),
           ),
-          const SizedBox(height: BeautyCitaTheme.spaceLG),
+          const SizedBox(height: AppConstants.paddingLG),
           ElevatedButton(
             onPressed: () => _showPicker(context),
             child: const Text('Elegir fecha'),
@@ -338,6 +347,7 @@ class _DatePickerAnswer extends StatelessWidget {
   }
 
   Future<void> _showPicker(BuildContext context) async {
+    final palette = Theme.of(context).colorScheme;
     final now = DateTime.now();
     final picked = await showDatePicker(
       context: context,
@@ -349,7 +359,7 @@ class _DatePickerAnswer extends StatelessWidget {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: Theme.of(context).colorScheme.copyWith(
-                  primary: BeautyCitaTheme.primaryRose,
+                  primary: palette.primary,
                 ),
           ),
           child: child!,

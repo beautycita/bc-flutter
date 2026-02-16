@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../config/theme.dart';
+import '../config/constants.dart';
 import '../providers/booking_flow_provider.dart';
 import '../widgets/cinematic_question_text.dart';
 import 'transport_selection.dart';
@@ -56,8 +56,10 @@ class _LoadingView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = Theme.of(context).colorScheme;
+
     return Scaffold(
-      backgroundColor: BeautyCitaTheme.surfaceCream,
+      backgroundColor: palette.surface,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -66,21 +68,21 @@ class _LoadingView extends StatelessWidget {
               text: 'Buscando las mejores opciones...',
               fontSize: 24,
             ),
-            const SizedBox(height: BeautyCitaTheme.spaceLG),
-            const SizedBox(
+            const SizedBox(height: AppConstants.paddingLG),
+            SizedBox(
               width: 48,
               height: 48,
               child: CircularProgressIndicator(
-                color: BeautyCitaTheme.primaryRose,
+                color: palette.primary,
                 strokeWidth: 3,
               ),
             ),
-            const SizedBox(height: BeautyCitaTheme.spaceSM),
+            const SizedBox(height: AppConstants.paddingSM),
             Text(
               serviceName,
               style: GoogleFonts.nunito(
                 fontSize: 14,
-                color: BeautyCitaTheme.textLight,
+                color: palette.onSurface.withValues(alpha: 0.5),
               ),
             ),
           ],
@@ -98,49 +100,51 @@ class _ErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = Theme.of(context).colorScheme;
+
     return Scaffold(
-      backgroundColor: BeautyCitaTheme.surfaceCream,
+      backgroundColor: palette.surface,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded,
-              color: BeautyCitaTheme.textDark, size: 24),
+          icon: Icon(Icons.arrow_back_rounded,
+              color: palette.onSurface, size: 24),
           onPressed: onRetry,
         ),
       ),
       body: Center(
         child: Padding(
           padding:
-              const EdgeInsets.symmetric(horizontal: BeautyCitaTheme.spaceLG),
+              const EdgeInsets.symmetric(horizontal: AppConstants.paddingLG),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(
+              Icon(
                 Icons.error_outline,
                 size: 64,
-                color: BeautyCitaTheme.primaryRose,
+                color: palette.primary,
               ),
-              const SizedBox(height: BeautyCitaTheme.spaceLG),
+              const SizedBox(height: AppConstants.paddingLG),
               Text(
                 'No pudimos encontrar resultados',
                 style: GoogleFonts.poppins(
                   fontSize: 20,
                   fontWeight: FontWeight.w600,
-                  color: BeautyCitaTheme.textDark,
+                  color: palette.onSurface,
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: BeautyCitaTheme.spaceSM),
+              const SizedBox(height: AppConstants.paddingSM),
               Text(
                 error,
                 style: GoogleFonts.nunito(
                   fontSize: 14,
-                  color: BeautyCitaTheme.textLight,
+                  color: palette.onSurface.withValues(alpha: 0.5),
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: BeautyCitaTheme.spaceXL),
+              const SizedBox(height: AppConstants.paddingXL),
               ElevatedButton(
                 onPressed: onRetry,
                 child: const Text('Intentar de nuevo'),
