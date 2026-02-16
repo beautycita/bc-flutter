@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../config/theme.dart';
+import '../../config/constants.dart';
 
 /// Placeholder analytics dashboard — will be populated with real metrics
 /// once sufficient booking data exists.
@@ -10,7 +10,7 @@ class AnalyticsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.all(BeautyCitaTheme.spaceMD),
+      padding: const EdgeInsets.all(AppConstants.paddingMD),
       children: [
         _MetricCard(
           title: 'Rendimiento del Motor',
@@ -66,33 +66,35 @@ class _MetricCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
     return Card(
       elevation: 0,
       color: Colors.white,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
       ),
-      margin: const EdgeInsets.only(bottom: BeautyCitaTheme.spaceMD),
+      margin: const EdgeInsets.only(bottom: AppConstants.paddingMD),
       child: Padding(
-        padding: const EdgeInsets.all(BeautyCitaTheme.spaceMD),
+        padding: const EdgeInsets.all(AppConstants.paddingMD),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Icon(icon, color: BeautyCitaTheme.primaryRose, size: 22),
+                Icon(icon, color: colors.primary, size: 22),
                 const SizedBox(width: 10),
                 Text(
                   title,
                   style: GoogleFonts.poppins(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    color: BeautyCitaTheme.textDark,
+                    color: colors.onSurface,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: BeautyCitaTheme.spaceMD),
+            const SizedBox(height: AppConstants.paddingMD),
             ...items.map((item) => Padding(
                   padding: const EdgeInsets.only(bottom: 8),
                   child: Row(
@@ -102,7 +104,7 @@ class _MetricCard extends StatelessWidget {
                         item.label,
                         style: GoogleFonts.nunito(
                           fontSize: 13,
-                          color: BeautyCitaTheme.textLight,
+                          color: colors.onSurface.withValues(alpha: 0.5),
                         ),
                       ),
                       Text(
@@ -110,7 +112,7 @@ class _MetricCard extends StatelessWidget {
                         style: GoogleFonts.nunito(
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
-                          color: BeautyCitaTheme.textDark,
+                          color: colors.onSurface,
                         ),
                       ),
                     ],

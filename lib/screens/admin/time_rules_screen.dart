@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../config/theme.dart';
+import '../../config/constants.dart';
 import '../../providers/admin_provider.dart';
 import '../../services/supabase_client.dart';
 
@@ -32,27 +32,31 @@ class _TimeRulesScreenState extends ConsumerState<TimeRulesScreen> {
   @override
   Widget build(BuildContext context) {
     final rulesAsync = ref.watch(timeInferenceRulesProvider);
+    final colors = Theme.of(context).colorScheme;
 
     return rulesAsync.when(
       data: (rules) => _buildList(rules),
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(
         child: Text('Error: $e',
-            style: GoogleFonts.nunito(color: BeautyCitaTheme.textLight)),
+            style: GoogleFonts.nunito(
+                color: colors.onSurface.withValues(alpha: 0.5))),
       ),
     );
   }
 
   Widget _buildList(List<TimeInferenceRule> rules) {
+    final colors = Theme.of(context).colorScheme;
+
     return ListView(
-      padding: const EdgeInsets.all(BeautyCitaTheme.spaceMD),
+      padding: const EdgeInsets.all(AppConstants.paddingMD),
       children: [
         // Header row
         Padding(
           padding: const EdgeInsets.only(
-            bottom: BeautyCitaTheme.spaceSM,
-            left: BeautyCitaTheme.spaceMD,
-            right: BeautyCitaTheme.spaceMD,
+            bottom: AppConstants.paddingSM,
+            left: AppConstants.paddingMD,
+            right: AppConstants.paddingMD,
           ),
           child: Row(
             children: [
@@ -62,7 +66,7 @@ class _TimeRulesScreenState extends ConsumerState<TimeRulesScreen> {
                     style: GoogleFonts.poppins(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: BeautyCitaTheme.textLight)),
+                        color: colors.onSurface.withValues(alpha: 0.5))),
               ),
               Expanded(
                 flex: 2,
@@ -70,7 +74,7 @@ class _TimeRulesScreenState extends ConsumerState<TimeRulesScreen> {
                     style: GoogleFonts.poppins(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: BeautyCitaTheme.textLight)),
+                        color: colors.onSurface.withValues(alpha: 0.5))),
               ),
               Expanded(
                 flex: 3,
@@ -78,7 +82,7 @@ class _TimeRulesScreenState extends ConsumerState<TimeRulesScreen> {
                     style: GoogleFonts.poppins(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: BeautyCitaTheme.textLight)),
+                        color: colors.onSurface.withValues(alpha: 0.5))),
               ),
               SizedBox(
                 width: 50,
@@ -86,7 +90,7 @@ class _TimeRulesScreenState extends ConsumerState<TimeRulesScreen> {
                     style: GoogleFonts.poppins(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: BeautyCitaTheme.textLight)),
+                        color: colors.onSurface.withValues(alpha: 0.5))),
               ),
             ],
           ),
@@ -98,12 +102,13 @@ class _TimeRulesScreenState extends ConsumerState<TimeRulesScreen> {
 
   Widget _buildRuleCard(TimeInferenceRule rule) {
     final isExpanded = _expandedId == rule.id;
+    final colors = Theme.of(context).colorScheme;
 
     return Card(
       elevation: 0,
       color: Colors.white,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusSmall),
+        borderRadius: BorderRadius.circular(AppConstants.radiusSM),
       ),
       margin: const EdgeInsets.only(bottom: 4),
       child: Column(
@@ -113,11 +118,11 @@ class _TimeRulesScreenState extends ConsumerState<TimeRulesScreen> {
             onTap: () => setState(() {
               _expandedId = isExpanded ? null : rule.id;
             }),
-            borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusSmall),
+            borderRadius: BorderRadius.circular(AppConstants.radiusSM),
             child: Padding(
               padding: const EdgeInsets.symmetric(
-                horizontal: BeautyCitaTheme.spaceMD,
-                vertical: BeautyCitaTheme.spaceSM + 2,
+                horizontal: AppConstants.paddingMD,
+                vertical: AppConstants.paddingSM + 2,
               ),
               child: Row(
                 children: [
@@ -136,7 +141,7 @@ class _TimeRulesScreenState extends ConsumerState<TimeRulesScreen> {
                     child: Text(
                       _hourRange(rule.hourStart, rule.hourEnd),
                       style: GoogleFonts.nunito(
-                          fontSize: 13, color: BeautyCitaTheme.textDark),
+                          fontSize: 13, color: colors.onSurface),
                     ),
                   ),
                   Expanded(
@@ -144,7 +149,7 @@ class _TimeRulesScreenState extends ConsumerState<TimeRulesScreen> {
                     child: Text(
                       _dayRange(rule.dayStart, rule.dayEnd),
                       style: GoogleFonts.nunito(
-                          fontSize: 13, color: BeautyCitaTheme.textDark),
+                          fontSize: 13, color: colors.onSurface),
                     ),
                   ),
                   Expanded(
@@ -152,7 +157,7 @@ class _TimeRulesScreenState extends ConsumerState<TimeRulesScreen> {
                     child: Text(
                       rule.description ?? '-',
                       style: GoogleFonts.nunito(
-                          fontSize: 13, color: BeautyCitaTheme.textDark),
+                          fontSize: 13, color: colors.onSurface),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -166,14 +171,14 @@ class _TimeRulesScreenState extends ConsumerState<TimeRulesScreen> {
                       style: GoogleFonts.nunito(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
-                        color: BeautyCitaTheme.primaryRose,
+                        color: colors.primary,
                       ),
                     ),
                   ),
                   Icon(
                     isExpanded ? Icons.expand_less : Icons.expand_more,
                     size: 20,
-                    color: BeautyCitaTheme.textLight,
+                    color: colors.onSurface.withValues(alpha: 0.5),
                   ),
                 ],
               ),
@@ -257,9 +262,9 @@ class _RuleEditorState extends State<_RuleEditor> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Regla guardada'),
-            backgroundColor: BeautyCitaTheme.primaryRose,
+          SnackBar(
+            content: const Text('Regla guardada'),
+            backgroundColor: Theme.of(context).colorScheme.primary,
           ),
         );
       }
@@ -277,18 +282,20 @@ class _RuleEditorState extends State<_RuleEditor> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(
-        BeautyCitaTheme.spaceMD,
+        AppConstants.paddingMD,
         0,
-        BeautyCitaTheme.spaceMD,
-        BeautyCitaTheme.spaceMD,
+        AppConstants.paddingMD,
+        AppConstants.paddingMD,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Divider(height: 1),
-          const SizedBox(height: BeautyCitaTheme.spaceMD),
+          const SizedBox(height: AppConstants.paddingMD),
 
           // Hour range
           Row(
@@ -425,16 +432,16 @@ class _RuleEditorState extends State<_RuleEditor> {
             children: [
               Text('Activa',
                   style: GoogleFonts.nunito(
-                      fontSize: 14, color: BeautyCitaTheme.textDark)),
+                      fontSize: 14, color: colors.onSurface)),
               Switch(
                 value: _isActive,
-                activeColor: BeautyCitaTheme.primaryRose,
+                activeColor: colors.primary,
                 onChanged: (v) => setState(() => _isActive = v),
               ),
             ],
           ),
 
-          const SizedBox(height: BeautyCitaTheme.spaceMD),
+          const SizedBox(height: AppConstants.paddingMD),
 
           // Save button
           SizedBox(
@@ -442,7 +449,7 @@ class _RuleEditorState extends State<_RuleEditor> {
             child: ElevatedButton(
               onPressed: _saving ? null : _save,
               style: ElevatedButton.styleFrom(
-                backgroundColor: BeautyCitaTheme.primaryRose,
+                backgroundColor: colors.primary,
                 foregroundColor: Colors.white,
                 minimumSize: const Size(0, 44),
               ),
@@ -482,12 +489,15 @@ class _IntField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label,
             style: GoogleFonts.nunito(
-                fontSize: 11, color: BeautyCitaTheme.textLight)),
+                fontSize: 11,
+                color: colors.onSurface.withValues(alpha: 0.5))),
         const SizedBox(height: 4),
         Row(
           children: [
@@ -496,8 +506,8 @@ class _IntField extends StatelessWidget {
               child: Icon(Icons.remove_circle_outline,
                   size: 20,
                   color: value > min
-                      ? BeautyCitaTheme.primaryRose
-                      : BeautyCitaTheme.dividerLight),
+                      ? colors.primary
+                      : Theme.of(context).dividerColor),
             ),
             Expanded(
               child: Text(
@@ -506,7 +516,7 @@ class _IntField extends StatelessWidget {
                 style: GoogleFonts.nunito(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
-                  color: BeautyCitaTheme.textDark,
+                  color: colors.onSurface,
                 ),
               ),
             ),
@@ -515,8 +525,8 @@ class _IntField extends StatelessWidget {
               child: Icon(Icons.add_circle_outline,
                   size: 20,
                   color: value < max
-                      ? BeautyCitaTheme.primaryRose
-                      : BeautyCitaTheme.dividerLight),
+                      ? colors.primary
+                      : Theme.of(context).dividerColor),
             ),
           ],
         ),

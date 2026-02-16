@@ -541,7 +541,7 @@ class AppRoutes {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error_outline, size: 64, color: Color(0xFFC2185B)),
+              Icon(Icons.error_outline, size: 64, color: Theme.of(context).colorScheme.primary),
               const SizedBox(height: 16),
               Text('Pagina no encontrada',
                   style: Theme.of(context).textTheme.headlineMedium),

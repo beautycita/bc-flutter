@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../config/theme.dart';
+import '../../config/constants.dart';
 import '../../providers/admin_provider.dart';
 import '../../services/supabase_client.dart';
 
@@ -19,13 +19,15 @@ class _CategoryTreeScreenState extends ConsumerState<CategoryTreeScreen> {
   @override
   Widget build(BuildContext context) {
     final treeAsync = ref.watch(categoryTreeProvider);
+    final colors = Theme.of(context).colorScheme;
 
     return treeAsync.when(
       data: (nodes) => _buildTree(nodes),
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(
         child: Text('Error: $e',
-            style: GoogleFonts.nunito(color: BeautyCitaTheme.textLight)),
+            style: GoogleFonts.nunito(
+                color: colors.onSurface.withValues(alpha: 0.5))),
       ),
     );
   }
@@ -47,7 +49,7 @@ class _CategoryTreeScreenState extends ConsumerState<CategoryTreeScreen> {
     }
 
     return ListView(
-      padding: const EdgeInsets.all(BeautyCitaTheme.spaceMD),
+      padding: const EdgeInsets.all(AppConstants.paddingMD),
       children: [
         for (final root in roots)
           _buildNode(root, childrenOf, 0),
@@ -63,6 +65,7 @@ class _CategoryTreeScreenState extends ConsumerState<CategoryTreeScreen> {
     final children = childrenOf[node.id] ?? [];
     final hasChildren = children.isNotEmpty;
     final isExpanded = _expanded.contains(node.id);
+    final colors = Theme.of(context).colorScheme;
 
     return Column(
       children: [
@@ -76,8 +79,8 @@ class _CategoryTreeScreenState extends ConsumerState<CategoryTreeScreen> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(
               indent == 0
-                  ? BeautyCitaTheme.radiusMedium
-                  : BeautyCitaTheme.radiusSmall,
+                  ? AppConstants.radiusMD
+                  : AppConstants.radiusSM,
             ),
           ),
           child: InkWell(
@@ -90,11 +93,11 @@ class _CategoryTreeScreenState extends ConsumerState<CategoryTreeScreen> {
                       }
                     })
                 : null,
-            borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+            borderRadius: BorderRadius.circular(AppConstants.radiusMD),
             child: Padding(
               padding: const EdgeInsets.symmetric(
-                horizontal: BeautyCitaTheme.spaceMD,
-                vertical: BeautyCitaTheme.spaceSM + 2,
+                horizontal: AppConstants.paddingMD,
+                vertical: AppConstants.paddingSM + 2,
               ),
               child: Row(
                 children: [
@@ -103,7 +106,7 @@ class _CategoryTreeScreenState extends ConsumerState<CategoryTreeScreen> {
                     Icon(
                       isExpanded ? Icons.expand_less : Icons.expand_more,
                       size: 20,
-                      color: BeautyCitaTheme.textLight,
+                      color: colors.onSurface.withValues(alpha: 0.5),
                     )
                   else
                     const SizedBox(width: 20),
@@ -129,8 +132,8 @@ class _CategoryTreeScreenState extends ConsumerState<CategoryTreeScreen> {
                                 ? FontWeight.w600
                                 : FontWeight.w500,
                             color: node.isActive
-                                ? BeautyCitaTheme.textDark
-                                : BeautyCitaTheme.textLight,
+                                ? colors.onSurface
+                                : colors.onSurface.withValues(alpha: 0.5),
                           ),
                         ),
                         if (node.isLeaf && node.serviceType != null)
@@ -138,7 +141,7 @@ class _CategoryTreeScreenState extends ConsumerState<CategoryTreeScreen> {
                             node.serviceType!,
                             style: GoogleFonts.nunito(
                               fontSize: 11,
-                              color: BeautyCitaTheme.textLight,
+                              color: colors.onSurface.withValues(alpha: 0.5),
                             ),
                           ),
                       ],
@@ -169,7 +172,7 @@ class _CategoryTreeScreenState extends ConsumerState<CategoryTreeScreen> {
                   // Edit button
                   IconButton(
                     icon: const Icon(Icons.edit_outlined, size: 18),
-                    color: BeautyCitaTheme.textLight,
+                    color: colors.onSurface.withValues(alpha: 0.5),
                     onPressed: () => _showEditDialog(node),
                     padding: EdgeInsets.zero,
                     constraints:
@@ -195,13 +198,14 @@ class _CategoryTreeScreenState extends ConsumerState<CategoryTreeScreen> {
     final iconCtrl = TextEditingController(text: node.icon ?? '');
     final slugCtrl = TextEditingController(text: node.slug);
     var isActive = node.isActive;
+    final colors = Theme.of(context).colorScheme;
 
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+            borderRadius: BorderRadius.circular(AppConstants.radiusMD),
           ),
           title: Text(
             'Editar: ${node.displayNameEs}',
@@ -236,7 +240,7 @@ class _CategoryTreeScreenState extends ConsumerState<CategoryTreeScreen> {
                       child: TextField(
                         controller: iconCtrl,
                         decoration: InputDecoration(
-                          labelText: 'Ícono',
+                          labelText: 'Icono',
                           labelStyle: GoogleFonts.nunito(fontSize: 13),
                         ),
                       ),
@@ -262,7 +266,7 @@ class _CategoryTreeScreenState extends ConsumerState<CategoryTreeScreen> {
                         style: GoogleFonts.nunito(fontSize: 14)),
                     Switch(
                       value: isActive,
-                      activeColor: BeautyCitaTheme.primaryRose,
+                      activeColor: colors.primary,
                       onChanged: (v) =>
                           setDialogState(() => isActive = v),
                     ),
@@ -276,7 +280,7 @@ class _CategoryTreeScreenState extends ConsumerState<CategoryTreeScreen> {
                         Text('Perfil: ',
                             style: GoogleFonts.nunito(
                                 fontSize: 13,
-                                color: BeautyCitaTheme.textLight)),
+                                color: colors.onSurface.withValues(alpha: 0.5))),
                         Text(node.serviceType!,
                             style: GoogleFonts.nunito(
                                 fontSize: 13,
@@ -310,13 +314,13 @@ class _CategoryTreeScreenState extends ConsumerState<CategoryTreeScreen> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text('${nameEsCtrl.text} guardado'),
-                      backgroundColor: BeautyCitaTheme.primaryRose,
+                      backgroundColor: colors.primary,
                     ),
                   );
                 }
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: BeautyCitaTheme.primaryRose,
+                backgroundColor: colors.primary,
                 foregroundColor: Colors.white,
               ),
               child: const Text('GUARDAR'),

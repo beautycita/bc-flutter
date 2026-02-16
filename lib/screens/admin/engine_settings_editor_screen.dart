@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../config/theme.dart';
+import '../../config/constants.dart';
 import '../../providers/admin_provider.dart';
 import '../../services/supabase_client.dart';
 
@@ -36,9 +36,9 @@ class _EngineSettingsEditorScreenState
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Configuración guardada'),
-            backgroundColor: BeautyCitaTheme.primaryRose,
+          SnackBar(
+            content: const Text('Configuración guardada'),
+            backgroundColor: Theme.of(context).colorScheme.primary,
           ),
         );
       }
@@ -64,18 +64,22 @@ class _EngineSettingsEditorScreenState
   @override
   Widget build(BuildContext context) {
     final settingsAsync = ref.watch(engineSettingsProvider);
+    final colors = Theme.of(context).colorScheme;
 
     return settingsAsync.when(
       data: (settings) => _buildContent(settings),
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(
         child: Text('Error: $e',
-            style: GoogleFonts.nunito(color: BeautyCitaTheme.textLight)),
+            style: GoogleFonts.nunito(
+                color: colors.onSurface.withValues(alpha: 0.5))),
       ),
     );
   }
 
   Widget _buildContent(List<EngineSetting> settings) {
+    final colors = Theme.of(context).colorScheme;
+
     // Group by group_name
     final groups = <String, List<EngineSetting>>{};
     for (final s in settings) {
@@ -89,7 +93,7 @@ class _EngineSettingsEditorScreenState
       children: [
         Expanded(
           child: ListView.builder(
-            padding: const EdgeInsets.all(BeautyCitaTheme.spaceMD),
+            padding: const EdgeInsets.all(AppConstants.paddingMD),
             itemCount: groupOrder.length,
             itemBuilder: (context, i) {
               final group = groupOrder[i];
@@ -109,7 +113,7 @@ class _EngineSettingsEditorScreenState
         // Bottom action bar
         if (_hasEdits)
           Container(
-            padding: const EdgeInsets.all(BeautyCitaTheme.spaceMD),
+            padding: const EdgeInsets.all(AppConstants.paddingMD),
             decoration: BoxDecoration(
               color: Colors.white,
               boxShadow: [
@@ -126,7 +130,7 @@ class _EngineSettingsEditorScreenState
                   '${_edits.length} cambio${_edits.length == 1 ? '' : 's'}',
                   style: GoogleFonts.nunito(
                     fontSize: 13,
-                    color: BeautyCitaTheme.textLight,
+                    color: colors.onSurface.withValues(alpha: 0.5),
                   ),
                 ),
                 const Spacer(),
@@ -134,11 +138,11 @@ class _EngineSettingsEditorScreenState
                   onPressed: _reset,
                   child: const Text('DESCARTAR'),
                 ),
-                const SizedBox(width: BeautyCitaTheme.spaceSM),
+                const SizedBox(width: AppConstants.paddingSM),
                 ElevatedButton(
                   onPressed: _saving ? null : () => _save(settings),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: BeautyCitaTheme.primaryRose,
+                    backgroundColor: colors.primary,
                     foregroundColor: Colors.white,
                     minimumSize: const Size(100, 44),
                   ),
@@ -203,15 +207,17 @@ class _GroupCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
     return Card(
       elevation: 0,
       color: Colors.white,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
       ),
-      margin: const EdgeInsets.only(bottom: BeautyCitaTheme.spaceMD),
+      margin: const EdgeInsets.only(bottom: AppConstants.paddingMD),
       child: Padding(
-        padding: const EdgeInsets.all(BeautyCitaTheme.spaceMD),
+        padding: const EdgeInsets.all(AppConstants.paddingMD),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -220,7 +226,7 @@ class _GroupCard extends StatelessWidget {
               children: [
                 Icon(
                   _groupIcons[groupName] ?? Icons.settings,
-                  color: BeautyCitaTheme.primaryRose,
+                  color: colors.primary,
                   size: 22,
                 ),
                 const SizedBox(width: 10),
@@ -229,12 +235,12 @@ class _GroupCard extends StatelessWidget {
                   style: GoogleFonts.poppins(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    color: BeautyCitaTheme.textDark,
+                    color: colors.onSurface,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: BeautyCitaTheme.spaceMD),
+            const SizedBox(height: AppConstants.paddingMD),
             ...settings.map((s) => _SettingRow(
                   setting: s,
                   currentValue: currentValue(s),
@@ -267,6 +273,7 @@ class _SettingRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     final isNumber = setting.dataType == 'number';
     final minVal = setting.minValue ?? 0.0;
     final maxVal = setting.maxValue ?? (isNumber ? 1.0 : 100.0);
@@ -275,7 +282,7 @@ class _SettingRow extends StatelessWidget {
     final clamped = parsed.clamp(minVal, maxVal);
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: BeautyCitaTheme.spaceMD),
+      padding: const EdgeInsets.only(bottom: AppConstants.paddingMD),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -290,8 +297,8 @@ class _SettingRow extends StatelessWidget {
                     fontWeight:
                         isEdited ? FontWeight.w700 : FontWeight.w500,
                     color: isEdited
-                        ? BeautyCitaTheme.primaryRose
-                        : BeautyCitaTheme.textDark,
+                        ? colors.primary
+                        : colors.onSurface,
                   ),
                 ),
               ),
@@ -303,8 +310,8 @@ class _SettingRow extends StatelessWidget {
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
                   color: isEdited
-                      ? BeautyCitaTheme.primaryRose
-                      : BeautyCitaTheme.textDark,
+                      ? colors.primary
+                      : colors.onSurface,
                 ),
               ),
             ],
@@ -319,10 +326,10 @@ class _SettingRow extends StatelessWidget {
                 ? ((maxVal - minVal) * 100).round().clamp(1, 1000)
                 : (maxVal - minVal).round().clamp(1, 1000),
             activeColor: isEdited
-                ? BeautyCitaTheme.primaryRose
-                : BeautyCitaTheme.primaryRose.withValues(alpha: 0.6),
+                ? colors.primary
+                : colors.primary.withValues(alpha: 0.6),
             inactiveColor:
-                BeautyCitaTheme.primaryRose.withValues(alpha: 0.12),
+                colors.primary.withValues(alpha: 0.12),
             onChanged: (v) {
               onChanged(isNumber
                   ? v.toStringAsFixed(2)
@@ -339,7 +346,7 @@ class _SettingRow extends StatelessWidget {
                 setting.descriptionEs!,
                 style: GoogleFonts.nunito(
                   fontSize: 11,
-                  color: BeautyCitaTheme.textLight,
+                  color: colors.onSurface.withValues(alpha: 0.5),
                   height: 1.3,
                 ),
               ),
