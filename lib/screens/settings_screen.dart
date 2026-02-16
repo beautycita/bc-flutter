@@ -1,33 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:beautycita/config/theme.dart';
+import 'package:beautycita/config/theme_extension.dart';
 import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/providers/auth_provider.dart';
 import 'package:beautycita/providers/profile_provider.dart';
 import 'package:beautycita/widgets/settings_widgets.dart';
-
-/// 13-stop real gold gradient used across the app.
-const _goldGradient = LinearGradient(
-  begin: Alignment.topLeft,
-  end: Alignment.bottomRight,
-  colors: [
-    Color(0xFF8B6914),
-    Color(0xFFD4AF37),
-    Color(0xFFFFF8DC),
-    Color(0xFFFFD700),
-    Color(0xFFC19A26),
-    Color(0xFFF5D547),
-    Color(0xFFFFFFE0),
-    Color(0xFFD4AF37),
-    Color(0xFFA67C00),
-    Color(0xFFCDAD38),
-    Color(0xFFFFF8DC),
-    Color(0xFFB8860B),
-    Color(0xFF8B6914),
-  ],
-  stops: [0.0, 0.08, 0.15, 0.25, 0.35, 0.45, 0.50, 0.58, 0.68, 0.78, 0.85, 0.93, 1.0],
-);
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -36,14 +14,16 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authStateProvider);
     final profile = ref.watch(profileProvider);
+    final ext = Theme.of(context).extension<BCThemeExtension>()!;
+    final goldGrad = ext.goldGradientDirectional();
 
     return Scaffold(
-      backgroundColor: BeautyCitaTheme.backgroundWhite,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(title: const Text('Ajustes')),
       body: ListView(
         padding: const EdgeInsets.symmetric(
           horizontal: AppConstants.screenPaddingHorizontal,
-          vertical: BeautyCitaTheme.spaceMD,
+          vertical: AppConstants.paddingMD,
         ),
         children: [
           // ── Profile Card with gold gradient border ──
@@ -51,14 +31,14 @@ class SettingsScreen extends ConsumerWidget {
             onTap: () => context.push('/settings/profile'),
             child: Container(
               decoration: BoxDecoration(
-                gradient: _goldGradient,
+                gradient: goldGrad,
                 borderRadius: BorderRadius.circular(AppConstants.radiusMD),
               ),
               child: Container(
                 margin: const EdgeInsets.all(3),
                 padding: const EdgeInsets.all(AppConstants.paddingLG),
                 decoration: BoxDecoration(
-                  gradient: BeautyCitaTheme.primaryGradient,
+                  gradient: ext.primaryGradient,
                   borderRadius: BorderRadius.circular(AppConstants.radiusMD - 3),
                 ),
                 child: Row(
@@ -66,9 +46,9 @@ class SettingsScreen extends ConsumerWidget {
                     // Avatar with gold stroke
                     Container(
                       padding: const EdgeInsets.all(2),
-                      decoration: const BoxDecoration(
+                      decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        gradient: _goldGradient,
+                        gradient: goldGrad,
                       ),
                       child: CircleAvatar(
                         radius: 28,
@@ -81,7 +61,7 @@ class SettingsScreen extends ConsumerWidget {
                             : null,
                       ),
                     ),
-                    const SizedBox(width: BeautyCitaTheme.spaceMD),
+                    const SizedBox(width: AppConstants.paddingMD),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -97,7 +77,7 @@ class SettingsScreen extends ConsumerWidget {
                           const SizedBox(height: 2),
                           // "Editar perfil" with static gold
                           ShaderMask(
-                            shaderCallback: (bounds) => _goldGradient.createShader(bounds),
+                            shaderCallback: (bounds) => goldGrad.createShader(bounds),
                             child: Text(
                               'Editar perfil',
                               style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -110,7 +90,7 @@ class SettingsScreen extends ConsumerWidget {
                     ),
                     // Pencil icon — gold
                     ShaderMask(
-                      shaderCallback: (bounds) => _goldGradient.createShader(bounds),
+                      shaderCallback: (bounds) => goldGrad.createShader(bounds),
                       child: const Icon(
                         Icons.edit_outlined,
                         size: 18,
@@ -120,7 +100,7 @@ class SettingsScreen extends ConsumerWidget {
                     const SizedBox(width: 4),
                     // Chevron — gold
                     ShaderMask(
-                      shaderCallback: (bounds) => _goldGradient.createShader(bounds),
+                      shaderCallback: (bounds) => goldGrad.createShader(bounds),
                       child: const Icon(
                         Icons.chevron_right_rounded,
                         color: Colors.white,
@@ -132,7 +112,7 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
 
-          const SizedBox(height: BeautyCitaTheme.spaceLG),
+          const SizedBox(height: AppConstants.paddingLG),
 
           // ── Navigation tiles ──
           SettingsTile(
@@ -161,7 +141,7 @@ class SettingsScreen extends ConsumerWidget {
             onTap: () => context.push('/settings/security'),
           ),
 
-          const SizedBox(height: BeautyCitaTheme.spaceXL),
+          const SizedBox(height: AppConstants.paddingXL),
 
           // ── Logout ──
           SizedBox(
@@ -178,7 +158,7 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
 
-          const SizedBox(height: BeautyCitaTheme.spaceLG),
+          const SizedBox(height: AppConstants.paddingLG),
         ],
       ),
     );
@@ -212,20 +192,22 @@ class SettingsScreen extends ConsumerWidget {
                     ),
                   ),
                 ),
-                const SizedBox(height: BeautyCitaTheme.spaceMD),
+                const SizedBox(height: AppConstants.paddingMD),
                 Icon(Icons.logout_rounded, size: AppConstants.iconSizeXL, color: Colors.red.shade400),
-                const SizedBox(height: BeautyCitaTheme.spaceSM),
+                const SizedBox(height: AppConstants.paddingSM),
                 Text(
                   'Cerrar sesion?',
                   style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
                 ),
-                const SizedBox(height: BeautyCitaTheme.spaceXS),
+                const SizedBox(height: AppConstants.paddingXS),
                 Text(
                   'Se cerrara tu sesion y tendras que autenticarte de nuevo.',
-                  style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(color: BeautyCitaTheme.textLight),
+                  style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.5),
+                  ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: BeautyCitaTheme.spaceLG),
+                const SizedBox(height: AppConstants.paddingLG),
                 Row(
                   children: [
                     Expanded(
@@ -240,7 +222,7 @@ class SettingsScreen extends ConsumerWidget {
                         child: const Text('Cancelar'),
                       ),
                     ),
-                    const SizedBox(width: BeautyCitaTheme.spaceSM),
+                    const SizedBox(width: AppConstants.paddingSM),
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () => Navigator.pop(ctx, true),
