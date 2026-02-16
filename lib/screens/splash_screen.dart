@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../config/theme.dart';
 import '../config/constants.dart';
 import '../main.dart' show supabaseReady;
 import '../providers/auth_provider.dart';
@@ -90,6 +89,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
+    final primary = Theme.of(context).colorScheme.primary;
+    final secondary = Theme.of(context).colorScheme.secondary;
+    final onSurfaceLight = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
 
     return Scaffold(
       body: Container(
@@ -111,7 +113,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                 height: 200,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: BeautyCitaTheme.primaryRose.withValues(alpha: 0.04),
+                  color: primary.withValues(alpha: 0.04),
                 ),
               ),
             ),
@@ -123,7 +125,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                 height: 240,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: BeautyCitaTheme.secondaryGold.withValues(alpha: 0.05),
+                  color: secondary.withValues(alpha: 0.05),
                 ),
               ),
             ),
@@ -135,7 +137,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                 height: 100,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: BeautyCitaTheme.primaryRose.withValues(alpha: 0.03),
+                  color: primary.withValues(alpha: 0.03),
                 ),
               ),
             ),
@@ -157,8 +159,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: BeautyCitaTheme.primaryRose
-                                  .withValues(alpha: 0.3),
+                              color: primary.withValues(alpha: 0.3),
                               blurRadius: 24,
                               offset: const Offset(0, 8),
                             ),
@@ -181,7 +182,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                         style: GoogleFonts.poppins(
                           fontSize: 44,
                           fontWeight: FontWeight.w700,
-                          color: BeautyCitaTheme.primaryRose,
+                          color: primary,
                           letterSpacing: -1.5,
                           height: 1.1,
                         ),
@@ -198,7 +199,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                             style: GoogleFonts.nunito(
                               fontSize: 15,
                               fontWeight: FontWeight.w500,
-                              color: BeautyCitaTheme.textLight,
+                              color: onSurfaceLight,
                               letterSpacing: 0.3,
                             ),
                             textAlign: TextAlign.center,

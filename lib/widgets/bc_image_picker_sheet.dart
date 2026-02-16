@@ -7,7 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 
-import '../config/theme.dart';
+import '../config/constants.dart';
 import '../providers/media_provider.dart';
 import '../services/media_service.dart';
 
@@ -52,7 +52,7 @@ Future<BCImagePickerResult?> showBCImagePicker({
     isScrollControlled: true,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(
-        top: Radius.circular(BeautyCitaTheme.radiusXL),
+        top: Radius.circular(AppConstants.radiusXL),
       ),
     ),
     builder: (ctx) => _BCImagePickerBody(ref: ref),
@@ -77,20 +77,25 @@ class _BCImagePickerBodyState extends State<_BCImagePickerBody> {
   Widget build(BuildContext context) {
     final mediaAsync = widget.ref.watch(personalMediaProvider);
     final screenHeight = MediaQuery.of(context).size.height;
+    final primary = Theme.of(context).colorScheme.primary;
+    final surface = Theme.of(context).colorScheme.surface;
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+    final onSurfaceLight = onSurface.withValues(alpha: 0.5);
+    final scaffoldBg = Theme.of(context).scaffoldBackgroundColor;
 
     return Container(
       height: screenHeight * 0.75,
-      decoration: const BoxDecoration(
-        color: BeautyCitaTheme.backgroundWhite,
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(BeautyCitaTheme.radiusXL),
+      decoration: BoxDecoration(
+        color: scaffoldBg,
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(AppConstants.radiusXL),
         ),
       ),
       child: Column(
         children: [
           // Drag handle
           Padding(
-            padding: const EdgeInsets.only(top: BeautyCitaTheme.spaceMD),
+            padding: const EdgeInsets.only(top: AppConstants.paddingMD),
             child: Center(
               child: Container(
                 width: 40,
@@ -106,10 +111,10 @@ class _BCImagePickerBodyState extends State<_BCImagePickerBody> {
           // Header
           Padding(
             padding: const EdgeInsets.fromLTRB(
-              BeautyCitaTheme.spaceLG,
-              BeautyCitaTheme.spaceMD,
-              BeautyCitaTheme.spaceLG,
-              BeautyCitaTheme.spaceSM,
+              AppConstants.paddingLG,
+              AppConstants.paddingMD,
+              AppConstants.paddingLG,
+              AppConstants.paddingSM,
             ),
             child: Row(
               children: [
@@ -118,17 +123,17 @@ class _BCImagePickerBodyState extends State<_BCImagePickerBody> {
                   style: GoogleFonts.poppins(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
-                    color: BeautyCitaTheme.textDark,
+                    color: onSurface,
                   ),
                 ),
                 const Spacer(),
                 if (_loading)
-                  const SizedBox(
+                  SizedBox(
                     width: 20,
                     height: 20,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: BeautyCitaTheme.primaryRose,
+                      color: primary,
                     ),
                   ),
               ],
@@ -138,8 +143,8 @@ class _BCImagePickerBodyState extends State<_BCImagePickerBody> {
           // Gallery & Camera buttons
           Padding(
             padding: const EdgeInsets.symmetric(
-              horizontal: BeautyCitaTheme.spaceLG,
-              vertical: BeautyCitaTheme.spaceSM,
+              horizontal: AppConstants.paddingLG,
+              vertical: AppConstants.paddingSM,
             ),
             child: Row(
               children: [
@@ -150,7 +155,7 @@ class _BCImagePickerBodyState extends State<_BCImagePickerBody> {
                     onTap: _loading ? null : _pickFromGallery,
                   ),
                 ),
-                const SizedBox(width: BeautyCitaTheme.spaceMD),
+                const SizedBox(width: AppConstants.paddingMD),
                 Expanded(
                   child: _ActionButton(
                     icon: Icons.camera_alt_outlined,
@@ -162,30 +167,30 @@ class _BCImagePickerBodyState extends State<_BCImagePickerBody> {
             ),
           ),
 
-          const Divider(height: BeautyCitaTheme.spaceLG),
+          const Divider(height: AppConstants.paddingLG),
 
           // "Tu biblioteca" section header
           Padding(
             padding: const EdgeInsets.fromLTRB(
-              BeautyCitaTheme.spaceLG,
+              AppConstants.paddingLG,
               0,
-              BeautyCitaTheme.spaceLG,
-              BeautyCitaTheme.spaceSM,
+              AppConstants.paddingLG,
+              AppConstants.paddingSM,
             ),
             child: Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.collections_outlined,
                   size: 20,
-                  color: BeautyCitaTheme.primaryRose,
+                  color: primary,
                 ),
-                const SizedBox(width: BeautyCitaTheme.spaceXS),
+                const SizedBox(width: AppConstants.paddingXS),
                 Text(
                   'Tu biblioteca',
                   style: GoogleFonts.poppins(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    color: BeautyCitaTheme.textDark,
+                    color: onSurface,
                   ),
                 ),
               ],
@@ -195,9 +200,9 @@ class _BCImagePickerBodyState extends State<_BCImagePickerBody> {
           // Media library grid
           Expanded(
             child: mediaAsync.when(
-              loading: () => const Center(
+              loading: () => Center(
                 child: CircularProgressIndicator(
-                  color: BeautyCitaTheme.primaryRose,
+                  color: primary,
                 ),
               ),
               error: (err, _) => Center(
@@ -207,14 +212,14 @@ class _BCImagePickerBodyState extends State<_BCImagePickerBody> {
                     Icon(
                       Icons.error_outline,
                       size: 48,
-                      color: BeautyCitaTheme.textLight.withValues(alpha: 0.5),
+                      color: onSurfaceLight.withValues(alpha: 0.5),
                     ),
-                    const SizedBox(height: BeautyCitaTheme.spaceSM),
+                    const SizedBox(height: AppConstants.paddingSM),
                     Text(
                       'Error al cargar medios',
                       style: GoogleFonts.nunito(
                         fontSize: 14,
-                        color: BeautyCitaTheme.textLight,
+                        color: onSurfaceLight,
                       ),
                     ),
                   ],
@@ -229,22 +234,22 @@ class _BCImagePickerBodyState extends State<_BCImagePickerBody> {
                         Icon(
                           Icons.photo_library_outlined,
                           size: 64,
-                          color: BeautyCitaTheme.textLight.withValues(alpha: 0.3),
+                          color: onSurfaceLight.withValues(alpha: 0.3),
                         ),
-                        const SizedBox(height: BeautyCitaTheme.spaceMD),
+                        const SizedBox(height: AppConstants.paddingMD),
                         Text(
                           'Sin imagenes todavia',
                           style: GoogleFonts.nunito(
                             fontSize: 16,
-                            color: BeautyCitaTheme.textLight,
+                            color: onSurfaceLight,
                           ),
                         ),
-                        const SizedBox(height: BeautyCitaTheme.spaceXS),
+                        const SizedBox(height: AppConstants.paddingXS),
                         Text(
                           'Las fotos de tu estudio virtual apareceran aqui',
                           style: GoogleFonts.nunito(
                             fontSize: 13,
-                            color: BeautyCitaTheme.textLight.withValues(alpha: 0.7),
+                            color: onSurfaceLight.withValues(alpha: 0.7),
                           ),
                           textAlign: TextAlign.center,
                         ),
@@ -255,10 +260,10 @@ class _BCImagePickerBodyState extends State<_BCImagePickerBody> {
 
                 return GridView.builder(
                   padding: const EdgeInsets.fromLTRB(
-                    BeautyCitaTheme.spaceMD,
+                    AppConstants.paddingMD,
                     0,
-                    BeautyCitaTheme.spaceMD,
-                    BeautyCitaTheme.spaceLG,
+                    AppConstants.paddingMD,
+                    AppConstants.paddingLG,
                   ),
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 3,
@@ -282,11 +287,11 @@ class _BCImagePickerBodyState extends State<_BCImagePickerBody> {
                               item.thumbnailUrl ?? item.url,
                               fit: BoxFit.cover,
                               errorBuilder: (_, __, ___) => Container(
-                                color: BeautyCitaTheme.surfaceCream,
-                                child: const Icon(
+                                color: surface,
+                                child: Icon(
                                   Icons.broken_image,
                                   size: 32,
-                                  color: BeautyCitaTheme.textLight,
+                                  color: onSurfaceLight,
                                 ),
                               ),
                             ),
@@ -298,7 +303,7 @@ class _BCImagePickerBodyState extends State<_BCImagePickerBody> {
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(8),
                                 border: Border.all(
-                                  color: BeautyCitaTheme.primaryRose,
+                                  color: primary,
                                   width: 3,
                                 ),
                               ),
@@ -477,19 +482,23 @@ class _ActionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDisabled = onTap == null;
+    final primary = Theme.of(context).colorScheme.primary;
+    final surface = Theme.of(context).colorScheme.surface;
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+    final onSurfaceLight = onSurface.withValues(alpha: 0.5);
 
     return Material(
       color: isDisabled
-          ? BeautyCitaTheme.surfaceCream.withValues(alpha: 0.5)
-          : BeautyCitaTheme.surfaceCream,
-      borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+          ? surface.withValues(alpha: 0.5)
+          : surface,
+      borderRadius: BorderRadius.circular(AppConstants.radiusMD),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
         child: Padding(
           padding: const EdgeInsets.symmetric(
-            horizontal: BeautyCitaTheme.spaceMD,
-            vertical: BeautyCitaTheme.spaceMD,
+            horizontal: AppConstants.paddingMD,
+            vertical: AppConstants.paddingMD,
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -498,18 +507,18 @@ class _ActionButton extends StatelessWidget {
                 icon,
                 size: 22,
                 color: isDisabled
-                    ? BeautyCitaTheme.textLight
-                    : BeautyCitaTheme.primaryRose,
+                    ? onSurfaceLight
+                    : primary,
               ),
-              const SizedBox(width: BeautyCitaTheme.spaceXS),
+              const SizedBox(width: AppConstants.paddingXS),
               Text(
                 label,
                 style: GoogleFonts.nunito(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
                   color: isDisabled
-                      ? BeautyCitaTheme.textLight
-                      : BeautyCitaTheme.textDark,
+                      ? onSurfaceLight
+                      : onSurface,
                 ),
               ),
             ],

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:beautycita/config/theme.dart';
 import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/providers/payment_methods_provider.dart';
 import 'package:beautycita/widgets/settings_widgets.dart';
@@ -25,6 +24,8 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
   Widget build(BuildContext context) {
     final pm = ref.watch(paymentMethodsProvider);
     final textTheme = Theme.of(context).textTheme;
+    final surface = Theme.of(context).colorScheme.surface;
+    final onSurfaceLight = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
 
     // Listen for messages
     ref.listen<PaymentMethodsState>(paymentMethodsProvider, (prev, next) {
@@ -51,17 +52,17 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
     });
 
     return Scaffold(
-      backgroundColor: BeautyCitaTheme.backgroundWhite,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(title: const Text('Metodos de pago')),
       body: ListView(
         padding: const EdgeInsets.symmetric(
           horizontal: AppConstants.screenPaddingHorizontal,
-          vertical: BeautyCitaTheme.spaceMD,
+          vertical: AppConstants.paddingMD,
         ),
         children: [
           // ── Tarjetas guardadas ──
           const SectionHeader(label: 'Tarjetas guardadas'),
-          const SizedBox(height: BeautyCitaTheme.spaceXS),
+          const SizedBox(height: AppConstants.paddingXS),
 
           if (pm.isLoading && pm.cards.isEmpty)
             const Padding(
@@ -76,7 +77,7 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
               ),
               child: Text(
                 'No tienes tarjetas guardadas',
-                style: textTheme.bodyMedium?.copyWith(color: BeautyCitaTheme.textLight),
+                style: textTheme.bodyMedium?.copyWith(color: onSurfaceLight),
               ),
             )
           else
@@ -92,11 +93,11 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
             onTap: pm.isLoading ? null : () => ref.read(paymentMethodsProvider.notifier).addCard(),
           ),
 
-          const SizedBox(height: BeautyCitaTheme.spaceLG),
+          const SizedBox(height: AppConstants.paddingLG),
 
           // ── Otros metodos ──
           const SectionHeader(label: 'Otros metodos'),
-          const SizedBox(height: BeautyCitaTheme.spaceXS),
+          const SizedBox(height: AppConstants.paddingXS),
 
           // OXXO
           _OtherMethodTile(
@@ -108,7 +109,7 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
             badgeColor: Colors.green.shade600,
           ),
 
-          const SizedBox(height: BeautyCitaTheme.spaceXS),
+          const SizedBox(height: AppConstants.paddingXS),
 
           // Bitcoin
           _OtherMethodTile(
@@ -120,13 +121,13 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
             badgeColor: Colors.green.shade600,
           ),
 
-          const SizedBox(height: BeautyCitaTheme.spaceLG),
+          const SizedBox(height: AppConstants.paddingLG),
 
           // ── Fee info ──
           Container(
             padding: const EdgeInsets.all(AppConstants.paddingMD),
             decoration: BoxDecoration(
-              color: BeautyCitaTheme.surfaceCream,
+              color: surface,
               borderRadius: BorderRadius.circular(AppConstants.radiusSM),
             ),
             child: Row(
@@ -135,14 +136,14 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
                 Icon(
                   Icons.info_outline_rounded,
                   size: 20,
-                  color: BeautyCitaTheme.textLight,
+                  color: onSurfaceLight,
                 ),
-                const SizedBox(width: BeautyCitaTheme.spaceSM),
+                const SizedBox(width: AppConstants.paddingSM),
                 Expanded(
                   child: Text(
                     'BeautyCita cobra una comision del 3% en todas las transacciones para mantener la plataforma y ofrecer proteccion al cliente.',
                     style: textTheme.bodySmall?.copyWith(
-                      color: BeautyCitaTheme.textLight,
+                      color: onSurfaceLight,
                     ),
                   ),
                 ),
@@ -150,7 +151,7 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
             ),
           ),
 
-          const SizedBox(height: BeautyCitaTheme.spaceLG),
+          const SizedBox(height: AppConstants.paddingLG),
         ],
       ),
     );
@@ -166,6 +167,7 @@ class _CardTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final onSurfaceLight = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
 
     return SettingsTile(
       icon: Icons.credit_card_rounded,
@@ -176,7 +178,7 @@ class _CardTile extends StatelessWidget {
         children: [
           Text(
             card.expiry,
-            style: textTheme.bodySmall?.copyWith(color: BeautyCitaTheme.textLight),
+            style: textTheme.bodySmall?.copyWith(color: onSurfaceLight),
           ),
           const SizedBox(width: 8),
           GestureDetector(
@@ -189,6 +191,8 @@ class _CardTile extends StatelessWidget {
   }
 
   void _confirmRemove(BuildContext context) async {
+    final onSurfaceLight = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
+
     final confirmed = await showModalBottomSheet<bool>(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -210,11 +214,11 @@ class _CardTile extends StatelessWidget {
                 Text(
                   '${card.displayBrand} terminada en ${card.last4}',
                   style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(
-                        color: BeautyCitaTheme.textLight,
+                        color: onSurfaceLight,
                       ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: BeautyCitaTheme.spaceLG),
+                const SizedBox(height: AppConstants.paddingLG),
                 Row(
                   children: [
                     Expanded(
@@ -229,7 +233,7 @@ class _CardTile extends StatelessWidget {
                         child: const Text('Cancelar'),
                       ),
                     ),
-                    const SizedBox(width: BeautyCitaTheme.spaceSM),
+                    const SizedBox(width: AppConstants.paddingSM),
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () => Navigator.pop(ctx, true),
@@ -281,6 +285,7 @@ class _OtherMethodTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final onSurfaceLight = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
 
     return Padding(
       padding: const EdgeInsets.symmetric(
@@ -298,7 +303,7 @@ class _OtherMethodTile extends StatelessWidget {
             ),
             child: Icon(icon, color: iconColor, size: 22),
           ),
-          const SizedBox(width: BeautyCitaTheme.spaceMD),
+          const SizedBox(width: AppConstants.paddingMD),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -309,7 +314,7 @@ class _OtherMethodTile extends StatelessWidget {
                 ),
                 Text(
                   subtitle,
-                  style: textTheme.bodySmall?.copyWith(color: BeautyCitaTheme.textLight),
+                  style: textTheme.bodySmall?.copyWith(color: onSurfaceLight),
                 ),
               ],
             ),

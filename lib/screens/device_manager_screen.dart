@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:beautycita/config/theme.dart';
 import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/services/supabase_client.dart';
 
@@ -96,9 +95,10 @@ class DeviceManagerScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final sessionsAsync = ref.watch(deviceSessionsProvider);
     final textTheme = Theme.of(context).textTheme;
+    final onSurfaceLight = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
 
     return Scaffold(
-      backgroundColor: BeautyCitaTheme.backgroundWhite,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Dispositivos conectados'),
         actions: [
@@ -120,7 +120,7 @@ class DeviceManagerScreen extends ConsumerWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(Icons.error_outline_rounded, size: 64, color: Colors.red.shade400),
-                const SizedBox(height: BeautyCitaTheme.spaceMD),
+                const SizedBox(height: AppConstants.paddingMD),
                 Text(
                   'Error al cargar dispositivos',
                   style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
@@ -134,20 +134,20 @@ class DeviceManagerScreen extends ConsumerWidget {
           return ListView(
             padding: const EdgeInsets.symmetric(
               horizontal: AppConstants.screenPaddingHorizontal,
-              vertical: BeautyCitaTheme.spaceMD,
+              vertical: AppConstants.paddingMD,
             ),
             children: [
               // Current device (always shown)
               _CurrentDeviceCard(),
-              const SizedBox(height: BeautyCitaTheme.spaceMD),
+              const SizedBox(height: AppConstants.paddingMD),
 
               if (sessions.isNotEmpty) ...[
                 Padding(
-                  padding: const EdgeInsets.only(bottom: BeautyCitaTheme.spaceSM),
+                  padding: const EdgeInsets.only(bottom: AppConstants.paddingSM),
                   child: Text(
                     'Sesiones web vinculadas',
                     style: textTheme.titleSmall?.copyWith(
-                      color: BeautyCitaTheme.textLight,
+                      color: onSurfaceLight,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -164,12 +164,12 @@ class DeviceManagerScreen extends ConsumerWidget {
                       Icon(
                         Icons.devices_other_rounded,
                         size: 48,
-                        color: BeautyCitaTheme.textLight.withValues(alpha: 0.4),
+                        color: onSurfaceLight.withValues(alpha: 0.4),
                       ),
                       const SizedBox(height: 12),
                       Text(
                         'No hay sesiones web vinculadas',
-                        style: textTheme.bodyMedium?.copyWith(color: BeautyCitaTheme.textLight),
+                        style: textTheme.bodyMedium?.copyWith(color: onSurfaceLight),
                       ),
                     ],
                   ),
@@ -183,6 +183,8 @@ class DeviceManagerScreen extends ConsumerWidget {
   }
 
   void _showRevokeConfirmation(BuildContext context, WidgetRef ref, DeviceSession session) {
+    final onSurfaceLight = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
+
     showModalBottomSheet<bool>(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -211,28 +213,28 @@ class DeviceManagerScreen extends ConsumerWidget {
                     ),
                   ),
                 ),
-                const SizedBox(height: BeautyCitaTheme.spaceMD),
+                const SizedBox(height: AppConstants.paddingMD),
                 Icon(
                   Icons.devices_rounded,
                   size: AppConstants.iconSizeXL,
                   color: Colors.red.shade400,
                 ),
-                const SizedBox(height: BeautyCitaTheme.spaceSM),
+                const SizedBox(height: AppConstants.paddingSM),
                 Text(
                   'Cerrar sesion web?',
                   style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
                 ),
-                const SizedBox(height: BeautyCitaTheme.spaceXS),
+                const SizedBox(height: AppConstants.paddingXS),
                 Text(
                   'Esta sesion web se desvinculara. El navegador debera vincular de nuevo.',
                   style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(
-                        color: BeautyCitaTheme.textLight,
+                        color: onSurfaceLight,
                       ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: BeautyCitaTheme.spaceLG),
+                const SizedBox(height: AppConstants.paddingLG),
                 Row(
                   children: [
                     Expanded(
@@ -249,7 +251,7 @@ class DeviceManagerScreen extends ConsumerWidget {
                         child: const Text('Cancelar'),
                       ),
                     ),
-                    const SizedBox(width: BeautyCitaTheme.spaceSM),
+                    const SizedBox(width: AppConstants.paddingSM),
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () async {
@@ -298,12 +300,14 @@ class _CurrentDeviceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final primary = Theme.of(context).colorScheme.primary;
+
     return Container(
       padding: const EdgeInsets.all(AppConstants.paddingMD),
       decoration: BoxDecoration(
-        color: BeautyCitaTheme.primaryRose.withValues(alpha: 0.05),
+        color: primary.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-        border: Border.all(color: BeautyCitaTheme.primaryRose.withValues(alpha: 0.2)),
+        border: Border.all(color: primary.withValues(alpha: 0.2)),
       ),
       child: Row(
         children: [
@@ -311,12 +315,12 @@ class _CurrentDeviceCard extends StatelessWidget {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: BeautyCitaTheme.primaryRose.withValues(alpha: 0.1),
+              color: primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(AppConstants.radiusSM),
             ),
-            child: const Icon(Icons.phone_android_rounded, color: BeautyCitaTheme.primaryRose, size: 24),
+            child: Icon(Icons.phone_android_rounded, color: primary, size: 24),
           ),
-          const SizedBox(width: BeautyCitaTheme.spaceMD),
+          const SizedBox(width: AppConstants.paddingMD),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -357,10 +361,11 @@ class _WebSessionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final onSurfaceLight = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
     final timeAgo = _formatTimeAgo(session.linkedAt);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: BeautyCitaTheme.spaceSM),
+      margin: const EdgeInsets.only(bottom: AppConstants.paddingSM),
       padding: const EdgeInsets.all(AppConstants.paddingMD),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -378,7 +383,7 @@ class _WebSessionCard extends StatelessWidget {
             ),
             child: Icon(Icons.computer_rounded, color: Colors.blue.shade400, size: 24),
           ),
-          const SizedBox(width: BeautyCitaTheme.spaceMD),
+          const SizedBox(width: AppConstants.paddingMD),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -387,7 +392,7 @@ class _WebSessionCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   'Vinculado hace $timeAgo',
-                  style: textTheme.bodySmall?.copyWith(color: BeautyCitaTheme.textLight),
+                  style: textTheme.bodySmall?.copyWith(color: onSurfaceLight),
                 ),
               ],
             ),

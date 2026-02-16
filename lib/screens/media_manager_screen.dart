@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../config/theme.dart';
 import '../providers/media_provider.dart';
 import '../services/media_service.dart';
 import '../widgets/bc_image_picker_sheet.dart';
@@ -40,6 +39,7 @@ class _MediaManagerScreenState extends ConsumerState<MediaManagerScreen>
     final service = ref.read(mediaServiceProvider);
     final success = await service.saveUrlToGallery(item.url);
     if (mounted) {
+      final primary = Theme.of(context).colorScheme.primary;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -49,7 +49,7 @@ class _MediaManagerScreenState extends ConsumerState<MediaManagerScreen>
           duration: const Duration(seconds: 2),
           behavior: SnackBarBehavior.floating,
           backgroundColor:
-              success ? BeautyCitaTheme.primaryRose : Colors.red.shade400,
+              success ? primary : Colors.red.shade400,
         ),
       );
     }
@@ -91,6 +91,7 @@ class _MediaManagerScreenState extends ConsumerState<MediaManagerScreen>
     // 0 = personal, 1 = business, 2 = chats (don't upload to chats)
     final tabIndex = _tabController.index;
     if (tabIndex == 2) {
+      final onSurfaceLight = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
       // Chats tab - show info snackbar
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -100,7 +101,7 @@ class _MediaManagerScreenState extends ConsumerState<MediaManagerScreen>
           ),
           duration: const Duration(seconds: 2),
           behavior: SnackBarBehavior.floating,
-          backgroundColor: BeautyCitaTheme.textLight,
+          backgroundColor: onSurfaceLight,
         ),
       );
       return;
@@ -116,6 +117,8 @@ class _MediaManagerScreenState extends ConsumerState<MediaManagerScreen>
       debugPrint('MediaManager: result null or not mounted');
       return;
     }
+
+    final primary = Theme.of(context).colorScheme.primary;
 
     // Show loading snackbar
     HapticFeedback.lightImpact();
@@ -137,7 +140,7 @@ class _MediaManagerScreenState extends ConsumerState<MediaManagerScreen>
         ),
         duration: const Duration(seconds: 30),
         behavior: SnackBarBehavior.floating,
-        backgroundColor: BeautyCitaTheme.primaryRose,
+        backgroundColor: primary,
       ),
     );
 
@@ -166,7 +169,7 @@ class _MediaManagerScreenState extends ConsumerState<MediaManagerScreen>
           ),
           duration: const Duration(seconds: 2),
           behavior: SnackBarBehavior.floating,
-          backgroundColor: BeautyCitaTheme.primaryRose,
+          backgroundColor: primary,
         ),
       );
     } else {
@@ -186,10 +189,13 @@ class _MediaManagerScreenState extends ConsumerState<MediaManagerScreen>
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    final onSurfaceLight = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
+
     return Scaffold(
-      backgroundColor: BeautyCitaTheme.backgroundWhite,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: BeautyCitaTheme.backgroundWhite,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         title: Text(
           'Media Manager',
           style: GoogleFonts.poppins(
@@ -199,9 +205,9 @@ class _MediaManagerScreenState extends ConsumerState<MediaManagerScreen>
         ),
         bottom: TabBar(
           controller: _tabController,
-          labelColor: BeautyCitaTheme.primaryRose,
-          unselectedLabelColor: BeautyCitaTheme.textLight,
-          indicatorColor: BeautyCitaTheme.primaryRose,
+          labelColor: primary,
+          unselectedLabelColor: onSurfaceLight,
+          indicatorColor: primary,
           indicatorWeight: 3,
           labelStyle: GoogleFonts.nunito(
             fontSize: 14,
@@ -239,7 +245,7 @@ class _MediaManagerScreenState extends ConsumerState<MediaManagerScreen>
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _onUpload,
-        backgroundColor: BeautyCitaTheme.primaryRose,
+        backgroundColor: primary,
         child: const Icon(
           Icons.add_photo_alternate,
           color: Colors.white,
@@ -263,6 +269,7 @@ class _PersonalTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final primary = Theme.of(context).colorScheme.primary;
     final mediaAsync = ref.watch(personalMediaProvider);
     return mediaAsync.when(
       data: (items) => MediaGrid(
@@ -271,8 +278,8 @@ class _PersonalTab extends ConsumerWidget {
         onDelete: onDelete,
         onSaveToGallery: onSaveToGallery,
       ),
-      loading: () => const Center(
-        child: CircularProgressIndicator(color: BeautyCitaTheme.primaryRose),
+      loading: () => Center(
+        child: CircularProgressIndicator(color: primary),
       ),
       error: (err, _) => Center(
         child: Text('Error: $err', style: GoogleFonts.nunito()),
@@ -295,6 +302,8 @@ class _BusinessTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final primary = Theme.of(context).colorScheme.primary;
+    final onSurfaceLight = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
     final mediaAsync = ref.watch(businessMediaProvider);
     return mediaAsync.when(
       data: (items) {
@@ -306,14 +315,14 @@ class _BusinessTab extends ConsumerWidget {
                 Icon(
                   Icons.store_outlined,
                   size: 64,
-                  color: BeautyCitaTheme.textLight.withValues(alpha: 0.3),
+                  color: onSurfaceLight.withValues(alpha: 0.3),
                 ),
                 const SizedBox(height: 12),
                 Text(
                   'Sin medios de negocio',
                   style: GoogleFonts.nunito(
                     fontSize: 16,
-                    color: BeautyCitaTheme.textLight,
+                    color: onSurfaceLight,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -321,7 +330,7 @@ class _BusinessTab extends ConsumerWidget {
                   'Los medios de tu salon apareceran aqui',
                   style: GoogleFonts.nunito(
                     fontSize: 13,
-                    color: BeautyCitaTheme.textLight.withValues(alpha: 0.6),
+                    color: onSurfaceLight.withValues(alpha: 0.6),
                   ),
                 ),
               ],
@@ -335,8 +344,8 @@ class _BusinessTab extends ConsumerWidget {
           onSaveToGallery: onSaveToGallery,
         );
       },
-      loading: () => const Center(
-        child: CircularProgressIndicator(color: BeautyCitaTheme.primaryRose),
+      loading: () => Center(
+        child: CircularProgressIndicator(color: primary),
       ),
       error: (err, _) => Center(
         child: Text('Error: $err', style: GoogleFonts.nunito()),
@@ -357,6 +366,8 @@ class _ChatsTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final primary = Theme.of(context).colorScheme.primary;
+    final onSurfaceLight = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
     final chatAsync = ref.watch(chatMediaProvider);
     return chatAsync.when(
       data: (grouped) {
@@ -368,14 +379,14 @@ class _ChatsTab extends ConsumerWidget {
                 Icon(
                   Icons.chat_bubble_outline,
                   size: 64,
-                  color: BeautyCitaTheme.textLight.withValues(alpha: 0.3),
+                  color: onSurfaceLight.withValues(alpha: 0.3),
                 ),
                 const SizedBox(height: 12),
                 Text(
                   'Sin medios en chats',
                   style: GoogleFonts.nunito(
                     fontSize: 16,
-                    color: BeautyCitaTheme.textLight,
+                    color: onSurfaceLight,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -383,7 +394,7 @@ class _ChatsTab extends ConsumerWidget {
                   'Las imagenes de tus conversaciones apareceran aqui',
                   style: GoogleFonts.nunito(
                     fontSize: 13,
-                    color: BeautyCitaTheme.textLight.withValues(alpha: 0.6),
+                    color: onSurfaceLight.withValues(alpha: 0.6),
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -402,8 +413,8 @@ class _ChatsTab extends ConsumerWidget {
           }).toList(),
         );
       },
-      loading: () => const Center(
-        child: CircularProgressIndicator(color: BeautyCitaTheme.primaryRose),
+      loading: () => Center(
+        child: CircularProgressIndicator(color: primary),
       ),
       error: (err, _) => Center(
         child: Text('Error: $err', style: GoogleFonts.nunito()),
