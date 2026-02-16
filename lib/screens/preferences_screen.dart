@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:beautycita/config/theme.dart';
 import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/providers/uber_provider.dart';
 import 'package:beautycita/providers/user_preferences_provider.dart';
@@ -29,24 +28,26 @@ class PreferencesScreen extends ConsumerWidget {
     });
 
     return Scaffold(
-      backgroundColor: BeautyCitaTheme.backgroundWhite,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(title: const Text('Preferencias')),
       body: ListView(
         padding: const EdgeInsets.symmetric(
           horizontal: AppConstants.screenPaddingHorizontal,
-          vertical: BeautyCitaTheme.spaceMD,
+          vertical: AppConstants.paddingMD,
         ),
         children: [
           // ── Preferencias ──
           const SectionHeader(label: 'Preferencias'),
-          const SizedBox(height: BeautyCitaTheme.spaceXS),
+          const SizedBox(height: AppConstants.paddingXS),
 
           SettingsTile(
             icon: Icons.attach_money_rounded,
             label: 'Presupuesto',
             trailing: Text(
               _priceLabel(prefsState.priceComfort),
-              style: textTheme.bodyMedium?.copyWith(color: BeautyCitaTheme.textLight),
+              style: textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+              ),
             ),
             onTap: () => _showPriceSheet(context, ref, prefsState.priceComfort),
           ),
@@ -55,7 +56,9 @@ class PreferencesScreen extends ConsumerWidget {
             label: 'Calidad vs Rapidez',
             trailing: Text(
               _qualityLabel(prefsState.qualitySpeed),
-              style: textTheme.bodyMedium?.copyWith(color: BeautyCitaTheme.textLight),
+              style: textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+              ),
             ),
             onTap: () => _showQualitySheet(context, ref, prefsState.qualitySpeed),
           ),
@@ -64,7 +67,9 @@ class PreferencesScreen extends ConsumerWidget {
             label: 'Explorar vs Lealtad',
             trailing: Text(
               _exploreLabel(prefsState.exploreLoyalty),
-              style: textTheme.bodyMedium?.copyWith(color: BeautyCitaTheme.textLight),
+              style: textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+              ),
             ),
             onTap: () => _showExploreSheet(context, ref, prefsState.exploreLoyalty),
           ),
@@ -73,16 +78,18 @@ class PreferencesScreen extends ConsumerWidget {
             label: 'Radio de busqueda',
             trailing: Text(
               '${prefsState.searchRadiusKm} km',
-              style: textTheme.bodyMedium?.copyWith(color: BeautyCitaTheme.textLight),
+              style: textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+              ),
             ),
             onTap: () => _showRadiusSheet(context, ref, prefsState.searchRadiusKm),
           ),
 
-          const SizedBox(height: BeautyCitaTheme.spaceLG),
+          const SizedBox(height: AppConstants.paddingLG),
 
           // ── Transporte ──
           const SectionHeader(label: 'Transporte'),
-          const SizedBox(height: BeautyCitaTheme.spaceXS),
+          const SizedBox(height: AppConstants.paddingXS),
 
           _UberTile(uberState: uberState, ref: ref),
           SettingsTile(
@@ -90,16 +97,18 @@ class PreferencesScreen extends ConsumerWidget {
             label: 'Transporte preferido',
             trailing: Text(
               _transportLabel(prefsState.defaultTransport),
-              style: textTheme.bodyMedium?.copyWith(color: BeautyCitaTheme.textLight),
+              style: textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+              ),
             ),
             onTap: () => _showTransportSheet(context, ref, prefsState.defaultTransport),
           ),
 
-          const SizedBox(height: BeautyCitaTheme.spaceLG),
+          const SizedBox(height: AppConstants.paddingLG),
 
           // ── Notificaciones ──
           const SectionHeader(label: 'Notificaciones'),
-          const SizedBox(height: BeautyCitaTheme.spaceXS),
+          const SizedBox(height: AppConstants.paddingXS),
 
           // Master notifications toggle
           SettingsTile(
@@ -107,7 +116,7 @@ class PreferencesScreen extends ConsumerWidget {
             label: 'Todas las notificaciones',
             trailing: Switch(
               value: prefsState.notificationsEnabled,
-              activeColor: BeautyCitaTheme.primaryRose,
+              activeColor: Theme.of(context).colorScheme.primary,
               onChanged: (_) {
                 ref.read(userPrefsProvider.notifier).toggleNotifications();
               },
@@ -142,7 +151,7 @@ class PreferencesScreen extends ConsumerWidget {
             ),
           ],
 
-          const SizedBox(height: BeautyCitaTheme.spaceLG),
+          const SizedBox(height: AppConstants.paddingLG),
         ],
       ),
     );
@@ -238,7 +247,7 @@ class PreferencesScreen extends ConsumerWidget {
                         '${sliderValue.round()} km',
                         style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                               fontWeight: FontWeight.w700,
-                              color: BeautyCitaTheme.primaryRose,
+                              color: Theme.of(context).colorScheme.primary,
                             ),
                       ),
                     ),
@@ -247,7 +256,7 @@ class PreferencesScreen extends ConsumerWidget {
                       min: 5,
                       max: 100,
                       divisions: 19,
-                      activeColor: BeautyCitaTheme.primaryRose,
+                      activeColor: Theme.of(context).colorScheme.primary,
                       label: '${sliderValue.round()} km',
                       onChanged: (v) => setSheetState(() => sliderValue = v),
                     ),
@@ -275,7 +284,7 @@ class PreferencesScreen extends ConsumerWidget {
                           }
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: BeautyCitaTheme.primaryRose,
+                          backgroundColor: Theme.of(context).colorScheme.primary,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
@@ -376,26 +385,30 @@ class PreferencesScreen extends ConsumerWidget {
                         _qualityLabel(sliderValue),
                         style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                               fontWeight: FontWeight.w700,
-                              color: BeautyCitaTheme.primaryRose,
+                              color: Theme.of(context).colorScheme.primary,
                             ),
                       ),
                     ),
                     Row(
                       children: [
                         Text('Lo mas rapido',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: BeautyCitaTheme.textLight)),
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                            )),
                         Expanded(
                           child: Slider(
                             value: sliderValue,
                             min: 0.0,
                             max: 1.0,
                             divisions: 10,
-                            activeColor: BeautyCitaTheme.primaryRose,
+                            activeColor: Theme.of(context).colorScheme.primary,
                             onChanged: (v) => setSheetState(() => sliderValue = v),
                           ),
                         ),
                         Text('Lo mejor',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: BeautyCitaTheme.textLight)),
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                            )),
                       ],
                     ),
                     const SizedBox(height: 8),
@@ -435,26 +448,30 @@ class PreferencesScreen extends ConsumerWidget {
                         _exploreLabel(sliderValue),
                         style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                               fontWeight: FontWeight.w700,
-                              color: BeautyCitaTheme.primaryRose,
+                              color: Theme.of(context).colorScheme.primary,
                             ),
                       ),
                     ),
                     Row(
                       children: [
                         Text('Explorar nuevos',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: BeautyCitaTheme.textLight)),
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                            )),
                         Expanded(
                           child: Slider(
                             value: sliderValue,
                             min: 0.0,
                             max: 1.0,
                             divisions: 10,
-                            activeColor: BeautyCitaTheme.primaryRose,
+                            activeColor: Theme.of(context).colorScheme.primary,
                             onChanged: (v) => setSheetState(() => sliderValue = v),
                           ),
                         ),
                         Text('Mis favoritos',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: BeautyCitaTheme.textLight)),
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                            )),
                       ],
                     ),
                     const SizedBox(height: 8),
@@ -495,7 +512,7 @@ class PreferencesScreen extends ConsumerWidget {
           }
         },
         style: ElevatedButton.styleFrom(
-          backgroundColor: BeautyCitaTheme.primaryRose,
+          backgroundColor: Theme.of(parentCtx).colorScheme.primary,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 14),
           shape: RoundedRectangleBorder(
@@ -593,7 +610,7 @@ class _NotifChildTile extends StatelessWidget {
               Icon(
                 icon,
                 size: 18,
-                color: BeautyCitaTheme.textLight,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -601,7 +618,7 @@ class _NotifChildTile extends StatelessWidget {
                   label,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w400,
-                    color: BeautyCitaTheme.textDark,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
               ),
@@ -610,7 +627,7 @@ class _NotifChildTile extends StatelessWidget {
                 child: FittedBox(
                   child: Switch(
                     value: value,
-                    activeColor: BeautyCitaTheme.primaryRose,
+                    activeColor: Theme.of(context).colorScheme.primary,
                     onChanged: onChanged,
                   ),
                 ),
@@ -706,20 +723,22 @@ class _UberTile extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(height: BeautyCitaTheme.spaceMD),
+                const SizedBox(height: AppConstants.paddingMD),
                 Icon(Icons.local_taxi_rounded, size: AppConstants.iconSizeXL, color: Colors.red.shade400),
-                const SizedBox(height: BeautyCitaTheme.spaceSM),
+                const SizedBox(height: AppConstants.paddingSM),
                 Text(
                   'Desvincular Uber?',
                   style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
                 ),
-                const SizedBox(height: BeautyCitaTheme.spaceXS),
+                const SizedBox(height: AppConstants.paddingXS),
                 Text(
                   'Ya no se programaran viajes automaticamente. Puedes volver a vincular en cualquier momento.',
-                  style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(color: BeautyCitaTheme.textLight),
+                  style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.5),
+                  ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: BeautyCitaTheme.spaceLG),
+                const SizedBox(height: AppConstants.paddingLG),
                 Row(
                   children: [
                     Expanded(
@@ -732,7 +751,7 @@ class _UberTile extends StatelessWidget {
                         child: const Text('Cancelar'),
                       ),
                     ),
-                    const SizedBox(width: BeautyCitaTheme.spaceSM),
+                    const SizedBox(width: AppConstants.paddingSM),
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () => Navigator.pop(ctx, true),

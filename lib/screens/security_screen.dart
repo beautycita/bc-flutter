@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:beautycita/config/theme.dart';
 import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/providers/security_provider.dart';
 import 'package:beautycita/widgets/settings_widgets.dart';
@@ -52,17 +51,17 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
     });
 
     return Scaffold(
-      backgroundColor: BeautyCitaTheme.backgroundWhite,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(title: const Text('Seguridad')),
       body: ListView(
         padding: const EdgeInsets.symmetric(
           horizontal: AppConstants.screenPaddingHorizontal,
-          vertical: BeautyCitaTheme.spaceMD,
+          vertical: AppConstants.paddingMD,
         ),
         children: [
           // ── Cuentas vinculadas ──
           const SectionHeader(label: 'Cuentas vinculadas'),
-          const SizedBox(height: BeautyCitaTheme.spaceXS),
+          const SizedBox(height: AppConstants.paddingXS),
 
           // Google
           SettingsTile(
@@ -105,7 +104,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
                   Text(
                     'cambiar',
                     style: textTheme.bodySmall?.copyWith(
-                      color: BeautyCitaTheme.textLight,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                       fontSize: 11,
                     ),
                   ),
@@ -125,7 +124,8 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
                       sec.isEmailAdded ? 'Confirma email' : 'Requiere email',
                       style: textTheme.bodySmall?.copyWith(color: Colors.red.shade400, fontSize: 11),
                     )
-                  : const Icon(Icons.chevron_right, size: 20, color: BeautyCitaTheme.textLight),
+                  : Icon(Icons.chevron_right, size: 20,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)),
               onTap: _canAddPassword(sec)
                   ? () => _showPasswordSheet(context)
                   : () {
@@ -143,11 +143,11 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
                     },
             ),
 
-          const SizedBox(height: BeautyCitaTheme.spaceLG),
+          const SizedBox(height: AppConstants.paddingLG),
 
           // ── Dispositivos ──
           const SectionHeader(label: 'Dispositivos'),
-          const SizedBox(height: BeautyCitaTheme.spaceXS),
+          const SizedBox(height: AppConstants.paddingXS),
 
           SettingsTile(
             icon: Icons.devices_rounded,
@@ -160,22 +160,24 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
             onTap: () => context.push('/qr-scan'),
           ),
 
-          const SizedBox(height: BeautyCitaTheme.spaceLG),
+          const SizedBox(height: AppConstants.paddingLG),
 
           // ── Acerca de ──
           const SectionHeader(label: 'Acerca de'),
-          const SizedBox(height: BeautyCitaTheme.spaceXS),
+          const SizedBox(height: AppConstants.paddingXS),
 
           SettingsTile(
             icon: Icons.info_outline_rounded,
             label: 'Version',
             trailing: Text(
               '0.1.0',
-              style: textTheme.bodyMedium?.copyWith(color: BeautyCitaTheme.textLight),
+              style: textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+              ),
             ),
           ),
 
-          const SizedBox(height: BeautyCitaTheme.spaceLG),
+          const SizedBox(height: AppConstants.paddingLG),
         ],
       ),
     );
@@ -210,7 +212,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
               Text(
                 'Necesario para recibos de reservas y para recuperar tu cuenta.',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: BeautyCitaTheme.textLight,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                     ),
               ),
               const SizedBox(height: 16),
@@ -243,7 +245,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
                     ref.read(securityProvider.notifier).addEmail(email);
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: BeautyCitaTheme.primaryRose,
+                    backgroundColor: Theme.of(context).colorScheme.primary,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
@@ -287,7 +289,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
                   Text(
                     'Podras iniciar sesion con tu email y contrasena en cualquier dispositivo.',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: BeautyCitaTheme.textLight,
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                         ),
                   ),
                   const SizedBox(height: 16),
@@ -344,7 +346,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
                         ref.read(securityProvider.notifier).addPassword(pass);
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: BeautyCitaTheme.primaryRose,
+                        backgroundColor: Theme.of(context).colorScheme.primary,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(

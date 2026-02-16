@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:beautycita/config/theme.dart';
 import 'package:beautycita/widgets/bc_image_picker_sheet.dart';
 import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/providers/auth_provider.dart';
@@ -101,12 +100,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
-      backgroundColor: BeautyCitaTheme.backgroundWhite,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(title: const Text('Perfil')),
       body: ListView(
         padding: const EdgeInsets.symmetric(
           horizontal: AppConstants.screenPaddingHorizontal,
-          vertical: BeautyCitaTheme.spaceMD,
+          vertical: AppConstants.paddingMD,
         ),
         children: [
           // ── Avatar ──
@@ -118,13 +117,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   CircleAvatar(
                     key: ValueKey(profile.avatarUrl),
                     radius: 48,
-                    backgroundColor: BeautyCitaTheme.surfaceCream,
+                    backgroundColor: Theme.of(context).colorScheme.surface,
                     backgroundImage: profile.avatarUrl != null
                         ? NetworkImage(profile.avatarUrl!)
                         : null,
                     child: profile.avatarUrl == null
-                        ? const Icon(Icons.person_outline,
-                            size: 48, color: BeautyCitaTheme.textLight)
+                        ? Icon(Icons.person_outline,
+                            size: 48, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5))
                         : null,
                   ),
                   Positioned(
@@ -133,7 +132,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     child: Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        color: BeautyCitaTheme.primaryRose,
+                        color: Theme.of(context).colorScheme.primary,
                         shape: BoxShape.circle,
                         border: Border.all(color: Colors.white, width: 2),
                       ),
@@ -146,7 +145,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
           ),
 
-          const SizedBox(height: BeautyCitaTheme.spaceMD),
+          const SizedBox(height: AppConstants.paddingMD),
 
           // ── Username (tappable to edit) ──
           if (_editingUsername)
@@ -165,17 +164,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     ),
                     const SizedBox(width: 6),
                     Icon(Icons.edit_outlined,
-                        size: 16, color: BeautyCitaTheme.textLight),
+                        size: 16, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)),
                   ],
                 ),
               ),
             ),
 
-          const SizedBox(height: BeautyCitaTheme.spaceLG),
+          const SizedBox(height: AppConstants.paddingLG),
 
           // ── Full Name ──
           const SectionHeader(label: 'Informacion personal'),
-          const SizedBox(height: BeautyCitaTheme.spaceXS),
+          const SizedBox(height: AppConstants.paddingXS),
 
           if (_editingName)
             Padding(
@@ -198,8 +197,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ),
                   const SizedBox(width: 8),
                   IconButton(
-                    icon: const Icon(Icons.check_rounded,
-                        color: BeautyCitaTheme.primaryRose),
+                    icon: Icon(Icons.check_rounded,
+                        color: Theme.of(context).colorScheme.primary),
                     onPressed: _saveName,
                   ),
                   IconButton(
@@ -220,7 +219,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   : Text(
                       'Agregar',
                       style: textTheme.bodySmall
-                          ?.copyWith(color: BeautyCitaTheme.primaryRose),
+                          ?.copyWith(color: Theme.of(context).colorScheme.primary),
                     ),
               onTap: () {
                 _nameController.text = profile.fullName ?? '';
@@ -249,7 +248,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     ? GestureDetector(
                         onTap: () => _showOtpSheet(context),
                         child: Text('Verificar', style: textTheme.bodySmall?.copyWith(
-                          color: BeautyCitaTheme.primaryRose, fontWeight: FontWeight.w600)),
+                          color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600)),
                       )
                     : Text('Requerido', style: textTheme.bodySmall?.copyWith(
                         color: Colors.red.shade400, fontSize: 11)),
@@ -282,19 +281,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             onTap: () => _showGenderSheet(context),
           ),
 
-          const SizedBox(height: BeautyCitaTheme.spaceLG),
+          const SizedBox(height: AppConstants.paddingLG),
 
           // ── Ubicacion temporal ──
           const SectionHeader(label: 'Buscar desde otra ubicacion'),
-          const SizedBox(height: BeautyCitaTheme.spaceXS),
+          const SizedBox(height: AppConstants.paddingXS),
 
           _buildTempLocationTile(context, textTheme),
 
-          const SizedBox(height: BeautyCitaTheme.spaceLG),
+          const SizedBox(height: AppConstants.paddingLG),
 
           // ── Contenido ──
           const SectionHeader(label: 'Contenido'),
-          const SizedBox(height: BeautyCitaTheme.spaceXS),
+          const SizedBox(height: AppConstants.paddingXS),
 
           SettingsTile(
             icon: Icons.perm_media_rounded,
@@ -302,7 +301,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             onTap: () => context.push('/media-manager'),
           ),
 
-          const SizedBox(height: BeautyCitaTheme.spaceLG),
+          const SizedBox(height: AppConstants.paddingLG),
         ],
       ),
     );
@@ -368,8 +367,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ),
               const SizedBox(width: 8),
               IconButton(
-                icon: const Icon(Icons.check_rounded,
-                    color: BeautyCitaTheme.primaryRose),
+                icon: Icon(Icons.check_rounded,
+                    color: Theme.of(context).colorScheme.primary),
                 onPressed:
                     _usernameAvailable && _usernameError == null
                         ? _saveUsername
@@ -381,7 +380,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ),
             ],
           ),
-          const SizedBox(height: BeautyCitaTheme.spaceXS),
+          const SizedBox(height: AppConstants.paddingXS),
           // Suggestion chips
           Wrap(
             spacing: 8,
@@ -395,14 +394,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       _usernameController.text = s;
                       _onUsernameChanged(s);
                     },
-                    backgroundColor: BeautyCitaTheme.surfaceCream,
+                    backgroundColor: Theme.of(context).colorScheme.surface,
                     side: BorderSide.none,
                     visualDensity: VisualDensity.compact,
                   ),
                 )
                 .toList(),
           ),
-          const SizedBox(height: BeautyCitaTheme.spaceXS),
+          const SizedBox(height: AppConstants.paddingXS),
         ],
       ),
     );
@@ -578,7 +577,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
                       trailing: Icon(Icons.chevron_right,
-                          color: BeautyCitaTheme.textLight),
+                          color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.5)),
                       onTap: () => Navigator.pop(ctx, style),
                     )),
               ],
@@ -771,7 +770,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           padding: const EdgeInsets.symmetric(horizontal: AppConstants.paddingSM),
           child: Text(
             'Si estaras en otro lugar (boda, viaje, etc.), busca estilistas cerca de esa direccion. Se reinicia al cerrar la app.',
-            style: textTheme.bodySmall?.copyWith(color: BeautyCitaTheme.textLight),
+            style: textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+            ),
           ),
         ),
         const SizedBox(height: 8),
@@ -828,7 +829,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               Text(
                 'Necesario para confirmar reservas y recibir alertas por SMS.',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: BeautyCitaTheme.textLight),
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)),
               ),
               const SizedBox(height: 16),
               TextField(
@@ -863,7 +864,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     }
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: BeautyCitaTheme.primaryRose,
+                    backgroundColor: Theme.of(context).colorScheme.primary,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
@@ -915,7 +916,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               Text(
                 'Ingresa el codigo de 6 digitos que enviamos a ${ref.read(profileProvider).phone}',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: BeautyCitaTheme.textLight),
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)),
               ),
               const SizedBox(height: 16),
               TextField(
@@ -949,7 +950,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     }
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: BeautyCitaTheme.primaryRose,
+                    backgroundColor: Theme.of(context).colorScheme.primary,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
@@ -1075,9 +1076,9 @@ class _AvatarCropEditorState extends State<_AvatarCropEditor> {
     final circleSize = screenWidth * 0.80;
 
     return Scaffold(
-      backgroundColor: BeautyCitaTheme.textDark,
+      backgroundColor: Theme.of(context).colorScheme.onSurface,
       appBar: AppBar(
-        backgroundColor: BeautyCitaTheme.textDark,
+        backgroundColor: Theme.of(context).colorScheme.onSurface,
         foregroundColor: Colors.white,
         title: const Text('Recortar foto'),
         leading: IconButton(
@@ -1134,7 +1135,7 @@ class _AvatarCropEditorState extends State<_AvatarCropEditor> {
                 child: ElevatedButton(
                   onPressed: _processing ? null : _cropAndReturn,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: BeautyCitaTheme.primaryRose,
+                    backgroundColor: Theme.of(context).colorScheme.primary,
                     foregroundColor: Colors.white,
                     minimumSize:
                         const Size(0, AppConstants.minTouchHeight),
