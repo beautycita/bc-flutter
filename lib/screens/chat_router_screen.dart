@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../config/theme.dart';
+import '../config/theme_extension.dart';
 import '../providers/chat_provider.dart';
 
 /// Smart router that skips the chat list when there are no unread messages
@@ -57,7 +57,7 @@ class _LoadingView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: BeautyCitaTheme.backgroundWhite,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -65,25 +65,21 @@ class _LoadingView extends StatelessWidget {
             Container(
               width: 64,
               height: 64,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  colors: [Color(0xFFFFB300), Color(0xFFFFD54F)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+                gradient: Theme.of(context).extension<BCThemeExtension>()!.accentGradient,
               ),
               child: const Center(
                 child: Text('\u{1F3DB}\uFE0F', style: TextStyle(fontSize: 32)),
               ),
             ),
             const SizedBox(height: 16),
-            const SizedBox(
+            SizedBox(
               width: 24,
               height: 24,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                color: Color(0xFFFFB300),
+                color: Theme.of(context).colorScheme.secondary,
               ),
             ),
           ],

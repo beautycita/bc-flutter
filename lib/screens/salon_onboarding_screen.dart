@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../config/theme.dart';
+import '../config/constants.dart';
 import '../services/supabase_client.dart';
 
 class SalonOnboardingScreen extends ConsumerStatefulWidget {
@@ -234,20 +234,22 @@ class _SalonOnboardingScreenState
       );
     }
 
+    final colorScheme = Theme.of(context).colorScheme;
+
     if (_loadingPrefill) {
       return Scaffold(
-        backgroundColor: BeautyCitaTheme.surfaceCream,
+        backgroundColor: colorScheme.surface,
         body: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const CircularProgressIndicator(color: BeautyCitaTheme.primaryRose),
+              CircularProgressIndicator(color: colorScheme.primary),
               const SizedBox(height: 16),
               Text(
                 'Cargando datos de tu salon...',
                 style: GoogleFonts.nunito(
                   fontSize: 14,
-                  color: BeautyCitaTheme.textLight,
+                  color: colorScheme.onSurface.withValues(alpha: 0.5),
                 ),
               ),
             ],
@@ -257,17 +259,17 @@ class _SalonOnboardingScreenState
     }
 
     return Scaffold(
-      backgroundColor: BeautyCitaTheme.surfaceCream,
+      backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: BeautyCitaTheme.surfaceCream,
+        backgroundColor: colorScheme.surface,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.close_rounded, color: BeautyCitaTheme.textDark, size: 24),
+          icon: Icon(Icons.close_rounded, color: colorScheme.onSurface, size: 24),
           onPressed: () => context.pop(),
         ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(BeautyCitaTheme.spaceLG),
+        padding: const EdgeInsets.all(AppConstants.paddingLG),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -275,7 +277,7 @@ class _SalonOnboardingScreenState
             if (_photoUrl != null) ...[
               Center(
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusLarge),
+                  borderRadius: BorderRadius.circular(AppConstants.radiusLG),
                   child: Image.network(
                     _photoUrl!,
                     width: 120,
@@ -285,19 +287,19 @@ class _SalonOnboardingScreenState
                       width: 120,
                       height: 120,
                       decoration: BoxDecoration(
-                        color: BeautyCitaTheme.primaryRose.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusLarge),
+                        color: colorScheme.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(AppConstants.radiusLG),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.store,
                         size: 48,
-                        color: BeautyCitaTheme.primaryRose,
+                        color: colorScheme.primary,
                       ),
                     ),
                   ),
                 ),
               ),
-              const SizedBox(height: BeautyCitaTheme.spaceMD),
+              const SizedBox(height: AppConstants.paddingMD),
             ],
 
             // Header
@@ -306,7 +308,7 @@ class _SalonOnboardingScreenState
               style: GoogleFonts.poppins(
                 fontSize: 26,
                 fontWeight: FontWeight.w700,
-                color: BeautyCitaTheme.textDark,
+                color: colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 4),
@@ -314,18 +316,18 @@ class _SalonOnboardingScreenState
               'Gratis. 60 segundos. Sin tarjeta.',
               style: GoogleFonts.nunito(
                 fontSize: 15,
-                color: BeautyCitaTheme.textLight,
+                color: colorScheme.onSurface.withValues(alpha: 0.5),
               ),
             ),
 
             // Pre-fill notice
             if (_discoveredSalonData != null) ...[
-              const SizedBox(height: BeautyCitaTheme.spaceSM),
+              const SizedBox(height: AppConstants.paddingSM),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
                   color: Colors.green.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+                  borderRadius: BorderRadius.circular(AppConstants.radiusMD),
                 ),
                 child: Row(
                   children: [
@@ -344,50 +346,50 @@ class _SalonOnboardingScreenState
                 ),
               ),
             ],
-            const SizedBox(height: BeautyCitaTheme.spaceXL),
+            const SizedBox(height: AppConstants.paddingXL),
 
             // Business name
             Text('Nombre del salon',
-                style: _labelStyle()),
+                style: _labelStyle(colorScheme)),
             const SizedBox(height: 8),
             TextField(
               controller: _nameCtrl,
               onChanged: (_) => setState(() {}),
-              decoration: _inputDecoration('Ej: Salon Rosa'),
+              decoration: _inputDecoration('Ej: Salon Rosa', colorScheme),
               textCapitalization: TextCapitalization.words,
             ),
-            const SizedBox(height: BeautyCitaTheme.spaceLG),
+            const SizedBox(height: AppConstants.paddingLG),
 
             // WhatsApp number
             Text('WhatsApp',
-                style: _labelStyle()),
+                style: _labelStyle(colorScheme)),
             const SizedBox(height: 8),
             TextField(
               controller: _phoneCtrl,
               onChanged: (_) => setState(() {}),
-              decoration: _inputDecoration('+52 33 1234 5678'),
+              decoration: _inputDecoration('+52 33 1234 5678', colorScheme),
               keyboardType: TextInputType.phone,
             ),
-            const SizedBox(height: BeautyCitaTheme.spaceLG),
+            const SizedBox(height: AppConstants.paddingLG),
 
             // Address
             Text('Direccion (opcional)',
-                style: _labelStyle()),
+                style: _labelStyle(colorScheme)),
             const SizedBox(height: 8),
             TextField(
               controller: _addressCtrl,
-              decoration: _inputDecoration('Buscar direccion o usar GPS'),
+              decoration: _inputDecoration('Buscar direccion o usar GPS', colorScheme),
               textCapitalization: TextCapitalization.sentences,
             ),
-            const SizedBox(height: BeautyCitaTheme.spaceXL),
+            const SizedBox(height: AppConstants.paddingXL),
 
             // Categories
             Text('Que servicios ofreces?',
-                style: _labelStyle()),
-            const SizedBox(height: BeautyCitaTheme.spaceMD),
+                style: _labelStyle(colorScheme)),
+            const SizedBox(height: AppConstants.paddingMD),
             Wrap(
-              spacing: BeautyCitaTheme.spaceSM,
-              runSpacing: BeautyCitaTheme.spaceSM,
+              spacing: AppConstants.paddingSM,
+              runSpacing: AppConstants.paddingSM,
               children: _categories.map((cat) {
                 final selected = _selectedCategories.contains(cat.slug);
                 return FilterChip(
@@ -400,25 +402,25 @@ class _SalonOnboardingScreenState
                         size: 18,
                         color: selected
                             ? Colors.white
-                            : BeautyCitaTheme.textDark,
+                            : colorScheme.onSurface,
                       ),
                       const SizedBox(width: 6),
                       Text(cat.label),
                     ],
                   ),
-                  selectedColor: BeautyCitaTheme.primaryRose,
+                  selectedColor: colorScheme.primary,
                   checkmarkColor: Colors.white,
                   labelStyle: GoogleFonts.nunito(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: selected
                         ? Colors.white
-                        : BeautyCitaTheme.textDark,
+                        : colorScheme.onSurface,
                   ),
                   backgroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius:
-                        BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+                        BorderRadius.circular(AppConstants.radiusMD),
                   ),
                   padding: const EdgeInsets.symmetric(
                       horizontal: 4, vertical: 4),
@@ -435,7 +437,7 @@ class _SalonOnboardingScreenState
               }).toList(),
             ),
 
-            const SizedBox(height: BeautyCitaTheme.spaceXL),
+            const SizedBox(height: AppConstants.paddingXL),
 
             // Submit
             SizedBox(
@@ -443,17 +445,17 @@ class _SalonOnboardingScreenState
               child: ElevatedButton(
                 onPressed: _isValid && !_submitting ? _submit : null,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: BeautyCitaTheme.primaryRose,
+                  backgroundColor: colorScheme.primary,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(
-                      vertical: BeautyCitaTheme.spaceMD),
+                      vertical: AppConstants.paddingMD),
                   shape: RoundedRectangleBorder(
                     borderRadius:
-                        BorderRadius.circular(BeautyCitaTheme.radiusLarge),
+                        BorderRadius.circular(AppConstants.radiusLG),
                   ),
                   elevation: 0,
                   disabledBackgroundColor:
-                      BeautyCitaTheme.primaryRose.withValues(alpha: 0.3),
+                      colorScheme.primary.withValues(alpha: 0.3),
                 ),
                 child: _submitting
                     ? const SizedBox(
@@ -475,36 +477,36 @@ class _SalonOnboardingScreenState
                       ),
               ),
             ),
-            const SizedBox(height: BeautyCitaTheme.spaceLG),
+            const SizedBox(height: AppConstants.paddingLG),
           ],
         ),
       ),
     );
   }
 
-  TextStyle _labelStyle() => GoogleFonts.poppins(
+  TextStyle _labelStyle(ColorScheme colorScheme) => GoogleFonts.poppins(
         fontSize: 14,
         fontWeight: FontWeight.w600,
-        color: BeautyCitaTheme.textDark,
+        color: colorScheme.onSurface,
       );
 
-  InputDecoration _inputDecoration(String hint) => InputDecoration(
+  InputDecoration _inputDecoration(String hint, ColorScheme colorScheme) => InputDecoration(
         hintText: hint,
         hintStyle: GoogleFonts.nunito(fontSize: 14, color: Colors.grey),
         filled: true,
         fillColor: Colors.white,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+          borderRadius: BorderRadius.circular(AppConstants.radiusMD),
           borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+          borderRadius: BorderRadius.circular(AppConstants.radiusMD),
           borderSide:
-              const BorderSide(color: BeautyCitaTheme.primaryRose, width: 2),
+              BorderSide(color: colorScheme.primary, width: 2),
         ),
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: BeautyCitaTheme.spaceMD,
-          vertical: BeautyCitaTheme.spaceMD,
+          horizontal: AppConstants.paddingMD,
+          vertical: AppConstants.paddingMD,
         ),
       );
 }
@@ -570,11 +572,13 @@ class _SuccessScreenState extends State<_SuccessScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Scaffold(
-      backgroundColor: BeautyCitaTheme.surfaceCream,
+      backgroundColor: colorScheme.surface,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(BeautyCitaTheme.spaceXL),
+          padding: const EdgeInsets.all(AppConstants.paddingXL),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -583,44 +587,44 @@ class _SuccessScreenState extends State<_SuccessScreen> {
                 width: 80,
                 height: 80,
                 decoration: BoxDecoration(
-                  color: BeautyCitaTheme.primaryRose.withValues(alpha: 0.1),
+                  color: colorScheme.primary.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.check_circle,
                   size: 48,
-                  color: BeautyCitaTheme.primaryRose,
+                  color: colorScheme.primary,
                 ),
               ),
-              const SizedBox(height: BeautyCitaTheme.spaceLG),
+              const SizedBox(height: AppConstants.paddingLG),
               Text(
                 'Bienvenido a BeautyCita!',
                 style: GoogleFonts.poppins(
                   fontSize: 22,
                   fontWeight: FontWeight.w700,
-                  color: BeautyCitaTheme.textDark,
+                  color: colorScheme.onSurface,
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: BeautyCitaTheme.spaceSM),
+              const SizedBox(height: AppConstants.paddingSM),
               Text(
                 'Tu salon "${widget.businessName}" ya esta registrado.',
                 style: GoogleFonts.nunito(
                   fontSize: 15,
-                  color: BeautyCitaTheme.textLight,
+                  color: colorScheme.onSurface.withValues(alpha: 0.5),
                   height: 1.5,
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: BeautyCitaTheme.spaceXL),
+              const SizedBox(height: AppConstants.paddingXL),
 
               // Stripe setup card
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(BeautyCitaTheme.spaceLG),
+                padding: const EdgeInsets.all(AppConstants.paddingLG),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusLarge),
+                  borderRadius: BorderRadius.circular(AppConstants.radiusLG),
                   border: Border.all(
                     color: const Color(0xFF635BFF).withValues(alpha: 0.3), // Stripe purple
                     width: 2,
@@ -653,14 +657,14 @@ class _SuccessScreenState extends State<_SuccessScreen> {
                                 style: GoogleFonts.poppins(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
-                                  color: BeautyCitaTheme.textDark,
+                                  color: colorScheme.onSurface,
                                 ),
                               ),
                               Text(
                                 'Para recibir pagos de clientes',
                                 style: GoogleFonts.nunito(
                                   fontSize: 13,
-                                  color: BeautyCitaTheme.textLight,
+                                  color: colorScheme.onSurface.withValues(alpha: 0.5),
                                 ),
                               ),
                             ],
@@ -668,16 +672,16 @@ class _SuccessScreenState extends State<_SuccessScreen> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: BeautyCitaTheme.spaceMD),
+                    const SizedBox(height: AppConstants.paddingMD),
                     Text(
                       'Conecta tu cuenta bancaria para recibir el pago de cada reserva directamente. Solo toma 2 minutos.',
                       style: GoogleFonts.nunito(
                         fontSize: 14,
-                        color: BeautyCitaTheme.textLight,
+                        color: colorScheme.onSurface.withValues(alpha: 0.5),
                         height: 1.4,
                       ),
                     ),
-                    const SizedBox(height: BeautyCitaTheme.spaceMD),
+                    const SizedBox(height: AppConstants.paddingMD),
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton.icon(
@@ -704,7 +708,7 @@ class _SuccessScreenState extends State<_SuccessScreen> {
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+                            borderRadius: BorderRadius.circular(AppConstants.radiusMD),
                           ),
                         ),
                       ),
@@ -713,7 +717,7 @@ class _SuccessScreenState extends State<_SuccessScreen> {
                 ),
               ),
 
-              const SizedBox(height: BeautyCitaTheme.spaceMD),
+              const SizedBox(height: AppConstants.paddingMD),
 
               // Skip option
               TextButton(
@@ -722,20 +726,20 @@ class _SuccessScreenState extends State<_SuccessScreen> {
                   'Configurar despues',
                   style: GoogleFonts.nunito(
                     fontSize: 14,
-                    color: BeautyCitaTheme.textLight,
+                    color: colorScheme.onSurface.withValues(alpha: 0.5),
                     decoration: TextDecoration.underline,
                   ),
                 ),
               ),
 
-              const SizedBox(height: BeautyCitaTheme.spaceLG),
+              const SizedBox(height: AppConstants.paddingLG),
 
               // Info note
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: Colors.amber.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+                  borderRadius: BorderRadius.circular(AppConstants.radiusMD),
                 ),
                 child: Row(
                   children: [

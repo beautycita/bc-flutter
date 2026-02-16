@@ -5,7 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
-import '../config/theme.dart';
+import '../config/theme_extension.dart';
 import '../models/chat_message.dart';
 import '../providers/chat_provider.dart';
 import '../services/supabase_client.dart';
@@ -106,9 +106,9 @@ class _ChatConversationScreenState
     final title = isAphrodite ? 'Afrodita' : (thread?.displayName ?? 'Chat');
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F0EB),
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: BeautyCitaTheme.backgroundWhite,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => context.go('/home'),
@@ -119,7 +119,7 @@ class _ChatConversationScreenState
             IconButton(
               icon: Icon(
                 Icons.forum_outlined,
-                color: BeautyCitaTheme.textLight,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                 size: 22,
               ),
               tooltip: 'Todos los mensajes',
@@ -132,13 +132,9 @@ class _ChatConversationScreenState
               Container(
                 width: 36,
                 height: 36,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [Color(0xFFFFB300), Color(0xFFFFD54F)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+                  gradient: Theme.of(context).extension<BCThemeExtension>()!.accentGradient,
                 ),
                 child: const Center(
                   child: Text('🏛️', style: TextStyle(fontSize: 18)),
@@ -161,7 +157,7 @@ class _ChatConversationScreenState
                     'Asesora de belleza divina',
                     style: GoogleFonts.nunito(
                       fontSize: 12,
-                      color: BeautyCitaTheme.textLight,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                     ),
                   ),
               ],
@@ -256,7 +252,7 @@ class _ChatConversationScreenState
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: BeautyCitaTheme.dividerLight,
+                  color: Theme.of(context).dividerColor,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -271,9 +267,7 @@ class _ChatConversationScreenState
               child: Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFE91E63), Color(0xFFC2185B)],
-                  ),
+                  gradient: Theme.of(context).extension<BCThemeExtension>()!.primaryGradient,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
@@ -317,12 +311,12 @@ class _ChatConversationScreenState
               child: Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: BeautyCitaTheme.surfaceCream,
+                  color: Theme.of(context).colorScheme.surface,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.attach_file_rounded, color: BeautyCitaTheme.primaryRose, size: 24),
+                    Icon(Icons.attach_file_rounded, color: Theme.of(context).colorScheme.primary, size: 24),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
@@ -339,13 +333,13 @@ class _ChatConversationScreenState
                             'Enviar una foto o imagen',
                             style: GoogleFonts.nunito(
                               fontSize: 12,
-                              color: BeautyCitaTheme.textLight,
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                             ),
                           ),
                         ],
                       ),
                     ),
-                    const Icon(Icons.chevron_right_rounded, color: BeautyCitaTheme.textLight),
+                    Icon(Icons.chevron_right_rounded, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)),
                   ],
                 ),
               ),
@@ -384,9 +378,9 @@ class _MessageBubble extends StatelessWidget {
     final isUser = message.isFromUser;
     final alignment = isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start;
     final bubbleColor = isUser
-        ? BeautyCitaTheme.primaryRose
+        ? Theme.of(context).colorScheme.primary
         : Colors.white;
-    final textColor = isUser ? Colors.white : BeautyCitaTheme.textDark;
+    final textColor = isUser ? Colors.white : Theme.of(context).colorScheme.onSurface;
 
     // Try-on result card
     if (message.isTryOnResult && message.mediaUrl != null) {
@@ -424,7 +418,7 @@ class _MessageBubble extends StatelessWidget {
                       height: 200,
                       errorBuilder: (_, __, ___) => Container(
                         height: 200,
-                        color: BeautyCitaTheme.surfaceCream,
+                        color: Theme.of(context).colorScheme.surface,
                         child: const Center(
                           child: Icon(Icons.image_not_supported, size: 48),
                         ),
@@ -441,7 +435,7 @@ class _MessageBubble extends StatelessWidget {
                           style: GoogleFonts.poppins(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
-                            color: const Color(0xFFFFB300),
+                            color: Theme.of(context).colorScheme.secondary,
                           ),
                         ),
                         if (message.textContent != null) ...[
@@ -450,7 +444,7 @@ class _MessageBubble extends StatelessWidget {
                             message.textContent!,
                             style: GoogleFonts.nunito(
                               fontSize: 13,
-                              color: BeautyCitaTheme.textLight,
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                             ),
                           ),
                         ],
@@ -495,7 +489,7 @@ class _MessageBubble extends StatelessWidget {
                   fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) => Container(
                     height: 150,
-                    color: BeautyCitaTheme.surfaceCream,
+                    color: Theme.of(context).colorScheme.surface,
                     child: const Center(
                       child: Icon(Icons.broken_image, size: 48),
                     ),
@@ -568,7 +562,7 @@ class _TimeStamp extends StatelessWidget {
         DateFormat.Hm().format(time.toLocal()),
         style: GoogleFonts.nunito(
           fontSize: 11,
-          color: BeautyCitaTheme.textLight.withValues(alpha: 0.6),
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5).withValues(alpha: 0.6),
         ),
       ),
     );
@@ -664,7 +658,7 @@ class _BouncingDotState extends State<_BouncingDot>
         width: 8,
         height: 8,
         decoration: BoxDecoration(
-          color: BeautyCitaTheme.textLight.withValues(alpha: 0.5),
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5).withValues(alpha: 0.5),
           shape: BoxShape.circle,
         ),
       ),
@@ -681,7 +675,7 @@ class _QuickActionChips extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: const Color(0xFFF5F0EB),
+      color: Theme.of(context).colorScheme.surface,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
@@ -733,7 +727,7 @@ class _ActionChip extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: BeautyCitaTheme.primaryRose.withValues(alpha: 0.2),
+            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
             width: 1,
           ),
         ),
@@ -747,7 +741,7 @@ class _ActionChip extends StatelessWidget {
               style: GoogleFonts.nunito(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: BeautyCitaTheme.primaryRose,
+                color: Theme.of(context).colorScheme.primary,
               ),
             ),
           ],
@@ -783,7 +777,7 @@ class _InputBar extends StatelessWidget {
         bottom: MediaQuery.of(context).padding.bottom + 8,
       ),
       decoration: BoxDecoration(
-        color: BeautyCitaTheme.backgroundWhite,
+        color: Theme.of(context).scaffoldBackgroundColor,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.05),
@@ -802,14 +796,14 @@ class _InputBar extends StatelessWidget {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: BeautyCitaTheme.surfaceCream,
+                  color: Theme.of(context).colorScheme.surface,
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
                   Icons.camera_alt_rounded,
                   color: isSending
-                      ? BeautyCitaTheme.textLight
-                      : BeautyCitaTheme.primaryRose,
+                      ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)
+                      : Theme.of(context).colorScheme.primary,
                   size: 22,
                 ),
               ),
@@ -820,7 +814,7 @@ class _InputBar extends StatelessWidget {
           Expanded(
             child: Container(
               decoration: BoxDecoration(
-                color: BeautyCitaTheme.surfaceCream,
+                color: Theme.of(context).colorScheme.surface,
                 borderRadius: BorderRadius.circular(24),
               ),
               child: TextField(
@@ -834,7 +828,7 @@ class _InputBar extends StatelessWidget {
                   hintText: 'Escribe un mensaje...',
                   hintStyle: GoogleFonts.nunito(
                     fontSize: 15,
-                    color: BeautyCitaTheme.textLight,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                   ),
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(
@@ -856,18 +850,16 @@ class _InputBar extends StatelessWidget {
               decoration: BoxDecoration(
                 gradient: isSending
                     ? null
-                    : const LinearGradient(
-                        colors: [Color(0xFFE91E63), Color(0xFFC2185B)],
-                      ),
-                color: isSending ? BeautyCitaTheme.dividerLight : null,
+                    : Theme.of(context).extension<BCThemeExtension>()!.primaryGradient,
+                color: isSending ? Theme.of(context).dividerColor : null,
                 shape: BoxShape.circle,
               ),
               child: isSending
-                  ? const Padding(
-                      padding: EdgeInsets.all(12),
+                  ? Padding(
+                      padding: const EdgeInsets.all(12),
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: BeautyCitaTheme.primaryRose,
+                        color: Theme.of(context).colorScheme.primary,
                       ),
                     )
                   : const Icon(

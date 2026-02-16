@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:beautycita/models/provider.dart' as models;
 import 'package:beautycita/providers/provider_provider.dart';
-import 'package:beautycita/config/theme.dart';
+import 'package:beautycita/config/constants.dart';
+import 'package:beautycita/config/palettes.dart';
+import '../config/theme_extension.dart';
 
 class ProviderDetailScreen extends ConsumerWidget {
   final String providerId;
@@ -19,12 +21,13 @@ class ProviderDetailScreen extends ConsumerWidget {
     final providerAsync = ref.watch(providerDetailProvider(providerId));
     final servicesAsync =
         ref.watch(providerServicesProvider((providerId, null)));
+    final colorScheme = Theme.of(context).colorScheme;
 
     return providerAsync.when(
-      loading: () => const Scaffold(
+      loading: () => Scaffold(
         body: Center(
           child: CircularProgressIndicator(
-            color: BeautyCitaTheme.primaryRose,
+            color: colorScheme.primary,
           ),
         ),
       ),
@@ -34,28 +37,28 @@ class ProviderDetailScreen extends ConsumerWidget {
         ),
         body: Center(
           child: Padding(
-            padding: const EdgeInsets.all(BeautyCitaTheme.spaceLG),
+            padding: const EdgeInsets.all(AppConstants.paddingLG),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(
+                Icon(
                   Icons.error_outline,
                   size: 64,
-                  color: BeautyCitaTheme.primaryRose,
+                  color: colorScheme.primary,
                 ),
-                const SizedBox(height: BeautyCitaTheme.spaceMD),
+                const SizedBox(height: AppConstants.paddingMD),
                 Text(
                   'No se pudo cargar el proveedor',
                   style: Theme.of(context).textTheme.headlineSmall,
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: BeautyCitaTheme.spaceSM),
+                const SizedBox(height: AppConstants.paddingSM),
                 Text(
                   error.toString(),
                   style: Theme.of(context).textTheme.bodySmall,
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: BeautyCitaTheme.spaceLG),
+                const SizedBox(height: AppConstants.paddingLG),
                 ElevatedButton(
                   onPressed: () =>
                       ref.invalidate(providerDetailProvider(providerId)),
@@ -86,17 +89,17 @@ class ProviderDetailScreen extends ConsumerWidget {
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: BeautyCitaTheme.spaceMD,
+                    horizontal: AppConstants.paddingMD,
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const SizedBox(height: BeautyCitaTheme.spaceMD),
+                      const SizedBox(height: AppConstants.paddingMD),
 
                       // Name, rating, verified badge
                       _buildHeader(context, provider),
 
-                      const SizedBox(height: BeautyCitaTheme.spaceLG),
+                      const SizedBox(height: AppConstants.paddingLG),
 
                       // Address
                       if (provider.address != null)
@@ -118,15 +121,15 @@ class ProviderDetailScreen extends ConsumerWidget {
                         _buildHoursSection(context, provider),
 
                       // Services header
-                      const SizedBox(height: BeautyCitaTheme.spaceLG),
+                      const SizedBox(height: AppConstants.paddingLG),
                       Text(
                         'Servicios',
                         style:
                             Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                  color: BeautyCitaTheme.textDark,
+                                  color: colorScheme.onSurface,
                                 ),
                       ),
-                      const SizedBox(height: BeautyCitaTheme.spaceSM),
+                      const SizedBox(height: AppConstants.paddingSM),
                     ],
                   ),
                 ),
@@ -137,7 +140,7 @@ class ProviderDetailScreen extends ConsumerWidget {
 
               // Bottom padding
               const SliverToBoxAdapter(
-                child: SizedBox(height: BeautyCitaTheme.spaceXXL),
+                child: SizedBox(height: AppConstants.paddingXXL),
               ),
             ],
           ),
@@ -150,10 +153,12 @@ class ProviderDetailScreen extends ConsumerWidget {
   // SliverAppBar
   // ---------------------------------------------------------------------------
   Widget _buildSliverAppBar(BuildContext context, models.Provider provider) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return SliverAppBar(
       expandedHeight: 260,
       pinned: true,
-      backgroundColor: BeautyCitaTheme.primaryRose,
+      backgroundColor: colorScheme.primary,
       leading: Container(
         margin: const EdgeInsets.all(8),
         decoration: BoxDecoration(
@@ -171,17 +176,19 @@ class ProviderDetailScreen extends ConsumerWidget {
                 provider.photoUrl!,
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) =>
-                    _buildGradientPlaceholder(provider.name),
+                    _buildGradientPlaceholder(context, provider.name),
               )
-            : _buildGradientPlaceholder(provider.name),
+            : _buildGradientPlaceholder(context, provider.name),
       ),
     );
   }
 
-  Widget _buildGradientPlaceholder(String name) {
+  Widget _buildGradientPlaceholder(BuildContext context, String name) {
+    final ext = Theme.of(context).extension<BCThemeExtension>()!;
+
     return Container(
-      decoration: const BoxDecoration(
-        gradient: BeautyCitaTheme.primaryGradient,
+      decoration: BoxDecoration(
+        gradient: ext.primaryGradient,
       ),
       child: Center(
         child: Column(
@@ -192,10 +199,10 @@ class ProviderDetailScreen extends ConsumerWidget {
               size: 64,
               color: Colors.white70,
             ),
-            const SizedBox(height: BeautyCitaTheme.spaceSM),
+            const SizedBox(height: AppConstants.paddingSM),
             Padding(
               padding:
-                  const EdgeInsets.symmetric(horizontal: BeautyCitaTheme.spaceLG),
+                  const EdgeInsets.symmetric(horizontal: AppConstants.paddingLG),
               child: Text(
                 name,
                 style: const TextStyle(
@@ -219,6 +226,7 @@ class ProviderDetailScreen extends ConsumerWidget {
   // ---------------------------------------------------------------------------
   Widget _buildHeader(BuildContext context, models.Provider provider) {
     final textTheme = Theme.of(context).textTheme;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -231,37 +239,37 @@ class ProviderDetailScreen extends ConsumerWidget {
                 provider.name,
                 style: textTheme.headlineMedium?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: BeautyCitaTheme.textDark,
+                  color: colorScheme.onSurface,
                 ),
               ),
             ),
             if (provider.isVerified)
               Container(
-                margin: const EdgeInsets.only(left: BeautyCitaTheme.spaceSM),
+                margin: const EdgeInsets.only(left: AppConstants.paddingSM),
                 padding: const EdgeInsets.symmetric(
-                  horizontal: BeautyCitaTheme.spaceSM,
-                  vertical: BeautyCitaTheme.spaceXS,
+                  horizontal: AppConstants.paddingSM,
+                  vertical: AppConstants.paddingXS,
                 ),
                 decoration: BoxDecoration(
-                  color: BeautyCitaTheme.primaryRose.withValues(alpha: 0.1),
+                  color: colorScheme.primary.withValues(alpha: 0.1),
                   borderRadius:
-                      BorderRadius.circular(BeautyCitaTheme.radiusSmall),
+                      BorderRadius.circular(AppConstants.radiusSM),
                 ),
-                child: const Row(
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
                       Icons.verified,
                       size: 16,
-                      color: BeautyCitaTheme.primaryRose,
+                      color: colorScheme.primary,
                     ),
-                    SizedBox(width: 4),
+                    const SizedBox(width: 4),
                     Text(
                       'Verificado',
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: BeautyCitaTheme.primaryRose,
+                        color: colorScheme.primary,
                       ),
                     ),
                   ],
@@ -270,25 +278,25 @@ class ProviderDetailScreen extends ConsumerWidget {
           ],
         ),
 
-        const SizedBox(height: BeautyCitaTheme.spaceSM),
+        const SizedBox(height: AppConstants.paddingSM),
 
         // Rating and review count
         Row(
           children: [
-            ..._buildStarIcons(provider.rating ?? 0),
-            const SizedBox(width: BeautyCitaTheme.spaceSM),
+            ..._buildStarIcons(context, provider.rating ?? 0),
+            const SizedBox(width: AppConstants.paddingSM),
             Text(
               provider.rating != null
                   ? provider.rating!.toStringAsFixed(1)
                   : '0.0',
               style: textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.bold,
-                color: BeautyCitaTheme.secondaryGold,
+                color: colorScheme.secondary,
               ),
             ),
-            const SizedBox(width: BeautyCitaTheme.spaceXS),
+            const SizedBox(width: AppConstants.paddingXS),
             Text(
-              '(${provider.reviewsCount} ${provider.reviewsCount == 1 ? 'reseña' : 'reseñas'})',
+              '(${provider.reviewsCount} ${provider.reviewsCount == 1 ? 'resena' : 'resenas'})',
               style: textTheme.bodySmall,
             ),
           ],
@@ -296,15 +304,15 @@ class ProviderDetailScreen extends ConsumerWidget {
 
         // Business category chip
         if (provider.businessCategory != null) ...[
-          const SizedBox(height: BeautyCitaTheme.spaceSM),
+          const SizedBox(height: AppConstants.paddingSM),
           Chip(
             label: Text(provider.businessCategory!),
-            backgroundColor: BeautyCitaTheme.surfaceCream,
+            backgroundColor: colorScheme.surface,
             side: BorderSide.none,
             padding: EdgeInsets.zero,
-            labelStyle: const TextStyle(
+            labelStyle: TextStyle(
               fontSize: 13,
-              color: BeautyCitaTheme.textLight,
+              color: colorScheme.onSurface.withValues(alpha: 0.5),
             ),
           ),
         ],
@@ -312,13 +320,14 @@ class ProviderDetailScreen extends ConsumerWidget {
     );
   }
 
-  List<Widget> _buildStarIcons(double rating) {
+  List<Widget> _buildStarIcons(BuildContext context, double rating) {
+    final colorScheme = Theme.of(context).colorScheme;
     final stars = <Widget>[];
     for (int i = 1; i <= 5; i++) {
       if (rating >= i) {
-        stars.add(const Icon(Icons.star, size: 20, color: BeautyCitaTheme.secondaryGold));
+        stars.add(Icon(Icons.star, size: 20, color: colorScheme.secondary));
       } else if (rating >= i - 0.5) {
-        stars.add(const Icon(Icons.star_half, size: 20, color: BeautyCitaTheme.secondaryGold));
+        stars.add(Icon(Icons.star_half, size: 20, color: colorScheme.secondary));
       } else {
         stars.add(Icon(Icons.star_border, size: 20, color: Colors.grey.shade300));
       }
@@ -330,22 +339,24 @@ class ProviderDetailScreen extends ConsumerWidget {
   // Address section
   // ---------------------------------------------------------------------------
   Widget _buildAddressSection(BuildContext context, models.Provider provider) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Padding(
-      padding: const EdgeInsets.only(bottom: BeautyCitaTheme.spaceMD),
+      padding: const EdgeInsets.only(bottom: AppConstants.paddingMD),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(
+          Icon(
             Icons.location_on_outlined,
-            color: BeautyCitaTheme.primaryRose,
+            color: colorScheme.primary,
             size: 22,
           ),
-          const SizedBox(width: BeautyCitaTheme.spaceSM),
+          const SizedBox(width: AppConstants.paddingSM),
           Expanded(
             child: Text(
               '${provider.address}, ${provider.city}, ${provider.state}',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: BeautyCitaTheme.textLight,
+                    color: colorScheme.onSurface.withValues(alpha: 0.5),
                   ),
             ),
           ),
@@ -359,7 +370,7 @@ class ProviderDetailScreen extends ConsumerWidget {
   // ---------------------------------------------------------------------------
   Widget _buildContactSection(BuildContext context, models.Provider provider) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: BeautyCitaTheme.spaceMD),
+      padding: const EdgeInsets.only(bottom: AppConstants.paddingMD),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -369,7 +380,7 @@ class ProviderDetailScreen extends ConsumerWidget {
                   fontWeight: FontWeight.bold,
                 ),
           ),
-          const SizedBox(height: BeautyCitaTheme.spaceSM),
+          const SizedBox(height: AppConstants.paddingSM),
           Row(
             children: [
               if (provider.phone != null)
@@ -381,13 +392,13 @@ class ProviderDetailScreen extends ConsumerWidget {
                   ),
                 ),
               if (provider.phone != null && provider.whatsapp != null)
-                const SizedBox(width: BeautyCitaTheme.spaceSM),
+                const SizedBox(width: AppConstants.paddingSM),
               if (provider.whatsapp != null)
                 Expanded(
                   child: _ContactButton(
                     icon: Icons.chat_outlined,
                     label: 'WhatsApp',
-                    color: const Color(0xFF25D366),
+                    color: kWhatsAppGreen,
                     onTap: () => _launchUrl(
                       'https://wa.me/${provider.whatsapp}',
                     ),
@@ -405,7 +416,7 @@ class ProviderDetailScreen extends ConsumerWidget {
   // ---------------------------------------------------------------------------
   Widget _buildSocialSection(BuildContext context, models.Provider provider) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: BeautyCitaTheme.spaceMD),
+      padding: const EdgeInsets.only(bottom: AppConstants.paddingMD),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -415,10 +426,10 @@ class ProviderDetailScreen extends ConsumerWidget {
                   fontWeight: FontWeight.bold,
                 ),
           ),
-          const SizedBox(height: BeautyCitaTheme.spaceSM),
+          const SizedBox(height: AppConstants.paddingSM),
           Wrap(
-            spacing: BeautyCitaTheme.spaceSM,
-            runSpacing: BeautyCitaTheme.spaceSM,
+            spacing: AppConstants.paddingSM,
+            runSpacing: AppConstants.paddingSM,
             children: [
               if (provider.instagramHandle != null)
                 _SocialChip(
@@ -452,6 +463,7 @@ class ProviderDetailScreen extends ConsumerWidget {
   // ---------------------------------------------------------------------------
   Widget _buildHoursSection(BuildContext context, models.Provider provider) {
     final hours = provider.hours!;
+    final colorScheme = Theme.of(context).colorScheme;
 
     // Ordered days in Spanish
     const dayOrder = [
@@ -466,15 +478,15 @@ class ProviderDetailScreen extends ConsumerWidget {
     const dayLabels = {
       'lunes': 'Lunes',
       'martes': 'Martes',
-      'miercoles': 'Miércoles',
+      'miercoles': 'Miercoles',
       'jueves': 'Jueves',
       'viernes': 'Viernes',
-      'sabado': 'Sábado',
+      'sabado': 'Sabado',
       'domingo': 'Domingo',
     };
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: BeautyCitaTheme.spaceMD),
+      padding: const EdgeInsets.only(bottom: AppConstants.paddingMD),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -484,14 +496,14 @@ class ProviderDetailScreen extends ConsumerWidget {
                   fontWeight: FontWeight.bold,
                 ),
           ),
-          const SizedBox(height: BeautyCitaTheme.spaceSM),
+          const SizedBox(height: AppConstants.paddingSM),
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(BeautyCitaTheme.spaceMD),
+            padding: const EdgeInsets.all(AppConstants.paddingMD),
             decoration: BoxDecoration(
-              color: BeautyCitaTheme.surfaceCream,
+              color: colorScheme.surface,
               borderRadius:
-                  BorderRadius.circular(BeautyCitaTheme.radiusSmall),
+                  BorderRadius.circular(AppConstants.radiusSM),
             ),
             child: Column(
               children: dayOrder.map((day) {
@@ -514,7 +526,7 @@ class ProviderDetailScreen extends ConsumerWidget {
 
                 return Padding(
                   padding: const EdgeInsets.symmetric(
-                    vertical: BeautyCitaTheme.spaceXS,
+                    vertical: AppConstants.paddingXS,
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -525,8 +537,8 @@ class ProviderDetailScreen extends ConsumerWidget {
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                           color: isClosed
-                              ? BeautyCitaTheme.textLight
-                              : BeautyCitaTheme.textDark,
+                              ? colorScheme.onSurface.withValues(alpha: 0.5)
+                              : colorScheme.onSurface,
                         ),
                       ),
                       Text(
@@ -534,8 +546,8 @@ class ProviderDetailScreen extends ConsumerWidget {
                         style: TextStyle(
                           fontSize: 14,
                           color: isClosed
-                              ? BeautyCitaTheme.textLight
-                              : BeautyCitaTheme.textDark,
+                              ? colorScheme.onSurface.withValues(alpha: 0.5)
+                              : colorScheme.onSurface,
                         ),
                       ),
                     ],
@@ -556,24 +568,26 @@ class ProviderDetailScreen extends ConsumerWidget {
     BuildContext context,
     AsyncValue<List<models.ProviderService>> servicesAsync,
   ) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return servicesAsync.when(
-      loading: () => const SliverToBoxAdapter(
+      loading: () => SliverToBoxAdapter(
         child: Padding(
-          padding: EdgeInsets.all(BeautyCitaTheme.spaceLG),
+          padding: const EdgeInsets.all(AppConstants.paddingLG),
           child: Center(
             child: CircularProgressIndicator(
-              color: BeautyCitaTheme.primaryRose,
+              color: colorScheme.primary,
             ),
           ),
         ),
       ),
       error: (error, _) => SliverToBoxAdapter(
         child: Padding(
-          padding: const EdgeInsets.all(BeautyCitaTheme.spaceLG),
+          padding: const EdgeInsets.all(AppConstants.paddingLG),
           child: Center(
             child: Text(
               'Error al cargar servicios: $error',
-              style: const TextStyle(color: BeautyCitaTheme.textLight),
+              style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.5)),
               textAlign: TextAlign.center,
             ),
           ),
@@ -581,13 +595,13 @@ class ProviderDetailScreen extends ConsumerWidget {
       ),
       data: (services) {
         if (services.isEmpty) {
-          return const SliverToBoxAdapter(
+          return SliverToBoxAdapter(
             child: Padding(
-              padding: EdgeInsets.all(BeautyCitaTheme.spaceLG),
+              padding: const EdgeInsets.all(AppConstants.paddingLG),
               child: Center(
                 child: Text(
                   'No hay servicios disponibles',
-                  style: TextStyle(color: BeautyCitaTheme.textLight),
+                  style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.5)),
                 ),
               ),
             ),
@@ -642,24 +656,24 @@ class _ContactButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final buttonColor = color ?? BeautyCitaTheme.primaryRose;
+    final buttonColor = color ?? Theme.of(context).colorScheme.primary;
 
     return Material(
       color: buttonColor.withValues(alpha: 0.1),
-      borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusSmall),
+      borderRadius: BorderRadius.circular(AppConstants.radiusSM),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusSmall),
+        borderRadius: BorderRadius.circular(AppConstants.radiusSM),
         child: Padding(
           padding: const EdgeInsets.symmetric(
-            vertical: BeautyCitaTheme.spaceMD,
-            horizontal: BeautyCitaTheme.spaceSM,
+            vertical: AppConstants.paddingMD,
+            horizontal: AppConstants.paddingSM,
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(icon, color: buttonColor, size: 20),
-              const SizedBox(width: BeautyCitaTheme.spaceSM),
+              const SizedBox(width: AppConstants.paddingSM),
               Text(
                 label,
                 style: TextStyle(
@@ -689,15 +703,17 @@ class _SocialChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return ActionChip(
-      avatar: Icon(icon, size: 18, color: BeautyCitaTheme.primaryRose),
+      avatar: Icon(icon, size: 18, color: colorScheme.primary),
       label: Text(label),
       onPressed: onTap,
-      backgroundColor: BeautyCitaTheme.surfaceCream,
+      backgroundColor: colorScheme.surface,
       side: BorderSide.none,
-      labelStyle: const TextStyle(
+      labelStyle: TextStyle(
         fontSize: 13,
-        color: BeautyCitaTheme.textDark,
+        color: colorScheme.onSurface,
       ),
     );
   }
@@ -747,20 +763,21 @@ class _ServiceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Padding(
       padding: const EdgeInsets.symmetric(
-        horizontal: BeautyCitaTheme.spaceMD,
-        vertical: BeautyCitaTheme.spaceXS,
+        horizontal: AppConstants.paddingMD,
+        vertical: AppConstants.paddingXS,
       ),
       child: Card(
-        elevation: BeautyCitaTheme.elevationCard,
+        elevation: AppConstants.elevationLow,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+          borderRadius: BorderRadius.circular(AppConstants.radiusMD),
         ),
         child: Padding(
-          padding: const EdgeInsets.all(BeautyCitaTheme.spaceMD),
+          padding: const EdgeInsets.all(AppConstants.paddingMD),
           child: Row(
             children: [
               // Service info
@@ -772,27 +789,27 @@ class _ServiceCard extends StatelessWidget {
                       service.serviceName,
                       style: textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w700,
-                        color: BeautyCitaTheme.textDark,
+                        color: colorScheme.onSurface,
                       ),
                     ),
-                    const SizedBox(height: BeautyCitaTheme.spaceXS),
+                    const SizedBox(height: AppConstants.paddingXS),
                     Text(
                       '${service.category} / ${service.subcategory}',
                       style: textTheme.bodySmall?.copyWith(
-                        color: BeautyCitaTheme.textLight,
+                        color: colorScheme.onSurface.withValues(alpha: 0.5),
                       ),
                     ),
-                    const SizedBox(height: BeautyCitaTheme.spaceSM),
+                    const SizedBox(height: AppConstants.paddingSM),
                     Row(
                       children: [
                         Text(
                           _formatPrice(),
                           style: textTheme.titleSmall?.copyWith(
-                            color: BeautyCitaTheme.primaryRose,
+                            color: colorScheme.primary,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        const SizedBox(width: BeautyCitaTheme.spaceMD),
+                        const SizedBox(width: AppConstants.paddingMD),
                         Icon(
                           Icons.schedule,
                           size: 16,
@@ -802,7 +819,7 @@ class _ServiceCard extends StatelessWidget {
                         Text(
                           _formatDuration(),
                           style: textTheme.bodySmall?.copyWith(
-                            color: BeautyCitaTheme.textLight,
+                            color: colorScheme.onSurface.withValues(alpha: 0.5),
                           ),
                         ),
                       ],
@@ -811,7 +828,7 @@ class _ServiceCard extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(width: BeautyCitaTheme.spaceSM),
+              const SizedBox(width: AppConstants.paddingSM),
 
               // Book button
               SizedBox(
@@ -821,11 +838,11 @@ class _ServiceCard extends StatelessWidget {
                   style: ElevatedButton.styleFrom(
                     minimumSize: const Size(0, 40),
                     padding: const EdgeInsets.symmetric(
-                      horizontal: BeautyCitaTheme.spaceMD,
+                      horizontal: AppConstants.paddingMD,
                     ),
                     shape: RoundedRectangleBorder(
                       borderRadius:
-                          BorderRadius.circular(BeautyCitaTheme.radiusSmall),
+                          BorderRadius.circular(AppConstants.radiusSM),
                     ),
                   ),
                   child: const Text('Reservar'),
