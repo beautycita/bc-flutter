@@ -3,7 +3,9 @@ import 'package:flutter/material.dart' show Color, ThemeMode;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
+import 'package:beautycita/services/btcpay_service.dart';
 import 'package:beautycita/services/toast_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../models/curate_result.dart';
 import '../models/follow_up_question.dart';
 import '../repositories/booking_repository.dart';
@@ -65,6 +67,7 @@ class BookingFlowState {
   final Map<String, String> followUpAnswers;
   final String? bookingId;
   final bool uberScheduled;
+  final String paymentMethod; // 'card', 'oxxo', 'bitcoin'
 
   const BookingFlowState({
     this.step = BookingFlowStep.categorySelect,
@@ -83,6 +86,7 @@ class BookingFlowState {
     this.followUpAnswers = const {},
     this.bookingId,
     this.uberScheduled = false,
+    this.paymentMethod = 'card',
   });
 
   /// Returns the pickup location: custom if set, otherwise user's GPS location.
@@ -114,6 +118,7 @@ class BookingFlowState {
     Map<String, String>? followUpAnswers,
     String? bookingId,
     bool? uberScheduled,
+    String? paymentMethod,
   }) {
     return BookingFlowState(
       step: step ?? this.step,
@@ -132,6 +137,7 @@ class BookingFlowState {
       followUpAnswers: followUpAnswers ?? this.followUpAnswers,
       bookingId: bookingId ?? this.bookingId,
       uberScheduled: uberScheduled ?? this.uberScheduled,
+      paymentMethod: paymentMethod ?? this.paymentMethod,
     );
   }
 }
@@ -253,7 +259,12 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
     );
   }
 
-  /// User confirmed the booking — collect payment, create appointment, schedule Uber.
+  /// User selected a payment method on the confirmation screen.
+  void selectPaymentMethod(String method) {
+    state = state.copyWith(paymentMethod: method);
+  }
+
+  /// User confirmed the booking — route by payment method.
   Future<void> confirmBooking() async {
     final result = state.selectedResult;
     if (result == null) return;
@@ -261,134 +272,15 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
     state = state.copyWith(step: BookingFlowStep.booking);
 
     try {
-      // 1. Create PaymentIntent via edge function
-      String? paymentIntentId;
-      final serviceId = result.service.id;
-
-      if (serviceId.isNotEmpty && result.service.price > 0) {
-        debugPrint('[PAYMENT] Creating PaymentIntent for service $serviceId');
-
-        final piResponse = await SupabaseClientService.client.functions.invoke(
-          'create-payment-intent',
-          body: {
-            'service_id': serviceId,
-            'scheduled_at': result.slot.startTime.toUtc().toIso8601String(),
-            'payment_type': 'full',
-          },
-        );
-
-        if (piResponse.status != 200) {
-          final error = piResponse.data is Map
-              ? piResponse.data['error'] ?? 'Payment error'
-              : 'Payment error';
-          throw Exception(error);
-        }
-
-        final piData = piResponse.data as Map<String, dynamic>;
-        final clientSecret = piData['client_secret'] as String;
-        paymentIntentId = piData['payment_intent_id'] as String;
-        final customerId = piData['customer_id'] as String?;
-        final ephemeralKey = piData['ephemeral_key'] as String?;
-
-        debugPrint('[PAYMENT] PaymentIntent created: $paymentIntentId');
-        debugPrint('[PAYMENT] Customer: $customerId, ephemeral key: ${ephemeralKey != null ? "present" : "missing"}');
-
-        // 2. Present Stripe Payment Sheet (themed to match BeautyCita)
-        await Stripe.instance.initPaymentSheet(
-          paymentSheetParameters: SetupPaymentSheetParameters(
-            paymentIntentClientSecret: clientSecret,
-            customerId: customerId,
-            customerEphemeralKeySecret: ephemeralKey,
-            merchantDisplayName: 'BeautyCita',
-            returnURL: 'beautycita://stripe-redirect',
-            allowsDelayedPaymentMethods: true,
-            billingDetailsCollectionConfiguration: const BillingDetailsCollectionConfiguration(
-              name: CollectionMode.automatic,
-              email: CollectionMode.never,
-              phone: CollectionMode.never,
-              address: AddressCollectionMode.never,
-            ),
-            style: ThemeMode.light,
-            appearance: const PaymentSheetAppearance(
-              colors: PaymentSheetAppearanceColors(
-                primary: Color(0xFFC2185B),
-                background: Color(0xFFF9F9F9),
-                componentBackground: Color(0xFFF5F5F5),
-                componentBorder: Color(0xFFBDBDBD),
-                componentDivider: Color(0xFFE0E0E0),
-                primaryText: Color(0xFF000000),
-                secondaryText: Color(0xFF424242),
-                placeholderText: Color(0xFF9E9E9E),
-                icon: Color(0xFFC2185B),
-                error: Color(0xFFD32F2F),
-              ),
-              shapes: PaymentSheetShape(
-                borderRadius: 12,
-                borderWidth: 1.0,
-              ),
-              primaryButton: PaymentSheetPrimaryButtonAppearance(
-                colors: PaymentSheetPrimaryButtonTheme(
-                  light: PaymentSheetPrimaryButtonThemeColors(
-                    background: Color(0xFFC2185B),
-                    text: Color(0xFFFFFFFF),
-                    border: Color(0xFFC2185B),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
-
-        await Stripe.instance.presentPaymentSheet();
-        debugPrint('[PAYMENT] Payment completed successfully');
+      switch (state.paymentMethod) {
+        case 'bitcoin':
+          await _confirmBitcoin(result);
+        case 'oxxo':
+          await _confirmStripe(result, oxxoOnly: true);
+        default: // card
+          await _confirmStripe(result, oxxoOnly: false);
       }
-
-      // 3. Create the appointment (only after payment succeeds)
-      final booking = await _bookingRepo.createBooking(
-        providerId: result.business.id,
-        providerServiceId: result.service.id,
-        serviceName: result.service.name,
-        category: state.serviceType ?? '',
-        scheduledAt: result.slot.startTime,
-        durationMinutes: result.service.durationMinutes,
-        price: result.service.price,
-        paymentIntentId: paymentIntentId,
-        paymentStatus: paymentIntentId != null ? 'paid' : null,
-      );
-
-      bool uberOk = false;
-
-      // 4. If transport is uber, schedule rides
-      final pickup = state.pickupLocation;
-      if (state.transportMode == 'uber' && pickup != null) {
-        try {
-          final uberResult = await _uberService.scheduleRides(
-            appointmentId: booking.id,
-            pickupLat: pickup.lat,
-            pickupLng: pickup.lng,
-            salonLat: result.business.lat,
-            salonLng: result.business.lng,
-            salonAddress: result.business.address,
-            appointmentAt: result.slot.startTime.toUtc().toIso8601String(),
-            durationMinutes: result.service.durationMinutes,
-          );
-          uberOk = uberResult.scheduled;
-          if (!uberOk) {
-            debugPrint('Uber scheduling skipped: ${uberResult.reason}');
-          }
-        } catch (e) {
-          debugPrint('Uber scheduling error: $e');
-          // Booking was created, Uber just didn't work — don't fail the whole thing
-        }
-      }
-
-      state = state.copyWith(
-        step: BookingFlowStep.booked,
-        bookingId: booking.id,
-        uberScheduled: uberOk,
-      );
     } on StripeException catch (e) {
-      // User cancelled the payment sheet or payment failed
       debugPrint('[PAYMENT] Stripe error: ${e.error.localizedMessage}');
       final msg = e.error.code == FailureCode.Canceled
           ? 'Pago cancelado'
@@ -405,6 +297,186 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
         step: BookingFlowStep.error,
         error: msg,
       );
+    }
+  }
+
+  /// Card / OXXO path — Stripe PaymentSheet.
+  Future<void> _confirmStripe(ResultCard result, {required bool oxxoOnly}) async {
+    String? paymentIntentId;
+    final serviceId = result.service.id;
+
+    if (serviceId.isNotEmpty && result.service.price > 0) {
+      debugPrint('[PAYMENT] Creating PaymentIntent (${oxxoOnly ? "oxxo" : "card"}) for service $serviceId');
+
+      final piResponse = await SupabaseClientService.client.functions.invoke(
+        'create-payment-intent',
+        body: {
+          'service_id': serviceId,
+          'scheduled_at': result.slot.startTime.toUtc().toIso8601String(),
+          'payment_type': 'full',
+          'payment_method': oxxoOnly ? 'oxxo' : 'card',
+        },
+      );
+
+      if (piResponse.status != 200) {
+        final error = piResponse.data is Map
+            ? piResponse.data['error'] ?? 'Payment error'
+            : 'Payment error';
+        throw Exception(error);
+      }
+
+      final piData = piResponse.data as Map<String, dynamic>;
+      final clientSecret = piData['client_secret'] as String;
+      paymentIntentId = piData['payment_intent_id'] as String;
+      final customerId = piData['customer_id'] as String?;
+      final ephemeralKey = piData['ephemeral_key'] as String?;
+
+      debugPrint('[PAYMENT] PaymentIntent created: $paymentIntentId');
+
+      await Stripe.instance.initPaymentSheet(
+        paymentSheetParameters: SetupPaymentSheetParameters(
+          paymentIntentClientSecret: clientSecret,
+          customerId: customerId,
+          customerEphemeralKeySecret: ephemeralKey,
+          merchantDisplayName: 'BeautyCita',
+          returnURL: 'beautycita://stripe-redirect',
+          allowsDelayedPaymentMethods: true,
+          billingDetailsCollectionConfiguration: const BillingDetailsCollectionConfiguration(
+            name: CollectionMode.automatic,
+            email: CollectionMode.never,
+            phone: CollectionMode.never,
+            address: AddressCollectionMode.never,
+          ),
+          style: ThemeMode.light,
+          appearance: const PaymentSheetAppearance(
+            colors: PaymentSheetAppearanceColors(
+              primary: Color(0xFFC2185B),
+              background: Color(0xFFF9F9F9),
+              componentBackground: Color(0xFFF5F5F5),
+              componentBorder: Color(0xFFBDBDBD),
+              componentDivider: Color(0xFFE0E0E0),
+              primaryText: Color(0xFF000000),
+              secondaryText: Color(0xFF424242),
+              placeholderText: Color(0xFF9E9E9E),
+              icon: Color(0xFFC2185B),
+              error: Color(0xFFD32F2F),
+            ),
+            shapes: PaymentSheetShape(
+              borderRadius: 12,
+              borderWidth: 1.0,
+            ),
+            primaryButton: PaymentSheetPrimaryButtonAppearance(
+              colors: PaymentSheetPrimaryButtonTheme(
+                light: PaymentSheetPrimaryButtonThemeColors(
+                  background: Color(0xFFC2185B),
+                  text: Color(0xFFFFFFFF),
+                  border: Color(0xFFC2185B),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await Stripe.instance.presentPaymentSheet();
+      debugPrint('[PAYMENT] Payment sheet completed');
+    }
+
+    // For OXXO: booking is pending until they pay at the store
+    // For card: payment is instant
+    final isPaid = !oxxoOnly;
+
+    final booking = await _bookingRepo.createBooking(
+      providerId: result.business.id,
+      providerServiceId: result.service.id,
+      serviceName: result.service.name,
+      category: state.serviceType ?? '',
+      scheduledAt: result.slot.startTime,
+      durationMinutes: result.service.durationMinutes,
+      price: result.service.price,
+      paymentIntentId: paymentIntentId,
+      paymentStatus: paymentIntentId != null ? (isPaid ? 'paid' : 'pending_payment') : null,
+      paymentMethod: state.paymentMethod,
+    );
+
+    final uberOk = await _scheduleUber(result, booking.id);
+
+    state = state.copyWith(
+      step: BookingFlowStep.booked,
+      bookingId: booking.id,
+      uberScheduled: uberOk,
+    );
+  }
+
+  /// Bitcoin path — BTCPay invoice + external browser checkout.
+  Future<void> _confirmBitcoin(ResultCard result) async {
+    final serviceId = result.service.id;
+
+    // Create booking first as pending
+    final booking = await _bookingRepo.createBooking(
+      providerId: result.business.id,
+      providerServiceId: result.service.id,
+      serviceName: result.service.name,
+      category: state.serviceType ?? '',
+      scheduledAt: result.slot.startTime,
+      durationMinutes: result.service.durationMinutes,
+      price: result.service.price,
+      paymentStatus: 'pending_payment',
+      paymentMethod: 'bitcoin',
+    );
+
+    // Create BTCPay invoice
+    final invoice = await BTCPayService.createInvoice(
+      serviceId: serviceId,
+      scheduledAt: result.slot.startTime.toUtc().toIso8601String(),
+    );
+
+    debugPrint('[PAYMENT] BTCPay invoice created: ${invoice.invoiceId}');
+
+    // Store invoice ID on booking
+    await _bookingRepo.updateNotes(
+      booking.id,
+      'btcpay_invoice:${invoice.invoiceId}',
+    );
+
+    // Open checkout in external browser
+    final url = Uri.parse(invoice.checkoutLink);
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    }
+
+    final uberOk = await _scheduleUber(result, booking.id);
+
+    state = state.copyWith(
+      step: BookingFlowStep.booked,
+      bookingId: booking.id,
+      uberScheduled: uberOk,
+    );
+  }
+
+  /// Schedule Uber rides if transport mode is uber. Returns true if scheduled.
+  Future<bool> _scheduleUber(ResultCard result, String bookingId) async {
+    final pickup = state.pickupLocation;
+    if (state.transportMode != 'uber' || pickup == null) return false;
+
+    try {
+      final uberResult = await _uberService.scheduleRides(
+        appointmentId: bookingId,
+        pickupLat: pickup.lat,
+        pickupLng: pickup.lng,
+        salonLat: result.business.lat,
+        salonLng: result.business.lng,
+        salonAddress: result.business.address,
+        appointmentAt: result.slot.startTime.toUtc().toIso8601String(),
+        durationMinutes: result.service.durationMinutes,
+      );
+      if (!uberResult.scheduled) {
+        debugPrint('Uber scheduling skipped: ${uberResult.reason}');
+      }
+      return uberResult.scheduled;
+    } catch (e) {
+      debugPrint('Uber scheduling error: $e');
+      return false;
     }
   }
 

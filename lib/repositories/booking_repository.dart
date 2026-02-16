@@ -15,6 +15,8 @@ class BookingRepository {
     String? notes,
     String? paymentIntentId,
     String? paymentStatus,
+    String? paymentMethod,
+    String? btcpayInvoiceId,
   }) async {
     final userId = SupabaseClientService.currentUserId;
     if (userId == null) {
@@ -36,6 +38,8 @@ class BookingRepository {
       'status': paymentStatus == 'paid' ? 'confirmed' : 'pending',
       if (paymentIntentId != null) 'payment_intent_id': paymentIntentId,
       if (paymentStatus != null) 'payment_status': paymentStatus,
+      if (paymentMethod != null) 'payment_method': paymentMethod,
+      if (btcpayInvoiceId != null) 'btcpay_invoice_id': btcpayInvoiceId,
     };
 
     final response = await SupabaseClientService.client

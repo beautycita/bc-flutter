@@ -72,7 +72,7 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
         child: Column(
           children: [
             if (isBooked) ...[
-              const _SuccessBanner(),
+              _SuccessBanner(paymentMethod: state.paymentMethod),
               const SizedBox(height: BeautyCitaTheme.spaceMD),
             ] else ...[
               const CinematicQuestionText(
@@ -87,6 +87,13 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
             _TransportCard(result: result, isBooked: isBooked, uberScheduled: state.uberScheduled),
             const SizedBox(height: BeautyCitaTheme.spaceMD),
             _PriceBreakdown(result: result),
+            if (!isBooked) ...[
+              const SizedBox(height: BeautyCitaTheme.spaceMD),
+              _PaymentMethodSelector(
+                selected: state.paymentMethod,
+                onSelect: (method) => notifier.selectPaymentMethod(method),
+              ),
+            ],
             const SizedBox(height: BeautyCitaTheme.spaceXL),
             if (isBooked) ...[
               // Success actions — gold gradient button
@@ -183,28 +190,44 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
 // ---------------------------------------------------------------------------
 
 class _SuccessBanner extends StatelessWidget {
-  const _SuccessBanner();
+  final String paymentMethod;
+
+  const _SuccessBanner({required this.paymentMethod});
 
   @override
   Widget build(BuildContext context) {
+    final isPending = paymentMethod == 'oxxo' || paymentMethod == 'bitcoin';
+
+    String subtitle;
+    switch (paymentMethod) {
+      case 'oxxo':
+        subtitle = 'Ve a tu OXXO mas cercano para completar el pago';
+      case 'bitcoin':
+        subtitle = 'Completa el pago en Bitcoin para confirmar';
+      default:
+        subtitle = 'Te enviamos la confirmacion';
+    }
+
     return Column(
       children: [
         Container(
           width: 72,
           height: 72,
           decoration: BoxDecoration(
-            color: BeautyCitaTheme.secondaryGold.withValues(alpha: 0.12),
+            color: isPending
+                ? Colors.orange.withValues(alpha: 0.12)
+                : BeautyCitaTheme.secondaryGold.withValues(alpha: 0.12),
             shape: BoxShape.circle,
           ),
-          child: const Icon(
-            Icons.check_circle_rounded,
-            color: BeautyCitaTheme.secondaryGold,
+          child: Icon(
+            isPending ? Icons.schedule_rounded : Icons.check_circle_rounded,
+            color: isPending ? Colors.orange : BeautyCitaTheme.secondaryGold,
             size: 48,
           ),
         ),
         const SizedBox(height: BeautyCitaTheme.spaceMD),
         Text(
-          'Cita reservada',
+          isPending ? 'Pago pendiente' : 'Cita reservada',
           style: GoogleFonts.poppins(
             fontSize: 24,
             fontWeight: FontWeight.w700,
@@ -213,10 +236,11 @@ class _SuccessBanner extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          'Te enviamos la confirmacion',
+          subtitle,
+          textAlign: TextAlign.center,
           style: GoogleFonts.nunito(
             fontSize: 14,
-            color: BeautyCitaTheme.textLight,
+            color: isPending ? Colors.orange.shade700 : BeautyCitaTheme.textLight,
           ),
         ),
       ],
@@ -770,6 +794,140 @@ class _PriceBreakdown extends StatelessWidget {
               ),
             ],
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Payment method selector
+// ---------------------------------------------------------------------------
+
+class _PaymentMethodSelector extends StatelessWidget {
+  final String selected;
+  final ValueChanged<String> onSelect;
+
+  const _PaymentMethodSelector({
+    required this.selected,
+    required this.onSelect,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        _PaymentMethodCard(
+          icon: Icons.credit_card,
+          label: 'Tarjeta',
+          subtitle: 'Pago inmediato',
+          method: 'card',
+          isSelected: selected == 'card',
+          onTap: () => onSelect('card'),
+        ),
+        const SizedBox(width: 10),
+        _PaymentMethodCard(
+          icon: Icons.store,
+          label: 'OXXO',
+          subtitle: 'Paga en tienda',
+          method: 'oxxo',
+          isSelected: selected == 'oxxo',
+          onTap: () => onSelect('oxxo'),
+        ),
+        const SizedBox(width: 10),
+        _PaymentMethodCard(
+          icon: Icons.currency_bitcoin,
+          label: 'Bitcoin',
+          subtitle: 'Pago con crypto',
+          method: 'bitcoin',
+          isSelected: selected == 'bitcoin',
+          onTap: () => onSelect('bitcoin'),
+        ),
+      ],
+    );
+  }
+}
+
+class _PaymentMethodCard extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String subtitle;
+  final String method;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _PaymentMethodCard({
+    required this.icon,
+    required this.label,
+    required this.subtitle,
+    required this.method,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          HapticFeedback.lightImpact();
+          onTap();
+        },
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: _goldGradient,
+            borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: const Color(0xFFD4AF37).withValues(alpha: 0.5),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Container(
+            margin: const EdgeInsets.all(2),
+            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),
+            decoration: BoxDecoration(
+              color: isSelected ? const Color(0xFFFFF8DC) : Colors.white,
+              borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium - 2),
+            ),
+            child: Column(
+              children: [
+                Icon(
+                  icon,
+                  size: 28,
+                  color: isSelected
+                      ? const Color(0xFFB8860B)
+                      : BeautyCitaTheme.textLight,
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  label,
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: isSelected
+                        ? const Color(0xFF8B6914)
+                        : BeautyCitaTheme.textDark,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.nunito(
+                    fontSize: 10,
+                    color: isSelected
+                        ? const Color(0xFFA67C00)
+                        : BeautyCitaTheme.textLight,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

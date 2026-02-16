@@ -33,6 +33,7 @@ interface PaymentIntentRequest {
   staff_id?: string;
   scheduled_at: string; // ISO timestamp
   payment_type?: "full" | "deposit_only"; // default: full
+  payment_method?: "card" | "oxxo"; // default: card (bitcoin handled separately)
 }
 
 serve(async (req) => {
@@ -53,7 +54,7 @@ serve(async (req) => {
     }
 
     const body: PaymentIntentRequest = await req.json();
-    const { service_id, staff_id, scheduled_at, payment_type = "full" } = body;
+    const { service_id, staff_id, scheduled_at, payment_type = "full", payment_method = "card" } = body;
 
     if (!service_id || !scheduled_at) {
       return json({ error: "service_id and scheduled_at are required" }, 400);
@@ -157,14 +158,23 @@ serve(async (req) => {
         .eq("id", user.id);
     }
 
+    // Create ephemeral key for customer (needed by PaymentSheet)
+    const ephemeralKey = await stripe.ephemeralKeys.create(
+      { customer: stripeCustomerId! },
+      { apiVersion: "2023-10-16" },
+    );
+
+    // Payment method config: OXXO-only or automatic
+    const paymentMethodConfig = payment_method === "oxxo"
+      ? { payment_method_types: ["oxxo"] as string[] }
+      : { automatic_payment_methods: { enabled: true } };
+
     // Create PaymentIntent with Connect destination charge
     const paymentIntent = await stripe.paymentIntents.create({
       amount: amountCentavos,
       currency: "mxn",
       customer: stripeCustomerId,
-      automatic_payment_methods: {
-        enabled: true,
-      },
+      ...paymentMethodConfig,
       // Transfer to connected account, minus platform fee
       transfer_data: {
         destination: business.stripe_account_id,
@@ -179,6 +189,7 @@ serve(async (req) => {
         scheduled_at,
         user_id: user.id,
         payment_type,
+        payment_method,
         deposit_amount: depositAmount.toString(),
         full_price: servicePrice.toString(),
       },
@@ -192,11 +203,14 @@ serve(async (req) => {
     return json({
       client_secret: paymentIntent.client_secret,
       payment_intent_id: paymentIntent.id,
+      customer_id: stripeCustomerId,
+      ephemeral_key: ephemeralKey.secret,
       amount: chargeAmount,
       deposit_amount: depositAmount,
       platform_fee: platformFee / 100,
       provider_receives: (amountCentavos - platformFee) / 100,
       currency: "mxn",
+      payment_method,
       service: {
         id: service.id,
         name: service.name,
