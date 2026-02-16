@@ -131,6 +131,7 @@ class _VideoMapBackgroundState extends State<VideoMapBackground>
   Widget build(BuildContext context) {
     final aReady = _playerA.value.isInitialized;
     final bReady = _playerB.value.isInitialized;
+    final primary = Theme.of(context).colorScheme.primary;
 
     return RepaintBoundary(
       child: Stack(
@@ -158,9 +159,9 @@ class _VideoMapBackgroundState extends State<VideoMapBackground>
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  const Color(0xFFAD1457).withValues(alpha: 0.55),
-                  const Color(0xFFC2185B).withValues(alpha: 0.40),
-                  const Color(0xFFE91E63).withValues(alpha: 0.30),
+                  HSLColor.fromColor(primary).withLightness(0.25).toColor().withValues(alpha: 0.55),
+                  primary.withValues(alpha: 0.40),
+                  HSLColor.fromColor(primary).withLightness(0.55).toColor().withValues(alpha: 0.30),
                 ],
                 begin: Alignment.bottomCenter,
                 end: Alignment.topCenter,

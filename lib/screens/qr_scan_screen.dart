@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:beautycita/config/theme.dart';
 import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/services/qr_auth_service.dart';
 import 'package:beautycita/services/biometric_service.dart';
@@ -75,6 +74,9 @@ class _QrScanScreenState extends State<QrScanScreen> with SingleTickerProviderSt
       _status = ScanStatus.confirming;
     });
 
+    final primary = Theme.of(context).colorScheme.primary;
+    final onSurfaceLight = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
+
     // Show confirmation
     final confirmed = await showModalBottomSheet<bool>(
       context: context,
@@ -106,28 +108,28 @@ class _QrScanScreenState extends State<QrScanScreen> with SingleTickerProviderSt
                     ),
                   ),
                 ),
-                const SizedBox(height: BeautyCitaTheme.spaceMD),
-                const Icon(
+                const SizedBox(height: AppConstants.paddingMD),
+                Icon(
                   Icons.link_rounded,
                   size: AppConstants.iconSizeXL,
-                  color: BeautyCitaTheme.primaryRose,
+                  color: primary,
                 ),
-                const SizedBox(height: BeautyCitaTheme.spaceSM),
+                const SizedBox(height: AppConstants.paddingSM),
                 Text(
                   'Vincular dispositivo?',
                   style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
                 ),
-                const SizedBox(height: BeautyCitaTheme.spaceXS),
+                const SizedBox(height: AppConstants.paddingXS),
                 Text(
                   'Vas a iniciar sesion en BeautyCita Web.',
                   style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(
-                        color: BeautyCitaTheme.textLight,
+                        color: onSurfaceLight,
                       ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: BeautyCitaTheme.spaceSM),
+                const SizedBox(height: AppConstants.paddingSM),
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
@@ -148,7 +150,7 @@ class _QrScanScreenState extends State<QrScanScreen> with SingleTickerProviderSt
                     ],
                   ),
                 ),
-                const SizedBox(height: BeautyCitaTheme.spaceLG),
+                const SizedBox(height: AppConstants.paddingLG),
                 Row(
                   children: [
                     Expanded(
@@ -165,12 +167,12 @@ class _QrScanScreenState extends State<QrScanScreen> with SingleTickerProviderSt
                         child: const Text('Cancelar'),
                       ),
                     ),
-                    const SizedBox(width: BeautyCitaTheme.spaceSM),
+                    const SizedBox(width: AppConstants.paddingSM),
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () => Navigator.pop(ctx, true),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: BeautyCitaTheme.primaryRose,
+                          backgroundColor: primary,
                           minimumSize:
                               const Size(0, AppConstants.minTouchHeight),
                           shape: RoundedRectangleBorder(
@@ -252,6 +254,8 @@ class _QrScanScreenState extends State<QrScanScreen> with SingleTickerProviderSt
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
@@ -284,7 +288,7 @@ class _QrScanScreenState extends State<QrScanScreen> with SingleTickerProviderSt
                     onDetect: _handleBarcode,
                   ),
                   CustomPaint(
-                    painter: _ViewfinderPainter(),
+                    painter: _ViewfinderPainter(accentColor: primary),
                     size: Size.infinite,
                   ),
                   // Instruction text
@@ -367,6 +371,8 @@ class _QrScanScreenState extends State<QrScanScreen> with SingleTickerProviderSt
   }
 
   Widget _buildManualEntry() {
+    final primary = Theme.of(context).colorScheme.primary;
+
     return Container(
       color: Colors.black,
       padding: const EdgeInsets.all(32),
@@ -377,7 +383,7 @@ class _QrScanScreenState extends State<QrScanScreen> with SingleTickerProviderSt
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: BeautyCitaTheme.primaryRose.withValues(alpha: 0.15),
+                color: primary.withValues(alpha: 0.15),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.keyboard_rounded, color: Colors.white, size: 40),
@@ -417,8 +423,8 @@ class _QrScanScreenState extends State<QrScanScreen> with SingleTickerProviderSt
                   enabledBorder: UnderlineInputBorder(
                     borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.3), width: 2),
                   ),
-                  focusedBorder: const UnderlineInputBorder(
-                    borderSide: BorderSide(color: BeautyCitaTheme.primaryRose, width: 2),
+                  focusedBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: primary, width: 2),
                   ),
                 ),
                 textCapitalization: TextCapitalization.characters,
@@ -432,7 +438,7 @@ class _QrScanScreenState extends State<QrScanScreen> with SingleTickerProviderSt
               child: FilledButton(
                 onPressed: _isProcessing ? null : _submitManualCode,
                 style: FilledButton.styleFrom(
-                  backgroundColor: BeautyCitaTheme.primaryRose,
+                  backgroundColor: primary,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 child: Text(
@@ -451,6 +457,8 @@ class _QrScanScreenState extends State<QrScanScreen> with SingleTickerProviderSt
     final isSuccess = _status == ScanStatus.success;
     final isError = _status == ScanStatus.error;
     final isProcessing = _status == ScanStatus.processing;
+    final primary = Theme.of(context).colorScheme.primary;
+    final onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Container(
       color: Colors.black.withValues(alpha: 0.8),
@@ -468,8 +476,8 @@ class _QrScanScreenState extends State<QrScanScreen> with SingleTickerProviderSt
             mainAxisSize: MainAxisSize.min,
             children: [
               if (isProcessing)
-                const CircularProgressIndicator(
-                  color: BeautyCitaTheme.primaryRose,
+                CircularProgressIndicator(
+                  color: primary,
                 )
               else if (isSuccess)
                 Container(
@@ -499,7 +507,7 @@ class _QrScanScreenState extends State<QrScanScreen> with SingleTickerProviderSt
                     size: 56,
                   ),
                 ),
-              const SizedBox(height: BeautyCitaTheme.spaceLG),
+              const SizedBox(height: AppConstants.paddingLG),
               Text(
                 isProcessing
                     ? 'Vinculando...'
@@ -509,7 +517,7 @@ class _QrScanScreenState extends State<QrScanScreen> with SingleTickerProviderSt
                 style: GoogleFonts.poppins(
                   fontSize: isError ? 16 : 20,
                   fontWeight: FontWeight.w700,
-                  color: isError ? Colors.red.shade700 : BeautyCitaTheme.textDark,
+                  color: isError ? Colors.red.shade700 : onSurface,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -530,6 +538,10 @@ enum ScanStatus {
 }
 
 class _ViewfinderPainter extends CustomPainter {
+  final Color accentColor;
+
+  _ViewfinderPainter({required this.accentColor});
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
@@ -559,7 +571,7 @@ class _ViewfinderPainter extends CustomPainter {
     canvas.drawRRect(cutoutRect, borderPaint);
 
     final accentPaint = Paint()
-      ..color = BeautyCitaTheme.primaryRose
+      ..color = accentColor
       ..style = PaintingStyle.stroke
       ..strokeWidth = 4
       ..strokeCap = StrokeCap.round;
@@ -616,5 +628,6 @@ class _ViewfinderPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _ViewfinderPainter oldDelegate) =>
+      oldDelegate.accentColor != accentColor;
 }

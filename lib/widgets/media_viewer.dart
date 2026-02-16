@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import '../config/theme.dart';
 import '../services/media_service.dart';
 
 /// Full-screen image viewer with swipe navigation and action bar.
@@ -47,6 +46,8 @@ class _MediaViewerState extends State<MediaViewer> {
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+
     return Scaffold(
       backgroundColor: Colors.black,
       extendBodyBehindAppBar: true,
@@ -72,7 +73,7 @@ class _MediaViewerState extends State<MediaViewer> {
               margin: const EdgeInsets.only(right: 12),
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: BeautyCitaTheme.primaryRose.withValues(alpha: 0.8),
+                color: primary.withValues(alpha: 0.8),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
@@ -109,7 +110,7 @@ class _MediaViewerState extends State<MediaViewer> {
                             ? progress.cumulativeBytesLoaded /
                                 progress.expectedTotalBytes!
                             : null,
-                        color: BeautyCitaTheme.primaryRose,
+                        color: primary,
                       ),
                     );
                   },

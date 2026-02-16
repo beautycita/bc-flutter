@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:beautycita/config/constants.dart';
-import 'package:beautycita/config/theme.dart';
 import 'package:beautycita/providers/booking_flow_provider.dart'
     show placesServiceProvider, uberServiceProvider;
 import 'package:beautycita/services/location_service.dart';
@@ -182,6 +181,9 @@ class _LocationPickerBodyState extends State<_LocationPickerBody> {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final primary = Theme.of(context).colorScheme.primary;
+    final surface = Theme.of(context).colorScheme.surface;
+    final onSurfaceLight = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     return AnimatedPadding(
@@ -212,7 +214,7 @@ class _LocationPickerBodyState extends State<_LocationPickerBody> {
             Padding(
               padding: const EdgeInsets.fromLTRB(
                 AppConstants.paddingLG,
-                BeautyCitaTheme.spaceMD,
+                AppConstants.paddingMD,
                 AppConstants.paddingLG,
                 0,
               ),
@@ -226,18 +228,18 @@ class _LocationPickerBodyState extends State<_LocationPickerBody> {
                     ),
                   ),
                   if (widget.currentAddress != null) ...[
-                    const SizedBox(height: BeautyCitaTheme.spaceXS),
+                    const SizedBox(height: AppConstants.paddingXS),
                     Row(
                       children: [
                         Icon(Icons.location_on_outlined,
                             size: AppConstants.iconSizeSM,
-                            color: BeautyCitaTheme.textLight),
-                        const SizedBox(width: BeautyCitaTheme.spaceXS),
+                            color: onSurfaceLight),
+                        const SizedBox(width: AppConstants.paddingXS),
                         Expanded(
                           child: Text(
                             'Actual: ${widget.currentAddress}',
                             style: textTheme.bodySmall?.copyWith(
-                              color: BeautyCitaTheme.textLight,
+                              color: onSurfaceLight,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -256,25 +258,25 @@ class _LocationPickerBodyState extends State<_LocationPickerBody> {
                 shrinkWrap: true,
                 padding: const EdgeInsets.fromLTRB(
                   AppConstants.paddingLG,
-                  BeautyCitaTheme.spaceMD,
+                  AppConstants.paddingMD,
                   AppConstants.paddingLG,
                   AppConstants.paddingLG,
                 ),
                 children: [
                   // Uber saved places section — only if loading or has results
                   if (_loadingUber)
-                    _buildShimmerPlaces()
+                    _buildShimmerPlaces(surface, onSurfaceLight)
                   else if (_uberPlaces.isNotEmpty) ...[
                     Text(
                       'Lugares guardados',
                       style: textTheme.labelMedium?.copyWith(
-                        color: BeautyCitaTheme.textLight,
+                        color: onSurfaceLight,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    const SizedBox(height: BeautyCitaTheme.spaceSM),
-                    ..._uberPlaces.map(_buildUberPlaceTile),
-                    const SizedBox(height: BeautyCitaTheme.spaceMD),
+                    const SizedBox(height: AppConstants.paddingSM),
+                    ..._uberPlaces.map((place) => _buildUberPlaceTile(place, primary, surface, onSurfaceLight)),
+                    const SizedBox(height: AppConstants.paddingMD),
                   ],
 
                   // Use current location button
@@ -297,9 +299,8 @@ class _LocationPickerBodyState extends State<_LocationPickerBody> {
                             : 'Usar ubicacion actual',
                       ),
                       style: OutlinedButton.styleFrom(
-                        side: const BorderSide(
-                            color: BeautyCitaTheme.primaryRose),
-                        foregroundColor: BeautyCitaTheme.primaryRose,
+                        side: BorderSide(color: primary),
+                        foregroundColor: primary,
                         shape: RoundedRectangleBorder(
                           borderRadius:
                               BorderRadius.circular(AppConstants.radiusLG),
@@ -307,7 +308,7 @@ class _LocationPickerBodyState extends State<_LocationPickerBody> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: BeautyCitaTheme.spaceMD),
+                  const SizedBox(height: AppConstants.paddingMD),
 
                   // Search field
                   TextField(
@@ -331,7 +332,7 @@ class _LocationPickerBodyState extends State<_LocationPickerBody> {
                             BorderRadius.circular(AppConstants.radiusSM),
                       ),
                       filled: true,
-                      fillColor: BeautyCitaTheme.surfaceCream,
+                      fillColor: surface,
                     ),
                   ),
 
@@ -339,7 +340,7 @@ class _LocationPickerBodyState extends State<_LocationPickerBody> {
                   if (_loadingSearch)
                     const Padding(
                       padding: EdgeInsets.symmetric(
-                          vertical: BeautyCitaTheme.spaceMD),
+                          vertical: AppConstants.paddingMD),
                       child: Center(
                         child: SizedBox(
                           width: 24,
@@ -349,8 +350,8 @@ class _LocationPickerBodyState extends State<_LocationPickerBody> {
                       ),
                     )
                   else if (_predictions.isNotEmpty) ...[
-                    const SizedBox(height: BeautyCitaTheme.spaceSM),
-                    ..._predictions.map(_buildPredictionTile),
+                    const SizedBox(height: AppConstants.paddingSM),
+                    ..._predictions.map((prediction) => _buildPredictionTile(prediction, onSurfaceLight)),
                   ],
                 ],
               ),
@@ -361,11 +362,11 @@ class _LocationPickerBodyState extends State<_LocationPickerBody> {
     );
   }
 
-  Widget _buildUberPlaceTile(UberSavedPlace place) {
+  Widget _buildUberPlaceTile(UberSavedPlace place, Color primary, Color surface, Color onSurfaceLight) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: BeautyCitaTheme.spaceXS),
+      padding: const EdgeInsets.only(bottom: AppConstants.paddingXS),
       child: Material(
-        color: BeautyCitaTheme.surfaceCream,
+        color: surface,
         borderRadius: BorderRadius.circular(AppConstants.radiusSM),
         child: InkWell(
           onTap: _resolving ? null : () => _selectUberPlace(place),
@@ -379,8 +380,8 @@ class _LocationPickerBodyState extends State<_LocationPickerBody> {
               children: [
                 Icon(place.icon,
                     size: AppConstants.iconSizeMD,
-                    color: BeautyCitaTheme.primaryRose),
-                const SizedBox(width: BeautyCitaTheme.spaceSM),
+                    color: primary),
+                const SizedBox(width: AppConstants.paddingSM),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -396,7 +397,7 @@ class _LocationPickerBodyState extends State<_LocationPickerBody> {
                         place.address,
                         style:
                             Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: BeautyCitaTheme.textLight,
+                                  color: onSurfaceLight,
                                 ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -404,8 +405,8 @@ class _LocationPickerBodyState extends State<_LocationPickerBody> {
                     ],
                   ),
                 ),
-                const Icon(Icons.chevron_right_rounded,
-                    color: BeautyCitaTheme.textLight),
+                Icon(Icons.chevron_right_rounded,
+                    color: onSurfaceLight),
               ],
             ),
           ),
@@ -414,7 +415,7 @@ class _LocationPickerBodyState extends State<_LocationPickerBody> {
     );
   }
 
-  Widget _buildPredictionTile(PlacePrediction prediction) {
+  Widget _buildPredictionTile(PlacePrediction prediction, Color onSurfaceLight) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -427,10 +428,10 @@ class _LocationPickerBodyState extends State<_LocationPickerBody> {
           ),
           child: Row(
             children: [
-              const Icon(Icons.place_outlined,
+              Icon(Icons.place_outlined,
                   size: AppConstants.iconSizeMD,
-                  color: BeautyCitaTheme.textLight),
-              const SizedBox(width: BeautyCitaTheme.spaceSM),
+                  color: onSurfaceLight),
+              const SizedBox(width: AppConstants.paddingSM),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -447,7 +448,7 @@ class _LocationPickerBodyState extends State<_LocationPickerBody> {
                         prediction.secondaryText,
                         style:
                             Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: BeautyCitaTheme.textLight,
+                                  color: onSurfaceLight,
                                 ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -462,31 +463,31 @@ class _LocationPickerBodyState extends State<_LocationPickerBody> {
     );
   }
 
-  Widget _buildShimmerPlaces() {
+  Widget _buildShimmerPlaces(Color surface, Color onSurfaceLight) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Lugares guardados',
           style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: BeautyCitaTheme.textLight,
+                color: onSurfaceLight,
                 fontWeight: FontWeight.w600,
               ),
         ),
-        const SizedBox(height: BeautyCitaTheme.spaceSM),
+        const SizedBox(height: AppConstants.paddingSM),
         for (int i = 0; i < 2; i++)
           Padding(
-            padding: const EdgeInsets.only(bottom: BeautyCitaTheme.spaceXS),
+            padding: const EdgeInsets.only(bottom: AppConstants.paddingXS),
             child: Container(
               height: 52,
               decoration: BoxDecoration(
-                color: BeautyCitaTheme.surfaceCream,
+                color: surface,
                 borderRadius:
                     BorderRadius.circular(AppConstants.radiusSM),
               ),
             ),
           ),
-        const SizedBox(height: BeautyCitaTheme.spaceMD),
+        const SizedBox(height: AppConstants.paddingMD),
       ],
     );
   }

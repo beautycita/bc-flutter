@@ -3,9 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../providers/auth_provider.dart';
-import '../config/theme.dart';
 import '../config/constants.dart';
-import '../services/supabase_client.dart';
+
 
 class AuthScreen extends ConsumerStatefulWidget {
   const AuthScreen({super.key});
@@ -61,6 +60,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
+        final theme = Theme.of(ctx);
+        final primary = theme.colorScheme.primary;
+        final onSurface = theme.colorScheme.onSurface;
         return StatefulBuilder(
           builder: (ctx, setSheetState) {
             return Padding(
@@ -72,7 +74,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusLarge),
+                  borderRadius: BorderRadius.circular(AppConstants.radiusLG),
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -91,7 +93,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                       style: GoogleFonts.poppins(
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
-                        color: BeautyCitaTheme.textDark,
+                        color: onSurface,
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -167,7 +169,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                               'Cancelar',
                               style: GoogleFonts.nunito(
                                 fontWeight: FontWeight.w600,
-                                color: BeautyCitaTheme.textLight,
+                                color: onSurface.withValues(alpha: 0.5),
                               ),
                             ),
                           ),
@@ -202,10 +204,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                                     }
                                   },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: BeautyCitaTheme.primaryRose,
+                              backgroundColor: primary,
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusSmall),
+                                borderRadius: BorderRadius.circular(AppConstants.radiusSM),
                               ),
                               padding: const EdgeInsets.symmetric(vertical: 14),
                             ),
@@ -287,7 +289,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
         ),
         backgroundColor: Theme.of(context).colorScheme.error,
         behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.all(BeautyCitaTheme.spaceLG),
+        margin: const EdgeInsets.all(AppConstants.paddingLG),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(14),
         ),
@@ -300,6 +302,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
   Widget build(BuildContext context) {
     final authState = ref.watch(authStateProvider);
     final isFirstTime = authState.username == null;
+    final primary = Theme.of(context).colorScheme.primary;
+    final secondary = Theme.of(context).colorScheme.secondary;
 
     ref.listen<AuthState>(authStateProvider, (previous, next) {
       if (next.isAuthenticated && !_showCelebration && mounted) {
@@ -329,8 +333,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                   height: 180,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color:
-                        BeautyCitaTheme.primaryRose.withValues(alpha: 0.04),
+                    color: primary.withValues(alpha: 0.04),
                   ),
                 ),
               ),
@@ -342,8 +345,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                   height: 140,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color:
-                        BeautyCitaTheme.secondaryGold.withValues(alpha: 0.05),
+                    color: secondary.withValues(alpha: 0.05),
                   ),
                 ),
               ),
@@ -367,6 +369,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
   }
 
   Widget _buildAuthContent(bool isFirstTime, bool isLoading) {
+    final primary = Theme.of(context).colorScheme.primary;
+    final onSurfaceLight = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
+
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -380,7 +385,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
             style: GoogleFonts.poppins(
               fontSize: 38,
               fontWeight: FontWeight.w700,
-              color: BeautyCitaTheme.primaryRose,
+              color: primary,
               height: 1.1,
             ),
             textAlign: TextAlign.center,
@@ -396,7 +401,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
           style: GoogleFonts.nunito(
             fontSize: 16,
             fontWeight: FontWeight.w500,
-            color: BeautyCitaTheme.textLight,
+            color: onSurfaceLight,
           ),
           textAlign: TextAlign.center,
         ),
@@ -418,19 +423,19 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                     shape: BoxShape.circle,
                     gradient: LinearGradient(
                       colors: [
-                        BeautyCitaTheme.primaryRose.withValues(alpha: 0.1),
-                        BeautyCitaTheme.primaryRose.withValues(alpha: 0.06),
+                        primary.withValues(alpha: 0.1),
+                        primary.withValues(alpha: 0.06),
                       ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
                     border: Border.all(
-                      color: BeautyCitaTheme.primaryRose.withValues(alpha: 0.15),
+                      color: primary.withValues(alpha: 0.15),
                       width: 2,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: BeautyCitaTheme.primaryRose.withValues(alpha: 0.12),
+                        color: primary.withValues(alpha: 0.12),
                         blurRadius: 24,
                         offset: const Offset(0, 8),
                       ),
@@ -438,14 +443,14 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                   ),
                   child: Center(
                     child: isLoading
-                        ? const CircularProgressIndicator(
-                            color: BeautyCitaTheme.primaryRose,
+                        ? CircularProgressIndicator(
+                            color: primary,
                             strokeWidth: 3,
                           )
-                        : const Icon(
+                        : Icon(
                             Icons.fingerprint,
                             size: 56,
-                            color: BeautyCitaTheme.primaryRose,
+                            color: primary,
                           ),
                   ),
                 ),
@@ -462,7 +467,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
             style: GoogleFonts.nunito(
               fontSize: 14,
               fontWeight: FontWeight.w400,
-              color: BeautyCitaTheme.textLight,
+              color: onSurfaceLight,
             ),
             textAlign: TextAlign.center,
           ),
@@ -471,6 +476,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
   }
 
   Widget _buildCelebrationContent() {
+    final primary = Theme.of(context).colorScheme.primary;
+    final secondary = Theme.of(context).colorScheme.secondary;
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+
     return ScaleTransition(
       scale: _celebrationAnimation,
       child: Column(
@@ -484,8 +493,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
               shape: BoxShape.circle,
               gradient: LinearGradient(
                 colors: [
-                  BeautyCitaTheme.secondaryGold.withValues(alpha: 0.15),
-                  BeautyCitaTheme.secondaryGold.withValues(alpha: 0.08),
+                  secondary.withValues(alpha: 0.15),
+                  secondary.withValues(alpha: 0.08),
                 ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -506,7 +515,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
             style: GoogleFonts.poppins(
               fontSize: 20,
               fontWeight: FontWeight.w500,
-              color: BeautyCitaTheme.textDark,
+              color: onSurface,
             ),
             textAlign: TextAlign.center,
           ),
@@ -518,7 +527,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
             style: GoogleFonts.poppins(
               fontSize: 34,
               fontWeight: FontWeight.w700,
-              color: BeautyCitaTheme.primaryRose,
+              color: primary,
             ),
             textAlign: TextAlign.center,
           ),

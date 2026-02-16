@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
-import '../config/theme.dart';
 import '../services/lightx_service.dart';
 import '../services/media_service.dart';
 
@@ -63,10 +62,13 @@ class _VirtualStudioScreenState extends ConsumerState<VirtualStudioScreen>
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    final onSurfaceLight = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F0EB),
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: BeautyCitaTheme.backgroundWhite,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         title: Text(
           'Estudio Virtual',
           style: GoogleFonts.poppins(
@@ -77,9 +79,9 @@ class _VirtualStudioScreenState extends ConsumerState<VirtualStudioScreen>
         bottom: TabBar(
           controller: _tabController,
           isScrollable: true,
-          labelColor: BeautyCitaTheme.primaryRose,
-          unselectedLabelColor: BeautyCitaTheme.textLight,
-          indicatorColor: BeautyCitaTheme.primaryRose,
+          labelColor: primary,
+          unselectedLabelColor: onSurfaceLight,
+          indicatorColor: primary,
           indicatorWeight: 3,
           labelStyle: GoogleFonts.nunito(
             fontSize: 13,
@@ -107,7 +109,7 @@ class _VirtualStudioScreenState extends ConsumerState<VirtualStudioScreen>
   }
 }
 
-/// Individual tool tab content: upload → prompt → process → result.
+/// Individual tool tab content: upload -> prompt -> process -> result.
 class _ToolView extends ConsumerStatefulWidget {
   final _StudioTool tool;
 
@@ -159,6 +161,7 @@ class _ToolViewState extends ConsumerState<_ToolView>
   }
 
   void _showImageSourcePicker() {
+    final primary = Theme.of(context).colorScheme.primary;
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -171,7 +174,7 @@ class _ToolViewState extends ConsumerState<_ToolView>
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                leading: const Icon(Icons.camera_alt, color: BeautyCitaTheme.primaryRose),
+                leading: Icon(Icons.camera_alt, color: primary),
                 title: Text('Tomar selfie', style: GoogleFonts.nunito(fontSize: 16, fontWeight: FontWeight.w600)),
                 onTap: () {
                   Navigator.pop(ctx);
@@ -179,7 +182,7 @@ class _ToolViewState extends ConsumerState<_ToolView>
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.photo_library, color: BeautyCitaTheme.primaryRose),
+                leading: Icon(Icons.photo_library, color: primary),
                 title: Text('Elegir de galeria', style: GoogleFonts.nunito(fontSize: 16, fontWeight: FontWeight.w600)),
                 onTap: () {
                   Navigator.pop(ctx);
@@ -229,6 +232,7 @@ class _ToolViewState extends ConsumerState<_ToolView>
   }
 
   void _autoSave(String resultUrl, String toolType, String stylePrompt) async {
+    final primary = Theme.of(context).colorScheme.primary;
     try {
       final mediaService = MediaService();
       final saved = await mediaService.saveLightXResult(
@@ -245,7 +249,7 @@ class _ToolViewState extends ConsumerState<_ToolView>
             ),
             duration: const Duration(seconds: 2),
             behavior: SnackBarBehavior.floating,
-            backgroundColor: saved != null ? BeautyCitaTheme.primaryRose : Colors.orange,
+            backgroundColor: saved != null ? primary : Colors.orange,
           ),
         );
       }
@@ -266,6 +270,7 @@ class _ToolViewState extends ConsumerState<_ToolView>
 
   void _saveToGallery() async {
     if (_resultUrl == null) return;
+    final primary = Theme.of(context).colorScheme.primary;
     try {
       final mediaService = MediaService();
       final success = await mediaService.saveUrlToGallery(_resultUrl!);
@@ -278,7 +283,7 @@ class _ToolViewState extends ConsumerState<_ToolView>
             ),
             duration: const Duration(seconds: 2),
             behavior: SnackBarBehavior.floating,
-            backgroundColor: success ? BeautyCitaTheme.primaryRose : Colors.red.shade400,
+            backgroundColor: success ? primary : Colors.red.shade400,
           ),
         );
       }
@@ -325,6 +330,10 @@ class _ToolViewState extends ConsumerState<_ToolView>
   }
 
   Widget _buildUpload() {
+    final primary = Theme.of(context).colorScheme.primary;
+    final onSurfaceLight = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
+    final dividerColor = Theme.of(context).dividerColor;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -335,7 +344,7 @@ class _ToolViewState extends ConsumerState<_ToolView>
             widget.tool.description,
             style: GoogleFonts.nunito(
               fontSize: 15,
-              color: BeautyCitaTheme.textLight,
+              color: onSurfaceLight,
             ),
             textAlign: TextAlign.center,
           ),
@@ -351,7 +360,7 @@ class _ToolViewState extends ConsumerState<_ToolView>
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
                   border: _imageBytes != null
-                      ? Border.all(color: BeautyCitaTheme.primaryRose, width: 2)
+                      ? Border.all(color: primary, width: 2)
                       : null,
                 ),
                 child: _imageBytes != null
@@ -382,7 +391,7 @@ class _ToolViewState extends ConsumerState<_ToolView>
                       )
                     : CustomPaint(
                         painter: _DashedBorderPainter(
-                          color: BeautyCitaTheme.textLight.withValues(alpha: 0.3),
+                          color: onSurfaceLight.withValues(alpha: 0.3),
                           radius: 16,
                         ),
                         child: Center(
@@ -392,7 +401,7 @@ class _ToolViewState extends ConsumerState<_ToolView>
                               Icon(
                                 Icons.add_a_photo_rounded,
                                 size: 48,
-                                color: BeautyCitaTheme.primaryRose.withValues(alpha: 0.5),
+                                color: primary.withValues(alpha: 0.5),
                               ),
                               const SizedBox(height: 12),
                               Text(
@@ -400,7 +409,7 @@ class _ToolViewState extends ConsumerState<_ToolView>
                                 style: GoogleFonts.nunito(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
-                                  color: BeautyCitaTheme.textLight,
+                                  color: onSurfaceLight,
                                 ),
                               ),
                               const SizedBox(height: 4),
@@ -408,7 +417,7 @@ class _ToolViewState extends ConsumerState<_ToolView>
                                 'Toca para seleccionar',
                                 style: GoogleFonts.nunito(
                                   fontSize: 13,
-                                  color: BeautyCitaTheme.textLight.withValues(alpha: 0.6),
+                                  color: onSurfaceLight.withValues(alpha: 0.6),
                                 ),
                               ),
                             ],
@@ -431,15 +440,15 @@ class _ToolViewState extends ConsumerState<_ToolView>
               fillColor: Colors.white,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: BeautyCitaTheme.dividerLight),
+                borderSide: BorderSide(color: dividerColor),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: BeautyCitaTheme.dividerLight),
+                borderSide: BorderSide(color: dividerColor),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: BeautyCitaTheme.primaryRose, width: 2),
+                borderSide: BorderSide(color: primary, width: 2),
               ),
               contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             ),
@@ -467,9 +476,9 @@ class _ToolViewState extends ConsumerState<_ToolView>
             child: ElevatedButton(
               onPressed: _imageBytes != null ? _process : null,
               style: ElevatedButton.styleFrom(
-                backgroundColor: BeautyCitaTheme.primaryRose,
+                backgroundColor: primary,
                 foregroundColor: Colors.white,
-                disabledBackgroundColor: BeautyCitaTheme.dividerLight,
+                disabledBackgroundColor: dividerColor,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -489,6 +498,9 @@ class _ToolViewState extends ConsumerState<_ToolView>
   }
 
   Widget _buildProcessing() {
+    final primary = Theme.of(context).colorScheme.primary;
+    final onSurfaceLight = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -513,15 +525,15 @@ class _ToolViewState extends ConsumerState<_ToolView>
               ),
             ),
           const SizedBox(height: 24),
-          const CircularProgressIndicator(
-            color: BeautyCitaTheme.primaryRose,
+          CircularProgressIndicator(
+            color: primary,
           ),
           const SizedBox(height: 16),
           Text(
             'Procesando tu imagen...',
             style: GoogleFonts.nunito(
               fontSize: 16,
-              color: BeautyCitaTheme.textLight,
+              color: onSurfaceLight,
               fontStyle: FontStyle.italic,
             ),
           ),
@@ -531,6 +543,10 @@ class _ToolViewState extends ConsumerState<_ToolView>
   }
 
   Widget _buildResult() {
+    final primary = Theme.of(context).colorScheme.primary;
+    final onSurfaceLight = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
+    final surface = Theme.of(context).colorScheme.surface;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -548,7 +564,7 @@ class _ToolViewState extends ConsumerState<_ToolView>
                       style: GoogleFonts.poppins(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: BeautyCitaTheme.textLight,
+                        color: onSurfaceLight,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -572,7 +588,7 @@ class _ToolViewState extends ConsumerState<_ToolView>
                       style: GoogleFonts.poppins(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: BeautyCitaTheme.primaryRose,
+                        color: primary,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -584,7 +600,7 @@ class _ToolViewState extends ConsumerState<_ToolView>
                           _resultUrl!,
                           fit: BoxFit.contain,
                           errorBuilder: (_, __, ___) => Container(
-                            color: BeautyCitaTheme.surfaceCream,
+                            color: surface,
                             child: const Center(
                               child: Icon(Icons.broken_image, size: 48),
                             ),
@@ -608,7 +624,7 @@ class _ToolViewState extends ConsumerState<_ToolView>
                   icon: const Icon(Icons.download, size: 20),
                   label: Text('Guardar', style: GoogleFonts.nunito(fontWeight: FontWeight.w700)),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: BeautyCitaTheme.primaryRose,
+                    backgroundColor: primary,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -624,8 +640,8 @@ class _ToolViewState extends ConsumerState<_ToolView>
                   icon: const Icon(Icons.share, size: 20),
                   label: Text('Compartir', style: GoogleFonts.nunito(fontWeight: FontWeight.w700)),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: BeautyCitaTheme.primaryRose,
-                    side: const BorderSide(color: BeautyCitaTheme.primaryRose),
+                    foregroundColor: primary,
+                    side: BorderSide(color: primary),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -645,8 +661,8 @@ class _ToolViewState extends ConsumerState<_ToolView>
                   icon: const Icon(Icons.refresh, size: 20),
                   label: Text('Probar otro', style: GoogleFonts.nunito(fontWeight: FontWeight.w700)),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: BeautyCitaTheme.textLight,
-                    side: BorderSide(color: BeautyCitaTheme.textLight.withValues(alpha: 0.4)),
+                    foregroundColor: onSurfaceLight,
+                    side: BorderSide(color: onSurfaceLight.withValues(alpha: 0.4)),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -680,45 +696,15 @@ class _HairstyleSample {
 const _r2 = 'https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/media/hairstyles';
 
 const _hairstyleSamples = [
-  _HairstyleSample(
-    id: 'rubioOndulado',
-    label: 'Rubio Ondulado',
-    previewUrl: '$_r2/rubioOndulado.png',
-    templateUrl: '$_r2/rubioOndulado.png',
-  ),
-  _HairstyleSample(
-    id: 'balayageLargo',
-    label: 'Balayage Largo',
-    previewUrl: '$_r2/balayageLargo.png',
-    templateUrl: '$_r2/balayageLargo.png',
-  ),
-  _HairstyleSample(
-    id: 'bobOndulado',
-    label: 'Bob Ondulado',
-    previewUrl: '$_r2/bobOndulado.png',
-    templateUrl: '$_r2/bobOndulado.png',
-  ),
-  _HairstyleSample(
-    id: 'lacioLargo',
-    label: 'Lacio Largo',
-    previewUrl: '$_r2/lacioLargo.png',
-    templateUrl: '$_r2/lacioLargo.png',
-  ),
-  _HairstyleSample(
-    id: 'pixieElegante',
-    label: 'Pixie Elegante',
-    previewUrl: '$_r2/pixieElegante.png',
-    templateUrl: '$_r2/pixieElegante.png',
-  ),
-  _HairstyleSample(
-    id: 'rizosMedianos',
-    label: 'Rizos Medianos',
-    previewUrl: '$_r2/rizosMedianos.png',
-    templateUrl: '$_r2/rizosMedianos.png',
-  ),
+  _HairstyleSample(id: 'rubioOndulado', label: 'Rubio Ondulado', previewUrl: '$_r2/rubioOndulado.png', templateUrl: '$_r2/rubioOndulado.png'),
+  _HairstyleSample(id: 'balayageLargo', label: 'Balayage Largo', previewUrl: '$_r2/balayageLargo.png', templateUrl: '$_r2/balayageLargo.png'),
+  _HairstyleSample(id: 'bobOndulado', label: 'Bob Ondulado', previewUrl: '$_r2/bobOndulado.png', templateUrl: '$_r2/bobOndulado.png'),
+  _HairstyleSample(id: 'lacioLargo', label: 'Lacio Largo', previewUrl: '$_r2/lacioLargo.png', templateUrl: '$_r2/lacioLargo.png'),
+  _HairstyleSample(id: 'pixieElegante', label: 'Pixie Elegante', previewUrl: '$_r2/pixieElegante.png', templateUrl: '$_r2/pixieElegante.png'),
+  _HairstyleSample(id: 'rizosMedianos', label: 'Rizos Medianos', previewUrl: '$_r2/rizosMedianos.png', templateUrl: '$_r2/rizosMedianos.png'),
 ];
 
-/// Look Swap view: selfie upload → pick hairstyle from samples or upload custom → process.
+/// Look Swap view: selfie upload -> pick hairstyle from samples or upload custom -> process.
 class _FaceSwapView extends ConsumerStatefulWidget {
   final _StudioTool tool;
 
@@ -759,6 +745,7 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
   }
 
   void _showSelfiePicker() {
+    final primary = Theme.of(context).colorScheme.primary;
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -771,7 +758,7 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                leading: const Icon(Icons.camera_alt, color: BeautyCitaTheme.primaryRose),
+                leading: Icon(Icons.camera_alt, color: primary),
                 title: Text('Tomar selfie', style: GoogleFonts.nunito(fontSize: 16, fontWeight: FontWeight.w600)),
                 onTap: () {
                   Navigator.pop(ctx);
@@ -779,7 +766,7 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.photo_library, color: BeautyCitaTheme.primaryRose),
+                leading: Icon(Icons.photo_library, color: primary),
                 title: Text('Elegir de galeria', style: GoogleFonts.nunito(fontSize: 16, fontWeight: FontWeight.w600)),
                 onTap: () {
                   Navigator.pop(ctx);
@@ -863,6 +850,7 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
   }
 
   void _autoSave(String resultUrl) async {
+    final primary = Theme.of(context).colorScheme.primary;
     try {
       final mediaService = MediaService();
       final saved = await mediaService.saveLightXResult(
@@ -879,7 +867,7 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
             ),
             duration: const Duration(seconds: 2),
             behavior: SnackBarBehavior.floating,
-            backgroundColor: saved != null ? BeautyCitaTheme.primaryRose : Colors.orange,
+            backgroundColor: saved != null ? primary : Colors.orange,
           ),
         );
       }
@@ -890,6 +878,7 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
 
   void _saveToGallery() async {
     if (_resultUrl == null) return;
+    final primary = Theme.of(context).colorScheme.primary;
     try {
       final mediaService = MediaService();
       final success = await mediaService.saveUrlToGallery(_resultUrl!);
@@ -899,7 +888,7 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
             content: Text(success ? 'Guardado en galeria' : 'Error al guardar', style: GoogleFonts.nunito()),
             duration: const Duration(seconds: 2),
             behavior: SnackBarBehavior.floating,
-            backgroundColor: success ? BeautyCitaTheme.primaryRose : Colors.red.shade400,
+            backgroundColor: success ? primary : Colors.red.shade400,
           ),
         );
       }
@@ -938,6 +927,12 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
   }
 
   Widget _buildUpload() {
+    final primary = Theme.of(context).colorScheme.primary;
+    final onSurfaceLight = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+    final surface = Theme.of(context).colorScheme.surface;
+    final dividerColor = Theme.of(context).dividerColor;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -945,7 +940,7 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
         children: [
           Text(
             'Sube tu foto y elige un peinado para ver como te queda',
-            style: GoogleFonts.nunito(fontSize: 15, color: BeautyCitaTheme.textLight),
+            style: GoogleFonts.nunito(fontSize: 15, color: onSurfaceLight),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 20),
@@ -964,7 +959,7 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
                 border: _selfieBytes != null
-                    ? Border.all(color: BeautyCitaTheme.primaryRose, width: 2)
+                    ? Border.all(color: primary, width: 2)
                     : null,
               ),
               child: _selfieBytes != null
@@ -986,16 +981,16 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
                     )
                   : CustomPaint(
                       painter: _DashedBorderPainter(
-                        color: BeautyCitaTheme.textLight.withValues(alpha: 0.3),
+                        color: onSurfaceLight.withValues(alpha: 0.3),
                         radius: 16,
                       ),
                       child: Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.face, size: 40, color: BeautyCitaTheme.primaryRose.withValues(alpha: 0.5)),
+                            Icon(Icons.face, size: 40, color: primary.withValues(alpha: 0.5)),
                             const SizedBox(height: 8),
-                            Text('Tomar selfie o elegir foto', style: GoogleFonts.nunito(fontSize: 14, fontWeight: FontWeight.w600, color: BeautyCitaTheme.textLight)),
+                            Text('Tomar selfie o elegir foto', style: GoogleFonts.nunito(fontSize: 14, fontWeight: FontWeight.w600, color: onSurfaceLight)),
                           ],
                         ),
                       ),
@@ -1017,7 +1012,7 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
             child: ListView(
               scrollDirection: Axis.horizontal,
               children: [
-                // "Upload custom" option — first
+                // "Upload custom" option -- first
                 Padding(
                   padding: const EdgeInsets.only(right: 10),
                   child: GestureDetector(
@@ -1028,8 +1023,8 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: _customReferenceBytes != null
-                              ? BeautyCitaTheme.primaryRose
-                              : BeautyCitaTheme.dividerLight,
+                              ? primary
+                              : dividerColor,
                           width: _customReferenceBytes != null ? 3 : 1,
                         ),
                       ),
@@ -1046,7 +1041,7 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
                                   width: double.infinity,
                                   padding: const EdgeInsets.symmetric(vertical: 4),
                                   decoration: BoxDecoration(
-                                    color: BeautyCitaTheme.primaryRose,
+                                    color: primary,
                                     borderRadius: const BorderRadius.vertical(bottom: Radius.circular(11)),
                                   ),
                                   child: Text(
@@ -1061,9 +1056,9 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.add_photo_alternate_outlined, size: 32, color: BeautyCitaTheme.primaryRose.withValues(alpha: 0.5)),
+                                  Icon(Icons.add_photo_alternate_outlined, size: 32, color: primary.withValues(alpha: 0.5)),
                                   const SizedBox(height: 4),
-                                  Text('Subir\nreferencia', textAlign: TextAlign.center, style: GoogleFonts.nunito(fontSize: 10, fontWeight: FontWeight.w600, color: BeautyCitaTheme.textLight)),
+                                  Text('Subir\nreferencia', textAlign: TextAlign.center, style: GoogleFonts.nunito(fontSize: 10, fontWeight: FontWeight.w600, color: onSurfaceLight)),
                                 ],
                               ),
                             ),
@@ -1081,8 +1076,8 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: _selectedSample?.id == sample.id
-                              ? BeautyCitaTheme.primaryRose
-                              : BeautyCitaTheme.dividerLight,
+                              ? primary
+                              : dividerColor,
                           width: _selectedSample?.id == sample.id ? 3 : 1,
                         ),
                       ),
@@ -1106,8 +1101,8 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
                             padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
                             decoration: BoxDecoration(
                               color: _selectedSample?.id == sample.id
-                                  ? BeautyCitaTheme.primaryRose
-                                  : BeautyCitaTheme.surfaceCream,
+                                  ? primary
+                                  : surface,
                               borderRadius: const BorderRadius.vertical(bottom: Radius.circular(11)),
                             ),
                             child: Text(
@@ -1118,7 +1113,7 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
                               style: GoogleFonts.nunito(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w700,
-                                color: _selectedSample?.id == sample.id ? Colors.white : BeautyCitaTheme.textDark,
+                                color: _selectedSample?.id == sample.id ? Colors.white : onSurface,
                               ),
                             ),
                           ),
@@ -1153,9 +1148,9 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
             child: ElevatedButton(
               onPressed: _canProcess ? _process : null,
               style: ElevatedButton.styleFrom(
-                backgroundColor: BeautyCitaTheme.primaryRose,
+                backgroundColor: primary,
                 foregroundColor: Colors.white,
-                disabledBackgroundColor: BeautyCitaTheme.dividerLight,
+                disabledBackgroundColor: dividerColor,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
               child: Text(
@@ -1170,6 +1165,9 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
   }
 
   Widget _buildProcessing() {
+    final primary = Theme.of(context).colorScheme.primary;
+    final onSurfaceLight = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -1181,11 +1179,11 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
               child: ClipRRect(borderRadius: BorderRadius.circular(12), child: Image.memory(_selfieBytes!, fit: BoxFit.cover)),
             ),
           const SizedBox(height: 24),
-          const CircularProgressIndicator(color: BeautyCitaTheme.primaryRose),
+          CircularProgressIndicator(color: primary),
           const SizedBox(height: 16),
           Text(
             'Procesando cambio de look...',
-            style: GoogleFonts.nunito(fontSize: 16, color: BeautyCitaTheme.textLight, fontStyle: FontStyle.italic),
+            style: GoogleFonts.nunito(fontSize: 16, color: onSurfaceLight, fontStyle: FontStyle.italic),
           ),
         ],
       ),
@@ -1193,6 +1191,10 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
   }
 
   Widget _buildResult() {
+    final primary = Theme.of(context).colorScheme.primary;
+    final onSurfaceLight = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
+    final surface = Theme.of(context).colorScheme.surface;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -1203,7 +1205,7 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
               Expanded(
                 child: Column(
                   children: [
-                    Text('Tu foto', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: BeautyCitaTheme.textLight)),
+                    Text('Tu foto', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: onSurfaceLight)),
                     const SizedBox(height: 8),
                     ClipRRect(
                       borderRadius: BorderRadius.circular(12),
@@ -1216,7 +1218,7 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
               Expanded(
                 child: Column(
                   children: [
-                    Text('Resultado', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: BeautyCitaTheme.primaryRose)),
+                    Text('Resultado', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: primary)),
                     const SizedBox(height: 8),
                     ClipRRect(
                       borderRadius: BorderRadius.circular(12),
@@ -1226,7 +1228,7 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
                           _resultUrl!,
                           fit: BoxFit.contain,
                           errorBuilder: (_, __, ___) => Container(
-                            color: BeautyCitaTheme.surfaceCream,
+                            color: surface,
                             child: const Center(child: Icon(Icons.broken_image, size: 48)),
                           ),
                         ),
@@ -1246,7 +1248,7 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
                   icon: const Icon(Icons.download, size: 20),
                   label: Text('Guardar', style: GoogleFonts.nunito(fontWeight: FontWeight.w700)),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: BeautyCitaTheme.primaryRose,
+                    backgroundColor: primary,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     padding: const EdgeInsets.symmetric(vertical: 14),
@@ -1260,8 +1262,8 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
                   icon: const Icon(Icons.share, size: 20),
                   label: Text('Compartir', style: GoogleFonts.nunito(fontWeight: FontWeight.w700)),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: BeautyCitaTheme.primaryRose,
-                    side: const BorderSide(color: BeautyCitaTheme.primaryRose),
+                    foregroundColor: primary,
+                    side: BorderSide(color: primary),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
@@ -1275,8 +1277,8 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
             icon: const Icon(Icons.refresh, size: 20),
             label: Text('Probar otro', style: GoogleFonts.nunito(fontWeight: FontWeight.w700)),
             style: OutlinedButton.styleFrom(
-              foregroundColor: BeautyCitaTheme.textLight,
-              side: BorderSide(color: BeautyCitaTheme.textLight.withValues(alpha: 0.4)),
+              foregroundColor: onSurfaceLight,
+              side: BorderSide(color: onSurfaceLight.withValues(alpha: 0.4)),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               padding: const EdgeInsets.symmetric(vertical: 14),
             ),
