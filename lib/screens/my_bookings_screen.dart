@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:beautycita/config/theme.dart';
 import 'package:beautycita/config/constants.dart';
+import 'package:beautycita/config/theme_extension.dart';
 import 'package:beautycita/models/booking.dart';
 import 'package:beautycita/providers/booking_provider.dart';
 import 'package:go_router/go_router.dart';
@@ -85,7 +85,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
       case 'no_show':
         return Colors.grey.shade600;
       default:
-        return BeautyCitaTheme.textLight;
+        return Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
     }
   }
 
@@ -151,29 +151,29 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(height: BeautyCitaTheme.spaceMD),
+                const SizedBox(height: AppConstants.paddingMD),
                 Icon(
                   Icons.cancel_outlined,
                   size: AppConstants.iconSizeXL,
                   color: Colors.red.shade400,
                 ),
-                const SizedBox(height: BeautyCitaTheme.spaceSM),
+                const SizedBox(height: AppConstants.paddingSM),
                 Text(
                   'Cancelar esta cita?',
                   style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
                 ),
-                const SizedBox(height: BeautyCitaTheme.spaceXS),
+                const SizedBox(height: AppConstants.paddingXS),
                 Text(
                   'Se cancelara tu cita de ${booking.serviceName}.'
                   '${booking.transportMode == 'uber' ? ' Tambien se cancelaran tus viajes de Uber.' : ''}',
                   style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(
-                        color: BeautyCitaTheme.textLight,
+                        color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.5),
                       ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: BeautyCitaTheme.spaceLG),
+                const SizedBox(height: AppConstants.paddingLG),
                 Row(
                   children: [
                     Expanded(
@@ -190,7 +190,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
                         child: const Text('No, mantener'),
                       ),
                     ),
-                    const SizedBox(width: BeautyCitaTheme.spaceSM),
+                    const SizedBox(width: AppConstants.paddingSM),
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () => Navigator.pop(ctx, true),
@@ -255,9 +255,10 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
   Widget build(BuildContext context) {
     final bookingsAsync = ref.watch(userBookingsProvider);
     final textTheme = Theme.of(context).textTheme;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: BeautyCitaTheme.backgroundWhite,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(),
       body: Column(
         children: [
@@ -287,7 +288,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
                 }
 
                 return RefreshIndicator(
-                  color: BeautyCitaTheme.primaryRose,
+                  color: colorScheme.primary,
                   onRefresh: () async {
                     ref.invalidate(userBookingsProvider);
                     // Wait for the provider to reload.
@@ -299,11 +300,11 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
                     ),
                     padding: const EdgeInsets.symmetric(
                       horizontal: AppConstants.screenPaddingHorizontal,
-                      vertical: BeautyCitaTheme.spaceMD,
+                      vertical: AppConstants.paddingMD,
                     ),
                     itemCount: filtered.length,
                     separatorBuilder: (_, __) =>
-                        const SizedBox(height: BeautyCitaTheme.spaceSM),
+                        const SizedBox(height: AppConstants.paddingSM),
                     itemBuilder: (context, index) {
                       return _buildBookingCard(filtered[index], textTheme);
                     },
@@ -318,10 +319,13 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
   }
 
   Widget _buildFilterChips(TextTheme textTheme) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final ext = Theme.of(context).extension<BCThemeExtension>()!;
+
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppConstants.screenPaddingHorizontal,
-        vertical: BeautyCitaTheme.spaceSM,
+        vertical: AppConstants.paddingSM,
       ),
       child: Row(
         children: _BookingTab.values.map((tab) {
@@ -330,39 +334,23 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
           return Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(
-                horizontal: BeautyCitaTheme.spaceXS,
+                horizontal: AppConstants.paddingXS,
               ),
               child: GestureDetector(
                 onTap: () => setState(() => _activeTab = tab),
                 child: Container(
                   height: AppConstants.minTouchHeight - 8,
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
+                    gradient: ext.goldGradientDirectional(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
-                      colors: [
-                        Color(0xFF8B6914),
-                        Color(0xFFD4AF37),
-                        Color(0xFFFFF8DC),
-                        Color(0xFFFFD700),
-                        Color(0xFFC19A26),
-                        Color(0xFFF5D547),
-                        Color(0xFFFFFFE0),
-                        Color(0xFFD4AF37),
-                        Color(0xFFA67C00),
-                        Color(0xFFCDAD38),
-                        Color(0xFFFFF8DC),
-                        Color(0xFFB8860B),
-                        Color(0xFF8B6914),
-                      ],
-                      stops: [0.0, 0.08, 0.15, 0.25, 0.35, 0.45, 0.50, 0.58, 0.68, 0.78, 0.85, 0.93, 1.0],
                     ),
                     borderRadius:
                         BorderRadius.circular(AppConstants.radiusMD),
                     boxShadow: isSelected
                         ? [
                             BoxShadow(
-                              color: BeautyCitaTheme.primaryRose
+                              color: colorScheme.primary
                                   .withValues(alpha: 0.3),
                               blurRadius: 8,
                               offset: const Offset(0, 3),
@@ -375,8 +363,8 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       color: isSelected
-                          ? BeautyCitaTheme.primaryRose
-                          : BeautyCitaTheme.surfaceCream,
+                          ? colorScheme.primary
+                          : colorScheme.surface,
                       borderRadius:
                           BorderRadius.circular(AppConstants.radiusMD - 3),
                     ),
@@ -385,7 +373,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
                       style: textTheme.labelLarge?.copyWith(
                         color: isSelected
                             ? Colors.white
-                            : BeautyCitaTheme.textDark,
+                            : colorScheme.onSurface,
                         fontWeight:
                             isSelected ? FontWeight.w700 : FontWeight.w500,
                       ),
@@ -401,6 +389,8 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
   }
 
   Widget _buildEmptyState(TextTheme textTheme) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppConstants.paddingXL),
@@ -410,13 +400,13 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
             Icon(
               Icons.calendar_today_rounded,
               size: AppConstants.iconSizeXXL,
-              color: BeautyCitaTheme.textLight.withValues(alpha: 0.4),
+              color: colorScheme.onSurface.withValues(alpha: 0.2),
             ),
-            const SizedBox(height: BeautyCitaTheme.spaceMD),
+            const SizedBox(height: AppConstants.paddingMD),
             Text(
               _emptyMessage(),
               style: textTheme.bodyLarge?.copyWith(
-                color: BeautyCitaTheme.textLight,
+                color: colorScheme.onSurface.withValues(alpha: 0.5),
               ),
               textAlign: TextAlign.center,
             ),
@@ -427,6 +417,8 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
   }
 
   Widget _buildBookingCard(Booking booking, TextTheme textTheme) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final ext = Theme.of(context).extension<BCThemeExtension>()!;
     final canCancel =
         booking.status == 'pending' || booking.status == 'confirmed';
 
@@ -434,25 +426,9 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
       onTap: () => context.push('/appointment/${booking.id}'),
       child: Container(
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: ext.goldGradientDirectional(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [
-            Color(0xFF8B6914),
-            Color(0xFFD4AF37),
-            Color(0xFFFFF8DC),
-            Color(0xFFFFD700),
-            Color(0xFFC19A26),
-            Color(0xFFF5D547),
-            Color(0xFFFFFFE0),
-            Color(0xFFD4AF37),
-            Color(0xFFA67C00),
-            Color(0xFFCDAD38),
-            Color(0xFFFFF8DC),
-            Color(0xFFB8860B),
-            Color(0xFF8B6914),
-          ],
-          stops: [0.0, 0.08, 0.15, 0.25, 0.35, 0.45, 0.50, 0.58, 0.68, 0.78, 0.85, 0.93, 1.0],
         ),
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
         boxShadow: [
@@ -466,7 +442,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
       child: Container(
       margin: const EdgeInsets.all(3),
       decoration: BoxDecoration(
-        color: BeautyCitaTheme.surfaceCream,
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(AppConstants.radiusMD - 3),
       ),
       child: Padding(
@@ -488,34 +464,34 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                const SizedBox(width: BeautyCitaTheme.spaceSM),
+                const SizedBox(width: AppConstants.paddingSM),
                 _buildStatusChip(booking.status, textTheme),
               ],
             ),
 
-            const SizedBox(height: BeautyCitaTheme.spaceXS),
+            const SizedBox(height: AppConstants.paddingXS),
 
             // Service name
             Text(
               booking.serviceName,
               style: textTheme.bodyMedium?.copyWith(
-                color: BeautyCitaTheme.textLight,
+                color: colorScheme.onSurface.withValues(alpha: 0.5),
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
 
-            const SizedBox(height: BeautyCitaTheme.spaceSM),
+            const SizedBox(height: AppConstants.paddingSM),
 
             // Date formatted in Spanish
             Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.schedule_rounded,
                   size: AppConstants.iconSizeSM,
-                  color: BeautyCitaTheme.primaryRose,
+                  color: colorScheme.primary,
                 ),
-                const SizedBox(width: BeautyCitaTheme.spaceXS),
+                const SizedBox(width: AppConstants.paddingXS),
                 Expanded(
                   child: Text(
                     _formatDate(booking.scheduledAt),
@@ -531,18 +507,18 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
 
             // Price if available
             if (booking.price != null) ...[
-              const SizedBox(height: BeautyCitaTheme.spaceXS),
+              const SizedBox(height: AppConstants.paddingXS),
               Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.attach_money_rounded,
                     size: AppConstants.iconSizeSM,
-                    color: BeautyCitaTheme.primaryRose,
+                    color: colorScheme.primary,
                   ),
                   Text(
                     '\$${booking.price!.toStringAsFixed(0)} MXN',
                     style: textTheme.bodyMedium?.copyWith(
-                      color: BeautyCitaTheme.primaryRose,
+                      color: colorScheme.primary,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -552,7 +528,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
 
             // Cancel button for pending / confirmed
             if (canCancel) ...[
-              const SizedBox(height: BeautyCitaTheme.spaceSM),
+              const SizedBox(height: AppConstants.paddingSM),
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton.icon(
