@@ -1,13 +1,14 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../config/theme.dart';
+import '../config/theme_extension.dart';
+import '../config/palettes.dart';
 import 'flare_particle_painter.dart';
 
 class CinematicQuestionText extends StatefulWidget {
   final String text;
-  final Color primaryColor;
-  final Color accentColor;
+  final Color? primaryColor;
+  final Color? accentColor;
   final double fontSize;
   final Duration entranceDuration;
   final Duration flareDuration;
@@ -15,8 +16,8 @@ class CinematicQuestionText extends StatefulWidget {
   const CinematicQuestionText({
     super.key,
     required this.text,
-    this.primaryColor = BeautyCitaTheme.primaryRose,
-    this.accentColor = BeautyCitaTheme.secondaryGold,
+    this.primaryColor,
+    this.accentColor,
     this.fontSize = 28,
     this.entranceDuration = const Duration(milliseconds: 1200),
     this.flareDuration = const Duration(milliseconds: 800),
@@ -94,6 +95,10 @@ class _CinematicQuestionTextState extends State<CinematicQuestionText>
 
   @override
   Widget build(BuildContext context) {
+    final ext = Theme.of(context).extension<BCThemeExtension>();
+    final resolvedPrimary = widget.primaryColor ?? ext?.cinematicPrimary ?? Theme.of(context).colorScheme.primary;
+    final resolvedAccent = widget.accentColor ?? ext?.cinematicAccent ?? Theme.of(context).colorScheme.secondary;
+
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 300),
       transitionBuilder: (child, animation) {
@@ -110,8 +115,8 @@ class _CinematicQuestionTextState extends State<CinematicQuestionText>
       child: _CinematicContent(
         key: ValueKey(widget.text),
         text: widget.text,
-        primaryColor: widget.primaryColor,
-        accentColor: widget.accentColor,
+        primaryColor: resolvedPrimary,
+        accentColor: resolvedAccent,
         fontSize: widget.fontSize,
         entranceController: _entranceController,
         flareController: _flareController,
@@ -181,7 +186,7 @@ class _CinematicContent extends StatelessWidget {
                 ),
 
               // Character-by-character text with 3D fly-in + gold shader per word
-              _buildCharacterRow(characters, totalChars, staggerFraction),
+              _buildCharacterRow(context, characters, totalChars, staggerFraction),
             ],
           ),
         );
@@ -189,32 +194,31 @@ class _CinematicContent extends StatelessWidget {
     );
   }
 
-  // Gold gradient applied per-word so each line gets full effect when wrapping
-  static const _goldGradient = LinearGradient(
-    begin: Alignment.topCenter,
-    end: Alignment.bottomCenter,
-    colors: [
-      Color(0xFF8B6914), // Deep shadow edge
-      Color(0xFFD4AF37), // Rich gold
-      Color(0xFFFFF8DC), // Bright highlight (cornsilk)
-      Color(0xFFFFD700), // Pure gold
-      Color(0xFFC19A26), // Mid gold
-      Color(0xFFF5D547), // Light gold
-      Color(0xFFFFFFE0), // Near-white specular
-      Color(0xFFD4AF37), // Rich gold
-      Color(0xFFA67C00), // Bronze shadow
-      Color(0xFFCDAD38), // Warm gold
-      Color(0xFFFFF8DC), // Bright highlight
-      Color(0xFFB8860B), // Dark goldenrod
-      Color(0xFF8B6914), // Deep shadow edge
-    ],
-    stops: [0.0, 0.08, 0.15, 0.25, 0.35, 0.45, 0.50, 0.58, 0.68, 0.78, 0.85, 0.93, 1.0],
-  );
+  // Gold gradient resolved from theme extension, with fallback to palette constants
+  LinearGradient _getGradient(BuildContext context) {
+    final ext = Theme.of(context).extension<BCThemeExtension>();
+    if (ext?.cinematicGradient != null) {
+      return LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: ext!.cinematicGradient!,
+      );
+    }
+    final stops = ext?.goldGradientStops ?? kGoldStops;
+    final positions = ext?.goldGradientPositions ?? kGoldPositions;
+    return LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: stops,
+      stops: positions,
+    );
+  }
 
-  Widget _buildCharacterRow(List<String> characters, int totalChars, double staggerFraction) {
+  Widget _buildCharacterRow(BuildContext context, List<String> characters, int totalChars, double staggerFraction) {
     // Split text into words so wrapping only happens at word boundaries
     final words = text.split(' ');
     int charIndex = 0;
+    final gradient = _getGradient(context);
 
     Widget textContent = Wrap(
       alignment: WrapAlignment.center,
@@ -273,7 +277,7 @@ class _CinematicContent extends StatelessWidget {
         return Padding(
           padding: const EdgeInsets.only(right: 6),
           child: ShaderMask(
-            shaderCallback: (bounds) => _goldGradient.createShader(bounds),
+            shaderCallback: (bounds) => gradient.createShader(bounds),
             blendMode: BlendMode.srcIn,
             child: Row(
               mainAxisSize: MainAxisSize.min,
