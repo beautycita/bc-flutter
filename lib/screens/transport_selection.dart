@@ -2,34 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../config/theme.dart';
+import '../config/constants.dart';
+import '../config/theme_extension.dart';
 import '../models/curate_result.dart';
 import '../widgets/cinematic_question_text.dart';
 import '../providers/booking_flow_provider.dart';
 import '../providers/profile_provider.dart';
 import '../providers/user_preferences_provider.dart';
 import '../services/location_service.dart';
-
-/// 13-stop real gold gradient for card borders.
-const _goldGradient = LinearGradient(
-  begin: Alignment.topLeft,
-  end: Alignment.bottomRight,
-  colors: [
-    Color(0xFF8B6914),
-    Color(0xFFD4AF37),
-    Color(0xFFFFF8DC),
-    Color(0xFFFFD700),
-    Color(0xFFC19A26),
-    Color(0xFFF5D547),
-    Color(0xFFFFFFE0),
-    Color(0xFFD4AF37),
-    Color(0xFFA67C00),
-    Color(0xFFCDAD38),
-    Color(0xFFFFF8DC),
-    Color(0xFFB8860B),
-    Color(0xFF8B6914),
-  ],
-  stops: [0.0, 0.08, 0.15, 0.25, 0.35, 0.45, 0.50, 0.58, 0.68, 0.78, 0.85, 0.93, 1.0],
-);
 
 class TransportSelection extends ConsumerStatefulWidget {
   const TransportSelection({super.key});
@@ -82,9 +62,10 @@ class _TransportSelectionState extends ConsumerState<TransportSelection> {
   Widget build(BuildContext context) {
     final bookingNotifier = ref.read(bookingFlowProvider.notifier);
     final defaultTransport = ref.watch(userPrefsProvider).defaultTransport;
+    final palette = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: BeautyCitaTheme.surfaceCream,
+      backgroundColor: palette.surface,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -98,11 +79,11 @@ class _TransportSelectionState extends ConsumerState<TransportSelection> {
                 alignment: Alignment.centerLeft,
                 child: GestureDetector(
                   onTap: () => bookingNotifier.goBack(),
-                  child: const Padding(
-                    padding: EdgeInsets.only(bottom: 16),
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
                     child: Icon(
                       Icons.arrow_back_rounded,
-                      color: BeautyCitaTheme.textDark,
+                      color: palette.onSurface,
                       size: 24,
                     ),
                   ),
@@ -121,7 +102,7 @@ class _TransportSelectionState extends ConsumerState<TransportSelection> {
                 'Esto nos ayuda a calcular el tiempo de traslado',
                 style: GoogleFonts.nunito(
                   fontSize: 14,
-                  color: BeautyCitaTheme.textLight,
+                  color: palette.onSurface.withValues(alpha: 0.5),
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -134,15 +115,15 @@ class _TransportSelectionState extends ConsumerState<TransportSelection> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const CircularProgressIndicator(
-                        color: BeautyCitaTheme.primaryRose,
+                      CircularProgressIndicator(
+                        color: palette.primary,
                       ),
                       const SizedBox(height: 16),
                       Text(
                         'Obteniendo tu ubicacion...',
                         style: GoogleFonts.nunito(
                           fontSize: 14,
-                          color: BeautyCitaTheme.textLight,
+                          color: palette.onSurface.withValues(alpha: 0.5),
                         ),
                       ),
                     ],
@@ -153,10 +134,10 @@ class _TransportSelectionState extends ConsumerState<TransportSelection> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.location_off_rounded,
                         size: 48,
-                        color: BeautyCitaTheme.textLight,
+                        color: palette.onSurface.withValues(alpha: 0.5),
                       ),
                       const SizedBox(height: 16),
                       Text(
@@ -164,7 +145,7 @@ class _TransportSelectionState extends ConsumerState<TransportSelection> {
                         style: GoogleFonts.poppins(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: BeautyCitaTheme.textDark,
+                          color: palette.onSurface,
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -172,7 +153,7 @@ class _TransportSelectionState extends ConsumerState<TransportSelection> {
                         'Activa el GPS y permite el acceso a ubicacion',
                         style: GoogleFonts.nunito(
                           fontSize: 14,
-                          color: BeautyCitaTheme.textLight,
+                          color: palette.onSurface.withValues(alpha: 0.5),
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -191,11 +172,11 @@ class _TransportSelectionState extends ConsumerState<TransportSelection> {
                           style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
                         ),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: BeautyCitaTheme.primaryRose,
+                          backgroundColor: palette.primary,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+                            borderRadius: BorderRadius.circular(AppConstants.radiusMD),
                           ),
                         ),
                       ),
@@ -207,8 +188,8 @@ class _TransportSelectionState extends ConsumerState<TransportSelection> {
                   children: [
                     _TransportCard(
                       icon: Icons.directions_car_rounded,
-                      iconColor: BeautyCitaTheme.primaryRose,
-                      iconBgColor: BeautyCitaTheme.primaryRoseLight,
+                      iconColor: palette.primary,
+                      iconBgColor: palette.primary.withValues(alpha: 0.1),
                       label: 'Mi auto',
                       subtitle: 'Manejo yo',
                       isRecommended: defaultTransport == 'car',
@@ -217,9 +198,9 @@ class _TransportSelectionState extends ConsumerState<TransportSelection> {
                     const SizedBox(height: 14),
                     _TransportCard(
                       icon: Icons.local_taxi_rounded,
-                      iconColor: BeautyCitaTheme.secondaryGold,
-                      iconBgColor: BeautyCitaTheme.secondaryGoldLight,
-                      borderColor: BeautyCitaTheme.secondaryGold,
+                      iconColor: palette.secondary,
+                      iconBgColor: palette.secondary.withValues(alpha: 0.1),
+                      borderColor: palette.secondary,
                       label: 'Uber',
                       subtitle: 'Que me lleven',
                       isRecommended: defaultTransport == 'uber',
@@ -277,6 +258,9 @@ class _TransportCardState extends State<_TransportCard> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = Theme.of(context).colorScheme;
+    final ext = Theme.of(context).extension<BCThemeExtension>()!;
+
     return GestureDetector(
       onTapDown: (_) => setState(() => _isPressed = true),
       onTapUp: (_) {
@@ -291,8 +275,8 @@ class _TransportCardState extends State<_TransportCard> {
           ..scale(_isPressed ? 0.97 : 1.0, _isPressed ? 0.97 : 1.0),
         transformAlignment: Alignment.center,
         decoration: BoxDecoration(
-          gradient: _goldGradient,
-          borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusLarge),
+          gradient: ext.goldGradientDirectional(),
+          borderRadius: BorderRadius.circular(AppConstants.radiusLG),
           boxShadow: _isPressed
               ? []
               : [
@@ -310,7 +294,7 @@ class _TransportCardState extends State<_TransportCard> {
             color: _isPressed
                 ? widget.iconBgColor
                 : Colors.white,
-            borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusLarge - 3),
+            borderRadius: BorderRadius.circular(AppConstants.radiusLG - 3),
           ),
           child: Row(
           children: [
@@ -343,7 +327,7 @@ class _TransportCardState extends State<_TransportCard> {
                           style: GoogleFonts.poppins(
                             fontSize: 17,
                             fontWeight: FontWeight.w600,
-                            color: BeautyCitaTheme.textDark,
+                            color: palette.onSurface,
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -354,7 +338,7 @@ class _TransportCardState extends State<_TransportCard> {
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
                             color: widget.iconBgColor,
-                            borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusSmall),
+                            borderRadius: BorderRadius.circular(AppConstants.radiusSM),
                           ),
                           child: Text(
                             'Recomendado',
@@ -373,7 +357,7 @@ class _TransportCardState extends State<_TransportCard> {
                     widget.subtitle,
                     style: GoogleFonts.nunito(
                       fontSize: 13,
-                      color: BeautyCitaTheme.textLight,
+                      color: palette.onSurface.withValues(alpha: 0.5),
                     ),
                   ),
                 ],
@@ -383,7 +367,7 @@ class _TransportCardState extends State<_TransportCard> {
             // Chevron
             Icon(
               Icons.chevron_right_rounded,
-              color: BeautyCitaTheme.textLight.withValues(alpha: 0.5),
+              color: palette.onSurface.withValues(alpha: 0.25),
               size: 24,
             ),
           ],

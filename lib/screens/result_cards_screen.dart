@@ -5,37 +5,15 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../config/theme.dart';
+import '../config/constants.dart';
+import '../config/theme_extension.dart';
 import '../models/curate_result.dart';
 import '../providers/booking_flow_provider.dart';
-import '../services/places_service.dart';
 import '../services/supabase_client.dart';
 import '../widgets/cinematic_question_text.dart';
 import '../widgets/location_picker_sheet.dart';
 import 'invite_salon_screen.dart' show DiscoveredSalon, nearbySalonsProvider, waGreen, waLightGreen, waCardTint;
 import 'time_override_sheet.dart';
-
-/// 13-stop real gold gradient for card borders and button.
-const _goldGradient = LinearGradient(
-  begin: Alignment.topLeft,
-  end: Alignment.bottomRight,
-  colors: [
-    Color(0xFF8B6914),
-    Color(0xFFD4AF37),
-    Color(0xFFFFF8DC),
-    Color(0xFFFFD700),
-    Color(0xFFC19A26),
-    Color(0xFFF5D547),
-    Color(0xFFFFFFE0),
-    Color(0xFFD4AF37),
-    Color(0xFFA67C00),
-    Color(0xFFCDAD38),
-    Color(0xFFFFF8DC),
-    Color(0xFFB8860B),
-    Color(0xFF8B6914),
-  ],
-  stops: [0.0, 0.08, 0.15, 0.25, 0.35, 0.45, 0.50, 0.58, 0.68, 0.78, 0.85, 0.93, 1.0],
-);
 
 class ResultCardsScreen extends ConsumerStatefulWidget {
   const ResultCardsScreen({super.key});
@@ -213,7 +191,7 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
       case 'new_on_platform':
         return 'Nuevo en BeautyCita';
       case 'instant_confirm':
-        return 'Confirmación instantánea';
+        return 'Confirmacion instantanea';
       default:
         return badgeKey;
     }
@@ -222,11 +200,11 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
   String _formatTrafficLevel(String level) {
     switch (level) {
       case 'light':
-        return 'poco tráfico';
+        return 'poco trafico';
       case 'moderate':
-        return 'tráfico moderado';
+        return 'trafico moderado';
       case 'heavy':
-        return 'mucho tráfico';
+        return 'mucho trafico';
       default:
         return level;
     }
@@ -276,6 +254,7 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
   Widget build(BuildContext context) {
     final bookingState = ref.watch(bookingFlowProvider);
     final bookingNotifier = ref.read(bookingFlowProvider.notifier);
+    final palette = Theme.of(context).colorScheme;
 
     if (bookingState.curateResponse == null ||
         bookingState.curateResponse!.results.isEmpty) {
@@ -301,19 +280,19 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
     }
 
     return Scaffold(
-      backgroundColor: BeautyCitaTheme.surfaceCream,
+      backgroundColor: palette.surface,
       appBar: AppBar(
-        backgroundColor: BeautyCitaTheme.surfaceCream,
+        backgroundColor: palette.surface,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: BeautyCitaTheme.textDark, size: 24),
+          icon: Icon(Icons.arrow_back_rounded, color: palette.onSurface, size: 24),
           onPressed: () => bookingNotifier.goBack(),
         ),
         title: Text(
           'Resultados para $serviceName',
           style: GoogleFonts.poppins(
             fontWeight: FontWeight.w600,
-            color: BeautyCitaTheme.textDark,
+            color: palette.onSurface,
             fontSize: 18,
           ),
         ),
@@ -335,7 +314,7 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
               style: GoogleFonts.poppins(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
-                color: BeautyCitaTheme.textLight,
+                color: palette.onSurface.withValues(alpha: 0.5),
               ),
             ),
           ),
@@ -373,7 +352,7 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
 
         return Stack(
           children: [
-            // Card 3 (bottom) — only show if 3+ cards
+            // Card 3 (bottom) -- only show if 3+ cards
             if (total >= 3)
               Positioned(
                 top: card3Top,
@@ -388,7 +367,7 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
                 ),
               ),
 
-            // Card 2 (middle) — only show if 2+ cards
+            // Card 2 (middle) -- only show if 2+ cards
             if (total >= 2)
               Positioned(
                 top: card2Top.clamp(0.0, 10.0),
@@ -427,11 +406,13 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
   }
 
   Widget _buildCard(ResultCard result, bool isTopCard) {
+    final ext = Theme.of(context).extension<BCThemeExtension>()!;
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        gradient: _goldGradient,
-        borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusLarge),
+        gradient: ext.goldGradientDirectional(),
+        borderRadius: BorderRadius.circular(AppConstants.radiusLG),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: isTopCard ? 0.15 : 0.05),
@@ -444,7 +425,7 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
         margin: const EdgeInsets.all(3),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusLarge - 3),
+          borderRadius: BorderRadius.circular(AppConstants.radiusLG - 3),
         ),
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -481,6 +462,7 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
   }
 
   Widget _buildBusinessHeader(ResultCard result) {
+    final palette = Theme.of(context).colorScheme;
     final avatarUrl = result.staff.avatarUrl ?? result.business.photoUrl;
 
     return Row(
@@ -488,14 +470,14 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
         // Avatar
         CircleAvatar(
           radius: 24,
-          backgroundColor: BeautyCitaTheme.primaryRose.withValues(alpha: 0.15),
+          backgroundColor: palette.primary.withValues(alpha: 0.15),
           backgroundImage:
               avatarUrl != null ? NetworkImage(avatarUrl) : null,
           child: avatarUrl == null
-              ? const Icon(
+              ? Icon(
                   Icons.storefront_rounded,
                   size: 24,
-                  color: BeautyCitaTheme.primaryRose,
+                  color: palette.primary,
                 )
               : null,
         ),
@@ -510,22 +492,22 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
                 style: GoogleFonts.poppins(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
-                  color: BeautyCitaTheme.textDark,
+                  color: palette.onSurface,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
               Row(
                 children: [
-                  const Icon(Icons.star,
-                      color: BeautyCitaTheme.secondaryGold, size: 16),
+                  Icon(Icons.star,
+                      color: palette.secondary, size: 16),
                   const SizedBox(width: 3),
                   Text(
                     '${result.staff.rating.toStringAsFixed(1)} (${result.staff.totalReviews})',
                     style: GoogleFonts.poppins(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
-                      color: BeautyCitaTheme.textLight,
+                      color: palette.onSurface.withValues(alpha: 0.5),
                     ),
                   ),
                 ],
@@ -538,23 +520,25 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
   }
 
   Widget _buildStaffInfo(ResultCard result) {
+    final palette = Theme.of(context).colorScheme;
     String staffText = result.staff.name;
 
     if (result.staff.experienceYears != null &&
         result.staff.experienceYears! > 0) {
-      staffText += ' · ${result.staff.experienceYears} años de experiencia';
+      staffText += ' · ${result.staff.experienceYears} anos de experiencia';
     }
 
     return Text(
       staffText,
       style: GoogleFonts.poppins(
         fontSize: 14,
-        color: BeautyCitaTheme.textLight,
+        color: palette.onSurface.withValues(alpha: 0.5),
       ),
     );
   }
 
   Widget _buildTimeSlot(ResultCard result) {
+    final palette = Theme.of(context).colorScheme;
     final formatter = DateFormat('EEEE HH:mm', 'es');
     final formattedTime = formatter.format(result.slot.startTime);
     final capitalizedTime =
@@ -568,7 +552,7 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
           style: GoogleFonts.poppins(
             fontSize: 18,
             fontWeight: FontWeight.w600,
-            color: BeautyCitaTheme.textDark,
+            color: palette.onSurface,
           ),
         ),
         const SizedBox(height: 4),
@@ -580,10 +564,10 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
           ),
           child: Text(
-            '¿Otro horario?',
+            'Otro horario?',
             style: GoogleFonts.poppins(
               fontSize: 14,
-              color: BeautyCitaTheme.primaryRose,
+              color: palette.primary,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -593,6 +577,8 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
   }
 
   Widget _buildPriceInfo(ResultCard result) {
+    final palette = Theme.of(context).colorScheme;
+
     return Row(
       children: [
         Text(
@@ -600,7 +586,7 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
           style: GoogleFonts.poppins(
             fontSize: 20,
             fontWeight: FontWeight.w700,
-            color: BeautyCitaTheme.textDark,
+            color: palette.onSurface,
           ),
         ),
         const SizedBox(width: 8),
@@ -608,7 +594,7 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
           '(promedio: \$${result.areaAvgPrice.toStringAsFixed(0)})',
           style: GoogleFonts.poppins(
             fontSize: 12,
-            color: BeautyCitaTheme.textLight,
+            color: palette.onSurface.withValues(alpha: 0.5),
           ),
         ),
       ],
@@ -616,19 +602,20 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
   }
 
   Widget _buildTransportInfo(ResultCard result) {
+    final palette = Theme.of(context).colorScheme;
     final transport = result.transport;
     final icon = _getTransportIcon(transport.mode);
     final info = _formatTransportInfo(transport);
 
     return Row(
       children: [
-        Icon(icon, size: 20, color: BeautyCitaTheme.textLight),
+        Icon(icon, size: 20, color: palette.onSurface.withValues(alpha: 0.5)),
         const SizedBox(width: 8),
         Text(
           info,
           style: GoogleFonts.poppins(
             fontSize: 14,
-            color: BeautyCitaTheme.textLight,
+            color: palette.onSurface.withValues(alpha: 0.5),
           ),
         ),
       ],
@@ -636,6 +623,7 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
   }
 
   Widget _buildPickupInfo() {
+    final palette = Theme.of(context).colorScheme;
     final bookingState = ref.watch(bookingFlowProvider);
     final hasCustomPickup = bookingState.customPickupAddress != null;
     final label = hasCustomPickup
@@ -650,7 +638,7 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
           size: 14,
           color: hasCustomPickup
               ? Colors.green.shade600
-              : BeautyCitaTheme.textLight,
+              : palette.onSurface.withValues(alpha: 0.5),
         ),
         const SizedBox(width: 6),
         Expanded(
@@ -658,7 +646,7 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
             label,
             style: GoogleFonts.poppins(
               fontSize: 12,
-              color: BeautyCitaTheme.textLight,
+              color: palette.onSurface.withValues(alpha: 0.5),
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -670,7 +658,7 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
             'Cambiar',
             style: GoogleFonts.poppins(
               fontSize: 12,
-              color: BeautyCitaTheme.primaryRose,
+              color: palette.primary,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -698,13 +686,14 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
   }
 
   Widget _buildReviewSnippet(ResultCard result) {
+    final palette = Theme.of(context).colorScheme;
     final snippet = result.reviewSnippet!;
 
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.grey[100],
-        borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -714,7 +703,7 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
             style: GoogleFonts.poppins(
               fontSize: 13,
               fontStyle: FontStyle.italic,
-              color: BeautyCitaTheme.textDark,
+              color: palette.onSurface,
             ),
             maxLines: 3,
             overflow: TextOverflow.ellipsis,
@@ -724,20 +713,20 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
             Row(
               children: [
                 Text(
-                  '— ${snippet.authorName ?? "Cliente"}, hace ${snippet.daysAgo ?? 0} días',
+                  '— ${snippet.authorName ?? "Cliente"}, hace ${snippet.daysAgo ?? 0} dias',
                   style: GoogleFonts.poppins(
                     fontSize: 11,
-                    color: BeautyCitaTheme.textLight,
+                    color: palette.onSurface.withValues(alpha: 0.5),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Row(
                   children: List.generate(
                     snippet.rating ?? 0,
-                    (index) => const Icon(
+                    (index) => Icon(
                       Icons.star,
                       size: 12,
-                      color: BeautyCitaTheme.secondaryGold,
+                      color: palette.secondary,
                     ),
                   ),
                 ),
@@ -750,6 +739,8 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
   }
 
   Widget _buildBadges(ResultCard result) {
+    final palette = Theme.of(context).colorScheme;
+
     return Wrap(
       spacing: 8,
       runSpacing: 8,
@@ -760,12 +751,12 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
             style: GoogleFonts.poppins(
               fontSize: 11,
               fontWeight: FontWeight.w500,
-              color: BeautyCitaTheme.textDark,
+              color: palette.onSurface,
             ),
           ),
-          backgroundColor: BeautyCitaTheme.surfaceCream,
+          backgroundColor: palette.surface,
           side: BorderSide(
-              color: BeautyCitaTheme.textLight.withValues(alpha: 0.3)),
+              color: palette.onSurface.withValues(alpha: 0.15)),
           materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         );
@@ -774,6 +765,8 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
   }
 
   Widget _buildActionButtons(ResultCard result) {
+    final ext = Theme.of(context).extension<BCThemeExtension>()!;
+
     return GestureDetector(
       onTap: _isBooking
           ? null
@@ -788,8 +781,8 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          gradient: _goldGradient,
-          borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+          gradient: ext.goldGradientDirectional(),
+          borderRadius: BorderRadius.circular(AppConstants.radiusMD),
           boxShadow: [
             BoxShadow(
               color: const Color(0xFFD4AF37).withValues(alpha: 0.4),
@@ -973,10 +966,10 @@ class _NoResultsWithNearbySalonsState
           // Content
           Expanded(
             child: Container(
-              decoration: const BoxDecoration(
-                color: Color(0xFFECE5DD),
+              decoration: BoxDecoration(
+                color: const Color(0xFFECE5DD),
                 borderRadius: BorderRadius.vertical(
-                  top: Radius.circular(BeautyCitaTheme.radiusLarge),
+                  top: Radius.circular(AppConstants.radiusLG),
                 ),
               ),
               child: _buildContent(salonsAsync),
@@ -988,6 +981,8 @@ class _NoResultsWithNearbySalonsState
   }
 
   Widget _buildContent(AsyncValue<List<DiscoveredSalon>>? salonsAsync) {
+    final palette = Theme.of(context).colorScheme;
+
     if (salonsAsync == null) {
       return Center(
         child: Padding(
@@ -997,7 +992,7 @@ class _NoResultsWithNearbySalonsState
             style: GoogleFonts.poppins(
               fontSize: 15,
               fontWeight: FontWeight.w600,
-              color: BeautyCitaTheme.textDark,
+              color: palette.onSurface,
             ),
             textAlign: TextAlign.center,
           ),
@@ -1012,7 +1007,7 @@ class _NoResultsWithNearbySalonsState
       error: (e, _) => Center(
         child: Text(
           'Error: $e',
-          style: GoogleFonts.nunito(color: BeautyCitaTheme.textLight),
+          style: GoogleFonts.nunito(color: palette.onSurface.withValues(alpha: 0.5)),
           textAlign: TextAlign.center,
         ),
       ),
@@ -1026,7 +1021,7 @@ class _NoResultsWithNearbySalonsState
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+                  borderRadius: BorderRadius.circular(AppConstants.radiusMD),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.06),
@@ -1040,22 +1035,22 @@ class _NoResultsWithNearbySalonsState
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: BeautyCitaTheme.primaryRose.withValues(alpha: 0.1),
+                        color: palette.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Icon(Icons.filter_alt_off, size: 18, color: BeautyCitaTheme.primaryRose),
+                      child: Icon(Icons.filter_alt_off, size: 18, color: palette.primary),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         'El filtro de horario no encontro opciones',
-                        style: GoogleFonts.nunito(fontSize: 13, color: BeautyCitaTheme.textLight),
+                        style: GoogleFonts.nunito(fontSize: 13, color: palette.onSurface.withValues(alpha: 0.5)),
                       ),
                     ),
                     TextButton(
                       onPressed: widget.onClearOverride,
                       style: TextButton.styleFrom(
-                        backgroundColor: BeautyCitaTheme.primaryRose.withValues(alpha: 0.1),
+                        backgroundColor: palette.primary.withValues(alpha: 0.1),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(20),
                         ),
@@ -1066,7 +1061,7 @@ class _NoResultsWithNearbySalonsState
                         style: GoogleFonts.poppins(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: BeautyCitaTheme.primaryRose,
+                          color: palette.primary,
                         ),
                       ),
                     ),
@@ -1082,7 +1077,7 @@ class _NoResultsWithNearbySalonsState
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Text(
                   '${salons.length} estilistas en tu zona',
-                  style: GoogleFonts.nunito(fontSize: 12, color: BeautyCitaTheme.textLight),
+                  style: GoogleFonts.nunito(fontSize: 12, color: palette.onSurface.withValues(alpha: 0.5)),
                 ),
               ),
 
@@ -1100,7 +1095,7 @@ class _NoResultsWithNearbySalonsState
                 child: Center(
                   child: Text(
                     'No se encontraron estilistas en tu zona',
-                    style: GoogleFonts.nunito(fontSize: 14, color: BeautyCitaTheme.textLight),
+                    style: GoogleFonts.nunito(fontSize: 14, color: palette.onSurface.withValues(alpha: 0.5)),
                   ),
                 ),
               ),
@@ -1117,7 +1112,7 @@ class _NoResultsWithNearbySalonsState
     if (phone != null) {
       final params = <String, String>{
         if (salon.name.isNotEmpty) 'name': salon.name,
-        if (phone != null) 'phone': phone,
+        'phone': phone,
         if (salon.address != null) 'address': salon.address!,
         if (salon.city != null) 'city': salon.city!,
         if (salon.photoUrl != null) 'avatar': salon.photoUrl!,
@@ -1205,13 +1200,15 @@ class _NearbySalonCardState extends State<_NearbySalonCard>
 
   @override
   Widget build(BuildContext context) {
+    final palette = Theme.of(context).colorScheme;
+
     return GestureDetector(
       onTap: widget.onTap,
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
           color: widget.invited ? waCardTint : Colors.white,
-          borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+          borderRadius: BorderRadius.circular(AppConstants.radiusMD),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.08),
@@ -1268,7 +1265,7 @@ class _NearbySalonCardState extends State<_NearbySalonCard>
                       style: GoogleFonts.poppins(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
-                        color: BeautyCitaTheme.textDark,
+                        color: palette.onSurface,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -1277,14 +1274,14 @@ class _NearbySalonCardState extends State<_NearbySalonCard>
                     Row(
                       children: [
                         if (widget.salon.rating != null) ...[
-                          Icon(Icons.star, size: 14, color: BeautyCitaTheme.secondaryGold),
+                          Icon(Icons.star, size: 14, color: palette.secondary),
                           const SizedBox(width: 3),
                           Text(
                             widget.salon.rating!.toStringAsFixed(1),
                             style: GoogleFonts.nunito(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
-                              color: BeautyCitaTheme.textDark,
+                              color: palette.onSurface,
                             ),
                           ),
                           const SizedBox(width: 10),
@@ -1294,7 +1291,7 @@ class _NearbySalonCardState extends State<_NearbySalonCard>
                             '${widget.salon.distanceKm!.toStringAsFixed(1)} km',
                             style: GoogleFonts.nunito(
                               fontSize: 12,
-                              color: BeautyCitaTheme.textLight,
+                              color: palette.onSurface.withValues(alpha: 0.5),
                             ),
                           ),
                       ],
