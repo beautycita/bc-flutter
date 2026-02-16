@@ -151,6 +151,11 @@ class SettingsScreen extends ConsumerWidget {
             onTap: () => context.push('/settings/payment-methods'),
           ),
           SettingsTile(
+            icon: Icons.palette_outlined,
+            label: 'Apariencia',
+            onTap: () => context.push('/settings/appearance'),
+          ),
+          SettingsTile(
             icon: Icons.shield_outlined,
             label: 'Seguridad y cuenta',
             onTap: () => context.push('/settings/security'),

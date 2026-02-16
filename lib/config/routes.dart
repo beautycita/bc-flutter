@@ -26,6 +26,7 @@ import 'package:beautycita/screens/preferences_screen.dart';
 import 'package:beautycita/screens/profile_screen.dart';
 import 'package:beautycita/screens/security_screen.dart';
 import 'package:beautycita/screens/payment_methods_screen.dart';
+import 'package:beautycita/screens/appearance_screen.dart';
 
 
 class AppRoutes {
@@ -55,6 +56,7 @@ class AppRoutes {
   static const String profile = '/settings/profile';
   static const String security = '/settings/security';
   static const String paymentMethods = '/settings/payment-methods';
+  static const String appearance = '/settings/appearance';
 
 
   static final GoRouter router = GoRouter(
@@ -505,6 +507,22 @@ class AppRoutes {
         pageBuilder: (context, state) => CustomTransitionPage(
           key: state.pageKey,
           child: const SecurityScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
+                .chain(CurveTween(curve: Curves.easeInOutCubic));
+            return SlideTransition(
+              position: animation.drive(tween),
+              child: child,
+            );
+          },
+        ),
+      ),
+      GoRoute(
+        path: appearance,
+        name: 'appearance',
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const AppearanceScreen(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
                 .chain(CurveTween(curve: Curves.easeInOutCubic));
