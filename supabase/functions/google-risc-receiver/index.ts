@@ -13,14 +13,19 @@ import { decode as base64Decode } from "https://deno.land/std@0.177.0/encoding/b
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
-// Google's RISC issuer
-const GOOGLE_ISSUER = "https://accounts.google.com/";
+// Google's RISC issuer (accept with or without trailing slash)
+const GOOGLE_ISSUERS = [
+  "https://accounts.google.com",
+  "https://accounts.google.com/",
+];
 const GOOGLE_JWKS_URI = "https://www.googleapis.com/oauth2/v3/certs";
 
 // Our OAuth client IDs (audience validation)
 const VALID_AUDIENCES = [
   "925456539297-48gjim6slsnke7e9lc5h4ca9dhhpqb1e.apps.googleusercontent.com",
   "925456539297-bif3artsdt25nn53mbqfd57eurm5vnvh.apps.googleusercontent.com",
+  "925456539297-iimbf4thh5k3getppuh1llg2jim85dki.apps.googleusercontent.com",
+  "925456539297-tpmguj9c6t6j6s7fpgp8928ucv9ab7ul.apps.googleusercontent.com",
 ];
 
 interface JWKKey {
@@ -73,7 +78,7 @@ async function validateSecurityEventToken(token: string) {
   const { header, payload } = decodeJwtParts(token);
 
   // Validate issuer
-  if (payload.iss !== GOOGLE_ISSUER) {
+  if (!GOOGLE_ISSUERS.includes(payload.iss)) {
     throw new Error(`Invalid issuer: ${payload.iss}`);
   }
 
