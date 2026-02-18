@@ -1,10 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:beautycita/services/supabase_client.dart';
 
-/// Checks if the current user has admin role.
-final isAdminProvider = FutureProvider<bool>((ref) async {
+/// Fetches the current user's role string (cached).
+final _userRoleProvider = FutureProvider<String?>((ref) async {
   final userId = SupabaseClientService.currentUserId;
-  if (userId == null) return false;
+  if (userId == null) return null;
 
   try {
     final response = await SupabaseClientService.client
@@ -13,10 +13,24 @@ final isAdminProvider = FutureProvider<bool>((ref) async {
         .eq('id', userId)
         .single();
 
-    return response['role'] == 'admin';
+    return response['role'] as String?;
   } catch (_) {
-    return false;
+    return null;
   }
+});
+
+/// True for admin OR superadmin — can access admin panel.
+final isAdminProvider = FutureProvider<bool>((ref) async {
+  final role = await ref.watch(_userRoleProvider.future);
+  return role == 'admin' || role == 'superadmin';
+});
+
+/// True ONLY for superadmin — can modify engine config, feature toggles,
+/// category tree, time rules, notification templates.
+/// Admin role gets read-only access to dashboards + user/dispute management.
+final isSuperAdminProvider = FutureProvider<bool>((ref) async {
+  final role = await ref.watch(_userRoleProvider.future);
+  return role == 'superadmin';
 });
 
 /// Fetches all engine settings grouped by group_name.
@@ -102,8 +116,225 @@ final notificationTemplatesProvider =
 });
 
 // ---------------------------------------------------------------------------
+// Dashboard & Management Providers
+// ---------------------------------------------------------------------------
+
+/// Dashboard stats aggregated from multiple tables.
+final adminDashStatsProvider = FutureProvider<AdminStats>((ref) async {
+  final client = SupabaseClientService.client;
+  final today = DateTime.now().toIso8601String().split('T')[0];
+  final firstOfMonth =
+      DateTime(DateTime.now().year, DateTime.now().month, 1).toIso8601String();
+
+  final results = await Future.wait([
+    client.from('profiles').select('id'),
+    client.from('profiles').select('id').eq('role', 'stylist'),
+    client.from('appointments').select('id').gte('created_at', today),
+    client
+        .from('appointments')
+        .select('price')
+        .gte('created_at', firstOfMonth)
+        .eq('status', 'completed'),
+    client
+        .from('stylist_applications')
+        .select('id')
+        .eq('status', 'pending'),
+    client.from('disputes').select('id').eq('status', 'open'),
+  ]);
+
+  double revenue = 0;
+  for (final row in (results[3] as List)) {
+    revenue += ((row as Map)['price'] as num?)?.toDouble() ?? 0;
+  }
+
+  return AdminStats(
+    totalUsers: (results[0] as List).length,
+    activeStylists: (results[1] as List).length,
+    bookingsToday: (results[2] as List).length,
+    revenueMonth: revenue,
+    pendingApplications: (results[4] as List).length,
+    openDisputes: (results[5] as List).length,
+  );
+});
+
+/// Recent activity feed — last bookings, disputes, new users.
+final adminRecentActivityProvider =
+    FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  final client = SupabaseClientService.client;
+
+  final results = await Future.wait([
+    client
+        .from('appointments')
+        .select('id, created_at, status')
+        .order('created_at', ascending: false)
+        .limit(5),
+    client
+        .from('disputes')
+        .select('id, created_at, status')
+        .order('created_at', ascending: false)
+        .limit(3),
+    client
+        .from('profiles')
+        .select('id, full_name, created_at')
+        .order('created_at', ascending: false)
+        .limit(5),
+  ]);
+
+  final activities = <Map<String, dynamic>>[];
+
+  for (final row in (results[0] as List)) {
+    final m = row as Map<String, dynamic>;
+    activities.add({
+      'type': 'booking',
+      'description': 'Nueva cita: ${m['status']}',
+      'created_at': m['created_at'],
+    });
+  }
+  for (final row in (results[1] as List)) {
+    final m = row as Map<String, dynamic>;
+    activities.add({
+      'type': 'dispute',
+      'description': 'Disputa abierta',
+      'created_at': m['created_at'],
+    });
+  }
+  for (final row in (results[2] as List)) {
+    final m = row as Map<String, dynamic>;
+    activities.add({
+      'type': 'user',
+      'description': 'Nuevo usuario: ${m['full_name'] ?? 'Sin nombre'}',
+      'created_at': m['created_at'],
+    });
+  }
+
+  activities.sort((a, b) =>
+      (b['created_at'] as String).compareTo(a['created_at'] as String));
+  return activities.take(10).toList();
+});
+
+/// All users from profiles table.
+final adminUsersProvider = FutureProvider<List<AdminUser>>((ref) async {
+  final response = await SupabaseClientService.client
+      .from('profiles')
+      .select('id, username, full_name, phone, role, created_at')
+      .order('created_at', ascending: false);
+
+  return (response as List)
+      .map((e) => AdminUser.fromJson(e as Map<String, dynamic>))
+      .toList();
+});
+
+/// All disputes.
+final adminDisputesProvider =
+    FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  final response = await SupabaseClientService.client
+      .from('disputes')
+      .select()
+      .order('created_at', ascending: false);
+  return (response as List).cast<Map<String, dynamic>>();
+});
+
+/// Stylist/salon applications.
+final adminApplicationsProvider =
+    FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  final response = await SupabaseClientService.client
+      .from('stylist_applications')
+      .select()
+      .order('created_at', ascending: false);
+  return (response as List).cast<Map<String, dynamic>>();
+});
+
+/// All appointments (bookings).
+final adminBookingsProvider =
+    FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  final response = await SupabaseClientService.client
+      .from('appointments')
+      .select()
+      .order('created_at', ascending: false);
+  return (response as List).cast<Map<String, dynamic>>();
+});
+
+/// Feature toggles from app_config (data_type == 'bool').
+final adminFeatureTogglesProvider =
+    FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  final response = await SupabaseClientService.client
+      .from('app_config')
+      .select()
+      .eq('data_type', 'bool')
+      .order('group_name')
+      .order('key');
+  return (response as List).cast<Map<String, dynamic>>();
+});
+
+/// Inserts an entry into the audit_log table.
+Future<void> adminLogAction({
+  required String action,
+  required String targetType,
+  String? targetId,
+  Map<String, dynamic>? details,
+}) async {
+  final userId = SupabaseClientService.currentUserId;
+  if (userId == null) return;
+
+  await SupabaseClientService.client.from('audit_log').insert({
+    'admin_id': userId,
+    'action': action,
+    'target_type': targetType,
+    'target_id': targetId,
+    'details': details ?? {},
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Models
 // ---------------------------------------------------------------------------
+
+class AdminUser {
+  final String id;
+  final String username;
+  final String? fullName;
+  final String? phone;
+  final String role;
+  final String? createdAt;
+
+  const AdminUser({
+    required this.id,
+    required this.username,
+    this.fullName,
+    this.phone,
+    required this.role,
+    this.createdAt,
+  });
+
+  factory AdminUser.fromJson(Map<String, dynamic> json) {
+    return AdminUser(
+      id: json['id'] as String,
+      username: json['username'] as String? ?? '',
+      fullName: json['full_name'] as String?,
+      phone: json['phone'] as String?,
+      role: json['role'] as String? ?? 'customer',
+      createdAt: json['created_at'] as String?,
+    );
+  }
+}
+
+class AdminStats {
+  final int totalUsers;
+  final int activeStylists;
+  final int bookingsToday;
+  final double revenueMonth;
+  final int pendingApplications;
+  final int openDisputes;
+
+  const AdminStats({
+    required this.totalUsers,
+    required this.activeStylists,
+    required this.bookingsToday,
+    required this.revenueMonth,
+    required this.pendingApplications,
+    required this.openDisputes,
+  });
+}
 
 class EngineSetting {
   final String key;

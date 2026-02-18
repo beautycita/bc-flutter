@@ -27,6 +27,52 @@ const FOLLOWUP_MESSAGES = {
   reminder: `{{name}}, tienes {{count}} clientas esperando poder reservar contigo. BeautyCita es gratis para ti. Regístrate: {{link}}`,
 };
 
+// ---------------------------------------------------------------------------
+// Email fallback via send-email edge function
+// ---------------------------------------------------------------------------
+async function sendPromotionEmail(
+  salonName: string,
+  email: string,
+  interestCount: number,
+  salonLink: string
+): Promise<boolean> {
+  try {
+    const resp = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        template: "promotion",
+        to: email,
+        subject: `${interestCount} clientas te buscan en BeautyCita`,
+        variables: {
+          PROMO_TITLE: `${interestCount} clientas te buscan`,
+          PROMO_PREHEADER: `${salonName}, no pierdas mas reservas`,
+          PROMO_AMOUNT: "GRATIS",
+          PROMO_SUBTITLE: "Registro en 60 segundos",
+          PROMO_DESCRIPTION: `${salonName}, ${interestCount} clientas intentaron reservar contigo en BeautyCita esta semana. Registrate gratis y empieza a recibir reservas hoy mismo.`,
+          PROMO_CODE: "",
+          PROMO_CTA_URL: salonLink,
+          PROMO_CTA_TEXT: "REGISTRARME GRATIS",
+          PROMO_EXPIRY: "",
+          UNSUBSCRIBE_URL: `${salonLink}?unsub=1`,
+        },
+      }),
+    });
+    if (!resp.ok) {
+      console.error(`[EMAIL-FOLLOWUP] Failed: ${await resp.text()}`);
+      return false;
+    }
+    console.log(`[EMAIL-FOLLOWUP] Sent promotion to ${email}`);
+    return true;
+  } catch (err) {
+    console.error(`[EMAIL-FOLLOWUP] Error:`, err);
+    return false;
+  }
+}
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -123,10 +169,11 @@ Deno.serve(async (req: Request) => {
     const failed: string[] = [];
 
     for (const salon of candidates ?? []) {
-      // Skip if no phone/whatsapp
+      // Need either phone or email to reach this salon
       const phone = salon.whatsapp || salon.phone;
-      if (!phone) {
-        skipped.push(`${salon.business_name}: no phone`);
+      const email = salon.email;
+      if (!phone && !email) {
+        skipped.push(`${salon.business_name}: no phone or email`);
         continue;
       }
 
@@ -156,23 +203,39 @@ Deno.serve(async (req: Request) => {
         .replace("{{link}}", link)
         .replace("{{count}}", String(salon.interest_count ?? 1));
 
-      // Send message
-      const success = await sendWhatsApp(phone, message);
+      // Send via WhatsApp (preferred) or email (fallback)
+      let success = false;
+      let channel = "whatsapp";
 
-      if (success || !TWILIO_ACCOUNT_SID) {
-        // Update salon record
+      if (phone) {
+        success = await sendWhatsApp(phone, message);
+        if (!success && !TWILIO_ACCOUNT_SID) success = true; // Twilio disabled = dry run
+      }
+
+      // Fallback to email if WhatsApp failed or no phone
+      if (!success && email) {
+        success = await sendPromotionEmail(
+          salon.business_name,
+          email,
+          salon.interest_count ?? 1,
+          link
+        );
+        channel = "email";
+      }
+
+      if (success) {
         await supabase
           .from("discovered_salons")
           .update({
             last_outreach_at: nowISO,
             outreach_count: (salon.outreach_count ?? 0) + 1,
-            outreach_channel: "whatsapp",
+            outreach_channel: channel,
             status: "outreach_sent",
           })
           .eq("id", salon.id);
 
         sent.push(salon.business_name);
-        console.log(`[FOLLOWUP] Sent to ${salon.business_name}`);
+        console.log(`[FOLLOWUP] Sent to ${salon.business_name} via ${channel}`);
       } else {
         failed.push(salon.business_name);
       }

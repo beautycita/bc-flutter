@@ -29,6 +29,10 @@ class BCThemeExtension extends ThemeExtension<BCThemeExtension> {
   final Color navigationBarColor;
   final Brightness navigationBarIconBrightness;
 
+  // Typography
+  final String headingFont;
+  final String bodyFont;
+
   // Extra palette colors not in ColorScheme
   final Color cardBorderColor;
   final Color shimmerColor;
@@ -50,6 +54,8 @@ class BCThemeExtension extends ThemeExtension<BCThemeExtension> {
     this.cinematicGradient,
     this.spacingScale = 1.0,
     this.radiusScale = 1.0,
+    this.headingFont = 'Poppins',
+    this.bodyFont = 'Nunito',
     required this.statusBarColor,
     required this.statusBarIconBrightness,
     required this.navigationBarColor,
@@ -96,6 +102,8 @@ class BCThemeExtension extends ThemeExtension<BCThemeExtension> {
     List<Color>? cinematicGradient,
     double? spacingScale,
     double? radiusScale,
+    String? headingFont,
+    String? bodyFont,
     Color? statusBarColor,
     Brightness? statusBarIconBrightness,
     Color? navigationBarColor,
@@ -120,6 +128,8 @@ class BCThemeExtension extends ThemeExtension<BCThemeExtension> {
       cinematicGradient: cinematicGradient ?? this.cinematicGradient,
       spacingScale: spacingScale ?? this.spacingScale,
       radiusScale: radiusScale ?? this.radiusScale,
+      headingFont: headingFont ?? this.headingFont,
+      bodyFont: bodyFont ?? this.bodyFont,
       statusBarColor: statusBarColor ?? this.statusBarColor,
       statusBarIconBrightness: statusBarIconBrightness ?? this.statusBarIconBrightness,
       navigationBarColor: navigationBarColor ?? this.navigationBarColor,
@@ -149,6 +159,8 @@ class BCThemeExtension extends ThemeExtension<BCThemeExtension> {
       cinematicGradient: t < 0.5 ? cinematicGradient : other.cinematicGradient,
       spacingScale: spacingScale + (other.spacingScale - spacingScale) * t,
       radiusScale: radiusScale + (other.radiusScale - radiusScale) * t,
+      headingFont: t < 0.5 ? headingFont : other.headingFont,
+      bodyFont: t < 0.5 ? bodyFont : other.bodyFont,
       statusBarColor: Color.lerp(statusBarColor, other.statusBarColor, t)!,
       statusBarIconBrightness: t < 0.5 ? statusBarIconBrightness : other.statusBarIconBrightness,
       navigationBarColor: Color.lerp(navigationBarColor, other.navigationBarColor, t)!,

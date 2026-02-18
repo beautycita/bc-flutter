@@ -377,10 +377,11 @@ class _MessageBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final isUser = message.isFromUser;
     final alignment = isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start;
+    final colors = Theme.of(context).colorScheme;
     final bubbleColor = isUser
-        ? Theme.of(context).colorScheme.primary
-        : Colors.white;
-    final textColor = isUser ? Colors.white : Theme.of(context).colorScheme.onSurface;
+        ? colors.primary
+        : colors.surface;
+    final textColor = isUser ? colors.onPrimary : colors.onSurface;
 
     // Try-on result card
     if (message.isTryOnResult && message.mediaUrl != null) {
@@ -394,7 +395,7 @@ class _MessageBubble extends StatelessWidget {
                 maxWidth: MediaQuery.of(context).size.width * 0.75,
               ),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: colors.surface,
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
@@ -581,7 +582,7 @@ class _TypingIndicator extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
@@ -724,7 +725,7 @@ class _ActionChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),

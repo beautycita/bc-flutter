@@ -5,6 +5,7 @@ import 'package:beautycita/config/theme_extension.dart';
 import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/providers/auth_provider.dart';
 import 'package:beautycita/providers/profile_provider.dart';
+import 'package:beautycita/providers/admin_provider.dart';
 import 'package:beautycita/widgets/settings_widgets.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -139,6 +140,56 @@ class SettingsScreen extends ConsumerWidget {
             icon: Icons.shield_outlined,
             label: 'Seguridad y cuenta',
             onTap: () => context.push('/settings/security'),
+          ),
+
+          // ── Admin panel (only for admin/superadmin) ──
+          ref.watch(isAdminProvider).when(
+            data: (isAdmin) => isAdmin
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: AppConstants.paddingLG),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 4, bottom: 8),
+                        child: Text(
+                          'ADMINISTRACION',
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1.2,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                      ),
+                      SettingsTile(
+                        icon: Icons.admin_panel_settings_rounded,
+                        label: 'Panel de administracion',
+                        onTap: () => context.push('/admin'),
+                      ),
+                    ],
+                  )
+                : const SizedBox.shrink(),
+            loading: () => const SizedBox.shrink(),
+            error: (_, _) => const SizedBox.shrink(),
+          ),
+
+          const SizedBox(height: AppConstants.paddingLG),
+
+          // ── Salon section ──
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 8),
+            child: Text(
+              'PARA PROFESIONALES',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.2,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+          ),
+          SettingsTile(
+            icon: Icons.store_rounded,
+            label: 'Registra tu salon',
+            onTap: () => context.push('/registro'),
           ),
 
           const SizedBox(height: AppConstants.paddingXL),

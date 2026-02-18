@@ -164,6 +164,9 @@ serve(async (req) => {
             status: "succeeded",
             created_at: new Date().toISOString(),
           });
+
+          // Send emails (non-blocking — don't fail the webhook)
+          await sendBookingEmails(supabase, bookingId, paymentIntent);
         }
         break;
       }
@@ -271,6 +274,128 @@ serve(async (req) => {
     });
   }
 });
+
+// ---------------------------------------------------------------------------
+// Helper: Send email via send-email edge function
+// ---------------------------------------------------------------------------
+async function sendEmail(
+  template: string,
+  to: string,
+  subject: string,
+  variables: Record<string, string>
+): Promise<void> {
+  try {
+    const resp = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ template, to, subject, variables }),
+    });
+    if (!resp.ok) {
+      const err = await resp.text();
+      console.error(`[EMAIL] Failed to send ${template} to ${to}: ${err}`);
+    } else {
+      console.log(`[EMAIL] Sent ${template} to ${to}`);
+    }
+  } catch (err) {
+    console.error(`[EMAIL] Error sending ${template}:`, err);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Helper: Send welcome + booking receipt emails after payment
+// ---------------------------------------------------------------------------
+async function sendBookingEmails(
+  supabase: ReturnType<typeof createClient>,
+  bookingId: string,
+  paymentIntent: Stripe.PaymentIntent
+) {
+  try {
+    // Fetch booking details with related data
+    const { data: booking } = await supabase
+      .from("appointments")
+      .select(`
+        id, scheduled_at, duration_minutes, price,
+        service:services(name),
+        business:businesses(name),
+        staff:staff(display_name),
+        client_id
+      `)
+      .eq("id", bookingId)
+      .single();
+
+    if (!booking) {
+      console.error(`[EMAIL] Booking ${bookingId} not found`);
+      return;
+    }
+
+    // Get client email & name
+    const { data: auth } = await supabase.auth.admin.getUserById(booking.client_id);
+    const clientEmail = auth?.user?.email;
+    if (!clientEmail) {
+      console.log(`[EMAIL] No email for client ${booking.client_id}, skipping`);
+      return;
+    }
+
+    const clientName = auth?.user?.user_metadata?.full_name
+      || auth?.user?.user_metadata?.username
+      || clientEmail.split("@")[0];
+
+    // Check if this is the client's first completed booking → send welcome
+    const { count } = await supabase
+      .from("payments")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "succeeded")
+      .in("appointment_id",
+        (await supabase
+          .from("appointments")
+          .select("id")
+          .eq("client_id", booking.client_id)
+        ).data?.map((a: { id: string }) => a.id) ?? []
+      );
+
+    if (count !== null && count <= 1) {
+      await sendEmail("welcome", clientEmail, "Bienvenida a BeautyCita", {
+        USER_NAME: clientName,
+      });
+    }
+
+    // Send booking receipt
+    const scheduledDate = new Date(booking.scheduled_at);
+    const dateStr = scheduledDate.toLocaleDateString("es-MX", {
+      weekday: "long", year: "numeric", month: "long", day: "numeric",
+    });
+    const timeStr = scheduledDate.toLocaleTimeString("es-MX", {
+      hour: "2-digit", minute: "2-digit",
+    });
+
+    const amountMXN = (paymentIntent.amount / 100).toLocaleString("es-MX", {
+      style: "currency", currency: "MXN",
+    });
+
+    // Determine payment method display name
+    let paymentMethodDisplay = "Tarjeta";
+    if (paymentIntent.payment_method_types?.includes("oxxo")) {
+      paymentMethodDisplay = "OXXO";
+    }
+
+    await sendEmail("booking-receipt", clientEmail, "Confirmacion de tu reserva - BeautyCita", {
+      BOOKING_ID: bookingId.slice(0, 8).toUpperCase(),
+      SALON_NAME: (booking.business as any)?.name ?? "Salon",
+      SERVICE_NAME: (booking.service as any)?.name ?? "Servicio",
+      STYLIST_NAME: (booking.staff as any)?.display_name ?? "Estilista asignado",
+      BOOKING_DATE: dateStr,
+      BOOKING_TIME: timeStr,
+      DURATION: `${booking.duration_minutes ?? 45} min`,
+      TOTAL_AMOUNT: amountMXN,
+      PAYMENT_METHOD: paymentMethodDisplay,
+    });
+  } catch (err) {
+    console.error("[EMAIL] Error in sendBookingEmails:", err);
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Helper: Notify business owner when onboarding completes

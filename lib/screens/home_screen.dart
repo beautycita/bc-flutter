@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/category.dart';
 import '../providers/category_provider.dart';
+import '../providers/business_provider.dart';
 import '../config/constants.dart';
 import '../config/theme_extension.dart';
 import '../widgets/animated_city_map.dart';
@@ -62,6 +63,26 @@ class HomeScreen extends ConsumerWidget {
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.end,
                                 children: [
+                                  // Mi Negocio button — only visible for business owners
+                                  Consumer(
+                                    builder: (context, ref, _) {
+                                      final isBizOwner = ref.watch(isBusinessOwnerProvider);
+                                      return isBizOwner.when(
+                                        data: (isOwner) => isOwner
+                                            ? Padding(
+                                                padding: const EdgeInsets.only(
+                                                    right: AppConstants.paddingSM),
+                                                child: _HeaderButton(
+                                                  icon: Icons.storefront_rounded,
+                                                  onTap: () => context.push('/business'),
+                                                ),
+                                              )
+                                            : const SizedBox.shrink(),
+                                        loading: () => const SizedBox.shrink(),
+                                        error: (e, st) => const SizedBox.shrink(),
+                                      );
+                                    },
+                                  ),
                                   _HeaderButton(
                                     icon: Icons.chat_bubble_outline_rounded,
                                     onTap: () => context.push('/chat'),
@@ -109,10 +130,27 @@ class HomeScreen extends ConsumerWidget {
                   right: 0,
                   child: CustomPaint(
                     size: Size(screenWidth, 28),
-                    painter: _CurvePainter(),
+                    painter: _CurvePainter(
+                      color: Theme.of(context).scaffoldBackgroundColor,
+                    ),
                   ),
                 ),
               ],
+            ),
+          ),
+
+          // Gradient fade from scaffold bg to transparent
+          Container(
+            height: 20,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Theme.of(context).scaffoldBackgroundColor,
+                  Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0),
+                ],
+              ),
             ),
           ),
 
@@ -123,7 +161,7 @@ class HomeScreen extends ConsumerWidget {
                 horizontal: AppConstants.paddingMD,
               ),
               child: GridView.builder(
-                padding: const EdgeInsets.only(top: 4, bottom: 16),
+                padding: const EdgeInsets.only(top: 0, bottom: 16),
                 physics: const BouncingScrollPhysics(),
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
@@ -160,10 +198,13 @@ class HomeScreen extends ConsumerWidget {
 
 // Curved wave painter for the header bottom edge
 class _CurvePainter extends CustomPainter {
+  final Color color;
+  const _CurvePainter({required this.color});
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.white
+      ..color = color
       ..style = PaintingStyle.fill;
 
     final path = Path()
@@ -298,8 +339,8 @@ class _CategoryCardState extends State<_CategoryCard>
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: Theme.of(context).dividerColor,
-              width: 1,
+              color: Colors.grey.withValues(alpha: 0.12),
+              width: 0.5,
             ),
             boxShadow: [
               BoxShadow(
