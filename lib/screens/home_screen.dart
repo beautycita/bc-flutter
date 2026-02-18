@@ -7,6 +7,8 @@ import '../providers/category_provider.dart';
 import '../providers/business_provider.dart';
 import '../config/constants.dart';
 import '../config/theme_extension.dart';
+import '../themes/category_icons.dart';
+import '../themes/theme_variant.dart';
 import '../widgets/animated_city_map.dart';
 import '../widgets/cinematic_question_text.dart';
 import 'subcategory_sheet.dart';
@@ -375,12 +377,11 @@ class _CategoryCardState extends State<_CategoryCard>
                   ),
                 ),
                 child: Center(
-                  child: Text(
-                    category.icon,
-                    style: const TextStyle(
-                      fontSize: 36,
-                      height: 1.2,
-                    ),
+                  child: getCategoryIcon(
+                    variant: ThemeVariant.roseGold,
+                    categoryId: category.id,
+                    color: categoryColor,
+                    size: 36,
                   ),
                 ),
               ),

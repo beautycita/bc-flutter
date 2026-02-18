@@ -40,6 +40,17 @@ class BCThemeExtension extends ThemeExtension<BCThemeExtension> {
   final Color warningColor;
   final Color infoColor;
 
+  // Status colors (booking/appointment lifecycle)
+  final Color statusPending;
+  final Color statusConfirmed;
+  final Color statusCompleted;
+  final Color statusCancelled;
+
+  // Chart colors
+  final List<Color> chartColors;
+  final Color chartGridColor;
+  final Color chartLabelColor;
+
   const BCThemeExtension({
     required this.primaryGradient,
     required this.accentGradient,
@@ -65,6 +76,13 @@ class BCThemeExtension extends ThemeExtension<BCThemeExtension> {
     required this.successColor,
     required this.warningColor,
     required this.infoColor,
+    required this.statusPending,
+    required this.statusConfirmed,
+    required this.statusCompleted,
+    required this.statusCancelled,
+    required this.chartColors,
+    required this.chartGridColor,
+    required this.chartLabelColor,
   });
 
   /// Convenience: build a LinearGradient from the gold stops.
@@ -113,6 +131,13 @@ class BCThemeExtension extends ThemeExtension<BCThemeExtension> {
     Color? successColor,
     Color? warningColor,
     Color? infoColor,
+    Color? statusPending,
+    Color? statusConfirmed,
+    Color? statusCompleted,
+    Color? statusCancelled,
+    List<Color>? chartColors,
+    Color? chartGridColor,
+    Color? chartLabelColor,
   }) {
     return BCThemeExtension(
       primaryGradient: primaryGradient ?? this.primaryGradient,
@@ -139,6 +164,13 @@ class BCThemeExtension extends ThemeExtension<BCThemeExtension> {
       successColor: successColor ?? this.successColor,
       warningColor: warningColor ?? this.warningColor,
       infoColor: infoColor ?? this.infoColor,
+      statusPending: statusPending ?? this.statusPending,
+      statusConfirmed: statusConfirmed ?? this.statusConfirmed,
+      statusCompleted: statusCompleted ?? this.statusCompleted,
+      statusCancelled: statusCancelled ?? this.statusCancelled,
+      chartColors: chartColors ?? this.chartColors,
+      chartGridColor: chartGridColor ?? this.chartGridColor,
+      chartLabelColor: chartLabelColor ?? this.chartLabelColor,
     );
   }
 
@@ -170,6 +202,13 @@ class BCThemeExtension extends ThemeExtension<BCThemeExtension> {
       successColor: Color.lerp(successColor, other.successColor, t)!,
       warningColor: Color.lerp(warningColor, other.warningColor, t)!,
       infoColor: Color.lerp(infoColor, other.infoColor, t)!,
+      statusPending: Color.lerp(statusPending, other.statusPending, t)!,
+      statusConfirmed: Color.lerp(statusConfirmed, other.statusConfirmed, t)!,
+      statusCompleted: Color.lerp(statusCompleted, other.statusCompleted, t)!,
+      statusCancelled: Color.lerp(statusCancelled, other.statusCancelled, t)!,
+      chartColors: t < 0.5 ? chartColors : other.chartColors,
+      chartGridColor: Color.lerp(chartGridColor, other.chartGridColor, t)!,
+      chartLabelColor: Color.lerp(chartLabelColor, other.chartLabelColor, t)!,
     );
   }
 }

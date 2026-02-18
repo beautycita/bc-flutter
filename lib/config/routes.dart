@@ -1,19 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:beautycita/screens/splash_screen.dart';
-import 'package:beautycita/screens/auth_screen.dart';
-import 'package:beautycita/screens/home_screen.dart';
 import 'package:beautycita/screens/provider_list_screen.dart';
 import 'package:beautycita/screens/provider_detail_screen.dart';
 import 'package:beautycita/screens/booking_screen.dart';
-import 'package:beautycita/screens/my_bookings_screen.dart';
 import 'package:beautycita/screens/booking_flow_screen.dart';
 import 'package:beautycita/screens/admin/admin_shell_screen.dart';
 import 'package:beautycita/screens/invite_salon_screen.dart';
 import 'package:beautycita/screens/salon_onboarding_screen.dart';
-import 'package:beautycita/screens/settings_screen.dart';
-import 'package:beautycita/screens/chat_list_screen.dart';
-import 'package:beautycita/screens/chat_conversation_screen.dart';
 import 'package:beautycita/screens/chat_router_screen.dart';
 import 'package:beautycita/screens/booking_detail_screen.dart';
 import 'package:beautycita/screens/qr_scan_screen.dart';
@@ -27,7 +20,10 @@ import 'package:beautycita/screens/profile_screen.dart';
 import 'package:beautycita/screens/security_screen.dart';
 import 'package:beautycita/screens/payment_methods_screen.dart';
 import 'package:beautycita/screens/appearance_screen.dart';
-import 'package:beautycita/screens/business/business_shell_screen.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:beautycita/themes/theme_variant.dart';
+import 'package:beautycita/themes/screen_builders.dart';
+import 'package:beautycita/themes/variant_config.dart';
 
 
 class AppRoutes {
@@ -68,45 +64,38 @@ class AppRoutes {
       GoRoute(
         path: splash,
         name: 'splash',
-        pageBuilder: (context, state) => CustomTransitionPage(
-          key: state.pageKey,
-          child: const SplashScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return FadeTransition(opacity: animation, child: child);
-          },
-        ),
+        pageBuilder: (context, state) {
+          final config = _variantConfig(context);
+          return CustomTransitionPage(
+            key: state.pageKey,
+            child: config.buildSplash(),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+          );
+        },
       ),
       GoRoute(
         path: auth,
         name: 'auth',
-        pageBuilder: (context, state) => CustomTransitionPage(
-          key: state.pageKey,
-          child: const AuthScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
-                .chain(CurveTween(curve: Curves.easeInOutCubic));
-            return SlideTransition(
-              position: animation.drive(tween),
-              child: child,
-            );
-          },
-        ),
+        pageBuilder: (context, state) {
+          final config = _variantConfig(context);
+          return config.buildPageTransition(
+            child: config.buildAuth(),
+            state: state,
+          );
+        },
       ),
       GoRoute(
         path: home,
         name: 'home',
-        pageBuilder: (context, state) => CustomTransitionPage(
-          key: state.pageKey,
-          child: const HomeScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            final tween = Tween(begin: const Offset(0.0, 1.0), end: Offset.zero)
-                .chain(CurveTween(curve: Curves.easeInOutCubic));
-            return SlideTransition(
-              position: animation.drive(tween),
-              child: FadeTransition(opacity: animation, child: child),
-            );
-          },
-        ),
+        pageBuilder: (context, state) {
+          final config = _variantConfig(context);
+          return config.buildPageTransition(
+            child: config.buildHome(),
+            state: state,
+          );
+        },
       ),
       GoRoute(
         path: providers,
@@ -217,17 +206,10 @@ class AppRoutes {
         path: '/my-bookings',
         name: 'my-bookings',
         pageBuilder: (context, state) {
-          return CustomTransitionPage(
-            key: state.pageKey,
-            child: const MyBookingsScreen(),
-            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-              final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
-                  .chain(CurveTween(curve: Curves.easeInOutCubic));
-              return SlideTransition(
-                position: animation.drive(tween),
-                child: child,
-              );
-            },
+          final config = _variantConfig(context);
+          return config.buildPageTransition(
+            child: config.buildMyBookings(),
+            state: state,
           );
         },
       ),
@@ -269,18 +251,13 @@ class AppRoutes {
       GoRoute(
         path: business,
         name: 'business',
-        pageBuilder: (context, state) => CustomTransitionPage(
-          key: state.pageKey,
-          child: const BusinessShellScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
-                .chain(CurveTween(curve: Curves.easeInOutCubic));
-            return SlideTransition(
-              position: animation.drive(tween),
-              child: child,
-            );
-          },
-        ),
+        pageBuilder: (context, state) {
+          final config = _variantConfig(context);
+          return config.buildPageTransition(
+            child: config.buildBusinessShell(),
+            state: state,
+          );
+        },
       ),
       GoRoute(
         path: inviteSalon,
@@ -301,18 +278,13 @@ class AppRoutes {
       GoRoute(
         path: settings,
         name: 'settings',
-        pageBuilder: (context, state) => CustomTransitionPage(
-          key: state.pageKey,
-          child: const SettingsScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
-                .chain(CurveTween(curve: Curves.easeInOutCubic));
-            return SlideTransition(
-              position: animation.drive(tween),
-              child: child,
-            );
-          },
-        ),
+        pageBuilder: (context, state) {
+          final config = _variantConfig(context);
+          return config.buildPageTransition(
+            child: config.buildSettings(),
+            state: state,
+          );
+        },
       ),
       GoRoute(
         path: '/qr-scan',
@@ -367,35 +339,23 @@ class AppRoutes {
       GoRoute(
         path: chatList,
         name: 'chat-list',
-        pageBuilder: (context, state) => CustomTransitionPage(
-          key: state.pageKey,
-          child: const ChatListScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
-                .chain(CurveTween(curve: Curves.easeInOutCubic));
-            return SlideTransition(
-              position: animation.drive(tween),
-              child: child,
-            );
-          },
-        ),
+        pageBuilder: (context, state) {
+          final config = _variantConfig(context);
+          return config.buildPageTransition(
+            child: config.buildChatList(),
+            state: state,
+          );
+        },
       ),
       GoRoute(
         path: chatConversation,
         name: 'chat-conversation',
         pageBuilder: (context, state) {
           final threadId = state.pathParameters['threadId']!;
-          return CustomTransitionPage(
-            key: state.pageKey,
-            child: ChatConversationScreen(threadId: threadId),
-            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-              final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
-                  .chain(CurveTween(curve: Curves.easeInOutCubic));
-              return SlideTransition(
-                position: animation.drive(tween),
-                child: child,
-              );
-            },
+          final config = _variantConfig(context);
+          return config.buildPageTransition(
+            child: config.buildChatConversation(threadId),
+            state: state,
           );
         },
       ),
@@ -577,6 +537,13 @@ class AppRoutes {
       ),
     ),
   );
+
+  /// Reads the current ThemeVariant from Riverpod and returns its config.
+  static ThemeVariantConfig _variantConfig(BuildContext context) {
+    final container = ProviderScope.containerOf(context);
+    final variant = container.read(currentVariantProvider);
+    return getVariantConfig(variant);
+  }
 
   AppRoutes._();
 }

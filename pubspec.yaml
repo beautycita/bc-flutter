@@ -39,6 +39,9 @@ dependencies:
   firebase_messaging: ^15.1.6
   flutter_local_notifications: ^18.0.1
   qr_flutter: ^4.1.0
+  phosphor_flutter: ^2.1.0
+  hugeicons: ^0.0.7
+  material_symbols_icons: ^4.2752.0
 
 dev_dependencies:
   flutter_test:

@@ -70,7 +70,7 @@ class _MetricCard extends StatelessWidget {
 
     return Card(
       elevation: 0,
-      color: Colors.white,
+      color: colors.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
       ),

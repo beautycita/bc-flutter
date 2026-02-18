@@ -73,57 +73,85 @@ class ThemeNotifier extends StateNotifier<ThemeState> {
 
   Future<void> setFontScale(double scale) async {
     _fontScale = scale;
-    _rebuild(state.palette);
+    _rebuildFromCurrentTheme();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setDouble(_prefFontScale, scale);
   }
 
   Future<void> setRadiusScale(double scale) async {
     _radiusScale = scale;
-    _rebuild(state.palette);
+    _rebuildFromCurrentTheme();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setDouble(_prefRadiusScale, scale);
   }
 
   Future<void> setAnimationSpeed(double speed) async {
     _animationSpeed = speed;
-    _rebuild(state.palette);
+    _rebuildFromCurrentTheme();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setDouble(_prefAnimSpeed, speed);
   }
 
   Future<void> setThemeMode(ThemeMode mode) async {
     _themeMode = mode;
-    _rebuild(state.palette);
+    _rebuildFromCurrentTheme();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_prefThemeMode, mode.index);
   }
 
+  /// Re-resolve effective palette from the current base theme ID.
+  void _rebuildFromCurrentTheme() {
+    final basePalette = allPalettes[state.themeId] ?? state.palette;
+    _applyPalette(basePalette);
+  }
+
   void _applyPalette(BCPalette palette) {
     _rebuild(palette);
-    // Update system UI chrome
+    // Update system UI chrome from the effective (resolved) palette
+    final effective = state.palette;
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
-      statusBarColor: palette.statusBarColor,
-      statusBarIconBrightness: palette.statusBarIconBrightness,
-      statusBarBrightness: palette.brightness == Brightness.light
+      statusBarColor: effective.statusBarColor,
+      statusBarIconBrightness: effective.statusBarIconBrightness,
+      statusBarBrightness: effective.brightness == Brightness.light
           ? Brightness.light
           : Brightness.dark,
-      systemNavigationBarColor: palette.navigationBarColor,
-      systemNavigationBarIconBrightness: palette.navigationBarIconBrightness,
+      systemNavigationBarColor: effective.navigationBarColor,
+      systemNavigationBarIconBrightness: effective.navigationBarIconBrightness,
     ));
   }
 
-  void _rebuild(BCPalette palette) {
-    final effectiveRadius = _radiusScale * palette.radiusScale;
+  /// Resolve the effective palette based on _themeMode, then build ThemeData.
+  void _rebuild(BCPalette basePalette) {
+    final pair = palettePairs[basePalette.id];
+    BCPalette effectivePalette;
+    if (pair != null) {
+      switch (_themeMode) {
+        case ThemeMode.light:
+          effectivePalette = pair.light;
+        case ThemeMode.dark:
+          effectivePalette = pair.dark;
+        case ThemeMode.system:
+          // Use platform brightness; default to palette's native brightness
+          final platformBrightness =
+              WidgetsBinding.instance.platformDispatcher.platformBrightness;
+          effectivePalette = platformBrightness == Brightness.light
+              ? pair.light
+              : pair.dark;
+      }
+    } else {
+      effectivePalette = basePalette;
+    }
+
+    final effectiveRadius = _radiusScale * effectivePalette.radiusScale;
     final themeData = buildThemeFromPalette(
-      palette,
+      effectivePalette,
       fontScale: _fontScale,
       radiusOverride: effectiveRadius,
     );
     state = ThemeState(
-      themeId: palette.id,
+      themeId: basePalette.id, // keep base ID for variant routing
       themeData: themeData,
-      palette: palette,
+      palette: effectivePalette,
       fontScale: _fontScale,
       radiusScale: _radiusScale,
       animationSpeed: _animationSpeed,

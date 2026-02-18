@@ -107,6 +107,13 @@ ThemeData buildThemeFromPalette(BCPalette palette, {double fontScale = 1.0, doub
     successColor: palette.success,
     warningColor: palette.warning,
     infoColor: palette.info,
+    statusPending: palette.statusPending,
+    statusConfirmed: palette.statusConfirmed,
+    statusCompleted: palette.statusCompleted,
+    statusCancelled: palette.statusCancelled,
+    chartColors: palette.chartColors,
+    chartGridColor: palette.chartGridColor,
+    chartLabelColor: palette.chartLabelColor,
   );
 
   return base.copyWith(
