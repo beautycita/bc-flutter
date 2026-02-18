@@ -6,7 +6,7 @@ import 'theme_extension.dart';
 
 /// Builds a complete ThemeData from a BCPalette.
 /// This is the SINGLE source of truth for all theme generation.
-ThemeData buildThemeFromPalette(BCPalette palette) {
+ThemeData buildThemeFromPalette(BCPalette palette, {double fontScale = 1.0, double? radiusOverride}) {
   final isLight = palette.brightness == Brightness.light;
   final base = isLight ? ThemeData.light() : ThemeData.dark();
 
@@ -24,7 +24,8 @@ ThemeData buildThemeFromPalette(BCPalette palette) {
 
   // Scaled dimensions
   final s = palette.spacingScale;
-  final r = palette.radiusScale;
+  final r = radiusOverride ?? palette.radiusScale;
+  final f = fontScale;
 
   final headingColor = palette.textPrimary;
   final bodyColor = palette.textPrimary;
@@ -39,7 +40,7 @@ ThemeData buildThemeFromPalette(BCPalette palette) {
   }) =>
       GoogleFonts.getFont(
         palette.headingFont,
-        fontSize: fontSize,
+        fontSize: fontSize * f,
         fontWeight: fontWeight,
         color: color ?? headingColor,
         height: height,
@@ -53,7 +54,7 @@ ThemeData buildThemeFromPalette(BCPalette palette) {
   }) =>
       GoogleFonts.getFont(
         palette.bodyFont,
-        fontSize: fontSize,
+        fontSize: fontSize * f,
         fontWeight: fontWeight,
         color: color ?? bodyColor,
         height: height,
