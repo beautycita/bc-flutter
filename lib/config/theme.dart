@@ -30,52 +30,51 @@ ThemeData buildThemeFromPalette(BCPalette palette) {
   final bodyColor = palette.textPrimary;
   final hintColor = palette.textSecondary;
 
-  final textTheme = GoogleFonts.nunitoTextTheme(base.textTheme).copyWith(
-    displayLarge: GoogleFonts.poppins(
-      fontSize: 32, fontWeight: FontWeight.bold, color: headingColor, height: 1.2,
-    ),
-    displayMedium: GoogleFonts.poppins(
-      fontSize: 28, fontWeight: FontWeight.bold, color: headingColor, height: 1.2,
-    ),
-    displaySmall: GoogleFonts.poppins(
-      fontSize: 24, fontWeight: FontWeight.w600, color: headingColor, height: 1.3,
-    ),
-    headlineLarge: GoogleFonts.poppins(
-      fontSize: 22, fontWeight: FontWeight.w600, color: headingColor, height: 1.3,
-    ),
-    headlineMedium: GoogleFonts.poppins(
-      fontSize: 20, fontWeight: FontWeight.w600, color: headingColor, height: 1.3,
-    ),
-    headlineSmall: GoogleFonts.poppins(
-      fontSize: 18, fontWeight: FontWeight.w600, color: headingColor, height: 1.4,
-    ),
-    titleLarge: GoogleFonts.nunito(
-      fontSize: 18, fontWeight: FontWeight.w600, color: bodyColor, height: 1.4,
-    ),
-    titleMedium: GoogleFonts.nunito(
-      fontSize: 16, fontWeight: FontWeight.w600, color: bodyColor, height: 1.4,
-    ),
-    titleSmall: GoogleFonts.nunito(
-      fontSize: 14, fontWeight: FontWeight.w600, color: bodyColor, height: 1.4,
-    ),
-    bodyLarge: GoogleFonts.nunito(
-      fontSize: 16, fontWeight: FontWeight.w400, color: bodyColor, height: 1.5,
-    ),
-    bodyMedium: GoogleFonts.nunito(
-      fontSize: 14, fontWeight: FontWeight.w400, color: bodyColor, height: 1.5,
-    ),
-    bodySmall: GoogleFonts.nunito(
-      fontSize: 12, fontWeight: FontWeight.w400, color: hintColor, height: 1.5,
-    ),
-    labelLarge: GoogleFonts.nunito(
-      fontSize: 16, fontWeight: FontWeight.w600, color: bodyColor, height: 1.2,
-    ),
-    labelMedium: GoogleFonts.nunito(
-      fontSize: 14, fontWeight: FontWeight.w500, color: bodyColor, height: 1.2,
-    ),
-    labelSmall: GoogleFonts.nunito(
-      fontSize: 12, fontWeight: FontWeight.w500, color: hintColor, height: 1.2,
-    ),
+  // Dynamic font lookup — each theme gets its own typography personality
+  TextStyle heading({
+    double fontSize = 16,
+    FontWeight fontWeight = FontWeight.w600,
+    Color? color,
+    double height = 1.3,
+  }) =>
+      GoogleFonts.getFont(
+        palette.headingFont,
+        fontSize: fontSize,
+        fontWeight: fontWeight,
+        color: color ?? headingColor,
+        height: height,
+      );
+
+  TextStyle body({
+    double fontSize = 14,
+    FontWeight fontWeight = FontWeight.w400,
+    Color? color,
+    double height = 1.5,
+  }) =>
+      GoogleFonts.getFont(
+        palette.bodyFont,
+        fontSize: fontSize,
+        fontWeight: fontWeight,
+        color: color ?? bodyColor,
+        height: height,
+      );
+
+  final textTheme = base.textTheme.copyWith(
+    displayLarge: heading(fontSize: 32, fontWeight: FontWeight.bold, height: 1.2),
+    displayMedium: heading(fontSize: 28, fontWeight: FontWeight.bold, height: 1.2),
+    displaySmall: heading(fontSize: 24, fontWeight: FontWeight.w600, height: 1.3),
+    headlineLarge: heading(fontSize: 22, fontWeight: FontWeight.w600, height: 1.3),
+    headlineMedium: heading(fontSize: 20, fontWeight: FontWeight.w600, height: 1.3),
+    headlineSmall: heading(fontSize: 18, fontWeight: FontWeight.w600, height: 1.4),
+    titleLarge: body(fontSize: 18, fontWeight: FontWeight.w600, height: 1.4),
+    titleMedium: body(fontSize: 16, fontWeight: FontWeight.w600, height: 1.4),
+    titleSmall: body(fontSize: 14, fontWeight: FontWeight.w600, height: 1.4),
+    bodyLarge: body(fontSize: 16, height: 1.5),
+    bodyMedium: body(fontSize: 14, height: 1.5),
+    bodySmall: body(fontSize: 12, color: hintColor, height: 1.5),
+    labelLarge: body(fontSize: 16, fontWeight: FontWeight.w600, height: 1.2),
+    labelMedium: body(fontSize: 14, fontWeight: FontWeight.w500, height: 1.2),
+    labelSmall: body(fontSize: 12, fontWeight: FontWeight.w500, color: hintColor, height: 1.2),
   );
 
   final rMD = AppConstants.radiusMD * r;
@@ -96,6 +95,8 @@ ThemeData buildThemeFromPalette(BCPalette palette) {
     cinematicGradient: palette.cinematicGradient,
     spacingScale: palette.spacingScale,
     radiusScale: palette.radiusScale,
+    headingFont: palette.headingFont,
+    bodyFont: palette.bodyFont,
     statusBarColor: palette.statusBarColor,
     statusBarIconBrightness: palette.statusBarIconBrightness,
     navigationBarColor: palette.navigationBarColor,
@@ -120,9 +121,7 @@ ThemeData buildThemeFromPalette(BCPalette palette) {
       backgroundColor: palette.scaffoldBackground,
       foregroundColor: palette.textPrimary,
       surfaceTintColor: Colors.transparent,
-      titleTextStyle: GoogleFonts.poppins(
-        fontSize: 20, fontWeight: FontWeight.w600, color: palette.textPrimary,
-      ),
+      titleTextStyle: heading(fontSize: 20, fontWeight: FontWeight.w600, color: palette.textPrimary),
       iconTheme: IconThemeData(color: palette.textPrimary, size: 24),
     ),
 
@@ -150,9 +149,7 @@ ThemeData buildThemeFromPalette(BCPalette palette) {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(rLG),
         ),
-        textStyle: GoogleFonts.nunito(
-          fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: 0.5,
-        ),
+        textStyle: body(fontSize: 16, fontWeight: FontWeight.w700),
       ),
     ),
 
@@ -168,9 +165,7 @@ ThemeData buildThemeFromPalette(BCPalette palette) {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(rLG),
         ),
-        textStyle: GoogleFonts.nunito(
-          fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: 0.5,
-        ),
+        textStyle: body(fontSize: 16, fontWeight: FontWeight.w700),
       ),
     ),
 
@@ -185,9 +180,7 @@ ThemeData buildThemeFromPalette(BCPalette palette) {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(rMD),
         ),
-        textStyle: GoogleFonts.nunito(
-          fontSize: 16, fontWeight: FontWeight.w600,
-        ),
+        textStyle: body(fontSize: 16, fontWeight: FontWeight.w600),
       ),
     ),
 
@@ -218,8 +211,8 @@ ThemeData buildThemeFromPalette(BCPalette palette) {
         borderRadius: BorderRadius.circular(rMD),
         borderSide: BorderSide(color: palette.error, width: 2),
       ),
-      labelStyle: GoogleFonts.nunito(fontSize: 16, color: palette.textSecondary),
-      hintStyle: GoogleFonts.nunito(fontSize: 16, color: palette.textSecondary),
+      labelStyle: body(fontSize: 16, color: palette.textSecondary),
+      hintStyle: body(fontSize: 16, color: palette.textSecondary),
     ),
 
     bottomSheetTheme: BottomSheetThemeData(
@@ -258,12 +251,8 @@ ThemeData buildThemeFromPalette(BCPalette palette) {
         horizontal: AppConstants.paddingMD * s,
         vertical: AppConstants.paddingSM * s,
       ),
-      labelStyle: GoogleFonts.nunito(
-        fontSize: 14, fontWeight: FontWeight.w600, color: palette.textPrimary,
-      ),
-      secondaryLabelStyle: GoogleFonts.nunito(
-        fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white,
-      ),
+      labelStyle: body(fontSize: 14, fontWeight: FontWeight.w600, color: palette.textPrimary),
+      secondaryLabelStyle: body(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(rMD),
       ),

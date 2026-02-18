@@ -195,12 +195,16 @@ const roseGoldPalette = BCPalette(
   navigationBarIconBrightness: Brightness.dark,
 );
 
-/// 2. Black & Gold
+/// 2. Black & Gold — luxury editorial, sharp corners, tight spacing
 const blackGoldPalette = BCPalette(
   id: 'black_gold',
   nameEs: 'Negro y Oro',
   nameEn: 'Black & Gold',
   brightness: Brightness.dark,
+  headingFont: 'Playfair Display',
+  bodyFont: 'Lato',
+  spacingScale: 0.9,
+  radiusScale: 0.5,
   primary: Color(0xFFFFB300),
   onPrimary: Color(0xFF0A0A0F),
   secondary: Color(0xFFD4AF37),
@@ -245,12 +249,16 @@ const blackGoldPalette = BCPalette(
   navigationBarIconBrightness: Brightness.light,
 );
 
-/// 3. Glassmorphism
+/// 3. Glassmorphism — modern minimal, large radius, airy spacing
 const glassmorphismPalette = BCPalette(
   id: 'glass',
   nameEs: 'Cristal',
   nameEn: 'Glassmorphism',
   brightness: Brightness.dark,
+  headingFont: 'Inter',
+  bodyFont: 'Inter',
+  spacingScale: 1.15,
+  radiusScale: 1.5,
   primary: Color(0xFFEC4899),
   onPrimary: Color(0xFFFFFFFF),
   secondary: Color(0xFF9333EA),
@@ -299,12 +307,16 @@ const glassmorphismPalette = BCPalette(
   navigationBarIconBrightness: Brightness.light,
 );
 
-/// 4. Midnight Orchid
+/// 4. Midnight Orchid — whimsical, soft/rounded, playful
 const midnightOrchidPalette = BCPalette(
   id: 'midnight_orchid',
   nameEs: 'Orquidea Nocturna',
   nameEn: 'Midnight Orchid',
   brightness: Brightness.dark,
+  headingFont: 'Quicksand',
+  bodyFont: 'Quicksand',
+  spacingScale: 1.05,
+  radiusScale: 1.3,
   primary: Color(0xFFB388FF),
   onPrimary: Color(0xFF0D0015),
   secondary: Color(0xFFE040FB),
@@ -356,12 +368,16 @@ const midnightOrchidPalette = BCPalette(
   navigationBarIconBrightness: Brightness.light,
 );
 
-/// 5. Ocean Noir
+/// 5. Ocean Noir — tech/cyberpunk, angular, tight
 const oceanNoirPalette = BCPalette(
   id: 'ocean_noir',
   nameEs: 'Oceano Oscuro',
   nameEn: 'Ocean Noir',
   brightness: Brightness.dark,
+  headingFont: 'Rajdhani',
+  bodyFont: 'Source Sans 3',
+  spacingScale: 0.85,
+  radiusScale: 0.4,
   primary: Color(0xFF00E5FF),
   onPrimary: Color(0xFF0A1628),
   secondary: Color(0xFF1DE9B6),
@@ -413,12 +429,16 @@ const oceanNoirPalette = BCPalette(
   navigationBarIconBrightness: Brightness.light,
 );
 
-/// 6. Cherry Blossom
+/// 6. Cherry Blossom — romantic, elegant serif headers, airy
 const cherryBlossomPalette = BCPalette(
   id: 'cherry_blossom',
   nameEs: 'Flor de Cerezo',
   nameEn: 'Cherry Blossom',
   brightness: Brightness.light,
+  headingFont: 'Cormorant Garamond',
+  bodyFont: 'Nunito Sans',
+  spacingScale: 1.1,
+  radiusScale: 1.2,
   primary: Color(0xFFFF6B9D),
   onPrimary: Color(0xFFFFFFFF),
   secondary: Color(0xFFC084FC),
@@ -470,12 +490,16 @@ const cherryBlossomPalette = BCPalette(
   navigationBarIconBrightness: Brightness.dark,
 );
 
-/// 7. Emerald Luxe
+/// 7. Emerald Luxe — art deco, geometric, structured
 const emeraldLuxePalette = BCPalette(
   id: 'emerald_luxe',
   nameEs: 'Esmeralda Lujosa',
   nameEn: 'Emerald Luxe',
   brightness: Brightness.dark,
+  headingFont: 'Cinzel',
+  bodyFont: 'Raleway',
+  spacingScale: 0.95,
+  radiusScale: 0.6,
   primary: Color(0xFF00E676),
   onPrimary: Color(0xFF0A1F0A),
   secondary: Color(0xFFFFD700),

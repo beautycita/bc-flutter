@@ -178,8 +178,8 @@ Deno.serve(async (req: Request) => {
       // Create Account Link for onboarding
       const accountLink = await stripePost("/account_links", {
         account: accountId,
-        refresh_url: `${APP_URL}/salon/stripe-refresh?business_id=${businessId}`,
-        return_url: `${APP_URL}/salon/stripe-complete?business_id=${businessId}`,
+        refresh_url: `${APP_URL}/stripe/refresh?business_id=${businessId}`,
+        return_url: `${APP_URL}/stripe/complete?business_id=${businessId}`,
         type: "account_onboarding",
       });
 

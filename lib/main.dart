@@ -15,6 +15,7 @@ import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/providers/theme_provider.dart';
 import 'package:beautycita/providers/uber_provider.dart';
 import 'package:beautycita/services/qr_auth_service.dart';
+import 'package:beautycita/screens/business/business_shell_screen.dart';
 import 'package:beautycita/services/toast_service.dart';
 import 'package:beautycita/services/debug_log.dart';
 import 'package:go_router/go_router.dart';
@@ -104,13 +105,17 @@ class _BeautyCitaAppState extends ConsumerState<BeautyCitaApp> {
   }
 
   void _checkNotificationNavigation() {
-    final pending = NotificationService().consumePendingNavigation();
-    if (pending != null && mounted) {
-      final route = pending['route'] as String?;
-      if (route != null && route.isNotEmpty) {
-        debugPrint('[Notification] Navigating to: $route');
-        AppRoutes.router.go(route);
+    try {
+      final pending = NotificationService().consumePendingNavigation();
+      if (pending != null && mounted) {
+        final route = pending['route'] as String?;
+        if (route != null && route.isNotEmpty) {
+          debugPrint('[Notification] Navigating to: $route');
+          AppRoutes.router.go(route);
+        }
       }
+    } catch (e) {
+      debugPrint('[Notification] Skipped — not yet initialized: $e');
     }
   }
 
@@ -129,6 +134,23 @@ class _BeautyCitaAppState extends ConsumerState<BeautyCitaApp> {
         }
         if (code != null) {
           ref.read(uberLinkProvider.notifier).handleCallback(code);
+        }
+        break;
+      case 'stripe-complete':
+        debugPrint('[DeepLink] Stripe onboarding complete');
+        // Navigate to business shell, Pagos tab
+        ref.read(businessTabProvider.notifier).state = 6;
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          AppRoutes.business,
+          (route) => false,
+        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Stripe conectado — tus servicios estan listos'),
+              backgroundColor: Colors.green,
+            ),
+          );
         }
         break;
       case 'auth':

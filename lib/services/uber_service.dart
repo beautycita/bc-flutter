@@ -8,13 +8,16 @@ import 'supabase_client.dart';
 class UberService {
   final String clientId;
   final String redirectUri;
+  final bool sandbox;
   UberService({
     required this.clientId,
     required this.redirectUri,
+    this.sandbox = false,
   });
 
-  // Always use production login for OAuth (sandbox doesn't support token generation)
-  static const String _uberAuthUrl = 'https://login.uber.com/oauth/v2/authorize';
+  String get _uberAuthUrl => sandbox
+      ? 'https://sandbox-login.uber.com/oauth/v2/authorize'
+      : 'https://login.uber.com/oauth/v2/authorize';
 
   /// Build the OAuth authorization URL for Uber login.
   Uri buildAuthUrl({String scope = 'profile request places history'}) {
@@ -34,7 +37,7 @@ class UberService {
       final client = SupabaseClientService.client;
       final response = await client.functions.invoke(
         'link-uber',
-        body: {'auth_code': authCode},
+        body: {'auth_code': authCode, 'redirect_uri': redirectUri},
       );
 
       if (response.status != 200) {

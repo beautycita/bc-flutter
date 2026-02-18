@@ -18,7 +18,8 @@ class NotificationService {
   factory NotificationService() => _instance;
   NotificationService._internal();
 
-  final FirebaseMessaging _messaging = FirebaseMessaging.instance;
+  // Lazy — only access after Firebase.initializeApp() has been called
+  FirebaseMessaging? _messaging;
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
 
@@ -46,11 +47,14 @@ class NotificationService {
       // Initialize Firebase
       await Firebase.initializeApp();
 
+      // Now safe to access FirebaseMessaging
+      _messaging = FirebaseMessaging.instance;
+
       // Set background handler
       FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
       // Request permissions
-      final settings = await _messaging.requestPermission(
+      final settings = await _messaging!.requestPermission(
         alert: true,
         badge: true,
         sound: true,
@@ -65,14 +69,14 @@ class NotificationService {
         await _initLocalNotifications();
 
         // Get FCM token
-        _fcmToken = await _messaging.getToken();
+        _fcmToken = await _messaging!.getToken();
         debugPrint('[FCM] Token: ${_fcmToken?.substring(0, 20)}...');
 
         // Store token in database
         await _saveTokenToDatabase();
 
         // Listen for token refresh
-        _tokenRefreshSub = _messaging.onTokenRefresh.listen((newToken) {
+        _tokenRefreshSub = _messaging!.onTokenRefresh.listen((newToken) {
           _fcmToken = newToken;
           _saveTokenToDatabase();
         });
@@ -81,7 +85,7 @@ class NotificationService {
         _foregroundSub = FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
 
         // Handle notification tap when app was terminated
-        final initialMessage = await _messaging.getInitialMessage();
+        final initialMessage = await _messaging!.getInitialMessage();
         if (initialMessage != null) {
           _handleNotificationTap(initialMessage);
         }
@@ -202,13 +206,15 @@ class NotificationService {
 
   /// Subscribe to topic for broadcasts
   Future<void> subscribeToTopic(String topic) async {
-    await _messaging.subscribeToTopic(topic);
+    if (_messaging == null) return;
+    await _messaging!.subscribeToTopic(topic);
     debugPrint('[FCM] Subscribed to topic: $topic');
   }
 
   /// Unsubscribe from topic
   Future<void> unsubscribeFromTopic(String topic) async {
-    await _messaging.unsubscribeFromTopic(topic);
+    if (_messaging == null) return;
+    await _messaging!.unsubscribeFromTopic(topic);
     debugPrint('[FCM] Unsubscribed from topic: $topic');
   }
 

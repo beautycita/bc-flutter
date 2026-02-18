@@ -27,6 +27,7 @@ import 'package:beautycita/screens/profile_screen.dart';
 import 'package:beautycita/screens/security_screen.dart';
 import 'package:beautycita/screens/payment_methods_screen.dart';
 import 'package:beautycita/screens/appearance_screen.dart';
+import 'package:beautycita/screens/business/business_shell_screen.dart';
 
 
 class AppRoutes {
@@ -40,6 +41,7 @@ class AppRoutes {
   static const String myBookings = '/my-bookings';
   static const String book = '/book';
   static const String admin = '/admin';
+  static const String business = '/business';
   static const String inviteSalon = '/invite';
   static const String settings = '/settings';
   static const String salonOnboarding = '/registro';
@@ -254,6 +256,22 @@ class AppRoutes {
         pageBuilder: (context, state) => CustomTransitionPage(
           key: state.pageKey,
           child: const AdminShellScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
+                .chain(CurveTween(curve: Curves.easeInOutCubic));
+            return SlideTransition(
+              position: animation.drive(tween),
+              child: child,
+            );
+          },
+        ),
+      ),
+      GoRoute(
+        path: business,
+        name: 'business',
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const BusinessShellScreen(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
                 .chain(CurveTween(curve: Curves.easeInOutCubic));
