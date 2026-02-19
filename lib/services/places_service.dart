@@ -35,10 +35,13 @@ class PlacesService {
   final String packageName;
   final String sha1Cert;
 
+  static const _debugSha1 = '3BB7776E83D63854B9ACEA059ED3D8B20E04CBD1';
+  static const _releaseSha1 = 'E87B10F536D9486A2155FDA0E788E5C6050DA47E';
+
   PlacesService({
     required this.apiKey,
-    this.packageName = 'com.beautycita.beautycita',
-    this.sha1Cert = '3BB7776E83D63854B9ACEA059ED3D8B20E04CBD1',
+    this.packageName = 'com.beautycita',
+    this.sha1Cert = kReleaseMode ? _releaseSha1 : _debugSha1,
   });
 
   Map<String, String> get _headers => {
