@@ -17,32 +17,968 @@ class _DisputesScreenState extends ConsumerState<DisputesScreen> {
 
   List<Map<String, dynamic>> _filtered(List<Map<String, dynamic>> disputes) {
     if (_statusFilter == null) return disputes;
-    return disputes
-        .where((d) => d['status'] == _statusFilter)
-        .toList();
+    return disputes.where((d) => d['status'] == _statusFilter).toList();
   }
 
-  Future<void> _resolve(
-      Map<String, dynamic> dispute, String resolution) async {
-    final id = dispute['id'] as String;
+  @override
+  Widget build(BuildContext context) {
+    final disputesAsync = ref.watch(adminDisputesProvider);
+    final colors = Theme.of(context).colorScheme;
+
+    return disputesAsync.when(
+      data: (disputes) {
+        int open = 0, resolved = 0, rejected = 0;
+        for (final d in disputes) {
+          final s = d['status'] as String? ?? 'open';
+          switch (s) {
+            case 'open':
+              open++;
+            case 'resolved':
+              resolved++;
+            case 'rejected':
+              rejected++;
+          }
+        }
+
+        final filtered = _filtered(disputes);
+
+        return RefreshIndicator(
+          onRefresh: () async => ref.invalidate(adminDisputesProvider),
+          child: ListView(
+            padding: const EdgeInsets.all(AppConstants.paddingMD),
+            children: [
+              // Status summary chips
+              Row(
+                children: [
+                  Expanded(
+                    child: _SummaryChip(
+                      label: 'Todas',
+                      count: disputes.length,
+                      color: colors.primary,
+                      selected: _statusFilter == null,
+                      onTap: () => setState(() => _statusFilter = null),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _SummaryChip(
+                      label: 'Abiertas',
+                      count: open,
+                      color: Colors.orange,
+                      selected: _statusFilter == 'open',
+                      onTap: () => setState(() => _statusFilter = 'open'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _SummaryChip(
+                      label: 'Resueltas',
+                      count: resolved,
+                      color: Colors.green,
+                      selected: _statusFilter == 'resolved',
+                      onTap: () => setState(() => _statusFilter = 'resolved'),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: AppConstants.paddingMD),
+
+              if (filtered.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 60),
+                  child: Center(
+                    child: Column(
+                      children: [
+                        Icon(Icons.gavel_rounded,
+                            size: 48,
+                            color: colors.onSurface.withValues(alpha: 0.2)),
+                        const SizedBox(height: 8),
+                        Text('Sin disputas',
+                            style: GoogleFonts.nunito(
+                                color: colors.onSurface
+                                    .withValues(alpha: 0.5))),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                for (final d in filtered) ...[
+                  _DisputeCard(
+                    dispute: d,
+                    onTap: () => _showDetail(d),
+                  ),
+                ],
+            ],
+          ),
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(
+        child:
+            Text('Error: $e', style: GoogleFonts.nunito(color: colors.error)),
+      ),
+    );
+  }
+
+  void _showDetail(Map<String, dynamic> dispute) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _DisputeDetailSheet(
+        dispute: dispute,
+        onChanged: () {
+          ref.invalidate(adminDisputesProvider);
+          ref.invalidate(adminDashStatsProvider);
+        },
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Summary chip
+// ---------------------------------------------------------------------------
+
+class _SummaryChip extends StatelessWidget {
+  final String label;
+  final int count;
+  final Color color;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _SummaryChip({
+    required this.label,
+    required this.count,
+    required this.color,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Material(
+      color: selected ? color.withValues(alpha: 0.1) : Colors.white,
+      borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+            border: Border.all(
+              color: selected ? color : colors.onSurface.withValues(alpha: 0.1),
+              width: selected ? 1.5 : 1,
+            ),
+          ),
+          child: Column(
+            children: [
+              Text(
+                '$count',
+                style: GoogleFonts.poppins(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: color,
+                ),
+              ),
+              Text(
+                label,
+                style: GoogleFonts.nunito(
+                  fontSize: 12,
+                  color: colors.onSurface.withValues(alpha: 0.6),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Dispute card
+// ---------------------------------------------------------------------------
+
+class _DisputeCard extends StatelessWidget {
+  final Map<String, dynamic> dispute;
+  final VoidCallback onTap;
+
+  const _DisputeCard({required this.dispute, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final status = dispute['status'] as String? ?? 'open';
+    final reason = dispute['reason'] as String? ?? 'Sin razon';
+    final createdAt = dispute['created_at'] as String?;
+    final appt = dispute['appointments'] as Map<String, dynamic>?;
+    final serviceName = appt?['service_name'] as String? ?? 'Servicio';
+    final businessName =
+        (appt?['businesses'] as Map?)?['name'] as String? ?? '';
+
+    String dateStr = '';
+    if (createdAt != null) {
+      final dt = DateTime.tryParse(createdAt);
+      if (dt != null) {
+        dateStr = '${dt.day}/${dt.month}/${dt.year}';
+      }
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppConstants.paddingSM),
+      child: Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+              border: Border.all(
+                color: colors.onSurface.withValues(alpha: 0.08),
+                width: 1,
+              ),
+            ),
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: _statusColor(status).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(Icons.gavel_rounded,
+                      color: _statusColor(status), size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              serviceName,
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: colors.onSurface,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          _statusBadge(status),
+                        ],
+                      ),
+                      if (businessName.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          businessName,
+                          style: GoogleFonts.nunito(
+                            fontSize: 12,
+                            color: colors.onSurface.withValues(alpha: 0.5),
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 4),
+                      Text(
+                        reason,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.nunito(
+                          fontSize: 13,
+                          color: colors.onSurface.withValues(alpha: 0.6),
+                        ),
+                      ),
+                      if (dateStr.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          dateStr,
+                          style: GoogleFonts.nunito(
+                            fontSize: 11,
+                            color: colors.onSurface.withValues(alpha: 0.4),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right_rounded,
+                    color: colors.onSurface.withValues(alpha: 0.3), size: 20),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _statusBadge(String status) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: _statusColor(status).withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        _statusLabel(status),
+        style: GoogleFonts.nunito(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: _statusColor(status),
+        ),
+      ),
+    );
+  }
+
+  static Color _statusColor(String status) {
+    return switch (status) {
+      'open' => Colors.orange,
+      'resolved' => Colors.green,
+      'rejected' => Colors.red,
+      _ => Colors.grey,
+    };
+  }
+
+  static String _statusLabel(String status) {
+    return switch (status) {
+      'open' => 'Abierta',
+      'resolved' => 'Resuelta',
+      'rejected' => 'Rechazada',
+      _ => status,
+    };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Dispute detail bottom sheet — full resolution capabilities
+// ---------------------------------------------------------------------------
+
+class _DisputeDetailSheet extends StatefulWidget {
+  final Map<String, dynamic> dispute;
+  final VoidCallback onChanged;
+
+  const _DisputeDetailSheet({
+    required this.dispute,
+    required this.onChanged,
+  });
+
+  @override
+  State<_DisputeDetailSheet> createState() => _DisputeDetailSheetState();
+}
+
+class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
+  String? _selectedOutcome;
+  bool _refundEnabled = false;
+  final _refundAmountCtrl = TextEditingController();
+  final _notesCtrl = TextEditingController();
+  bool _saving = false;
+
+  @override
+  void dispose() {
+    _refundAmountCtrl.dispose();
+    _notesCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final d = widget.dispute;
+    final status = d['status'] as String? ?? 'open';
+    final reason = d['reason'] as String? ?? 'Sin razon';
+    final clientEvidence = d['client_evidence'] as String?;
+    final stylistEvidence = d['stylist_evidence'] as String?;
+    final resolution = d['resolution'] as String?;
+    final resolutionNotes = d['resolution_notes'] as String?;
+    final refundAmount = d['refund_amount'] as num?;
+    final refundStatus = d['refund_status'] as String?;
+    final isOpen = status == 'open';
+
+    // Appointment details
+    final appt = d['appointments'] as Map<String, dynamic>?;
+    final serviceName = appt?['service_name'] as String? ?? '-';
+    final price = appt?['price'] as num?;
+    final startsAt = appt?['starts_at'] as String?;
+    final clientId = d['user_id'] as String? ?? appt?['user_id'] as String?;
+    final biz = appt?['businesses'] as Map<String, dynamic>?;
+    final businessName = biz?['name'] as String? ?? '-';
+    final businessOwnerId = biz?['owner_id'] as String?;
+
+    String apptDate = '-';
+    if (startsAt != null) {
+      final dt = DateTime.tryParse(startsAt);
+      if (dt != null) {
+        apptDate =
+            '${dt.day}/${dt.month}/${dt.year} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+      }
+    }
+
+    // Pre-fill refund amount with appointment price
+    if (_refundAmountCtrl.text.isEmpty && price != null) {
+      _refundAmountCtrl.text = price.toStringAsFixed(0);
+    }
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.85,
+      minChildSize: 0.4,
+      maxChildSize: 0.95,
+      builder: (context, scrollController) {
+        return Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            borderRadius:
+                const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: ListView(
+            controller: scrollController,
+            padding: const EdgeInsets.all(AppConstants.paddingLG),
+            children: [
+              // Drag handle
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin:
+                      const EdgeInsets.only(bottom: AppConstants.paddingMD),
+                  decoration: BoxDecoration(
+                    color: colors.onSurface.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+
+              // Header
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Disputa #${(d['id'] as String).substring(0, 8)}',
+                      style: GoogleFonts.poppins(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: colors.onSurface,
+                      ),
+                    ),
+                  ),
+                  _DisputeCard._statusColor(status) != Colors.grey
+                      ? Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: _DisputeCard._statusColor(status)
+                                .withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            _DisputeCard._statusLabel(status),
+                            style: GoogleFonts.poppins(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: _DisputeCard._statusColor(status),
+                            ),
+                          ),
+                        )
+                      : const SizedBox.shrink(),
+                ],
+              ),
+
+              const SizedBox(height: AppConstants.paddingMD),
+
+              // Appointment info card
+              _infoCard(context, 'Detalles de la Cita', [
+                _infoRow('Servicio', serviceName),
+                _infoRow('Negocio', businessName),
+                _infoRow('Fecha', apptDate),
+                if (price != null)
+                  _infoRow('Precio', '\$${price.toStringAsFixed(0)} MXN'),
+                if (clientId != null)
+                  _infoRow('Cliente', clientId.substring(0, 8)),
+              ]),
+
+              const SizedBox(height: AppConstants.paddingSM),
+
+              // Reason
+              _infoCard(context, 'Razon del Cliente', [
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Text(reason, style: GoogleFonts.nunito(fontSize: 14)),
+                ),
+                if (clientEvidence != null && clientEvidence.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text('Evidencia:',
+                      style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: colors.onSurface.withValues(alpha: 0.5))),
+                  Text(clientEvidence,
+                      style: GoogleFonts.nunito(fontSize: 13)),
+                ],
+              ]),
+
+              // Business response
+              if (stylistEvidence != null && stylistEvidence.isNotEmpty) ...[
+                const SizedBox(height: AppConstants.paddingSM),
+                _infoCard(context, 'Respuesta del Negocio', [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Text(stylistEvidence,
+                        style: GoogleFonts.nunito(fontSize: 14)),
+                  ),
+                ]),
+              ],
+
+              // Resolution info (if already resolved)
+              if (!isOpen) ...[
+                const SizedBox(height: AppConstants.paddingSM),
+                _infoCard(context, 'Resolucion', [
+                  if (resolution != null)
+                    _infoRow('Resultado', _outcomeLabel(resolution)),
+                  if (resolutionNotes != null && resolutionNotes.isNotEmpty)
+                    _infoRow('Notas', resolutionNotes),
+                  if (refundAmount != null && refundAmount > 0) ...[
+                    _infoRow('Reembolso',
+                        '\$${refundAmount.toStringAsFixed(0)} MXN'),
+                    if (refundStatus != null)
+                      _infoRow('Estado reembolso', refundStatus),
+                  ],
+                ]),
+              ],
+
+              // Resolution controls (only for open disputes)
+              if (isOpen) ...[
+                const SizedBox(height: AppConstants.paddingLG),
+                Text('Resolver Disputa',
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: colors.onSurface,
+                    )),
+                const SizedBox(height: AppConstants.paddingSM),
+
+                // Outcome selection
+                Text('Resultado',
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: colors.onSurface.withValues(alpha: 0.6),
+                    )),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _outcomeChip('favor_client', 'A favor del cliente',
+                        Colors.green),
+                    _outcomeChip('favor_provider', 'A favor del proveedor',
+                        Colors.blue),
+                    _outcomeChip(
+                        'favor_both', 'A favor de ambos', Colors.teal),
+                    _outcomeChip('dismissed', 'Descartar', Colors.grey),
+                  ],
+                ),
+
+                const SizedBox(height: AppConstants.paddingMD),
+
+                // Refund toggle
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius:
+                        BorderRadius.circular(AppConstants.radiusMD),
+                    border: Border.all(
+                      color: colors.onSurface.withValues(alpha: 0.08),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      SwitchListTile(
+                        title: Text('Forzar reembolso',
+                            style: GoogleFonts.poppins(
+                                fontSize: 14, fontWeight: FontWeight.w600)),
+                        subtitle: Text(
+                          'Devolver pago al cliente via Stripe',
+                          style: GoogleFonts.nunito(fontSize: 12),
+                        ),
+                        value: _refundEnabled,
+                        onChanged: (v) =>
+                            setState(() => _refundEnabled = v),
+                      ),
+                      if (_refundEnabled) ...[
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                          child: TextField(
+                            controller: _refundAmountCtrl,
+                            keyboardType: TextInputType.number,
+                            decoration: InputDecoration(
+                              labelText: 'Monto a reembolsar (MXN)',
+                              prefixText: '\$ ',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(
+                                    AppConstants.radiusMD),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: AppConstants.paddingSM),
+
+                // Admin actions
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius:
+                        BorderRadius.circular(AppConstants.radiusMD),
+                    border: Border.all(
+                      color: colors.onSurface.withValues(alpha: 0.08),
+                    ),
+                  ),
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Acciones adicionales',
+                          style: GoogleFonts.poppins(
+                              fontSize: 14, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _actionButton(
+                              'Suspender cliente',
+                              Icons.person_off,
+                              Colors.red.shade600,
+                              () => _suspendAccount(clientId, 'cliente'),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _actionButton(
+                              'Suspender negocio',
+                              Icons.store_outlined,
+                              Colors.orange.shade700,
+                              () => _suspendAccount(
+                                  businessOwnerId, 'negocio'),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: _actionButton(
+                          'Retener pagos del negocio',
+                          Icons.money_off,
+                          Colors.deepPurple,
+                          () => _withholdPayouts(d['business_id'] as String?),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: AppConstants.paddingSM),
+
+                // Notes
+                TextField(
+                  controller: _notesCtrl,
+                  maxLines: 2,
+                  decoration: InputDecoration(
+                    labelText: 'Notas del admin (opcional)',
+                    border: OutlineInputBorder(
+                      borderRadius:
+                          BorderRadius.circular(AppConstants.radiusMD),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: AppConstants.paddingMD),
+
+                // Resolve button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed:
+                        _selectedOutcome != null && !_saving
+                            ? _resolveDispute
+                            : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green.shade600,
+                      disabledBackgroundColor: Colors.grey.shade300,
+                      minimumSize:
+                          const Size(0, AppConstants.minTouchHeight),
+                      shape: RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.circular(AppConstants.radiusLG),
+                      ),
+                    ),
+                    child: _saving
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white))
+                        : Text(
+                            'Resolver Disputa',
+                            style: GoogleFonts.poppins(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+                  ),
+                ),
+              ],
+
+              const SizedBox(height: AppConstants.paddingXL),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _outcomeChip(String value, String label, Color color) {
+    final isSelected = _selectedOutcome == value;
+    return ChoiceChip(
+      label: Text(label),
+      selected: isSelected,
+      selectedColor: color.withValues(alpha: 0.15),
+      labelStyle: GoogleFonts.poppins(
+        fontSize: 12,
+        fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+        color: isSelected ? color : null,
+      ),
+      onSelected: (_) => setState(() => _selectedOutcome = value),
+    );
+  }
+
+  Widget _actionButton(
+      String label, IconData icon, Color color, VoidCallback onTap) {
+    return OutlinedButton.icon(
+      onPressed: onTap,
+      icon: Icon(icon, size: 16, color: color),
+      label: Text(label,
+          style: GoogleFonts.nunito(
+              fontSize: 12, fontWeight: FontWeight.w600, color: color)),
+      style: OutlinedButton.styleFrom(
+        side: BorderSide(color: color.withValues(alpha: 0.3)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      ),
+    );
+  }
+
+  Widget _infoCard(
+      BuildContext context, String title, List<Widget> children) {
+    final colors = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+        border: Border.all(
+          color: colors.onSurface.withValues(alpha: 0.08),
+          width: 1,
+        ),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title,
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: colors.onSurface.withValues(alpha: 0.5),
+              )),
+          const SizedBox(height: 8),
+          ...children,
+        ],
+      ),
+    );
+  }
+
+  Widget _infoRow(String label, String value) {
+    final colors = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 110,
+            child: Text(label,
+                style: GoogleFonts.nunito(
+                  fontSize: 13,
+                  color: colors.onSurface.withValues(alpha: 0.5),
+                )),
+          ),
+          Expanded(
+            child: Text(value,
+                style: GoogleFonts.nunito(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: colors.onSurface,
+                )),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _outcomeLabel(String resolution) {
+    return switch (resolution) {
+      'favor_client' => 'A favor del cliente',
+      'favor_provider' => 'A favor del proveedor',
+      'favor_both' => 'A favor de ambos',
+      'dismissed' => 'Descartada',
+      _ => resolution,
+    };
+  }
+
+  // -------------------------------------------------------------------------
+  // Actions
+  // -------------------------------------------------------------------------
+
+  Future<void> _resolveDispute() async {
+    if (_selectedOutcome == null) return;
+    setState(() => _saving = true);
+
     try {
+      final disputeId = widget.dispute['id'] as String;
+      final adminId = SupabaseClientService.currentUserId;
+
+      // Update dispute
       await SupabaseClientService.client.from('disputes').update({
         'status': 'resolved',
-        'resolution': resolution,
+        'resolution': _selectedOutcome,
+        'resolution_notes': _notesCtrl.text.trim().isEmpty
+            ? null
+            : _notesCtrl.text.trim(),
+        'resolved_by': adminId,
         'resolved_at': DateTime.now().toIso8601String(),
-      }).eq('id', id);
+        'refund_amount': _refundEnabled
+            ? double.tryParse(_refundAmountCtrl.text) ?? 0
+            : null,
+        'refund_status': _refundEnabled ? 'pending' : null,
+      }).eq('id', disputeId);
+
+      // Log audit
       await adminLogAction(
         action: 'resolve_dispute',
         targetType: 'dispute',
-        targetId: id,
-        details: {'resolution': resolution},
+        targetId: disputeId,
+        details: {
+          'resolution': _selectedOutcome,
+          'refund_requested': _refundEnabled,
+          if (_refundEnabled)
+            'refund_amount': double.tryParse(_refundAmountCtrl.text) ?? 0,
+        },
       );
-      ref.invalidate(adminDisputesProvider);
-      ref.invalidate(adminDashStatsProvider);
+
+      // If refund enabled, update the appointment payment status
+      if (_refundEnabled) {
+        final appointmentId =
+            widget.dispute['appointment_id'] as String?;
+        if (appointmentId != null) {
+          await SupabaseClientService.client
+              .from('appointments')
+              .update({'payment_status': 'refund_pending'})
+              .eq('id', appointmentId);
+        }
+      }
+
+      widget.onChanged();
       if (mounted) {
-        Navigator.of(context).pop(); // close bottom sheet
+        Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Disputa resuelta: $resolution')),
+          SnackBar(
+            content:
+                Text('Disputa resuelta: ${_outcomeLabel(_selectedOutcome!)}'),
+            backgroundColor: Colors.green.shade600,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _suspendAccount(String? userId, String label) async {
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ID de usuario no disponible')),
+      );
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Suspender $label'),
+        content: Text(
+            'Esto suspenderia la cuenta del $label inmediatamente. Continuar?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancelar')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Suspender',
+                style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      await SupabaseClientService.client
+          .from('profiles')
+          .update({'status': 'suspended'})
+          .eq('id', userId);
+
+      await adminLogAction(
+        action: 'suspend_account',
+        targetType: 'profile',
+        targetId: userId,
+        details: {
+          'reason': 'dispute_${widget.dispute['id']}',
+          'label': label,
+        },
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Cuenta de $label suspendida'),
+            backgroundColor: Colors.red.shade600,
+          ),
         );
       }
     } catch (e) {
@@ -54,323 +990,65 @@ class _DisputesScreenState extends ConsumerState<DisputesScreen> {
     }
   }
 
-  void _showDetail(Map<String, dynamic> dispute) {
-    final colors = Theme.of(context).colorScheme;
+  Future<void> _withholdPayouts(String? businessId) async {
+    if (businessId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ID de negocio no disponible')),
+      );
+      return;
+    }
 
-    showModalBottomSheet(
+    final confirmed = await showDialog<bool>(
       context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-            top: Radius.circular(AppConstants.radiusMD)),
-      ),
-      builder: (ctx) {
-        return DraggableScrollableSheet(
-          initialChildSize: 0.6,
-          maxChildSize: 0.85,
-          minChildSize: 0.4,
-          expand: false,
-          builder: (_, scrollCtrl) {
-            return ListView(
-              controller: scrollCtrl,
-              padding: const EdgeInsets.all(AppConstants.paddingLG),
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: colors.onSurface.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: AppConstants.paddingMD),
-                Text(
-                  'Disputa #${(dispute['id'] as String).substring(0, 8)}',
-                  style: GoogleFonts.poppins(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: colors.onSurface,
-                  ),
-                ),
-                const SizedBox(height: AppConstants.paddingMD),
-                _infoRow('Estado', dispute['status'] as String? ?? '-'),
-                _infoRow(
-                    'Fecha',
-                    (dispute['created_at'] as String?)?.split('T')[0] ??
-                        '-'),
-                _infoRow(
-                    'Cliente', dispute['client_id'] as String? ?? '-'),
-                _infoRow(
-                    'Estilista', dispute['stylist_id'] as String? ?? '-'),
-                const SizedBox(height: AppConstants.paddingSM),
-                Text('Razon:',
-                    style: GoogleFonts.poppins(
-                        fontWeight: FontWeight.w600, fontSize: 14)),
-                const SizedBox(height: 4),
-                Text(
-                  dispute['reason'] as String? ?? 'Sin razon',
-                  style: GoogleFonts.nunito(fontSize: 14),
-                ),
-                if (dispute['client_evidence'] != null) ...[
-                  const SizedBox(height: AppConstants.paddingSM),
-                  Text('Evidencia cliente:',
-                      style: GoogleFonts.poppins(
-                          fontWeight: FontWeight.w600, fontSize: 14)),
-                  const SizedBox(height: 4),
-                  Text('${dispute['client_evidence']}',
-                      style: GoogleFonts.nunito(fontSize: 13)),
-                ],
-                if (dispute['stylist_evidence'] != null) ...[
-                  const SizedBox(height: AppConstants.paddingSM),
-                  Text('Evidencia estilista:',
-                      style: GoogleFonts.poppins(
-                          fontWeight: FontWeight.w600, fontSize: 14)),
-                  const SizedBox(height: 4),
-                  Text('${dispute['stylist_evidence']}',
-                      style: GoogleFonts.nunito(fontSize: 13)),
-                ],
-                const SizedBox(height: AppConstants.paddingLG),
-                if (dispute['status'] != 'resolved') ...[
-                  Text('Resolver:',
-                      style: GoogleFonts.poppins(
-                          fontWeight: FontWeight.w600, fontSize: 14)),
-                  const SizedBox(height: AppConstants.paddingSM),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () => _resolve(dispute, 'refund'),
-                          style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green),
-                          child: Text('Reembolso',
-                              style: GoogleFonts.poppins(
-                                  fontSize: 13, color: Colors.white)),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () => _resolve(dispute, 'credit'),
-                          style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.orange),
-                          child: Text('Credito',
-                              style: GoogleFonts.poppins(
-                                  fontSize: 13, color: Colors.white)),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () =>
-                              _resolve(dispute, 'dismissed'),
-                          style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.grey),
-                          child: Text('Descartar',
-                              style: GoogleFonts.poppins(
-                                  fontSize: 13, color: Colors.white)),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Widget _infoRow(String label, String value) {
-    final colors = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label,
-              style: GoogleFonts.nunito(
-                  fontSize: 13,
-                  color: colors.onSurface.withValues(alpha: 0.5))),
-          Text(value,
-              style: GoogleFonts.nunito(
-                  fontSize: 13, fontWeight: FontWeight.w600)),
+      builder: (ctx) => AlertDialog(
+        title: const Text('Retener pagos'),
+        content: const Text(
+            'Esto deshabilitaria los pagos al negocio via Stripe. '
+            'Los fondos se retendran hasta que se reactive manualmente. Continuar?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancelar')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.deepPurple),
+            child: const Text('Retener pagos',
+                style: TextStyle(color: Colors.white)),
+          ),
         ],
       ),
     );
-  }
 
-  @override
-  Widget build(BuildContext context) {
-    final disputesAsync = ref.watch(adminDisputesProvider);
-    final colors = Theme.of(context).colorScheme;
+    if (confirmed != true) return;
 
-    return Column(
-      children: [
-        // Status filter chips
-        Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppConstants.paddingMD,
-            AppConstants.paddingMD,
-            AppConstants.paddingMD,
-            AppConstants.paddingSM,
+    try {
+      await SupabaseClientService.client
+          .from('businesses')
+          .update({'stripe_payouts_enabled': false})
+          .eq('id', businessId);
+
+      await adminLogAction(
+        action: 'withhold_payouts',
+        targetType: 'business',
+        targetId: businessId,
+        details: {'reason': 'dispute_${widget.dispute['id']}'},
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Pagos al negocio retenidos'),
+            backgroundColor: Colors.deepPurple,
           ),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                _filterChip('Todos', null),
-                _filterChip('Abierta', 'open'),
-                _filterChip('Resuelta', 'resolved'),
-              ],
-            ),
-          ),
-        ),
-
-        Expanded(
-          child: disputesAsync.when(
-            data: (disputes) {
-              final filtered = _filtered(disputes);
-              if (filtered.isEmpty) {
-                return Center(
-                  child: Text('Sin disputas',
-                      style: GoogleFonts.nunito(
-                          color:
-                              colors.onSurface.withValues(alpha: 0.5))),
-                );
-              }
-              return RefreshIndicator(
-                onRefresh: () async =>
-                    ref.invalidate(adminDisputesProvider),
-                child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: AppConstants.paddingMD),
-                  itemCount: filtered.length,
-                  itemBuilder: (context, i) {
-                    final d = filtered[i];
-                    final status = d['status'] as String? ?? 'open';
-                    return Card(
-                      elevation: 0,
-                      color: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(AppConstants.radiusMD),
-                      ),
-                      margin: const EdgeInsets.only(
-                          bottom: AppConstants.paddingSM),
-                      child: InkWell(
-                        borderRadius:
-                            BorderRadius.circular(AppConstants.radiusMD),
-                        onTap: () => _showDetail(d),
-                        child: Padding(
-                          padding: const EdgeInsets.all(
-                              AppConstants.paddingSM),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Text(
-                                          '#${(d['id'] as String).substring(0, 8)}',
-                                          style: GoogleFonts.poppins(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w600,
-                                            color: colors.onSurface,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        _statusChip(status),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      d['reason'] as String? ??
-                                          'Sin razon',
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: GoogleFonts.nunito(
-                                        fontSize: 13,
-                                        color: colors.onSurface
-                                            .withValues(alpha: 0.6),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      (d['created_at'] as String?)
-                                              ?.split('T')[0] ??
-                                          '',
-                                      style: GoogleFonts.nunito(
-                                        fontSize: 11,
-                                        color: colors.onSurface
-                                            .withValues(alpha: 0.4),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Icon(Icons.chevron_right,
-                                  color: colors.onSurface
-                                      .withValues(alpha: 0.3)),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              );
-            },
-            loading: () =>
-                const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(
-              child: Text('Error: $e',
-                  style: GoogleFonts.nunito(color: colors.error)),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _filterChip(String label, String? value) {
-    final selected = _statusFilter == value;
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: FilterChip(
-        label: Text(label,
-            style: GoogleFonts.nunito(
-              fontSize: 13,
-              fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
-            )),
-        selected: selected,
-        onSelected: (_) => setState(() => _statusFilter = value),
-      ),
-    );
-  }
-
-  Widget _statusChip(String status) {
-    final color = status == 'open'
-        ? Colors.orange
-        : status == 'resolved'
-            ? Colors.green
-            : Colors.grey;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(AppConstants.radiusXS),
-      ),
-      child: Text(
-        status,
-        style: GoogleFonts.nunito(
-            fontSize: 11, fontWeight: FontWeight.w700, color: color),
-      ),
-    );
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    }
   }
 }

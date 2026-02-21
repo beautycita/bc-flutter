@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:beautycita/services/supabase_client.dart';
 
@@ -13,8 +14,11 @@ final _userRoleProvider = FutureProvider<String?>((ref) async {
         .eq('id', userId)
         .single();
 
-    return response['role'] as String?;
-  } catch (_) {
+    final role = response['role'] as String?;
+    debugPrint('AdminProvider: userId=$userId, role=$role');
+    return role;
+  } catch (e) {
+    debugPrint('AdminProvider: failed to fetch role for $userId: $e');
     return null;
   }
 });
@@ -212,11 +216,73 @@ final adminRecentActivityProvider =
   return activities.take(10).toList();
 });
 
+/// Full recent activity feed for the dedicated screen (50 items).
+final adminFullActivityProvider =
+    FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  final client = SupabaseClientService.client;
+
+  final results = await Future.wait([
+    client
+        .from('appointments')
+        .select('id, created_at, status, starts_at, price, business_id, businesses(name)')
+        .order('created_at', ascending: false)
+        .limit(25),
+    client
+        .from('disputes')
+        .select('id, created_at, status, reason, resolution')
+        .order('created_at', ascending: false)
+        .limit(15),
+    client
+        .from('profiles')
+        .select('id, full_name, username, phone, role, created_at')
+        .order('created_at', ascending: false)
+        .limit(15),
+  ]);
+
+  final activities = <Map<String, dynamic>>[];
+
+  for (final row in (results[0] as List)) {
+    final m = row as Map<String, dynamic>;
+    final bizName = (m['businesses'] as Map?)?['name'] ?? 'Sin negocio';
+    activities.add({
+      'type': 'booking',
+      'description': 'Cita: ${m['status']}',
+      'detail': 'Negocio: $bizName\nEstatus: ${m['status']}\nPrecio: \$${m['price'] ?? 0}\nInicio: ${m['starts_at'] ?? '-'}',
+      'created_at': m['created_at'],
+      'raw': m,
+    });
+  }
+  for (final row in (results[1] as List)) {
+    final m = row as Map<String, dynamic>;
+    activities.add({
+      'type': 'dispute',
+      'description': 'Disputa: ${m['status']}',
+      'detail': 'Razon: ${m['reason'] ?? '-'}\nEstatus: ${m['status']}\nResolucion: ${m['resolution'] ?? 'Pendiente'}',
+      'created_at': m['created_at'],
+      'raw': m,
+    });
+  }
+  for (final row in (results[2] as List)) {
+    final m = row as Map<String, dynamic>;
+    activities.add({
+      'type': 'user',
+      'description': 'Nuevo usuario: ${m['full_name'] ?? m['username'] ?? 'Sin nombre'}',
+      'detail': 'Nombre: ${m['full_name'] ?? '-'}\nUsuario: ${m['username'] ?? '-'}\nTelefono: ${m['phone'] ?? '-'}\nRol: ${m['role'] ?? 'customer'}',
+      'created_at': m['created_at'],
+      'raw': m,
+    });
+  }
+
+  activities.sort((a, b) =>
+      (b['created_at'] as String).compareTo(a['created_at'] as String));
+  return activities.take(50).toList();
+});
+
 /// All users from profiles table.
 final adminUsersProvider = FutureProvider<List<AdminUser>>((ref) async {
   final response = await SupabaseClientService.client
       .from('profiles')
-      .select('id, username, full_name, phone, role, created_at')
+      .select('id, username, full_name, phone, role, status, created_at')
       .order('created_at', ascending: false);
 
   return (response as List)
@@ -224,33 +290,45 @@ final adminUsersProvider = FutureProvider<List<AdminUser>>((ref) async {
       .toList();
 });
 
-/// All disputes.
+/// All disputes with appointment and business details.
 final adminDisputesProvider =
     FutureProvider<List<Map<String, dynamic>>>((ref) async {
   final response = await SupabaseClientService.client
       .from('disputes')
-      .select()
+      .select('*, appointments(id, service_name, price, starts_at, status, user_id, businesses(name, owner_id, stripe_account_id))')
       .order('created_at', ascending: false);
   return (response as List).cast<Map<String, dynamic>>();
 });
 
-/// Stylist/salon applications.
+/// Salon applications (unverified businesses pending admin review).
 final adminApplicationsProvider =
     FutureProvider<List<Map<String, dynamic>>>((ref) async {
   final response = await SupabaseClientService.client
-      .from('stylist_applications')
+      .from('businesses')
       .select()
+      .eq('is_verified', false)
       .order('created_at', ascending: false);
   return (response as List).cast<Map<String, dynamic>>();
 });
 
-/// All appointments (bookings).
+/// All appointments (bookings) with business name.
 final adminBookingsProvider =
     FutureProvider<List<Map<String, dynamic>>>((ref) async {
   final response = await SupabaseClientService.client
       .from('appointments')
-      .select()
+      .select('*, businesses(name)')
       .order('created_at', ascending: false);
+  return (response as List).cast<Map<String, dynamic>>();
+});
+
+/// All reviews (admin view).
+final adminReviewsProvider =
+    FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  final response = await SupabaseClientService.client
+      .from('reviews')
+      .select('*, businesses(name)')
+      .order('created_at', ascending: false)
+      .limit(100);
   return (response as List).cast<Map<String, dynamic>>();
 });
 
@@ -295,6 +373,7 @@ class AdminUser {
   final String? fullName;
   final String? phone;
   final String role;
+  final String status;
   final String? createdAt;
 
   const AdminUser({
@@ -303,6 +382,7 @@ class AdminUser {
     this.fullName,
     this.phone,
     required this.role,
+    this.status = 'active',
     this.createdAt,
   });
 
@@ -313,6 +393,7 @@ class AdminUser {
       fullName: json['full_name'] as String?,
       phone: json['phone'] as String?,
       role: json['role'] as String? ?? 'customer',
+      status: json['status'] as String? ?? 'active',
       createdAt: json['created_at'] as String?,
     );
   }

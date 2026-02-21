@@ -260,11 +260,11 @@ class _SummaryCard extends StatelessWidget {
         ],
       ),
       child: Container(
-        margin: const EdgeInsets.all(3),
+        margin: const EdgeInsets.all(1.5),
         padding: const EdgeInsets.all(AppConstants.paddingLG),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(AppConstants.radiusMD - 3),
+          borderRadius: BorderRadius.circular(AppConstants.radiusMD - 1.5),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -418,11 +418,11 @@ class _TransportCard extends StatelessWidget {
         ],
       ),
       child: Container(
-        margin: const EdgeInsets.all(3),
+        margin: const EdgeInsets.all(1.5),
         padding: const EdgeInsets.all(AppConstants.paddingLG),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(AppConstants.radiusMD - 3),
+          borderRadius: BorderRadius.circular(AppConstants.radiusMD - 1.5),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -725,11 +725,11 @@ class _PriceBreakdown extends StatelessWidget {
         ],
       ),
       child: Container(
-        margin: const EdgeInsets.all(3),
+        margin: const EdgeInsets.all(1.5),
         padding: const EdgeInsets.all(AppConstants.paddingLG),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(AppConstants.radiusMD - 3),
+          borderRadius: BorderRadius.circular(AppConstants.radiusMD - 1.5),
         ),
         child: Column(
           children: [

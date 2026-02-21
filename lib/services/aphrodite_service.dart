@@ -27,7 +27,7 @@ class AphroditeService {
         'message': text,
         'language': 'es',
       },
-    );
+    ).timeout(const Duration(seconds: 30));
 
     if (response.status != 200) {
       final error = response.data is Map ? response.data['error'] : 'Unknown error';
@@ -207,7 +207,8 @@ class AphroditeService {
         .eq('user_id', userId)
         .eq('contact_type', 'aphrodite')
         .isFilter('archived_at', null)
-        .maybeSingle();
+        .maybeSingle()
+        .timeout(const Duration(seconds: 8));
 
     if (existing != null) {
       return ChatThread.fromJson(existing);
@@ -245,7 +246,7 @@ class AphroditeService {
       'last_message_text': welcomeText,
       'last_message_at': now.toIso8601String(),
       'created_at': now.toIso8601String(),
-    });
+    }).timeout(const Duration(seconds: 8));
 
     // Insert welcome message
     await client.from('chat_messages').insert({
@@ -255,7 +256,7 @@ class AphroditeService {
       'content_type': 'text',
       'text_content': welcomeText,
       'created_at': now.toIso8601String(),
-    });
+    }).timeout(const Duration(seconds: 8));
 
     return ChatThread(
       id: threadId,

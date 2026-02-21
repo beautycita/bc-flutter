@@ -288,13 +288,13 @@ class _TransportCardState extends State<_TransportCard> {
                 ],
         ),
         child: Container(
-          margin: const EdgeInsets.all(3),
+          margin: const EdgeInsets.all(1.5),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
           decoration: BoxDecoration(
             color: _isPressed
                 ? widget.iconBgColor
                 : Colors.white,
-            borderRadius: BorderRadius.circular(AppConstants.radiusLG - 3),
+            borderRadius: BorderRadius.circular(AppConstants.radiusLG - 1.5),
           ),
           child: Row(
           children: [

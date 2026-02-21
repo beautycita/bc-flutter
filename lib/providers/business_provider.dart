@@ -6,7 +6,7 @@ import 'package:beautycita/services/supabase_client.dart';
 // ---------------------------------------------------------------------------
 
 final currentBusinessProvider =
-    FutureProvider<Map<String, dynamic>?>((ref) async {
+    FutureProvider.autoDispose<Map<String, dynamic>?>((ref) async {
   final userId = SupabaseClientService.currentUserId;
   if (userId == null) return null;
 
@@ -19,7 +19,7 @@ final currentBusinessProvider =
   return response;
 });
 
-final isBusinessOwnerProvider = FutureProvider<bool>((ref) async {
+final isBusinessOwnerProvider = FutureProvider.autoDispose<bool>((ref) async {
   final biz = await ref.watch(currentBusinessProvider.future);
   return biz != null;
 });
@@ -83,6 +83,52 @@ final businessStatsProvider =
     averageRating: (bizData['average_rating'] as num?)?.toDouble() ?? 0,
     totalReviews: bizData['total_reviews'] as int? ?? 0,
   );
+});
+
+// ---------------------------------------------------------------------------
+// Monthly daily breakdown (for dashboard bar chart)
+// ---------------------------------------------------------------------------
+
+final businessMonthlyDailyProvider =
+    FutureProvider<List<({int day, int count, double revenue})>>((ref) async {
+  final biz = await ref.watch(currentBusinessProvider.future);
+  if (biz == null) return [];
+
+  final bizId = biz['id'] as String;
+  final now = DateTime.now();
+  final firstOfMonth = DateTime(now.year, now.month, 1);
+  final lastOfMonth = DateTime(now.year, now.month + 1, 0, 23, 59, 59);
+
+  final response = await SupabaseClientService.client
+      .from('appointments')
+      .select('starts_at, price, status')
+      .eq('business_id', bizId)
+      .gte('starts_at', firstOfMonth.toIso8601String())
+      .lte('starts_at', lastOfMonth.toIso8601String())
+      .neq('status', 'cancelled_customer')
+      .neq('status', 'cancelled_business');
+
+  final rows = (response as List).cast<Map<String, dynamic>>();
+
+  final Map<int, ({int count, double revenue})> byDay = {};
+  for (final row in rows) {
+    final dt = DateTime.tryParse(row['starts_at'] as String? ?? '');
+    if (dt == null) continue;
+    final day = dt.day;
+    final price = (row['price'] as num?)?.toDouble() ?? 0;
+    final existing = byDay[day];
+    byDay[day] = (
+      count: (existing?.count ?? 0) + 1,
+      revenue: (existing?.revenue ?? 0) + price,
+    );
+  }
+
+  final daysInMonth = lastOfMonth.day;
+  return List.generate(daysInMonth, (i) {
+    final day = i + 1;
+    final data = byDay[day];
+    return (day: day, count: data?.count ?? 0, revenue: data?.revenue ?? 0);
+  });
 });
 
 // ---------------------------------------------------------------------------

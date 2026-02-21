@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -29,11 +30,17 @@ class ChatRouterScreen extends ConsumerWidget {
           // No unreads — go straight to Aphrodite
           WidgetsBinding.instance.addPostFrameCallback((_) async {
             if (!context.mounted) return;
-            final aphThread = await ref.read(aphroditeThreadProvider.future);
-            if (aphThread != null && context.mounted) {
-              context.pushReplacement('/chat/${aphThread.id}');
-            } else if (context.mounted) {
-              context.pushReplacement('/chat/list');
+            try {
+              final aphThread = await ref
+                  .read(aphroditeThreadProvider.future)
+                  .timeout(const Duration(seconds: 10));
+              if (aphThread != null && context.mounted) {
+                context.pushReplacement('/chat/${aphThread.id}');
+              } else if (context.mounted) {
+                context.pushReplacement('/chat/list');
+              }
+            } catch (_) {
+              if (context.mounted) context.pushReplacement('/chat/list');
             }
           });
         }

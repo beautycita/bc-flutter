@@ -5,6 +5,7 @@ import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/config/theme_extension.dart';
 import 'package:beautycita/models/booking.dart';
 import 'package:beautycita/providers/booking_provider.dart';
+import 'package:beautycita/services/supabase_client.dart';
 import 'package:go_router/go_router.dart';
 
 /// Filter tabs for the user's bookings list.
@@ -251,6 +252,175 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
     }
   }
 
+  /// Open a dispute filing bottom sheet for a completed booking.
+  Future<void> _openDispute(Booking booking) async {
+    final reasonCtrl = TextEditingController();
+    String selectedReason = 'Servicio de mala calidad';
+
+    final reasons = [
+      'Servicio de mala calidad',
+      'Servicio no realizado',
+      'Cobro incorrecto',
+      'Tiempo de espera excesivo',
+      'Otro',
+    ];
+
+    final submitted = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+            top: Radius.circular(AppConstants.radiusXL)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            return Padding(
+              padding: EdgeInsets.fromLTRB(
+                AppConstants.paddingLG,
+                AppConstants.paddingMD,
+                AppConstants.paddingLG,
+                MediaQuery.of(ctx).viewInsets.bottom + AppConstants.paddingLG,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppConstants.paddingMD),
+                  Text(
+                    'Reportar problema',
+                    style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    booking.serviceName,
+                    style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(ctx)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.5),
+                        ),
+                  ),
+                  const SizedBox(height: AppConstants.paddingMD),
+                  Text('Razon',
+                      style: Theme.of(ctx).textTheme.labelLarge?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          )),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: reasons.map((r) {
+                      final isSelected = r == selectedReason;
+                      return ChoiceChip(
+                        label: Text(r),
+                        selected: isSelected,
+                        onSelected: (_) =>
+                            setSheetState(() => selectedReason = r),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: AppConstants.paddingMD),
+                  Text('Detalles (opcional)',
+                      style: Theme.of(ctx).textTheme.labelLarge?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          )),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: reasonCtrl,
+                    maxLines: 3,
+                    decoration: InputDecoration(
+                      hintText: 'Describe el problema...',
+                      border: OutlineInputBorder(
+                        borderRadius:
+                            BorderRadius.circular(AppConstants.radiusMD),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppConstants.paddingLG),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(ctx, true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange.shade700,
+                        minimumSize:
+                            const Size(0, AppConstants.minTouchHeight),
+                        shape: RoundedRectangleBorder(
+                          borderRadius:
+                              BorderRadius.circular(AppConstants.radiusLG),
+                        ),
+                      ),
+                      child: const Text(
+                        'Enviar reporte',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    if (submitted == true) {
+      try {
+        final userId = SupabaseClientService.currentUserId;
+        if (userId == null) throw Exception('No autenticado');
+
+        final reason = selectedReason +
+            (reasonCtrl.text.trim().isNotEmpty
+                ? ': ${reasonCtrl.text.trim()}'
+                : '');
+
+        await SupabaseClientService.client.from('disputes').insert({
+          'appointment_id': booking.id,
+          'user_id': userId,
+          'business_id': booking.businessId,
+          'reason': reason,
+          'status': 'open',
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Reporte enviado. Te contactaremos pronto.'),
+              backgroundColor: Colors.green.shade600,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error: $e'),
+              backgroundColor: Colors.red.shade600,
+            ),
+          );
+        }
+      }
+    }
+
+    reasonCtrl.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final bookingsAsync = ref.watch(userBookingsProvider);
@@ -359,17 +529,19 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
                         : null,
                   ),
                   child: Container(
-                    margin: const EdgeInsets.all(3),
+                    margin: const EdgeInsets.all(1.5),
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       color: isSelected
                           ? colorScheme.primary
                           : colorScheme.surface,
                       borderRadius:
-                          BorderRadius.circular(AppConstants.radiusMD - 3),
+                          BorderRadius.circular(AppConstants.radiusMD - 1.5),
                     ),
                     child: Text(
                       _tabLabel(tab),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: textTheme.labelLarge?.copyWith(
                         color: isSelected
                             ? Colors.white
@@ -440,10 +612,10 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
         ],
       ),
       child: Container(
-      margin: const EdgeInsets.all(3),
+      margin: const EdgeInsets.all(1.5),
       decoration: BoxDecoration(
         color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(AppConstants.radiusMD - 3),
+        borderRadius: BorderRadius.circular(AppConstants.radiusMD - 1.5),
       ),
       child: Padding(
         padding: const EdgeInsets.all(AppConstants.paddingMD),
@@ -540,6 +712,30 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
                   label: const Text('Cancelar'),
                   style: TextButton.styleFrom(
                     foregroundColor: Colors.red.shade600,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppConstants.paddingSM,
+                    ),
+                    minimumSize: const Size(0, AppConstants.minTouchHeight - 16),
+                  ),
+                ),
+              ),
+            ],
+
+            // Dispute button for completed bookings
+            if (booking.status == 'completed') ...[
+              const SizedBox(height: AppConstants.paddingSM),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: () => _openDispute(booking),
+                  icon: Icon(
+                    Icons.flag_outlined,
+                    size: AppConstants.iconSizeSM,
+                    color: Colors.orange.shade700,
+                  ),
+                  label: Text('Reportar problema',
+                      style: TextStyle(color: Colors.orange.shade700)),
+                  style: TextButton.styleFrom(
                     padding: const EdgeInsets.symmetric(
                       horizontal: AppConstants.paddingSM,
                     ),

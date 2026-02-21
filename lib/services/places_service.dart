@@ -20,11 +20,15 @@ class PlaceLocation {
   final double lat;
   final double lng;
   final String address;
+  final String? city;
+  final String? state;
 
   const PlaceLocation({
     required this.lat,
     required this.lng,
     required this.address,
+    this.city,
+    this.state,
   });
 }
 
@@ -35,10 +39,13 @@ class PlacesService {
   final String packageName;
   final String sha1Cert;
 
+  static const _debugSha1 = '3BB7776E83D63854B9ACEA059ED3D8B20E04CBD1';
+  static const _releaseSha1 = 'E87B10F536D9486A2155FDA0E788E5C6050DA47E';
+
   PlacesService({
     required this.apiKey,
-    this.packageName = 'com.beautycita.beautycita',
-    this.sha1Cert = '3BB7776E83D63854B9ACEA059ED3D8B20E04CBD1',
+    this.packageName = 'com.beautycita',
+    this.sha1Cert = kReleaseMode ? _releaseSha1 : _debugSha1,
   });
 
   Map<String, String> get _headers => {
@@ -134,7 +141,7 @@ class PlacesService {
 
       final headers = {
         'X-Goog-Api-Key': apiKey,
-        'X-Goog-FieldMask': 'location,formattedAddress',
+        'X-Goog-FieldMask': 'location,formattedAddress,addressComponents',
         'X-Android-Package': packageName,
         'X-Android-Cert': sha1Cert,
       };
@@ -154,10 +161,26 @@ class PlacesService {
         return null;
       }
 
+      // Extract city and state from address components
+      String? city;
+      String? state;
+      final components = data['addressComponents'] as List<dynamic>? ?? [];
+      for (final comp in components) {
+        final types = (comp['types'] as List<dynamic>?) ?? [];
+        final text = comp['longText'] as String? ?? '';
+        if (types.contains('locality')) {
+          city = text;
+        } else if (types.contains('administrative_area_level_1')) {
+          state = text;
+        }
+      }
+
       return PlaceLocation(
         lat: (location['latitude'] as num).toDouble(),
         lng: (location['longitude'] as num).toDouble(),
         address: data['formattedAddress'] as String? ?? '',
+        city: city,
+        state: state,
       );
     } catch (e) {
       debugPrint('[PlacesService] getPlaceDetails error: $e');

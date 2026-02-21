@@ -3,6 +3,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/constants.dart';
 import '../../providers/admin_provider.dart';
+import 'admin_shell_screen.dart';
+import 'recent_activity_screen.dart';
+
+/// Index mapping from stat tile to admin tab index.
+/// Admin tabs order: Dashboard(0), Usuarios(1), Solicitudes(2), Citas(3),
+///   Disputas(4), Salones(5), Analitica(6), Resenas(7)
+const _tileTabMapping = <String, int>{
+  'Usuarios': 1,
+  'Estilistas': 5, // Salones tab
+  'Citas Hoy': 3, // Citas tab
+  'Ingresos Mes': 6, // Analitica tab
+  'Solicitudes': 2,
+  'Disputas': 4,
+};
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -46,36 +60,42 @@ class DashboardScreen extends ConsumerWidget {
                   label: 'Usuarios',
                   value: '${stats.totalUsers}',
                   color: colors.primary,
+                  onTap: () => _goToTab(ref, 'Usuarios'),
                 ),
                 _StatCard(
                   icon: Icons.content_cut,
                   label: 'Estilistas',
                   value: '${stats.activeStylists}',
                   color: Colors.teal,
+                  onTap: () => _goToTab(ref, 'Estilistas'),
                 ),
                 _StatCard(
                   icon: Icons.calendar_today,
                   label: 'Citas Hoy',
                   value: '${stats.bookingsToday}',
                   color: Colors.orange,
+                  onTap: () => _goToTab(ref, 'Citas Hoy'),
                 ),
                 _StatCard(
                   icon: Icons.attach_money,
                   label: 'Ingresos Mes',
                   value: '\$${stats.revenueMonth.toStringAsFixed(0)}',
                   color: Colors.green,
+                  onTap: () => _goToTab(ref, 'Ingresos Mes'),
                 ),
                 _StatCard(
                   icon: Icons.assignment,
                   label: 'Solicitudes',
                   value: '${stats.pendingApplications}',
                   color: Colors.deepPurple,
+                  onTap: () => _goToTab(ref, 'Solicitudes'),
                 ),
                 _StatCard(
                   icon: Icons.gavel,
                   label: 'Disputas',
                   value: '${stats.openDisputes}',
                   color: Colors.red,
+                  onTap: () => _goToTab(ref, 'Disputas'),
                 ),
               ],
             ),
@@ -93,13 +113,29 @@ class DashboardScreen extends ConsumerWidget {
 
           const SizedBox(height: AppConstants.paddingLG),
 
-          // Recent activity
-          Text(
-            'Actividad Reciente',
-            style: GoogleFonts.poppins(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: colors.onSurface,
+          // Recent activity header — tappable link
+          GestureDetector(
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const RecentActivityScreen(),
+              ),
+            ),
+            child: Row(
+              children: [
+                Text(
+                  'Actividad Reciente',
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: colors.primary,
+                    decoration: TextDecoration.underline,
+                    decorationColor: colors.primary.withValues(alpha: 0.4),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Icon(Icons.arrow_forward_ios_rounded,
+                    size: 14, color: colors.primary),
+              ],
             ),
           ),
           const SizedBox(height: AppConstants.paddingSM),
@@ -127,6 +163,8 @@ class DashboardScreen extends ConsumerWidget {
                   ),
                 );
               }
+              // Show only first 5 items
+              final displayItems = items.take(5).toList();
               return Card(
                 elevation: 0,
                 color: Colors.white,
@@ -137,10 +175,10 @@ class DashboardScreen extends ConsumerWidget {
                 child: ListView.separated(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  itemCount: items.length,
+                  itemCount: displayItems.length,
                   separatorBuilder: (context, index) => const Divider(height: 1),
                   itemBuilder: (context, i) {
-                    final item = items[i];
+                    final item = displayItems[i];
                     final type = item['type'] as String;
                     final icon = type == 'booking'
                         ? Icons.calendar_today
@@ -180,6 +218,13 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
+  void _goToTab(WidgetRef ref, String label) {
+    final tabIndex = _tileTabMapping[label];
+    if (tabIndex != null) {
+      ref.read(adminTabProvider.notifier).state = tabIndex;
+    }
+  }
+
   static String _timeAgo(String? iso) {
     if (iso == null) return '';
     try {
@@ -201,48 +246,58 @@ class _StatCard extends StatelessWidget {
   final String label;
   final String value;
   final Color color;
+  final VoidCallback? onTap;
 
   const _StatCard({
     required this.icon,
     required this.label,
     required this.value,
     required this.color,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
 
-    return Card(
-      elevation: 0,
+    return Material(
       color: Colors.white,
-      shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(AppConstants.paddingSM),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: color, size: 24),
-            const SizedBox(height: 6),
-            Text(
-              value,
-              style: GoogleFonts.poppins(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: colors.onSurface,
-              ),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+            border: Border.all(
+              color: color.withValues(alpha: 0.3),
+              width: 1.5,
             ),
-            Text(
-              label,
-              style: GoogleFonts.nunito(
-                fontSize: 12,
-                color: colors.onSurface.withValues(alpha: 0.5),
+          ),
+          padding: const EdgeInsets.all(AppConstants.paddingSM),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: color, size: 24),
+              const SizedBox(height: 6),
+              Text(
+                value,
+                style: GoogleFonts.poppins(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: colors.onSurface,
+                ),
               ),
-            ),
-          ],
+              Text(
+                label,
+                style: GoogleFonts.nunito(
+                  fontSize: 12,
+                  color: colors.onSurface.withValues(alpha: 0.5),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

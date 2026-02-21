@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -44,10 +45,10 @@ class _BusinessCalendarScreenState
     final range = _range;
 
     final apptsAsync = ref.watch(businessAppointmentsProvider(
-      (start: range.start.toIso8601String(), end: range.end.toIso8601String()),
+      (start: range.start.toUtc().toIso8601String(), end: range.end.toUtc().toIso8601String()),
     ));
     final blocksAsync = ref.watch(businessScheduleBlocksProvider(
-      (start: range.start.toIso8601String(), end: range.end.toIso8601String()),
+      (start: range.start.toUtc().toIso8601String(), end: range.end.toUtc().toIso8601String()),
     ));
     final staffAsync = ref.watch(businessStaffProvider);
     final bizAsync = ref.watch(currentBusinessProvider);
@@ -55,6 +56,17 @@ class _BusinessCalendarScreenState
 
     return Column(
       children: [
+        // Summary card
+        if (!_weekView)
+          _SummaryCard(
+            date: _selectedDate,
+            apptsAsync: apptsAsync,
+            staffAsync: staffAsync,
+            ownerId: ownerId,
+            onPickDate: _pickDate,
+            onAddNew: () => _showWalkinSheet(context, DateTime.now().hour),
+          ),
+
         // Navigation bar
         _DateNavBar(
           selectedDate: _selectedDate,
@@ -120,15 +132,15 @@ class _BusinessCalendarScreenState
                     _weekView = false;
                   }),
                 )
-              : _DayTimeline(
+              : _HorizontalTimeline(
                   date: _selectedDate,
                   apptsAsync: apptsAsync,
                   blocksAsync: blocksAsync,
+                  staffAsync: staffAsync,
                   staffFilter: _staffFilter,
                   ownerId: ownerId,
                   onAction: _handleAction,
                   onBlockTime: () => _showBlockTimeSheet(context),
-                  onAddWalkin: (hour) => _showWalkinSheet(context, hour),
                   onRefresh: _refresh,
                 ),
         ),
@@ -149,10 +161,10 @@ class _BusinessCalendarScreenState
   void _refresh() {
     final range = _range;
     ref.invalidate(businessAppointmentsProvider(
-      (start: range.start.toIso8601String(), end: range.end.toIso8601String()),
+      (start: range.start.toUtc().toIso8601String(), end: range.end.toUtc().toIso8601String()),
     ));
     ref.invalidate(businessScheduleBlocksProvider(
-      (start: range.start.toIso8601String(), end: range.end.toIso8601String()),
+      (start: range.start.toUtc().toIso8601String(), end: range.end.toUtc().toIso8601String()),
     ));
     ref.invalidate(businessStatsProvider);
   }
@@ -419,91 +431,447 @@ class _FilterChip extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Day timeline view — the main interactive calendar
+// Summary card — appointment total, date, staff chips
 // ---------------------------------------------------------------------------
 
-class _DayTimeline extends StatelessWidget {
+class _SummaryCard extends StatelessWidget {
   final DateTime date;
   final AsyncValue<List<Map<String, dynamic>>> apptsAsync;
-  final AsyncValue<List<Map<String, dynamic>>> blocksAsync;
-  final String? staffFilter;
+  final AsyncValue<List<Map<String, dynamic>>> staffAsync;
   final String? ownerId;
-  final Future<void> Function(Map<String, dynamic>, String) onAction;
-  final VoidCallback onBlockTime;
-  final ValueChanged<int> onAddWalkin;
-  final VoidCallback onRefresh;
+  final VoidCallback onPickDate;
+  final VoidCallback onAddNew;
 
-  const _DayTimeline({
+  const _SummaryCard({
     required this.date,
     required this.apptsAsync,
-    required this.blocksAsync,
-    required this.staffFilter,
-    this.ownerId,
-    required this.onAction,
-    required this.onBlockTime,
-    required this.onAddWalkin,
-    required this.onRefresh,
+    required this.staffAsync,
+    required this.ownerId,
+    required this.onPickDate,
+    required this.onAddNew,
   });
 
-  static const _startHour = 8;
-  static const _endHour = 21;
-  static const _hourHeight = 80.0;
+  static const _months = [
+    'Ene','Feb','Mar','Abr','May','Jun',
+    'Jul','Ago','Sep','Oct','Nov','Dic',
+  ];
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final appts = apptsAsync.valueOrNull ?? [];
+    final staff = staffAsync.valueOrNull ?? [];
+
+    // Build staff list with owner first
+    final allStaff = <_StaffInfo>[];
+    if (ownerId != null) {
+      allStaff.add(_StaffInfo(id: ownerId!, name: 'Yo'));
+    }
+    for (final s in staff) {
+      allStaff.add(_StaffInfo(
+        id: s['id'] as String,
+        name: s['first_name'] as String? ?? '?',
+      ));
+    }
+
+    // Count per staff
+    for (final si in allStaff) {
+      si.count = appts.where((a) {
+        final sid = a['staff_id'] as String?;
+        if (si.id == ownerId) return sid == null || sid == ownerId;
+        return sid == si.id;
+      }).length;
+    }
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(
+        AppConstants.paddingMD, AppConstants.paddingSM,
+        AppConstants.paddingMD, 0,
+      ),
+      padding: const EdgeInsets.all(AppConstants.paddingMD),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+        boxShadow: [
+          BoxShadow(
+            color: colors.onSurface.withValues(alpha: 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Total Citas',
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: colors.onSurface.withValues(alpha: 0.5),
+                        )),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Text('${appts.length}',
+                            style: GoogleFonts.poppins(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF212121),
+                            )),
+                        const SizedBox(width: 8),
+                        GestureDetector(
+                          onTap: onPickDate,
+                          child: Text(
+                            'Hoy, ${date.day} ${_months[date.month - 1]} \u25BC',
+                            style: GoogleFonts.nunito(
+                              fontSize: 13,
+                              color: colors.onSurface.withValues(alpha: 0.5),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              TextButton.icon(
+                onPressed: onAddNew,
+                icon: const Icon(Icons.add_rounded, size: 18),
+                label: Text('Agregar',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    )),
+                style: TextButton.styleFrom(
+                  foregroundColor: colors.primary,
+                ),
+              ),
+            ],
+          ),
+          if (allStaff.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 12,
+              runSpacing: 4,
+              children: [
+                for (var i = 0; i < allStaff.length; i++)
+                  _StaffChip(
+                    name: allStaff[i].name,
+                    count: allStaff[i].count,
+                    color: _staffColor(i),
+                  ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _StaffInfo {
+  final String id;
+  final String name;
+  int count = 0;
+  _StaffInfo({required this.id, required this.name});
+}
+
+class _StaffChip extends StatelessWidget {
+  final String name;
+  final int count;
+  final Color color;
+
+  const _StaffChip({
+    required this.name,
+    required this.count,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          '$name:$count',
+          style: GoogleFonts.poppins(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: const Color(0xFF616161),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// Staff color palette
+const _kStaffColors = [
+  Color(0xFFF48FB1), // Pastel pink
+  Color(0xFFCE93D8), // Pastel purple
+  Color(0xFFA5D6A7), // Pastel green
+  Color(0xFFB39DDB), // Pastel lavender
+  Color(0xFFF6C1D0), // Soft blush
+  Color(0xFFB2DFDB), // Pastel mint
+];
+
+Color _staffColor(int index) => _kStaffColors[index % _kStaffColors.length];
+
+// ---------------------------------------------------------------------------
+// Horizontal Gantt-style timeline
+// ---------------------------------------------------------------------------
+
+class _HorizontalTimeline extends StatefulWidget {
+  final DateTime date;
+  final AsyncValue<List<Map<String, dynamic>>> apptsAsync;
+  final AsyncValue<List<Map<String, dynamic>>> blocksAsync;
+  final AsyncValue<List<Map<String, dynamic>>> staffAsync;
+  final String? staffFilter;
+  final String? ownerId;
+  final Future<void> Function(Map<String, dynamic>, String) onAction;
+  final VoidCallback onBlockTime;
+  final VoidCallback onRefresh;
+
+  const _HorizontalTimeline({
+    required this.date,
+    required this.apptsAsync,
+    required this.blocksAsync,
+    required this.staffAsync,
+    required this.staffFilter,
+    this.ownerId,
+    required this.onAction,
+    required this.onBlockTime,
+    required this.onRefresh,
+  });
+
+  @override
+  State<_HorizontalTimeline> createState() => _HorizontalTimelineState();
+}
+
+class _HorizontalTimelineState extends State<_HorizontalTimeline> {
+  static const _startHour = 8;
+  static const _endHour = 21;
+  static const _hourWidth = 120.0;
+  static const _laneHeight = 70.0;
+  static const _labelRowHeight = 24.0;
+  static const _staffColumnWidth = 60.0;
+  static const _totalWidth = (_endHour - _startHour) * _hourWidth;
+
+  late ScrollController _scrollController;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToNow());
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _scrollToNow() {
+    final now = DateTime.now();
+    final isToday = now.year == widget.date.year &&
+        now.month == widget.date.month &&
+        now.day == widget.date.day;
+
+    double targetOffset;
+    if (isToday && now.hour >= _startHour && now.hour < _endHour) {
+      final minutesSinceStart = (now.hour - _startHour) * 60 + now.minute;
+      targetOffset = (minutesSinceStart / 60.0) * _hourWidth - 40;
+    } else {
+      targetOffset = 0;
+    }
+    targetOffset = targetOffset.clamp(
+        0, math.max(0, _totalWidth - (MediaQuery.of(context).size.width - _staffColumnWidth)));
+
+    if (_scrollController.hasClients) {
+      _scrollController.jumpTo(targetOffset);
+    }
+  }
+
+  @override
+  void didUpdateWidget(_HorizontalTimeline old) {
+    super.didUpdateWidget(old);
+    if (old.date != widget.date) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToNow());
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final appts = widget.apptsAsync.valueOrNull ?? [];
+    final blocks = widget.blocksAsync.valueOrNull ?? [];
+    final staff = widget.staffAsync.valueOrNull ?? [];
+
+    // Build staff lanes
+    final lanes = <_LaneData>[];
+    if (widget.ownerId != null) {
+      lanes.add(_LaneData(id: widget.ownerId!, name: 'Yo'));
+    }
+    for (final s in staff) {
+      lanes.add(_LaneData(
+        id: s['id'] as String,
+        name: s['first_name'] as String? ?? '?',
+      ));
+    }
+
+    // Apply staff filter
+    final visibleLanes = widget.staffFilter != null
+        ? lanes.where((l) {
+            if (widget.staffFilter == widget.ownerId) {
+              return l.id == widget.ownerId;
+            }
+            return l.id == widget.staffFilter;
+          }).toList()
+        : lanes;
+
+    if (visibleLanes.isEmpty && lanes.isEmpty) {
+      // No staff at all — show single lane
+      lanes.add(_LaneData(id: widget.ownerId ?? '', name: 'Yo'));
+    }
+
+    final effectiveLanes = visibleLanes.isEmpty ? lanes : visibleLanes;
+
+    // Assign appointments and blocks to lanes
+    for (final lane in effectiveLanes) {
+      lane.appts = appts.where((a) {
+        final sid = a['staff_id'] as String?;
+        if (lane.id == widget.ownerId) return sid == null || sid == widget.ownerId;
+        return sid == lane.id;
+      }).toList();
+
+      lane.blocks = blocks.where((b) {
+        final sid = b['staff_id'] as String?;
+        if (sid == null) return true; // Salon-wide block
+        if (lane.id == widget.ownerId) return sid == widget.ownerId;
+        return sid == lane.id;
+      }).toList();
+    }
+
+    // Now-line position
+    final now = DateTime.now();
+    final isToday = now.year == widget.date.year &&
+        now.month == widget.date.month &&
+        now.day == widget.date.day;
+    double? nowLineX;
+    if (isToday && now.hour >= _startHour && now.hour < _endHour) {
+      final minutesSinceStart = (now.hour - _startHour) * 60 + now.minute;
+      nowLineX = (minutesSinceStart / 60.0) * _hourWidth;
+    }
+
+    // Pre-compute lane color indices
+    final laneColorIndices = <int>[];
+    for (var i = 0; i < effectiveLanes.length; i++) {
+      final idx = lanes.indexOf(effectiveLanes[i]);
+      laneColorIndices.add(idx >= 0 ? idx : i);
+    }
 
     return Stack(
       children: [
         RefreshIndicator(
-          onRefresh: () async => onRefresh(),
-          child: ListView.builder(
-            padding: const EdgeInsets.only(
-              left: 50,
-              right: AppConstants.paddingMD,
-              bottom: 80,
-            ),
-            itemCount: _endHour - _startHour,
-            itemBuilder: (context, index) {
-              final hour = _startHour + index;
-              return _HourRow(
-                hour: hour,
-                hourHeight: _hourHeight,
-                appointments: _apptsForHour(hour),
-                blocks: _blocksForHour(hour),
-                onAction: onAction,
-                onTapEmpty: () => onAddWalkin(hour),
-              );
-            },
-          ),
-        ),
-        // Hour labels on the left
-        Positioned(
-          left: 0,
-          top: 0,
-          bottom: 0,
-          width: 46,
-          child: IgnorePointer(
-            child: ListView.builder(
-              padding: EdgeInsets.zero,
-              itemCount: _endHour - _startHour,
-              itemBuilder: (context, index) {
-                final hour = _startHour + index;
-                return SizedBox(
-                  height: _hourHeight,
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 0, left: 4),
-                    child: Text(
-                      '${hour.toString().padLeft(2, '0')}:00',
-                      style: GoogleFonts.poppins(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        color: colors.onSurface.withValues(alpha: 0.4),
+          onRefresh: () async => widget.onRefresh(),
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Fixed staff name column
+                SizedBox(
+                  width: _staffColumnWidth,
+                  child: Column(
+                    children: [
+                      SizedBox(height: _labelRowHeight),
+                      for (var i = 0; i < effectiveLanes.length; i++)
+                        Container(
+                          height: _laneHeight,
+                          alignment: Alignment.centerLeft,
+                          padding: const EdgeInsets.only(left: 6),
+                          child: Text(
+                            effectiveLanes[i].name,
+                            style: GoogleFonts.poppins(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: _staffColor(laneColorIndices[i]),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                // Scrollable timeline
+                Expanded(
+                  child: SingleChildScrollView(
+                    controller: _scrollController,
+                    scrollDirection: Axis.horizontal,
+                    child: SizedBox(
+                      width: _totalWidth,
+                      child: Column(
+                        children: [
+                          // Hour labels
+                          SizedBox(
+                            height: _labelRowHeight,
+                            child: Row(
+                              children: List.generate(
+                                _endHour - _startHour,
+                                (i) {
+                                  final hour = _startHour + i;
+                                  return SizedBox(
+                                    width: _hourWidth,
+                                    child: Text(
+                                      '${hour > 12 ? hour - 12 : hour}${hour >= 12 ? 'PM' : 'AM'}',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w500,
+                                        color: colors.onSurface.withValues(alpha: 0.4),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                          // Staff lanes
+                          for (var i = 0; i < effectiveLanes.length; i++)
+                            _StaffLane(
+                              lane: effectiveLanes[i],
+                              laneIndex: laneColorIndices[i],
+                              laneHeight: _laneHeight,
+                              hourWidth: _hourWidth,
+                              startHour: _startHour,
+                              endHour: _endHour,
+                              totalWidth: _totalWidth,
+                              nowLineX: nowLineX,
+                              onAction: widget.onAction,
+                            ),
+                        ],
                       ),
                     ),
                   ),
-                );
-              },
+                ),
+              ],
             ),
           ),
         ),
@@ -513,157 +881,211 @@ class _DayTimeline extends StatelessWidget {
           bottom: AppConstants.paddingMD,
           child: FloatingActionButton.small(
             heroTag: 'blockTime',
-            onPressed: onBlockTime,
+            onPressed: widget.onBlockTime,
             child: const Icon(Icons.block_rounded, size: 20),
           ),
         ),
       ],
     );
   }
+}
 
-  List<Map<String, dynamic>> _apptsForHour(int hour) {
-    final appts = apptsAsync.valueOrNull ?? [];
-    return appts.where((a) {
-      final startsAt = a['starts_at'] as String?;
-      if (startsAt == null) return false;
-      final dt = DateTime.tryParse(startsAt);
-      if (dt == null) return false;
-      if (dt.hour != hour) return false;
-      if (staffFilter != null) {
-        final sid = a['staff_id'];
-        if (staffFilter == ownerId) {
-          // Owner filter: show owner's appts + unassigned
-          if (sid != null && sid != staffFilter) return false;
-        } else {
-          if (sid != staffFilter) return false;
-        }
-      }
-      return true;
-    }).toList();
-  }
-
-  List<Map<String, dynamic>> _blocksForHour(int hour) {
-    final blocks = blocksAsync.valueOrNull ?? [];
-    return blocks.where((b) {
-      final startsAt = DateTime.tryParse(b['starts_at'] as String? ?? '');
-      final endsAt = DateTime.tryParse(b['ends_at'] as String? ?? '');
-      if (startsAt == null || endsAt == null) return false;
-      if (staffFilter != null) {
-        final sid = b['staff_id'];
-        if (staffFilter == ownerId) {
-          if (sid != null && sid != staffFilter) return false;
-        } else {
-          if (sid != staffFilter) return false;
-        }
-      }
-      return startsAt.hour <= hour && endsAt.hour > hour;
-    }).toList();
-  }
+class _LaneData {
+  final String id;
+  final String name;
+  List<Map<String, dynamic>> appts = const [];
+  List<Map<String, dynamic>> blocks = const [];
+  _LaneData({required this.id, required this.name});
 }
 
 // ---------------------------------------------------------------------------
-// Single hour row in the timeline
+// Staff lane — a single row in the Gantt chart
 // ---------------------------------------------------------------------------
 
-class _HourRow extends StatelessWidget {
-  final int hour;
-  final double hourHeight;
-  final List<Map<String, dynamic>> appointments;
-  final List<Map<String, dynamic>> blocks;
+class _StaffLane extends StatelessWidget {
+  final _LaneData lane;
+  final int laneIndex;
+  final double laneHeight;
+  final double hourWidth;
+  final int startHour;
+  final int endHour;
+  final double totalWidth;
+  final double? nowLineX;
   final Future<void> Function(Map<String, dynamic>, String) onAction;
-  final VoidCallback onTapEmpty;
 
-  const _HourRow({
-    required this.hour,
-    required this.hourHeight,
-    required this.appointments,
-    required this.blocks,
+  const _StaffLane({
+    required this.lane,
+    required this.laneIndex,
+    required this.laneHeight,
+    required this.hourWidth,
+    required this.startHour,
+    required this.endHour,
+    required this.totalWidth,
+    required this.nowLineX,
     required this.onAction,
-    required this.onTapEmpty,
   });
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final hasBlocks = blocks.isNotEmpty;
-
-    return GestureDetector(
-      onTap: appointments.isEmpty && !hasBlocks ? onTapEmpty : null,
-      child: Container(
-        height: hourHeight,
-        decoration: BoxDecoration(
-          border: Border(
-            top: BorderSide(
-              color: colors.onSurface.withValues(alpha: 0.06),
-            ),
-          ),
-        ),
-        child: hasBlocks && appointments.isEmpty
-            ? _BlockedIndicator(blocks: blocks)
-            : appointments.isEmpty
-                ? Center(
-                    child: Icon(Icons.add_rounded,
-                        size: 18,
-                        color: colors.onSurface.withValues(alpha: 0.15)),
-                  )
-                : Column(
-                    children: [
-                      for (final appt in appointments)
-                        Expanded(
-                          child: _TimelineApptCard(
-                            appointment: appt,
-                            onAction: onAction,
-                          ),
-                        ),
-                    ],
-                  ),
-      ),
-    );
-  }
-}
-
-class _BlockedIndicator extends StatelessWidget {
-  final List<Map<String, dynamic>> blocks;
-  const _BlockedIndicator({required this.blocks});
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final reason = blocks.first['reason'] as String? ?? 'blocked';
-    final reasonLabel = _reasonLabel(reason);
+    final staffColor = _staffColor(laneIndex);
 
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 2, horizontal: 4),
+      height: laneHeight,
+      width: totalWidth,
       decoration: BoxDecoration(
-        color: colors.onSurface.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: colors.onSurface.withValues(alpha: 0.1),
-          style: BorderStyle.solid,
+        border: Border(
+          top: BorderSide(
+            color: colors.onSurface.withValues(alpha: 0.06),
+          ),
         ),
       ),
-      child: Center(
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.block_rounded,
-                size: 14, color: colors.onSurface.withValues(alpha: 0.3)),
-            const SizedBox(width: 4),
-            Text(
-              reasonLabel,
-              style: GoogleFonts.nunito(
-                fontSize: 12,
-                color: colors.onSurface.withValues(alpha: 0.4),
-                fontStyle: FontStyle.italic,
+      child: Stack(
+        children: [
+          // Hour grid lines
+          for (var h = 0; h < endHour - startHour; h++)
+            Positioned(
+              left: h * hourWidth,
+              top: 0,
+              bottom: 0,
+              child: Container(
+                width: 1,
+                color: colors.onSurface.withValues(alpha: 0.04),
               ),
             ),
-          ],
+
+          // Schedule blocks (lunch/breaks)
+          for (final block in lane.blocks)
+            _buildBlock(context, block, colors),
+
+          // Appointment blocks
+          for (final appt in lane.appts)
+            _buildApptBlock(context, appt, staffColor),
+
+          // Now-line
+          if (nowLineX != null)
+            Positioned(
+              left: nowLineX!,
+              top: 0,
+              bottom: 0,
+              child: Container(
+                width: 2,
+                color: const Color(0xFFFFB300),
+              ),
+            ),
+          if (nowLineX != null)
+            Positioned(
+              left: nowLineX! - 4,
+              top: 0,
+              child: CustomPaint(
+                size: const Size(10, 6),
+                painter: _NowTrianglePainter(),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  double _timeToX(DateTime dt) {
+    final minutesSinceStart = (dt.hour - startHour) * 60 + dt.minute;
+    return (minutesSinceStart / 60.0) * hourWidth;
+  }
+
+  Widget _buildBlock(
+      BuildContext context, Map<String, dynamic> block, ColorScheme colors) {
+    final startsAt = DateTime.tryParse(block['starts_at'] as String? ?? '')?.toLocal();
+    final endsAt = DateTime.tryParse(block['ends_at'] as String? ?? '')?.toLocal();
+    if (startsAt == null || endsAt == null) return const SizedBox.shrink();
+
+    final left = _timeToX(startsAt).clamp(0.0, totalWidth);
+    final right = _timeToX(endsAt).clamp(0.0, totalWidth);
+    final width = (right - left).clamp(20.0, totalWidth);
+
+    final reason = block['reason'] as String? ?? 'blocked';
+    final label = _reasonLabel(reason);
+
+    return Positioned(
+      left: left,
+      top: 4,
+      height: laneHeight - 8,
+      width: width,
+      child: Container(
+        decoration: BoxDecoration(
+          color: colors.onSurface.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          label,
+          style: GoogleFonts.nunito(
+            fontSize: 10,
+            fontStyle: FontStyle.italic,
+            color: colors.onSurface.withValues(alpha: 0.35),
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
       ),
     );
   }
 
-  String _reasonLabel(String reason) {
+  Widget _buildApptBlock(
+      BuildContext context, Map<String, dynamic> appt, Color staffColor) {
+    final startsAt = DateTime.tryParse(appt['starts_at'] as String? ?? '')?.toLocal();
+    final endsAt = DateTime.tryParse(appt['ends_at'] as String? ?? '')?.toLocal();
+    if (startsAt == null) return const SizedBox.shrink();
+
+    final effectiveEnd = endsAt ?? startsAt.add(const Duration(minutes: 60));
+    final left = _timeToX(startsAt).clamp(0.0, totalWidth);
+    final right = _timeToX(effectiveEnd).clamp(0.0, totalWidth);
+    final width = math.max(right - left, 30.0);
+
+    final service = appt['service_name'] as String? ?? 'Servicio';
+
+    return Positioned(
+      left: left,
+      top: 4,
+      height: laneHeight - 8,
+      width: width,
+      child: GestureDetector(
+        onTap: () => _showApptActionSheet(context, appt, onAction),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+          decoration: BoxDecoration(
+            color: staffColor.withValues(alpha: 0.85),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                service,
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              if (width > 60)
+                Text(
+                  '${startsAt.hour.toString().padLeft(2, '0')}:${startsAt.minute.toString().padLeft(2, '0')}',
+                  style: GoogleFonts.nunito(
+                    fontSize: 9,
+                    color: Colors.white.withValues(alpha: 0.8),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  static String _reasonLabel(String reason) {
     switch (reason) {
       case 'lunch': return 'Almuerzo';
       case 'day_off': return 'Dia libre';
@@ -673,184 +1095,106 @@ class _BlockedIndicator extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Appointment card in timeline
-// ---------------------------------------------------------------------------
-
-class _TimelineApptCard extends StatelessWidget {
-  final Map<String, dynamic> appointment;
-  final Future<void> Function(Map<String, dynamic>, String) onAction;
-
-  const _TimelineApptCard({
-    required this.appointment,
-    required this.onAction,
-  });
-
+// Now-line triangle indicator
+class _NowTrianglePainter extends CustomPainter {
   @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final status = appointment['status'] as String? ?? 'pending';
-    final service = appointment['service_name'] as String? ?? 'Servicio';
-    final price = (appointment['price'] as num?)?.toDouble() ?? 0;
-    final startsAt = appointment['starts_at'] as String?;
-    final statusColor = _statusColor(status);
-
-    String timeStr = '';
-    if (startsAt != null) {
-      final dt = DateTime.tryParse(startsAt);
-      if (dt != null) {
-        timeStr = '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-      }
-    }
-
-    return GestureDetector(
-      onTap: () => _showActionSheet(context),
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 2, horizontal: 4),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: statusColor.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(8),
-          border: Border(
-            left: BorderSide(color: statusColor, width: 3),
-          ),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    service,
-                    style: GoogleFonts.poppins(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: colors.onSurface,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  Text(
-                    '$timeStr • \$${price.toStringAsFixed(0)} • ${_statusLabel(status)}',
-                    style: GoogleFonts.nunito(
-                      fontSize: 11,
-                      color: statusColor,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(Icons.more_vert_rounded,
-                size: 18, color: colors.onSurface.withValues(alpha: 0.4)),
-          ],
-        ),
-      ),
-    );
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = const Color(0xFFFFB300);
+    final path = Path()
+      ..moveTo(size.width / 2, size.height)
+      ..lineTo(0, 0)
+      ..lineTo(size.width, 0)
+      ..close();
+    canvas.drawPath(path, paint);
   }
 
-  void _showActionSheet(BuildContext context) {
-    final status = appointment['status'] as String? ?? 'pending';
-    final colors = Theme.of(context).colorScheme;
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
 
-    showModalBottomSheet(
-      context: context,
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(AppConstants.paddingMD),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (status == 'pending') ...[
-                _ActionTile(
-                  icon: Icons.check_circle_rounded,
-                  label: 'Confirmar',
-                  color: Colors.blue,
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    onAction(appointment, 'confirmed');
-                  },
-                ),
-                _ActionTile(
-                  icon: Icons.cancel_rounded,
-                  label: 'Cancelar',
-                  color: Colors.red,
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    onAction(appointment, 'cancelled_business');
-                  },
-                ),
-              ],
-              if (status == 'confirmed') ...[
-                _ActionTile(
-                  icon: Icons.done_all_rounded,
-                  label: 'Completar',
-                  color: Colors.green,
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    onAction(appointment, 'completed');
-                  },
-                ),
-                _ActionTile(
-                  icon: Icons.person_off_rounded,
-                  label: 'No-Show',
-                  color: Colors.orange,
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    onAction(appointment, 'no_show');
-                  },
-                ),
-                _ActionTile(
-                  icon: Icons.cancel_rounded,
-                  label: 'Cancelar',
-                  color: Colors.red,
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    onAction(appointment, 'cancelled_business');
-                  },
-                ),
-              ],
+// ---------------------------------------------------------------------------
+// Standalone action sheet for appointment blocks
+// ---------------------------------------------------------------------------
+
+void _showApptActionSheet(
+  BuildContext context,
+  Map<String, dynamic> appointment,
+  Future<void> Function(Map<String, dynamic>, String) onAction,
+) {
+  final status = appointment['status'] as String? ?? 'pending';
+  final colors = Theme.of(context).colorScheme;
+
+  showModalBottomSheet(
+    context: context,
+    builder: (ctx) => SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(AppConstants.paddingMD),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (status == 'pending') ...[
               _ActionTile(
-                icon: Icons.schedule_rounded,
-                label: 'Reprogramar',
-                color: colors.primary,
+                icon: Icons.check_circle_rounded,
+                label: 'Confirmar',
+                color: const Color(0xFFCE93D8),
                 onTap: () {
                   Navigator.pop(ctx);
-                  onAction(appointment, 'reschedule');
+                  onAction(appointment, 'confirmed');
+                },
+              ),
+              _ActionTile(
+                icon: Icons.cancel_rounded,
+                label: 'Cancelar',
+                color: const Color(0xFFF48FB1),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  onAction(appointment, 'cancelled_business');
                 },
               ),
             ],
-          ),
+            if (status == 'confirmed') ...[
+              _ActionTile(
+                icon: Icons.done_all_rounded,
+                label: 'Completar',
+                color: const Color(0xFFA5D6A7),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  onAction(appointment, 'completed');
+                },
+              ),
+              _ActionTile(
+                icon: Icons.person_off_rounded,
+                label: 'No-Show',
+                color: const Color(0xFFB39DDB),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  onAction(appointment, 'no_show');
+                },
+              ),
+              _ActionTile(
+                icon: Icons.cancel_rounded,
+                label: 'Cancelar',
+                color: const Color(0xFFF48FB1),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  onAction(appointment, 'cancelled_business');
+                },
+              ),
+            ],
+            _ActionTile(
+              icon: Icons.schedule_rounded,
+              label: 'Reprogramar',
+              color: colors.primary,
+              onTap: () {
+                Navigator.pop(ctx);
+                onAction(appointment, 'reschedule');
+              },
+            ),
+          ],
         ),
       ),
-    );
-  }
-
-  Color _statusColor(String status) {
-    switch (status) {
-      case 'pending': return Colors.orange;
-      case 'confirmed': return Colors.blue;
-      case 'completed': return Colors.green;
-      case 'cancelled_customer':
-      case 'cancelled_business': return Colors.red;
-      case 'no_show': return Colors.grey;
-      default: return Colors.grey;
-    }
-  }
-
-  String _statusLabel(String status) {
-    switch (status) {
-      case 'pending': return 'Pendiente';
-      case 'confirmed': return 'Confirmada';
-      case 'completed': return 'Completada';
-      case 'cancelled_customer': return 'Canc. cliente';
-      case 'cancelled_business': return 'Canc. negocio';
-      case 'no_show': return 'No asistio';
-      default: return status;
-    }
-  }
+    ),
+  );
 }
 
 class _ActionTile extends StatelessWidget {
@@ -1014,10 +1358,10 @@ class _WeekView extends StatelessWidget {
 
   Color _dotColor(String status) {
     switch (status) {
-      case 'pending': return Colors.orange;
-      case 'confirmed': return Colors.blue;
-      case 'completed': return Colors.green;
-      default: return Colors.grey;
+      case 'pending': return const Color(0xFFF48FB1);   // Pastel pink
+      case 'confirmed': return const Color(0xFFCE93D8); // Pastel purple
+      case 'completed': return const Color(0xFFA5D6A7); // Pastel green
+      default: return const Color(0xFFE0E0E0);
     }
   }
 }
@@ -1168,8 +1512,8 @@ class _BlockTimeSheetState extends ConsumerState<_BlockTimeSheet> {
           .insert({
         'business_id': biz['id'],
         'staff_id': _staffId,
-        'starts_at': startsAt.toIso8601String(),
-        'ends_at': endsAt.toIso8601String(),
+        'starts_at': startsAt.toUtc().toIso8601String(),
+        'ends_at': endsAt.toUtc().toIso8601String(),
         'reason': _reason,
       });
 
@@ -1330,8 +1674,8 @@ class _WalkinSheetState extends ConsumerState<_WalkinSheet> {
         'service_id': _serviceId,
         'service_name': service['name'],
         'staff_id': _staffId,
-        'starts_at': startsAt.toIso8601String(),
-        'ends_at': endsAt.toIso8601String(),
+        'starts_at': startsAt.toUtc().toIso8601String(),
+        'ends_at': endsAt.toUtc().toIso8601String(),
         'price': price,
         'status': 'confirmed',
       });
@@ -1376,7 +1720,7 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
   void initState() {
     super.initState();
     final startsAt =
-        DateTime.tryParse(widget.appointment['starts_at'] as String? ?? '');
+        DateTime.tryParse(widget.appointment['starts_at'] as String? ?? '')?.toLocal();
     _newDate = startsAt ?? DateTime.now();
     _newTime = startsAt != null
         ? TimeOfDay(hour: startsAt.hour, minute: startsAt.minute)
@@ -1464,8 +1808,8 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
       await SupabaseClientService.client
           .from('appointments')
           .update({
-        'starts_at': newStart.toIso8601String(),
-        'ends_at': newEnd.toIso8601String(),
+        'starts_at': newStart.toUtc().toIso8601String(),
+        'ends_at': newEnd.toUtc().toIso8601String(),
       }).eq('id', id);
 
       widget.onSaved();

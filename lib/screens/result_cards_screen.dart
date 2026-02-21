@@ -422,10 +422,10 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
         ],
       ),
       child: Container(
-        margin: const EdgeInsets.all(3),
+        margin: const EdgeInsets.all(1.5),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(AppConstants.radiusLG - 3),
+          borderRadius: BorderRadius.circular(AppConstants.radiusLG - 1.5),
         ),
         padding: const EdgeInsets.all(16),
         child: Column(
