@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../models/category.dart';
 import '../providers/category_provider.dart';
 import '../providers/business_provider.dart';
+import '../providers/admin_provider.dart';
 import '../config/constants.dart';
 import '../config/theme_extension.dart';
 import '../themes/category_icons.dart';
@@ -12,6 +13,8 @@ import '../themes/theme_variant.dart';
 import '../widgets/video_map_background.dart';
 import '../widgets/cinematic_question_text.dart';
 import 'subcategory_sheet.dart';
+import 'business/business_shell_screen.dart' show businessTabProvider;
+import 'admin/admin_shell_screen.dart' show adminTabProvider;
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -25,8 +28,43 @@ class HomeScreen extends ConsumerWidget {
 
     final topSectionHeight = screenHeight * 0.34;
 
+    // Edge-swipe drawers: business (left) for service providers, admin (right) for admins
+    final isBizOwner = ref.watch(isBusinessOwnerProvider);
+    final isAdmin = ref.watch(isAdminProvider);
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      // Left-edge swipe → Business panel (only for service providers)
+      drawer: isBizOwner.when(
+        data: (isOwner) => isOwner
+            ? _HomeBusinessDrawer(
+                onSelectTab: (index) {
+                  Navigator.of(context).pop(); // close drawer
+                  ref.read(businessTabProvider.notifier).state = index;
+                  context.push('/business');
+                },
+              )
+            : null,
+        loading: () => null,
+        error: (_, __) => null,
+      ),
+      drawerEdgeDragWidth: 24, // narrow edge zone
+      drawerEnableOpenDragGesture: isBizOwner.valueOrNull == true,
+      // Right-edge swipe → Admin panel (only for admins/superadmins)
+      endDrawer: isAdmin.when(
+        data: (admin) => admin
+            ? _HomeAdminDrawer(
+                onSelectTab: (index) {
+                  Navigator.of(context).pop(); // close drawer
+                  ref.read(adminTabProvider.notifier).state = index;
+                  context.push('/admin');
+                },
+              )
+            : null,
+        loading: () => null,
+        error: (_, __) => null,
+      ),
+      endDrawerEnableOpenDragGesture: isAdmin.valueOrNull == true,
       body: Column(
         children: [
           // Header with gradient, decorative shapes, and curved bottom
@@ -409,6 +447,255 @@ class _CategoryCardState extends State<_CategoryCard>
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Home screen drawers — edge-swipe access to business & admin panels
+// ---------------------------------------------------------------------------
+
+class _HomeBusinessDrawer extends StatelessWidget {
+  final void Function(int index) onSelectTab;
+  const _HomeBusinessDrawer({required this.onSelectTab});
+
+  static const _tabs = <(IconData, String)>[
+    (Icons.dashboard_rounded, 'Inicio'),
+    (Icons.calendar_month_rounded, 'Calendario'),
+    (Icons.design_services_rounded, 'Servicios'),
+    (Icons.people_rounded, 'Equipo'),
+    (Icons.gavel_rounded, 'Disputas'),
+    (Icons.qr_code_rounded, 'QR Cita Express'),
+    (Icons.payments_rounded, 'Pagos'),
+    (Icons.settings_rounded, 'Ajustes'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Drawer(
+      backgroundColor: const Color(0xFFF5F3FF),
+      shape: const RoundedRectangleBorder(
+        borderRadius:
+            BorderRadius.horizontal(right: Radius.circular(AppConstants.radiusLG)),
+      ),
+      child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(AppConstants.paddingLG),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.storefront_rounded,
+                      size: 32, color: colors.primary),
+                  const SizedBox(height: AppConstants.paddingSM),
+                  Text(
+                    'Mi Negocio',
+                    style: GoogleFonts.poppins(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF000000),
+                    ),
+                  ),
+                  Text(
+                    'Portal de Negocio',
+                    style: GoogleFonts.nunito(
+                      fontSize: 13,
+                      color: const Color(0xFF757575),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              height: 1,
+              margin: const EdgeInsets.symmetric(horizontal: AppConstants.paddingMD),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    colors.primary.withValues(alpha: 0.0),
+                    colors.primary.withValues(alpha: 0.15),
+                    colors.primary.withValues(alpha: 0.0),
+                  ],
+                ),
+              ),
+            ),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(
+                    vertical: AppConstants.paddingSM),
+                children: [
+                  for (var i = 0; i < _tabs.length; i++)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: AppConstants.paddingSM, vertical: 2),
+                      child: Material(
+                        color: Colors.transparent,
+                        borderRadius:
+                            BorderRadius.circular(AppConstants.radiusMD),
+                        child: ListTile(
+                          leading: Icon(
+                            _tabs[i].$1,
+                            color: const Color(0xFF757575).withValues(alpha: 0.6),
+                            size: 22,
+                          ),
+                          title: Text(
+                            _tabs[i].$2,
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: const Color(0xFF212121),
+                            ),
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius:
+                                BorderRadius.circular(AppConstants.radiusMD),
+                          ),
+                          onTap: () => onSelectTab(i),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeAdminDrawer extends StatelessWidget {
+  final void Function(int index) onSelectTab;
+  const _HomeAdminDrawer({required this.onSelectTab});
+
+  static const _tabs = <(IconData, String, String)>[
+    (Icons.dashboard, 'Dashboard', 'Gestion'),
+    (Icons.people, 'Usuarios', 'Gestion'),
+    (Icons.assignment, 'Solicitudes', 'Gestion'),
+    (Icons.calendar_today, 'Citas', 'Gestion'),
+    (Icons.gavel, 'Disputas', 'Gestion'),
+    (Icons.store, 'Salones', 'Gestion'),
+    (Icons.analytics, 'Analitica', 'Gestion'),
+    (Icons.rate_review, 'Resenas', 'Gestion'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    // Group tabs by section
+    final sections = <String, List<int>>{};
+    for (var i = 0; i < _tabs.length; i++) {
+      sections.putIfAbsent(_tabs[i].$3, () => []).add(i);
+    }
+
+    return Drawer(
+      backgroundColor: const Color(0xFFF5F3FF),
+      shape: const RoundedRectangleBorder(
+        borderRadius:
+            BorderRadius.horizontal(left: Radius.circular(AppConstants.radiusLG)),
+      ),
+      child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(AppConstants.paddingLG),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.admin_panel_settings,
+                      size: 32, color: colors.primary),
+                  const SizedBox(height: AppConstants.paddingSM),
+                  Text(
+                    'Admin Panel',
+                    style: GoogleFonts.poppins(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF000000),
+                    ),
+                  ),
+                  Text(
+                    'BeautyCita',
+                    style: GoogleFonts.nunito(
+                      fontSize: 13,
+                      color: const Color(0xFF757575),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              height: 1,
+              margin: const EdgeInsets.symmetric(horizontal: AppConstants.paddingMD),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    colors.primary.withValues(alpha: 0.0),
+                    colors.primary.withValues(alpha: 0.15),
+                    colors.primary.withValues(alpha: 0.0),
+                  ],
+                ),
+              ),
+            ),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(
+                    vertical: AppConstants.paddingSM),
+                children: [
+                  for (final entry in sections.entries) ...[
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                      child: Text(
+                        entry.key.toUpperCase(),
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.2,
+                          color: colors.primary.withValues(alpha: 0.55),
+                        ),
+                      ),
+                    ),
+                    for (final i in entry.value)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: AppConstants.paddingSM, vertical: 2),
+                        child: Material(
+                          color: Colors.transparent,
+                          borderRadius:
+                              BorderRadius.circular(AppConstants.radiusMD),
+                          child: ListTile(
+                            leading: Icon(
+                              _tabs[i].$1,
+                              color: const Color(0xFF757575).withValues(alpha: 0.6),
+                              size: 22,
+                            ),
+                            title: Text(
+                              _tabs[i].$2,
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: const Color(0xFF212121),
+                              ),
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius:
+                                  BorderRadius.circular(AppConstants.radiusMD),
+                            ),
+                            onTap: () => onSelectTab(i),
+                          ),
+                        ),
+                      ),
+                  ],
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
