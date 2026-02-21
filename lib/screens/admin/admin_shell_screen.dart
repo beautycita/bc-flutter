@@ -17,6 +17,7 @@ import 'disputes_screen.dart';
 import 'applications_screen.dart';
 import 'bookings_screen.dart';
 import 'feature_toggles_screen.dart';
+import 'reviews_screen.dart';
 
 /// Index of the currently selected admin tab.
 final adminTabProvider = StateProvider<int>((ref) => 0);
@@ -55,20 +56,20 @@ class AdminShellScreen extends ConsumerWidget {
       data: (admin) {
         if (!admin) {
           return Scaffold(
-            backgroundColor: colors.surface,
+            backgroundColor: const Color(0xFFF5F3FF),
             body: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(Icons.lock,
-                      size: 64, color: colors.onSurface.withValues(alpha: 0.5)),
+                      size: 64, color: colors.primary.withValues(alpha: 0.4)),
                   const SizedBox(height: AppConstants.paddingLG),
                   Text(
                     'Acceso restringido',
                     style: GoogleFonts.poppins(
                       fontSize: 20,
                       fontWeight: FontWeight.w600,
-                      color: colors.onSurface,
+                      color: const Color(0xFF212121),
                     ),
                   ),
                   const SizedBox(height: AppConstants.paddingSM),
@@ -76,12 +77,19 @@ class AdminShellScreen extends ConsumerWidget {
                     'No tienes permisos de administrador.',
                     style: GoogleFonts.nunito(
                       fontSize: 14,
-                      color: colors.onSurface.withValues(alpha: 0.5),
+                      color: const Color(0xFF757575),
                     ),
                   ),
                   const SizedBox(height: AppConstants.paddingXL),
                   ElevatedButton(
                     onPressed: () => context.go('/home'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: colors.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppConstants.radiusLG),
+                      ),
+                    ),
                     child: const Text('Volver'),
                   ),
                 ],
@@ -93,14 +101,15 @@ class AdminShellScreen extends ConsumerWidget {
         return const _AdminContent();
       },
       loading: () => const Scaffold(
+        backgroundColor: Color(0xFFF5F3FF),
         body: Center(child: CircularProgressIndicator()),
       ),
       error: (_, __) => Scaffold(
+        backgroundColor: const Color(0xFFF5F3FF),
         body: Center(
           child: Text(
             'Error verificando permisos',
-            style: GoogleFonts.poppins(
-                color: colors.onSurface.withValues(alpha: 0.5)),
+            style: GoogleFonts.poppins(color: const Color(0xFF757575)),
           ),
         ),
       ),
@@ -126,31 +135,36 @@ class _AdminContent extends ConsumerWidget {
       ),
     ];
 
-    // Clamp selected tab if role changed
     final safeTab = selectedTab.clamp(0, allTabs.isEmpty ? 0 : allTabs.length - 1);
 
     return Scaffold(
-      backgroundColor: colors.surface,
+      backgroundColor: const Color(0xFFF5F3FF),
       appBar: AppBar(
-        backgroundColor: colors.surface,
+        backgroundColor: Colors.white,
         elevation: 0,
+        scrolledUnderElevation: 0.5,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            bottom: Radius.circular(AppConstants.radiusMD),
+          ),
+        ),
         leading: IconButton(
           icon: Icon(Icons.arrow_back_rounded,
-              color: colors.onSurface, size: 24),
+              color: colors.primary, size: 24),
           onPressed: () => context.go('/home'),
         ),
         title: Text(
           allTabs.isNotEmpty ? allTabs[safeTab].label : 'Admin',
           style: GoogleFonts.poppins(
-            fontWeight: FontWeight.w600,
-            color: colors.onSurface,
+            fontWeight: FontWeight.w700,
             fontSize: 18,
+            color: const Color(0xFF000000),
           ),
         ),
         actions: [
           Builder(
             builder: (ctx) => IconButton(
-              icon: Icon(Icons.menu, color: colors.onSurface, size: 26),
+              icon: Icon(Icons.menu, color: colors.primary, size: 26),
               onPressed: () => Scaffold.of(ctx).openEndDrawer(),
               tooltip: 'Menu',
             ),
@@ -180,7 +194,6 @@ class _AdminContent extends ConsumerWidget {
     final tab = tabs[index];
 
     switch (tab.label) {
-      // Admin tabs
       case 'Dashboard':
         return const DashboardScreen();
       case 'Usuarios':
@@ -196,13 +209,7 @@ class _AdminContent extends ConsumerWidget {
       case 'Analitica':
         return const AnalyticsScreen();
       case 'Resenas':
-        return const _PlaceholderTab(
-          icon: Icons.rate_review,
-          label: 'Inteligencia de Resenas',
-          subtitle: 'Proximamente',
-        );
-
-      // Superadmin tabs
+        return const ReviewsScreen();
       case 'Perfiles de Servicio':
         return const ServiceProfileEditorScreen();
       case 'Configuracion Global':
@@ -215,7 +222,6 @@ class _AdminContent extends ConsumerWidget {
         return const NotificationTemplatesScreen();
       case 'Feature Toggles':
         return const FeatureTogglesScreen();
-
       default:
         return _PlaceholderTab(
           icon: tab.icon,
@@ -225,6 +231,8 @@ class _AdminContent extends ConsumerWidget {
     }
   }
 }
+
+// -- Admin Drawer: gold shimmer header, section headers, rose-styled tiles --
 
 class _AdminDrawer extends StatelessWidget {
   final List<_AdminTab> tabs;
@@ -239,8 +247,7 @@ class _AdminDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
+    final colors = Theme.of(context).colorScheme;
 
     // Group tabs by section
     final sections = <String, List<int>>{};
@@ -249,7 +256,10 @@ class _AdminDrawer extends StatelessWidget {
     }
 
     return Drawer(
-      backgroundColor: theme.scaffoldBackgroundColor,
+      backgroundColor: const Color(0xFFF5F3FF),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.horizontal(left: Radius.circular(AppConstants.radiusLG)),
+      ),
       child: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -268,20 +278,33 @@ class _AdminDrawer extends StatelessWidget {
                     style: GoogleFonts.poppins(
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
-                      color: colors.onSurface,
+                      color: const Color(0xFF000000),
                     ),
                   ),
                   Text(
                     'BeautyCita',
                     style: GoogleFonts.nunito(
                       fontSize: 13,
-                      color: colors.onSurface.withValues(alpha: 0.5),
+                      color: const Color(0xFF757575),
                     ),
                   ),
                 ],
               ),
             ),
-            const Divider(height: 1),
+            // Rose gradient divider
+            Container(
+              height: 1,
+              margin: const EdgeInsets.symmetric(horizontal: AppConstants.paddingMD),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    colors.primary.withValues(alpha: 0.0),
+                    colors.primary.withValues(alpha: 0.15),
+                    colors.primary.withValues(alpha: 0.0),
+                  ],
+                ),
+              ),
+            ),
             // Nav items grouped by section
             Expanded(
               child: ListView(
@@ -297,39 +320,46 @@ class _AdminDrawer extends StatelessWidget {
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
                           letterSpacing: 1.2,
-                          color: colors.onSurface.withValues(alpha: 0.4),
+                          color: colors.primary.withValues(alpha: 0.55),
                         ),
                       ),
                     ),
                     for (final i in entry.value)
-                      ListTile(
-                        leading: Icon(
-                          tabs[i].icon,
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: AppConstants.paddingSM, vertical: 2),
+                        child: Material(
                           color: i == selectedIndex
-                              ? colors.primary
-                              : colors.onSurface.withValues(alpha: 0.5),
-                          size: 22,
-                        ),
-                        title: Text(
-                          tabs[i].label,
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            fontWeight: i == selectedIndex
-                                ? FontWeight.w600
-                                : FontWeight.w400,
-                            color: i == selectedIndex
-                                ? colors.primary
-                                : colors.onSurface,
+                              ? colors.primary.withValues(alpha: 0.08)
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+                          child: ListTile(
+                            leading: Icon(
+                              tabs[i].icon,
+                              color: i == selectedIndex
+                                  ? colors.primary
+                                  : const Color(0xFF757575).withValues(alpha: 0.6),
+                              size: 22,
+                            ),
+                            title: Text(
+                              tabs[i].label,
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                fontWeight: i == selectedIndex
+                                    ? FontWeight.w700
+                                    : FontWeight.w500,
+                                color: i == selectedIndex
+                                    ? colors.primary
+                                    : const Color(0xFF212121),
+                              ),
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius:
+                                  BorderRadius.circular(AppConstants.radiusMD),
+                            ),
+                            onTap: () => onSelect(i),
                           ),
                         ),
-                        selected: i == selectedIndex,
-                        selectedTileColor:
-                            colors.primary.withValues(alpha: 0.08),
-                        shape: RoundedRectangleBorder(
-                          borderRadius:
-                              BorderRadius.circular(AppConstants.radiusMD),
-                        ),
-                        onTap: () => onSelect(i),
                       ),
                   ],
                 ],
@@ -360,14 +390,14 @@ class _PlaceholderTab extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 48, color: colors.primary),
+          Icon(icon, size: 48, color: colors.primary.withValues(alpha: 0.4)),
           const SizedBox(height: AppConstants.paddingMD),
           Text(
             label,
             style: GoogleFonts.poppins(
               fontSize: 18,
               fontWeight: FontWeight.w600,
-              color: colors.onSurface,
+              color: const Color(0xFF212121),
             ),
           ),
           const SizedBox(height: AppConstants.paddingSM),
@@ -375,7 +405,7 @@ class _PlaceholderTab extends StatelessWidget {
             subtitle,
             style: GoogleFonts.nunito(
               fontSize: 14,
-              color: colors.onSurface.withValues(alpha: 0.5),
+              color: const Color(0xFF757575),
             ),
             textAlign: TextAlign.center,
           ),
@@ -395,4 +425,75 @@ class _AdminTab {
     required this.label,
     required this.section,
   });
+}
+
+// -- Spectrum shimmer text --
+
+class _GoldShimmerText extends StatefulWidget {
+  final String text;
+  final TextStyle? style;
+  const _GoldShimmerText({required this.text, this.style});
+
+  @override
+  State<_GoldShimmerText> createState() => _GoldShimmerTextState();
+}
+
+class _GoldShimmerTextState extends State<_GoldShimmerText>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 2500),
+      vsync: this,
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        final shimmerOffset = _controller.value * 3.0 - 1.0;
+        return ShaderMask(
+          shaderCallback: (bounds) {
+            return LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: const [
+                Color(0xFF00D4AA), // aqua
+                Color(0xFF06B6D4), // teal
+                Color(0xFF3B82F6), // blue
+                Color(0xFF8B5CF6), // purple
+                Color(0xFFC026D3), // magenta
+                Color(0xFFEC4899), // pink
+              ],
+              stops: [
+                (shimmerOffset - 0.3).clamp(0.0, 1.0),
+                (shimmerOffset - 0.1).clamp(0.0, 1.0),
+                shimmerOffset.clamp(0.0, 1.0),
+                (shimmerOffset + 0.1).clamp(0.0, 1.0),
+                (shimmerOffset + 0.3).clamp(0.0, 1.0),
+                (shimmerOffset + 0.5).clamp(0.0, 1.0),
+              ],
+            ).createShader(bounds);
+          },
+          child: Text(
+            widget.text,
+            style: (widget.style ?? const TextStyle()).copyWith(
+              color: Colors.white,
+            ),
+          ),
+        );
+      },
+    );
+  }
 }

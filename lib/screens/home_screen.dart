@@ -7,7 +7,9 @@ import '../providers/category_provider.dart';
 import '../providers/business_provider.dart';
 import '../config/constants.dart';
 import '../config/theme_extension.dart';
-import '../widgets/animated_city_map.dart';
+import '../themes/category_icons.dart';
+import '../themes/theme_variant.dart';
+import '../widgets/video_map_background.dart';
 import '../widgets/cinematic_question_text.dart';
 import 'subcategory_sheet.dart';
 
@@ -45,9 +47,11 @@ class HomeScreen extends ConsumerWidget {
                   ),
                   child: Stack(
                     children: [
-                      // Animated city map background
+                      // Wireframe hero video background (1:1, cross-fade loop)
                       const Positioned.fill(
-                        child: AnimatedCityMap(),
+                        child: VideoMapBackground(
+                          assetPath: 'assets/videos/wireframe_hero.mp4',
+                        ),
                       ),
 
                       // Safe area content
@@ -175,6 +179,7 @@ class HomeScreen extends ConsumerWidget {
                   return _CategoryCard(
                     category: category,
                     index: index,
+                    variant: ref.watch(currentVariantProvider),
                     onTap: () => _showSubcategorySheet(context, category),
                   );
                 },
@@ -267,11 +272,13 @@ class _HeaderButton extends StatelessWidget {
 class _CategoryCard extends StatefulWidget {
   final ServiceCategory category;
   final int index;
+  final ThemeVariant variant;
   final VoidCallback onTap;
 
   const _CategoryCard({
     required this.category,
     required this.index,
+    required this.variant,
     required this.onTap,
   });
 
@@ -375,12 +382,11 @@ class _CategoryCardState extends State<_CategoryCard>
                   ),
                 ),
                 child: Center(
-                  child: Text(
-                    category.icon,
-                    style: const TextStyle(
-                      fontSize: 36,
-                      height: 1.2,
-                    ),
+                  child: getCategoryIcon(
+                    variant: widget.variant,
+                    categoryId: category.id,
+                    color: categoryColor,
+                    size: 36,
                   ),
                 ),
               ),

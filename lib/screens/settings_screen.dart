@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:beautycita/config/theme_extension.dart';
 import 'package:beautycita/config/constants.dart';
+import 'package:beautycita/config/routes.dart';
 import 'package:beautycita/providers/auth_provider.dart';
 import 'package:beautycita/providers/profile_provider.dart';
 import 'package:beautycita/providers/admin_provider.dart';
+import 'package:beautycita/providers/business_provider.dart';
 import 'package:beautycita/widgets/settings_widgets.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -36,11 +38,11 @@ class SettingsScreen extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(AppConstants.radiusMD),
               ),
               child: Container(
-                margin: const EdgeInsets.all(3),
+                margin: const EdgeInsets.all(1.5),
                 padding: const EdgeInsets.all(AppConstants.paddingLG),
                 decoration: BoxDecoration(
                   gradient: ext.primaryGradient,
-                  borderRadius: BorderRadius.circular(AppConstants.radiusMD - 3),
+                  borderRadius: BorderRadius.circular(AppConstants.radiusMD - 1.5),
                 ),
                 child: Row(
                   children: [
@@ -163,7 +165,7 @@ class SettingsScreen extends ConsumerWidget {
                       SettingsTile(
                         icon: Icons.admin_panel_settings_rounded,
                         label: 'Panel de administracion',
-                        onTap: () => context.push('/admin'),
+                        onTap: () => context.push(AppRoutes.admin),
                       ),
                     ],
                   )
@@ -174,7 +176,7 @@ class SettingsScreen extends ConsumerWidget {
 
           const SizedBox(height: AppConstants.paddingLG),
 
-          // ── Salon section ──
+          // ── Salon / Business section ──
           Padding(
             padding: const EdgeInsets.only(left: 4, bottom: 8),
             child: Text(
@@ -186,10 +188,28 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ),
           ),
-          SettingsTile(
-            icon: Icons.store_rounded,
-            label: 'Registra tu salon',
-            onTap: () => context.push('/registro'),
+          ref.watch(isBusinessOwnerProvider).when(
+            data: (isOwner) => isOwner
+                ? SettingsTile(
+                    icon: Icons.storefront_rounded,
+                    label: 'Portal de negocio',
+                    onTap: () => context.push(AppRoutes.business),
+                  )
+                : SettingsTile(
+                    icon: Icons.store_rounded,
+                    label: 'Registra tu salon',
+                    onTap: () => context.push('/registro'),
+                  ),
+            loading: () => SettingsTile(
+              icon: Icons.store_rounded,
+              label: 'Registra tu salon',
+              onTap: () => context.push('/registro'),
+            ),
+            error: (_, _) => SettingsTile(
+              icon: Icons.store_rounded,
+              label: 'Registra tu salon',
+              onTap: () => context.push('/registro'),
+            ),
           ),
 
           const SizedBox(height: AppConstants.paddingXL),

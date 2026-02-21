@@ -1,9 +1,17 @@
+import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:latlong2/latlong.dart' show LatLng;
 import 'package:url_launcher/url_launcher.dart';
 import '../config/constants.dart';
+import '../config/theme.dart';
+import '../providers/booking_flow_provider.dart' show placesServiceProvider;
+import '../services/places_service.dart';
 import '../services/supabase_client.dart';
 
 class SalonOnboardingScreen extends ConsumerStatefulWidget {
@@ -21,28 +29,31 @@ class _SalonOnboardingScreenState
   final _nameCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController(text: '+52 ');
   final _addressCtrl = TextEditingController();
+  final _detailsCtrl = TextEditingController();
+  final _scrollCtrl = ScrollController();
+  final _suggestionsKey = GlobalKey();
 
-  final Set<String> _selectedCategories = {};
   bool _submitting = false;
   bool _registered = false;
   bool _loadingPrefill = false;
   String? _photoUrl;
   Map<String, dynamic>? _discoveredSalonData;
-  String? _businessId; // Stored after registration for Stripe setup
+  String? _businessId;
 
-  static const _categories = <_CategoryOption>[
-    _CategoryOption(slug: 'unas', label: 'Unas', icon: Icons.brush),
-    _CategoryOption(slug: 'cabello', label: 'Cabello', icon: Icons.content_cut),
-    _CategoryOption(
-        slug: 'pestanas_cejas', label: 'Pestanas y Cejas', icon: Icons.visibility),
-    _CategoryOption(slug: 'maquillaje', label: 'Maquillaje', icon: Icons.palette),
-    _CategoryOption(slug: 'facial', label: 'Facial', icon: Icons.face),
-    _CategoryOption(slug: 'cuerpo_spa', label: 'Cuerpo y Spa', icon: Icons.spa),
-    _CategoryOption(
-        slug: 'cuidado_especializado',
-        label: 'Cuidado Especializado',
-        icon: Icons.star),
-  ];
+  // Location state
+  double? _pickedLat;
+  double? _pickedLng;
+  String? _pickedAddress;
+  bool _locationConfirmed = false;
+
+  // Inline autocomplete
+  Timer? _debounce;
+  List<PlacePrediction> _predictions = [];
+  bool _loadingPlaces = false;
+  bool _resolvingPlace = false;
+
+  // Map
+  final _mapCtrl = MapController();
 
   @override
   void initState() {
@@ -50,7 +61,6 @@ class _SalonOnboardingScreenState
     _loadDiscoveredSalonData();
   }
 
-  /// Fetch discovered_salon data by refCode and pre-fill form fields
   Future<void> _loadDiscoveredSalonData() async {
     if (widget.refCode == null || widget.refCode!.isEmpty) return;
 
@@ -66,52 +76,36 @@ class _SalonOnboardingScreenState
       if (response != null && mounted) {
         _discoveredSalonData = response;
 
-        // Pre-fill name (try business_name first, then name)
         final name = response['business_name'] ?? response['name'];
         if (name != null && name.toString().isNotEmpty) {
           _nameCtrl.text = _sanitizeLatin(name.toString());
         }
 
-        // Pre-fill phone (prefer whatsapp, then phone)
         final phone = response['whatsapp'] ?? response['phone'];
         if (phone != null && phone.toString().isNotEmpty) {
           _phoneCtrl.text = phone.toString();
         }
 
-        // Pre-fill address (try location_address first, then address)
         final address = response['location_address'] ?? response['address'];
+        final prefillLat = response['location_lat'] ?? response['lat'];
+        final prefillLng = response['location_lng'] ?? response['lng'];
         if (address != null && address.toString().isNotEmpty) {
           _addressCtrl.text = _sanitizeLatin(address.toString());
+          _pickedAddress = _addressCtrl.text;
         }
-
-        // Store photo URL for display
-        _photoUrl = response['feature_image_url'] ?? response['photo_url'];
-
-        // Try to infer categories from service_types or keywords if available
-        final serviceTypes = response['service_types'];
-        if (serviceTypes is List) {
-          for (final svc in serviceTypes) {
-            final svcStr = svc.toString().toLowerCase();
-            if (svcStr.contains('una') || svcStr.contains('nail')) {
-              _selectedCategories.add('unas');
-            }
-            if (svcStr.contains('cabello') || svcStr.contains('hair') || svcStr.contains('corte')) {
-              _selectedCategories.add('cabello');
-            }
-            if (svcStr.contains('pestana') || svcStr.contains('ceja') || svcStr.contains('lash') || svcStr.contains('brow')) {
-              _selectedCategories.add('pestanas_cejas');
-            }
-            if (svcStr.contains('maquillaje') || svcStr.contains('makeup')) {
-              _selectedCategories.add('maquillaje');
-            }
-            if (svcStr.contains('facial') || svcStr.contains('face')) {
-              _selectedCategories.add('facial');
-            }
-            if (svcStr.contains('spa') || svcStr.contains('cuerpo') || svcStr.contains('body') || svcStr.contains('massage')) {
-              _selectedCategories.add('cuerpo_spa');
-            }
+        if (prefillLat != null && prefillLng != null) {
+          _pickedLat = (prefillLat is num)
+              ? prefillLat.toDouble()
+              : double.tryParse(prefillLat.toString());
+          _pickedLng = (prefillLng is num)
+              ? prefillLng.toDouble()
+              : double.tryParse(prefillLng.toString());
+          if (_pickedLat != null && _pickedLng != null) {
+            _locationConfirmed = true;
           }
         }
+
+        _photoUrl = response['feature_image_url'] ?? response['photo_url'];
       }
     } catch (e) {
       debugPrint('[SalonOnboarding] Error loading prefill data: $e');
@@ -120,75 +114,170 @@ class _SalonOnboardingScreenState
     }
   }
 
-  /// Strip non-Latin characters from scraped data
   String _sanitizeLatin(String text) {
-    return text.replaceAll(
-      RegExp(r'[^\u0000-\u024F\u1E00-\u1EFF\u2000-\u206F\u2070-\u209F\u20A0-\u20CF\u2100-\u214F\s]'),
-      '',
-    ).trim();
+    return text
+        .replaceAll(
+          RegExp(
+              r'[^\u0000-\u024F\u1E00-\u1EFF\u2000-\u206F\u2070-\u209F\u20A0-\u20CF\u2100-\u214F\s]'),
+          '',
+        )
+        .trim();
   }
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _nameCtrl.dispose();
     _phoneCtrl.dispose();
     _addressCtrl.dispose();
+    _detailsCtrl.dispose();
+    _scrollCtrl.dispose();
+    _mapCtrl.dispose();
     super.dispose();
   }
 
   bool get _isValid =>
       _nameCtrl.text.trim().length >= 2 &&
       _phoneCtrl.text.replaceAll(RegExp(r'[^\d]'), '').length >= 10 &&
-      _selectedCategories.isNotEmpty;
+      _locationConfirmed &&
+      _pickedLat != null;
+
+  // ── Address autocomplete ─────────────────────────────────────────────
+
+  void _onAddressChanged(String query) {
+    _debounce?.cancel();
+    if (query.trim().length < 3) {
+      setState(() {
+        _predictions = [];
+        _loadingPlaces = false;
+      });
+      return;
+    }
+    setState(() => _loadingPlaces = true);
+    _debounce = Timer(const Duration(milliseconds: 400), () async {
+      final placesService = ref.read(placesServiceProvider);
+      final results = await placesService.searchPlaces(query.trim());
+      if (mounted) {
+        setState(() {
+          _predictions = results;
+          _loadingPlaces = false;
+        });
+        _scrollToSuggestions();
+      }
+    });
+  }
+
+  void _scrollToSuggestions() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctx = _suggestionsKey.currentContext;
+      if (ctx != null) {
+        Scrollable.ensureVisible(
+          ctx,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+          alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+        );
+      }
+    });
+  }
+
+  Future<void> _selectPrediction(PlacePrediction prediction) async {
+    setState(() => _resolvingPlace = true);
+    final placesService = ref.read(placesServiceProvider);
+    final location = await placesService.getPlaceDetails(prediction.placeId);
+    if (!mounted) return;
+    if (location != null) {
+      setState(() {
+        _pickedLat = location.lat;
+        _pickedLng = location.lng;
+        _pickedAddress = location.address;
+        _addressCtrl.text = location.address;
+        _predictions = [];
+        _resolvingPlace = false;
+        _locationConfirmed = true;
+      });
+      FocusScope.of(context).unfocus();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_scrollCtrl.hasClients) {
+          _scrollCtrl.animateTo(
+            _scrollCtrl.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 400),
+            curve: Curves.easeOut,
+          );
+        }
+      });
+    } else {
+      setState(() => _resolvingPlace = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No se pudo obtener la ubicacion'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  void _clearLocation() {
+    setState(() {
+      _pickedLat = null;
+      _pickedLng = null;
+      _pickedAddress = null;
+      _locationConfirmed = false;
+      _addressCtrl.clear();
+      _detailsCtrl.clear();
+      _predictions = [];
+    });
+  }
+
+  void _onMapTap(TapPosition tapPos, LatLng latLng) {
+    setState(() {
+      _pickedLat = latLng.latitude;
+      _pickedLng = latLng.longitude;
+    });
+  }
+
+  // ── Submit ───────────────────────────────────────────────────────────
 
   Future<void> _submit() async {
     if (!_isValid || _submitting) return;
     setState(() => _submitting = true);
 
     try {
-      // Normalize phone to E.164
       final rawPhone = _phoneCtrl.text.replaceAll(RegExp(r'[^\d+]'), '');
-      final phone =
-          rawPhone.startsWith('+') ? rawPhone : '+52$rawPhone';
+      final phone = rawPhone.startsWith('+') ? rawPhone : '+52$rawPhone';
 
-      // Build business record with pre-filled data where available
+      final userId = SupabaseClientService.client.auth.currentUser?.id;
+
+      final baseAddress = _pickedAddress ?? _addressCtrl.text.trim();
+      final details = _detailsCtrl.text.trim();
+      final fullAddress =
+          details.isNotEmpty ? '$baseAddress, $details' : baseAddress;
+
       final businessData = <String, dynamic>{
         'name': _nameCtrl.text.trim(),
         'phone': phone,
         'whatsapp': phone,
-        'address': _addressCtrl.text.trim().isEmpty
-            ? null
-            : _addressCtrl.text.trim(),
+        'address': fullAddress,
+        'lat': _pickedLat,
+        'lng': _pickedLng,
         'tier': 1,
         'is_active': true,
-        'service_categories': _selectedCategories.toList(),
+        if (userId != null) 'owner_id': userId,
       };
 
-      // Include photo URL from discovered salon if available
       if (_photoUrl != null) {
         businessData['photo_url'] = _photoUrl;
       }
 
-      // Include location coordinates from discovered salon if available
       if (_discoveredSalonData != null) {
-        final lat = _discoveredSalonData!['location_lat'] ?? _discoveredSalonData!['lat'];
-        final lng = _discoveredSalonData!['location_lng'] ?? _discoveredSalonData!['lng'];
-        if (lat != null && lng != null) {
-          businessData['location'] = 'POINT($lng $lat)';
-        }
-        // Include city if available
-        final city = _discoveredSalonData!['location_city'] ?? _discoveredSalonData!['city'];
-        if (city != null) {
-          businessData['city'] = city;
-        }
-        // Include rating if available (as initial rating)
-        final rating = _discoveredSalonData!['rating_average'] ?? _discoveredSalonData!['rating'];
-        if (rating != null) {
-          businessData['initial_rating'] = rating;
-        }
+        final city = _discoveredSalonData!['location_city'] ??
+            _discoveredSalonData!['city'];
+        if (city != null) businessData['city'] = city;
+        final rating = _discoveredSalonData!['rating_average'] ??
+            _discoveredSalonData!['rating'];
+        if (rating != null) businessData['average_rating'] = rating;
       }
 
-      // Create business record (Tier 1)
       final response = await SupabaseClientService.client
           .from('businesses')
           .insert(businessData)
@@ -197,7 +286,6 @@ class _SalonOnboardingScreenState
 
       final businessId = response['id'] as String;
 
-      // If ref code is a discovered_salon_id, mark it as registered
       if (widget.refCode != null && widget.refCode!.isNotEmpty) {
         await SupabaseClientService.client
             .from('discovered_salons')
@@ -224,8 +312,12 @@ class _SalonOnboardingScreenState
     }
   }
 
+  // ── Build ────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
     if (_registered) {
       return _SuccessScreen(
         businessId: _businessId,
@@ -234,282 +326,1096 @@ class _SalonOnboardingScreenState
       );
     }
 
-    final colorScheme = Theme.of(context).colorScheme;
-
     if (_loadingPrefill) {
       return Scaffold(
-        backgroundColor: colorScheme.surface,
+        backgroundColor: const Color(0xFFFFF8F0),
         body: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(color: colorScheme.primary),
-              const SizedBox(height: 16),
-              Text(
-                'Cargando datos de tu salon...',
-                style: GoogleFonts.nunito(
-                  fontSize: 14,
-                  color: colorScheme.onSurface.withValues(alpha: 0.5),
-                ),
-              ),
-            ],
-          ),
+          child: CircularProgressIndicator(color: colors.primary),
         ),
       );
     }
 
     return Scaffold(
-      backgroundColor: colorScheme.surface,
-      appBar: AppBar(
-        backgroundColor: colorScheme.surface,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.close_rounded, color: colorScheme.onSurface, size: 24),
-          onPressed: () => context.pop(),
-        ),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppConstants.paddingLG),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Photo preview (if available from discovered_salons)
-            if (_photoUrl != null) ...[
-              Center(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(AppConstants.radiusLG),
-                  child: Image.network(
-                    _photoUrl!,
-                    width: 120,
-                    height: 120,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
-                      width: 120,
-                      height: 120,
-                      decoration: BoxDecoration(
-                        color: colorScheme.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(AppConstants.radiusLG),
-                      ),
-                      child: Icon(
-                        Icons.store,
-                        size: 48,
-                        color: colorScheme.primary,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: AppConstants.paddingMD),
-            ],
-
-            // Header
-            Text(
-              'Registra tu salon',
-              style: GoogleFonts.poppins(
-                fontSize: 26,
-                fontWeight: FontWeight.w700,
-                color: colorScheme.onSurface,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Gratis. 60 segundos. Sin tarjeta.',
-              style: GoogleFonts.nunito(
-                fontSize: 15,
-                color: colorScheme.onSurface.withValues(alpha: 0.5),
+      backgroundColor: const Color(0xFFFFF8F0),
+      body: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: CustomScrollView(
+          controller: _scrollCtrl,
+          slivers: [
+            // ── Gradient header ──────────────────────────────────────
+            SliverToBoxAdapter(
+              child: _HeroHeader(
+                photoUrl: _photoUrl,
+                onBack: () => context.pop(),
               ),
             ),
 
-            // Pre-fill notice
-            if (_discoveredSalonData != null) ...[
-              const SizedBox(height: AppConstants.paddingSM),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.green.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.auto_awesome, size: 18, color: Colors.green.shade700),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Datos pre-llenados. Puedes editarlos si algo esta mal.',
-                        style: GoogleFonts.nunito(
-                          fontSize: 13,
-                          color: Colors.green.shade700,
-                        ),
-                      ),
+            // ── Form content ─────────────────────────────────────────
+            SliverPadding(
+              padding: EdgeInsets.fromLTRB(
+                20,
+                0,
+                20,
+                MediaQuery.of(context).viewInsets.bottom + 32,
+              ),
+              sliver: SliverList(
+                delegate: SliverChildListDelegate([
+                  // Prefill notice
+                  if (_discoveredSalonData != null) ...[
+                    _InfoBanner(
+                      icon: Icons.auto_awesome,
+                      text: 'Datos pre-llenados. Puedes editarlos.',
+                      color: colors.primary,
                     ),
+                    const SizedBox(height: 16),
                   ],
-                ),
-              ),
-            ],
-            const SizedBox(height: AppConstants.paddingXL),
 
-            // Business name
-            Text('Nombre del salon',
-                style: _labelStyle(colorScheme)),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _nameCtrl,
-              onChanged: (_) => setState(() {}),
-              decoration: _inputDecoration('Ej: Salon Rosa', colorScheme),
-              textCapitalization: TextCapitalization.words,
-            ),
-            const SizedBox(height: AppConstants.paddingLG),
-
-            // WhatsApp number
-            Text('WhatsApp',
-                style: _labelStyle(colorScheme)),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _phoneCtrl,
-              onChanged: (_) => setState(() {}),
-              decoration: _inputDecoration('+52 33 1234 5678', colorScheme),
-              keyboardType: TextInputType.phone,
-            ),
-            const SizedBox(height: AppConstants.paddingLG),
-
-            // Address
-            Text('Direccion (opcional)',
-                style: _labelStyle(colorScheme)),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _addressCtrl,
-              decoration: _inputDecoration('Buscar direccion o usar GPS', colorScheme),
-              textCapitalization: TextCapitalization.sentences,
-            ),
-            const SizedBox(height: AppConstants.paddingXL),
-
-            // Categories
-            Text('Que servicios ofreces?',
-                style: _labelStyle(colorScheme)),
-            const SizedBox(height: AppConstants.paddingMD),
-            Wrap(
-              spacing: AppConstants.paddingSM,
-              runSpacing: AppConstants.paddingSM,
-              children: _categories.map((cat) {
-                final selected = _selectedCategories.contains(cat.slug);
-                return FilterChip(
-                  selected: selected,
-                  label: Row(
-                    mainAxisSize: MainAxisSize.min,
+                  // ── Section: Datos del salon ────────────────────────
+                  _SectionCard(
                     children: [
-                      Icon(
-                        cat.icon,
-                        size: 18,
-                        color: selected
-                            ? Colors.white
-                            : colorScheme.onSurface,
+                      _SectionHeader(
+                        icon: Icons.store_rounded,
+                        title: 'Datos del salon',
+                        color: colors.primary,
                       ),
-                      const SizedBox(width: 6),
-                      Text(cat.label),
+                      const SizedBox(height: 16),
+
+                      // Business name
+                      _StyledField(
+                        controller: _nameCtrl,
+                        label: 'Nombre del salon',
+                        hint: 'Ej: Salon Rosa',
+                        icon: Icons.storefront_rounded,
+                        textCapitalization: TextCapitalization.words,
+                        onChanged: (_) => setState(() {}),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // WhatsApp
+                      _StyledField(
+                        controller: _phoneCtrl,
+                        label: 'WhatsApp',
+                        hint: '+52 33 1234 5678',
+                        icon: Icons.chat_rounded,
+                        iconColor: const Color(0xFF25D366),
+                        keyboardType: TextInputType.phone,
+                        onChanged: (_) => setState(() {}),
+                      ),
                     ],
                   ),
-                  selectedColor: colorScheme.primary,
-                  checkmarkColor: Colors.white,
-                  labelStyle: GoogleFonts.nunito(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: selected
-                        ? Colors.white
-                        : colorScheme.onSurface,
+                  const SizedBox(height: 16),
+
+                  // ── Section: Ubicacion ──────────────────────────────
+                  _SectionCard(
+                    children: [
+                      _SectionHeader(
+                        icon: Icons.location_on_rounded,
+                        title: 'Ubicacion',
+                        color: const Color(0xFFE91E63),
+                      ),
+                      const SizedBox(height: 16),
+
+                      if (!_locationConfirmed) ...[
+                        // Search mode
+                        _StyledField(
+                          controller: _addressCtrl,
+                          label: 'Direccion del salon',
+                          hint: 'Escribe para buscar...',
+                          icon: Icons.search_rounded,
+                          onChanged: _onAddressChanged,
+                          suffixWidget: _loadingPlaces || _resolvingPlace
+                              ? const Padding(
+                                  padding: EdgeInsets.all(12),
+                                  child: SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2),
+                                  ),
+                                )
+                              : null,
+                        ),
+
+                        // Autocomplete dropdown
+                        if (_predictions.isNotEmpty)
+                          Container(
+                            key: _suggestionsKey,
+                            margin: const EdgeInsets.only(top: 4),
+                            constraints: const BoxConstraints(maxHeight: 220),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: colors.primary.withValues(alpha: 0.08),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                              border: Border.all(
+                                color: colors.primary.withValues(alpha: 0.1),
+                              ),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: ListView(
+                                shrinkWrap: true,
+                                padding: EdgeInsets.zero,
+                                children: _predictions.map((p) {
+                                  return InkWell(
+                                    onTap: _resolvingPlace
+                                        ? null
+                                        : () => _selectPrediction(p),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 14, vertical: 12),
+                                      child: Row(
+                                        children: [
+                                          Container(
+                                            width: 32,
+                                            height: 32,
+                                            decoration: BoxDecoration(
+                                              color: colors.primary
+                                                  .withValues(alpha: 0.08),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                            child: Icon(
+                                              Icons.place_outlined,
+                                              size: 16,
+                                              color: colors.primary,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  p.mainText,
+                                                  style: GoogleFonts.nunito(
+                                                    fontSize: 14,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: const Color(
+                                                        0xFF212121),
+                                                  ),
+                                                ),
+                                                if (p.secondaryText.isNotEmpty)
+                                                  Text(
+                                                    p.secondaryText,
+                                                    style: GoogleFonts.nunito(
+                                                      fontSize: 12,
+                                                      color: const Color(
+                                                          0xFF757575),
+                                                    ),
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                            ),
+                          ),
+                      ] else ...[
+                        // Confirmed mode
+                        // Address chip
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 12),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                colors.primary.withValues(alpha: 0.06),
+                                colors.primary.withValues(alpha: 0.02),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: colors.primary.withValues(alpha: 0.15),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 32,
+                                height: 32,
+                                decoration: BoxDecoration(
+                                  color:
+                                      colors.primary.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Icon(Icons.location_on_rounded,
+                                    size: 16, color: colors.primary),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  _pickedAddress ?? '',
+                                  style: GoogleFonts.nunito(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFF212121),
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              GestureDetector(
+                                onTap: _clearLocation,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: colors.primary
+                                        .withValues(alpha: 0.08),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    'Cambiar',
+                                    style: GoogleFonts.nunito(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      color: colors.primary,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+
+                        // Optional details
+                        _StyledField(
+                          controller: _detailsCtrl,
+                          label: 'Detalles (opcional)',
+                          hint: 'Local, piso, interior...',
+                          icon: Icons.edit_location_alt_outlined,
+                          textCapitalization: TextCapitalization.sentences,
+                        ),
+                        const SizedBox(height: 14),
+
+                        // Mini map
+                        if (_pickedLat != null && _pickedLng != null)
+                          _MiniMap(
+                            lat: _pickedLat!,
+                            lng: _pickedLng!,
+                            pinColor: colors.primary,
+                            mapController: _mapCtrl,
+                            onTap: _onMapTap,
+                          ),
+                      ],
+                    ],
                   ),
-                  backgroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius.circular(AppConstants.radiusMD),
+                  const SizedBox(height: 20),
+
+                  // ── Register button ─────────────────────────────────
+                  _RegisterButton(
+                    enabled: _isValid && !_submitting,
+                    loading: _submitting,
+                    onPressed: _submit,
                   ),
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 4, vertical: 4),
-                  onSelected: (v) {
-                    setState(() {
-                      if (v) {
-                        _selectedCategories.add(cat.slug);
-                      } else {
-                        _selectedCategories.remove(cat.slug);
-                      }
-                    });
-                  },
-                );
-              }).toList(),
+                  const SizedBox(height: 20),
+
+                  // ── Benefits section ────────────────────────────────
+                  _BenefitsSection(primaryColor: colors.primary),
+                  const SizedBox(height: 16),
+                ]),
+              ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
-            const SizedBox(height: AppConstants.paddingXL),
+// ==========================================================================
+// Hero Header — gradient background with icon and title
+// ==========================================================================
 
-            // Submit
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _isValid && !_submitting ? _submit : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: colorScheme.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                      vertical: AppConstants.paddingMD),
-                  shape: RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius.circular(AppConstants.radiusLG),
-                  ),
-                  elevation: 0,
-                  disabledBackgroundColor:
-                      colorScheme.primary.withValues(alpha: 0.3),
+class _HeroHeader extends StatelessWidget {
+  final String? photoUrl;
+  final VoidCallback onBack;
+
+  const _HeroHeader({this.photoUrl, required this.onBack});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            colors.primary,
+            colors.primary.withValues(alpha: 0.85),
+            const Color(0xFFD81B60),
+          ],
+        ),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(4, 4, 16, 28),
+          child: Column(
+            children: [
+              // Back button row
+              Align(
+                alignment: Alignment.centerLeft,
+                child: IconButton(
+                  icon: const Icon(Icons.arrow_back_rounded,
+                      color: Colors.white, size: 24),
+                  onPressed: onBack,
                 ),
-                child: _submitting
+              ),
+              const SizedBox(height: 8),
+
+              // Avatar or icon
+              if (photoUrl != null)
+                Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 3),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.2),
+                        blurRadius: 12,
+                      ),
+                    ],
+                  ),
+                  child: CircleAvatar(
+                    radius: 40,
+                    backgroundColor: Colors.white.withValues(alpha: 0.2),
+                    backgroundImage: NetworkImage(photoUrl!),
+                    onBackgroundImageError: (_, __) {},
+                  ),
+                )
+              else
+                Container(
+                  width: 72,
+                  height: 72,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withValues(alpha: 0.15),
+                    border:
+                        Border.all(color: Colors.white.withValues(alpha: 0.3), width: 2),
+                  ),
+                  child: const Icon(Icons.store_rounded,
+                      size: 36, color: Colors.white),
+                ),
+              const SizedBox(height: 16),
+
+              Text(
+                'Registra tu Salon',
+                style: GoogleFonts.poppins(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                  height: 1.2,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Unete a BeautyCita y recibe clientes nuevas',
+                style: GoogleFonts.nunito(
+                  fontSize: 14,
+                  color: Colors.white.withValues(alpha: 0.85),
+                  height: 1.3,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ==========================================================================
+// Section Card — white card container
+// ==========================================================================
+
+class _SectionCard extends StatelessWidget {
+  final List<Widget> children;
+  const _SectionCard({required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFC2185B).withValues(alpha: 0.04),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: children,
+      ),
+    );
+  }
+}
+
+// ==========================================================================
+// Section Header — icon + title
+// ==========================================================================
+
+class _SectionHeader extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final Color color;
+  const _SectionHeader({
+    required this.icon,
+    required this.title,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, size: 18, color: color),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          title,
+          style: GoogleFonts.poppins(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: const Color(0xFF212121),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ==========================================================================
+// Styled text field
+// ==========================================================================
+
+class _StyledField extends StatelessWidget {
+  final TextEditingController controller;
+  final String label;
+  final String? hint;
+  final IconData icon;
+  final Color? iconColor;
+  final TextInputType? keyboardType;
+  final TextCapitalization textCapitalization;
+  final ValueChanged<String>? onChanged;
+  final Widget? suffixWidget;
+
+  const _StyledField({
+    required this.controller,
+    required this.label,
+    this.hint,
+    required this.icon,
+    this.iconColor,
+    this.keyboardType,
+    this.textCapitalization = TextCapitalization.none,
+    this.onChanged,
+    this.suffixWidget,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final effectiveIconColor =
+        iconColor ?? colors.primary.withValues(alpha: 0.5);
+
+    return TextField(
+      controller: controller,
+      keyboardType: keyboardType,
+      textCapitalization: textCapitalization,
+      onChanged: onChanged,
+      style: GoogleFonts.nunito(fontSize: 15, color: const Color(0xFF212121)),
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        labelStyle:
+            GoogleFonts.nunito(fontSize: 14, color: const Color(0xFF757575)),
+        hintStyle:
+            GoogleFonts.nunito(fontSize: 14, color: const Color(0xFF9E9E9E)),
+        prefixIcon: Icon(icon, size: 20, color: effectiveIconColor),
+        suffixIcon: suffixWidget,
+        filled: true,
+        fillColor: const Color(0xFFFAFAFA),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide:
+              BorderSide(color: colors.primary.withValues(alpha: 0.12)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide:
+              BorderSide(color: colors.primary.withValues(alpha: 0.12)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: colors.primary, width: 1.5),
+        ),
+      ),
+    );
+  }
+}
+
+// ==========================================================================
+// Info banner
+// ==========================================================================
+
+class _InfoBanner extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  final Color color;
+  const _InfoBanner({
+    required this.icon,
+    required this.text,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.15)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: color),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              style: GoogleFonts.nunito(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ==========================================================================
+// Register button — gradient style
+// ==========================================================================
+
+class _RegisterButton extends StatelessWidget {
+  final bool enabled;
+  final bool loading;
+  final VoidCallback onPressed;
+
+  const _RegisterButton({
+    required this.enabled,
+    required this.loading,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return AnimatedOpacity(
+      opacity: enabled ? 1.0 : 0.5,
+      duration: const Duration(milliseconds: 200),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          gradient: enabled
+              ? LinearGradient(
+                  colors: [colors.primary, const Color(0xFFD81B60)],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                )
+              : null,
+          color: enabled ? null : const Color(0xFFE0E0E0),
+          boxShadow: enabled
+              ? [
+                  BoxShadow(
+                    color: colors.primary.withValues(alpha: 0.3),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
+              : null,
+        ),
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(14),
+          child: InkWell(
+            onTap: enabled ? onPressed : null,
+            borderRadius: BorderRadius.circular(14),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              child: Center(
+                child: loading
                     ? const SizedBox(
                         width: 22,
                         height: 22,
                         child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor:
-                              AlwaysStoppedAnimation<Color>(Colors.white),
-                        ),
+                            strokeWidth: 2, color: Colors.white),
                       )
                     : Text(
                         'REGISTRARME GRATIS',
                         style: GoogleFonts.poppins(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
-                          letterSpacing: 1,
+                          color: enabled
+                              ? Colors.white
+                              : const Color(0xFF9E9E9E),
+                          letterSpacing: 0.5,
                         ),
                       ),
               ),
             ),
-            const SizedBox(height: AppConstants.paddingLG),
-          ],
+          ),
         ),
       ),
     );
   }
-
-  TextStyle _labelStyle(ColorScheme colorScheme) => GoogleFonts.poppins(
-        fontSize: 14,
-        fontWeight: FontWeight.w600,
-        color: colorScheme.onSurface,
-      );
-
-  InputDecoration _inputDecoration(String hint, ColorScheme colorScheme) => InputDecoration(
-        hintText: hint,
-        hintStyle: GoogleFonts.nunito(fontSize: 14, color: Colors.grey),
-        filled: true,
-        fillColor: Colors.white,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-          borderSide: BorderSide.none,
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-          borderSide:
-              BorderSide(color: colorScheme.primary, width: 2),
-        ),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: AppConstants.paddingMD,
-          vertical: AppConstants.paddingMD,
-        ),
-      );
 }
+
+// ==========================================================================
+// Benefits section — why join BeautyCita
+// ==========================================================================
+
+class _BenefitsSection extends StatelessWidget {
+  final Color primaryColor;
+  const _BenefitsSection({required this.primaryColor});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: primaryColor.withValues(alpha: 0.04),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFB300).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.star_rounded,
+                    size: 18, color: Color(0xFFFFB300)),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Beneficios',
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF212121),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _BenefitItem(
+            icon: Icons.people_rounded,
+            text: 'Recibe clientes nuevas sin esfuerzo',
+            color: primaryColor,
+          ),
+          const SizedBox(height: 12),
+          _BenefitItem(
+            icon: Icons.calendar_today_rounded,
+            text: 'Agenda organizada automaticamente',
+            color: primaryColor,
+          ),
+          const SizedBox(height: 12),
+          _BenefitItem(
+            icon: Icons.payment_rounded,
+            text: 'Pagos seguros directo a tu cuenta',
+            color: primaryColor,
+          ),
+          const SizedBox(height: 12),
+          _BenefitItem(
+            icon: Icons.trending_up_rounded,
+            text: 'Crece tu negocio con visibilidad online',
+            color: const Color(0xFFFFB300),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BenefitItem extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  final Color color;
+  const _BenefitItem({
+    required this.icon,
+    required this.text,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, size: 16, color: color),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            text,
+            style: GoogleFonts.nunito(
+              fontSize: 14,
+              color: const Color(0xFF424242),
+              height: 1.3,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ==========================================================================
+// Mini Map with animated pin drop
+// ==========================================================================
+
+class _MiniMap extends StatefulWidget {
+  final double lat;
+  final double lng;
+  final Color pinColor;
+  final MapController mapController;
+  final void Function(TapPosition, LatLng) onTap;
+
+  const _MiniMap({
+    required this.lat,
+    required this.lng,
+    required this.pinColor,
+    required this.mapController,
+    required this.onTap,
+  });
+
+  @override
+  State<_MiniMap> createState() => _MiniMapState();
+}
+
+class _MiniMapState extends State<_MiniMap>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animCtrl;
+  late Animation<double> _fadeAnim;
+  late Animation<double> _dropAnim;
+  late Animation<double> _shadowAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _animCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
+    _fadeAnim = CurvedAnimation(
+      parent: _animCtrl,
+      curve: const Interval(0.0, 0.3, curve: Curves.easeOut),
+    );
+    _dropAnim = CurvedAnimation(
+      parent: _animCtrl,
+      curve: const Interval(0.2, 0.8, curve: Curves.bounceOut),
+    );
+    _shadowAnim = CurvedAnimation(
+      parent: _animCtrl,
+      curve: const Interval(0.2, 0.8, curve: Curves.easeOut),
+    );
+    _animCtrl.forward();
+  }
+
+  @override
+  void didUpdateWidget(covariant _MiniMap old) {
+    super.didUpdateWidget(old);
+    if (old.lat != widget.lat || old.lng != widget.lng) {
+      _animCtrl.reset();
+      _animCtrl.forward();
+      widget.mapController.move(
+        LatLng(widget.lat, widget.lng),
+        17,
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _animCtrl.dispose();
+    super.dispose();
+  }
+
+  String get _mapTileUrl {
+    final token = dotenv.env['MAPBOX_TOKEN'] ?? '';
+    if (token.isNotEmpty) {
+      return 'https://api.mapbox.com/styles/v1/mapbox/light-v11/tiles/{z}/{x}/{y}@2x?access_token=$token';
+    }
+    return 'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return FadeTransition(
+      opacity: _fadeAnim,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8, left: 2),
+            child: Text(
+              'Toca el mapa para posicionar el pin en la entrada',
+              style: GoogleFonts.nunito(
+                fontSize: 12,
+                color: const Color(0xFF757575),
+              ),
+            ),
+          ),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              height: 200,
+              decoration: BoxDecoration(
+                border: Border.all(
+                  color: colors.primary.withValues(alpha: 0.15),
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Stack(
+                children: [
+                  FlutterMap(
+                    mapController: widget.mapController,
+                    options: MapOptions(
+                      initialCenter: LatLng(widget.lat, widget.lng),
+                      initialZoom: 17,
+                      maxZoom: 19,
+                      minZoom: 14,
+                      onTap: widget.onTap,
+                      interactionOptions: const InteractionOptions(
+                        flags:
+                            InteractiveFlag.all & ~InteractiveFlag.rotate,
+                      ),
+                    ),
+                    children: [
+                      TileLayer(
+                        urlTemplate: _mapTileUrl,
+                        userAgentPackageName: 'com.beautycita',
+                        maxZoom: 19,
+                      ),
+                      MarkerLayer(
+                        markers: [
+                          Marker(
+                            point: LatLng(widget.lat, widget.lng),
+                            width: 48,
+                            height: 60,
+                            alignment: Alignment.topCenter,
+                            child: _AnimatedPin(
+                              dropAnimation: _dropAnim,
+                              shadowAnimation: _shadowAnim,
+                              color: widget.pinColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  // Top gradient overlay
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: 24,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.white.withValues(alpha: 0.3),
+                            Colors.white.withValues(alpha: 0.0),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ==========================================================================
+// Animated Pin — drops from above with bounce, shadow grows
+// ==========================================================================
+
+class _AnimatedPin extends StatelessWidget {
+  final Animation<double> dropAnimation;
+  final Animation<double> shadowAnimation;
+  final Color color;
+
+  const _AnimatedPin({
+    required this.dropAnimation,
+    required this.shadowAnimation,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: dropAnimation,
+      builder: (context, child) {
+        final drop = 1.0 - dropAnimation.value;
+        return SizedBox(
+          width: 48,
+          height: 60,
+          child: Stack(
+            alignment: Alignment.bottomCenter,
+            children: [
+              Positioned(
+                bottom: 0,
+                child: Opacity(
+                  opacity: shadowAnimation.value * 0.4,
+                  child: Container(
+                    width: 16 + (8 * shadowAnimation.value),
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: Colors.black,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: 4 + (drop * 40),
+                child: _PinIcon(color: color),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _PinIcon extends StatelessWidget {
+  final Color color;
+  const _PinIcon({required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 32,
+      height: 44,
+      child: CustomPaint(
+        painter: _PinPainter(color: color),
+      ),
+    );
+  }
+}
+
+class _PinPainter extends CustomPainter {
+  final Color color;
+  _PinPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final cx = w / 2;
+
+    final pinPaint = Paint()..color = color;
+    final shadowPaint = Paint()
+      ..color = Colors.black.withValues(alpha: 0.15);
+
+    canvas.save();
+    canvas.translate(1.5, 1.5);
+    _drawPin(canvas, w, h, cx, shadowPaint);
+    canvas.restore();
+
+    _drawPin(canvas, w, h, cx, pinPaint);
+
+    final innerPaint = Paint()..color = Colors.white;
+    canvas.drawCircle(Offset(cx, h * 0.32), w * 0.18, innerPaint);
+  }
+
+  void _drawPin(Canvas canvas, double w, double h, double cx, Paint paint) {
+    final radius = w * 0.42;
+    final path = Path();
+    path.addArc(
+      Rect.fromCircle(center: Offset(cx, h * 0.32), radius: radius),
+      math.pi * 0.15,
+      math.pi * 1.7,
+    );
+    path.lineTo(cx, h * 0.92);
+    path.close();
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _PinPainter old) => old.color != color;
+}
+
+// ==========================================================================
+// Success Screen
+// ==========================================================================
 
 class _SuccessScreen extends StatefulWidget {
   final String? businessId;
@@ -526,8 +1432,38 @@ class _SuccessScreen extends StatefulWidget {
   State<_SuccessScreen> createState() => _SuccessScreenState();
 }
 
-class _SuccessScreenState extends State<_SuccessScreen> {
+class _SuccessScreenState extends State<_SuccessScreen>
+    with SingleTickerProviderStateMixin {
   bool _loadingStripe = false;
+  late AnimationController _celebrationController;
+  late Animation<double> _scaleAnim;
+  late Animation<double> _fadeAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _celebrationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _scaleAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _celebrationController,
+        curve: Curves.elasticOut,
+      ),
+    );
+    _fadeAnim = CurvedAnimation(
+      parent: _celebrationController,
+      curve: const Interval(0.2, 1.0, curve: Curves.easeOutCubic),
+    );
+    _celebrationController.forward();
+  }
+
+  @override
+  void dispose() {
+    _celebrationController.dispose();
+    super.dispose();
+  }
 
   Future<void> _setupStripe() async {
     if (widget.businessId == null) return;
@@ -535,7 +1471,6 @@ class _SuccessScreenState extends State<_SuccessScreen> {
     setState(() => _loadingStripe = true);
 
     try {
-      // Call edge function to get Stripe onboarding URL
       final response = await SupabaseClientService.client.functions.invoke(
         'stripe-connect-onboard',
         body: {
@@ -548,7 +1483,6 @@ class _SuccessScreenState extends State<_SuccessScreen> {
       final onboardingUrl = data['onboarding_url'] as String?;
 
       if (onboardingUrl != null) {
-        // Launch Stripe onboarding in browser
         final uri = Uri.parse(onboardingUrl);
         if (await canLaunchUrl(uri)) {
           await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -572,185 +1506,217 @@ class _SuccessScreenState extends State<_SuccessScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: colorScheme.surface,
+      backgroundColor: const Color(0xFFFFF8F0),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(AppConstants.paddingXL),
+          padding: const EdgeInsets.all(24),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const SizedBox(height: 48),
-              Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  color: colorScheme.primary.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.check_circle,
-                  size: 48,
-                  color: colorScheme.primary,
-                ),
-              ),
-              const SizedBox(height: AppConstants.paddingLG),
-              Text(
-                'Bienvenido a BeautyCita!',
-                style: GoogleFonts.poppins(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                  color: colorScheme.onSurface,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: AppConstants.paddingSM),
-              Text(
-                'Tu salon "${widget.businessName}" ya esta registrado.',
-                style: GoogleFonts.nunito(
-                  fontSize: 15,
-                  color: colorScheme.onSurface.withValues(alpha: 0.5),
-                  height: 1.5,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: AppConstants.paddingXL),
-
-              // Stripe setup card
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(AppConstants.paddingLG),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(AppConstants.radiusLG),
-                  border: Border.all(
-                    color: const Color(0xFF635BFF).withValues(alpha: 0.3), // Stripe purple
-                    width: 2,
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF635BFF).withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(
-                            Icons.account_balance_wallet,
-                            color: Color(0xFF635BFF),
-                            size: 24,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Configurar pagos',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: colorScheme.onSurface,
-                                ),
-                              ),
-                              Text(
-                                'Para recibir pagos de clientes',
-                                style: GoogleFonts.nunito(
-                                  fontSize: 13,
-                                  color: colorScheme.onSurface.withValues(alpha: 0.5),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+              ScaleTransition(
+                scale: _scaleAnim,
+                child: Container(
+                  width: 88,
+                  height: 88,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      colors: [
+                        colors.primary.withValues(alpha: 0.15),
+                        colors.primary.withValues(alpha: 0.05),
                       ],
                     ),
-                    const SizedBox(height: AppConstants.paddingMD),
+                  ),
+                  child: Icon(
+                    Icons.celebration_rounded,
+                    size: 44,
+                    color: colors.primary,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              FadeTransition(
+                opacity: _fadeAnim,
+                child: Column(
+                  children: [
                     Text(
-                      'Conecta tu cuenta bancaria para recibir el pago de cada reserva directamente. Solo toma 2 minutos.',
-                      style: GoogleFonts.nunito(
-                        fontSize: 14,
-                        color: colorScheme.onSurface.withValues(alpha: 0.5),
-                        height: 1.4,
+                      'Bienvenido a BeautyCita!',
+                      style: GoogleFonts.poppins(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF212121),
                       ),
+                      textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: AppConstants.paddingMD),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: _loadingStripe ? null : _setupStripe,
-                        icon: _loadingStripe
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : const Icon(Icons.arrow_forward, size: 18),
-                        label: Text(
-                          _loadingStripe ? 'Abriendo...' : 'CONFIGURAR AHORA',
-                          style: GoogleFonts.poppins(
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.5,
-                          ),
+                    const SizedBox(height: 8),
+                    RichText(
+                      textAlign: TextAlign.center,
+                      text: TextSpan(
+                        style: GoogleFonts.nunito(
+                          fontSize: 15,
+                          color: const Color(0xFF757575),
+                          height: 1.5,
                         ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF635BFF), // Stripe purple
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+                        children: [
+                          const TextSpan(text: 'Tu salon '),
+                          TextSpan(
+                            text: '"${widget.businessName}"',
+                            style: GoogleFonts.nunito(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: colors.primary,
+                            ),
                           ),
-                        ),
+                          const TextSpan(text: ' ya esta registrado.'),
+                        ],
                       ),
                     ),
                   ],
                 ),
               ),
-
-              const SizedBox(height: AppConstants.paddingMD),
-
-              // Skip option
+              const SizedBox(height: 32),
+              FadeTransition(
+                opacity: _fadeAnim,
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: const Color(0xFF635BFF).withValues(alpha: 0.15),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF635BFF).withValues(alpha: 0.06),
+                        blurRadius: 16,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF635BFF)
+                                  .withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(
+                              Icons.account_balance_wallet_rounded,
+                              color: Color(0xFF635BFF),
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Configurar pagos',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFF212121),
+                                  ),
+                                ),
+                                Text(
+                                  'Para recibir pagos de clientes',
+                                  style: GoogleFonts.nunito(
+                                    fontSize: 13,
+                                    color: const Color(0xFF757575),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      Text(
+                        'Conecta tu cuenta bancaria para recibir el pago de cada reserva directamente. Solo toma 2 minutos.',
+                        style: GoogleFonts.nunito(
+                          fontSize: 14,
+                          color: const Color(0xFF757575),
+                          height: 1.4,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: _loadingStripe ? null : _setupStripe,
+                          icon: _loadingStripe
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Icon(Icons.arrow_forward_rounded,
+                                  size: 18),
+                          label: Text(
+                            _loadingStripe
+                                ? 'Abriendo...'
+                                : 'CONFIGURAR AHORA',
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF635BFF),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
               TextButton(
                 onPressed: widget.onDone,
                 child: Text(
                   'Configurar despues',
                   style: GoogleFonts.nunito(
                     fontSize: 14,
-                    color: colorScheme.onSurface.withValues(alpha: 0.5),
+                    color: const Color(0xFF757575),
                     decoration: TextDecoration.underline,
                   ),
                 ),
               ),
-
-              const SizedBox(height: AppConstants.paddingLG),
-
-              // Info note
+              const SizedBox(height: 20),
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: Colors.amber.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+                  color: const Color(0xFFFFB300).withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: const Color(0xFFFFB300).withValues(alpha: 0.15),
+                  ),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.info_outline, size: 20, color: Colors.amber.shade700),
-                    const SizedBox(width: 8),
+                    const Icon(Icons.info_outline_rounded,
+                        size: 20, color: Color(0xFFFFB300)),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: Text(
                         'Sin configurar pagos, las clientas te contactaran por WhatsApp pero no podran pagar en la app.',
                         style: GoogleFonts.nunito(
                           fontSize: 12,
-                          color: Colors.amber.shade900,
+                          color: const Color(0xFF757575),
+                          height: 1.4,
                         ),
                       ),
                     ),
@@ -763,15 +1729,4 @@ class _SuccessScreenState extends State<_SuccessScreen> {
       ),
     );
   }
-}
-
-class _CategoryOption {
-  final String slug;
-  final String label;
-  final IconData icon;
-  const _CategoryOption({
-    required this.slug,
-    required this.label,
-    required this.icon,
-  });
 }

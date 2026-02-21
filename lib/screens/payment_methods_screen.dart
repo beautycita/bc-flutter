@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:beautycita/config/constants.dart';
+import 'package:beautycita/config/routes.dart';
 import 'package:beautycita/providers/payment_methods_provider.dart';
+import 'package:beautycita/screens/cash_payment_screen.dart';
 import 'package:beautycita/widgets/settings_widgets.dart';
 
 class PaymentMethodsScreen extends ConsumerStatefulWidget {
@@ -107,6 +110,10 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
             subtitle: 'OXXO, 7-Eleven, tiendas de conveniencia',
             badgeText: 'Disponible',
             badgeColor: Colors.green.shade600,
+            onTap: () => context.push(
+              AppRoutes.cashPayment,
+              extra: CashPaymentData.demo(),
+            ),
           ),
 
           const SizedBox(height: AppConstants.paddingXS),
@@ -119,6 +126,7 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
             subtitle: 'Pago con criptomoneda',
             badgeText: 'Disponible',
             badgeColor: Colors.green.shade600,
+            onTap: () => context.push(AppRoutes.btcWallet),
           ),
 
           const SizedBox(height: AppConstants.paddingLG),
@@ -272,6 +280,7 @@ class _OtherMethodTile extends StatelessWidget {
   final String subtitle;
   final String badgeText;
   final Color badgeColor;
+  final VoidCallback? onTap;
 
   const _OtherMethodTile({
     required this.icon,
@@ -280,6 +289,7 @@ class _OtherMethodTile extends StatelessWidget {
     required this.subtitle,
     required this.badgeText,
     required this.badgeColor,
+    this.onTap,
   });
 
   @override
@@ -287,53 +297,61 @@ class _OtherMethodTile extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final onSurfaceLight = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppConstants.paddingSM,
-        vertical: AppConstants.paddingMD,
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: iconColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(AppConstants.radiusSM),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppConstants.radiusSM),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppConstants.paddingSM,
+          vertical: AppConstants.paddingMD,
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: iconColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppConstants.radiusSM),
+              ),
+              child: Icon(icon, color: iconColor, size: 22),
             ),
-            child: Icon(icon, color: iconColor, size: 22),
-          ),
-          const SizedBox(width: AppConstants.paddingMD),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w500),
-                ),
-                Text(
-                  subtitle,
-                  style: textTheme.bodySmall?.copyWith(color: onSurfaceLight),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: badgeColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Text(
-              badgeText,
-              style: textTheme.labelSmall?.copyWith(
-                color: badgeColor,
-                fontWeight: FontWeight.w600,
+            const SizedBox(width: AppConstants.paddingMD),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w500),
+                  ),
+                  Text(
+                    subtitle,
+                    style: textTheme.bodySmall?.copyWith(color: onSurfaceLight),
+                  ),
+                ],
               ),
             ),
-          ),
-        ],
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: badgeColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                badgeText,
+                style: textTheme.labelSmall?.copyWith(
+                  color: badgeColor,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            if (onTap != null) ...[
+              const SizedBox(width: 8),
+              Icon(Icons.chevron_right_rounded, size: 20, color: onSurfaceLight),
+            ],
+          ],
+        ),
       ),
     );
   }

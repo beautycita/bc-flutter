@@ -1,7 +1,7 @@
 name: beautycita
 description: "BeautyCita — Intelligent Beauty Booking Agent"
 publish_to: 'none'
-version: 0.20.1+2002
+version: 1.0.0+12008
 
 environment:
   sdk: ^3.10.8
@@ -39,6 +39,11 @@ dependencies:
   firebase_messaging: ^15.1.6
   flutter_local_notifications: ^18.0.1
   qr_flutter: ^4.1.0
+  phosphor_flutter: ^2.1.0
+  hugeicons: ^1.1.5
+  material_symbols_icons: ^4.2906.0
+  flutter_map: ^8.2.2
+  latlong2: ^0.9.1
 
 dev_dependencies:
   flutter_test:

@@ -27,6 +27,8 @@ import 'package:beautycita/screens/profile_screen.dart';
 import 'package:beautycita/screens/security_screen.dart';
 import 'package:beautycita/screens/payment_methods_screen.dart';
 import 'package:beautycita/screens/appearance_screen.dart';
+import 'package:beautycita/screens/btc_wallet_screen.dart';
+import 'package:beautycita/screens/cash_payment_screen.dart';
 import 'package:beautycita/screens/business/business_shell_screen.dart';
 
 
@@ -59,6 +61,8 @@ class AppRoutes {
   static const String security = '/settings/security';
   static const String paymentMethods = '/settings/payment-methods';
   static const String appearance = '/settings/appearance';
+  static const String btcWallet = '/settings/btc-wallet';
+  static const String cashPayment = '/settings/cash-payment';
 
 
   static final GoRouter router = GoRouter(
@@ -550,6 +554,41 @@ class AppRoutes {
             );
           },
         ),
+      ),
+      GoRoute(
+        path: btcWallet,
+        name: 'btc-wallet',
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const BtcWalletScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
+                .chain(CurveTween(curve: Curves.easeInOutCubic));
+            return SlideTransition(
+              position: animation.drive(tween),
+              child: child,
+            );
+          },
+        ),
+      ),
+      GoRoute(
+        path: cashPayment,
+        name: 'cash-payment',
+        pageBuilder: (context, state) {
+          final data = state.extra as CashPaymentData?;
+          return CustomTransitionPage(
+            key: state.pageKey,
+            child: CashPaymentScreen(data: data),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
+                  .chain(CurveTween(curve: Curves.easeInOutCubic));
+              return SlideTransition(
+                position: animation.drive(tween),
+                child: child,
+              );
+            },
+          );
+        },
       ),
     ],
     errorPageBuilder: (context, state) => MaterialPage(

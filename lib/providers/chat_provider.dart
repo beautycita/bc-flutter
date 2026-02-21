@@ -13,10 +13,10 @@ final aphroditeServiceProvider = Provider<AphroditeService>((ref) {
 /// Stream of all chat threads for the current user, ordered by pinned DESC, last_message_at DESC.
 final chatThreadsProvider = StreamProvider<List<ChatThread>>((ref) {
   if (!SupabaseClientService.isInitialized) {
-    return const Stream.empty();
+    return Stream.value([]);
   }
   final userId = SupabaseClientService.currentUserId;
-  if (userId == null) return const Stream.empty();
+  if (userId == null) return Stream.value([]);
 
   final client = SupabaseClientService.client;
   return client
@@ -44,7 +44,7 @@ final chatThreadsProvider = StreamProvider<List<ChatThread>>((ref) {
 final chatMessagesProvider =
     StreamProvider.family<List<ChatMessage>, String>((ref, threadId) {
   if (!SupabaseClientService.isInitialized) {
-    return const Stream.empty();
+    return Stream.value([]);
   }
 
   final client = SupabaseClientService.client;
@@ -67,7 +67,9 @@ final aphroditeThreadProvider = FutureProvider<ChatThread?>((ref) async {
   if (userId == null) return null;
 
   final service = ref.read(aphroditeServiceProvider);
-  return service.getOrCreateAphroditeThread();
+  return service
+      .getOrCreateAphroditeThread()
+      .timeout(const Duration(seconds: 10));
 });
 
 /// State notifier for sending messages (handles loading state).

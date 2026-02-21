@@ -121,7 +121,14 @@ class _BeautyCitaAppState extends ConsumerState<BeautyCitaApp> {
 
   void _handleUri(Uri uri) {
     debugPrint('[DeepLink] Received URI: $uri');
-    debugPrint('[DeepLink] scheme=${uri.scheme} host=${uri.host} params=${uri.queryParameters}');
+    debugPrint('[DeepLink] scheme=${uri.scheme} host=${uri.host} path=${uri.path} params=${uri.queryParameters}');
+
+    // Handle HTTPS deep links (beautycita.com)
+    if (uri.scheme == 'https' && uri.host == 'beautycita.com') {
+      _handleWebLink(uri);
+      return;
+    }
+
     if (uri.scheme != 'beautycita') return;
 
     switch (uri.host) {
@@ -163,6 +170,28 @@ class _BeautyCitaAppState extends ConsumerState<BeautyCitaApp> {
         }
         break;
     }
+  }
+
+  void _handleWebLink(Uri uri) {
+    final path = uri.path;
+    final params = uri.queryParameters;
+    debugPrint('[DeepLink] Web link: path=$path');
+
+    if (path == '/registro' || path.startsWith('/registro')) {
+      // Salon registration with optional prefill from discovered salon
+      final ref = params['ref'] ?? '';
+      final route = ref.isNotEmpty ? '/registro?ref=$ref' : '/registro';
+      // Wait for Supabase to be ready before navigating
+      supabaseReady.future.then((_) {
+        if (mounted) AppRoutes.router.go(route);
+      });
+      return;
+    }
+
+    // Default: go home
+    supabaseReady.future.then((_) {
+      if (mounted) AppRoutes.router.go('/home');
+    });
   }
 
   Future<void> _handleQrAuth(String code, String sessionId) async {

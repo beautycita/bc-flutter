@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../providers/media_provider.dart';
+import '../providers/business_provider.dart';
 import '../services/media_service.dart';
 import '../widgets/bc_image_picker_sheet.dart';
 import '../widgets/media_grid.dart';
@@ -16,17 +17,24 @@ class MediaManagerScreen extends ConsumerStatefulWidget {
 
 class _MediaManagerScreenState extends ConsumerState<MediaManagerScreen>
     with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+  TabController? _tabController;
+  bool _isBusinessOwner = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+  void _initTabs(bool isOwner) {
+    if (_tabController != null && _isBusinessOwner == isOwner) return;
+    _isBusinessOwner = isOwner;
+    _tabController?.dispose();
+    _tabController = TabController(
+      length: isOwner ? 3 : 2,
+      vsync: this,
+    );
+    // Trigger rebuild since controller changed
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
+    _tabController?.dispose();
     super.dispose();
   }
 
@@ -85,14 +93,24 @@ class _MediaManagerScreenState extends ConsumerState<MediaManagerScreen>
     }
   }
 
+  /// Map tab index to section name based on whether business tab is shown.
+  String? _sectionForTab(int tabIndex) {
+    if (_isBusinessOwner) {
+      // 0=personal, 1=business, 2=chats
+      return switch (tabIndex) { 0 => 'personal', 1 => 'business', _ => null };
+    } else {
+      // 0=personal, 1=chats
+      return tabIndex == 0 ? 'personal' : null;
+    }
+  }
+
   Future<void> _onUpload() async {
     debugPrint('MediaManager: _onUpload called');
-    // Determine section based on current tab index
-    // 0 = personal, 1 = business, 2 = chats (don't upload to chats)
-    final tabIndex = _tabController.index;
-    if (tabIndex == 2) {
+    final tabIndex = _tabController?.index ?? 0;
+    final section = _sectionForTab(tabIndex);
+
+    if (section == null) {
       final onSurfaceLight = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
-      // Chats tab - show info snackbar
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -106,8 +124,6 @@ class _MediaManagerScreenState extends ConsumerState<MediaManagerScreen>
       );
       return;
     }
-
-    final section = tabIndex == 0 ? 'personal' : 'business';
     debugPrint('MediaManager: section = $section');
 
     // Show image picker
@@ -192,6 +208,40 @@ class _MediaManagerScreenState extends ConsumerState<MediaManagerScreen>
     final primary = Theme.of(context).colorScheme.primary;
     final onSurfaceLight = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
 
+    // Watch business owner status and rebuild tabs when it resolves
+    final isOwnerAsync = ref.watch(isBusinessOwnerProvider);
+    final isOwner = isOwnerAsync.valueOrNull ?? false;
+    _initTabs(isOwner);
+
+    final tabCtrl = _tabController;
+    if (tabCtrl == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    final tabs = <Tab>[
+      const Tab(text: 'Tus Medios'),
+      if (isOwner) const Tab(text: 'Negocio'),
+      const Tab(text: 'Chats'),
+    ];
+
+    final tabViews = <Widget>[
+      _PersonalTab(
+        onShare: _onShare,
+        onDelete: _onDelete,
+        onSaveToGallery: _onSaveToGallery,
+      ),
+      if (isOwner)
+        _BusinessTab(
+          onShare: _onShare,
+          onDelete: _onDelete,
+          onSaveToGallery: _onSaveToGallery,
+        ),
+      _ChatsTab(
+        onShare: _onShare,
+        onSaveToGallery: _onSaveToGallery,
+      ),
+    ];
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
@@ -204,7 +254,7 @@ class _MediaManagerScreenState extends ConsumerState<MediaManagerScreen>
           ),
         ),
         bottom: TabBar(
-          controller: _tabController,
+          controller: tabCtrl,
           labelColor: primary,
           unselectedLabelColor: onSurfaceLight,
           indicatorColor: primary,
@@ -217,31 +267,12 @@ class _MediaManagerScreenState extends ConsumerState<MediaManagerScreen>
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
-          tabs: const [
-            Tab(text: 'Tus Medios'),
-            Tab(text: 'Negocio'),
-            Tab(text: 'Chats'),
-          ],
+          tabs: tabs,
         ),
       ),
       body: TabBarView(
-        controller: _tabController,
-        children: [
-          _PersonalTab(
-            onShare: _onShare,
-            onDelete: _onDelete,
-            onSaveToGallery: _onSaveToGallery,
-          ),
-          _BusinessTab(
-            onShare: _onShare,
-            onDelete: _onDelete,
-            onSaveToGallery: _onSaveToGallery,
-          ),
-          _ChatsTab(
-            onShare: _onShare,
-            onSaveToGallery: _onSaveToGallery,
-          ),
-        ],
+        controller: tabCtrl,
+        children: tabViews,
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _onUpload,

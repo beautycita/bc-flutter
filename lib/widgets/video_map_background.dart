@@ -8,7 +8,12 @@ import 'package:video_player/video_player.dart';
 /// When player A nears the end, player B starts from 0 and a cross-fade
 /// dissolve makes the loop seamless.
 class VideoMapBackground extends StatefulWidget {
-  const VideoMapBackground({super.key});
+  final String assetPath;
+
+  const VideoMapBackground({
+    super.key,
+    this.assetPath = 'assets/videos/home_map_bg.mp4',
+  });
 
   @override
   State<VideoMapBackground> createState() => _VideoMapBackgroundState();
@@ -30,8 +35,6 @@ class _VideoMapBackgroundState extends State<VideoMapBackground>
 
   static const _crossfadeDuration = Duration(milliseconds: 1500);
   static const _triggerBeforeEnd = Duration(milliseconds: 2000);
-  static const _assetPath = 'assets/videos/home_map_bg.mp4';
-
   @override
   void initState() {
     super.initState();
@@ -41,8 +44,8 @@ class _VideoMapBackgroundState extends State<VideoMapBackground>
       duration: _crossfadeDuration,
     );
 
-    _playerA = VideoPlayerController.asset(_assetPath);
-    _playerB = VideoPlayerController.asset(_assetPath);
+    _playerA = VideoPlayerController.asset(widget.assetPath);
+    _playerB = VideoPlayerController.asset(widget.assetPath);
 
     _initPlayers();
   }
