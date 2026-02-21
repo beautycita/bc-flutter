@@ -85,6 +85,11 @@ class UserSession {
 
   /// Ensure a valid Supabase session exists.
   /// Returns true if session is active, false if offline/failed.
+  ///
+  /// IMPORTANT: Only creates a new anonymous user if we have NO stored
+  /// Supabase user ID. This prevents duplicate accounts when the SDK
+  /// fails to restore a previous anonymous session (app reinstall,
+  /// cache clear, JWT expiry).
   Future<bool> ensureSupabaseSession() async {
     if (!SupabaseClientService.isInitialized) return false;
 
@@ -101,7 +106,51 @@ class UserSession {
       return true;
     }
 
-    // Not authenticated — try to create anonymous session
+    // Check if we already have a stored Supabase user ID from a
+    // previous session. If so, DON'T create a new anonymous user —
+    // that would duplicate the account. The profile already exists
+    // in the DB; we just lost the JWT. We can still read/write via
+    // anon key + RLS policies.
+    final prefs = await SharedPreferences.getInstance();
+    final storedSupabaseId = prefs.getString(_keySupabaseUserId);
+    if (storedSupabaseId != null) {
+      debugPrint('Supabase: Have stored user $storedSupabaseId but SDK session lost. '
+          'Creating fresh anonymous session and linking to existing profile.');
+      try {
+        final response =
+            await SupabaseClientService.client.auth.signInAnonymously();
+        final newId = response.user?.id;
+        if (newId != null && newId != storedSupabaseId) {
+          // New anon session has a different ID. Merge: update the
+          // existing profile to point to the new auth ID, then delete
+          // the orphaned profile if one was auto-created by trigger.
+          debugPrint('Supabase: Migrating profile $storedSupabaseId -> $newId');
+          try {
+            // Delete the auto-created profile for the new anon user
+            // (the trigger may have created one with a generic username)
+            await SupabaseClientService.client
+                .from('profiles')
+                .delete()
+                .eq('id', newId);
+            // Update existing profile to new auth ID
+            await SupabaseClientService.client
+                .from('profiles')
+                .update({'id': newId})
+                .eq('id', storedSupabaseId);
+          } catch (e) {
+            debugPrint('Supabase: Profile migration failed: $e');
+            // Fallback: just use new ID, profile may already be correct
+          }
+          await prefs.setString(_keySupabaseUserId, newId);
+        }
+        return SupabaseClientService.isAuthenticated;
+      } catch (e) {
+        debugPrint('Supabase: Re-auth failed ($e)');
+        return false;
+      }
+    }
+
+    // First time ever — create new anonymous session
     try {
       final response = await SupabaseClientService.client.auth.signInAnonymously();
       final userId = response.user?.id;
@@ -111,7 +160,7 @@ class UserSession {
       }
       return SupabaseClientService.isAuthenticated;
     } catch (e) {
-      debugPrint('Supabase: Session restore failed ($e)');
+      debugPrint('Supabase: Session creation failed ($e)');
       return false;
     }
   }

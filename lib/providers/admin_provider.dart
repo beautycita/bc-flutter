@@ -282,7 +282,7 @@ final adminFullActivityProvider =
 final adminUsersProvider = FutureProvider<List<AdminUser>>((ref) async {
   final response = await SupabaseClientService.client
       .from('profiles')
-      .select('id, username, full_name, phone, role, status, created_at')
+      .select('id, username, full_name, phone, role, status, created_at, last_seen, avatar_url, birthday, gender, home_address, uber_linked, updated_at')
       .order('created_at', ascending: false);
 
   return (response as List)
@@ -375,6 +375,13 @@ class AdminUser {
   final String role;
   final String status;
   final String? createdAt;
+  final String? updatedAt;
+  final DateTime? lastSeen;
+  final String? avatarUrl;
+  final String? birthday;
+  final String? gender;
+  final String? homeAddress;
+  final bool uberLinked;
 
   const AdminUser({
     required this.id,
@@ -384,7 +391,31 @@ class AdminUser {
     required this.role,
     this.status = 'active',
     this.createdAt,
+    this.updatedAt,
+    this.lastSeen,
+    this.avatarUrl,
+    this.birthday,
+    this.gender,
+    this.homeAddress,
+    this.uberLinked = false,
   });
+
+  /// Online if last_seen within last 5 minutes.
+  bool get isOnline {
+    if (lastSeen == null) return false;
+    return DateTime.now().toUtc().difference(lastSeen!).inMinutes < 5;
+  }
+
+  /// Human-readable last seen text.
+  String get lastSeenText {
+    if (lastSeen == null) return 'Nunca';
+    final diff = DateTime.now().toUtc().difference(lastSeen!);
+    if (diff.inMinutes < 1) return 'Ahora';
+    if (diff.inMinutes < 60) return 'Hace ${diff.inMinutes}m';
+    if (diff.inHours < 24) return 'Hace ${diff.inHours}h';
+    if (diff.inDays < 30) return 'Hace ${diff.inDays}d';
+    return lastSeen!.toLocal().toString().split('.')[0];
+  }
 
   factory AdminUser.fromJson(Map<String, dynamic> json) {
     return AdminUser(
@@ -395,6 +426,15 @@ class AdminUser {
       role: json['role'] as String? ?? 'customer',
       status: json['status'] as String? ?? 'active',
       createdAt: json['created_at'] as String?,
+      updatedAt: json['updated_at'] as String?,
+      lastSeen: json['last_seen'] != null
+          ? DateTime.tryParse(json['last_seen'] as String)
+          : null,
+      avatarUrl: json['avatar_url'] as String?,
+      birthday: json['birthday'] as String?,
+      gender: json['gender'] as String?,
+      homeAddress: json['home_address'] as String?,
+      uberLinked: json['uber_linked'] as bool? ?? false,
     );
   }
 }

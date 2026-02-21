@@ -1,3 +1,4 @@
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -8,6 +9,7 @@ import '../providers/business_provider.dart';
 import '../providers/admin_provider.dart';
 import '../config/constants.dart';
 import '../config/theme_extension.dart';
+import '../services/gesture_exclusion_service.dart';
 import '../themes/category_icons.dart';
 import '../themes/theme_variant.dart';
 import '../widgets/video_map_background.dart';
@@ -16,11 +18,53 @@ import 'subcategory_sheet.dart';
 import 'business/business_shell_screen.dart' show businessTabProvider;
 import 'admin/admin_shell_screen.dart' show adminTabProvider;
 
-class HomeScreen extends ConsumerWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  bool _exclusionSet = false;
+
+  void _updateGestureExclusion(bool isBizOwner, bool isAdmin) {
+    if (_exclusionSet) return;
+    final mq = MediaQuery.of(context);
+    final ratio = mq.devicePixelRatio;
+    final screenH = mq.size.height * ratio;
+    final screenW = mq.size.width * ratio;
+    // Android caps exclusion height at 200dp per edge.
+    // Place it in the vertical center where thumb naturally swipes.
+    final maxH = 200 * ratio;
+    final centerTop = (screenH - maxH) / 2;
+    final centerBottom = centerTop + maxH;
+    final rects = <ui.Rect>[];
+    if (isBizOwner) {
+      // Left edge strip — 40dp wide
+      rects.add(ui.Rect.fromLTRB(0, centerTop, 40 * ratio, centerBottom));
+    }
+    if (isAdmin) {
+      // Right edge strip — 40dp wide
+      rects.add(ui.Rect.fromLTRB(
+          screenW - 40 * ratio, centerTop, screenW, centerBottom));
+    }
+    if (rects.isNotEmpty) {
+      GestureExclusionService.setRects(rects);
+      _exclusionSet = true;
+    }
+  }
+
+  @override
+  void dispose() {
+    if (_exclusionSet) {
+      GestureExclusionService.clearRects();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final categories = ref.watch(categoriesProvider);
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
@@ -31,6 +75,15 @@ class HomeScreen extends ConsumerWidget {
     // Edge-swipe drawers: business (left) for service providers, admin (right) for admins
     final isBizOwner = ref.watch(isBusinessOwnerProvider);
     final isAdmin = ref.watch(isAdminProvider);
+
+    // Set gesture exclusion rects once roles resolve
+    final bizOwnerVal = isBizOwner.valueOrNull ?? false;
+    final adminVal = isAdmin.valueOrNull ?? false;
+    if ((bizOwnerVal || adminVal) && !_exclusionSet) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _updateGestureExclusion(bizOwnerVal, adminVal);
+      });
+    }
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,

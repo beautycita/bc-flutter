@@ -35,6 +35,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
     return list;
   }
 
+  /// Avatar accent color per role (used for initials).
   Color _roleColor(String role) {
     switch (role) {
       case 'superadmin':
@@ -48,12 +49,55 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
     }
   }
 
+  /// Chip background tint per role.
+  Color _chipBgColor(String role) {
+    switch (role) {
+      case 'superadmin':
+        return const Color(0xFF424242); // dark gray
+      case 'admin':
+        return const Color(0xFFFCE4EC); // light pink
+      case 'stylist':
+        return const Color(0xFFE8F5E9); // light green
+      default:
+        return const Color(0xFFE3F2FD); // light blue (customer)
+    }
+  }
+
+  /// Chip text color per role.
+  Color _chipTextColor(String role) {
+    switch (role) {
+      case 'superadmin':
+        return Colors.white;
+      case 'admin':
+        return const Color(0xFFC62828);
+      case 'stylist':
+        return const Color(0xFF2E7D32);
+      default:
+        return const Color(0xFF1565C0);
+    }
+  }
+
+  /// Status color for edit sheet chips.
   Color _statusColor(String status) {
     switch (status) {
       case 'active':
         return Colors.green;
       case 'suspended':
         return Colors.orange;
+      case 'archived':
+        return Colors.grey;
+      default:
+        return Colors.blueGrey;
+    }
+  }
+
+  /// Chip stroke color per account status (list view).
+  Color _statusStrokeColor(String status) {
+    switch (status) {
+      case 'active':
+        return Colors.green;
+      case 'suspended':
+        return Colors.red;
       case 'archived':
         return Colors.grey;
       default:
@@ -153,7 +197,6 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
                   itemBuilder: (context, i) {
                     final user = filtered[i];
                     final rc = _roleColor(user.role);
-                    final sc = _statusColor(user.status);
 
                     return Padding(
                       padding: const EdgeInsets.only(bottom: AppConstants.paddingSM),
@@ -181,18 +224,42 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
                             padding: const EdgeInsets.all(AppConstants.paddingSM),
                             child: Row(
                               children: [
-                                CircleAvatar(
-                                  radius: 20,
-                                  backgroundColor: rc.withValues(alpha: 0.1),
-                                  child: Text(
-                                    (user.fullName ?? user.username)
-                                        .substring(0, 1)
-                                        .toUpperCase(),
-                                    style: GoogleFonts.poppins(
-                                      fontWeight: FontWeight.w600,
-                                      color: rc,
+                                // Avatar with online indicator
+                                Stack(
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 20,
+                                      backgroundColor: rc.withValues(alpha: 0.1),
+                                      child: Text(
+                                        (user.fullName ?? user.username)
+                                            .substring(0, 1)
+                                            .toUpperCase(),
+                                        style: GoogleFonts.poppins(
+                                          fontWeight: FontWeight.w600,
+                                          color: rc,
+                                        ),
+                                      ),
                                     ),
-                                  ),
+                                    // Online/offline dot
+                                    Positioned(
+                                      right: 0,
+                                      bottom: 0,
+                                      child: Container(
+                                        width: 12,
+                                        height: 12,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: user.isOnline
+                                              ? Colors.green
+                                              : Colors.grey.shade400,
+                                          border: Border.all(
+                                            color: Colors.white,
+                                            width: 2,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(
@@ -227,16 +294,16 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
                                     ],
                                   ),
                                 ),
-                                // Role chip
+                                // Role chip — bg tinted by role, stroke by status
                                 Container(
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 8, vertical: 3),
                                   decoration: BoxDecoration(
-                                    color: rc.withValues(alpha: 0.1),
+                                    color: _chipBgColor(user.role),
                                     borderRadius: BorderRadius.circular(8),
                                     border: Border.all(
-                                      color: rc.withValues(alpha: 0.3),
-                                      width: 1,
+                                      color: _statusStrokeColor(user.status),
+                                      width: 1.5,
                                     ),
                                   ),
                                   child: Text(
@@ -244,18 +311,8 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
                                     style: GoogleFonts.nunito(
                                       fontSize: 11,
                                       fontWeight: FontWeight.w700,
-                                      color: rc,
+                                      color: _chipTextColor(user.role),
                                     ),
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                // Status dot
-                                Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: sc,
                                   ),
                                 ),
                               ],
@@ -283,6 +340,8 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
     String selectedRole = user.role;
     String selectedStatus = user.status;
     final colors = Theme.of(context).colorScheme;
+    final dim = colors.onSurface.withValues(alpha: 0.5);
+    final dimIcon = colors.onSurface.withValues(alpha: 0.35);
 
     showModalBottomSheet(
       context: context,
@@ -292,250 +351,330 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
         builder: (ctx, setSheetState) {
           return Container(
             margin: const EdgeInsets.all(16),
-            padding: const EdgeInsets.all(24),
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(ctx).size.height * 0.85,
+            ),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(20),
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Handle
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    margin: const EdgeInsets.only(bottom: 20),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[300],
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-
-                // User info header
-                Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 24,
-                      backgroundColor: _roleColor(user.role).withValues(alpha: 0.1),
-                      child: Text(
-                        (user.fullName ?? user.username)
-                            .substring(0, 1)
-                            .toUpperCase(),
-                        style: GoogleFonts.poppins(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: _roleColor(user.role),
-                        ),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Handle
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: 20),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(2),
                       ),
                     ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                  ),
+
+                  // User info header with online indicator
+                  Row(
+                    children: [
+                      Stack(
                         children: [
-                          Text(
-                            user.fullName ?? user.username,
-                            style: GoogleFonts.poppins(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                              color: colors.onSurface,
+                          CircleAvatar(
+                            radius: 28,
+                            backgroundColor:
+                                _roleColor(user.role).withValues(alpha: 0.1),
+                            child: Text(
+                              (user.fullName ?? user.username)
+                                  .substring(0, 1)
+                                  .toUpperCase(),
+                              style: GoogleFonts.poppins(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w600,
+                                color: _roleColor(user.role),
+                              ),
                             ),
                           ),
-                          Text(
-                            '@${user.username}',
-                            style: GoogleFonts.nunito(
-                              fontSize: 14,
-                              color: colors.onSurface.withValues(alpha: 0.5),
+                          Positioned(
+                            right: 0,
+                            bottom: 0,
+                            child: Container(
+                              width: 14,
+                              height: 14,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: user.isOnline
+                                    ? Colors.green
+                                    : Colors.grey.shade400,
+                                border:
+                                    Border.all(color: Colors.white, width: 2),
+                              ),
                             ),
                           ),
                         ],
                       ),
-                    ),
-                  ],
-                ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              user.fullName ?? user.username,
+                              style: GoogleFonts.poppins(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                                color: colors.onSurface,
+                              ),
+                            ),
+                            Text(
+                              '@${user.username}',
+                              style: GoogleFonts.nunito(
+                                  fontSize: 14, color: dim),
+                            ),
+                            Text(
+                              user.isOnline
+                                  ? 'En linea'
+                                  : 'Visto: ${user.lastSeenText}',
+                              style: GoogleFonts.nunito(
+                                fontSize: 12,
+                                color: user.isOnline
+                                    ? Colors.green
+                                    : colors.onSurface.withValues(alpha: 0.4),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
 
-                if (user.phone != null) ...[
+                  const SizedBox(height: 16),
+
+                  // Detail rows
+                  _DetailSection(children: [
+                    _DetailRow(
+                      icon: Icons.fingerprint_rounded,
+                      label: 'ID',
+                      value: user.id.substring(0, 8),
+                      iconColor: dimIcon,
+                      valueColor: dim,
+                    ),
+                    if (user.phone != null)
+                      _DetailRow(
+                        icon: Icons.phone_rounded,
+                        label: 'Telefono',
+                        value: user.phone!,
+                        iconColor: dimIcon,
+                        valueColor: colors.onSurface.withValues(alpha: 0.7),
+                      ),
+                    if (user.gender != null)
+                      _DetailRow(
+                        icon: Icons.person_outline_rounded,
+                        label: 'Genero',
+                        value: user.gender!,
+                        iconColor: dimIcon,
+                        valueColor: dim,
+                      ),
+                    if (user.birthday != null)
+                      _DetailRow(
+                        icon: Icons.cake_rounded,
+                        label: 'Cumpleanos',
+                        value: user.birthday!,
+                        iconColor: dimIcon,
+                        valueColor: dim,
+                      ),
+                    if (user.homeAddress != null)
+                      _DetailRow(
+                        icon: Icons.home_rounded,
+                        label: 'Direccion',
+                        value: user.homeAddress!,
+                        iconColor: dimIcon,
+                        valueColor: dim,
+                      ),
+                    _DetailRow(
+                      icon: Icons.calendar_today_rounded,
+                      label: 'Registro',
+                      value: user.createdAt?.split('T')[0] ?? '-',
+                      iconColor: dimIcon,
+                      valueColor: dim,
+                    ),
+                    if (user.updatedAt != null)
+                      _DetailRow(
+                        icon: Icons.update_rounded,
+                        label: 'Actualizado',
+                        value: user.updatedAt!.split('T')[0],
+                        iconColor: dimIcon,
+                        valueColor: dim,
+                      ),
+                    _DetailRow(
+                      icon: Icons.local_taxi_rounded,
+                      label: 'Uber',
+                      value: user.uberLinked ? 'Vinculado' : 'No vinculado',
+                      iconColor: dimIcon,
+                      valueColor: user.uberLinked ? Colors.green : dim,
+                    ),
+                  ]),
+
+                  const SizedBox(height: 20),
+                  const Divider(height: 1),
+                  const SizedBox(height: 20),
+
+                  // Role selector
+                  Text(
+                    'Rol',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: colors.onSurface,
+                    ),
+                  ),
                   const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Icon(Icons.phone_rounded,
-                          size: 16, color: colors.onSurface.withValues(alpha: 0.4)),
-                      const SizedBox(width: 6),
-                      Text(
-                        user.phone!,
-                        style: GoogleFonts.nunito(
+                  Wrap(
+                    spacing: 8,
+                    children: _roles.map((r) {
+                      final isSelected = selectedRole == r;
+                      final rc = _roleColor(r);
+                      return ChoiceChip(
+                        label: Text(r),
+                        selected: isSelected,
+                        onSelected: (_) =>
+                            setSheetState(() => selectedRole = r),
+                        selectedColor: rc.withValues(alpha: 0.2),
+                        backgroundColor: Colors.grey[100],
+                        labelStyle: GoogleFonts.nunito(
                           fontSize: 13,
-                          color: colors.onSurface.withValues(alpha: 0.6),
+                          fontWeight:
+                              isSelected ? FontWeight.w700 : FontWeight.w500,
+                          color: isSelected
+                              ? rc
+                              : colors.onSurface.withValues(alpha: 0.7),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
-
-                if (user.createdAt != null) ...[
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Icon(Icons.calendar_today_rounded,
-                          size: 16, color: colors.onSurface.withValues(alpha: 0.4)),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Registrado: ${user.createdAt!.split('T')[0]}',
-                        style: GoogleFonts.nunito(
-                          fontSize: 13,
-                          color: colors.onSurface.withValues(alpha: 0.6),
+                        side: BorderSide(
+                          color: isSelected
+                              ? rc.withValues(alpha: 0.5)
+                              : Colors.transparent,
+                          width: 1,
                         ),
-                      ),
-                    ],
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      );
+                    }).toList(),
                   ),
-                ],
 
-                const SizedBox(height: 24),
-                const Divider(height: 1),
-                const SizedBox(height: 20),
+                  const SizedBox(height: 20),
 
-                // Role selector
-                Text(
-                  'Rol',
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: colors.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  children: _roles.map((r) {
-                    final isSelected = selectedRole == r;
-                    final rc = _roleColor(r);
-                    return ChoiceChip(
-                      label: Text(r),
-                      selected: isSelected,
-                      onSelected: (_) =>
-                          setSheetState(() => selectedRole = r),
-                      selectedColor: rc.withValues(alpha: 0.2),
-                      backgroundColor: Colors.grey[100],
-                      labelStyle: GoogleFonts.nunito(
-                        fontSize: 13,
-                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                        color: isSelected ? rc : colors.onSurface.withValues(alpha: 0.7),
-                      ),
-                      side: BorderSide(
-                        color: isSelected ? rc.withValues(alpha: 0.5) : Colors.transparent,
-                        width: 1,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    );
-                  }).toList(),
-                ),
-
-                const SizedBox(height: 20),
-
-                // Status selector
-                Text(
-                  'Estatus',
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: colors.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  children: _statuses.map((s) {
-                    final isSelected = selectedStatus == s;
-                    final sc = _statusColor(s);
-                    final label = s == 'active'
-                        ? 'Activo'
-                        : s == 'suspended'
-                            ? 'Suspendido'
-                            : 'Archivado';
-                    return ChoiceChip(
-                      label: Text(label),
-                      selected: isSelected,
-                      onSelected: (_) =>
-                          setSheetState(() => selectedStatus = s),
-                      selectedColor: sc.withValues(alpha: 0.2),
-                      backgroundColor: Colors.grey[100],
-                      labelStyle: GoogleFonts.nunito(
-                        fontSize: 13,
-                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                        color: isSelected ? sc : colors.onSurface.withValues(alpha: 0.7),
-                      ),
-                      side: BorderSide(
-                        color: isSelected ? sc.withValues(alpha: 0.5) : Colors.transparent,
-                        width: 1,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    );
-                  }).toList(),
-                ),
-
-                const SizedBox(height: 24),
-
-                // Action buttons
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextButton(
-                        onPressed: () => Navigator.of(ctx).pop(),
-                        child: Text('Cancelar',
-                            style: GoogleFonts.nunito(fontWeight: FontWeight.w600)),
-                      ),
+                  // Status selector
+                  Text(
+                    'Estatus',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: colors.onSurface,
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      flex: 2,
-                      child: ElevatedButton(
-                        onPressed: (selectedRole != user.role ||
-                                selectedStatus != user.status)
-                            ? () => _saveUser(ctx, user, selectedRole, selectedStatus)
-                            : null,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: colors.primary,
-                          foregroundColor: Colors.white,
-                          disabledBackgroundColor: Colors.grey[200],
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    children: _statuses.map((s) {
+                      final isSelected = selectedStatus == s;
+                      final sc = _statusColor(s);
+                      final label = s == 'active'
+                          ? 'Activo'
+                          : s == 'suspended'
+                              ? 'Suspendido'
+                              : 'Archivado';
+                      return ChoiceChip(
+                        label: Text(label),
+                        selected: isSelected,
+                        onSelected: (_) =>
+                            setSheetState(() => selectedStatus = s),
+                        selectedColor: sc.withValues(alpha: 0.2),
+                        backgroundColor: Colors.grey[100],
+                        labelStyle: GoogleFonts.nunito(
+                          fontSize: 13,
+                          fontWeight:
+                              isSelected ? FontWeight.w700 : FontWeight.w500,
+                          color: isSelected
+                              ? sc
+                              : colors.onSurface.withValues(alpha: 0.7),
                         ),
-                        child: Text('Guardar',
-                            style: GoogleFonts.nunito(fontWeight: FontWeight.w700)),
+                        side: BorderSide(
+                          color: isSelected
+                              ? sc.withValues(alpha: 0.5)
+                              : Colors.transparent,
+                          width: 1,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Action buttons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextButton(
+                          onPressed: () => Navigator.of(ctx).pop(),
+                          child: Text('Cancelar',
+                              style: GoogleFonts.nunito(
+                                  fontWeight: FontWeight.w600)),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 2,
+                        child: ElevatedButton(
+                          onPressed: (selectedRole != user.role ||
+                                  selectedStatus != user.status)
+                              ? () => _saveUser(
+                                  ctx, user, selectedRole, selectedStatus)
+                              : null,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: colors.primary,
+                            foregroundColor: Colors.white,
+                            disabledBackgroundColor: Colors.grey[200],
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding:
+                                const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          child: Text('Guardar',
+                              style: GoogleFonts.nunito(
+                                  fontWeight: FontWeight.w700)),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  // Archive shortcut if not already archived
+                  if (selectedStatus != 'archived') ...[
+                    const SizedBox(height: 12),
+                    Center(
+                      child: TextButton.icon(
+                        onPressed: () =>
+                            setSheetState(() => selectedStatus = 'archived'),
+                        icon: Icon(Icons.archive_outlined,
+                            size: 18, color: Colors.grey[600]),
+                        label: Text(
+                          'Archivar usuario',
+                          style: GoogleFonts.nunito(
+                            fontSize: 13,
+                            color: Colors.grey[600],
+                          ),
+                        ),
                       ),
                     ),
                   ],
-                ),
-
-                // Archive shortcut if not already archived
-                if (selectedStatus != 'archived') ...[
-                  const SizedBox(height: 12),
-                  Center(
-                    child: TextButton.icon(
-                      onPressed: () =>
-                          setSheetState(() => selectedStatus = 'archived'),
-                      icon: Icon(Icons.archive_outlined,
-                          size: 18, color: Colors.grey[600]),
-                      label: Text(
-                        'Archivar usuario',
-                        style: GoogleFonts.nunito(
-                          fontSize: 13,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                    ),
-                  ),
                 ],
-              ],
+              ),
             ),
           );
         },
@@ -593,5 +732,81 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
         );
       }
     }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Helper widgets for the edit sheet
+// ---------------------------------------------------------------------------
+
+class _DetailSection extends StatelessWidget {
+  final List<Widget> children;
+  const _DetailSection({required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        children: [
+          for (int i = 0; i < children.length; i++) ...[
+            children[i],
+            if (i < children.length - 1)
+              Divider(height: 16, color: Colors.grey.shade200),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _DetailRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color iconColor;
+  final Color valueColor;
+
+  const _DetailRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.iconColor,
+    required this.valueColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: iconColor),
+        const SizedBox(width: 8),
+        Text(
+          label,
+          style: GoogleFonts.nunito(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey.shade500,
+          ),
+        ),
+        const Spacer(),
+        Flexible(
+          child: Text(
+            value,
+            style: GoogleFonts.nunito(
+              fontSize: 13,
+              color: valueColor,
+            ),
+            textAlign: TextAlign.end,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
   }
 }
