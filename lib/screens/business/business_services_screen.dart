@@ -335,6 +335,38 @@ class _ServiceFormSheetState extends ConsumerState<_ServiceFormSheet> {
     super.dispose();
   }
 
+  InputDecoration _styledInput(
+    String label, {
+    String? prefixText,
+    String? suffixText,
+    String? helperText,
+  }) {
+    final colors = Theme.of(context).colorScheme;
+    final gray = colors.onSurface.withValues(alpha: 0.12);
+    return InputDecoration(
+      labelText: label,
+      prefixText: prefixText,
+      suffixText: suffixText,
+      helperText: helperText,
+      filled: true,
+      fillColor: Colors.white,
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+        borderSide: BorderSide(color: gray, width: 1),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+        borderSide: BorderSide(color: colors.primary, width: 1.5),
+      ),
+      disabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+        borderSide: BorderSide(color: gray.withValues(alpha: 0.06), width: 1),
+      ),
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
@@ -375,12 +407,12 @@ class _ServiceFormSheetState extends ConsumerState<_ServiceFormSheet> {
             const SizedBox(height: AppConstants.paddingMD),
             TextField(
               controller: _nameCtrl,
-              decoration: const InputDecoration(labelText: 'Nombre'),
+              decoration: _styledInput('Nombre'),
             ),
             const SizedBox(height: AppConstants.paddingSM),
             DropdownButtonFormField<String>(
               value: _category,
-              decoration: const InputDecoration(labelText: 'Categoria'),
+              decoration: _styledInput('Categoria'),
               items: const [
                 DropdownMenuItem(value: 'General', child: Text('General')),
                 DropdownMenuItem(value: 'Cabello', child: Text('Cabello')),
@@ -403,10 +435,8 @@ class _ServiceFormSheetState extends ConsumerState<_ServiceFormSheet> {
                   child: TextField(
                     controller: _priceCtrl,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'Precio (MXN)',
-                      prefixText: '\$ ',
-                    ),
+                    decoration: _styledInput('Precio (MXN)',
+                        prefixText: '\$ '),
                   ),
                 ),
                 const SizedBox(width: AppConstants.paddingSM),
@@ -414,9 +444,7 @@ class _ServiceFormSheetState extends ConsumerState<_ServiceFormSheet> {
                   child: TextField(
                     controller: _durationCtrl,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'Duracion (min)',
-                    ),
+                    decoration: _styledInput('Duracion (min)'),
                   ),
                 ),
               ],
@@ -425,30 +453,34 @@ class _ServiceFormSheetState extends ConsumerState<_ServiceFormSheet> {
             TextField(
               controller: _bufferCtrl,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Buffer entre citas (min)',
-                helperText: 'Tiempo de descanso entre citas',
-              ),
+              decoration: _styledInput('Buffer entre citas (min)',
+                  helperText: 'Tiempo de descanso entre citas'),
             ),
             const SizedBox(height: AppConstants.paddingSM),
             TextField(
               controller: _descCtrl,
               maxLines: 2,
-              decoration: const InputDecoration(
-                  labelText: 'Descripcion (opcional)'),
+              decoration: _styledInput('Descripcion (opcional)'),
             ),
             const SizedBox(height: AppConstants.paddingMD),
 
             // Deposit section
-            Card(
-              elevation: 0,
-              color: colors.surface,
-              shape: RoundedRectangleBorder(
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-                side: BorderSide(
+                border: Border.all(
                   color: colors.onSurface.withValues(alpha: 0.08),
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
+              clipBehavior: Clip.antiAlias,
               child: Column(
                 children: [
                   SwitchListTile(
@@ -470,10 +502,8 @@ class _ServiceFormSheetState extends ConsumerState<_ServiceFormSheet> {
                       child: TextField(
                         controller: _depositPctCtrl,
                         keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'Porcentaje de deposito',
-                          suffixText: '%',
-                        ),
+                        decoration: _styledInput('Porcentaje de deposito',
+                            suffixText: '%'),
                       ),
                     ),
                   ],

@@ -173,6 +173,13 @@ class _SummaryChip extends StatelessWidget {
               color: selected ? color : colors.onSurface.withValues(alpha: 0.1),
               width: selected ? 1.5 : 1,
             ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           child: Column(
             children: [
@@ -243,6 +250,13 @@ class _DisputeCard extends StatelessWidget {
                 color: colors.onSurface.withValues(alpha: 0.08),
                 width: 1,
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
             padding: const EdgeInsets.all(14),
             child: Row(
@@ -599,6 +613,13 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
                     border: Border.all(
                       color: colors.onSurface.withValues(alpha: 0.08),
                     ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
                   child: Column(
                     children: [
@@ -646,6 +667,13 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
                     border: Border.all(
                       color: colors.onSurface.withValues(alpha: 0.08),
                     ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
                   padding: const EdgeInsets.all(16),
                   child: Column(
@@ -797,6 +825,13 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
           color: colors.onSurface.withValues(alpha: 0.08),
           width: 1,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       padding: const EdgeInsets.all(16),
       child: Column(

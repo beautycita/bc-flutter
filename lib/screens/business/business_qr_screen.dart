@@ -23,7 +23,7 @@ class BusinessQrScreen extends ConsumerWidget {
 
         final bizId = biz['id'] as String;
         final bizName = biz['name'] as String? ?? 'Mi Salon';
-        final qrUrl = 'https://beautycita.com/walkin/$bizId';
+        final qrUrl = 'https://beautycita.com/cita-express/$bizId';
 
         return _QrContent(
           qrUrl: qrUrl,
@@ -94,7 +94,7 @@ class _QrContentState extends State<_QrContent> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Escanea para reservar',
+                      'Cita Express - Escanea para reservar',
                       style: GoogleFonts.nunito(
                         fontSize: 14,
                         color: colors.onSurface.withValues(alpha: 0.5),

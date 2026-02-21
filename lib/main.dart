@@ -188,6 +188,17 @@ class _BeautyCitaAppState extends ConsumerState<BeautyCitaApp> {
       return;
     }
 
+    // Cita Express walk-in QR deep link
+    if (path.startsWith('/cita-express/')) {
+      final bizId = path.replaceFirst('/cita-express/', '');
+      if (bizId.isNotEmpty) {
+        supabaseReady.future.then((_) {
+          if (mounted) AppRoutes.router.go('/cita-express/$bizId');
+        });
+        return;
+      }
+    }
+
     // Default: go home
     supabaseReady.future.then((_) {
       if (mounted) AppRoutes.router.go('/home');

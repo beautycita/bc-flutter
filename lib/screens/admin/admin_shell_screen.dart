@@ -149,9 +149,10 @@ class _AdminContent extends ConsumerWidget {
           ),
         ),
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_rounded,
+          icon: Icon(Icons.home_rounded,
               color: colors.primary, size: 24),
           onPressed: () => context.go('/home'),
+          tooltip: 'Inicio',
         ),
         title: Text(
           allTabs.isNotEmpty ? allTabs[safeTab].label : 'Admin',
