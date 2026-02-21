@@ -30,6 +30,7 @@ interface CurateRequest {
     time_of_day: "morning" | "afternoon" | "evening" | null;
     specific_date: string | null;
   } | null;
+  business_id?: string; // Lock to specific business (Cita Express)
 }
 
 interface BookingWindow {
@@ -166,6 +167,7 @@ serve(async (req) => {
       location,
       transport_mode,
       override_window,
+      business_id,
     } = body;
 
     if (!service_type || !location?.lat || !location?.lng) {
@@ -212,10 +214,11 @@ serve(async (req) => {
       location,
       baseRadius,
       window,
+      business_id,
     );
 
-    // Auto-radius expansion
-    if (candidates.length < 3 && profile.radius_auto_expand) {
+    // Auto-radius expansion (skip when locked to a specific business)
+    if (candidates.length < 3 && profile.radius_auto_expand && !business_id) {
       let mult = 1.5;
       const maxMult = Number(profile.radius_max_multiplier) || 3;
       while (candidates.length < 3 && mult <= maxMult) {
@@ -564,6 +567,7 @@ async function queryCandidates(
   loc: { lat: number; lng: number },
   radiusM: number,
   window: BookingWindow,
+  businessId?: string,
 ): Promise<Candidate[]> {
   const { data, error } = await sb.rpc("curate_candidates", {
     p_service_type: serviceType,
@@ -572,6 +576,7 @@ async function queryCandidates(
     p_radius_meters: Math.round(radiusM),
     p_window_start: window.window_start,
     p_window_end: window.window_end,
+    p_business_id: businessId ?? null,
   });
 
   if (error) {

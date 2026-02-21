@@ -173,6 +173,54 @@ class _BusinessSettingsScreenState
   String _fmt(TimeOfDay t) =>
       '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
 
+  InputDecoration _styledInput(
+    String label, {
+    Widget? prefixIcon,
+    String? prefixText,
+  }) {
+    final colors = Theme.of(context).colorScheme;
+    final gray = colors.onSurface.withValues(alpha: 0.12);
+    return InputDecoration(
+      labelText: label,
+      prefixIcon: prefixIcon,
+      prefixText: prefixText,
+      filled: true,
+      fillColor: Colors.white,
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+        borderSide: BorderSide(color: gray, width: 1),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+        borderSide: BorderSide(color: colors.primary, width: 1.5),
+      ),
+      disabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+        borderSide: BorderSide(color: gray.withValues(alpha: 0.06), width: 1),
+      ),
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    );
+  }
+
+  BoxDecoration _cardDecoration(ColorScheme colors) {
+    return BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+      border: Border.all(
+        color: colors.onSurface.withValues(alpha: 0.08),
+        width: 1,
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.04),
+          blurRadius: 8,
+          offset: const Offset(0, 2),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final bizAsync = ref.watch(currentBusinessProvider);
@@ -194,24 +242,23 @@ class _BusinessSettingsScreenState
             const SizedBox(height: AppConstants.paddingSM),
             TextField(
               controller: _nameCtrl,
-              decoration:
-                  const InputDecoration(labelText: 'Nombre del negocio'),
+              decoration: _styledInput('Nombre del negocio'),
             ),
             const SizedBox(height: AppConstants.paddingSM),
             TextField(
               controller: _phoneCtrl,
               keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(labelText: 'Telefono'),
+              decoration: _styledInput('Telefono'),
             ),
             const SizedBox(height: AppConstants.paddingSM),
             TextField(
               controller: _addressCtrl,
-              decoration: const InputDecoration(labelText: 'Direccion'),
+              decoration: _styledInput('Direccion'),
             ),
             const SizedBox(height: AppConstants.paddingSM),
             TextField(
               controller: _cityCtrl,
-              decoration: const InputDecoration(labelText: 'Ciudad'),
+              decoration: _styledInput('Ciudad'),
             ),
 
             const SizedBox(height: AppConstants.paddingLG),
@@ -219,28 +266,23 @@ class _BusinessSettingsScreenState
             const SizedBox(height: AppConstants.paddingSM),
             TextField(
               controller: _websiteCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Sitio web',
-                prefixIcon: Icon(Icons.language_rounded, size: 20),
-              ),
+              decoration: _styledInput('Sitio web',
+                  prefixIcon: const Icon(Icons.language_rounded, size: 20)),
             ),
             const SizedBox(height: AppConstants.paddingSM),
             TextField(
               controller: _igCtrl,
-              decoration: InputDecoration(
-                labelText: 'Instagram',
-                prefixIcon: Icon(Icons.camera_alt_rounded, size: 20,
-                    color: colors.onSurface.withValues(alpha: 0.5)),
-                prefixText: '@',
-              ),
+              decoration: _styledInput('Instagram',
+                  prefixIcon: Icon(Icons.camera_alt_rounded,
+                      size: 20,
+                      color: colors.onSurface.withValues(alpha: 0.5)),
+                  prefixText: '@'),
             ),
             const SizedBox(height: AppConstants.paddingSM),
             TextField(
               controller: _fbCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Facebook URL',
-                prefixIcon: Icon(Icons.facebook_rounded, size: 20),
-              ),
+              decoration: _styledInput('Facebook URL',
+                  prefixIcon: const Icon(Icons.facebook_rounded, size: 20)),
             ),
 
             // ---------- Operating hours ----------
@@ -253,15 +295,9 @@ class _BusinessSettingsScreenState
             const SizedBox(height: AppConstants.paddingLG),
             _SectionHeader(label: 'POLITICAS'),
             const SizedBox(height: AppConstants.paddingSM),
-            Card(
-              elevation: 0,
-              color: colors.surface,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-                side: BorderSide(
-                  color: colors.onSurface.withValues(alpha: 0.08),
-                ),
-              ),
+            Container(
+              decoration: _cardDecoration(colors),
+              clipBehavior: Clip.antiAlias,
               child: Column(
                 children: [
                   SwitchListTile(
@@ -304,9 +340,7 @@ class _BusinessSettingsScreenState
                   child: TextField(
                     controller: _cancelHoursCtrl,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'Cancelacion (horas)',
-                    ),
+                    decoration: _styledInput('Cancelacion (horas)'),
                   ),
                 ),
                 const SizedBox(width: AppConstants.paddingSM),
@@ -315,9 +349,7 @@ class _BusinessSettingsScreenState
                     controller: _depositPctCtrl,
                     keyboardType: TextInputType.number,
                     enabled: _depositRequired,
-                    decoration: const InputDecoration(
-                      labelText: 'Deposito (%)',
-                    ),
+                    decoration: _styledInput('Deposito (%)'),
                   ),
                 ),
               ],
@@ -327,15 +359,9 @@ class _BusinessSettingsScreenState
             const SizedBox(height: AppConstants.paddingMD),
             _SectionHeader(label: 'POLITICA DE NO-SHOW'),
             const SizedBox(height: AppConstants.paddingSM),
-            Card(
-              elevation: 0,
-              color: colors.surface,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-                side: BorderSide(
-                  color: colors.onSurface.withValues(alpha: 0.08),
-                ),
-              ),
+            Container(
+              decoration: _cardDecoration(colors),
+              clipBehavior: Clip.antiAlias,
               child: Column(
                 children: [
                   RadioListTile<String>(
@@ -406,13 +432,9 @@ class _BusinessSettingsScreenState
   // ---------- Hours editor ----------
 
   Widget _buildHoursEditor(ColorScheme colors) {
-    return Card(
-      elevation: 0,
-      color: colors.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-        side: BorderSide(color: colors.onSurface.withValues(alpha: 0.08)),
-      ),
+    return Container(
+      decoration: _cardDecoration(colors),
+      clipBehavior: Clip.antiAlias,
       child: Column(
         children: [
           for (var i = 0; i < 7; i++) ...[

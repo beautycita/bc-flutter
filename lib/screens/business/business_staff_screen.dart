@@ -306,6 +306,40 @@ class _AddStaffSheetState extends ConsumerState<_AddStaffSheet> {
     return publicUrl;
   }
 
+  InputDecoration _styledInput(
+    String label, {
+    Widget? prefixIcon,
+    bool isDense = false,
+    bool alignLabelWithHint = false,
+    String? hintText,
+  }) {
+    final colors = Theme.of(context).colorScheme;
+    final gray = colors.onSurface.withValues(alpha: 0.12);
+    return InputDecoration(
+      labelText: label,
+      prefixIcon: prefixIcon,
+      isDense: isDense,
+      alignLabelWithHint: alignLabelWithHint,
+      hintText: hintText,
+      filled: true,
+      fillColor: Colors.white,
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+        borderSide: BorderSide(color: gray, width: 1),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+        borderSide: BorderSide(color: colors.primary, width: 1.5),
+      ),
+      disabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+        borderSide: BorderSide(color: gray.withValues(alpha: 0.06), width: 1),
+      ),
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
@@ -410,16 +444,14 @@ class _AddStaffSheetState extends ConsumerState<_AddStaffSheet> {
                   Expanded(
                     child: TextField(
                       controller: _firstCtrl,
-                      decoration: const InputDecoration(
-                          labelText: 'Nombre', isDense: true),
+                      decoration: _styledInput('Nombre', isDense: true),
                     ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: TextField(
                       controller: _lastCtrl,
-                      decoration: const InputDecoration(
-                          labelText: 'Apellido', isDense: true),
+                      decoration: _styledInput('Apellido', isDense: true),
                     ),
                   ),
                 ],
@@ -430,10 +462,8 @@ class _AddStaffSheetState extends ConsumerState<_AddStaffSheet> {
               TextField(
                 controller: _phoneCtrl,
                 keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(
-                  labelText: 'Telefono',
-                  prefixIcon: Icon(Icons.phone_rounded, size: 20),
-                ),
+                decoration: _styledInput('Telefono',
+                    prefixIcon: const Icon(Icons.phone_rounded, size: 20)),
               ),
               const SizedBox(height: AppConstants.paddingSM),
 
@@ -450,10 +480,7 @@ class _AddStaffSheetState extends ConsumerState<_AddStaffSheet> {
                         _MaxValueFormatter(50),
                       ],
                       onChanged: (_) => setState(() {}),
-                      decoration: const InputDecoration(
-                        labelText: 'Exp. (anos)',
-                        isDense: true,
-                      ),
+                      decoration: _styledInput('Exp. (anos)', isDense: true),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -482,12 +509,10 @@ class _AddStaffSheetState extends ConsumerState<_AddStaffSheet> {
                 controller: _bioCtrl,
                 maxLines: 3,
                 maxLength: 500,
-                decoration: const InputDecoration(
-                  labelText: 'Autobiografia',
-                  hintText:
-                      'Cuenta un poco sobre ti, tu experiencia y estilo...',
-                  alignLabelWithHint: true,
-                ),
+                decoration: _styledInput('Autobiografia',
+                    alignLabelWithHint: true,
+                    hintText:
+                        'Cuenta un poco sobre ti, tu experiencia y estilo...'),
               ),
 
               const SizedBox(height: AppConstants.paddingMD),
@@ -552,12 +577,18 @@ class _AddStaffSheetState extends ConsumerState<_AddStaffSheet> {
                         width: 90,
                         height: 90,
                         decoration: BoxDecoration(
-                          color: colors.onSurface.withValues(alpha: 0.05),
+                          color: Colors.white,
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(
-                            color: colors.onSurface.withValues(alpha: 0.15),
-                            style: BorderStyle.solid,
+                            color: colors.onSurface.withValues(alpha: 0.12),
                           ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.04),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,

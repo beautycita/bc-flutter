@@ -143,21 +143,27 @@ class DashboardScreen extends ConsumerWidget {
           activityAsync.when(
             data: (items) {
               if (items.isEmpty) {
-                return Card(
-                  elevation: 0,
-                  color: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius.circular(AppConstants.radiusMD),
+                return Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+                    border: Border.all(
+                      color: colors.onSurface.withValues(alpha: 0.08),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(AppConstants.paddingLG),
-                    child: Center(
-                      child: Text(
-                        'Sin actividad reciente',
-                        style: GoogleFonts.nunito(
-                          color: colors.onSurface.withValues(alpha: 0.5),
-                        ),
+                  padding: const EdgeInsets.all(AppConstants.paddingLG),
+                  child: Center(
+                    child: Text(
+                      'Sin actividad reciente',
+                      style: GoogleFonts.nunito(
+                        color: colors.onSurface.withValues(alpha: 0.5),
                       ),
                     ),
                   ),
@@ -165,13 +171,22 @@ class DashboardScreen extends ConsumerWidget {
               }
               // Show only first 5 items
               final displayItems = items.take(5).toList();
-              return Card(
-                elevation: 0,
-                color: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius:
-                      BorderRadius.circular(AppConstants.radiusMD),
+              return Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+                  border: Border.all(
+                    color: colors.onSurface.withValues(alpha: 0.08),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
+                clipBehavior: Clip.antiAlias,
                 child: ListView.separated(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
@@ -273,6 +288,13 @@ class _StatCard extends StatelessWidget {
               color: color.withValues(alpha: 0.3),
               width: 1.5,
             ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           padding: const EdgeInsets.all(AppConstants.paddingSM),
           child: Column(

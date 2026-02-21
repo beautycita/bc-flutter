@@ -113,6 +113,13 @@ class _ApplicationCard extends ConsumerWidget {
                 color: colors.onSurface.withValues(alpha: 0.12),
                 width: 1,
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
             padding: const EdgeInsets.all(AppConstants.paddingMD),
             child: Column(

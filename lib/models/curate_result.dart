@@ -10,6 +10,7 @@ class CurateRequest {
   final String? priceComfort;
   final double? qualitySpeed;
   final double? exploreLoyalty;
+  final String? businessId; // Lock to specific business (Cita Express)
 
   const CurateRequest({
     required this.serviceType,
@@ -21,6 +22,7 @@ class CurateRequest {
     this.priceComfort,
     this.qualitySpeed,
     this.exploreLoyalty,
+    this.businessId,
   });
 
   Map<String, dynamic> toJson() => {
@@ -33,6 +35,7 @@ class CurateRequest {
         if (priceComfort != null) 'price_comfort': priceComfort,
         if (qualitySpeed != null) 'quality_speed': qualitySpeed,
         if (exploreLoyalty != null) 'explore_loyalty': exploreLoyalty,
+        if (businessId != null) 'business_id': businessId,
       };
 }
 

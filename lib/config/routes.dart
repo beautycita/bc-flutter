@@ -29,6 +29,7 @@ import 'package:beautycita/screens/payment_methods_screen.dart';
 import 'package:beautycita/screens/appearance_screen.dart';
 import 'package:beautycita/screens/btc_wallet_screen.dart';
 import 'package:beautycita/screens/cash_payment_screen.dart';
+import 'package:beautycita/screens/cita_express_screen.dart';
 import 'package:beautycita/screens/business/business_shell_screen.dart';
 
 
@@ -63,6 +64,7 @@ class AppRoutes {
   static const String appearance = '/settings/appearance';
   static const String btcWallet = '/settings/btc-wallet';
   static const String cashPayment = '/settings/cash-payment';
+  static const String citaExpress = '/cita-express/:businessId';
 
 
   static final GoRouter router = GoRouter(
@@ -581,6 +583,25 @@ class AppRoutes {
             child: CashPaymentScreen(data: data),
             transitionsBuilder: (context, animation, secondaryAnimation, child) {
               final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
+                  .chain(CurveTween(curve: Curves.easeInOutCubic));
+              return SlideTransition(
+                position: animation.drive(tween),
+                child: child,
+              );
+            },
+          );
+        },
+      ),
+      GoRoute(
+        path: '/cita-express/:businessId',
+        name: 'cita-express',
+        pageBuilder: (context, state) {
+          final businessId = state.pathParameters['businessId']!;
+          return CustomTransitionPage(
+            key: state.pageKey,
+            child: CitaExpressScreen(businessId: businessId),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              final tween = Tween(begin: const Offset(0.0, 1.0), end: Offset.zero)
                   .chain(CurveTween(curve: Curves.easeInOutCubic));
               return SlideTransition(
                 position: animation.drive(tween),
