@@ -92,7 +92,12 @@ class _FeatureTogglesScreenState
                   shape: RoundedRectangleBorder(
                     borderRadius:
                         BorderRadius.circular(AppConstants.radiusMD),
+                    side: BorderSide(
+                      color: colors.onSurface.withValues(alpha: 0.08),
+                    ),
                   ),
+                  shadowColor: colors.onSurface.withValues(alpha: 0.08),
+                  surfaceTintColor: Colors.transparent,
                   margin: const EdgeInsets.only(
                       bottom: AppConstants.paddingMD),
                   child: Padding(

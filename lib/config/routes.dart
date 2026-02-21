@@ -279,7 +279,7 @@ class AppRoutes {
           key: state.pageKey,
           child: const BusinessShellScreen(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
+            final tween = Tween(begin: const Offset(-1.0, 0.0), end: Offset.zero)
                 .chain(CurveTween(curve: Curves.easeInOutCubic));
             return SlideTransition(
               position: animation.drive(tween),

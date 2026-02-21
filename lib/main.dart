@@ -18,6 +18,7 @@ import 'package:beautycita/services/qr_auth_service.dart';
 import 'package:beautycita/screens/business/business_shell_screen.dart';
 import 'package:beautycita/services/toast_service.dart';
 import 'package:beautycita/services/debug_log.dart';
+import 'package:beautycita/services/presence_service.dart';
 import 'package:go_router/go_router.dart';
 
 /// Completes when Supabase is ready (or failed). Splash screen awaits this.
@@ -60,6 +61,8 @@ void main() async {
     // Initialize push notifications after Supabase is ready
     await NotificationService().initialize();
     debugPrint('[Init] Notifications initialized');
+    PresenceService.instance.start();
+    debugPrint('[Init] Presence heartbeat started');
     supabaseReady.complete();
   }).catchError((e) {
     debugPrint('[Init] ERROR: Supabase initialization failed: $e');

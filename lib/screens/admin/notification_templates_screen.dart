@@ -179,7 +179,12 @@ class _EventGroup extends StatelessWidget {
       color: Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+        side: BorderSide(
+          color: colors.onSurface.withValues(alpha: 0.08),
+        ),
       ),
+      shadowColor: colors.onSurface.withValues(alpha: 0.08),
+      surfaceTintColor: Colors.transparent,
       margin: const EdgeInsets.only(bottom: AppConstants.paddingSM),
       child: Padding(
         padding: const EdgeInsets.all(AppConstants.paddingMD),
