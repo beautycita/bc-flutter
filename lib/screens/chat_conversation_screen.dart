@@ -48,18 +48,21 @@ class _ChatConversationScreenState
     }
   }
 
-  bool get _isSupport {
+  String get _threadContactType {
     final threadsAsync = ref.read(chatThreadsProvider);
     return threadsAsync.whenOrNull(
       data: (threads) {
         try {
-          return threads.firstWhere((t) => t.id == widget.threadId).isSupport;
+          return threads.firstWhere((t) => t.id == widget.threadId).contactType;
         } catch (_) {
-          return false;
+          return 'aphrodite';
         }
       },
-    ) ?? false;
+    ) ?? 'aphrodite';
   }
+
+  bool get _isSupport => _threadContactType == 'support';
+  bool get _isAphrodite => _threadContactType == 'aphrodite';
 
   Future<void> _sendMessage() async {
     final text = _textController.text.trim();
@@ -85,8 +88,11 @@ class _ChatConversationScreenState
 
     if (_isSupport) {
       await ref.read(sendSupportMessageProvider.notifier).send(widget.threadId, text);
-    } else {
+    } else if (_isAphrodite) {
       await ref.read(sendMessageProvider.notifier).send(widget.threadId, text);
+    } else {
+      // Direct message insert for salon/user threads
+      await _sendDirectMessage(text);
     }
 
     if (mounted) {
@@ -95,6 +101,31 @@ class _ChatConversationScreenState
         _isSending = false;
       });
       _scrollToBottom();
+    }
+  }
+
+  Future<void> _sendDirectMessage(String text) async {
+    try {
+      final client = SupabaseClientService.client;
+      final userId = SupabaseClientService.currentUserId;
+      await client.from('chat_messages').insert({
+        'thread_id': widget.threadId,
+        'sender_type': 'user',
+        'sender_id': userId,
+        'content_type': 'text',
+        'text_content': text,
+      });
+      // Update thread's last message
+      await client.from('chat_threads').update({
+        'last_message_text': text,
+        'last_message_at': DateTime.now().toUtc().toIso8601String(),
+      }).eq('id', widget.threadId);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
     }
   }
 
@@ -129,20 +160,19 @@ class _ChatConversationScreenState
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () => context.go('/home'),
+          onPressed: () => context.go('/chat/list'),
         ),
         titleSpacing: 0,
         actions: [
-          if (isAphrodite)
-            IconButton(
-              icon: Icon(
-                Icons.forum_outlined,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                size: 22,
-              ),
-              tooltip: 'Todos los mensajes',
-              onPressed: () => context.push('/chat/list'),
+          IconButton(
+            icon: Icon(
+              Icons.forum_outlined,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+              size: 22,
             ),
+            tooltip: 'Todos los mensajes',
+            onPressed: () => context.go('/chat/list'),
+          ),
         ],
         title: Row(
           children: [
@@ -173,6 +203,19 @@ class _ChatConversationScreenState
                 ),
                 child: const Center(
                   child: Icon(Icons.support_agent_rounded, color: Colors.white, size: 20),
+                ),
+              ),
+              const SizedBox(width: 10),
+            ] else ...[
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Theme.of(context).colorScheme.primaryContainer,
+                ),
+                child: Center(
+                  child: Icon(Icons.storefront_rounded, color: Theme.of(context).colorScheme.primary, size: 20),
                 ),
               ),
               const SizedBox(width: 10),

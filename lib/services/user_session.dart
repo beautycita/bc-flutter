@@ -157,6 +157,13 @@ class UserSession {
       if (userId != null) {
         await saveSupabaseUserId(userId);
         debugPrint('Supabase: New anonymous session $userId');
+        // Tag registration source as APK (Android build)
+        try {
+          await SupabaseClientService.client
+              .from('profiles')
+              .update({'registration_source': 'apk'})
+              .eq('id', userId);
+        } catch (_) {}
       }
       return SupabaseClientService.isAuthenticated;
     } catch (e) {

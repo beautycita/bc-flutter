@@ -293,7 +293,7 @@ class _BookingTile extends StatelessWidget {
 
     String dateStr = '';
     if (startsAt != null) {
-      final dt = DateTime.tryParse(startsAt);
+      final dt = DateTime.tryParse(startsAt)?.toLocal();
       if (dt != null) {
         dateStr =
             '${dt.day}/${dt.month}/${dt.year} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';

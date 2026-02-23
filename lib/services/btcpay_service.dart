@@ -24,7 +24,7 @@ class BtcPrice {
   }
 }
 
-/// User wallet info from BTCPay
+/// User wallet info
 class BtcWallet {
   final int id;
   final String? walletAddress;
@@ -89,7 +89,7 @@ class BtcBalance {
 
 /// A single deposit record
 class BtcDeposit {
-  final int id;
+  final String id;
   final String? txid;
   final double amountBtc;
   final double amountMxn;
@@ -111,11 +111,11 @@ class BtcDeposit {
 
   factory BtcDeposit.fromJson(Map<String, dynamic> json) {
     return BtcDeposit(
-      id: json['id'] as int,
+      id: json['id'].toString(),
       txid: json['txid'] as String?,
       amountBtc: BtcBalance._toDouble(json['amount_btc']),
       amountMxn: BtcBalance._toDouble(json['amount_mxn']),
-      confirmations: (json['confirmations'] as int?) ?? 0,
+      confirmations: (json['confirmations'] as num?)?.toInt() ?? 0,
       status: json['status'] as String? ?? 'pending',
       detectedAt: DateTime.tryParse(json['detected_at'] as String? ?? ''),
       confirmedAt: DateTime.tryParse(json['confirmed_at'] as String? ?? ''),
@@ -125,7 +125,7 @@ class BtcDeposit {
 
 /// A balance transaction record
 class BtcTransaction {
-  final int id;
+  final String id;
   final String type;
   final double amountMxn;
   final String? description;
@@ -141,7 +141,7 @@ class BtcTransaction {
 
   factory BtcTransaction.fromJson(Map<String, dynamic> json) {
     return BtcTransaction(
-      id: json['id'] as int,
+      id: json['id'].toString(),
       type: json['transaction_type'] as String? ?? '',
       amountMxn: BtcBalance._toDouble(json['amount_mxn']),
       description: json['description'] as String?,
@@ -188,54 +188,25 @@ class BTCPayInvoice {
   }
 }
 
-/// Service for interacting with BTCPay Server directly and via edge functions
+/// Service for BTC operations. All sensitive calls go through edge functions.
 class BTCPayService {
   BTCPayService._();
 
-  static const String _btcpayBase = 'https://beautycita.com/btcpay';
-  static const String _btcpayApiKey = 'c1abd88fda4af3d5861f7cd33c3f3f83dc37e5dc';
-  static const String _btcpayStoreId = '9XbJqLfMLdCj8ezecxthj41wk4GpDe27ajw66a9ULY2V';
-
-  static Map<String, String> get _btcpayHeaders => {
-    'Authorization': 'token $_btcpayApiKey',
-    'Content-Type': 'application/json',
-  };
-
-  /// Fetch live BTC price from BTCPay Server rates + forex for MXN
+  /// Fetch live BTC price from CoinGecko public API (no API key needed)
   static Future<BtcPrice?> getPrice() async {
     try {
-      // Get BTC_USD from BTCPay's configured rate source
-      final ratesResp = await http.get(
-        Uri.parse('$_btcpayBase/api/v1/stores/$_btcpayStoreId/rates?currencyPair=BTC_USD'),
-        headers: _btcpayHeaders,
+      final resp = await http.get(
+        Uri.parse('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd,mxn'),
       ).timeout(const Duration(seconds: 10));
 
-      if (ratesResp.statusCode != 200) return null;
-      final ratesList = jsonDecode(ratesResp.body) as List<dynamic>;
-      if (ratesList.isEmpty) return null;
+      if (resp.statusCode != 200) return null;
+      final data = jsonDecode(resp.body) as Map<String, dynamic>;
+      final btc = data['bitcoin'] as Map<String, dynamic>?;
+      if (btc == null) return null;
 
-      final btcUsdEntry = ratesList[0] as Map<String, dynamic>;
-      final btcUsdRate = btcUsdEntry['rate'];
-      if (btcUsdRate == null) return null;
-      final usd = double.parse(btcUsdRate.toString());
-
-      // Get USD_MXN from free forex API
-      double mxn = usd * 17.0; // fallback
-      try {
-        final fxResp = await http.get(
-          Uri.parse('https://open.er-api.com/v6/latest/USD'),
-        ).timeout(const Duration(seconds: 5));
-        if (fxResp.statusCode == 200) {
-          final fxJson = jsonDecode(fxResp.body) as Map<String, dynamic>;
-          final rates = fxJson['rates'] as Map<String, dynamic>?;
-          if (rates != null && rates['MXN'] != null) {
-            final usdMxn = (rates['MXN'] as num).toDouble();
-            mxn = usd * usdMxn;
-          }
-        }
-      } catch (_) {
-        // use fallback
-      }
+      final usd = (btc['usd'] as num?)?.toDouble();
+      final mxn = (btc['mxn'] as num?)?.toDouble();
+      if (usd == null || mxn == null) return null;
 
       return BtcPrice(usd: usd, mxn: mxn, fetchedAt: DateTime.now());
     } catch (e) {
@@ -244,84 +215,7 @@ class BTCPayService {
     }
   }
 
-  /// Create a BTCPay invoice to generate a deposit address
-  static Future<BtcWallet?> getWallet() async {
-    try {
-      final resp = await http.post(
-        Uri.parse('$_btcpayBase/api/v1/stores/$_btcpayStoreId/invoices'),
-        headers: _btcpayHeaders,
-        body: jsonEncode({
-          'currency': 'BTC',
-          'metadata': {'purpose': 'deposit_wallet'},
-          'checkout': {
-            'expirationMinutes': 525600, // 1 year
-            'paymentMethods': ['BTC', 'BTC-LightningNetwork'],
-          },
-        }),
-      ).timeout(const Duration(seconds: 15));
-
-      if (resp.statusCode != 200) {
-        debugPrint('BTCPayService.getWallet: status ${resp.statusCode} body ${resp.body}');
-        return null;
-      }
-
-      final invoice = jsonDecode(resp.body) as Map<String, dynamic>;
-      final invoiceId = invoice['id'] as String?;
-      if (invoiceId == null) return null;
-
-      // Fetch the payment methods to get the on-chain address
-      final pmResp = await http.get(
-        Uri.parse('$_btcpayBase/api/v1/stores/$_btcpayStoreId/invoices/$invoiceId/payment-methods'),
-        headers: _btcpayHeaders,
-      ).timeout(const Duration(seconds: 10));
-
-      String? btcAddress;
-      if (pmResp.statusCode == 200) {
-        final methods = jsonDecode(pmResp.body) as List<dynamic>;
-        for (final m in methods) {
-          final pm = m as Map<String, dynamic>;
-          if (pm['paymentMethod'] == 'BTC' || pm['paymentMethodId'] == 'BTC') {
-            btcAddress = pm['destination'] as String?;
-            break;
-          }
-        }
-      }
-
-      return BtcWallet(
-        id: 0,
-        walletAddress: btcAddress ?? invoice['checkoutLink'] as String?,
-        label: 'BeautyCita Deposit',
-        btcpayInvoiceId: invoiceId,
-        checkoutLink: invoice['checkoutLink'] as String?,
-        createdAt: DateTime.now(),
-      );
-    } catch (e) {
-      debugPrint('BTCPayService.getWallet error: $e');
-      return null;
-    }
-  }
-
-  /// Get user's balance (placeholder — no backend route active)
-  static Future<BtcBalance> getBalance() async {
-    return const BtcBalance();
-  }
-
-  /// Get deposit history (placeholder — no backend route active)
-  static Future<List<BtcDeposit>> getDeposits({int limit = 20}) async {
-    return [];
-  }
-
-  /// Get balance transaction history (placeholder — no backend route active)
-  static Future<List<BtcTransaction>> getTransactions({int limit = 20}) async {
-    return [];
-  }
-
-  static String? get _authToken {
-    if (!SupabaseClientService.isInitialized) return null;
-    return SupabaseClientService.client.auth.currentSession?.accessToken;
-  }
-
-  /// Create a Bitcoin invoice for a booking
+  /// Create a Bitcoin invoice for a booking (via edge function)
   static Future<BTCPayInvoice> createInvoice({
     required String serviceId,
     required String scheduledAt,

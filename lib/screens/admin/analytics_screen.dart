@@ -69,11 +69,16 @@ class _MetricCard extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
 
     return Card(
-      elevation: 0,
+      elevation: 2,
       color: Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+        side: BorderSide(
+          color: colors.onSurface.withValues(alpha: 0.08),
+        ),
       ),
+      shadowColor: Colors.black.withValues(alpha: 0.12),
+      surfaceTintColor: Colors.transparent,
       margin: const EdgeInsets.only(bottom: AppConstants.paddingMD),
       child: Padding(
         padding: const EdgeInsets.all(AppConstants.paddingMD),

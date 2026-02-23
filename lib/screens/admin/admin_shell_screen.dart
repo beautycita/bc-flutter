@@ -19,6 +19,7 @@ import 'bookings_screen.dart';
 import 'feature_toggles_screen.dart';
 import 'reviews_screen.dart';
 import 'message_salons_screen.dart';
+import 'admin_chat_screen.dart';
 
 /// Index of the currently selected admin tab.
 final adminTabProvider = StateProvider<int>((ref) => 0);
@@ -37,6 +38,7 @@ class AdminShellScreen extends ConsumerWidget {
     _AdminTab(icon: Icons.analytics, label: 'Analitica', section: 'Gestion'),
     _AdminTab(icon: Icons.rate_review, label: 'Resenas', section: 'Gestion'),
     _AdminTab(icon: Icons.message, label: 'Mensajes Salones', section: 'Gestion'),
+    _AdminTab(icon: Icons.chat_rounded, label: 'Chat', section: 'Gestion'),
   ];
 
   /// Tabs visible ONLY to superadmin — system config.
@@ -215,6 +217,8 @@ class _AdminContent extends ConsumerWidget {
         return const ReviewsScreen();
       case 'Mensajes Salones':
         return const MessageSalonsScreen();
+      case 'Chat':
+        return const AdminChatScreen();
       case 'Perfiles de Servicio':
         return const ServiceProfileEditorScreen();
       case 'Configuracion Global':

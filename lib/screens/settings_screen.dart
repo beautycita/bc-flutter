@@ -133,11 +133,12 @@ class SettingsScreen extends ConsumerWidget {
             label: 'Metodos de pago',
             onTap: () => context.push('/settings/payment-methods'),
           ),
-          SettingsTile(
-            icon: Icons.palette_outlined,
-            label: 'Apariencia',
-            onTap: () => context.push('/settings/appearance'),
-          ),
+          if (ref.watch(isSuperAdminProvider).valueOrNull == true)
+            SettingsTile(
+              icon: Icons.palette_outlined,
+              label: 'Apariencia',
+              onTap: () => context.push('/settings/appearance'),
+            ),
           SettingsTile(
             icon: Icons.shield_outlined,
             label: 'Seguridad y cuenta',
@@ -210,6 +211,26 @@ class SettingsScreen extends ConsumerWidget {
               label: 'Registra tu salon',
               onTap: () => context.push('/registro'),
             ),
+          ),
+
+          const SizedBox(height: AppConstants.paddingLG),
+
+          // ── Legal ──
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 8),
+            child: Text(
+              'LEGAL',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.2,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+          ),
+          SettingsTile(
+            icon: Icons.gavel_rounded,
+            label: 'Terminos y politicas',
+            onTap: () => context.push(AppRoutes.legal),
           ),
 
           const SizedBox(height: AppConstants.paddingXL),

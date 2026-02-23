@@ -70,6 +70,22 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
     load();
   }
 
+  /// Returns true if Supabase is initialized and user is authenticated.
+  /// Shows an error toast if not ready.
+  bool _ensureReady(String method) {
+    if (!SupabaseClientService.isInitialized) {
+      debugPrint('ProfileNotifier.$method: Supabase not initialized');
+      ToastService.showError('Sin conexion — intenta de nuevo');
+      return false;
+    }
+    if (SupabaseClientService.currentUserId == null) {
+      debugPrint('ProfileNotifier.$method: userId is null');
+      ToastService.showError('Sesion no activa — reinicia la app');
+      return false;
+    }
+    return true;
+  }
+
   Future<void> load() async {
     if (!SupabaseClientService.isInitialized) return;
     final userId = SupabaseClientService.currentUserId;
@@ -114,16 +130,19 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
   }
 
   Future<void> updateFullName(String name) async {
-    if (!SupabaseClientService.isInitialized) return;
-    final userId = SupabaseClientService.currentUserId;
-    if (userId == null) return;
+    if (!_ensureReady('updateFullName')) return;
+    final userId = SupabaseClientService.currentUserId!;
 
     state = state.copyWith(isLoading: true, error: null);
     try {
-      await SupabaseClientService.client
+      final rows = await SupabaseClientService.client
           .from('profiles')
           .update({'full_name': name})
-          .eq('id', userId);
+          .eq('id', userId)
+          .select('id');
+      if ((rows as List).isEmpty) {
+        throw Exception('No se pudo actualizar — perfil no encontrado');
+      }
       state = state.copyWith(fullName: name, isLoading: false);
     } catch (e) {
       debugPrint('ProfileNotifier.updateFullName error: $e');
@@ -134,16 +153,19 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
   }
 
   Future<void> updateAvatar(String url) async {
-    if (!SupabaseClientService.isInitialized) return;
-    final userId = SupabaseClientService.currentUserId;
-    if (userId == null) return;
+    if (!_ensureReady('updateAvatar')) return;
+    final userId = SupabaseClientService.currentUserId!;
 
     state = state.copyWith(isLoading: true, error: null);
     try {
-      await SupabaseClientService.client
+      final rows = await SupabaseClientService.client
           .from('profiles')
           .update({'avatar_url': url})
-          .eq('id', userId);
+          .eq('id', userId)
+          .select('id');
+      if ((rows as List).isEmpty) {
+        throw Exception('No se pudo actualizar — perfil no encontrado');
+      }
       state = state.copyWith(avatarUrl: url, isLoading: false);
     } catch (e) {
       debugPrint('ProfileNotifier.updateAvatar error: $e');
@@ -197,17 +219,19 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
     required double lat,
     required double lng,
   }) async {
-    if (!SupabaseClientService.isInitialized) return;
-    final userId = SupabaseClientService.currentUserId;
-    if (userId == null) return;
+    if (!_ensureReady('updateHomeLocation')) return;
+    final userId = SupabaseClientService.currentUserId!;
 
     state = state.copyWith(isLoading: true, error: null);
     try {
-      await SupabaseClientService.client.from('profiles').update({
+      final rows = await SupabaseClientService.client.from('profiles').update({
         'home_address': address,
         'home_lat': lat,
         'home_lng': lng,
-      }).eq('id', userId);
+      }).eq('id', userId).select('id');
+      if ((rows as List).isEmpty) {
+        throw Exception('No se pudo actualizar — perfil no encontrado');
+      }
       state = state.copyWith(
         homeAddress: address,
         homeLat: lat,
@@ -224,16 +248,18 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
 
   /// Save phone number to profile (unverified). Returns true on success.
   Future<bool> updatePhone(String phone) async {
-    if (!SupabaseClientService.isInitialized) return false;
-    final userId = SupabaseClientService.currentUserId;
-    if (userId == null) return false;
+    if (!_ensureReady('updatePhone')) return false;
+    final userId = SupabaseClientService.currentUserId!;
 
     state = state.copyWith(isLoading: true, error: null);
     try {
-      await SupabaseClientService.client.from('profiles').update({
+      final rows = await SupabaseClientService.client.from('profiles').update({
         'phone': phone,
         'phone_verified_at': null,
-      }).eq('id', userId);
+      }).eq('id', userId).select('id');
+      if ((rows as List).isEmpty) {
+        throw Exception('No se pudo actualizar — perfil no encontrado');
+      }
       state = state.copyWith(phone: phone, phoneVerified: false, isLoading: false);
       return true;
     } catch (e) {
@@ -245,7 +271,7 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
     }
   }
 
-  /// Send OTP to the saved phone number via Supabase Auth.
+  /// Send OTP to the saved phone number via phone-verify edge function.
   Future<bool> sendPhoneOtp() async {
     if (!SupabaseClientService.isInitialized) return false;
     final phone = state.phone;
@@ -253,7 +279,15 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
 
     state = state.copyWith(isLoading: true, error: null);
     try {
-      await SupabaseClientService.client.auth.signInWithOtp(phone: phone);
+      final res = await SupabaseClientService.client.functions.invoke(
+        'phone-verify',
+        body: {'action': 'send-code', 'phone': phone},
+      );
+      final data = res.data as Map<String, dynamic>?;
+      if (data == null || data['sent'] != true) {
+        throw Exception(data?['error'] ?? 'No se pudo enviar el codigo');
+      }
+      debugPrint('OTP sent via ${data['channel']}');
       state = state.copyWith(isLoading: false);
       return true;
     } catch (e) {
@@ -265,24 +299,22 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
     }
   }
 
-  /// Verify phone OTP and mark phone as verified.
+  /// Verify phone OTP via phone-verify edge function.
   Future<bool> verifyPhoneOtp(String otp) async {
     if (!SupabaseClientService.isInitialized) return false;
     final phone = state.phone;
-    final userId = SupabaseClientService.currentUserId;
-    if (phone == null || userId == null) return false;
+    if (phone == null) return false;
 
     state = state.copyWith(isLoading: true, error: null);
     try {
-      await SupabaseClientService.client.auth.verifyOTP(
-        phone: phone,
-        token: otp,
-        type: OtpType.sms,
+      final res = await SupabaseClientService.client.functions.invoke(
+        'phone-verify',
+        body: {'action': 'verify-code', 'phone': phone, 'code': otp},
       );
-      // Mark verified in profiles table
-      await SupabaseClientService.client.from('profiles').update({
-        'phone_verified_at': DateTime.now().toUtc().toIso8601String(),
-      }).eq('id', userId);
+      final data = res.data as Map<String, dynamic>?;
+      if (data == null || data['verified'] != true) {
+        throw Exception(data?['error'] ?? 'Codigo incorrecto');
+      }
       state = state.copyWith(phoneVerified: true, isLoading: false);
       return true;
     } catch (e) {
@@ -295,15 +327,17 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
   }
 
   Future<void> updateBirthday(DateTime? birthday) async {
-    if (!SupabaseClientService.isInitialized) return;
-    final userId = SupabaseClientService.currentUserId;
-    if (userId == null) return;
+    if (!_ensureReady('updateBirthday')) return;
+    final userId = SupabaseClientService.currentUserId!;
 
     state = state.copyWith(isLoading: true, error: null);
     try {
-      await SupabaseClientService.client.from('profiles').update({
+      final rows = await SupabaseClientService.client.from('profiles').update({
         'birthday': birthday?.toIso8601String().split('T').first,
-      }).eq('id', userId);
+      }).eq('id', userId).select('id');
+      if ((rows as List).isEmpty) {
+        throw Exception('No se pudo actualizar — perfil no encontrado');
+      }
       if (birthday != null) {
         state = state.copyWith(birthday: birthday, isLoading: false);
       } else {
@@ -318,15 +352,17 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
   }
 
   Future<void> updateGender(String? gender) async {
-    if (!SupabaseClientService.isInitialized) return;
-    final userId = SupabaseClientService.currentUserId;
-    if (userId == null) return;
+    if (!_ensureReady('updateGender')) return;
+    final userId = SupabaseClientService.currentUserId!;
 
     state = state.copyWith(isLoading: true, error: null);
     try {
-      await SupabaseClientService.client.from('profiles').update({
+      final rows = await SupabaseClientService.client.from('profiles').update({
         'gender': gender,
-      }).eq('id', userId);
+      }).eq('id', userId).select('id');
+      if ((rows as List).isEmpty) {
+        throw Exception('No se pudo actualizar — perfil no encontrado');
+      }
       if (gender != null) {
         state = state.copyWith(gender: gender, isLoading: false);
       } else {
@@ -341,16 +377,19 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
   }
 
   Future<bool> updateUsername(String username) async {
-    if (!SupabaseClientService.isInitialized) return false;
-    final userId = SupabaseClientService.currentUserId;
-    if (userId == null) return false;
+    if (!_ensureReady('updateUsername')) return false;
+    final userId = SupabaseClientService.currentUserId!;
 
     state = state.copyWith(isLoading: true, error: null);
     try {
-      await SupabaseClientService.client
+      final rows = await SupabaseClientService.client
           .from('profiles')
           .update({'username': username})
-          .eq('id', userId);
+          .eq('id', userId)
+          .select('id');
+      if ((rows as List).isEmpty) {
+        throw Exception('No se pudo actualizar — perfil no encontrado');
+      }
       state = state.copyWith(isLoading: false);
       return true;
     } catch (e) {

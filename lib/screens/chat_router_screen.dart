@@ -1,35 +1,39 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../config/theme_extension.dart';
 import '../providers/chat_provider.dart';
 
-/// Smart router that skips the chat list when there are no unread messages
-/// and goes directly to the Aphrodite conversation.
+const _prefHasSeenAphrodite = 'has_seen_aphrodite';
+
+/// Smart router: first-time users go to Aphrodite intro.
+/// After that, always go to chat list.
 class ChatRouterScreen extends ConsumerWidget {
   const ChatRouterScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final threadsAsync = ref.watch(chatThreadsProvider);
+    return FutureBuilder<bool>(
+      future: SharedPreferences.getInstance()
+          .then((p) => p.getBool(_prefHasSeenAphrodite) ?? false),
+      builder: (context, snap) {
+        if (!snap.hasData) return _LoadingView();
 
-    return threadsAsync.when(
-      data: (threads) {
-        // Count non-Aphrodite threads with unread messages
-        final unreadCount = threads
-            .where((t) => t.contactType != 'aphrodite' && t.unreadCount > 0)
-            .length;
+        final hasSeenAphrodite = snap.data!;
 
-        if (unreadCount > 0) {
-          // Has unreads — show chat list
+        if (hasSeenAphrodite) {
+          // Already met Aphrodite — always show chat list
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (context.mounted) context.pushReplacement('/chat/list');
           });
         } else {
-          // No unreads — go straight to Aphrodite
+          // First time — go to Aphrodite, then mark as seen
           WidgetsBinding.instance.addPostFrameCallback((_) async {
             if (!context.mounted) return;
+            // Mark seen before navigating
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setBool(_prefHasSeenAphrodite, true);
             try {
               final aphThread = await ref
                   .read(aphroditeThreadProvider.future)
@@ -45,15 +49,6 @@ class ChatRouterScreen extends ConsumerWidget {
           });
         }
 
-        // Show loading spinner while routing
-        return _LoadingView();
-      },
-      loading: () => _LoadingView(),
-      error: (_, __) {
-        // Fallback to chat list on error
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (context.mounted) context.pushReplacement('/chat/list');
-        });
         return _LoadingView();
       },
     );

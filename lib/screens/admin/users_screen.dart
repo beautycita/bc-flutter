@@ -105,6 +105,23 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
     }
   }
 
+  String _sourceLabel(String? source) {
+    switch (source) {
+      case 'apk':
+        return 'APK (Android)';
+      case 'web':
+        return '.com (Web)';
+      case 'pwa':
+        return 'PWA';
+      case 'ipa':
+        return 'IPA (iOS)';
+      case 'exe':
+        return 'EXE (Windows)';
+      default:
+        return source ?? 'Desconocido';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final usersAsync = ref.watch(adminUsersProvider);
@@ -267,7 +284,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        user.fullName ?? user.username,
+                                        '@${user.username}',
                                         style: GoogleFonts.poppins(
                                           fontSize: 14,
                                           fontWeight: FontWeight.w600,
@@ -276,16 +293,17 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
                                               : colors.onSurface,
                                         ),
                                       ),
-                                      Text(
-                                        '@${user.username}',
-                                        style: GoogleFonts.nunito(
-                                          fontSize: 12,
-                                          color: colors.onSurface.withValues(alpha: 0.5),
+                                      if (user.fullName != null && user.fullName!.isNotEmpty)
+                                        Text(
+                                          user.fullName!,
+                                          style: GoogleFonts.nunito(
+                                            fontSize: 12,
+                                            color: colors.onSurface.withValues(alpha: 0.6),
+                                          ),
                                         ),
-                                      ),
                                       if (user.createdAt != null)
                                         Text(
-                                          user.createdAt!.split('T')[0],
+                                          _formatLocalDate(user.createdAt!),
                                           style: GoogleFonts.nunito(
                                             fontSize: 11,
                                             color: colors.onSurface.withValues(alpha: 0.4),
@@ -452,12 +470,19 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
 
                   const SizedBox(height: 16),
 
-                  // Detail rows
+                  // Profile details
                   _DetailSection(children: [
                     _DetailRow(
                       icon: Icons.fingerprint_rounded,
                       label: 'ID',
                       value: user.id.substring(0, 8),
+                      iconColor: dimIcon,
+                      valueColor: dim,
+                    ),
+                    _DetailRow(
+                      icon: Icons.install_mobile_rounded,
+                      label: 'Registro via',
+                      value: _sourceLabel(user.registrationSource),
                       iconColor: dimIcon,
                       valueColor: dim,
                     ),
@@ -496,7 +521,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
                     _DetailRow(
                       icon: Icons.calendar_today_rounded,
                       label: 'Registro',
-                      value: user.createdAt?.split('T')[0] ?? '-',
+                      value: user.createdAt != null ? _formatLocalDate(user.createdAt!) : '-',
                       iconColor: dimIcon,
                       valueColor: dim,
                     ),
@@ -504,7 +529,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
                       _DetailRow(
                         icon: Icons.update_rounded,
                         label: 'Actualizado',
-                        value: user.updatedAt!.split('T')[0],
+                        value: _formatLocalDate(user.updatedAt!),
                         iconColor: dimIcon,
                         valueColor: dim,
                       ),
@@ -516,6 +541,108 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
                       valueColor: user.uberLinked ? Colors.green : dim,
                     ),
                   ]),
+
+                  const SizedBox(height: 12),
+
+                  // Auth / login methods section
+                  Consumer(
+                    builder: (ctx, ref, _) {
+                      final authAsync =
+                          ref.watch(adminUserAuthInfoProvider(user.id));
+                      return authAsync.when(
+                        data: (auth) {
+                          if (auth.isEmpty) return const SizedBox.shrink();
+                          final providers =
+                              (auth['providers'] as List?)?.cast<String>() ??
+                                  [];
+                          final email = auth['email'] as String?;
+                          final phone = auth['phone'] as String?;
+                          final emailConfirmed =
+                              auth['email_confirmed'] as bool? ?? false;
+                          final phoneConfirmed =
+                              auth['phone_confirmed'] as bool? ?? false;
+                          final hasPassword =
+                              auth['has_password'] as bool? ?? false;
+                          final isAnonymous =
+                              auth['is_anonymous'] as bool? ?? false;
+
+                          return _DetailSection(children: [
+                            _DetailRow(
+                              icon: Icons.login_rounded,
+                              label: 'Providers',
+                              value: providers.isEmpty
+                                  ? (isAnonymous ? 'anonimo' : '-')
+                                  : providers.join(', '),
+                              iconColor: dimIcon,
+                              valueColor: dim,
+                            ),
+                            if (email != null && email.isNotEmpty)
+                              _DetailRow(
+                                icon: Icons.email_rounded,
+                                label: 'Email',
+                                value: email,
+                                iconColor: dimIcon,
+                                valueColor: colors.onSurface
+                                    .withValues(alpha: 0.7),
+                              ),
+                            _DetailRow(
+                              icon: Icons.verified_rounded,
+                              label: 'Email verificado',
+                              value: emailConfirmed ? 'Si' : 'No',
+                              iconColor: dimIcon,
+                              valueColor:
+                                  emailConfirmed ? Colors.green : dim,
+                            ),
+                            if (phone != null && phone.isNotEmpty)
+                              _DetailRow(
+                                icon: Icons.sms_rounded,
+                                label: 'Tel. auth',
+                                value: phone,
+                                iconColor: dimIcon,
+                                valueColor: colors.onSurface
+                                    .withValues(alpha: 0.7),
+                              ),
+                            _DetailRow(
+                              icon: Icons.phone_android_rounded,
+                              label: 'Tel. verificado',
+                              value: phoneConfirmed ? 'Si' : 'No',
+                              iconColor: dimIcon,
+                              valueColor:
+                                  phoneConfirmed ? Colors.green : dim,
+                            ),
+                            _DetailRow(
+                              icon: Icons.lock_rounded,
+                              label: 'Password',
+                              value: hasPassword ? 'Si' : 'No',
+                              iconColor: dimIcon,
+                              valueColor: hasPassword ? Colors.green : dim,
+                            ),
+                            _DetailRow(
+                              icon: Icons.fingerprint_rounded,
+                              label: 'Biometrico',
+                              value: isAnonymous ? 'Si (anonimo)' : 'No',
+                              iconColor: dimIcon,
+                              valueColor: dim,
+                            ),
+                          ]);
+                        },
+                        loading: () => Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Center(
+                            child: SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: colors.primary,
+                              ),
+                            ),
+                          ),
+                        ),
+                        error: (_, __) => const SizedBox.shrink(),
+                      );
+                    },
+                  ),
 
                   const SizedBox(height: 20),
                   const Divider(height: 1),
@@ -763,6 +890,12 @@ class _DetailSection extends StatelessWidget {
       ),
     );
   }
+}
+
+String _formatLocalDate(String iso) {
+  final dt = DateTime.tryParse(iso)?.toLocal();
+  if (dt == null) return iso.split('T')[0];
+  return '${dt.day}/${dt.month}/${dt.year}';
 }
 
 class _DetailRow extends StatelessWidget {

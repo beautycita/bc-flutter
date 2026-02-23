@@ -191,6 +191,17 @@ class _BeautyCitaAppState extends ConsumerState<BeautyCitaApp> {
       return;
     }
 
+    // Salon profile deep link → redirect to registration
+    if (path.startsWith('/salon/')) {
+      final salonId = path.replaceFirst('/salon/', '');
+      if (salonId.isNotEmpty) {
+        supabaseReady.future.then((_) {
+          if (mounted) AppRoutes.router.go('/registro?ref=$salonId');
+        });
+        return;
+      }
+    }
+
     // Cita Express walk-in QR deep link
     if (path.startsWith('/cita-express/')) {
       final bizId = path.replaceFirst('/cita-express/', '');

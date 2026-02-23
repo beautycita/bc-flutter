@@ -979,6 +979,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
     if (picked != null && mounted) {
       await ref.read(profileProvider.notifier).updateBirthday(picked);
+      if (mounted && ref.read(profileProvider).error == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Fecha de nacimiento guardada'),
+            backgroundColor: Colors.green.shade600,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
     }
   }
 
@@ -1014,9 +1024,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     label: _genderLabel(g),
                     subtitle: '',
                     selected: ref.read(profileProvider).gender == g,
-                    onTap: () {
+                    onTap: () async {
                       Navigator.pop(ctx);
-                      ref.read(profileProvider.notifier).updateGender(g);
+                      await ref.read(profileProvider.notifier).updateGender(g);
+                      if (mounted && ref.read(profileProvider).error == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: const Text('Genero guardado'),
+                            backgroundColor: Colors.green.shade600,
+                            behavior: SnackBarBehavior.floating,
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      }
                     },
                   ),
               ],

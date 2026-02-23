@@ -48,23 +48,10 @@ class SalonManagementScreen extends ConsumerStatefulWidget {
 }
 
 class _SalonManagementScreenState
-    extends ConsumerState<SalonManagementScreen>
-    with SingleTickerProviderStateMixin {
-  late final TabController _tabCtrl;
+    extends ConsumerState<SalonManagementScreen> {
+  int _selectedTab = 0; // 0 = Salones, 1 = Pipeline
   String _searchQuery = '';
   int? _tierFilter;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabCtrl = TabController(length: 2, vsync: this);
-  }
-
-  @override
-  void dispose() {
-    _tabCtrl.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -72,26 +59,32 @@ class _SalonManagementScreenState
 
     return Column(
       children: [
-        TabBar(
-          controller: _tabCtrl,
-          labelColor: colors.primary,
-          unselectedLabelColor: colors.onSurface.withValues(alpha: 0.5),
-          indicatorColor: colors.primary,
-          labelStyle: GoogleFonts.poppins(
-              fontSize: 13, fontWeight: FontWeight.w600),
-          tabs: const [
-            Tab(text: 'Salones'),
-            Tab(text: 'Pipeline'),
-          ],
-        ),
-        Expanded(
-          child: TabBarView(
-            controller: _tabCtrl,
+        // Chip-based tab selector
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppConstants.paddingMD,
+            AppConstants.paddingSM,
+            AppConstants.paddingMD,
+            AppConstants.paddingSM,
+          ),
+          child: Row(
             children: [
-              _buildSalonsList(),
-              _buildPipeline(),
+              _TabChip(
+                label: 'Salones',
+                selected: _selectedTab == 0,
+                onTap: () => setState(() => _selectedTab = 0),
+              ),
+              const SizedBox(width: 8),
+              _TabChip(
+                label: 'Pipeline',
+                selected: _selectedTab == 1,
+                onTap: () => setState(() => _selectedTab = 1),
+              ),
             ],
           ),
+        ),
+        Expanded(
+          child: _selectedTab == 0 ? _buildSalonsList() : _buildPipeline(),
         ),
       ],
     );
@@ -111,6 +104,26 @@ class _SalonManagementScreenState
           if (_tierFilter != null && b.tier != _tierFilter) return false;
           return true;
         }).toList();
+
+        if (filtered.isEmpty && _searchQuery.isEmpty && _tierFilter == null) {
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.store_outlined,
+                    size: 48, color: colors.onSurface.withValues(alpha: 0.3)),
+                const SizedBox(height: 12),
+                Text(
+                  'Sin salones registrados',
+                  style: GoogleFonts.nunito(
+                    fontSize: 15,
+                    color: colors.onSurface.withValues(alpha: 0.5),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
 
         return Column(
           children: [
@@ -178,9 +191,27 @@ class _SalonManagementScreenState
       },
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(
-        child: Text('Error: $e',
-            style: GoogleFonts.nunito(
-                color: colors.onSurface.withValues(alpha: 0.5))),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.error_outline,
+                size: 48, color: colors.onSurface.withValues(alpha: 0.3)),
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Text('Error cargando salones:\n$e',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.nunito(
+                      color: colors.onSurface.withValues(alpha: 0.5))),
+            ),
+            const SizedBox(height: 16),
+            TextButton.icon(
+              onPressed: () => ref.invalidate(adminBusinessesProvider),
+              icon: const Icon(Icons.refresh, size: 18),
+              label: const Text('Reintentar'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -298,9 +329,84 @@ class _SalonManagementScreenState
       },
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(
-        child: Text('Error: $e',
-            style: GoogleFonts.nunito(
-                color: colors.onSurface.withValues(alpha: 0.5))),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.error_outline,
+                size: 48, color: colors.onSurface.withValues(alpha: 0.3)),
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Text('Error cargando pipeline:\n$e',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.nunito(
+                      color: colors.onSurface.withValues(alpha: 0.5))),
+            ),
+            const SizedBox(height: 16),
+            TextButton.icon(
+              onPressed: () => ref.invalidate(_pipelineStatsProvider),
+              icon: const Icon(Icons.refresh, size: 18),
+              label: const Text('Reintentar'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TabChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _TabChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? colors.primary : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: selected
+                ? colors.primary
+                : colors.onSurface.withValues(alpha: 0.15),
+          ),
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                    color: colors.primary.withValues(alpha: 0.2),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: selected ? Colors.white : colors.onSurface,
+          ),
+        ),
       ),
     );
   }
@@ -332,7 +438,12 @@ class _SalonTile extends StatelessWidget {
       color: Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppConstants.radiusSM),
+        side: BorderSide(
+          color: colors.onSurface.withValues(alpha: 0.08),
+        ),
       ),
+      shadowColor: Colors.black.withValues(alpha: 0.08),
+      surfaceTintColor: Colors.transparent,
       margin: const EdgeInsets.only(bottom: 4),
       child: Padding(
         padding: const EdgeInsets.all(AppConstants.paddingMD),
@@ -422,7 +533,12 @@ class _PipelineCard extends StatelessWidget {
       color: Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+        side: BorderSide(
+          color: colors.onSurface.withValues(alpha: 0.08),
+        ),
       ),
+      shadowColor: Colors.black.withValues(alpha: 0.08),
+      surfaceTintColor: Colors.transparent,
       margin: const EdgeInsets.only(bottom: AppConstants.paddingMD),
       child: Padding(
         padding: const EdgeInsets.all(AppConstants.paddingMD),

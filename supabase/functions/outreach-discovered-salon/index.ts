@@ -369,6 +369,115 @@ serve(async (req: Request) => {
       return jsonResponse({ imported, skipped, errors: errors.slice(0, 10) });
     }
 
+    // ───────── COLD_OUTREACH: admin sends custom message to a salon ─────────
+    if (action === "cold_outreach") {
+      // Verify admin role
+      const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        global: { headers: { Authorization: `Bearer ${token}` } },
+      });
+      const { data: { user }, error: authError } = await userClient.auth.getUser();
+      if (authError || !user) {
+        return jsonResponse({ error: "Unauthorized" }, 401);
+      }
+
+      const { data: profile } = await serviceClient
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+
+      if (!profile || !["admin", "superadmin"].includes(profile.role)) {
+        return jsonResponse({ error: "Admin access required" }, 403);
+      }
+
+      const { discovered_salon_id, message } = params;
+      if (!discovered_salon_id || !message) {
+        return jsonResponse({ error: "discovered_salon_id and message required" }, 400);
+      }
+
+      // Fetch salon details
+      const { data: salon, error: salonErr } = await serviceClient
+        .from("discovered_salons")
+        .select("*")
+        .eq("id", discovered_salon_id)
+        .single();
+
+      if (salonErr || !salon) {
+        return jsonResponse({ error: "Salon not found" }, 404);
+      }
+
+      const salonPhone = salon.whatsapp || salon.phone;
+      const recipientPhone = LIVE_MODE ? salonPhone : TEST_RECIPIENT;
+      const messagePrefix = LIVE_MODE ? "" : `[TEST - Para: ${salon.business_name} | ${salonPhone}]\n\n`;
+
+      if (!recipientPhone) {
+        return jsonResponse({ error: "Salon has no phone number" }, 400);
+      }
+
+      try {
+        // Check if recipient is on WhatsApp
+        const checkRes = await fetch(`${WA_API_URL}/api/wa/check`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${WA_API_TOKEN}`,
+          },
+          body: JSON.stringify({ phone: recipientPhone }),
+        });
+        const checkData = await checkRes.json();
+
+        if (!checkData.onWhatsApp) {
+          return jsonResponse({ error: "Recipient not on WhatsApp", phone: recipientPhone }, 400);
+        }
+
+        // Send the message
+        const sendRes = await fetch(`${WA_API_URL}/api/wa/send`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${WA_API_TOKEN}`,
+          },
+          body: JSON.stringify({
+            phone: recipientPhone,
+            message: messagePrefix + message,
+          }),
+        });
+        const sendData = await sendRes.json();
+        const sent = sendData.sent === true;
+
+        // Log to outreach log table
+        await serviceClient
+          .from("salon_outreach_log")
+          .insert({
+            discovered_salon_id,
+            channel: "whatsapp",
+            recipient_phone: recipientPhone,
+            message_text: message,
+            interest_count: salon.interest_count ?? 0,
+            test_mode: !LIVE_MODE,
+          });
+
+        // Update salon outreach tracking
+        const now = new Date().toISOString();
+        await serviceClient
+          .from("discovered_salons")
+          .update({
+            status: "outreach_sent",
+            last_outreach_at: now,
+            outreach_count: (salon.outreach_count ?? 0) + 1,
+            outreach_channel: "whatsapp",
+          })
+          .eq("id", discovered_salon_id);
+
+        console.log(`[COLD_OUTREACH] ${LIVE_MODE ? "LIVE" : "TEST"} Salon: ${salon.business_name}, Sent: ${sent}`);
+
+        return jsonResponse({ sent, salon_name: salon.business_name });
+      } catch (e) {
+        console.error(`[COLD_OUTREACH] WA send failed: ${e}`);
+        return jsonResponse({ error: `WA send failed: ${e}` }, 500);
+      }
+    }
+
     return jsonResponse({ error: `Unknown action: ${action}` }, 400);
   } catch (err) {
     return jsonResponse({ error: String(err) }, 500);

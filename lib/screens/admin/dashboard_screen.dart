@@ -4,7 +4,6 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../config/constants.dart';
 import '../../providers/admin_provider.dart';
 import 'admin_shell_screen.dart';
-import 'recent_activity_screen.dart';
 
 /// Index mapping from stat tile to admin tab index.
 /// Admin tabs order: Dashboard(0), Usuarios(1), Solicitudes(2), Citas(3),
@@ -113,13 +112,9 @@ class DashboardScreen extends ConsumerWidget {
 
           const SizedBox(height: AppConstants.paddingLG),
 
-          // Recent activity header — tappable link
+          // Recent activity header — tappable link opens popup
           GestureDetector(
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => const RecentActivityScreen(),
-              ),
-            ),
+            onTap: () => _showFullActivity(context, ref),
             child: Row(
               children: [
                 Text(
@@ -133,7 +128,7 @@ class DashboardScreen extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(width: 4),
-                Icon(Icons.arrow_forward_ios_rounded,
+                Icon(Icons.open_in_new_rounded,
                     size: 14, color: colors.primary),
               ],
             ),
@@ -240,6 +235,107 @@ class DashboardScreen extends ConsumerWidget {
     }
   }
 
+  void _showFullActivity(BuildContext context, WidgetRef ref) {
+    final colors = Theme.of(context).colorScheme;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => DraggableScrollableSheet(
+        initialChildSize: 0.75,
+        minChildSize: 0.4,
+        maxChildSize: 0.92,
+        builder: (ctx, scrollController) => Container(
+          decoration: const BoxDecoration(
+            color: Color(0xFFF5F3FF),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              // Handle bar + header
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 12, 0),
+                child: Column(
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Actividad Reciente',
+                            style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 18,
+                              color: colors.onSurface,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, size: 22),
+                          onPressed: () => Navigator.pop(ctx),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              // Activity list
+              Expanded(
+                child: Consumer(
+                  builder: (ctx, ref, _) {
+                    final activityAsync = ref.watch(adminFullActivityProvider);
+                    return activityAsync.when(
+                      data: (items) {
+                        if (items.isEmpty) {
+                          return Center(
+                            child: Text(
+                              'Sin actividad reciente',
+                              style: GoogleFonts.nunito(
+                                fontSize: 16,
+                                color: colors.onSurface.withValues(alpha: 0.5),
+                              ),
+                            ),
+                          );
+                        }
+                        return ListView.separated(
+                          controller: scrollController,
+                          padding: const EdgeInsets.all(AppConstants.paddingMD),
+                          itemCount: items.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 8),
+                          itemBuilder: (context, i) =>
+                              _FullActivityTile(item: items[i]),
+                        );
+                      },
+                      loading: () => const Center(
+                          child: CircularProgressIndicator()),
+                      error: (e, _) => Center(
+                        child: Text('Error: $e',
+                            style: GoogleFonts.nunito(color: colors.error)),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   static String _timeAgo(String? iso) {
     if (iso == null) return '';
     try {
@@ -250,6 +346,205 @@ class DashboardScreen extends ConsumerWidget {
       if (diff.inHours < 24) return '${diff.inHours}h';
       if (diff.inDays < 30) return '${diff.inDays}d';
       return '${(diff.inDays / 30).floor()}mo';
+    } catch (_) {
+      return '';
+    }
+  }
+}
+
+class _FullActivityTile extends StatelessWidget {
+  final Map<String, dynamic> item;
+
+  const _FullActivityTile({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    final type = item['type'] as String;
+    final colors = Theme.of(context).colorScheme;
+
+    final IconData icon;
+    final Color iconColor;
+    switch (type) {
+      case 'booking':
+        icon = Icons.calendar_today;
+        iconColor = Colors.orange;
+      case 'dispute':
+        icon = Icons.gavel;
+        iconColor = Colors.red;
+      default:
+        icon = Icons.person_add;
+        iconColor = colors.primary;
+    }
+
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+        onTap: () => _showDetail(context),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+            border: Border.all(
+              color: colors.onSurface.withValues(alpha: 0.08),
+            ),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: iconColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: iconColor, size: 20),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item['description'] as String,
+                      style: GoogleFonts.nunito(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: colors.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _timeAgo(item['created_at'] as String?),
+                      style: GoogleFonts.nunito(
+                        fontSize: 12,
+                        color: colors.onSurface.withValues(alpha: 0.5),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded,
+                  color: colors.onSurface.withValues(alpha: 0.3), size: 20),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showDetail(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final detail = item['detail'] as String? ?? 'Sin detalles';
+    final type = item['type'] as String;
+
+    final String title;
+    switch (type) {
+      case 'booking':
+        title = 'Detalle de Cita';
+      case 'dispute':
+        title = 'Detalle de Disputa';
+      default:
+        title = 'Detalle de Usuario';
+    }
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        margin: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Text(
+              title,
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: colors.onSurface,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              _timeAgo(item['created_at'] as String?),
+              style: GoogleFonts.nunito(
+                fontSize: 13,
+                color: colors.onSurface.withValues(alpha: 0.5),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ...detail.split('\n').map((line) {
+              final parts = line.split(':');
+              if (parts.length >= 2) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        width: 100,
+                        child: Text(
+                          '${parts[0].trim()}:',
+                          style: GoogleFonts.nunito(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: colors.onSurface.withValues(alpha: 0.7),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: Text(
+                          parts.sublist(1).join(':').trim(),
+                          style: GoogleFonts.nunito(
+                            fontSize: 14,
+                            color: colors.onSurface,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text(line, style: GoogleFonts.nunito(fontSize: 14)),
+              );
+            }),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static String _timeAgo(String? iso) {
+    if (iso == null) return '';
+    try {
+      final dt = DateTime.parse(iso);
+      final diff = DateTime.now().difference(dt);
+      if (diff.inMinutes < 1) return 'ahora';
+      if (diff.inMinutes < 60) return 'hace ${diff.inMinutes}m';
+      if (diff.inHours < 24) return 'hace ${diff.inHours}h';
+      if (diff.inDays < 30) return 'hace ${diff.inDays}d';
+      return 'hace ${(diff.inDays / 30).floor()} meses';
     } catch (_) {
       return '';
     }

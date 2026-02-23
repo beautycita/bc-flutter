@@ -266,7 +266,7 @@ ThemeData buildThemeFromPalette(BCPalette palette, {double fontScale = 1.0, doub
 // During migration, screens can use EITHER the old statics OR Theme.of(context).
 class BeautyCitaTheme {
   // Brand Colors — point at Rose & Gold palette
-  static const Color primaryRose = Color(0xFFC2185B);
+  static const Color primaryRose = Color(0xFF660033);
   static const Color secondaryGold = Color(0xFFFFB300);
   static const Color surfaceCream = Color(0xFFFFF8F0);
   static const Color backgroundWhite = Color(0xFFFFFFFF);
@@ -280,7 +280,7 @@ class BeautyCitaTheme {
   static const Color accentTealLight = Color(0xFFE0F2F1);
 
   static const LinearGradient primaryGradient = LinearGradient(
-    colors: [primaryRose, Color(0xFFD81B60)],
+    colors: [primaryRose, Color(0xFF990033)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );

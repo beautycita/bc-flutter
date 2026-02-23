@@ -661,7 +661,7 @@ class _HeroHeader extends StatelessWidget {
           colors: [
             colors.primary,
             colors.primary.withValues(alpha: 0.85),
-            const Color(0xFFD81B60),
+            const Color(0xFF990033),
           ],
         ),
       ),
@@ -761,7 +761,7 @@ class _SectionCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFC2185B).withValues(alpha: 0.04),
+            color: const Color(0xFF660033).withValues(alpha: 0.04),
             blurRadius: 16,
             offset: const Offset(0, 4),
           ),
@@ -957,7 +957,7 @@ class _RegisterButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
           gradient: enabled
               ? LinearGradient(
-                  colors: [colors.primary, const Color(0xFFD81B60)],
+                  colors: [colors.primary, const Color(0xFF990033)],
                   begin: Alignment.centerLeft,
                   end: Alignment.centerRight,
                 )
