@@ -44,6 +44,11 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
         ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.support_agent_rounded),
+            tooltip: 'Soporte',
+            onPressed: () => _openSupportChat(),
+          ),
+          IconButton(
             icon: const Icon(Icons.search_rounded),
             onPressed: () {
               // Future: search through conversations
@@ -69,15 +74,23 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
             ),
             itemBuilder: (context, index) {
               final thread = threads[index];
-              final row = thread.isAphrodite
-                  ? _AphroditeRow(
-                      thread: thread,
-                      onTap: () => context.push('/chat/${thread.id}'),
-                    )
-                  : _ThreadRow(
-                      thread: thread,
-                      onTap: () => context.push('/chat/${thread.id}'),
-                    );
+              final Widget row;
+              if (thread.isAphrodite) {
+                row = _AphroditeRow(
+                  thread: thread,
+                  onTap: () => context.push('/chat/${thread.id}'),
+                );
+              } else if (thread.isSupport) {
+                row = _SupportRow(
+                  thread: thread,
+                  onTap: () => context.push('/chat/${thread.id}'),
+                );
+              } else {
+                row = _ThreadRow(
+                  thread: thread,
+                  onTap: () => context.push('/chat/${thread.id}'),
+                );
+              }
               return Dismissible(
                 key: ValueKey(thread.id),
                 direction: DismissDirection.endToStart,
@@ -191,6 +204,13 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
       context.push('/chat/${aphThread.id}');
     }
   }
+
+  void _openSupportChat() async {
+    final supportThread = await ref.read(supportThreadProvider.future);
+    if (supportThread != null && mounted) {
+      context.push('/chat/${supportThread.id}');
+    }
+  }
 }
 
 /// Aphrodite row with gold accent and special styling.
@@ -297,6 +317,132 @@ class _AphroditeRow extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                     decoration: BoxDecoration(
                       color: Theme.of(context).colorScheme.primary,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '${thread.unreadCount}',
+                      style: GoogleFonts.nunito(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Support row with maroon accent.
+class _SupportRow extends StatelessWidget {
+  final ChatThread thread;
+  final VoidCallback onTap;
+
+  const _SupportRow({required this.thread, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF7B1038), Color(0xFFC2185B)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFC2185B).withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: const Center(
+                child: Icon(Icons.support_agent_rounded, color: Colors.white, size: 28),
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        'Soporte',
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFC2185B).withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          'LIVE',
+                          style: GoogleFonts.poppins(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFFC2185B),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    thread.lastMessageText ?? 'Ayuda y soporte',
+                    style: GoogleFonts.nunito(
+                      fontSize: 14,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                      fontWeight: thread.unreadCount > 0
+                          ? FontWeight.w700
+                          : FontWeight.w400,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  _formatTime(thread.lastMessageAt),
+                  style: GoogleFonts.nunito(
+                    fontSize: 12,
+                    color: thread.unreadCount > 0
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                  ),
+                ),
+                if (thread.unreadCount > 0) ...[
+                  const SizedBox(height: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFC2185B),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(

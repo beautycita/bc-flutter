@@ -60,6 +60,8 @@ class ChatThread {
     switch (contactType) {
       case 'aphrodite':
         return 'Afrodita';
+      case 'support':
+        return 'Soporte BeautyCita';
       default:
         return contactId ?? 'Chat';
     }
@@ -67,6 +69,9 @@ class ChatThread {
 
   /// Whether this is an Aphrodite AI thread
   bool get isAphrodite => contactType == 'aphrodite';
+
+  /// Whether this is a support thread
+  bool get isSupport => contactType == 'support';
 
   ChatThread copyWith({
     String? lastMessageText,

@@ -48,6 +48,19 @@ class _ChatConversationScreenState
     }
   }
 
+  bool get _isSupport {
+    final threadsAsync = ref.read(chatThreadsProvider);
+    return threadsAsync.whenOrNull(
+      data: (threads) {
+        try {
+          return threads.firstWhere((t) => t.id == widget.threadId).isSupport;
+        } catch (_) {
+          return false;
+        }
+      },
+    ) ?? false;
+  }
+
   Future<void> _sendMessage() async {
     final text = _textController.text.trim();
     if (text.isEmpty || _isSending) return;
@@ -70,7 +83,11 @@ class _ChatConversationScreenState
     });
     _scrollToBottom();
 
-    await ref.read(sendMessageProvider.notifier).send(widget.threadId, text);
+    if (_isSupport) {
+      await ref.read(sendSupportMessageProvider.notifier).send(widget.threadId, text);
+    } else {
+      await ref.read(sendMessageProvider.notifier).send(widget.threadId, text);
+    }
 
     if (mounted) {
       setState(() {
@@ -103,6 +120,7 @@ class _ChatConversationScreenState
     );
 
     final isAphrodite = thread?.isAphrodite ?? false;
+    final isSupport = thread?.isSupport ?? false;
     final title = isAphrodite ? 'Afrodita' : (thread?.displayName ?? 'Chat');
 
     return Scaffold(
@@ -141,6 +159,23 @@ class _ChatConversationScreenState
                 ),
               ),
               const SizedBox(width: 10),
+            ] else if (isSupport) ...[
+              Container(
+                width: 36,
+                height: 36,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [Color(0xFF7B1038), Color(0xFFC2185B)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                child: const Center(
+                  child: Icon(Icons.support_agent_rounded, color: Colors.white, size: 20),
+                ),
+              ),
+              const SizedBox(width: 10),
             ],
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -158,6 +193,14 @@ class _ChatConversationScreenState
                     style: GoogleFonts.nunito(
                       fontSize: 12,
                       color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                    ),
+                  ),
+                if (isSupport)
+                  Text(
+                    'Ayuda en vivo',
+                    style: GoogleFonts.nunito(
+                      fontSize: 12,
+                      color: const Color(0xFFC2185B).withValues(alpha: 0.7),
                     ),
                   ),
               ],
@@ -202,6 +245,7 @@ class _ChatConversationScreenState
                     return _MessageBubble(
                       message: msg,
                       isAphroditeThread: isAphrodite,
+                      isSupportThread: isSupport,
                     );
                   },
                 );
@@ -213,7 +257,7 @@ class _ChatConversationScreenState
             ),
           ),
 
-          // Quick action chips (Aphrodite only)
+          // Quick action chips (Aphrodite only, not support)
           if (isAphrodite && !_isSending)
             _QuickActionChips(onAction: _onQuickAction),
 
@@ -222,6 +266,7 @@ class _ChatConversationScreenState
             controller: _textController,
             isSending: _isSending,
             isAphrodite: isAphrodite,
+            showCamera: isAphrodite, // no camera for support
             onSend: _sendMessage,
             onCamera: () => _handleCamera(),
           ),
@@ -367,10 +412,12 @@ class _ChatConversationScreenState
 class _MessageBubble extends StatelessWidget {
   final ChatMessage message;
   final bool isAphroditeThread;
+  final bool isSupportThread;
 
   const _MessageBubble({
     required this.message,
     required this.isAphroditeThread,
+    this.isSupportThread = false,
   });
 
   @override
@@ -378,10 +425,19 @@ class _MessageBubble extends StatelessWidget {
     final isUser = message.isFromUser;
     final alignment = isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start;
     final colors = Theme.of(context).colorScheme;
+
+    // Support agent messages get maroon bubble
+    final bool isSupportAgent = message.isFromSupport;
     final bubbleColor = isUser
         ? colors.primary
-        : colors.surface;
-    final textColor = isUser ? colors.onPrimary : colors.onSurface;
+        : isSupportAgent
+            ? const Color(0xFF7B1038)
+            : colors.surface;
+    final textColor = isUser
+        ? colors.onPrimary
+        : isSupportAgent
+            ? Colors.white
+            : colors.onSurface;
 
     // Try-on result card
     if (message.isTryOnResult && message.mediaUrl != null) {
@@ -757,6 +813,7 @@ class _InputBar extends StatelessWidget {
   final TextEditingController controller;
   final bool isSending;
   final bool isAphrodite;
+  final bool showCamera;
   final VoidCallback onSend;
   final VoidCallback onCamera;
 
@@ -764,6 +821,7 @@ class _InputBar extends StatelessWidget {
     required this.controller,
     required this.isSending,
     required this.isAphrodite,
+    this.showCamera = true,
     required this.onSend,
     required this.onCamera,
   });
@@ -789,8 +847,8 @@ class _InputBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Camera button (Aphrodite only)
-          if (isAphrodite) ...[
+          // Camera button
+          if (showCamera) ...[
             GestureDetector(
               onTap: isSending ? null : onCamera,
               child: Container(

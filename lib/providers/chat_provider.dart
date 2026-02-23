@@ -126,3 +126,51 @@ final sendTryOnProvider =
   final service = ref.watch(aphroditeServiceProvider);
   return SendTryOnNotifier(service);
 });
+
+/// Get or create support thread for current user.
+final supportThreadProvider = FutureProvider<ChatThread?>((ref) async {
+  if (!SupabaseClientService.isInitialized) return null;
+  final userId = SupabaseClientService.currentUserId;
+  if (userId == null) return null;
+
+  final client = SupabaseClientService.client;
+  final token = client.auth.currentSession?.accessToken;
+  if (token == null) return null;
+
+  final res = await client.functions.invoke('support-chat',
+      body: {'action': 'init'});
+
+  if (res.status != 200) return null;
+  final data = res.data as Map<String, dynamic>;
+  if (data['thread'] == null) return null;
+  return ChatThread.fromJson(data['thread'] as Map<String, dynamic>);
+});
+
+/// State notifier for sending support messages.
+class SendSupportMessageNotifier extends StateNotifier<AsyncValue<void>> {
+  SendSupportMessageNotifier() : super(const AsyncValue.data(null));
+
+  Future<bool> send(String threadId, String message) async {
+    state = const AsyncValue.loading();
+    try {
+      final client = SupabaseClientService.client;
+      final res = await client.functions.invoke('support-chat',
+          body: {'action': 'send', 'thread_id': threadId, 'message': message});
+
+      if (res.status != 200) {
+        state = AsyncValue.error('Failed to send', StackTrace.current);
+        return false;
+      }
+      state = const AsyncValue.data(null);
+      return true;
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      return false;
+    }
+  }
+}
+
+final sendSupportMessageProvider =
+    StateNotifierProvider<SendSupportMessageNotifier, AsyncValue<void>>((ref) {
+  return SendSupportMessageNotifier();
+});

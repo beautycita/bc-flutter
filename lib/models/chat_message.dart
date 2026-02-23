@@ -55,6 +55,9 @@ class ChatMessage {
   /// Whether this is an Aphrodite response
   bool get isFromAphrodite => senderType == 'aphrodite';
 
+  /// Whether this is from support agent
+  bool get isFromSupport => senderType == 'support';
+
   /// Whether this message contains an image
   bool get hasMedia => mediaUrl != null && mediaUrl!.isNotEmpty;
 
