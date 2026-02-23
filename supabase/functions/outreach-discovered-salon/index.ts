@@ -11,6 +11,14 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 
+// WhatsApp API on beautypi
+const WA_API_URL = Deno.env.get("BEAUTYPI_WA_URL") || "http://100.93.1.103:3200";
+const WA_API_TOKEN = Deno.env.get("BEAUTYPI_WA_TOKEN") || "bc-wa-api-2026";
+
+// TEST MODE: send outreach to wife's number instead of the actual salon
+const LIVE_MODE = false; // flip to true when ready to go live
+const TEST_RECIPIENT = "523221215551";
+
 // Outreach thresholds: send platform message at these interest counts
 const OUTREACH_THRESHOLDS = [1, 3, 5, 10, 20];
 const OUTREACH_INTERVAL_AFTER_20 = 10;
@@ -214,10 +222,60 @@ serve(async (req: Request) => {
             })
             .eq("id", discovered_salon_id);
 
-          outreachSent = true;
+          // Send via WhatsApp API
+          const recipientPhone = LIVE_MODE ? (salon.whatsapp || salon.phone) : TEST_RECIPIENT;
+          const messagePrefix = LIVE_MODE ? "" : `[TEST - Para: ${salon.business_name} | ${salon.phone}]\n\n`;
+          const channel = salon.whatsapp ? "whatsapp" : "sms";
 
-          // Log the outreach message (would be sent via Twilio in production)
-          console.log(`[OUTREACH] Salon: ${salon.business_name}, Count: ${interestCount}, Channel: ${salon.whatsapp ? 'whatsapp' : 'sms'}, Message: ${message}`);
+          if (recipientPhone) {
+            try {
+              // Check if recipient is on WhatsApp
+              const checkRes = await fetch(`${WA_API_URL}/api/wa/check`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${WA_API_TOKEN}`,
+                },
+                body: JSON.stringify({ phone: recipientPhone }),
+              });
+              const checkData = await checkRes.json();
+
+              if (checkData.onWhatsApp) {
+                // Send the outreach message
+                const sendRes = await fetch(`${WA_API_URL}/api/wa/send`, {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${WA_API_TOKEN}`,
+                  },
+                  body: JSON.stringify({
+                    phone: recipientPhone,
+                    message: messagePrefix + message,
+                  }),
+                });
+                const sendData = await sendRes.json();
+                outreachSent = sendData.sent === true;
+
+                // Log to outreach log table
+                await serviceClient
+                  .from("salon_outreach_log")
+                  .insert({
+                    discovered_salon_id,
+                    channel,
+                    recipient_phone: recipientPhone,
+                    message_text: message,
+                    interest_count: interestCount,
+                    test_mode: !LIVE_MODE,
+                  });
+
+                console.log(`[OUTREACH] ${LIVE_MODE ? "LIVE" : "TEST"} Salon: ${salon.business_name}, Sent: ${outreachSent}, Channel: ${channel}`);
+              } else {
+                console.log(`[OUTREACH] ${recipientPhone} not on WhatsApp, skipping`);
+              }
+            } catch (e) {
+              console.error(`[OUTREACH] WA send failed: ${e}`);
+            }
+          }
         }
       }
 
