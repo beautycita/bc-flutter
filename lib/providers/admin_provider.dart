@@ -85,7 +85,7 @@ final timeInferenceRulesProvider =
       .from('time_inference_rules')
       .select()
       .order('hour_start')
-      .order('day_start');
+      .order('day_of_week_start');
 
   return (response as List)
       .map((e) => TimeInferenceRule.fromJson(e as Map<String, dynamic>))
@@ -97,7 +97,7 @@ final adminBusinessesProvider =
     FutureProvider<List<AdminBusiness>>((ref) async {
   final response = await SupabaseClientService.client
       .from('businesses')
-      .select('id, name, tier, is_active, avg_rating, review_count')
+      .select('id, name, tier, is_active, average_rating, total_reviews')
       .order('name');
 
   return (response as List)
@@ -282,7 +282,7 @@ final adminFullActivityProvider =
 final adminUsersProvider = FutureProvider<List<AdminUser>>((ref) async {
   final response = await SupabaseClientService.client
       .from('profiles')
-      .select('id, username, full_name, phone, role, status, created_at, last_seen, avatar_url, birthday, gender, home_address, uber_linked, updated_at')
+      .select('id, username, full_name, phone, role, status, created_at, last_seen, avatar_url, birthday, gender, home_address, uber_linked, updated_at, registration_source')
       .order('created_at', ascending: false);
 
   return (response as List)
@@ -382,6 +382,7 @@ class AdminUser {
   final String? gender;
   final String? homeAddress;
   final bool uberLinked;
+  final String? registrationSource;
 
   const AdminUser({
     required this.id,
@@ -398,6 +399,7 @@ class AdminUser {
     this.gender,
     this.homeAddress,
     this.uberLinked = false,
+    this.registrationSource,
   });
 
   /// Online if last_seen within last 5 minutes.
@@ -435,9 +437,18 @@ class AdminUser {
       gender: json['gender'] as String?,
       homeAddress: json['home_address'] as String?,
       uberLinked: json['uber_linked'] as bool? ?? false,
+      registrationSource: json['registration_source'] as String?,
     );
   }
 }
+
+/// Fetches auth info for a specific user (admin-only RPC).
+final adminUserAuthInfoProvider =
+    FutureProvider.family<Map<String, dynamic>, String>((ref, userId) async {
+  final response = await SupabaseClientService.client
+      .rpc('admin_get_user_auth_info', params: {'p_user_id': userId});
+  return response as Map<String, dynamic>? ?? {};
+});
 
 class AdminStats {
   final int totalUsers;
@@ -682,14 +693,14 @@ class TimeInferenceRule {
       id: json['id'] as String,
       hourStart: json['hour_start'] as int,
       hourEnd: json['hour_end'] as int,
-      dayStart: json['day_start'] as int,
-      dayEnd: json['day_end'] as int,
-      description: json['description'] as String?,
-      offsetDaysMin: json['offset_days_min'] as int? ?? 0,
-      offsetDaysMax: json['offset_days_max'] as int? ?? 1,
+      dayStart: json['day_of_week_start'] as int,
+      dayEnd: json['day_of_week_end'] as int,
+      description: json['window_description'] as String?,
+      offsetDaysMin: json['window_offset_days_min'] as int? ?? 0,
+      offsetDaysMax: json['window_offset_days_max'] as int? ?? 1,
       preferredHourStart: json['preferred_hour_start'] as int? ?? 10,
-      preferredHourEnd: json['preferred_hour_end'] as int? ?? 17,
-      peakHour: json['peak_hour'] as int?,
+      preferredHourEnd: json['preferred_hour_end'] as int? ?? 16,
+      peakHour: json['preference_peak_hour'] as int?,
       isActive: json['is_active'] as bool? ?? true,
     );
   }
@@ -718,8 +729,8 @@ class AdminBusiness {
       name: json['name'] as String,
       tier: json['tier'] as int?,
       isActive: json['is_active'] as bool? ?? true,
-      avgRating: (json['avg_rating'] as num?)?.toDouble(),
-      reviewCount: json['review_count'] as int?,
+      avgRating: (json['average_rating'] as num?)?.toDouble(),
+      reviewCount: (json['total_reviews'] as num?)?.toInt(),
     );
   }
 }

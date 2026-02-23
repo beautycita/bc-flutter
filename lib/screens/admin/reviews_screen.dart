@@ -268,7 +268,11 @@ class _ReviewsScreenState extends ConsumerState<ReviewsScreen> {
   Widget _buildReviewCard(Map<String, dynamic> review) {
     final rating = (review['rating'] as num?)?.toDouble() ?? 0;
     final comment = review['comment'] as String? ?? '';
-    final date = (review['created_at'] as String? ?? '').split('T')[0];
+    final rawDate = review['created_at'] as String? ?? '';
+    final dtParsed = DateTime.tryParse(rawDate)?.toLocal();
+    final date = dtParsed != null
+        ? '${dtParsed.day}/${dtParsed.month}/${dtParsed.year}'
+        : rawDate.split('T')[0];
     final bizData = review['businesses'] as Map<String, dynamic>?;
     final bizName = bizData?['name'] as String? ?? 'Salon desconocido';
 

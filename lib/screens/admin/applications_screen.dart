@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../config/constants.dart';
 import '../../providers/admin_provider.dart';
 import '../../providers/chat_provider.dart';
@@ -59,8 +60,6 @@ class _ApplicationCard extends ConsumerWidget {
   const _ApplicationCard({required this.app});
 
   String _inferOrigin() {
-    // If onboarding_step is set, it came through the in-app registration flow
-    // If whatsapp is set but onboarding_step is null, likely from outreach
     final onboardingStep = app['onboarding_step'] as String?;
     final whatsapp = app['whatsapp'] as String?;
     if (onboardingStep != null && onboardingStep.isNotEmpty) {
@@ -75,7 +74,7 @@ class _ApplicationCard extends ConsumerWidget {
   String _formatDate(String? iso) {
     if (iso == null) return '-';
     try {
-      final dt = DateTime.parse(iso);
+      final dt = DateTime.parse(iso).toLocal();
       final date =
           '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}';
       final time =
@@ -105,7 +104,7 @@ class _ApplicationCard extends ConsumerWidget {
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
         child: InkWell(
           borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-          onTap: () => _showDetailSheet(context, ref),
+          onTap: () => _showDetailPopup(context, ref),
           child: Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(AppConstants.radiusMD),
@@ -205,7 +204,7 @@ class _ApplicationCard extends ConsumerWidget {
     );
   }
 
-  void _showDetailSheet(BuildContext context, WidgetRef ref) {
+  void _showDetailPopup(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).colorScheme;
     final name = app['name'] as String? ?? 'Sin nombre';
     final phone = app['phone'] as String?;
@@ -218,83 +217,83 @@ class _ApplicationCard extends ConsumerWidget {
     final instagram = app['instagram_handle'] as String?;
     final facebook = app['facebook_url'] as String?;
     final createdAt = app['created_at'] as String?;
-    final categories =
-        app['service_categories'] as List<dynamic>? ?? [];
+    final categories = app['service_categories'] as List<dynamic>? ?? [];
     final origin = _inferOrigin();
     final ownerId = app['owner_id'] as String?;
+    final photoUrl = app['photo_url'] as String?;
+    final lat = (app['lat'] as num?)?.toDouble();
+    final lng = (app['lng'] as num?)?.toDouble();
+    final hasCoords = lat != null && lng != null;
+    final location = [city, state, country]
+        .where((s) => s != null && s.isNotEmpty)
+        .join(', ');
 
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => DraggableScrollableSheet(
-        initialChildSize: 0.75,
-        maxChildSize: 0.92,
-        minChildSize: 0.4,
-        builder: (ctx, scrollCtrl) => Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: ListView(
-            controller: scrollCtrl,
-            padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppConstants.radiusMD)),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Handle
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 20),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-
-              // Salon name
-              Text(
-                name,
-                style: GoogleFonts.poppins(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                  color: colors.onSurface,
-                ),
-              ),
-              const SizedBox(height: 4),
+              // Header: photo + name + chips
               Row(
                 children: [
-                  _statusChip('pendiente'),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: origin == 'WhatsApp outreach'
-                          ? Colors.green.withValues(alpha: 0.1)
-                          : colors.primary.withValues(alpha: 0.1),
+                  if (photoUrl != null && photoUrl.isNotEmpty)
+                    ClipRRect(
                       borderRadius: BorderRadius.circular(8),
+                      child: Image.network(photoUrl,
+                          width: 56, height: 56, fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => _placeholderIcon()),
+                    )
+                  else
+                    _placeholderIcon(),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(name,
+                            style: GoogleFonts.poppins(
+                                fontSize: 16, fontWeight: FontWeight.w700)),
+                        Row(
+                          children: [
+                            _statusChip('pendiente'),
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: origin == 'WhatsApp outreach'
+                                    ? Colors.green.withValues(alpha: 0.1)
+                                    : colors.primary.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(origin,
+                                  style: GoogleFonts.nunito(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                      color: origin == 'WhatsApp outreach'
+                                          ? Colors.green[700]
+                                          : colors.primary)),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                    child: Text(
-                      origin,
-                      style: GoogleFonts.nunito(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: origin == 'WhatsApp outreach'
-                            ? Colors.green
-                            : colors.primary,
-                      ),
-                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, size: 20),
+                    onPressed: () => Navigator.pop(ctx),
                   ),
                 ],
               ),
+              const Divider(height: 24),
 
-              const SizedBox(height: 20),
-              const Divider(height: 1),
-              const SizedBox(height: 16),
-
-              // Contact info
+              // Contact
               _SectionHeader(title: 'Contacto'),
               const SizedBox(height: 8),
               _DetailRow(label: 'Telefono', value: phone ?? '-'),
@@ -302,23 +301,21 @@ class _ApplicationCard extends ConsumerWidget {
                 _DetailRow(label: 'WhatsApp', value: whatsapp),
               _DetailRow(
                   label: 'Registro', value: _formatDate(createdAt)),
-
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
 
               // Location
               _SectionHeader(title: 'Ubicacion'),
               const SizedBox(height: 8),
-              if (address != null) _DetailRow(label: 'Direccion', value: address),
-              _DetailRow(
-                  label: 'Ciudad',
-                  value: [city, state, country]
-                      .where((s) => s != null && s.isNotEmpty)
-                      .join(', ')),
-
-              const SizedBox(height: 16),
+              if (address != null)
+                _DetailRow(label: 'Direccion', value: address),
+              if (location.isNotEmpty)
+                _DetailRow(label: 'Ciudad', value: location),
+              const SizedBox(height: 12),
 
               // Social / Web
-              if (website != null || instagram != null || facebook != null) ...[
+              if (website != null ||
+                  instagram != null ||
+                  facebook != null) ...[
                 _SectionHeader(title: 'Redes'),
                 const SizedBox(height: 8),
                 if (website != null)
@@ -327,7 +324,7 @@ class _ApplicationCard extends ConsumerWidget {
                   _DetailRow(label: 'Instagram', value: '@$instagram'),
                 if (facebook != null)
                   _DetailRow(label: 'Facebook', value: facebook),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
               ],
 
               // Categories
@@ -360,13 +357,64 @@ class _ApplicationCard extends ConsumerWidget {
                           ))
                       .toList(),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
               ],
 
               const Divider(height: 1),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
-              // Action buttons
+              // Action icons row
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  // Street View
+                  _ActionIcon(
+                    icon: Icons.streetview_rounded,
+                    label: 'Street View',
+                    color: hasCoords ? Colors.blue[700]! : Colors.grey[400]!,
+                    onTap: hasCoords
+                        ? () {
+                            final url = Uri.parse(
+                                'https://www.google.com/maps/@$lat,$lng,3a,75y,90t/data=!3m6!1e1!3m4!1s!2e0!7i16384!8i8192');
+                            launchUrl(url,
+                                mode: LaunchMode.externalApplication);
+                          }
+                        : null,
+                  ),
+                  // Map
+                  _ActionIcon(
+                    icon: Icons.map_rounded,
+                    label: 'Mapa',
+                    color: hasCoords ? Colors.green[700]! : Colors.grey[400]!,
+                    onTap: hasCoords
+                        ? () {
+                            final url = Uri.parse(
+                                'https://www.google.com/maps/search/?api=1&query=$lat,$lng');
+                            launchUrl(url,
+                                mode: LaunchMode.externalApplication);
+                          }
+                        : null,
+                  ),
+                  // Chat
+                  _ActionIcon(
+                    icon: Icons.chat_bubble_outline_rounded,
+                    label: 'Chat',
+                    color: ownerId != null
+                        ? colors.primary
+                        : Colors.grey[400]!,
+                    onTap: ownerId != null
+                        ? () {
+                            Navigator.pop(ctx);
+                            _startChat(context, ref, ownerId, name);
+                          }
+                        : null,
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 16),
+
+              // Approve / Reject buttons
               Row(
                 children: [
                   Expanded(
@@ -412,37 +460,22 @@ class _ApplicationCard extends ConsumerWidget {
                   ),
                 ],
               ),
-
-              const SizedBox(height: 12),
-
-              // Chat with applicant
-              if (ownerId != null)
-                OutlinedButton.icon(
-                  onPressed: () {
-                    Navigator.of(ctx).pop();
-                    _startChat(context, ref, ownerId, name);
-                  },
-                  icon: Icon(Icons.chat_bubble_outline_rounded,
-                      size: 18, color: colors.primary),
-                  label: Text(
-                    'Iniciar chat con solicitante',
-                    style: GoogleFonts.nunito(
-                      fontWeight: FontWeight.w700,
-                      color: colors.primary,
-                    ),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    side: BorderSide(color: colors.primary.withValues(alpha: 0.3)),
-                  ),
-                ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _placeholderIcon() {
+    return Container(
+      width: 56,
+      height: 56,
+      decoration: BoxDecoration(
+        color: Colors.orange.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: const Icon(Icons.store_rounded, color: Colors.orange, size: 28),
     );
   }
 
@@ -453,12 +486,13 @@ class _ApplicationCard extends ConsumerWidget {
       final adminId = SupabaseClientService.currentUserId;
       if (adminId == null) return;
 
-      // Check if a thread already exists between admin and this owner
+      // Check if a salon-type thread already exists for this owner
       final existing = await client
           .from('chat_threads')
           .select()
           .eq('user_id', adminId)
-          .eq('contact_type', 'admin_salon')
+          .eq('contact_type', 'salon')
+          .eq('contact_id', ownerId)
           .isFilter('archived_at', null)
           .maybeSingle();
 
@@ -468,21 +502,28 @@ class _ApplicationCard extends ConsumerWidget {
       } else {
         // Create a new thread
         final now = DateTime.now().toUtc().toIso8601String();
-        final newThread = {
-          'user_id': adminId,
-          'contact_type': 'admin_salon',
-          'contact_name': salonName,
-          'last_message_text': 'Chat iniciado por admin',
-          'last_message_at': now,
-          'created_at': now,
-          'metadata': {'salon_owner_id': ownerId},
-        };
         final result = await client
             .from('chat_threads')
-            .insert(newThread)
+            .insert({
+              'user_id': adminId,
+              'contact_type': 'salon',
+              'contact_id': ownerId,
+              'contact_name': salonName,
+              'last_message_text': 'Chat con $salonName',
+              'last_message_at': now,
+            })
             .select()
             .single();
         threadId = result['id'] as String;
+
+        // Insert a system message as opener
+        await client.from('chat_messages').insert({
+          'thread_id': threadId,
+          'sender_type': 'system',
+          'sender_id': adminId,
+          'content_type': 'text',
+          'text_content': 'Chat iniciado con $salonName',
+        });
       }
 
       if (context.mounted) {
@@ -686,6 +727,49 @@ class _DetailRow extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ActionIcon extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback? onTap;
+
+  const _ActionIcon(
+      {required this.icon,
+      required this.label,
+      required this.color,
+      this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Opacity(
+        opacity: onTap != null ? 1.0 : 0.4,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, size: 20, color: color),
+            ),
+            const SizedBox(height: 4),
+            Text(label,
+                style: GoogleFonts.nunito(
+                    fontSize: 11,
+                    color: color,
+                    fontWeight: FontWeight.w600)),
+          ],
+        ),
       ),
     );
   }

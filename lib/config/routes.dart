@@ -30,6 +30,7 @@ import 'package:beautycita/screens/appearance_screen.dart';
 import 'package:beautycita/screens/btc_wallet_screen.dart';
 import 'package:beautycita/screens/cash_payment_screen.dart';
 import 'package:beautycita/screens/cita_express_screen.dart';
+import 'package:beautycita/screens/legal_screens.dart';
 import 'package:beautycita/screens/business/business_shell_screen.dart';
 
 
@@ -65,6 +66,10 @@ class AppRoutes {
   static const String btcWallet = '/settings/btc-wallet';
   static const String cashPayment = '/settings/cash-payment';
   static const String citaExpress = '/cita-express/:businessId';
+  static const String legal = '/legal';
+  static const String terms = '/legal'; // back-compat
+  static const String privacy = '/legal'; // back-compat
+  static const String cookies = '/legal'; // back-compat
 
 
   static final GoRouter router = GoRouter(
@@ -123,7 +128,7 @@ class AppRoutes {
           final colorValue = state.uri.queryParameters['color'];
           final color = colorValue != null
               ? Color(int.parse(colorValue))
-              : const Color(0xFFC2185B);
+              : const Color(0xFF660033);
           return CustomTransitionPage(
             key: state.pageKey,
             child: ProviderListScreen(
@@ -591,6 +596,19 @@ class AppRoutes {
             },
           );
         },
+      ),
+      GoRoute(
+        path: legal,
+        name: 'legal',
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const TermsAndPolicyScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
+                .chain(CurveTween(curve: Curves.easeInOutCubic));
+            return SlideTransition(position: animation.drive(tween), child: child);
+          },
+        ),
       ),
       GoRoute(
         path: '/cita-express/:businessId',

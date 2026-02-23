@@ -35,12 +35,62 @@ class _TimeRulesScreenState extends ConsumerState<TimeRulesScreen> {
     final colors = Theme.of(context).colorScheme;
 
     return rulesAsync.when(
-      data: (rules) => _buildList(rules),
+      data: (rules) {
+        if (rules.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.schedule_outlined,
+                    size: 48, color: colors.onSurface.withValues(alpha: 0.3)),
+                const SizedBox(height: 12),
+                Text(
+                  'Sin reglas de tiempo configuradas',
+                  style: GoogleFonts.nunito(
+                    fontSize: 15,
+                    color: colors.onSurface.withValues(alpha: 0.5),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Las reglas determinan como el motor\ninfiere la ventana de tiempo ideal.',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.nunito(
+                    fontSize: 13,
+                    color: colors.onSurface.withValues(alpha: 0.35),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+        return _buildList(rules);
+      },
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(
-        child: Text('Error: $e',
-            style: GoogleFonts.nunito(
-                color: colors.onSurface.withValues(alpha: 0.5))),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.error_outline,
+                size: 48, color: colors.onSurface.withValues(alpha: 0.3)),
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Text(
+                'Error cargando reglas:\n$e',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.nunito(
+                    color: colors.onSurface.withValues(alpha: 0.5)),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextButton.icon(
+              onPressed: () => ref.invalidate(timeInferenceRulesProvider),
+              icon: const Icon(Icons.refresh, size: 18),
+              label: const Text('Reintentar'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -109,7 +159,12 @@ class _TimeRulesScreenState extends ConsumerState<TimeRulesScreen> {
       color: Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppConstants.radiusSM),
+        side: BorderSide(
+          color: colors.onSurface.withValues(alpha: 0.08),
+        ),
       ),
+      shadowColor: Colors.black.withValues(alpha: 0.08),
+      surfaceTintColor: Colors.transparent,
       margin: const EdgeInsets.only(bottom: 4),
       child: Column(
         children: [
@@ -249,14 +304,14 @@ class _RuleEditorState extends State<_RuleEditor> {
           .update({
             'hour_start': _hourStart,
             'hour_end': _hourEnd,
-            'day_start': _dayStart,
-            'day_end': _dayEnd,
-            'description': _description.isEmpty ? null : _description,
-            'offset_days_min': _offsetDaysMin,
-            'offset_days_max': _offsetDaysMax,
+            'day_of_week_start': _dayStart,
+            'day_of_week_end': _dayEnd,
+            'window_description': _description.isEmpty ? 'Sin nombre' : _description,
+            'window_offset_days_min': _offsetDaysMin,
+            'window_offset_days_max': _offsetDaysMax,
             'preferred_hour_start': _preferredHourStart,
             'preferred_hour_end': _preferredHourEnd,
-            'peak_hour': _peakHour,
+            'preference_peak_hour': _peakHour ?? 11,
             'is_active': _isActive,
           }).eq('id', widget.rule.id);
 

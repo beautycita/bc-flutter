@@ -146,7 +146,7 @@ const roseGoldPalette = BCPalette(
   nameEs: 'Rosa y Oro',
   nameEn: 'Rose & Gold',
   brightness: Brightness.light,
-  primary: Color(0xFFC2185B),
+  primary: Color(0xFF660033),
   onPrimary: Color(0xFFFFFFFF),
   secondary: Color(0xFFFFB300),
   onSecondary: Color(0xFF212121),
@@ -166,7 +166,7 @@ const roseGoldPalette = BCPalette(
   warning: Color(0xFFFFA000),
   info: Color(0xFF2196F3),
   primaryGradient: LinearGradient(
-    colors: [Color(0xFFC2185B), Color(0xFFD81B60)],
+    colors: [Color(0xFF660033), Color(0xFF990033)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   ),
@@ -187,7 +187,7 @@ const roseGoldPalette = BCPalette(
     Color(0xFFFFA726), // specialized
     Color(0xFF37474F), // barberia
   ],
-  cinematicPrimary: Color(0xFFC2185B),
+  cinematicPrimary: Color(0xFF660033),
   cinematicAccent: Color(0xFFFFB300),
   statusBarColor: Color(0x00000000),
   statusBarIconBrightness: Brightness.dark,

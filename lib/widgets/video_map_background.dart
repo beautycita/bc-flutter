@@ -157,14 +157,14 @@ class _VideoMapBackgroundState extends State<VideoMapBackground>
               child: _videoFitted(_showA ? _playerA : _playerB),
             ),
 
-          // BC brand color overlay — rose gradient filter
+          // BC brand color overlay — barely-there tint so video + custom colors show
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  HSLColor.fromColor(primary).withLightness(0.25).toColor().withValues(alpha: 0.55),
-                  primary.withValues(alpha: 0.40),
-                  HSLColor.fromColor(primary).withLightness(0.55).toColor().withValues(alpha: 0.30),
+                  HSLColor.fromColor(primary).withLightness(0.25).toColor().withValues(alpha: 0.12),
+                  primary.withValues(alpha: 0.08),
+                  HSLColor.fromColor(primary).withLightness(0.55).toColor().withValues(alpha: 0.05),
                 ],
                 begin: Alignment.bottomCenter,
                 end: Alignment.topCenter,

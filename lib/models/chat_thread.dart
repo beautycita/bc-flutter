@@ -3,6 +3,7 @@ class ChatThread {
   final String userId;
   final String contactType; // 'aphrodite', 'salon', 'user'
   final String? contactId;
+  final String? contactName;
   final String? openaiThreadId;
   final String? lastMessageText;
   final DateTime? lastMessageAt;
@@ -15,6 +16,7 @@ class ChatThread {
     required this.userId,
     required this.contactType,
     this.contactId,
+    this.contactName,
     this.openaiThreadId,
     this.lastMessageText,
     this.lastMessageAt,
@@ -29,6 +31,7 @@ class ChatThread {
       userId: json['user_id'] as String,
       contactType: json['contact_type'] as String,
       contactId: json['contact_id'] as String?,
+      contactName: json['contact_name'] as String?,
       openaiThreadId: json['openai_thread_id'] as String?,
       lastMessageText: json['last_message_text'] as String?,
       lastMessageAt: json['last_message_at'] != null
@@ -46,6 +49,7 @@ class ChatThread {
       'user_id': userId,
       'contact_type': contactType,
       'contact_id': contactId,
+      'contact_name': contactName,
       'openai_thread_id': openaiThreadId,
       'last_message_text': lastMessageText,
       'last_message_at': lastMessageAt?.toIso8601String(),
@@ -63,7 +67,7 @@ class ChatThread {
       case 'support':
         return 'Soporte BeautyCita';
       default:
-        return contactId ?? 'Chat';
+        return contactName ?? contactId ?? 'Chat';
     }
   }
 
@@ -84,6 +88,7 @@ class ChatThread {
       userId: userId,
       contactType: contactType,
       contactId: contactId,
+      contactName: contactName,
       openaiThreadId: openaiThreadId ?? this.openaiThreadId,
       lastMessageText: lastMessageText ?? this.lastMessageText,
       lastMessageAt: lastMessageAt ?? this.lastMessageAt,

@@ -229,7 +229,7 @@ class _DisputeCard extends StatelessWidget {
 
     String dateStr = '';
     if (createdAt != null) {
-      final dt = DateTime.tryParse(createdAt);
+      final dt = DateTime.tryParse(createdAt)?.toLocal();
       if (dt != null) {
         dateStr = '${dt.day}/${dt.month}/${dt.year}';
       }
@@ -431,7 +431,7 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
 
     String apptDate = '-';
     if (startsAt != null) {
-      final dt = DateTime.tryParse(startsAt);
+      final dt = DateTime.tryParse(startsAt)?.toLocal();
       if (dt != null) {
         apptDate =
             '${dt.day}/${dt.month}/${dt.year} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';

@@ -1,5 +1,7 @@
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -11,6 +13,7 @@ import '../config/constants.dart';
 import '../config/theme_extension.dart';
 import '../services/gesture_exclusion_service.dart';
 import '../themes/category_icons.dart';
+import '../providers/theme_provider.dart';
 import '../themes/theme_variant.dart';
 import '../widgets/video_map_background.dart';
 import '../widgets/cinematic_question_text.dart';
@@ -126,16 +129,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             child: Stack(
               clipBehavior: Clip.none,
               children: [
-                // Gradient background with decorative circles
-                Container(
+                // Gradient background with hidden color picker easter egg
+                _HeroColorPicker(
                   height: topSectionHeight,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Color(0xFFE91E63), palette.primary, Color(0xFFAD1457)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                  ),
                   child: Stack(
                     children: [
                       // Wireframe hero video background (1:1, cross-fade loop)
@@ -289,6 +285,80 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) => SubcategorySheet(category: category),
     );
+  }
+}
+
+/// Hidden color picker easter egg: long-press hero → drag to change app color.
+/// Radial map: angle from center = hue (0-360), distance from center = saturation.
+class _HeroColorPicker extends ConsumerStatefulWidget {
+  final double height;
+  final Widget child;
+
+  const _HeroColorPicker({required this.height, required this.child});
+
+  @override
+  ConsumerState<_HeroColorPicker> createState() => _HeroColorPickerState();
+}
+
+class _HeroColorPickerState extends ConsumerState<_HeroColorPicker> {
+  bool _active = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = Theme.of(context).colorScheme;
+
+    return GestureDetector(
+      onLongPressStart: (details) {
+        setState(() => _active = true);
+        HapticFeedback.lightImpact();
+        _updateColor(details.localPosition);
+      },
+      onLongPressMoveUpdate: (details) {
+        if (_active) _updateColor(details.localPosition);
+      },
+      onLongPressEnd: (_) {
+        if (_active) {
+          ref.read(themeProvider.notifier).saveCustomColor();
+          setState(() => _active = false);
+        }
+      },
+      child: Container(
+        height: widget.height,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              HSLColor.fromColor(palette.primary).withLightness(0.35).toColor(),
+              palette.primary,
+              HSLColor.fromColor(palette.primary).withLightness(0.20).toColor(),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: widget.child,
+      ),
+    );
+  }
+
+  void _updateColor(Offset pos) {
+    final box = context.findRenderObject() as RenderBox?;
+    if (box == null) return;
+    final size = box.size;
+    // Radial color map: center of hero = no saturation, edges = max saturation.
+    // Angle from center = hue (full 360), distance = saturation.
+    final cx = size.width / 2;
+    final cy = size.height / 2;
+    final dx = pos.dx - cx;
+    final dy = pos.dy - cy;
+    // Angle → hue (0-360). atan2 returns -pi..pi, shift to 0..2pi.
+    final angle = math.atan2(dy, dx);
+    final hue = ((angle < 0 ? angle + 2 * math.pi : angle) / (2 * math.pi) * 360)
+        .clamp(0.0, 360.0);
+    // Distance from center → saturation. Normalize to max possible radius.
+    final maxRadius = math.sqrt(cx * cx + cy * cy);
+    final dist = math.sqrt(dx * dx + dy * dy);
+    final sat = (dist / maxRadius).clamp(0.05, 1.0);
+    ref.read(themeProvider.notifier).setCustomColorLive(hue, sat);
   }
 }
 
