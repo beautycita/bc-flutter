@@ -367,7 +367,7 @@ class _ConversationPaneState extends ConsumerState<_ConversationPane> {
       final userId = SupabaseClientService.currentUserId;
       await client.from('chat_messages').insert({
         'thread_id': widget.threadId,
-        'sender_type': 'user',
+        'sender_type': 'support',
         'sender_id': userId,
         'content_type': 'text',
         'text_content': text,

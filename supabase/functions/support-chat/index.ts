@@ -1,14 +1,17 @@
 /**
- * support-chat — Bridge app chat messages to BC's WhatsApp via beautypi WA API.
+ * support-chat — In-app support chat with WA alert to wife.
  *
  * Actions:
- *   send    { thread_id, message }  — Forward user message to WhatsApp
+ *   send    { thread_id, message }  — Store user message in DB, send WA alert to wife
  *   init    {}                      — Get or create support thread for current user
  *
+ * Messages stay in DB. Admin manages replies in-app via admin chat screen.
+ * Wife gets a short WA alert so she knows to check the admin panel.
+ *
  * Env vars:
- *   BEAUTYPI_WA_URL   — e.g. http://100.93.1.103:3200
- *   BEAUTYPI_WA_TOKEN — Bearer token for WA API
- *   SUPPORT_WA_PHONE  — BC's WhatsApp number that receives support messages
+ *   BEAUTYPI_WA_URL    — e.g. http://100.93.1.103:3200
+ *   BEAUTYPI_WA_TOKEN  — Bearer token for WA API
+ *   SUPPORT_ALERT_PHONE — Wife's WhatsApp number for alerts (523221215551)
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -21,7 +24,7 @@ const corsHeaders = {
 
 const BEAUTYPI_WA_URL = Deno.env.get("BEAUTYPI_WA_URL") || "http://100.93.1.103:3200";
 const BEAUTYPI_WA_TOKEN = Deno.env.get("BEAUTYPI_WA_TOKEN") || "bc-wa-api-2026";
-const SUPPORT_WA_PHONE = Deno.env.get("SUPPORT_WA_PHONE") || "5217206777800";
+const SUPPORT_ALERT_PHONE = Deno.env.get("SUPPORT_ALERT_PHONE") || "523221215551";
 
 function json(body: Record<string, unknown>, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -86,10 +89,10 @@ Deno.serve(async (req) => {
       return json({ error: createErr.message }, 500);
     }
 
-    // Create WA bridge
+    // Create WA bridge (for alert routing)
     await db.from("wa_chat_bridges").insert({
       thread_id: thread.id,
-      wa_phone: SUPPORT_WA_PHONE,
+      wa_phone: SUPPORT_ALERT_PHONE,
     });
 
     // Insert welcome message
@@ -181,8 +184,9 @@ Deno.serve(async (req) => {
     const userName = profile?.display_name || profile?.username || "Usuario";
     const shortId = thread_id.substring(0, 8);
 
-    // Forward to WhatsApp
-    const waMessage = `[BC-${shortId}] ${userName}:\n${message}`;
+    // Send WA alert to wife (short notification, not full message)
+    const preview = message.length > 80 ? message.substring(0, 80) + "..." : message;
+    const alertMsg = `*Soporte BeautyCita*\nNuevo mensaje de ${userName}:\n"${preview}"\n\nResponde en la app > Admin > Chat`;
     try {
       await fetch(`${BEAUTYPI_WA_URL}/api/wa/send`, {
         method: "POST",
@@ -190,11 +194,11 @@ Deno.serve(async (req) => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${BEAUTYPI_WA_TOKEN}`,
         },
-        body: JSON.stringify({ phone: SUPPORT_WA_PHONE, message: waMessage }),
+        body: JSON.stringify({ phone: SUPPORT_ALERT_PHONE, message: alertMsg }),
       });
     } catch (e) {
-      console.error(`[SUPPORT] WA send failed: ${e}`);
-      // Don't fail the request — message is still in DB, just WA delivery failed
+      console.error(`[SUPPORT] WA alert failed: ${e}`);
+      // Don't fail — message is in DB, alert is just a notification
     }
 
     return json({ sent: true, message: msg });
