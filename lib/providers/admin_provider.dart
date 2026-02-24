@@ -1,9 +1,19 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show AuthState;
 import 'package:beautycita/services/supabase_client.dart';
 
-/// Fetches the current user's role string (cached).
+/// Stream of Supabase auth state changes — re-triggers role fetch on login/logout.
+final _supabaseAuthStreamProvider = StreamProvider<AuthState>((ref) {
+  if (!SupabaseClientService.isInitialized) return const Stream.empty();
+  return SupabaseClientService.client.auth.onAuthStateChange;
+});
+
+/// Fetches the current user's role string. Re-evaluates on auth state changes.
 final _userRoleProvider = FutureProvider<String?>((ref) async {
+  // Watch auth stream so provider re-runs on sign-in, sign-out, token refresh
+  ref.watch(_supabaseAuthStreamProvider);
+
   final userId = SupabaseClientService.currentUserId;
   if (userId == null) return null;
 
@@ -282,7 +292,7 @@ final adminFullActivityProvider =
 final adminUsersProvider = FutureProvider<List<AdminUser>>((ref) async {
   final response = await SupabaseClientService.client
       .from('profiles')
-      .select('id, username, full_name, phone, role, status, created_at, last_seen, avatar_url, birthday, gender, home_address, uber_linked, updated_at, registration_source')
+      .select('id, username, full_name, phone, role, status, created_at, last_seen, avatar_url, birthday, gender, home_address, uber_linked, updated_at, registration_source, phone_verified')
       .order('created_at', ascending: false);
 
   return (response as List)
@@ -329,6 +339,29 @@ final adminReviewsProvider =
       .select('*, businesses(name)')
       .order('created_at', ascending: false)
       .limit(100);
+  return (response as List).cast<Map<String, dynamic>>();
+});
+
+/// Discovered salons for outreach management.
+final adminDiscoveredSalonsProvider =
+    FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  final response = await SupabaseClientService.client
+      .from('discovered_salons')
+      .select('id, business_name, phone, whatsapp, location_city, location_state, latitude, longitude, feature_image_url, rating_average, rating_count, interest_count, categories, status, outreach_count, last_outreach_at, outreach_channel, created_at')
+      .order('interest_count', ascending: false)
+      .limit(200);
+  return (response as List).cast<Map<String, dynamic>>();
+});
+
+/// Outreach log for a specific salon.
+final salonOutreachLogProvider =
+    FutureProvider.family<List<Map<String, dynamic>>, String>((ref, salonId) async {
+  final response = await SupabaseClientService.client
+      .from('salon_outreach_log')
+      .select()
+      .eq('discovered_salon_id', salonId)
+      .order('sent_at', ascending: false)
+      .limit(20);
   return (response as List).cast<Map<String, dynamic>>();
 });
 
@@ -383,6 +416,7 @@ class AdminUser {
   final String? homeAddress;
   final bool uberLinked;
   final String? registrationSource;
+  final bool phoneVerified;
 
   const AdminUser({
     required this.id,
@@ -400,6 +434,7 @@ class AdminUser {
     this.homeAddress,
     this.uberLinked = false,
     this.registrationSource,
+    this.phoneVerified = false,
   });
 
   /// Online if last_seen within last 5 minutes.
@@ -438,6 +473,7 @@ class AdminUser {
       homeAddress: json['home_address'] as String?,
       uberLinked: json['uber_linked'] as bool? ?? false,
       registrationSource: json['registration_source'] as String?,
+      phoneVerified: json['phone_verified'] as bool? ?? false,
     );
   }
 }

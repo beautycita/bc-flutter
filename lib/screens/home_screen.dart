@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
@@ -15,8 +16,8 @@ import '../services/gesture_exclusion_service.dart';
 import '../themes/category_icons.dart';
 import '../providers/theme_provider.dart';
 import '../themes/theme_variant.dart';
-import '../widgets/video_map_background.dart';
 import '../widgets/cinematic_question_text.dart';
+import '../widgets/video_map_background.dart';
 import 'subcategory_sheet.dart';
 import 'business/business_shell_screen.dart' show businessTabProvider;
 import 'admin/admin_shell_screen.dart' show adminTabProvider;
@@ -132,85 +133,73 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 // Gradient background with hidden color picker easter egg
                 _HeroColorPicker(
                   height: topSectionHeight,
-                  child: Stack(
-                    children: [
-                      // Wireframe hero video background (1:1, cross-fade loop)
-                      const Positioned.fill(
-                        child: VideoMapBackground(
-                          assetPath: 'assets/videos/wireframe_hero.mp4',
-                        ),
+                  child: SafeArea(
+                    bottom: false,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppConstants.screenPaddingHorizontal,
                       ),
-
-                      // Safe area content
-                      SafeArea(
-                        bottom: false,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppConstants.screenPaddingHorizontal,
-                          ),
-                          child: Column(
+                      child: Column(
+                        children: [
+                          // Top row with nav buttons
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
                             children: [
-                              // Top row with nav buttons
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.end,
-                                children: [
-                                  // Mi Negocio button — only visible for business owners
-                                  Consumer(
-                                    builder: (context, ref, _) {
-                                      final isBizOwner = ref.watch(isBusinessOwnerProvider);
-                                      return isBizOwner.when(
-                                        data: (isOwner) => isOwner
-                                            ? Padding(
-                                                padding: const EdgeInsets.only(
-                                                    right: AppConstants.paddingSM),
-                                                child: _HeaderButton(
-                                                  icon: Icons.storefront_rounded,
-                                                  onTap: () => context.push('/business'),
-                                                ),
-                                              )
-                                            : const SizedBox.shrink(),
-                                        loading: () => const SizedBox.shrink(),
-                                        error: (e, st) => const SizedBox.shrink(),
-                                      );
-                                    },
-                                  ),
-                                  _HeaderButton(
-                                    icon: Icons.chat_bubble_outline_rounded,
-                                    onTap: () => context.push('/chat'),
-                                  ),
-                                  const SizedBox(width: AppConstants.paddingSM),
-                                  _HeaderButton(
-                                    icon: Icons.settings_outlined,
-                                    onTap: () => context.push('/settings'),
-                                  ),
-                                ],
+                              // Mi Negocio button — only visible for business owners
+                              Consumer(
+                                builder: (context, ref, _) {
+                                  final isBizOwner = ref.watch(isBusinessOwnerProvider);
+                                  return isBizOwner.when(
+                                    data: (isOwner) => isOwner
+                                        ? Padding(
+                                            padding: const EdgeInsets.only(
+                                                right: AppConstants.paddingSM),
+                                            child: _HeaderButton(
+                                              icon: Icons.storefront_rounded,
+                                              onTap: () => context.push('/business'),
+                                            ),
+                                          )
+                                        : const SizedBox.shrink(),
+                                    loading: () => const SizedBox.shrink(),
+                                    error: (e, st) => const SizedBox.shrink(),
+                                  );
+                                },
                               ),
-                              const Spacer(),
-                              // Brand text (subtle)
-                              Text(
-                                AppConstants.appName,
-                                style: GoogleFonts.poppins(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white.withValues(alpha: 0.8),
-                                  letterSpacing: -0.5,
-                                  height: 1.1,
-                                ),
+                              _HeaderButton(
+                                icon: Icons.chat_bubble_outline_rounded,
+                                onTap: () => context.push('/chat'),
                               ),
-                              const SizedBox(height: AppConstants.paddingSM),
-                              // Cinematic question text
-                              CinematicQuestionText(
-                                text: 'Que buscas hoy?',
-                                primaryColor: Colors.white,
-                                accentColor: palette.secondary,
-                                fontSize: 30,
+                              const SizedBox(width: AppConstants.paddingSM),
+                              _HeaderButton(
+                                icon: Icons.settings_outlined,
+                                onTap: () => context.push('/settings'),
                               ),
-                              const SizedBox(height: 40), // space before curve
                             ],
                           ),
-                        ),
+                          const Spacer(),
+                          // Brand text (subtle)
+                          Text(
+                            AppConstants.appName,
+                            style: GoogleFonts.poppins(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white.withValues(alpha: 0.8),
+                              letterSpacing: -0.5,
+                              height: 1.1,
+                            ),
+                          ),
+                          const SizedBox(height: AppConstants.paddingSM),
+                          // Cinematic question text
+                          CinematicQuestionText(
+                            text: 'Que buscas hoy?',
+                            primaryColor: Colors.white,
+                            accentColor: palette.secondary,
+                            fontSize: 30,
+                          ),
+                          const SizedBox(height: 40), // space before curve
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
 
@@ -288,8 +277,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 }
 
-/// Hidden color picker easter egg: long-press hero → drag to change app color.
-/// Radial map: angle from center = hue (0-360), distance from center = saturation.
+/// Hidden color picker easter egg — multi-touch:
+/// Long-press activates. First finger left/right = hue (full 360).
+/// Second finger up/down = saturation.
+/// During drag: writes to lightweight liveHue/liveSat providers (no ThemeData rebuild).
+/// On release: commits to theme once.
 class _HeroColorPicker extends ConsumerStatefulWidget {
   final double height;
   final Widget child;
@@ -302,63 +294,143 @@ class _HeroColorPicker extends ConsumerStatefulWidget {
 
 class _HeroColorPickerState extends ConsumerState<_HeroColorPicker> {
   bool _active = false;
+  int? _huePointer;
+  int? _satPointer;
+  double _hue = 0;
+  double _sat = 0.6;
+
+  Timer? _longPressTimer;
+  int? _candidatePointer;
+  static const _longPressDuration = Duration(milliseconds: 400);
+
+  @override
+  void dispose() {
+    _longPressTimer?.cancel();
+    super.dispose();
+  }
+
+  void _emit() {
+    ref.read(liveHueProvider.notifier).state = _hue;
+    ref.read(liveSatProvider.notifier).state = _sat;
+  }
+
+  void _updateHue(Offset localPos) {
+    final box = context.findRenderObject() as RenderBox?;
+    if (box == null) return;
+    _hue = (localPos.dx / box.size.width * 360).clamp(0.0, 360.0);
+    _emit();
+  }
+
+  void _updateSat(Offset localPos) {
+    final box = context.findRenderObject() as RenderBox?;
+    if (box == null) return;
+    _sat = (0.15 + 0.85 * (localPos.dy / box.size.height)).clamp(0.15, 1.0);
+    _emit();
+  }
+
+  void _finish() {
+    // Commit to theme (one-time ThemeData rebuild) and clear live state
+    ref.read(themeProvider.notifier).setCustomColorLive(_hue, _sat);
+    ref.read(themeProvider.notifier).saveCustomColor();
+    ref.read(liveHueProvider.notifier).state = null;
+    ref.read(liveSatProvider.notifier).state = null;
+    setState(() {
+      _active = false;
+      _huePointer = null;
+      _satPointer = null;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final palette = Theme.of(context).colorScheme;
+    // During drag, compute hero color from live providers (no ThemeData).
+    final liveHue = ref.watch(liveHueProvider);
+    final liveSat = ref.watch(liveSatProvider);
 
-    return GestureDetector(
-      onLongPressStart: (details) {
-        setState(() => _active = true);
-        HapticFeedback.lightImpact();
-        _updateColor(details.localPosition);
-      },
-      onLongPressMoveUpdate: (details) {
-        if (_active) _updateColor(details.localPosition);
-      },
-      onLongPressEnd: (_) {
-        if (_active) {
-          ref.read(themeProvider.notifier).saveCustomColor();
-          setState(() => _active = false);
+    Color heroColor;
+    if (liveHue != null && liveSat != null) {
+      heroColor = HSVColor.fromAHSV(1.0, liveHue, liveSat.clamp(0.1, 1.0), 0.5).toColor();
+    } else {
+      heroColor = palette.primary;
+    }
+
+    return Listener(
+      onPointerDown: (e) {
+        if (!_active) {
+          _candidatePointer = e.pointer;
+          _longPressTimer?.cancel();
+          _longPressTimer = Timer(_longPressDuration, () {
+            if (_candidatePointer == e.pointer) {
+              setState(() => _active = true);
+              HapticFeedback.lightImpact();
+              _huePointer = e.pointer;
+              final notifier = ref.read(themeProvider.notifier);
+              _hue = notifier.customHue ?? HSLColor.fromColor(palette.primary).hue;
+              _sat = notifier.customSat ?? 0.6;
+              _updateHue(e.localPosition);
+            }
+          });
+          return;
+        }
+        if (_huePointer != null && _satPointer == null) {
+          _satPointer = e.pointer;
+          HapticFeedback.selectionClick();
+          _updateSat(e.localPosition);
         }
       },
-      child: Container(
+      onPointerMove: (e) {
+        if (!_active) return;
+        if (e.pointer == _huePointer) _updateHue(e.localPosition);
+        else if (e.pointer == _satPointer) _updateSat(e.localPosition);
+      },
+      onPointerUp: (e) {
+        if (!_active && e.pointer == _candidatePointer) {
+          _longPressTimer?.cancel();
+          _candidatePointer = null;
+          return;
+        }
+        if (e.pointer == _satPointer) {
+          _satPointer = null;
+        } else if (e.pointer == _huePointer) {
+          _finish();
+        }
+      },
+      onPointerCancel: (e) {
+        if (e.pointer == _candidatePointer) {
+          _longPressTimer?.cancel();
+          _candidatePointer = null;
+        }
+        if (e.pointer == _huePointer) _finish();
+        else if (e.pointer == _satPointer) _satPointer = null;
+      },
+      child: SizedBox(
         height: widget.height,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              HSLColor.fromColor(palette.primary).withLightness(0.35).toColor(),
-              palette.primary,
-              HSLColor.fromColor(palette.primary).withLightness(0.20).toColor(),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // Looping video background
+            const VideoMapBackground(),
+            // Color gradient overlay (transparent enough to see video)
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    HSLColor.fromColor(heroColor).withLightness(0.35).toColor().withValues(alpha: 0.7),
+                    heroColor.withValues(alpha: 0.55),
+                    HSLColor.fromColor(heroColor).withLightness(0.20).toColor().withValues(alpha: 0.7),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+            ),
+            // Content
+            widget.child,
+          ],
         ),
-        child: widget.child,
       ),
     );
-  }
-
-  void _updateColor(Offset pos) {
-    final box = context.findRenderObject() as RenderBox?;
-    if (box == null) return;
-    final size = box.size;
-    // Radial color map: center of hero = no saturation, edges = max saturation.
-    // Angle from center = hue (full 360), distance = saturation.
-    final cx = size.width / 2;
-    final cy = size.height / 2;
-    final dx = pos.dx - cx;
-    final dy = pos.dy - cy;
-    // Angle → hue (0-360). atan2 returns -pi..pi, shift to 0..2pi.
-    final angle = math.atan2(dy, dx);
-    final hue = ((angle < 0 ? angle + 2 * math.pi : angle) / (2 * math.pi) * 360)
-        .clamp(0.0, 360.0);
-    // Distance from center → saturation. Normalize to max possible radius.
-    final maxRadius = math.sqrt(cx * cx + cy * cy);
-    final dist = math.sqrt(dx * dx + dy * dy);
-    final sat = (dist / maxRadius).clamp(0.05, 1.0);
-    ref.read(themeProvider.notifier).setCustomColorLive(hue, sat);
   }
 }
 
@@ -429,8 +501,8 @@ class _HeaderButton extends StatelessWidget {
   }
 }
 
-// Redesigned category card with colored icon circle and better depth
-class _CategoryCard extends StatefulWidget {
+// Category card — watches liveHueProvider for instant color during drag.
+class _CategoryCard extends ConsumerStatefulWidget {
   final ServiceCategory category;
   final int index;
   final ThemeVariant variant;
@@ -444,10 +516,10 @@ class _CategoryCard extends StatefulWidget {
   });
 
   @override
-  State<_CategoryCard> createState() => _CategoryCardState();
+  ConsumerState<_CategoryCard> createState() => _CategoryCardState();
 }
 
-class _CategoryCardState extends State<_CategoryCard>
+class _CategoryCardState extends ConsumerState<_CategoryCard>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
@@ -476,9 +548,29 @@ class _CategoryCardState extends State<_CategoryCard>
     final category = widget.category;
     final palette = Theme.of(context).colorScheme;
     final ext = Theme.of(context).extension<BCThemeExtension>()!;
-    final categoryColor = ext.categoryColors.length > widget.index
-        ? ext.categoryColors[widget.index]
-        : palette.primary;
+
+    // During drag: compute color from live hue (pure math, no ThemeData).
+    // Otherwise: use theme category color.
+    final liveHue = ref.watch(liveHueProvider);
+    Color categoryColor;
+    if (liveHue != null) {
+      final n = ref.read(themeProvider.notifier);
+      final offsets = n.categoryHueOffsets;
+      if (widget.index < offsets.length) {
+        final hueDelta = liveHue - n.basePrimaryHue;
+        var h = (n.basePrimaryHue + offsets[widget.index] + hueDelta) % 360;
+        if (h < 0) h += 360;
+        categoryColor = HSLColor.fromAHSL(
+          1.0, h, n.categorySaturations[widget.index], n.categoryLightnesses[widget.index],
+        ).toColor();
+      } else {
+        categoryColor = palette.primary;
+      }
+    } else {
+      categoryColor = ext.categoryColors.length > widget.index
+          ? ext.categoryColors[widget.index]
+          : palette.primary;
+    }
 
     return AnimatedBuilder(
       animation: _scaleAnimation,

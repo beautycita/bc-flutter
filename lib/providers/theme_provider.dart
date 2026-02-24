@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -42,13 +43,36 @@ class ThemeNotifier extends StateNotifier<ThemeState> {
   double? _customHue;
   double? _customSat;
 
+  // Pre-cached category color offsets — computed once per palette, not per drag tick.
+  double _basePrimaryHue = 0;
+  List<double> _catHueOffsets = [];
+  List<double> _catSaturations = [];
+  List<double> _catLightnesses = [];
+
   ThemeNotifier()
       : super(ThemeState(
           themeId: roseGoldPalette.id,
           themeData: buildThemeFromPalette(roseGoldPalette),
           palette: roseGoldPalette,
         )) {
+    _cacheCategoryOffsets(roseGoldPalette);
     _load();
+  }
+
+  /// Compute and cache hue offsets from base primary for each category color.
+  /// Called once when palette changes, not on every drag tick.
+  void _cacheCategoryOffsets(BCPalette palette) {
+    final baseHsl = HSLColor.fromColor(palette.primary);
+    _basePrimaryHue = baseHsl.hue;
+    _catHueOffsets = [];
+    _catSaturations = [];
+    _catLightnesses = [];
+    for (final c in palette.categoryColors) {
+      final hsl = HSLColor.fromColor(c);
+      _catHueOffsets.add(hsl.hue - _basePrimaryHue);
+      _catSaturations.add(hsl.saturation);
+      _catLightnesses.add(hsl.lightness);
+    }
   }
 
   Future<void> _load() async {
@@ -110,6 +134,7 @@ class ThemeNotifier extends StateNotifier<ThemeState> {
   }
 
   void _applyPalette(BCPalette palette) {
+    _cacheCategoryOffsets(palette);
     _rebuild(palette);
     // Update system UI chrome
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
@@ -153,6 +178,12 @@ class ThemeNotifier extends StateNotifier<ThemeState> {
   double? get customHue => _customHue;
   double? get customSat => _customSat;
 
+  /// Exposed for live color computation (bypasses ThemeData during drag).
+  double get basePrimaryHue => _basePrimaryHue;
+  List<double> get categoryHueOffsets => _catHueOffsets;
+  List<double> get categorySaturations => _catSaturations;
+  List<double> get categoryLightnesses => _catLightnesses;
+
   void _rebuild(BCPalette palette) {
     final effectiveRadius = _radiusScale * palette.radiusScale;
 
@@ -179,10 +210,19 @@ class ThemeNotifier extends StateNotifier<ThemeState> {
   }
 
   /// Create a modified palette with custom primary color from HSV.
+  /// Category colors use pre-cached hue offsets — no Color→HSL per tick.
   BCPalette _applyColorOverride(BCPalette base, double hue, double sat) {
     final primary = HSVColor.fromAHSV(1.0, hue.clamp(0, 360), sat.clamp(0.1, 1.0), 0.5).toColor();
-    // Gradient end: slightly shifted hue, higher value
     final gradEnd = HSVColor.fromAHSV(1.0, (hue + 15).clamp(0, 360), (sat * 0.8).clamp(0.1, 1.0), 0.65).toColor();
+
+    // Use pre-cached offsets — pure arithmetic, no conversions
+    final hueDelta = hue - _basePrimaryHue;
+    final shiftedCategories = List<Color>.generate(_catHueOffsets.length, (i) {
+      var newHue = (_basePrimaryHue + _catHueOffsets[i] + hueDelta) % 360;
+      if (newHue < 0) newHue += 360;
+      return HSLColor.fromAHSL(1.0, newHue, _catSaturations[i], _catLightnesses[i]).toColor();
+    });
+
     return BCPalette(
       id: base.id,
       nameEs: base.nameEs,
@@ -215,7 +255,7 @@ class ThemeNotifier extends StateNotifier<ThemeState> {
       accentGradient: base.accentGradient,
       goldGradientStops: base.goldGradientStops,
       goldGradientPositions: base.goldGradientPositions,
-      categoryColors: base.categoryColors,
+      categoryColors: shiftedCategories,
       headingFont: base.headingFont,
       bodyFont: base.bodyFont,
       spacingScale: base.spacingScale,
@@ -269,3 +309,8 @@ final paletteProvider = Provider<BCPalette>((ref) {
 final themeExtProvider = Provider<BCThemeExtension>((ref) {
   return ref.watch(themeProvider).themeData.extension<BCThemeExtension>()!;
 });
+
+/// Live color picker state — lightweight, bypasses ThemeData during drag.
+/// Null when not actively dragging.
+final liveHueProvider = StateProvider<double?>((ref) => null);
+final liveSatProvider = StateProvider<double?>((ref) => null);

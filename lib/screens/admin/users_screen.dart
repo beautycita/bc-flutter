@@ -15,12 +15,16 @@ class UsersScreen extends ConsumerStatefulWidget {
 class _UsersScreenState extends ConsumerState<UsersScreen> {
   String _search = '';
   String? _roleFilter;
+  String? _statusFilter = 'active'; // default to active users only
 
   static const _roles = ['customer', 'stylist', 'admin', 'superadmin'];
   static const _statuses = ['active', 'suspended', 'archived'];
 
   List<AdminUser> _filtered(List<AdminUser> users) {
     var list = users;
+    if (_statusFilter != null) {
+      list = list.where((u) => u.status == _statusFilter).toList();
+    }
     if (_roleFilter != null) {
       list = list.where((u) => u.role == _roleFilter).toList();
     }
@@ -122,6 +126,31 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
     }
   }
 
+  Widget _statusChip(String? value, String label, ColorScheme colors) {
+    final selected = _statusFilter == value;
+    return GestureDetector(
+      onTap: () => setState(() => _statusFilter = value),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected ? colors.primary : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: selected ? colors.primary : colors.onSurface.withValues(alpha: 0.2),
+          ),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.nunito(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: selected ? Colors.white : colors.onSurface.withValues(alpha: 0.6),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final usersAsync = ref.watch(adminUsersProvider);
@@ -190,6 +219,25 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
             ],
           ),
         ),
+
+        // Status filter chips
+        Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppConstants.paddingMD,
+          ),
+          child: Row(
+            children: [
+              _statusChip(null, 'Todos', colors),
+              const SizedBox(width: 6),
+              _statusChip('active', 'Activos', colors),
+              const SizedBox(width: 6),
+              _statusChip('suspended', 'Suspendidos', colors),
+              const SizedBox(width: 6),
+              _statusChip('archived', 'Archivados', colors),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppConstants.paddingSM),
 
         // User list
         Expanded(
@@ -788,13 +836,24 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
                       child: TextButton.icon(
                         onPressed: () =>
                             setSheetState(() => selectedStatus = 'archived'),
-                        icon: Icon(Icons.archive_outlined,
-                            size: 18, color: Colors.grey[600]),
+                        icon: Icon(
+                          user.phoneVerified
+                              ? Icons.archive_outlined
+                              : Icons.delete_outline_rounded,
+                          size: 18,
+                          color: user.phoneVerified
+                              ? Colors.grey[600]
+                              : Colors.red[400],
+                        ),
                         label: Text(
-                          'Archivar usuario',
+                          user.phoneVerified
+                              ? 'Archivar usuario'
+                              : 'Eliminar usuario (sin tel. verificado)',
                           style: GoogleFonts.nunito(
                             fontSize: 13,
-                            color: Colors.grey[600],
+                            color: user.phoneVerified
+                                ? Colors.grey[600]
+                                : Colors.red[400],
                           ),
                         ),
                       ),
@@ -818,6 +877,33 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
     Navigator.of(ctx).pop();
 
     try {
+      // Archiving a user who never verified phone → delete completely
+      if (newStatus == 'archived' && !user.phoneVerified) {
+        await SupabaseClientService.client
+            .rpc('admin_delete_user', params: {'p_user_id': user.id});
+
+        await adminLogAction(
+          action: 'delete_user',
+          targetType: 'user',
+          targetId: user.id,
+          details: {
+            'reason': 'archived_unverified_phone',
+            'username': user.username,
+            'phone': user.phone,
+          },
+        );
+
+        ref.invalidate(adminUsersProvider);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Usuario eliminado (sin telefono verificado)')),
+          );
+        }
+        return;
+      }
+
+      // Normal update (role change, status change, or archive verified user)
       final updates = <String, dynamic>{};
       if (newRole != user.role) updates['role'] = newRole;
       if (newStatus != user.status) updates['status'] = newStatus;
@@ -849,7 +935,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Usuario actualizado')),
+          const SnackBar(content: Text('Usuario actualizado')),
         );
       }
     } catch (e) {

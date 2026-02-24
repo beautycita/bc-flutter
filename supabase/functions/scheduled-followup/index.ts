@@ -13,9 +13,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-const TWILIO_ACCOUNT_SID = Deno.env.get("TWILIO_ACCOUNT_SID") ?? "";
-const TWILIO_AUTH_TOKEN = Deno.env.get("TWILIO_AUTH_TOKEN") ?? "";
-const TWILIO_WHATSAPP_FROM = Deno.env.get("TWILIO_WHATSAPP_FROM") ?? "";
+const BEAUTYPI_WA_URL = Deno.env.get("BEAUTYPI_WA_URL") || "http://100.93.1.103:3200";
+const BEAUTYPI_WA_TOKEN = Deno.env.get("BEAUTYPI_WA_TOKEN") || "bc-wa-api-2026";
 
 const MAX_OUTREACH_ATTEMPTS = 10;
 const MIN_HOURS_BETWEEN_MESSAGES = 48;
@@ -84,33 +83,49 @@ function json(body: unknown, status = 200) {
 }
 
 async function sendWhatsApp(to: string, body: string): Promise<boolean> {
-  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_WHATSAPP_FROM) {
-    console.log(`[TWILIO-DISABLED] Would send to ${to}: ${body}`);
+  try {
+    // Check if recipient is on WhatsApp
+    const checkRes = await fetch(`${BEAUTYPI_WA_URL}/api/wa/check`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${BEAUTYPI_WA_TOKEN}`,
+      },
+      body: JSON.stringify({ phone: to }),
+    });
+
+    if (!checkRes.ok) {
+      console.log(`[WA] Check failed for ${to}: ${checkRes.status}`);
+      return false;
+    }
+
+    const checkData = await checkRes.json();
+    if (!checkData.onWhatsApp) {
+      console.log(`[WA] ${to} not on WhatsApp`);
+      return false;
+    }
+
+    // Send message
+    const sendRes = await fetch(`${BEAUTYPI_WA_URL}/api/wa/send`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${BEAUTYPI_WA_TOKEN}`,
+      },
+      body: JSON.stringify({ phone: to, message: body }),
+    });
+
+    if (!sendRes.ok) {
+      console.error(`[WA] Send failed for ${to}: ${sendRes.status}`);
+      return false;
+    }
+
+    const sendData = await sendRes.json();
+    return sendData.sent === true;
+  } catch (e) {
+    console.error(`[WA] Error sending to ${to}: ${e}`);
     return false;
   }
-
-  const url = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`;
-
-  const resp = await fetch(url, {
-    method: "POST",
-    headers: {
-      Authorization: `Basic ${btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`)}`,
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: new URLSearchParams({
-      From: `whatsapp:${TWILIO_WHATSAPP_FROM}`,
-      To: `whatsapp:${to}`,
-      Body: body,
-    }),
-  });
-
-  if (!resp.ok) {
-    const err = await resp.text();
-    console.error(`[TWILIO-ERROR] ${resp.status}: ${err}`);
-    return false;
-  }
-
-  return true;
 }
 
 Deno.serve(async (req: Request) => {
@@ -209,7 +224,6 @@ Deno.serve(async (req: Request) => {
 
       if (phone) {
         success = await sendWhatsApp(phone, message);
-        if (!success && !TWILIO_ACCOUNT_SID) success = true; // Twilio disabled = dry run
       }
 
       // Fallback to email if WhatsApp failed or no phone

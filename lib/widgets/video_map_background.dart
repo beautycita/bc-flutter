@@ -12,7 +12,7 @@ class VideoMapBackground extends StatefulWidget {
 
   const VideoMapBackground({
     super.key,
-    this.assetPath = 'assets/videos/home_map_bg.mp4',
+    this.assetPath = 'assets/videos/wireframe_hero.mp4',
   });
 
   @override

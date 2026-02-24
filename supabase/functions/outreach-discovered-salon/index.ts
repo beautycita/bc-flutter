@@ -207,7 +207,7 @@ serve(async (req: Request) => {
           .single();
 
         if (salon && canSendOutreach(salon)) {
-          // Queue outreach (in production, this would call Twilio)
+          // Send outreach via beautypi WhatsApp API
           const registrationLink = `https://beautycita.com/salon/${discovered_salon_id}`;
           const message = getOutreachMessage(interestCount, salon.business_name, registrationLink);
 

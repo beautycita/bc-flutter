@@ -1,5 +1,4 @@
 import 'package:beautycita/models/booking.dart';
-import 'package:beautycita/models/uber_ride.dart';
 import 'package:beautycita/services/supabase_client.dart';
 
 class BookingRepository {
@@ -16,7 +15,7 @@ class BookingRepository {
     String? paymentIntentId,
     String? paymentStatus,
     String? paymentMethod,
-    String? btcpayInvoiceId,
+    String? transportMode,
   }) async {
     final userId = SupabaseClientService.currentUserId;
     if (userId == null) {
@@ -24,6 +23,15 @@ class BookingRepository {
     }
 
     final endsAt = scheduledAt.add(Duration(minutes: durationMinutes));
+
+    // Map payment status to DB constraint values:
+    // DB allows: unpaid, pending, paid, refunded, partial_refund, failed
+    String dbPaymentStatus = 'unpaid';
+    if (paymentStatus == 'paid') {
+      dbPaymentStatus = 'paid';
+    } else if (paymentStatus == 'pending_payment' || paymentStatus == 'pending') {
+      dbPaymentStatus = 'pending';
+    }
 
     final data = {
       'user_id': userId,
@@ -36,10 +44,9 @@ class BookingRepository {
       'price': price,
       'notes': notes,
       'status': paymentStatus == 'paid' ? 'confirmed' : 'pending',
+      'payment_status': dbPaymentStatus,
       if (paymentIntentId != null) 'payment_intent_id': paymentIntentId,
-      if (paymentStatus != null) 'payment_status': paymentStatus,
-      if (paymentMethod != null) 'payment_method': paymentMethod,
-      if (btcpayInvoiceId != null) 'btcpay_invoice_id': btcpayInvoiceId,
+      if (transportMode != null) 'transport_mode': transportMode,
     };
 
     final response = await SupabaseClientService.client
@@ -131,19 +138,6 @@ class BookingRepository {
         .from('appointments')
         .update({'notes': notes})
         .eq('id', id);
-  }
-
-  /// Get Uber rides for an appointment, ordered by leg.
-  Future<List<UberRide>> getUberRides(String appointmentId) async {
-    final response = await SupabaseClientService.client
-        .from('uber_scheduled_rides')
-        .select()
-        .eq('appointment_id', appointmentId)
-        .order('leg');
-
-    return (response as List)
-        .map((json) => UberRide.fromJson(json as Map<String, dynamic>))
-        .toList();
   }
 
   /// Update the transport_mode field on an appointment.

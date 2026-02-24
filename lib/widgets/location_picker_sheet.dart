@@ -4,10 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/providers/booking_flow_provider.dart'
-    show placesServiceProvider, uberServiceProvider;
+    show placesServiceProvider;
 import 'package:beautycita/services/location_service.dart';
 import 'package:beautycita/services/places_service.dart';
-import 'package:beautycita/services/uber_service.dart';
 
 /// Shows a LocationPickerSheet as a modal bottom sheet.
 /// Returns a [PlaceLocation] if the user selects a location, or null if dismissed.
@@ -57,18 +56,15 @@ class _LocationPickerBodyState extends State<_LocationPickerBody> {
   final _searchController = TextEditingController();
   Timer? _debounce;
   List<PlacePrediction> _predictions = [];
-  List<UberSavedPlace> _uberPlaces = [];
-  bool _loadingUber = false;
   bool _loadingSearch = false;
   bool _resolving = false;
 
   PlacesService get _placesService => widget.ref.read(placesServiceProvider);
-  UberService get _uberService => widget.ref.read(uberServiceProvider);
 
   @override
   void initState() {
     super.initState();
-    if (widget.showUberPlaces) _checkAndFetchUberPlaces();
+    // Uber saved places no longer available (using deep links)
   }
 
   @override
@@ -78,19 +74,6 @@ class _LocationPickerBodyState extends State<_LocationPickerBody> {
     super.dispose();
   }
 
-  Future<void> _checkAndFetchUberPlaces() async {
-    // Only attempt to fetch if Uber is actually linked
-    final linked = await _uberService.isLinked();
-    if (!linked || !mounted) return;
-
-    setState(() => _loadingUber = true);
-    try {
-      final places = await _uberService.getSavedPlaces();
-      if (mounted) setState(() => _uberPlaces = places);
-    } finally {
-      if (mounted) setState(() => _loadingUber = false);
-    }
-  }
 
   void _onSearchChanged(String query) {
     _debounce?.cancel();
@@ -132,30 +115,6 @@ class _LocationPickerBodyState extends State<_LocationPickerBody> {
     }
   }
 
-  Future<void> _selectUberPlace(UberSavedPlace place) async {
-    setState(() => _resolving = true);
-    // Geocode via Places API text search
-    final results = await _placesService.searchPlaces(place.address);
-    if (!mounted) return;
-    if (results.isNotEmpty) {
-      final location =
-          await _placesService.getPlaceDetails(results.first.placeId);
-      if (!mounted) return;
-      if (location != null) {
-        Navigator.pop(context, location);
-        return;
-      }
-    }
-    setState(() => _resolving = false);
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('No se pudo resolver la direccion'),
-          backgroundColor: Colors.red.shade600,
-        ),
-      );
-    }
-  }
 
   Future<void> _useCurrentLocation() async {
     setState(() => _resolving = true);
@@ -263,22 +222,6 @@ class _LocationPickerBodyState extends State<_LocationPickerBody> {
                   AppConstants.paddingLG,
                 ),
                 children: [
-                  // Uber saved places section — only if loading or has results
-                  if (_loadingUber)
-                    _buildShimmerPlaces(surface, onSurfaceLight)
-                  else if (_uberPlaces.isNotEmpty) ...[
-                    Text(
-                      'Lugares guardados',
-                      style: textTheme.labelMedium?.copyWith(
-                        color: onSurfaceLight,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: AppConstants.paddingSM),
-                    ..._uberPlaces.map((place) => _buildUberPlaceTile(place, primary, surface, onSurfaceLight)),
-                    const SizedBox(height: AppConstants.paddingMD),
-                  ],
-
                   // Use current location button
                   SizedBox(
                     width: double.infinity,
@@ -362,59 +305,6 @@ class _LocationPickerBodyState extends State<_LocationPickerBody> {
     );
   }
 
-  Widget _buildUberPlaceTile(UberSavedPlace place, Color primary, Color surface, Color onSurfaceLight) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppConstants.paddingXS),
-      child: Material(
-        color: surface,
-        borderRadius: BorderRadius.circular(AppConstants.radiusSM),
-        child: InkWell(
-          onTap: _resolving ? null : () => _selectUberPlace(place),
-          borderRadius: BorderRadius.circular(AppConstants.radiusSM),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppConstants.paddingMD,
-              vertical: AppConstants.paddingSM + 4,
-            ),
-            child: Row(
-              children: [
-                Icon(place.icon,
-                    size: AppConstants.iconSizeMD,
-                    color: primary),
-                const SizedBox(width: AppConstants.paddingSM),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        place.label,
-                        style:
-                            Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                ),
-                      ),
-                      Text(
-                        place.address,
-                        style:
-                            Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: onSurfaceLight,
-                                ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(Icons.chevron_right_rounded,
-                    color: onSurfaceLight),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildPredictionTile(PlacePrediction prediction, Color onSurfaceLight) {
     return Material(
       color: Colors.transparent,
@@ -463,32 +353,4 @@ class _LocationPickerBodyState extends State<_LocationPickerBody> {
     );
   }
 
-  Widget _buildShimmerPlaces(Color surface, Color onSurfaceLight) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Lugares guardados',
-          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: onSurfaceLight,
-                fontWeight: FontWeight.w600,
-              ),
-        ),
-        const SizedBox(height: AppConstants.paddingSM),
-        for (int i = 0; i < 2; i++)
-          Padding(
-            padding: const EdgeInsets.only(bottom: AppConstants.paddingXS),
-            child: Container(
-              height: 52,
-              decoration: BoxDecoration(
-                color: surface,
-                borderRadius:
-                    BorderRadius.circular(AppConstants.radiusSM),
-              ),
-            ),
-          ),
-        const SizedBox(height: AppConstants.paddingMD),
-      ],
-    );
-  }
 }

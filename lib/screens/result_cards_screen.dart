@@ -11,7 +11,6 @@ import '../models/curate_result.dart';
 import '../providers/booking_flow_provider.dart';
 import '../services/supabase_client.dart';
 import '../widgets/cinematic_question_text.dart';
-import '../widgets/location_picker_sheet.dart';
 import 'invite_salon_screen.dart' show DiscoveredSalon, nearbySalonsProvider, waGreen, waLightGreen, waCardTint;
 import 'time_override_sheet.dart';
 
@@ -197,45 +196,6 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
     }
   }
 
-  String _formatTrafficLevel(String level) {
-    switch (level) {
-      case 'light':
-        return 'poco trafico';
-      case 'moderate':
-        return 'trafico moderado';
-      case 'heavy':
-        return 'mucho trafico';
-      default:
-        return level;
-    }
-  }
-
-  IconData _getTransportIcon(String mode) {
-    switch (mode) {
-      case 'car':
-        return Icons.directions_car;
-      case 'uber':
-        return Icons.local_taxi;
-      case 'transit':
-        return Icons.directions_bus;
-      default:
-        return Icons.directions_car;
-    }
-  }
-
-  String _formatTransportInfo(TransportInfo transport) {
-    if (transport.mode == 'uber' &&
-        transport.uberEstimateMin != null &&
-        transport.uberEstimateMax != null) {
-      final roundTripMin = (transport.uberEstimateMin! * 2).toStringAsFixed(0);
-      final roundTripMax = (transport.uberEstimateMax! * 2).toStringAsFixed(0);
-      return '${transport.durationMin} min · ~\$$roundTripMin-\$$roundTripMax ida y vuelta';
-    } else if (transport.mode == 'transit' && transport.transitSummary != null) {
-      return '${transport.durationMin} min · ${transport.transitSummary}';
-    } else {
-      return '${transport.durationMin} min · ${_formatTrafficLevel(transport.trafficLevel)}';
-    }
-  }
 
   void _showTimeOverride(BuildContext context) {
     showModalBottomSheet(
@@ -439,12 +399,6 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
             _buildTimeSlot(result),
             const SizedBox(height: 12),
             _buildPriceInfo(result),
-            const SizedBox(height: 8),
-            _buildTransportInfo(result),
-            if (result.transport.mode == 'uber') ...[
-              const SizedBox(height: 4),
-              _buildPickupInfo(),
-            ],
             if (result.reviewSnippet != null) ...[
               const SizedBox(height: 10),
               _buildReviewSnippet(result),
@@ -599,90 +553,6 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
         ),
       ],
     );
-  }
-
-  Widget _buildTransportInfo(ResultCard result) {
-    final palette = Theme.of(context).colorScheme;
-    final transport = result.transport;
-    final icon = _getTransportIcon(transport.mode);
-    final info = _formatTransportInfo(transport);
-
-    return Row(
-      children: [
-        Icon(icon, size: 20, color: palette.onSurface.withValues(alpha: 0.5)),
-        const SizedBox(width: 8),
-        Text(
-          info,
-          style: GoogleFonts.poppins(
-            fontSize: 14,
-            color: palette.onSurface.withValues(alpha: 0.5),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPickupInfo() {
-    final palette = Theme.of(context).colorScheme;
-    final bookingState = ref.watch(bookingFlowProvider);
-    final hasCustomPickup = bookingState.customPickupAddress != null;
-    final label = hasCustomPickup
-        ? bookingState.customPickupAddress!
-        : 'Ubicacion actual';
-
-    return Row(
-      children: [
-        const SizedBox(width: 28), // align with transport icon
-        Icon(
-          Icons.trip_origin_rounded,
-          size: 14,
-          color: hasCustomPickup
-              ? Colors.green.shade600
-              : palette.onSurface.withValues(alpha: 0.5),
-        ),
-        const SizedBox(width: 6),
-        Expanded(
-          child: Text(
-            label,
-            style: GoogleFonts.poppins(
-              fontSize: 12,
-              color: palette.onSurface.withValues(alpha: 0.5),
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-        GestureDetector(
-          onTap: () => _showPickupPicker(),
-          child: Text(
-            'Cambiar',
-            style: GoogleFonts.poppins(
-              fontSize: 12,
-              color: palette.primary,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Future<void> _showPickupPicker() async {
-    final location = await showLocationPicker(
-      context: context,
-      ref: ref,
-      title: 'Punto de recogida',
-      currentAddress: ref.read(bookingFlowProvider).customPickupAddress,
-      showUberPlaces: true,
-    );
-
-    if (location != null) {
-      ref.read(bookingFlowProvider.notifier).setPickupLocation(
-            location.lat,
-            location.lng,
-            location.address,
-          );
-    }
   }
 
   Widget _buildReviewSnippet(ResultCard result) {
