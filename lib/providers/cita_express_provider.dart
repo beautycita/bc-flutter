@@ -127,6 +127,7 @@ class CitaExpressNotifier extends StateNotifier<CitaExpressState> {
           .select('*, services(*)')
           .eq('id', businessId)
           .eq('is_active', true)
+          .eq('is_verified', true)
           .maybeSingle();
 
       if (bizResponse == null) {

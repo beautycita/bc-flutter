@@ -11,6 +11,7 @@ class ProviderRepository {
         .select()
         .contains('service_categories', [category])
         .eq('is_active', true)
+        .eq('is_verified', true)
         .order('average_rating', ascending: false);
 
     return (response as List)

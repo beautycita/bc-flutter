@@ -662,7 +662,7 @@ class _TimeStamp extends StatelessWidget {
         DateFormat.Hm().format(time.toLocal()),
         style: GoogleFonts.nunito(
           fontSize: 11,
-          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5).withValues(alpha: 0.6),
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
         ),
       ),
     );
@@ -758,7 +758,7 @@ class _BouncingDotState extends State<_BouncingDot>
         width: 8,
         height: 8,
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5).withValues(alpha: 0.5),
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
           shape: BoxShape.circle,
         ),
       ),

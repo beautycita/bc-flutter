@@ -11,10 +11,11 @@ import '../models/follow_up_question.dart';
 import '../repositories/booking_repository.dart';
 import '../services/curate_service.dart';
 import '../services/follow_up_service.dart';
+import '../services/location_service.dart';
 import '../services/places_service.dart';
-import '../services/uber_service.dart';
 import 'package:beautycita/services/supabase_client.dart';
 import 'user_preferences_provider.dart';
+import 'profile_provider.dart' show tempSearchLocationProvider;
 
 // ---------------------------------------------------------------------------
 // Service instances
@@ -27,12 +28,6 @@ final placesServiceProvider = Provider<PlacesService>((ref) {
   final apiKey = dotenv.env['GOOGLE_ANDROID_API_KEY'] ?? '';
   return PlacesService(apiKey: apiKey);
 });
-final uberServiceProvider = Provider((ref) {
-  final clientId = dotenv.env['UBER_CLIENT_ID'] ?? '';
-  final redirectUri = dotenv.env['UBER_REDIRECT_URI'] ?? 'https://beautycita.com/auth/uber-callback';
-  final sandbox = dotenv.env['UBER_SANDBOX'] == 'true';
-  return UberService(clientId: clientId, redirectUri: redirectUri, sandbox: sandbox);
-});
 
 // ---------------------------------------------------------------------------
 // Booking Flow State
@@ -42,12 +37,12 @@ enum BookingFlowStep {
   categorySelect,
   subcategorySelect,
   followUpQuestions,
-  transportSelect,
   loading,
   results,
   confirmation,
-  booking,  // creating appointment + scheduling rides
-  booked,   // success — booking confirmed
+  booking,           // creating appointment + payment
+  emailVerification, // post-payment email gate
+  booked,            // success — booking confirmed
   error,
 }
 
@@ -67,7 +62,6 @@ class BookingFlowState {
   final int currentQuestionIndex;
   final Map<String, String> followUpAnswers;
   final String? bookingId;
-  final bool uberScheduled;
   final String paymentMethod; // 'card', 'oxxo', 'bitcoin'
 
   const BookingFlowState({
@@ -86,7 +80,6 @@ class BookingFlowState {
     this.currentQuestionIndex = 0,
     this.followUpAnswers = const {},
     this.bookingId,
-    this.uberScheduled = false,
     this.paymentMethod = 'card',
   });
 
@@ -118,7 +111,6 @@ class BookingFlowState {
     int? currentQuestionIndex,
     Map<String, String>? followUpAnswers,
     String? bookingId,
-    bool? uberScheduled,
     String? paymentMethod,
   }) {
     return BookingFlowState(
@@ -137,7 +129,6 @@ class BookingFlowState {
       currentQuestionIndex: currentQuestionIndex ?? this.currentQuestionIndex,
       followUpAnswers: followUpAnswers ?? this.followUpAnswers,
       bookingId: bookingId ?? this.bookingId,
-      uberScheduled: uberScheduled ?? this.uberScheduled,
       paymentMethod: paymentMethod ?? this.paymentMethod,
     );
   }
@@ -151,19 +142,19 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
   final CurateService _curateService;
   final FollowUpService _followUpService;
   final BookingRepository _bookingRepo;
-  final UberService _uberService;
   final UserPrefsState _userPrefs;
+  final LatLng? _tempSearchLocation;
 
   BookingFlowNotifier(
     this._curateService,
     this._followUpService,
     this._bookingRepo,
-    this._uberService,
     this._userPrefs,
+    this._tempSearchLocation,
   ) : super(const BookingFlowState());
 
   /// User selected a service type from the category tree.
-  /// Checks for follow-up questions before proceeding.
+  /// Checks for follow-up questions, then goes straight to engine.
   Future<void> selectService(String serviceType, String displayName) async {
     state = state.copyWith(
       step: BookingFlowStep.loading,
@@ -182,20 +173,17 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
           followUpAnswers: {},
         );
       } else {
-        state = state.copyWith(
-          step: BookingFlowStep.transportSelect,
-        );
+        // No follow-ups — go straight to engine
+        await _acquireLocationAndFetch();
       }
     } catch (_) {
-      // If fetching questions fails, just skip to transport
-      state = state.copyWith(
-        step: BookingFlowStep.transportSelect,
-      );
+      // If fetching questions fails, go straight to engine
+      await _acquireLocationAndFetch();
     }
   }
 
-  /// User answered a follow-up question. Advance to next or to transport.
-  void answerFollowUp(String questionKey, String value) {
+  /// User answered a follow-up question. Advance to next or to engine.
+  Future<void> answerFollowUp(String questionKey, String value) async {
     final newAnswers = Map<String, String>.from(state.followUpAnswers);
     newAnswers[questionKey] = value;
 
@@ -207,25 +195,49 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
         followUpAnswers: newAnswers,
       );
     } else {
+      // Last answer — go to engine
       state = state.copyWith(
-        step: BookingFlowStep.transportSelect,
+        step: BookingFlowStep.loading,
         followUpAnswers: newAnswers,
       );
+      await _acquireLocationAndFetch();
     }
   }
 
-  /// User selected a transport mode — triggers the API call.
-  Future<void> selectTransport(String mode, LatLng location) async {
+  /// Acquire GPS location, set transport from prefs, then fetch results.
+  Future<void> _acquireLocationAndFetch() async {
+    // Use temp search location override if set, otherwise GPS
+    LatLng? location;
+    if (_tempSearchLocation != null) {
+      location = LatLng(lat: _tempSearchLocation.lat, lng: _tempSearchLocation.lng);
+    } else {
+      location = await LocationService.getCurrentLocation();
+    }
+
+    if (location == null) {
+      ToastService.showError('No pudimos obtener tu ubicacion');
+      state = state.copyWith(
+        step: BookingFlowStep.error,
+        error: 'Activa el GPS y permite el acceso a ubicacion',
+      );
+      return;
+    }
+
+    // Use saved transport preference, default to 'car'
+    final transport = _userPrefs.defaultTransport.isNotEmpty
+        ? _userPrefs.defaultTransport
+        : 'car';
+
     state = state.copyWith(
       step: BookingFlowStep.loading,
-      transportMode: mode,
       userLocation: location,
+      transportMode: transport,
     );
 
     await _fetchResults();
   }
 
-  /// User tapped "¿Otro horario?" — re-fetch with override window.
+  /// User tapped "Otro horario?" — re-fetch with override window.
   Future<void> overrideTime(OverrideWindow window) async {
     state = state.copyWith(
       step: BookingFlowStep.loading,
@@ -244,7 +256,7 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
     await _fetchResults();
   }
 
-  /// User changed the Uber pickup location from the result card.
+  /// User changed pickup location from the result card.
   void setPickupLocation(double lat, double lng, String address) {
     state = state.copyWith(
       customPickupLocation: LatLng(lat: lat, lng: lng),
@@ -396,16 +408,18 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
       durationMinutes: result.service.durationMinutes,
       price: result.service.price,
       paymentIntentId: paymentIntentId,
-      paymentStatus: paymentIntentId != null ? (isPaid ? 'paid' : 'pending_payment') : null,
+      paymentStatus: paymentIntentId != null ? (isPaid ? 'paid' : 'pending') : null,
       paymentMethod: state.paymentMethod,
+      transportMode: state.transportMode,
     );
 
-    final uberOk = await _scheduleUber(result, booking.id);
+    // Fire booking confirmation + push (fire and forget)
+    _sendBookingNotifications(booking.id);
 
+    // Transition to email verification gate
     state = state.copyWith(
-      step: BookingFlowStep.booked,
+      step: BookingFlowStep.emailVerification,
       bookingId: booking.id,
-      uberScheduled: uberOk,
     );
   }
 
@@ -422,8 +436,9 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
       scheduledAt: result.slot.startTime,
       durationMinutes: result.service.durationMinutes,
       price: result.service.price,
-      paymentStatus: 'pending_payment',
+      paymentStatus: 'pending',
       paymentMethod: 'bitcoin',
+      transportMode: state.transportMode,
     );
 
     // Create BTCPay invoice
@@ -446,39 +461,54 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
       await launchUrl(url, mode: LaunchMode.externalApplication);
     }
 
-    final uberOk = await _scheduleUber(result, booking.id);
+    // Fire booking confirmation + push (fire and forget)
+    _sendBookingNotifications(booking.id);
 
+    // Transition to email verification gate
     state = state.copyWith(
-      step: BookingFlowStep.booked,
+      step: BookingFlowStep.emailVerification,
       bookingId: booking.id,
-      uberScheduled: uberOk,
     );
   }
 
-  /// Schedule Uber rides if transport mode is uber. Returns true if scheduled.
-  Future<bool> _scheduleUber(ResultCard result, String bookingId) async {
-    final pickup = state.pickupLocation;
-    if (state.transportMode != 'uber' || pickup == null) return false;
+  /// Fire-and-forget booking notifications (push + multi-channel receipt).
+  void _sendBookingNotifications(String bookingId) {
+    // Push notification
+    SupabaseClientService.client.functions.invoke(
+      'send-push-notification',
+      body: {
+        'type': 'booking_confirmed',
+        'user_id': SupabaseClientService.currentUserId,
+        'booking_id': bookingId,
+        'title': 'Cita confirmada',
+        'body': '${state.serviceName ?? "Servicio"} reservado',
+      },
+    ).ignore();
 
-    try {
-      final uberResult = await _uberService.scheduleRides(
-        appointmentId: bookingId,
-        pickupLat: pickup.lat,
-        pickupLng: pickup.lng,
-        salonLat: result.business.lat,
-        salonLng: result.business.lng,
-        salonAddress: result.business.address,
-        appointmentAt: result.slot.startTime.toUtc().toIso8601String(),
-        durationMinutes: result.service.durationMinutes,
-      );
-      if (!uberResult.scheduled) {
-        debugPrint('Uber scheduling skipped: ${uberResult.reason}');
-      }
-      return uberResult.scheduled;
-    } catch (e) {
-      debugPrint('Uber scheduling error: $e');
-      return false;
+    // Multi-channel receipt (email, WA, push)
+    SupabaseClientService.client.functions.invoke(
+      'booking-confirmation',
+      body: {
+        'booking_id': bookingId,
+        'has_email': false, // Will be updated after email gate
+      },
+    ).ignore();
+  }
+
+  /// Called from email verification screen after user provides email or skips.
+  void advanceFromEmail({bool hasEmail = false}) {
+    if (hasEmail && state.bookingId != null) {
+      // Re-send receipt with email
+      SupabaseClientService.client.functions.invoke(
+        'booking-confirmation',
+        body: {
+          'booking_id': state.bookingId,
+          'has_email': true,
+        },
+      ).ignore();
     }
+
+    state = state.copyWith(step: BookingFlowStep.booked);
   }
 
   /// Reset back to category selection.
@@ -503,32 +533,31 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
             followUpAnswers: {},
           );
         }
-      case BookingFlowStep.transportSelect:
+      case BookingFlowStep.results:
+      case BookingFlowStep.error:
         if (state.followUpQuestions.isNotEmpty) {
           state = state.copyWith(
             step: BookingFlowStep.followUpQuestions,
             currentQuestionIndex: state.followUpQuestions.length - 1,
+            curateResponse: null,
+            error: null,
           );
         } else {
           state = state.copyWith(
             step: BookingFlowStep.categorySelect,
             serviceType: null,
             serviceName: null,
+            curateResponse: null,
+            error: null,
           );
         }
-      case BookingFlowStep.results:
-      case BookingFlowStep.error:
-        state = state.copyWith(
-          step: BookingFlowStep.transportSelect,
-          curateResponse: null,
-          error: null,
-        );
       case BookingFlowStep.confirmation:
         state = state.copyWith(
           step: BookingFlowStep.results,
           selectedResult: null,
         );
       case BookingFlowStep.booked:
+      case BookingFlowStep.emailVerification:
         // After booking is confirmed, go home (can't un-book from here)
         break;
       default:
@@ -542,7 +571,7 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
         serviceType: state.serviceType!,
         userId: SupabaseClientService.currentUserId,
         location: state.userLocation!,
-        transportMode: state.transportMode!,
+        transportMode: state.transportMode ?? _userPrefs.defaultTransport,
         followUpAnswers:
             state.followUpAnswers.isNotEmpty ? state.followUpAnswers : null,
         overrideWindow: state.overrideWindow,
@@ -583,13 +612,15 @@ final bookingFlowProvider =
   final curateService = ref.watch(curateServiceProvider);
   final followUpService = ref.watch(followUpServiceProvider);
   final bookingRepo = ref.watch(bookingRepositoryProvider);
-  final uberService = ref.watch(uberServiceProvider);
   final userPrefs = ref.read(userPrefsProvider);
+  final tempLoc = ref.read(tempSearchLocationProvider);
+  // Convert PlaceLocation to LatLng if set
+  final tempLatLng = tempLoc != null ? LatLng(lat: tempLoc.lat, lng: tempLoc.lng) : null;
   return BookingFlowNotifier(
     curateService,
     followUpService,
     bookingRepo,
-    uberService,
     userPrefs,
+    tempLatLng,
   );
 });

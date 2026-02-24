@@ -1,7 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:beautycita/config/constants.dart';
-import 'package:beautycita/providers/uber_provider.dart';
 import 'package:beautycita/providers/user_preferences_provider.dart';
 import 'package:beautycita/widgets/settings_widgets.dart';
 
@@ -10,22 +11,8 @@ class PreferencesScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final uberState = ref.watch(uberLinkProvider);
     final prefsState = ref.watch(userPrefsProvider);
     final textTheme = Theme.of(context).textTheme;
-
-    ref.listen<UberLinkState>(uberLinkProvider, (prev, next) {
-      if (next.justLinked && !(prev?.justLinked ?? false)) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Uber vinculado exitosamente'),
-            backgroundColor: Colors.green.shade600,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
-    });
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -91,7 +78,6 @@ class PreferencesScreen extends ConsumerWidget {
           const SectionHeader(label: 'Transporte'),
           const SizedBox(height: AppConstants.paddingXS),
 
-          _UberTile(uberState: uberState, ref: ref),
           SettingsTile(
             icon: _transportIcon(prefsState.defaultTransport),
             label: 'Transporte preferido',
@@ -364,6 +350,7 @@ class PreferencesScreen extends ConsumerWidget {
 
   void _showQualitySheet(BuildContext context, WidgetRef ref, double current) {
     double sliderValue = current;
+    Timer? autoDismiss;
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -402,7 +389,14 @@ class PreferencesScreen extends ConsumerWidget {
                             max: 1.0,
                             divisions: 10,
                             activeColor: Theme.of(context).colorScheme.primary,
-                            onChanged: (v) => setSheetState(() => sliderValue = v),
+                            onChanged: (v) {
+                              setSheetState(() => sliderValue = v);
+                              ref.read(userPrefsProvider.notifier).setQualitySpeed(v);
+                              autoDismiss?.cancel();
+                              autoDismiss = Timer(const Duration(milliseconds: 400), () {
+                                if (ctx.mounted) Navigator.pop(ctx);
+                              });
+                            },
                           ),
                         ),
                         Text('Lo mejor',
@@ -411,10 +405,6 @@ class PreferencesScreen extends ConsumerWidget {
                             )),
                       ],
                     ),
-                    const SizedBox(height: 8),
-                    _buildSaveButton(context, ctx, () {
-                      ref.read(userPrefsProvider.notifier).setQualitySpeed(sliderValue);
-                    }),
                   ],
                 ),
               ),
@@ -427,6 +417,7 @@ class PreferencesScreen extends ConsumerWidget {
 
   void _showExploreSheet(BuildContext context, WidgetRef ref, double current) {
     double sliderValue = current;
+    Timer? autoDismiss;
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -465,7 +456,14 @@ class PreferencesScreen extends ConsumerWidget {
                             max: 1.0,
                             divisions: 10,
                             activeColor: Theme.of(context).colorScheme.primary,
-                            onChanged: (v) => setSheetState(() => sliderValue = v),
+                            onChanged: (v) {
+                              setSheetState(() => sliderValue = v);
+                              ref.read(userPrefsProvider.notifier).setExploreLoyalty(v);
+                              autoDismiss?.cancel();
+                              autoDismiss = Timer(const Duration(milliseconds: 400), () {
+                                if (ctx.mounted) Navigator.pop(ctx);
+                              });
+                            },
                           ),
                         ),
                         Text('Mis favoritos',
@@ -474,10 +472,6 @@ class PreferencesScreen extends ConsumerWidget {
                             )),
                       ],
                     ),
-                    const SizedBox(height: 8),
-                    _buildSaveButton(context, ctx, () {
-                      ref.read(userPrefsProvider.notifier).setExploreLoyalty(sliderValue);
-                    }),
                   ],
                 ),
               ),
@@ -485,42 +479,6 @@ class PreferencesScreen extends ConsumerWidget {
           },
         );
       },
-    );
-  }
-
-  Widget _buildSaveButton(BuildContext parentCtx, BuildContext sheetCtx, VoidCallback save) {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: () {
-          try {
-            save();
-            Navigator.pop(sheetCtx);
-            if (parentCtx.mounted) {
-              ScaffoldMessenger.of(parentCtx).showSnackBar(
-                SnackBar(
-                  content: const Text('Preferencia guardada'),
-                  backgroundColor: Colors.green.shade600,
-                  behavior: SnackBarBehavior.floating,
-                  duration: const Duration(seconds: 2),
-                ),
-              );
-            }
-          } catch (e) {
-            Navigator.pop(sheetCtx);
-            _showError(parentCtx, e);
-          }
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Theme.of(parentCtx).colorScheme.primary,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppConstants.radiusSM),
-          ),
-        ),
-        child: const Text('Guardar'),
-      ),
     );
   }
 
@@ -642,138 +600,4 @@ class _NotifChildTile extends StatelessWidget {
 
 // ---------------------------------------------------------------------------
 // Uber Tile (moved from settings_screen.dart)
-// ---------------------------------------------------------------------------
-
-class _UberTile extends StatelessWidget {
-  final UberLinkState uberState;
-  final WidgetRef ref;
-
-  const _UberTile({required this.uberState, required this.ref});
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
-    if (uberState.isLoading) {
-      return SettingsTile(
-        icon: Icons.local_taxi_rounded,
-        label: 'Uber',
-        trailing: const SizedBox(
-          width: 20,
-          height: 20,
-          child: CircularProgressIndicator(strokeWidth: 2),
-        ),
-      );
-    }
-
-    if (uberState.isLinked) {
-      return SettingsTile(
-        icon: Icons.local_taxi_rounded,
-        iconColor: Colors.green.shade600,
-        label: 'Uber',
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.check_circle, color: Colors.green.shade600, size: 20),
-            const SizedBox(width: 8),
-            GestureDetector(
-              onTap: () => _confirmUnlink(context),
-              child: Text(
-                'Desvincular',
-                style: textTheme.bodySmall?.copyWith(color: Colors.red.shade400),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return SettingsTile(
-      icon: Icons.local_taxi_rounded,
-      label: 'Vincular Uber',
-      onTap: () => ref.read(uberLinkProvider.notifier).initiateLink(),
-    );
-  }
-
-  void _confirmUnlink(BuildContext context) async {
-    final confirmed = await showModalBottomSheet<bool>(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppConstants.radiusXL)),
-      ),
-      builder: (ctx) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppConstants.paddingLG,
-              AppConstants.paddingMD,
-              AppConstants.paddingLG,
-              AppConstants.paddingLG,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: AppConstants.paddingMD),
-                Icon(Icons.local_taxi_rounded, size: AppConstants.iconSizeXL, color: Colors.red.shade400),
-                const SizedBox(height: AppConstants.paddingSM),
-                Text(
-                  'Desvincular Uber?',
-                  style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: AppConstants.paddingXS),
-                Text(
-                  'Ya no se programaran viajes automaticamente. Puedes volver a vincular en cualquier momento.',
-                  style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.5),
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: AppConstants.paddingLG),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => Navigator.pop(ctx, false),
-                        style: OutlinedButton.styleFrom(
-                          minimumSize: const Size(0, AppConstants.minTouchHeight),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppConstants.radiusLG)),
-                        ),
-                        child: const Text('Cancelar'),
-                      ),
-                    ),
-                    const SizedBox(width: AppConstants.paddingSM),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () => Navigator.pop(ctx, true),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red.shade500,
-                          minimumSize: const Size(0, AppConstants.minTouchHeight),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppConstants.radiusLG)),
-                        ),
-                        child: const Text('Desvincular', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-
-    if (confirmed == true) {
-      ref.read(uberLinkProvider.notifier).unlink();
-    }
-  }
-}
+// Uber linking tile removed — using deep links, no OAuth needed.

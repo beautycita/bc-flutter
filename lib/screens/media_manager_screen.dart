@@ -28,8 +28,6 @@ class _MediaManagerScreenState extends ConsumerState<MediaManagerScreen>
       length: isOwner ? 3 : 2,
       vsync: this,
     );
-    // Trigger rebuild since controller changed
-    if (mounted) setState(() {});
   }
 
   @override

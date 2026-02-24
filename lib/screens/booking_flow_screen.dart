@@ -5,10 +5,10 @@ import 'package:google_fonts/google_fonts.dart';
 import '../config/constants.dart';
 import '../providers/booking_flow_provider.dart';
 import '../widgets/cinematic_question_text.dart';
-import 'transport_selection.dart';
 import 'follow_up_question_screen.dart';
 import 'result_cards_screen.dart';
 import 'confirmation_screen.dart';
+import 'email_verification_screen.dart';
 
 class BookingFlowScreen extends ConsumerWidget {
   const BookingFlowScreen({super.key});
@@ -27,9 +27,7 @@ class BookingFlowScreen extends ConsumerWidget {
 
     return switch (state.step) {
       BookingFlowStep.followUpQuestions => const FollowUpQuestionScreen(),
-      BookingFlowStep.transportSelect ||
-      BookingFlowStep.subcategorySelect =>
-        const TransportSelection(),
+      BookingFlowStep.subcategorySelect => const SizedBox.shrink(),
       BookingFlowStep.loading => _LoadingView(
           serviceName: state.serviceName ?? '',
         ),
@@ -37,6 +35,14 @@ class BookingFlowScreen extends ConsumerWidget {
       BookingFlowStep.confirmation => const ConfirmationScreen(),
       BookingFlowStep.booking => _LoadingView(
           serviceName: 'Reservando tu cita...',
+        ),
+      BookingFlowStep.emailVerification => EmailVerificationScreen(
+          onComplete: (email) {
+            ref.read(bookingFlowProvider.notifier).advanceFromEmail(hasEmail: true);
+          },
+          onSkip: () {
+            ref.read(bookingFlowProvider.notifier).advanceFromEmail(hasEmail: false);
+          },
         ),
       BookingFlowStep.booked => const ConfirmationScreen(),
       BookingFlowStep.error => _ErrorView(

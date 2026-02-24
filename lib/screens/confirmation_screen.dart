@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../config/constants.dart';
 import '../config/theme_extension.dart';
 import '../models/curate_result.dart';
 import '../providers/booking_flow_provider.dart';
+import '../providers/profile_provider.dart';
 import '../widgets/cinematic_question_text.dart';
+import '../widgets/phone_verify_gate_sheet.dart';
 
 class ConfirmationScreen extends ConsumerStatefulWidget {
   const ConfirmationScreen({super.key});
@@ -18,6 +21,25 @@ class ConfirmationScreen extends ConsumerStatefulWidget {
 
 class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
   bool _isConfirming = false;
+
+  Future<void> _handleConfirm() async {
+    final notifier = ref.read(bookingFlowProvider.notifier);
+    final profile = ref.read(profileProvider);
+
+    // Phone verification gate
+    if (!profile.hasVerifiedPhone) {
+      final verified = await showPhoneVerifyGate(context);
+      if (!verified || !mounted) return;
+    }
+
+    setState(() => _isConfirming = true);
+    try {
+      HapticFeedback.mediumImpact();
+      await notifier.confirmBooking();
+    } finally {
+      if (mounted) setState(() => _isConfirming = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -65,8 +87,6 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
             ],
             _SummaryCard(result: result),
             const SizedBox(height: AppConstants.paddingMD),
-            _TransportCard(result: result, isBooked: isBooked, uberScheduled: state.uberScheduled),
-            const SizedBox(height: AppConstants.paddingMD),
             _PriceBreakdown(result: result),
             if (!isBooked) ...[
               const SizedBox(height: AppConstants.paddingMD),
@@ -77,11 +97,13 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
             ],
             const SizedBox(height: AppConstants.paddingXL),
             if (isBooked) ...[
-              // Success actions -- gold gradient button
+              // "VER COMO LLEGAR" — navigates to appointment detail with map
               GestureDetector(
                 onTap: () {
                   HapticFeedback.mediumImpact();
-                  notifier.reset();
+                  if (state.bookingId != null) {
+                    context.push('/appointment/${state.bookingId}');
+                  }
                 },
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: AppConstants.paddingMD),
@@ -98,7 +120,7 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
                   ),
                   alignment: Alignment.center,
                   child: Text(
-                    'LISTO',
+                    'VER COMO LLEGAR',
                     style: GoogleFonts.poppins(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
@@ -108,20 +130,25 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
                   ),
                 ),
               ),
-            ] else ...[
-              // Confirm button -- gold gradient
+              const SizedBox(height: AppConstants.paddingSM),
+              // Secondary "Listo" option
               GestureDetector(
-                onTap: _isConfirming
-                    ? null
-                    : () async {
-                        setState(() => _isConfirming = true);
-                        try {
-                          HapticFeedback.mediumImpact();
-                          await notifier.confirmBooking();
-                        } finally {
-                          if (mounted) setState(() => _isConfirming = false);
-                        }
-                      },
+                onTap: () {
+                  notifier.reset();
+                },
+                child: Text(
+                  'Listo',
+                  style: GoogleFonts.nunito(
+                    fontSize: 14,
+                    color: palette.onSurface.withValues(alpha: 0.5),
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+              ),
+            ] else ...[
+              // Confirm button — gold gradient
+              GestureDetector(
+                onTap: _isConfirming ? null : _handleConfirm,
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: AppConstants.paddingMD),
                   decoration: BoxDecoration(
@@ -146,9 +173,7 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
                           ),
                         )
                       : Text(
-                          result.transport.mode == 'uber'
-                              ? 'CONFIRMAR TODO'
-                              : 'CONFIRMAR RESERVA',
+                          'CONFIRMAR RESERVA',
                           style: GoogleFonts.poppins(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
@@ -358,332 +383,6 @@ class _SummaryCard extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Transport card
-// ---------------------------------------------------------------------------
-
-class _TransportCard extends StatelessWidget {
-  final ResultCard result;
-  final bool isBooked;
-  final bool uberScheduled;
-
-  const _TransportCard({
-    required this.result,
-    this.isBooked = false,
-    this.uberScheduled = false,
-  });
-
-  IconData _icon(String mode) {
-    switch (mode) {
-      case 'car':
-        return Icons.directions_car;
-      case 'uber':
-        return Icons.local_taxi;
-      case 'transit':
-        return Icons.directions_bus;
-      default:
-        return Icons.directions_car;
-    }
-  }
-
-  String _modeLabel(String mode) {
-    switch (mode) {
-      case 'car':
-        return 'En auto';
-      case 'uber':
-        return 'Transporte Uber';
-      case 'transit':
-        return 'Transporte';
-      default:
-        return mode;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = Theme.of(context).colorScheme;
-    final ext = Theme.of(context).extension<BCThemeExtension>()!;
-    final t = result.transport;
-    final isUber = t.mode == 'uber';
-
-    return Container(
-      decoration: BoxDecoration(
-        gradient: ext.goldGradientDirectional(),
-        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFD4AF37).withValues(alpha: 0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Container(
-        margin: const EdgeInsets.all(1.5),
-        padding: const EdgeInsets.all(AppConstants.paddingLG),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(AppConstants.radiusMD - 1.5),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header row
-            Row(
-              children: [
-                Icon(_icon(t.mode),
-                    color: palette.primary, size: 24),
-                const SizedBox(width: 12),
-                Text(
-                  _modeLabel(t.mode),
-                  style: GoogleFonts.poppins(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: palette.onSurface,
-                  ),
-                ),
-              ],
-            ),
-
-            if (isUber) ...[
-              const SizedBox(height: AppConstants.paddingMD),
-
-              // Uber status badge (after booking)
-              if (isBooked) ...[
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: uberScheduled
-                        ? const Color(0xFF4CAF50).withValues(alpha: 0.1)
-                        : Colors.orange.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        uberScheduled
-                            ? Icons.check_circle
-                            : Icons.info_outline,
-                        size: 16,
-                        color: uberScheduled
-                            ? const Color(0xFF4CAF50)
-                            : Colors.orange,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        uberScheduled
-                            ? 'Viajes programados'
-                            : 'Vincula Uber para programar viajes',
-                        style: GoogleFonts.nunito(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: uberScheduled
-                              ? const Color(0xFF4CAF50)
-                              : Colors.orange,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: AppConstants.paddingSM),
-              ],
-
-              // Outbound leg
-              _UberLegRow(
-                label: 'Ida',
-                icon: Icons.arrow_forward,
-                destination: result.business.name,
-                pickupTime: _formatPickupTime(
-                    result.slot.startTime, t.durationMin, 3),
-                fareMin: t.uberEstimateMin,
-                fareMax: t.uberEstimateMax,
-                durationMin: t.durationMin,
-                distanceKm: t.distanceKm,
-              ),
-
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8),
-                child: Divider(height: 1),
-              ),
-
-              // Return leg
-              _UberLegRow(
-                label: 'Vuelta',
-                icon: Icons.arrow_back_rounded,
-                destination: 'Tu ubicacion',
-                pickupTime: _formatReturnPickupTime(
-                  result.slot.startTime,
-                  result.service.durationMinutes,
-                ),
-                fareMin: t.uberEstimateMin,
-                fareMax: t.uberEstimateMax,
-                durationMin: t.durationMin,
-                distanceKm: t.distanceKm,
-              ),
-            ] else ...[
-              const SizedBox(height: 4),
-              Padding(
-                padding: const EdgeInsets.only(left: 36),
-                child: Text(
-                  '${t.durationMin} min · ${t.distanceKm.toStringAsFixed(1)} km',
-                  style: GoogleFonts.nunito(
-                    fontSize: 13,
-                    color: palette.onSurface.withValues(alpha: 0.5),
-                  ),
-                ),
-              ),
-              if (t.mode == 'transit' && t.transitSummary != null)
-                Padding(
-                  padding: const EdgeInsets.only(left: 36, top: 2),
-                  child: Text(
-                    t.transitSummary!,
-                    style: GoogleFonts.nunito(
-                      fontSize: 13,
-                      color: palette.onSurface.withValues(alpha: 0.5),
-                    ),
-                  ),
-                ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  String _formatPickupTime(DateTime appointmentTime, int driveMin, int buffer) {
-    final pickup =
-        appointmentTime.subtract(Duration(minutes: driveMin + buffer));
-    return DateFormat('h:mm a').format(pickup);
-  }
-
-  String _formatReturnPickupTime(DateTime appointmentTime, int durationMin) {
-    final pickup =
-        appointmentTime.add(Duration(minutes: durationMin + 5));
-    return '~${DateFormat('h:mm a').format(pickup)}';
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Uber leg row
-// ---------------------------------------------------------------------------
-
-class _UberLegRow extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final String destination;
-  final String pickupTime;
-  final double? fareMin;
-  final double? fareMax;
-  final int durationMin;
-  final double distanceKm;
-
-  const _UberLegRow({
-    required this.label,
-    required this.icon,
-    required this.destination,
-    required this.pickupTime,
-    this.fareMin,
-    this.fareMax,
-    required this.durationMin,
-    required this.distanceKm,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = Theme.of(context).colorScheme;
-    final hasFare = fareMin != null && fareMax != null;
-
-    return Padding(
-      padding: const EdgeInsets.only(left: 36),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '$label:',
-            style: GoogleFonts.poppins(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: palette.onSurface,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Row(
-            children: [
-              Icon(icon, size: 16, color: palette.onSurface.withValues(alpha: 0.5)),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  destination,
-                  style: GoogleFonts.nunito(
-                    fontSize: 13,
-                    color: palette.onSurface.withValues(alpha: 0.5),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 2),
-          Row(
-            children: [
-              Icon(Icons.access_time,
-                  size: 16, color: palette.onSurface.withValues(alpha: 0.5)),
-              const SizedBox(width: 6),
-              Text(
-                'Recogida: $pickupTime',
-                style: GoogleFonts.nunito(
-                  fontSize: 13,
-                  color: palette.onSurface.withValues(alpha: 0.5),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                '$durationMin min · ${distanceKm.toStringAsFixed(1)} km',
-                style: GoogleFonts.nunito(
-                  fontSize: 12,
-                  color: palette.onSurface.withValues(alpha: 0.35),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 2),
-          Row(
-            children: [
-              Icon(Icons.attach_money,
-                  size: 16,
-                  color: hasFare
-                      ? palette.primary
-                      : palette.onSurface.withValues(alpha: 0.5)),
-              const SizedBox(width: 6),
-              Text(
-                hasFare
-                    ? '~\$${fareMin!.toStringAsFixed(0)}-\$${fareMax!.toStringAsFixed(0)} MXN'
-                    : '~\$${_estimateFare(distanceKm, durationMin)} MXN',
-                style: GoogleFonts.nunito(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: hasFare
-                      ? palette.primary
-                      : palette.onSurface.withValues(alpha: 0.5),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Simple fare estimate based on Uber MX rates when API estimate unavailable.
-  /// Base ~28 MXN + ~5 MXN/km + ~1.5 MXN/min.
-  static String _estimateFare(double km, int min) {
-    final low = (28 + km * 4.5 + min * 1.2).round();
-    final high = (35 + km * 6.0 + min * 1.8).round();
-    return '\$$low-\$$high';
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Price breakdown
 // ---------------------------------------------------------------------------
 
@@ -696,21 +395,8 @@ class _PriceBreakdown extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = Theme.of(context).colorScheme;
     final ext = Theme.of(context).extension<BCThemeExtension>()!;
-    final t = result.transport;
     final servicePrice = result.service.price;
     final currency = result.service.currency;
-    final isUber = t.mode == 'uber';
-
-    // Use API estimates if available, otherwise compute local estimate
-    double uberLow;
-    double uberHigh;
-    if (t.uberEstimateMin != null && t.uberEstimateMax != null) {
-      uberLow = t.uberEstimateMin!;
-      uberHigh = t.uberEstimateMax!;
-    } else {
-      uberLow = 28 + t.distanceKm * 4.5 + t.durationMin * 1.2;
-      uberHigh = 35 + t.distanceKm * 6.0 + t.durationMin * 1.8;
-    }
 
     return Container(
       decoration: BoxDecoration(
@@ -762,25 +448,6 @@ class _PriceBreakdown extends StatelessWidget {
                 ),
               ],
             ),
-            if (isUber) ...[
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Icon(Icons.info_outline,
-                      size: 14, color: palette.onSurface.withValues(alpha: 0.5)),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      'Uber cobra por separado: ~\$${(uberLow * 2).toStringAsFixed(0)}-\$${(uberHigh * 2).toStringAsFixed(0)} $currency ida y vuelta',
-                      style: GoogleFonts.nunito(
-                        fontSize: 12,
-                        color: palette.onSurface.withValues(alpha: 0.5),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
           ],
         ),
       ),

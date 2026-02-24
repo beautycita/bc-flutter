@@ -619,7 +619,10 @@ class _ApplicationCard extends ConsumerWidget {
     try {
       await SupabaseClientService.client
           .from('businesses')
-          .update({'is_active': false}).eq('id', id);
+          .update({
+            'is_active': false,
+            'is_verified': true,
+          }).eq('id', id);
 
       await adminLogAction(
         action: 'reject_application',

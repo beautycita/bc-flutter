@@ -13,7 +13,7 @@ import 'package:beautycita/services/notification_service.dart';
 import 'package:beautycita/config/routes.dart';
 import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/providers/theme_provider.dart';
-import 'package:beautycita/providers/uber_provider.dart';
+// uber_provider import removed — using deep links, no OAuth
 import 'package:beautycita/services/qr_auth_service.dart';
 import 'package:beautycita/screens/business/business_shell_screen.dart';
 import 'package:beautycita/services/toast_service.dart';
@@ -137,14 +137,8 @@ class _BeautyCitaAppState extends ConsumerState<BeautyCitaApp> {
     switch (uri.host) {
       case 'uber-callback':
         final code = uri.queryParameters['code'];
-        final error = uri.queryParameters['error'];
-        debugPrint('[DeepLink] Uber callback - code=${code != null ? "${code.substring(0, code.length.clamp(0, 8))}..." : "null"}, error=$error');
-        if (error != null) {
-          debugPrint('[DeepLink] Uber OAuth error: $error - ${uri.queryParameters['error_description']}');
-        }
-        if (code != null) {
-          ref.read(uberLinkProvider.notifier).handleCallback(code);
-        }
+        // Uber OAuth no longer used — deep link approach instead.
+        debugPrint('[DeepLink] Uber callback (ignored — using deep links now)');
         break;
       case 'stripe-complete':
         debugPrint('[DeepLink] Stripe onboarding complete');

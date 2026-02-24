@@ -2,16 +2,40 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/models/booking.dart';
-import 'package:beautycita/models/uber_ride.dart';
+import 'package:beautycita/models/curate_result.dart' show LatLng;
 import 'package:beautycita/providers/booking_detail_provider.dart';
 import 'package:beautycita/providers/booking_flow_provider.dart'
-    show bookingRepositoryProvider, uberServiceProvider;
+    show bookingRepositoryProvider;
 import 'package:beautycita/providers/booking_provider.dart'
     show userBookingsProvider, upcomingBookingsProvider;
+import 'package:beautycita/providers/profile_provider.dart';
+import 'package:beautycita/providers/route_provider.dart';
+import 'package:beautycita/providers/uber_provider.dart';
 import 'package:beautycita/services/location_service.dart';
+import 'package:beautycita/services/supabase_client.dart';
+import 'package:beautycita/widgets/route_map_widget.dart';
 import 'package:beautycita/widgets/location_picker_sheet.dart';
+
+// ── Business location fetcher ───────────────────────────────────────────────
+
+final _businessLocationProvider =
+    FutureProvider.family<LatLng?, String>((ref, businessId) async {
+  final biz = await SupabaseClientService.client
+      .from('businesses')
+      .select('latitude, longitude')
+      .eq('id', businessId)
+      .maybeSingle();
+  if (biz == null) return null;
+  final lat = (biz['latitude'] as num?)?.toDouble();
+  final lng = (biz['longitude'] as num?)?.toDouble();
+  if (lat == null || lng == null) return null;
+  return LatLng(lat: lat, lng: lng);
+});
+
+// ── Screen ───────────────────────────────────────────────────────────────────
 
 class BookingDetailScreen extends ConsumerStatefulWidget {
   final String bookingId;
@@ -24,7 +48,13 @@ class BookingDetailScreen extends ConsumerStatefulWidget {
 
 class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
   bool _isCancelling = false;
-  bool _isAddingUber = false;
+  bool _isUpdatingTransport = false;
+
+  // Origin for route: starts null, initialized from profile or GPS on first
+  // build when business location is available.
+  LatLng? _origin;
+  String? _originAddress;
+  bool _originResolved = false;
 
   // ── Helpers ──
 
@@ -71,65 +101,137 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
     }
   }
 
-  String _transportLabel(String? mode) {
-    switch (mode) {
-      case 'uber':
-        return 'Uber';
-      case 'car':
-        return 'Auto propio';
-      case 'transit':
-        return 'Transporte publico';
-      default:
-        return 'No especificado';
-    }
-  }
-
-  IconData _transportIcon(String? mode) {
-    switch (mode) {
-      case 'uber':
-        return Icons.local_taxi_rounded;
-      case 'car':
-        return Icons.directions_car_rounded;
-      case 'transit':
-        return Icons.directions_bus_rounded;
-      default:
-        return Icons.help_outline_rounded;
-    }
-  }
-
-  Color _uberStatusColor(String status) {
-    switch (status) {
-      case 'scheduled':
-        return Colors.blue.shade600;
-      case 'requested':
-        return Colors.orange.shade600;
-      case 'accepted':
-        return Colors.green.shade600;
-      case 'arriving':
-        return Colors.teal.shade600;
-      case 'in_progress':
-        return Colors.indigo.shade600;
-      case 'completed':
-        return Colors.grey.shade600;
-      case 'cancelled':
-        return Colors.red.shade600;
-      default:
-        return Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
-    }
-  }
-
   bool _canCancel(String status) =>
       status == 'pending' || status == 'confirmed';
 
-  bool _canAddUber(Booking booking) {
-    if (booking.transportMode == 'uber') return false;
-    if (!_canCancel(booking.status)) return false;
-    final minutesUntil =
-        booking.scheduledAt.difference(DateTime.now()).inMinutes;
-    return minutesUntil >= 30;
+  // ── Origin resolution ──
+
+  Future<void> _resolveOriginIfNeeded() async {
+    if (_originResolved) return;
+    _originResolved = true;
+
+    final profile = ref.read(profileProvider);
+
+    if (profile.homeLat != null && profile.homeLng != null) {
+      setState(() {
+        _origin = LatLng(lat: profile.homeLat!, lng: profile.homeLng!);
+        _originAddress = profile.homeAddress ?? 'Mi casa';
+      });
+      return;
+    }
+
+    // Fall back to GPS
+    final gps = await LocationService.getCurrentLocation();
+    if (mounted && gps != null) {
+      setState(() {
+        _origin = gps;
+        _originAddress = 'Ubicacion actual';
+      });
+    }
   }
 
   // ── Actions ──
+
+  Future<void> _pickOrigin() async {
+    final result = await showLocationPicker(
+      context: context,
+      ref: ref,
+      title: 'Punto de partida',
+      currentAddress: _originAddress,
+    );
+    if (result != null && mounted) {
+      setState(() {
+        _origin = LatLng(lat: result.lat, lng: result.lng);
+        _originAddress = result.address;
+      });
+    }
+  }
+
+  Future<void> _updateTransportMode(Booking booking, String mode) async {
+    if (_isUpdatingTransport || booking.transportMode == mode) return;
+    setState(() => _isUpdatingTransport = true);
+    try {
+      await SupabaseClientService.client
+          .from('bookings')
+          .update({'transport_mode': mode})
+          .eq('id', booking.id);
+      ref.invalidate(bookingDetailProvider(widget.bookingId));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al actualizar transporte: $e'),
+            backgroundColor: Colors.red.shade600,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isUpdatingTransport = false);
+    }
+  }
+
+  Future<void> _openMapsNavigation(LatLng destination) async {
+    final url =
+        'https://www.google.com/maps/dir/?api=1&destination=${destination.lat},${destination.lng}';
+    Share.share(url);
+  }
+
+  void _shareRoute(Booking booking, LatLng? destination) {
+    final dest = destination;
+    String text =
+        'Mi cita de ${booking.serviceName} en ${booking.providerName ?? 'el salon'}\n'
+        'Fecha: ${_formatDate(booking.scheduledAt)}';
+    if (dest != null) {
+      text +=
+          '\nComo llegar: https://www.google.com/maps/dir/?api=1&destination=${dest.lat},${dest.lng}';
+    }
+    Share.share(text);
+  }
+
+  Future<void> _openUberToSalon(Booking booking) async {
+    try {
+      final biz = await SupabaseClientService.client
+          .from('businesses')
+          .select('name, address, latitude, longitude')
+          .eq('id', booking.businessId)
+          .maybeSingle();
+      if (biz == null || !mounted) return;
+      final uberService = ref.read(uberServiceProvider);
+      final lat = (biz['latitude'] as num?)?.toDouble();
+      final lng = (biz['longitude'] as num?)?.toDouble();
+      if (lat != null && lng != null) {
+        await uberService.openRideToSalon(
+          salonLat: lat,
+          salonLng: lng,
+          salonName:
+              biz['name'] as String? ?? booking.providerName ?? 'Salon',
+          salonAddress: biz['address'] as String?,
+        );
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _openUberFromSalon(Booking booking) async {
+    try {
+      final biz = await SupabaseClientService.client
+          .from('businesses')
+          .select('name, latitude, longitude')
+          .eq('id', booking.businessId)
+          .maybeSingle();
+      if (biz == null || !mounted) return;
+      final uberService = ref.read(uberServiceProvider);
+      final lat = (biz['latitude'] as num?)?.toDouble();
+      final lng = (biz['longitude'] as num?)?.toDouble();
+      if (lat != null && lng != null) {
+        await uberService.openRideHome(
+          salonLat: lat,
+          salonLng: lng,
+          salonName:
+              biz['name'] as String? ?? booking.providerName ?? 'Salon',
+        );
+      }
+    } catch (_) {}
+  }
 
   Future<void> _editNotes(Booking booking) async {
     final controller = TextEditingController(text: booking.notes ?? '');
@@ -139,8 +241,8 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius:
-            BorderRadius.vertical(top: Radius.circular(AppConstants.radiusXL)),
+        borderRadius: BorderRadius.vertical(
+            top: Radius.circular(AppConstants.radiusXL)),
       ),
       builder: (ctx) {
         return Padding(
@@ -194,7 +296,8 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
                     final repo = ref.read(bookingRepositoryProvider);
                     await repo.updateNotes(
                         widget.bookingId, controller.text.trim());
-                    ref.invalidate(bookingDetailProvider(widget.bookingId));
+                    ref.invalidate(
+                        bookingDetailProvider(widget.bookingId));
                     ref.invalidate(userBookingsProvider);
                     if (ctx.mounted) Navigator.pop(ctx);
                     if (mounted) {
@@ -233,8 +336,8 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
     final confirmed = await showModalBottomSheet<bool>(
       context: context,
       shape: const RoundedRectangleBorder(
-        borderRadius:
-            BorderRadius.vertical(top: Radius.circular(AppConstants.radiusXL)),
+        borderRadius: BorderRadius.vertical(
+            top: Radius.circular(AppConstants.radiusXL)),
       ),
       builder: (ctx) {
         return SafeArea(
@@ -276,7 +379,10 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
                   'Se cancelara tu cita de ${booking.serviceName}.'
                   '${booking.transportMode == 'uber' ? ' Tambien se cancelaran tus viajes de Uber.' : ''}',
                   style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.5),
+                        color: Theme.of(ctx)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.5),
                       ),
                   textAlign: TextAlign.center,
                 ),
@@ -336,11 +442,6 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
       final repo = ref.read(bookingRepositoryProvider);
       await repo.cancelBooking(booking.id);
 
-      if (booking.transportMode == 'uber') {
-        final uberService = ref.read(uberServiceProvider);
-        await uberService.cancelRides(appointmentId: booking.id);
-      }
-
       ref.invalidate(bookingDetailProvider(widget.bookingId));
       ref.invalidate(userBookingsProvider);
       ref.invalidate(upcomingBookingsProvider);
@@ -365,241 +466,6 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
       }
     } finally {
       if (mounted) setState(() => _isCancelling = false);
-    }
-  }
-
-  Future<void> _addUber(Booking booking) async {
-    setState(() => _isAddingUber = true);
-    final colorScheme = Theme.of(context).colorScheme;
-
-    try {
-      final location = await LocationService.getCurrentLocation();
-      if (location == null) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('No se pudo obtener tu ubicacion'),
-              backgroundColor: Colors.red.shade600,
-            ),
-          );
-        }
-        return;
-      }
-
-      final uberService = ref.read(uberServiceProvider);
-      // Get fare estimate for preview
-      final estimate = await uberService.getFareEstimate(
-        startLat: location.lat,
-        startLng: location.lng,
-        endLat: 0, // We need salon coords — fall back to booking business
-        endLng: 0,
-      );
-
-      if (!mounted) return;
-
-      // Show confirmation sheet
-      final confirmed = await showModalBottomSheet<bool>(
-        context: context,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(
-              top: Radius.circular(AppConstants.radiusXL)),
-        ),
-        builder: (ctx) {
-          return SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppConstants.paddingLG,
-                AppConstants.paddingMD,
-                AppConstants.paddingLG,
-                AppConstants.paddingLG,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade300,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: AppConstants.paddingMD),
-                  Icon(
-                    Icons.local_taxi_rounded,
-                    size: AppConstants.iconSizeXL,
-                    color: colorScheme.primary,
-                  ),
-                  const SizedBox(height: AppConstants.paddingSM),
-                  Text(
-                    'Agregar Uber?',
-                    style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                  ),
-                  const SizedBox(height: AppConstants.paddingXS),
-                  Text(
-                    estimate != null
-                        ? 'Estimado: \$${estimate.fareMin.toStringAsFixed(0)}-\$${estimate.fareMax.toStringAsFixed(0)} ${estimate.currency} (ida y vuelta)'
-                        : 'Se programaran viajes de ida y vuelta',
-                    style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.5),
-                        ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: AppConstants.paddingLG),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => Navigator.pop(ctx, false),
-                          style: OutlinedButton.styleFrom(
-                            minimumSize:
-                                const Size(0, AppConstants.minTouchHeight),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(
-                                  AppConstants.radiusLG),
-                            ),
-                          ),
-                          child: const Text('No'),
-                        ),
-                      ),
-                      const SizedBox(width: AppConstants.paddingSM),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () => Navigator.pop(ctx, true),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: colorScheme.primary,
-                            minimumSize:
-                                const Size(0, AppConstants.minTouchHeight),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(
-                                  AppConstants.radiusLG),
-                            ),
-                          ),
-                          child: const Text(
-                            'Agregar',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      );
-
-      if (confirmed != true || !mounted) return;
-
-      // Schedule rides
-      final result = await uberService.scheduleRides(
-        appointmentId: booking.id,
-        pickupLat: location.lat,
-        pickupLng: location.lng,
-        salonLat: 0, // The edge function resolves salon coords from appointment
-        salonLng: 0,
-        appointmentAt: booking.scheduledAt.toUtc().toIso8601String(),
-        durationMinutes: booking.durationMinutes,
-      );
-
-      if (!result.scheduled) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                  'No se pudo programar Uber: ${result.reason ?? "error desconocido"}'),
-              backgroundColor: Colors.red.shade600,
-            ),
-          );
-        }
-        return;
-      }
-
-      // Update transport mode
-      final repo = ref.read(bookingRepositoryProvider);
-      await repo.updateTransportMode(booking.id, 'uber');
-
-      ref.invalidate(bookingDetailProvider(widget.bookingId));
-      ref.invalidate(uberRidesProvider(widget.bookingId));
-      ref.invalidate(userBookingsProvider);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Uber agregado exitosamente'),
-            backgroundColor: Colors.green.shade600,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al agregar Uber: $e'),
-            backgroundColor: Colors.red.shade600,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isAddingUber = false);
-    }
-  }
-
-  Future<void> _editRideLocation(UberRide ride) async {
-    final uberService = ref.read(uberServiceProvider);
-    final isReturn = ride.leg == 'return';
-    final title =
-        isReturn ? 'Cambiar destino de regreso' : 'Cambiar punto de recogida';
-    final currentAddress = isReturn ? ride.dropoffAddress : ride.pickupAddress;
-    final successMsg = isReturn
-        ? 'Destino de regreso actualizado'
-        : 'Punto de recogida actualizado';
-
-    final location = await showLocationPicker(
-      context: context,
-      ref: ref,
-      title: title,
-      currentAddress: currentAddress,
-      showUberPlaces: true,
-    );
-
-    if (location == null || !mounted) return;
-
-    final bool success;
-    if (isReturn) {
-      success = await uberService.updateReturnDestination(
-        appointmentId: ride.appointmentId,
-        lat: location.lat,
-        lng: location.lng,
-        address: location.address,
-      );
-    } else {
-      success = await uberService.updatePickupLocation(
-        appointmentId: ride.appointmentId,
-        lat: location.lat,
-        lng: location.lng,
-        address: location.address,
-      );
-    }
-
-    ref.invalidate(uberRidesProvider(widget.bookingId));
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(success ? successMsg : 'Error al actualizar'),
-          backgroundColor:
-              success ? Colors.green.shade600 : Colors.red.shade600,
-        ),
-      );
     }
   }
 
@@ -633,11 +499,32 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
             return Center(
               child: Text(
                 'Cita no encontrada',
-                style: textTheme.bodyLarge
-                    ?.copyWith(color: colorScheme.onSurface.withValues(alpha: 0.5)),
+                style: textTheme.bodyLarge?.copyWith(
+                    color: colorScheme.onSurface.withValues(alpha: 0.5)),
               ),
             );
           }
+
+          // Watch business location; kick off origin resolution once available.
+          final bizLocationAsync =
+              ref.watch(_businessLocationProvider(booking.businessId));
+
+          bizLocationAsync.whenData((bizLoc) {
+            if (bizLoc != null) {
+              _resolveOriginIfNeeded();
+            }
+          });
+
+          final origin = _origin;
+          final bizLocation = bizLocationAsync.valueOrNull;
+
+          // Build route request only when both origin and destination are ready.
+          final routeAsync = (origin != null && bizLocation != null)
+              ? ref.watch(routeProvider(RouteRequest(
+                  origin: origin,
+                  destination: bizLocation,
+                )))
+              : null;
 
           return Column(
             children: [
@@ -651,25 +538,50 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // 1. Service Info Card
                       _buildServiceInfoCard(booking, textTheme),
                       const SizedBox(height: AppConstants.paddingMD),
+
+                      // 2. Date + Status
                       _buildDateRow(booking, textTheme),
                       const SizedBox(height: AppConstants.paddingSM),
                       _buildStatusChip(booking.status, textTheme),
                       const SizedBox(height: AppConstants.paddingMD),
-                      _buildNotesSection(booking, textTheme),
+
+                      // 3. Route Map
+                      _buildRouteSection(
+                        booking: booking,
+                        bizLocationAsync: bizLocationAsync,
+                        routeAsync: routeAsync,
+                        origin: origin,
+                        bizLocation: bizLocation,
+                        textTheme: textTheme,
+                      ),
                       const SizedBox(height: AppConstants.paddingMD),
-                      _buildTransportSection(booking, textTheme),
-                      if (booking.transportMode == 'uber') ...[
-                        const SizedBox(height: AppConstants.paddingMD),
-                        _buildUberRidesSection(textTheme),
-                      ],
+
+                      // 4. Transport Picker
+                      _buildTransportPicker(booking),
+                      const SizedBox(height: AppConstants.paddingMD),
+
+                      // 5. Action Buttons
+                      _buildActionButtons(
+                          booking: booking, bizLocation: bizLocation),
+                      const SizedBox(height: AppConstants.paddingMD),
+
+                      // 6. Origin Editor
+                      _buildOriginEditor(textTheme),
+                      const SizedBox(height: AppConstants.paddingMD),
+
+                      // 7. Notes
+                      _buildNotesSection(booking, textTheme),
                       const SizedBox(height: AppConstants.paddingLG),
                     ],
                   ),
                 ),
               ),
-              if (_canCancel(booking.status) || _canAddUber(booking))
+
+              // 8. Bottom bar: Cancel
+              if (_canCancel(booking.status))
                 _buildBottomActions(booking, textTheme),
             ],
           );
@@ -689,10 +601,7 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
       decoration: BoxDecoration(
         color: colorScheme.surface,
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-        border: Border.all(
-          color: Theme.of(context).dividerColor,
-          width: 1,
-        ),
+        border: Border.all(color: Theme.of(context).dividerColor, width: 1),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -800,6 +709,372 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
     );
   }
 
+  Widget _buildRouteSection({
+    required Booking booking,
+    required AsyncValue<LatLng?> bizLocationAsync,
+    required AsyncValue<dynamic>? routeAsync,
+    required LatLng? origin,
+    required LatLng? bizLocation,
+    required TextTheme textTheme,
+  }) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final mapHeight = screenHeight * 0.40;
+    final colorScheme = Theme.of(context).colorScheme;
+
+    // Business location still loading
+    if (bizLocationAsync is AsyncLoading) {
+      return _buildMapPlaceholder(
+        mapHeight,
+        child: const CircularProgressIndicator(),
+      );
+    }
+
+    // Business location error or unavailable
+    if (bizLocationAsync is AsyncError || bizLocation == null) {
+      return _buildMapPlaceholder(
+        mapHeight,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.map_outlined,
+                size: AppConstants.iconSizeLG,
+                color: colorScheme.onSurface.withValues(alpha: 0.3)),
+            const SizedBox(height: AppConstants.paddingSM),
+            Text(
+              'Mapa no disponible',
+              style: textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurface.withValues(alpha: 0.4),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Origin not yet resolved
+    if (origin == null) {
+      return _buildMapPlaceholder(
+        mapHeight,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            const SizedBox(height: AppConstants.paddingSM),
+            Text(
+              'Obteniendo tu ubicacion...',
+              style: textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurface.withValues(alpha: 0.5),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Route loading
+    if (routeAsync == null || routeAsync is AsyncLoading) {
+      return _buildMapPlaceholder(
+        mapHeight,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            const SizedBox(height: AppConstants.paddingSM),
+            Text(
+              'Calculando ruta...',
+              style: textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurface.withValues(alpha: 0.5),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Route error
+    if (routeAsync is AsyncError) {
+      return _buildMapPlaceholder(
+        mapHeight,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.route_outlined,
+                size: AppConstants.iconSizeLG,
+                color: colorScheme.onSurface.withValues(alpha: 0.3)),
+            const SizedBox(height: AppConstants.paddingSM),
+            Text(
+              'No se pudo calcular la ruta',
+              style: textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurface.withValues(alpha: 0.4),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Success — render map
+    final routeData = (routeAsync as AsyncData).value;
+    return RouteMapWidget(
+      routeData: routeData,
+      origin: origin,
+      destination: bizLocation,
+      height: mapHeight,
+    );
+  }
+
+  Widget _buildMapPlaceholder(double height, {required Widget child}) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Container(
+      width: double.infinity,
+      height: height,
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Theme.of(context).dividerColor, width: 1),
+      ),
+      child: Center(child: child),
+    );
+  }
+
+  Widget _buildTransportPicker(Booking booking) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final current = booking.transportMode;
+
+    final modes = [
+      (id: 'car', icon: Icons.directions_car_rounded, label: 'Mi auto'),
+      (id: 'uber', icon: Icons.local_taxi_rounded, label: 'Uber'),
+      (id: 'transit', icon: Icons.directions_bus_rounded, label: 'Transporte'),
+    ];
+
+    return Row(
+      children: modes.map((mode) {
+        final isSelected = current == mode.id;
+        return Expanded(
+          child: Padding(
+            padding: EdgeInsets.only(
+              right: mode.id != 'transit' ? AppConstants.paddingXS : 0,
+            ),
+            child: GestureDetector(
+              onTap: _isUpdatingTransport
+                  ? null
+                  : () => _updateTransportMode(booking, mode.id),
+              child: AnimatedContainer(
+                duration: AppConstants.shortAnimation,
+                padding: const EdgeInsets.symmetric(
+                  vertical: AppConstants.paddingSM + 2,
+                  horizontal: AppConstants.paddingXS,
+                ),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? colorScheme.primary
+                      : colorScheme.surface,
+                  borderRadius:
+                      BorderRadius.circular(AppConstants.radiusFull),
+                  border: Border.all(
+                    color: isSelected
+                        ? colorScheme.primary
+                        : Theme.of(context).dividerColor,
+                    width: 1.5,
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      mode.icon,
+                      size: AppConstants.iconSizeSM,
+                      color: isSelected ? Colors.white : colorScheme.primary,
+                    ),
+                    const SizedBox(width: AppConstants.paddingXS),
+                    Flexible(
+                      child: Text(
+                        mode.label,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              color: isSelected
+                                  ? Colors.white
+                                  : colorScheme.onSurface,
+                              fontWeight: FontWeight.w700,
+                            ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildActionButtons({
+    required Booking booking,
+    required LatLng? bizLocation,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final mode = booking.transportMode;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Uber-specific buttons
+        if (mode == 'uber') ...[
+          Row(
+            children: [
+              Expanded(
+                child: _actionButton(
+                  color: Colors.black,
+                  icon: Icons.arrow_forward_rounded,
+                  label: 'Pedir Uber',
+                  onTap: () => _openUberToSalon(booking),
+                ),
+              ),
+              const SizedBox(width: AppConstants.paddingSM),
+              Expanded(
+                child: _actionButton(
+                  color: Colors.black,
+                  icon: Icons.arrow_back_rounded,
+                  label: 'Uber de regreso',
+                  onTap: () => _openUberFromSalon(booking),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppConstants.paddingSM),
+        ],
+
+        // Car / Transit: open in Maps
+        if (mode == 'car' || mode == 'transit') ...[
+          _actionButton(
+            color: colorScheme.primary,
+            icon: Icons.map_rounded,
+            label: 'Abrir en Maps',
+            onTap: bizLocation != null
+                ? () => _openMapsNavigation(bizLocation)
+                : null,
+          ),
+          const SizedBox(height: AppConstants.paddingSM),
+        ],
+
+        // All modes: share route
+        _actionButton(
+          color: colorScheme.secondary,
+          icon: Icons.share_rounded,
+          label: 'Compartir ruta',
+          onTap: () => _shareRoute(booking, bizLocation),
+        ),
+      ],
+    );
+  }
+
+  Widget _actionButton({
+    required Color color,
+    required IconData icon,
+    required String label,
+    required VoidCallback? onTap,
+  }) {
+    return Material(
+      color: onTap != null ? color : color.withValues(alpha: 0.5),
+      borderRadius: BorderRadius.circular(AppConstants.radiusLG),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppConstants.radiusLG),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            vertical: AppConstants.paddingSM + 2,
+            horizontal: AppConstants.paddingMD,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon,
+                  size: AppConstants.iconSizeSM, color: Colors.white),
+              const SizedBox(width: AppConstants.paddingXS),
+              Text(
+                label,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOriginEditor(TextTheme textTheme) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final address = _originAddress ?? 'Seleccionar punto de partida';
+
+    return GestureDetector(
+      onTap: _pickOrigin,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppConstants.paddingMD,
+          vertical: AppConstants.paddingSM + 2,
+        ),
+        decoration: BoxDecoration(
+          color: colorScheme.surface,
+          borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+          border:
+              Border.all(color: Theme.of(context).dividerColor, width: 1),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.trip_origin_rounded,
+              size: AppConstants.iconSizeSM,
+              color: Colors.blue,
+            ),
+            const SizedBox(width: AppConstants.paddingSM),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Desde',
+                    style: textTheme.labelSmall?.copyWith(
+                      color:
+                          colorScheme.onSurface.withValues(alpha: 0.45),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Text(
+                    address,
+                    style: textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w500,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.edit_rounded,
+              size: AppConstants.iconSizeSM,
+              color: colorScheme.primary,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildNotesSection(Booking booking, TextTheme textTheme) {
     final colorScheme = Theme.of(context).colorScheme;
 
@@ -809,10 +1084,7 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
       decoration: BoxDecoration(
         color: colorScheme.surface,
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-        border: Border.all(
-          color: Theme.of(context).dividerColor,
-          width: 1,
-        ),
+        border: Border.all(color: Theme.of(context).dividerColor, width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -852,249 +1124,7 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
     );
   }
 
-  Widget _buildTransportSection(Booking booking, TextTheme textTheme) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Row(
-      children: [
-        Icon(
-          _transportIcon(booking.transportMode),
-          size: AppConstants.iconSizeMD,
-          color: colorScheme.primary,
-        ),
-        const SizedBox(width: AppConstants.paddingSM),
-        Text(
-          _transportLabel(booking.transportMode),
-          style: textTheme.bodyLarge?.copyWith(
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildUberRidesSection(TextTheme textTheme) {
-    final ridesAsync = ref.watch(uberRidesProvider(widget.bookingId));
-
-    return ridesAsync.when(
-      loading: () => const Padding(
-        padding: EdgeInsets.all(AppConstants.paddingMD),
-        child: Center(
-          child: SizedBox(
-            width: 24,
-            height: 24,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          ),
-        ),
-      ),
-      error: (_, __) => const SizedBox.shrink(),
-      data: (rides) {
-        if (rides.isEmpty) return const SizedBox.shrink();
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Viajes Uber',
-              style: textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: AppConstants.paddingSM),
-            ...rides.map((ride) => _buildUberRideCard(ride, textTheme)),
-          ],
-        );
-      },
-    );
-  }
-
-  /// Extract street name from a full address (first part before the comma).
-  String _shortAddress(String? address) {
-    if (address == null || address.isEmpty) return 'Sin direccion';
-    final parts = address.split(',');
-    return parts.first.trim();
-  }
-
-  Widget _buildUberRideCard(UberRide ride, TextTheme textTheme) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final isReturn = ride.leg == 'return';
-    final legLabel = isReturn ? 'Regreso' : 'Ida';
-    final statusColor = _uberStatusColor(ride.status);
-
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(bottom: AppConstants.paddingSM),
-      padding: const EdgeInsets.all(AppConstants.paddingMD),
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-        border: Border.all(
-          color: Theme.of(context).dividerColor,
-          width: 1,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header: leg label + status chip
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                legLabel,
-                style: textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppConstants.paddingSM,
-                  vertical: 2,
-                ),
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.12),
-                  borderRadius:
-                      BorderRadius.circular(AppConstants.radiusFull),
-                ),
-                child: Text(
-                  ride.statusLabel,
-                  style: textTheme.labelSmall?.copyWith(
-                    color: statusColor,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: AppConstants.paddingSM),
-
-          // Pickup address
-          Row(
-            children: [
-              Icon(
-                Icons.trip_origin_rounded,
-                size: AppConstants.iconSizeSM,
-                color: Colors.green.shade600,
-              ),
-              const SizedBox(width: AppConstants.paddingXS),
-              Expanded(
-                child: Text(
-                  _shortAddress(ride.pickupAddress),
-                  style: textTheme.bodySmall,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-
-          // Dotted connector
-          Padding(
-            padding: const EdgeInsets.only(left: 7),
-            child: Column(
-              children: [
-                for (int i = 0; i < 2; i++)
-                  Container(
-                    width: 2,
-                    height: 4,
-                    margin: const EdgeInsets.symmetric(vertical: 1),
-                    color: Theme.of(context).dividerColor,
-                  ),
-              ],
-            ),
-          ),
-
-          // Dropoff address
-          Row(
-            children: [
-              Icon(
-                Icons.location_on_rounded,
-                size: AppConstants.iconSizeSM,
-                color: Colors.red.shade500,
-              ),
-              const SizedBox(width: AppConstants.paddingXS),
-              Expanded(
-                child: Text(
-                  _shortAddress(ride.dropoffAddress),
-                  style: textTheme.bodySmall,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: AppConstants.paddingSM),
-
-          // Time + fare row
-          Row(
-            children: [
-              if (ride.scheduledPickupAt != null) ...[
-                Icon(
-                  Icons.schedule_rounded,
-                  size: AppConstants.iconSizeSM,
-                  color: colorScheme.onSurface.withValues(alpha: 0.5),
-                ),
-                const SizedBox(width: AppConstants.paddingXS),
-                Text(
-                  DateFormat('HH:mm').format(ride.scheduledPickupAt!),
-                  style: textTheme.bodyMedium,
-                ),
-              ],
-              if (ride.scheduledPickupAt != null &&
-                  ride.estimatedFareMin != null)
-                const SizedBox(width: AppConstants.paddingMD),
-              if (ride.estimatedFareMin != null &&
-                  ride.estimatedFareMax != null) ...[
-                Icon(
-                  Icons.attach_money_rounded,
-                  size: AppConstants.iconSizeSM,
-                  color: colorScheme.primary,
-                ),
-                Text(
-                  '\$${ride.estimatedFareMin!.toStringAsFixed(0)}-\$${ride.estimatedFareMax!.toStringAsFixed(0)} ${ride.currency}',
-                  style: textTheme.bodyMedium?.copyWith(
-                    color: colorScheme.primary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ],
-          ),
-
-          if (ride.isActive) ...[
-            const SizedBox(height: AppConstants.paddingSM),
-            GestureDetector(
-              onTap: () => _editRideLocation(ride),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.edit_location_alt_rounded,
-                    size: AppConstants.iconSizeSM,
-                    color: colorScheme.primary,
-                  ),
-                  const SizedBox(width: AppConstants.paddingXS),
-                  Text(
-                    isReturn ? 'Cambiar destino' : 'Cambiar recogida',
-                    style: textTheme.bodySmall?.copyWith(
-                      color: colorScheme.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
   Widget _buildBottomActions(Booking booking, TextTheme textTheme) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return Container(
       padding: EdgeInsets.fromLTRB(
         AppConstants.screenPaddingHorizontal,
@@ -1114,31 +1144,6 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
       ),
       child: Row(
         children: [
-          if (_canAddUber(booking))
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: _isAddingUber ? null : () => _addUber(booking),
-                icon: _isAddingUber
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.local_taxi_rounded),
-                label: Text(_isAddingUber ? 'Agregando...' : 'Agregar Uber'),
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(0, AppConstants.minTouchHeight),
-                  shape: RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius.circular(AppConstants.radiusLG),
-                  ),
-                  side: BorderSide(color: colorScheme.primary),
-                  foregroundColor: colorScheme.primary,
-                ),
-              ),
-            ),
-          if (_canAddUber(booking) && _canCancel(booking.status))
-            const SizedBox(width: AppConstants.paddingSM),
           if (_canCancel(booking.status))
             Expanded(
               child: TextButton.icon(
@@ -1160,7 +1165,8 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
                   style: TextStyle(color: Colors.red.shade600),
                 ),
                 style: TextButton.styleFrom(
-                  minimumSize: const Size(0, AppConstants.minTouchHeight),
+                  minimumSize:
+                      const Size(0, AppConstants.minTouchHeight),
                 ),
               ),
             ),
