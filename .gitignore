@@ -56,3 +56,7 @@ keys/
 .keystore-password
 .worktrees/
 .data/
+
+# Wrangler local state
+.wrangler/
+provider_token

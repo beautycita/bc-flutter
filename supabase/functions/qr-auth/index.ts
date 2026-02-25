@@ -236,6 +236,27 @@ serve(async (req) => {
 
       if (upError) throw upError;
 
+      // Broadcast revocation so connected web client signs out
+      try {
+        const ch = supabase.channel(`qr_revoke_${session_id}`);
+        await new Promise<void>((resolve) => {
+          ch.subscribe((status: string) => {
+            if (status === "SUBSCRIBED") {
+              ch.send({
+                type: "broadcast",
+                event: "session_revoked",
+                payload: { session_id },
+              });
+              resolve();
+            }
+          });
+        });
+        await new Promise((r) => setTimeout(r, 300));
+        supabase.removeChannel(ch);
+      } catch (_) {
+        // Broadcast is best-effort; DB update is the source of truth
+      }
+
       return json({ success: true });
     }
 

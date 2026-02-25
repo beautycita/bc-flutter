@@ -11,8 +11,10 @@ import 'package:url_launcher/url_launcher.dart';
 import '../config/constants.dart';
 import '../config/theme.dart';
 import '../providers/booking_flow_provider.dart' show placesServiceProvider;
+import '../providers/security_provider.dart';
 import '../services/places_service.dart';
 import '../services/supabase_client.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show UserAttributes;
 
 class SalonOnboardingScreen extends ConsumerStatefulWidget {
   final String? refCode;
@@ -28,6 +30,7 @@ class _SalonOnboardingScreenState
     extends ConsumerState<SalonOnboardingScreen> {
   final _nameCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController(text: '+52 ');
+  final _emailCtrl = TextEditingController();
   final _addressCtrl = TextEditingController();
   final _detailsCtrl = TextEditingController();
   final _scrollCtrl = ScrollController();
@@ -38,6 +41,7 @@ class _SalonOnboardingScreenState
   bool _loadingPrefill = false;
   String? _photoUrl;
   Map<String, dynamic>? _discoveredSalonData;
+  String? _discoveredSalonId; // ID of matched discovered salon (from refCode or phone match)
   String? _businessId;
 
   // Location state
@@ -50,9 +54,11 @@ class _SalonOnboardingScreenState
 
   // Inline autocomplete
   Timer? _debounce;
+  Timer? _phoneDebounce;
   List<PlacePrediction> _predictions = [];
   bool _loadingPlaces = false;
   bool _resolvingPlace = false;
+  bool _phoneMatchLoading = false;
 
   // Map
   final _mapCtrl = MapController();
@@ -61,6 +67,15 @@ class _SalonOnboardingScreenState
   void initState() {
     super.initState();
     _loadDiscoveredSalonData();
+    _prefillEmail();
+  }
+
+  void _prefillEmail() {
+    final user = SupabaseClientService.client.auth.currentUser;
+    final email = user?.email;
+    if (email != null && email.isNotEmpty && !email.endsWith('@qr.beautycita.app')) {
+      _emailCtrl.text = email;
+    }
   }
 
   Future<void> _loadDiscoveredSalonData() async {
@@ -129,8 +144,10 @@ class _SalonOnboardingScreenState
   @override
   void dispose() {
     _debounce?.cancel();
+    _phoneDebounce?.cancel();
     _nameCtrl.dispose();
     _phoneCtrl.dispose();
+    _emailCtrl.dispose();
     _addressCtrl.dispose();
     _detailsCtrl.dispose();
     _scrollCtrl.dispose();
@@ -141,6 +158,7 @@ class _SalonOnboardingScreenState
   bool get _isValid =>
       _nameCtrl.text.trim().length >= 2 &&
       _phoneCtrl.text.replaceAll(RegExp(r'[^\d]'), '').length >= 10 &&
+      _emailCtrl.text.trim().contains('@') &&
       _locationConfirmed &&
       _pickedLat != null;
 
@@ -242,10 +260,136 @@ class _SalonOnboardingScreenState
     });
   }
 
+  // ── Identity gate ────────────────────────────────────────────────────
+
+  Future<bool> _ensureIdentityVerified() async {
+    final security = ref.read(securityProvider);
+    if (security.isGoogleLinked || security.isEmailConfirmed) return true;
+
+    // Show identity verification gate
+    final result = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => const _IdentityGateSheet(),
+    );
+
+    if (result == true) {
+      // Re-check after returning
+      await ref.read(securityProvider.notifier).checkIdentities();
+      final updated = ref.read(securityProvider);
+      return updated.isGoogleLinked || updated.isEmailConfirmed;
+    }
+    return false;
+  }
+
+  // ── Phone matching against discovered_salons ────────────────────────
+
+  void _onPhoneChanged(String value) {
+    setState(() {}); // Refresh validation
+    _phoneDebounce?.cancel();
+
+    // Skip if already matched via invite link
+    if (widget.refCode != null && widget.refCode!.isNotEmpty) return;
+
+    final digits = value.replaceAll(RegExp(r'[^\d]'), '');
+    if (digits.length < 10) {
+      if (_discoveredSalonId != null) {
+        setState(() {
+          _discoveredSalonId = null;
+          _discoveredSalonData = null;
+        });
+      }
+      return;
+    }
+
+    _phoneDebounce = Timer(const Duration(milliseconds: 600), () async {
+      if (!mounted) return;
+      setState(() => _phoneMatchLoading = true);
+
+      try {
+        final last10 = digits.length > 10
+            ? digits.substring(digits.length - 10)
+            : digits;
+
+        final results = await SupabaseClientService.client
+            .from('discovered_salons')
+            .select()
+            .or('phone.ilike.%$last10,whatsapp.ilike.%$last10')
+            .limit(1);
+
+        if (!mounted) return;
+
+        if (results.isNotEmpty && results.first['status'] != 'registered') {
+          _prefillFromDiscoveredSalon(results.first);
+        } else if (_discoveredSalonId != null) {
+          setState(() {
+            _discoveredSalonId = null;
+            _discoveredSalonData = null;
+          });
+        }
+      } catch (e) {
+        debugPrint('[SalonOnboarding] Phone match error: $e');
+      } finally {
+        if (mounted) setState(() => _phoneMatchLoading = false);
+      }
+    });
+  }
+
+  void _prefillFromDiscoveredSalon(Map<String, dynamic> salon) {
+    setState(() {
+      _discoveredSalonData = salon;
+      _discoveredSalonId = salon['id'] as String?;
+
+      final name = salon['business_name'] ?? salon['name'];
+      if (name != null &&
+          name.toString().isNotEmpty &&
+          _nameCtrl.text.trim().isEmpty) {
+        _nameCtrl.text = _sanitizeLatin(name.toString());
+      }
+
+      if (!_locationConfirmed) {
+        final address = salon['location_address'] ?? salon['address'];
+        final lat = salon['location_lat'] ?? salon['lat'];
+        final lng = salon['location_lng'] ?? salon['lng'];
+
+        if (address != null && address.toString().isNotEmpty) {
+          _addressCtrl.text = _sanitizeLatin(address.toString());
+          _pickedAddress = _addressCtrl.text;
+        }
+        if (lat != null && lng != null) {
+          _pickedLat = (lat is num)
+              ? lat.toDouble()
+              : double.tryParse(lat.toString());
+          _pickedLng = (lng is num)
+              ? lng.toDouble()
+              : double.tryParse(lng.toString());
+          if (_pickedLat != null && _pickedLng != null) {
+            _locationConfirmed = true;
+          }
+        }
+
+        _pickedCity = salon['location_city'] ?? salon['city'];
+        _pickedState = salon['location_state'] ?? salon['state'];
+      }
+
+      _photoUrl ??= salon['feature_image_url'] ?? salon['photo_url'];
+    });
+  }
+
   // ── Submit ───────────────────────────────────────────────────────────
 
   Future<void> _submit() async {
     if (!_isValid || _submitting) return;
+
+    // Gate: require Google or confirmed email (bypass for invite links)
+    if (widget.refCode == null || widget.refCode!.isEmpty) {
+      final identityOk = await _ensureIdentityVerified();
+      if (!identityOk || !mounted) return;
+    }
+
     setState(() => _submitting = true);
 
     try {
@@ -299,6 +443,19 @@ class _SalonOnboardingScreenState
 
       final businessId = response['id'] as String;
 
+      // Save email on user's auth account (best-effort)
+      final email = _emailCtrl.text.trim();
+      if (email.isNotEmpty && email.contains('@')) {
+        try {
+          await SupabaseClientService.client.auth.updateUser(
+            UserAttributes(email: email),
+          );
+        } catch (_) {
+          // Non-critical
+        }
+      }
+
+      // Mark discovered salon as registered (invite link)
       if (widget.refCode != null && widget.refCode!.isNotEmpty) {
         await SupabaseClientService.client
             .from('discovered_salons')
@@ -308,6 +465,19 @@ class _SalonOnboardingScreenState
               'registered_at': DateTime.now().toUtc().toIso8601String(),
             })
             .eq('id', widget.refCode!);
+      }
+
+      // Mark discovered salon as registered (phone match)
+      if (_discoveredSalonId != null &&
+          (widget.refCode == null || widget.refCode!.isEmpty)) {
+        await SupabaseClientService.client
+            .from('discovered_salons')
+            .update({
+              'status': 'registered',
+              'registered_business_id': businessId,
+              'registered_at': DateTime.now().toUtc().toIso8601String(),
+            })
+            .eq('id', _discoveredSalonId!);
       }
 
       setState(() {
@@ -412,6 +582,41 @@ class _SalonOnboardingScreenState
                         icon: Icons.chat_rounded,
                         iconColor: const Color(0xFF25D366),
                         keyboardType: TextInputType.phone,
+                        onChanged: _onPhoneChanged,
+                        suffixWidget: _phoneMatchLoading
+                            ? const Padding(
+                                padding: EdgeInsets.all(12),
+                                child: SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2),
+                                ),
+                              )
+                            : null,
+                      ),
+
+                      // Phone match banner
+                      if (_discoveredSalonId != null &&
+                          (widget.refCode == null ||
+                              widget.refCode!.isEmpty)) ...[
+                        const SizedBox(height: 10),
+                        _InfoBanner(
+                          icon: Icons.auto_awesome,
+                          text:
+                              'Encontramos tu salon! Datos pre-llenados.',
+                          color: colors.primary,
+                        ),
+                      ],
+                      const SizedBox(height: 14),
+
+                      // Email
+                      _StyledField(
+                        controller: _emailCtrl,
+                        label: 'Email de contacto',
+                        hint: 'tu@email.com',
+                        icon: Icons.email_outlined,
+                        keyboardType: TextInputType.emailAddress,
                         onChanged: (_) => setState(() {}),
                       ),
                     ],
@@ -1424,6 +1629,261 @@ class _PinPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _PinPainter old) => old.color != color;
+}
+
+// ==========================================================================
+// Identity Gate Sheet — requires Google or confirmed email before registering
+// ==========================================================================
+
+class _IdentityGateSheet extends ConsumerStatefulWidget {
+  const _IdentityGateSheet();
+
+  @override
+  ConsumerState<_IdentityGateSheet> createState() => _IdentityGateSheetState();
+}
+
+class _IdentityGateSheetState extends ConsumerState<_IdentityGateSheet> {
+  bool _showEmailInput = false;
+  final _emailCtrl = TextEditingController();
+  bool _emailSent = false;
+
+  @override
+  void dispose() {
+    _emailCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final security = ref.watch(securityProvider);
+    final colors = Theme.of(context).colorScheme;
+
+    // Auto-dismiss if verification succeeded
+    if (security.isGoogleLinked || security.isEmailConfirmed) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) Navigator.pop(context, true);
+      });
+    }
+
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          24, 16, 24,
+          MediaQuery.of(context).viewInsets.bottom + 24,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Drag handle
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Icon
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: colors.primary.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.verified_user_rounded,
+                  size: 32, color: colors.primary),
+            ),
+            const SizedBox(height: 16),
+
+            Text(
+              'Verifica tu identidad',
+              style: GoogleFonts.poppins(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF212121),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Para registrar un salon necesitas vincular tu cuenta de Google o confirmar tu email.',
+              style: GoogleFonts.nunito(
+                fontSize: 14,
+                color: const Color(0xFF757575),
+                height: 1.4,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+
+            // Google button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: security.isLoading
+                    ? null
+                    : () async {
+                        await ref.read(securityProvider.notifier).linkGoogle();
+                      },
+                icon: security.isLoading && !_showEmailInput
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Icon(Icons.g_mobiledata_rounded, size: 24),
+                label: const Text('Continuar con Google'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: colors.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Divider
+            Row(
+              children: [
+                const Expanded(child: Divider()),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Text('o',
+                      style: GoogleFonts.nunito(
+                          color: const Color(0xFF9E9E9E), fontSize: 14)),
+                ),
+                const Expanded(child: Divider()),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            if (!_showEmailInput && !_emailSent)
+              // Show email option button
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () => setState(() => _showEmailInput = true),
+                  icon: const Icon(Icons.email_outlined, size: 20),
+                  label: const Text('Verificar con email'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              )
+            else if (_emailSent)
+              // Confirmation sent
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.green.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.mark_email_read_rounded,
+                        color: Colors.green.shade600, size: 24),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Se envio un correo de confirmacion a ${_emailCtrl.text}. Confirma tu email y luego intenta registrarte de nuevo.',
+                        style: GoogleFonts.nunito(
+                          fontSize: 13,
+                          color: Colors.green.shade800,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else ...[
+              // Email input
+              TextField(
+                controller: _emailCtrl,
+                keyboardType: TextInputType.emailAddress,
+                style: GoogleFonts.nunito(fontSize: 15),
+                decoration: InputDecoration(
+                  labelText: 'Email',
+                  hintText: 'tu@email.com',
+                  prefixIcon: const Icon(Icons.email_outlined, size: 20),
+                  filled: true,
+                  fillColor: const Color(0xFFFAFAFA),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                        color: colors.primary.withValues(alpha: 0.12)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                        color: colors.primary.withValues(alpha: 0.12)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: colors.primary, width: 1.5),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: security.isLoading
+                      ? null
+                      : () async {
+                          final email = _emailCtrl.text.trim();
+                          if (email.isEmpty || !email.contains('@')) return;
+                          await ref
+                              .read(securityProvider.notifier)
+                              .addEmail(email);
+                          if (mounted) setState(() => _emailSent = true);
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: colors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: security.isLoading
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Text('Enviar confirmacion'),
+                ),
+              ),
+            ],
+
+            if (security.error != null) ...[
+              const SizedBox(height: 12),
+              Text(
+                security.error!,
+                style: GoogleFonts.nunito(
+                    fontSize: 13, color: Colors.red.shade600),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 // ==========================================================================

@@ -225,32 +225,73 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   Widget _buildProfessionalsSection(BuildContext context, WidgetRef ref) {
+    final appStatus = ref.watch(applicationStatusProvider).valueOrNull;
     final isOwner = ref.watch(isBusinessOwnerProvider).valueOrNull ?? false;
 
-    // Business owners always see their portal
+    // Approved business owners → portal
     if (isOwner) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: AppConstants.paddingLG),
-          Padding(
-            padding: const EdgeInsets.only(left: 4, bottom: 8),
+      return _profSection(context, [
+        SettingsTile(
+          icon: Icons.storefront_rounded,
+          label: 'Portal de negocio',
+          onTap: () => context.push(AppRoutes.business),
+        ),
+      ]);
+    }
+
+    // Pending approval
+    if (appStatus == 'pending') {
+      return _profSection(context, [
+        SettingsTile(
+          icon: Icons.hourglass_top_rounded,
+          label: 'Solicitud en revision',
+          trailing: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: Colors.amber.shade100,
+              borderRadius: BorderRadius.circular(12),
+            ),
             child: Text(
-              'PARA PROFESIONALES',
+              'Pendiente',
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: Colors.amber.shade800,
                 fontWeight: FontWeight.w700,
-                letterSpacing: 1.2,
-                color: Theme.of(context).colorScheme.primary,
               ),
             ),
           ),
-          SettingsTile(
-            icon: Icons.storefront_rounded,
-            label: 'Portal de negocio',
-            onTap: () => context.push(AppRoutes.business),
+          onTap: () {},
+        ),
+      ]);
+    }
+
+    // Rejected → show message + retry
+    if (appStatus == 'rejected') {
+      return _profSection(context, [
+        SettingsTile(
+          icon: Icons.error_outline_rounded,
+          label: 'Solicitud rechazada',
+          trailing: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: Colors.red.shade50,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              'Rechazada',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: Colors.red.shade700,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ),
-        ],
-      );
+          onTap: () {},
+        ),
+        SettingsTile(
+          icon: Icons.refresh_rounded,
+          label: 'Intentar de nuevo',
+          onTap: () => context.push('/registro'),
+        ),
+      ]);
     }
 
     // Non-customer roles (admin, superadmin, stylist): hide registration
@@ -266,6 +307,16 @@ class SettingsScreen extends ConsumerWidget {
     }
 
     // Customer with <10 opens: show registra tu salon
+    return _profSection(context, [
+      SettingsTile(
+        icon: Icons.store_rounded,
+        label: 'Registra tu salon',
+        onTap: () => context.push('/registro'),
+      ),
+    ]);
+  }
+
+  Widget _profSection(BuildContext context, List<Widget> children) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -281,11 +332,7 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
         ),
-        SettingsTile(
-          icon: Icons.store_rounded,
-          label: 'Registra tu salon',
-          onTap: () => context.push('/registro'),
-        ),
+        ...children,
       ],
     );
   }
