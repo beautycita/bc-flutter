@@ -10,8 +10,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-const BEAUTYPI_WA_URL = Deno.env.get("BEAUTYPI_WA_URL") || "http://100.93.1.103:3200";
-const BEAUTYPI_WA_TOKEN = Deno.env.get("BEAUTYPI_WA_TOKEN") || "bc-wa-api-2026";
+const BEAUTYPI_WA_URL = Deno.env.get("BEAUTYPI_WA_URL") ?? "";
+const BEAUTYPI_WA_TOKEN = Deno.env.get("BEAUTYPI_WA_TOKEN") ?? "";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",

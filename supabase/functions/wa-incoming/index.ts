@@ -19,7 +19,7 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const WEBHOOK_SECRET = Deno.env.get("WA_WEBHOOK_SECRET") || "bc-wa-webhook-2026";
+const WEBHOOK_SECRET = Deno.env.get("WA_WEBHOOK_SECRET") ?? "";
 
 function json(body: Record<string, unknown>, status = 200) {
   return new Response(JSON.stringify(body), {

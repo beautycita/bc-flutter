@@ -23,8 +23,8 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const BEAUTYPI_WA_URL = Deno.env.get("BEAUTYPI_WA_URL") || "http://100.93.1.103:3200";
-const BEAUTYPI_WA_TOKEN = Deno.env.get("BEAUTYPI_WA_TOKEN") || "bc-wa-api-2026";
+const BEAUTYPI_WA_URL = Deno.env.get("BEAUTYPI_WA_URL") ?? "";
+const BEAUTYPI_WA_TOKEN = Deno.env.get("BEAUTYPI_WA_TOKEN") ?? "";
 const TWILIO_ACCOUNT_SID = Deno.env.get("TWILIO_ACCOUNT_SID") || "";
 const TWILIO_AUTH_TOKEN = Deno.env.get("TWILIO_AUTH_TOKEN") || "";
 const TWILIO_VERIFY_SID = Deno.env.get("TWILIO_VERIFY_SID") || "";

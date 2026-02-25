@@ -67,7 +67,7 @@ RULES:
 // ---------------------------------------------------------------------------
 
 interface ChatRequest {
-  action: "send_message" | "try_on" | "get_history";
+  action: "send_message" | "try_on" | "get_history" | "generate_copy";
   thread_id?: string;
   message?: string;
   image_base64?: string;
@@ -75,6 +75,8 @@ interface ChatRequest {
   style_prompt?: string;
   tool_type?: string;
   language?: "es" | "en";
+  field_type?: string;
+  context?: Record<string, string>;
 }
 
 interface ConversationMessage {
@@ -446,6 +448,111 @@ serve(async (req) => {
 
       return new Response(
         JSON.stringify({ history, thread_id: threadId }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    // ----- generate_copy -----
+    if (action === "generate_copy") {
+      const { field_type, context: fieldContext } = body as ChatRequest & {
+        field_type?: string;
+        context?: Record<string, string>;
+      };
+
+      if (!field_type) {
+        return new Response(
+          JSON.stringify({ error: "field_type required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      // Rate limit: 10 per hour per user
+      const oneHourAgo = new Date(Date.now() - 3600000).toISOString();
+      const { count } = await supabase
+        .from("aphrodite_copy_log")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .gte("created_at", oneHourAgo);
+
+      if ((count ?? 0) >= 10) {
+        return new Response(
+          JSON.stringify({ error: "rate_limit", text: "Ay mortal, ya me pediste demasiados textos. Regresa en un rato..." }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      // Build prompt based on field type
+      let prompt = "";
+      const ctx = fieldContext || {};
+      switch (field_type) {
+        case "staff_bio":
+          prompt = `Genera una autobiografia corta y profesional para un estilista/profesional de belleza.
+Nombre: ${ctx.name || "estilista"}
+Especialidad: ${ctx.specialty || "belleza en general"}
+Experiencia: ${ctx.experience || "varios anos"}
+Escribe en primera persona, en espanol mexicano, 2-3 oraciones.
+Tono profesional pero calido. NO uses emojis. NO uses comillas.
+Solo el texto, nada mas.`;
+          break;
+
+        case "service_description":
+          prompt = `Genera una descripcion atractiva y corta para un servicio de belleza.
+Servicio: ${ctx.service_name || "servicio de belleza"}
+Categoria: ${ctx.category || "belleza"}
+Precio: ${ctx.price || "no especificado"}
+Duracion: ${ctx.duration || "no especificada"}
+Escribe en espanol mexicano, 2-3 oraciones.
+Tono profesional y atractivo para clientes. NO uses emojis. NO uses comillas.
+Solo el texto, nada mas.`;
+          break;
+
+        default:
+          prompt = `Genera un texto corto y profesional en espanol mexicano para un campo de tipo "${field_type}". 2-3 oraciones. Sin emojis ni comillas.`;
+      }
+
+      const res = await fetch("https://api.openai.com/v1/responses", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${OPENAI_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          instructions: "Eres una experta en marketing para negocios de belleza. Generas textos concisos, atractivos y profesionales.",
+          input: [{ role: "user", content: prompt }],
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.text();
+        throw new Error(`OpenAI: ${res.status} ${err}`);
+      }
+
+      const data = await res.json() as {
+        id: string;
+        output: Array<{ type: string; content?: Array<{ type: string; text?: string }> }>;
+      };
+
+      let generatedText = "";
+      for (const item of data.output) {
+        if (item.type === "message" && item.content) {
+          for (const content of item.content) {
+            if (content.type === "output_text" && content.text) {
+              generatedText += content.text;
+            }
+          }
+        }
+      }
+
+      // Log for rate limiting (best-effort, ignore errors)
+      await supabase.from("aphrodite_copy_log").insert({
+        user_id: userId,
+        field_type,
+        created_at: new Date().toISOString(),
+      }).then(() => {}, () => {});
+
+      return new Response(
+        JSON.stringify({ text: generatedText.trim() }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }

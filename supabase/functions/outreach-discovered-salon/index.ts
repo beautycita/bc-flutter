@@ -12,12 +12,12 @@ const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 
 // WhatsApp API on beautypi
-const WA_API_URL = Deno.env.get("BEAUTYPI_WA_URL") || "http://100.93.1.103:3200";
-const WA_API_TOKEN = Deno.env.get("BEAUTYPI_WA_TOKEN") || "bc-wa-api-2026";
+const WA_API_URL = Deno.env.get("BEAUTYPI_WA_URL") ?? "";
+const WA_API_TOKEN = Deno.env.get("BEAUTYPI_WA_TOKEN") ?? "";
 
 // TEST MODE: send outreach to wife's number instead of the actual salon
 const LIVE_MODE = false; // flip to true when ready to go live
-const TEST_RECIPIENT = "523221215551";
+const TEST_RECIPIENT = "523221429800";
 
 // Outreach thresholds: send platform message at these interest counts
 const OUTREACH_THRESHOLDS = [1, 3, 5, 10, 20];

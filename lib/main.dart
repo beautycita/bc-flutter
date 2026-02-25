@@ -183,6 +183,15 @@ class _BeautyCitaAppState extends ConsumerState<BeautyCitaApp> {
           );
         }
         break;
+      case 'cita-express':
+        // beautycita://cita-express/{bizId}
+        final bizId = uri.path.replaceFirst('/', '');
+        if (bizId.isNotEmpty && _uuidRegex.hasMatch(bizId)) {
+          supabaseReady.future.then((_) {
+            if (mounted) AppRoutes.router.go('/cita-express/$bizId');
+          });
+        }
+        break;
       case 'auth':
         if (uri.path == '/qr') {
           final code = uri.queryParameters['code'];

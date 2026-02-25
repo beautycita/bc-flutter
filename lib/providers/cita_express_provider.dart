@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/curate_result.dart';
-import '../services/curate_service.dart';
 import '../services/supabase_client.dart';
 import '../repositories/booking_repository.dart';
 
@@ -16,11 +15,11 @@ enum CitaExpressStep {
   results,
   noSlotsToday,
   futureResults,
-  nearbyResults,
   confirming,
   booking,
   booked,
   error,
+  // nearbyResults removed — walk-in QR is always at THIS salon
 }
 
 class CitaExpressState {
@@ -28,6 +27,7 @@ class CitaExpressState {
   final String businessId;
   final Map<String, dynamic>? businessInfo;
   final List<Map<String, dynamic>> services;
+  final String? selectedServiceId;
   final String? selectedServiceType;
   final String? selectedServiceName;
   final CurateResponse? curateResponse;
@@ -41,6 +41,7 @@ class CitaExpressState {
     this.businessId = '',
     this.businessInfo,
     this.services = const [],
+    this.selectedServiceId,
     this.selectedServiceType,
     this.selectedServiceName,
     this.curateResponse,
@@ -55,6 +56,7 @@ class CitaExpressState {
     String? businessId,
     Map<String, dynamic>? businessInfo,
     List<Map<String, dynamic>>? services,
+    String? selectedServiceId,
     String? selectedServiceType,
     String? selectedServiceName,
     CurateResponse? curateResponse,
@@ -68,6 +70,7 @@ class CitaExpressState {
       businessId: businessId ?? this.businessId,
       businessInfo: businessInfo ?? this.businessInfo,
       services: services ?? this.services,
+      selectedServiceId: selectedServiceId ?? this.selectedServiceId,
       selectedServiceType: selectedServiceType ?? this.selectedServiceType,
       selectedServiceName: selectedServiceName ?? this.selectedServiceName,
       curateResponse: curateResponse ?? this.curateResponse,
@@ -77,15 +80,6 @@ class CitaExpressState {
       paymentMethod: paymentMethod ?? this.paymentMethod,
     );
   }
-
-  /// Business lat/lng for engine calls (user is at the salon).
-  LatLng? get businessLocation {
-    if (businessInfo == null) return null;
-    final lat = businessInfo!['lat'] as num?;
-    final lng = businessInfo!['lng'] as num?;
-    if (lat == null || lng == null) return null;
-    return LatLng(lat: lat.toDouble(), lng: lng.toDouble());
-  }
 }
 
 // ---------------------------------------------------------------------------
@@ -94,10 +88,7 @@ class CitaExpressState {
 
 final citaExpressProvider =
     StateNotifierProvider.autoDispose<CitaExpressNotifier, CitaExpressState>(
-  (ref) => CitaExpressNotifier(
-    CurateService(),
-    BookingRepository(),
-  ),
+  (ref) => CitaExpressNotifier(BookingRepository()),
 );
 
 // ---------------------------------------------------------------------------
@@ -105,11 +96,9 @@ final citaExpressProvider =
 // ---------------------------------------------------------------------------
 
 class CitaExpressNotifier extends StateNotifier<CitaExpressState> {
-  final CurateService _curateService;
   final BookingRepository _bookingRepo;
 
-  CitaExpressNotifier(this._curateService, this._bookingRepo)
-      : super(const CitaExpressState());
+  CitaExpressNotifier(this._bookingRepo) : super(const CitaExpressState());
 
   /// Load business info + services for the scanned salon.
   Future<void> loadBusiness(String businessId) async {
@@ -121,12 +110,11 @@ class CitaExpressNotifier extends StateNotifier<CitaExpressState> {
     try {
       final client = SupabaseClientService.client;
 
-      // Fetch business with its active services
+      // Walk-in QR: only require verified (business may not be "active" in search yet).
       final bizResponse = await client
           .from('businesses')
           .select('*, services(*)')
           .eq('id', businessId)
-          .eq('is_active', true)
           .eq('is_verified', true)
           .maybeSingle();
 
@@ -167,46 +155,30 @@ class CitaExpressNotifier extends StateNotifier<CitaExpressState> {
     }
   }
 
-  /// User selected a service. Call engine for today's availability at this salon.
-  Future<void> selectService(String serviceType, String displayName) async {
-    state = state.copyWith(
-      step: CitaExpressStep.searching,
-      selectedServiceType: serviceType,
-      selectedServiceName: displayName,
+  /// User selected a service. Find available walk-in slots directly.
+  Future<void> selectService(String serviceId, String displayName) async {
+    // Get category from the loaded service data
+    final svcData = state.services.firstWhere(
+      (s) => s['id'] == serviceId,
+      orElse: () => <String, dynamic>{},
     );
 
-    await _callEngine(
-      serviceType: serviceType,
-      businessId: state.businessId,
-      overrideRange: 'today',
-      onEmpty: CitaExpressStep.noSlotsToday,
-      onResults: CitaExpressStep.results,
+    state = state.copyWith(
+      step: CitaExpressStep.searching,
+      selectedServiceId: serviceId,
+      selectedServiceName: displayName,
+      selectedServiceType: svcData['category'] as String? ?? '',
     );
+
+    await _findWalkInSlots(serviceId: serviceId, range: 'today');
   }
 
   /// No slots today — try this week at the same salon.
   Future<void> tryOtherDay() async {
     state = state.copyWith(step: CitaExpressStep.searching);
-
-    await _callEngine(
-      serviceType: state.selectedServiceType!,
-      businessId: state.businessId,
-      overrideRange: 'this_week',
-      onEmpty: CitaExpressStep.noSlotsToday,
-      onResults: CitaExpressStep.futureResults,
-    );
-  }
-
-  /// No slots at this salon — search nearby salons for today.
-  Future<void> searchNearby() async {
-    state = state.copyWith(step: CitaExpressStep.searching);
-
-    await _callEngine(
-      serviceType: state.selectedServiceType!,
-      businessId: null, // No business filter
-      overrideRange: 'today',
-      onEmpty: CitaExpressStep.noSlotsToday,
-      onResults: CitaExpressStep.nearbyResults,
+    await _findWalkInSlots(
+      serviceId: state.selectedServiceId!,
+      range: 'this_week',
     );
   }
 
@@ -266,6 +238,7 @@ class CitaExpressNotifier extends StateNotifier<CitaExpressState> {
         durationMinutes: result.service.durationMinutes,
         price: result.service.price,
         paymentMethod: state.paymentMethod,
+        staffId: result.staff.id,
       );
 
       state = state.copyWith(
@@ -282,61 +255,182 @@ class CitaExpressNotifier extends StateNotifier<CitaExpressState> {
   }
 
   // ---------------------------------------------------------------------------
-  // Internal
+  // Internal — Direct availability query (bypasses engine)
   // ---------------------------------------------------------------------------
 
-  Future<void> _callEngine({
-    required String serviceType,
-    required String? businessId,
-    required String overrideRange,
-    required CitaExpressStep onEmpty,
-    required CitaExpressStep onResults,
+  Future<void> _findWalkInSlots({
+    required String serviceId,
+    required String range,
   }) async {
-    final location = state.businessLocation;
-    if (location == null) {
-      state = state.copyWith(
-        step: CitaExpressStep.error,
-        error: 'Ubicacion del salon no disponible',
-      );
-      return;
-    }
-
     try {
-      final userId = SupabaseClientService.currentUserId;
+      final client = SupabaseClientService.client;
 
-      final request = CurateRequest(
-        serviceType: serviceType,
-        userId: userId,
-        location: location,
-        transportMode: 'car', // At salon, ~0 travel
-        overrideWindow: OverrideWindow(range: overrideRange),
-        businessId: businessId,
+      // Get service details from loaded services
+      final svcData = state.services.firstWhere(
+        (s) => s['id'] == serviceId,
+        orElse: () => <String, dynamic>{},
+      );
+      if (svcData.isEmpty) {
+        state = state.copyWith(
+          step: CitaExpressStep.error,
+          error: 'Servicio no encontrado',
+        );
+        return;
+      }
+
+      final baseDuration = svcData['duration_minutes'] as int? ?? 60;
+      final buffer = svcData['buffer_minutes'] as int? ?? 0;
+      final basePrice = (svcData['price'] as num?)?.toDouble() ?? 0.0;
+
+      // Calculate time window
+      final now = DateTime.now();
+      final DateTime windowEnd;
+
+      if (range == 'today') {
+        windowEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
+      } else {
+        // this_week: through end of Sunday
+        final daysUntilSunday = DateTime.sunday - now.weekday;
+        final endDay = daysUntilSunday <= 0
+            ? now.add(Duration(days: 7 + daysUntilSunday))
+            : now.add(Duration(days: daysUntilSunday));
+        windowEnd = DateTime(endDay.year, endDay.month, endDay.day, 23, 59, 59);
+      }
+
+      // Find staff who can perform this service
+      final staffRows = await client
+          .from('staff_services')
+          .select(
+            'staff_id, custom_price, custom_duration, '
+            'staff!inner(id, first_name, last_name, avatar_url, '
+            'average_rating, total_reviews)',
+          )
+          .eq('service_id', serviceId)
+          .eq('staff.is_active', true)
+          .eq('staff.accept_online_booking', true);
+
+      if ((staffRows as List).isEmpty) {
+        state = state.copyWith(step: CitaExpressStep.noSlotsToday);
+        return;
+      }
+
+      // Business info for result cards
+      final biz = state.businessInfo ?? {};
+      final bizInfo = BusinessInfo(
+        id: state.businessId,
+        name: biz['name'] as String? ?? 'Salon',
+        photoUrl: biz['photo_url'] as String?,
+        address: biz['address'] as String?,
+        lat: (biz['lat'] as num?)?.toDouble() ?? 0,
+        lng: (biz['lng'] as num?)?.toDouble() ?? 0,
       );
 
-      final response = await _curateService.curateResults(request);
+      // For each staff member, find their first available slot
+      final results = <ResultCard>[];
 
-      if (response.results.isEmpty) {
-        state = state.copyWith(
-          step: onEmpty,
-          curateResponse: response,
+      for (final row in staffRows) {
+        final staff = row['staff'] as Map<String, dynamic>;
+        final staffId = row['staff_id'] as String;
+        final effectivePrice =
+            (row['custom_price'] as num?)?.toDouble() ?? basePrice;
+        final effectiveDuration =
+            (row['custom_duration'] as int?) ?? baseDuration;
+
+        final slotsResponse = await client.rpc(
+          'find_available_slots',
+          params: {
+            'p_staff_id': staffId,
+            'p_duration_minutes': effectiveDuration + buffer,
+            'p_window_start': now.toUtc().toIso8601String(),
+            'p_window_end': windowEnd.toUtc().toIso8601String(),
+          },
         );
-      } else {
-        state = state.copyWith(
-          step: onResults,
-          curateResponse: response,
-        );
+
+        final slots = slotsResponse as List;
+        if (slots.isEmpty) continue;
+
+        // Take the first available slot for this staff member
+        final slotStartStr = slots[0]['slot_start'] as String;
+        final slotStart = DateTime.parse(slotStartStr);
+        final slotEnd =
+            slotStart.add(Duration(minutes: effectiveDuration));
+
+        final firstName = staff['first_name'] as String? ?? '';
+        final lastName = staff['last_name'] as String? ?? '';
+        final staffName = lastName.isNotEmpty
+            ? '$firstName ${lastName[0]}.'
+            : firstName;
+
+        results.add(ResultCard(
+          rank: results.length + 1,
+          score: 1.0,
+          business: bizInfo,
+          staff: StaffInfo(
+            id: staffId,
+            name: staffName,
+            avatarUrl: staff['avatar_url'] as String?,
+            experienceYears: null,
+            rating: (staff['average_rating'] as num?)?.toDouble() ?? 0,
+            totalReviews: (staff['total_reviews'] as int?) ?? 0,
+          ),
+          service: ServiceInfo(
+            id: serviceId,
+            name: state.selectedServiceName ?? '',
+            price: effectivePrice,
+            durationMinutes: effectiveDuration,
+            currency: 'MXN',
+          ),
+          slot: SlotInfo(
+            startsAt: slotStart.toUtc().toIso8601String(),
+            endsAt: slotEnd.toUtc().toIso8601String(),
+          ),
+          transport: const TransportInfo(
+            mode: 'walk_in',
+            durationMin: 0,
+            distanceKm: 0,
+            trafficLevel: 'none',
+          ),
+          badges: const ['walk_in_ok'],
+          areaAvgPrice: effectivePrice,
+          scoringBreakdown: const ScoringBreakdown(
+            proximity: 1.0,
+            availability: 1.0,
+            rating: 0.5,
+            price: 0.5,
+            portfolio: 0.5,
+          ),
+        ));
       }
-    } on CurateException catch (e) {
-      debugPrint('[CitaExpress] Engine error: $e');
+
+      if (results.isEmpty) {
+        state = state.copyWith(step: CitaExpressStep.noSlotsToday);
+        return;
+      }
+
+      // Sort by slot time (soonest first)
+      results.sort((a, b) => a.slot.startTime.compareTo(b.slot.startTime));
+
+      final step = range == 'today'
+          ? CitaExpressStep.results
+          : CitaExpressStep.futureResults;
+
       state = state.copyWith(
-        step: CitaExpressStep.error,
-        error: 'Error del motor: ${e.message}',
+        step: step,
+        curateResponse: CurateResponse(
+          bookingWindow: BookingWindowInfo(
+            primaryDate: now.toIso8601String().split('T')[0],
+            primaryTime: now.toIso8601String(),
+            windowStart: now.toUtc().toIso8601String(),
+            windowEnd: windowEnd.toUtc().toIso8601String(),
+          ),
+          results: results,
+        ),
       );
     } catch (e) {
-      debugPrint('[CitaExpress] Unexpected error: $e');
+      debugPrint('[CitaExpress] Walk-in slots error: $e');
       state = state.copyWith(
         step: CitaExpressStep.error,
-        error: 'Error inesperado: $e',
+        error: 'Error buscando disponibilidad: $e',
       );
     }
   }

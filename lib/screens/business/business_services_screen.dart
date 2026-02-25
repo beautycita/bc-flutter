@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../config/constants.dart';
 import '../../providers/business_provider.dart';
 import '../../services/supabase_client.dart';
+import '../../widgets/aphrodite_copy_field.dart';
 
 class BusinessServicesScreen extends ConsumerWidget {
   const BusinessServicesScreen({super.key});
@@ -451,17 +452,35 @@ class _ServiceFormSheetState extends ConsumerState<_ServiceFormSheet> {
               ],
             ),
             const SizedBox(height: AppConstants.paddingSM),
-            TextField(
-              controller: _bufferCtrl,
-              keyboardType: TextInputType.number,
-              decoration: _styledInput('Buffer entre citas (min)',
-                  helperText: 'Tiempo de descanso entre citas'),
+            Focus(
+              onFocusChange: (hasFocus) {
+                if (hasFocus && _bufferCtrl.text == '0') {
+                  _bufferCtrl.clear();
+                } else if (!hasFocus && _bufferCtrl.text.trim().isEmpty) {
+                  _bufferCtrl.text = '0';
+                }
+              },
+              child: TextField(
+                controller: _bufferCtrl,
+                keyboardType: TextInputType.number,
+                decoration: _styledInput('Descanso entre citas (min)'),
+              ),
             ),
             const SizedBox(height: AppConstants.paddingSM),
-            TextField(
+            AphroditeCopyField(
               controller: _descCtrl,
+              label: 'Descripcion (opcional)',
+              hint: 'Describe este servicio para tus clientes...',
+              icon: Icons.description_outlined,
+              fieldType: 'service_description',
               maxLines: 2,
-              decoration: _styledInput('Descripcion (opcional)'),
+              autoGenerate: widget.existing == null,
+              context: {
+                'service_name': _nameCtrl.text.trim(),
+                'category': _category,
+                'price': _priceCtrl.text.trim(),
+                'duration': '${_durationCtrl.text.trim()} min',
+              },
             ),
             const SizedBox(height: AppConstants.paddingMD),
 

@@ -183,6 +183,43 @@ class AphroditeService {
         .update({'metadata': metadata}).eq('id', messageId);
   }
 
+  /// Generates AI copy for a field (bio, service description, etc.).
+  /// Returns the generated text string.
+  Future<String> generateCopy({
+    required String fieldType,
+    Map<String, String> context = const {},
+  }) async {
+    final client = SupabaseClientService.client;
+
+    final response = await client.functions.invoke(
+      'aphrodite-chat',
+      body: {
+        'action': 'generate_copy',
+        'field_type': fieldType,
+        'context': context,
+      },
+    ).timeout(const Duration(seconds: 15));
+
+    if (response.status == 429) {
+      final data = response.data as Map<String, dynamic>;
+      throw AphroditeException(
+        data['text'] as String? ?? 'Rate limited',
+        statusCode: 429,
+      );
+    }
+
+    if (response.status != 200) {
+      final error = response.data is Map ? response.data['error'] : 'Unknown error';
+      throw AphroditeException(
+        'Copy generation failed: $error',
+        statusCode: response.status,
+      );
+    }
+
+    final data = response.data as Map<String, dynamic>;
+    return data['text'] as String? ?? '';
+  }
+
   /// Archives a thread (soft-delete). Messages stay in DB but thread is hidden.
   Future<void> deleteThread(String threadId) async {
     final client = SupabaseClientService.client;

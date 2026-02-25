@@ -68,6 +68,7 @@ class _SalonOnboardingScreenState
     super.initState();
     _loadDiscoveredSalonData();
     _prefillEmail();
+    _autoMatchByPhone();
   }
 
   void _prefillEmail() {
@@ -75,6 +76,40 @@ class _SalonOnboardingScreenState
     final email = user?.email;
     if (email != null && email.isNotEmpty && !email.endsWith('@qr.beautycita.app')) {
       _emailCtrl.text = email;
+    }
+  }
+
+  /// Auto-match: if user has a verified phone, check discovered_salons for it
+  Future<void> _autoMatchByPhone() async {
+    // Skip if already loading via refCode invite link
+    if (widget.refCode != null && widget.refCode!.isNotEmpty) return;
+
+    final user = SupabaseClientService.client.auth.currentUser;
+    final phone = user?.phone;
+    if (phone == null || phone.isEmpty) return;
+
+    final digits = phone.replaceAll(RegExp(r'[^\d]'), '');
+    if (digits.length < 10) return;
+
+    final last10 = digits.length > 10
+        ? digits.substring(digits.length - 10)
+        : digits;
+
+    try {
+      final results = await SupabaseClientService.client
+          .from('discovered_salons')
+          .select()
+          .or('phone.ilike.%$last10,whatsapp.ilike.%$last10')
+          .neq('status', 'registered')
+          .limit(1);
+
+      if (!mounted || results.isEmpty) return;
+
+      // Pre-fill phone field and trigger discovered salon match
+      _phoneCtrl.text = phone;
+      _prefillFromDiscoveredSalon(results.first);
+    } catch (e) {
+      debugPrint('[SalonOnboarding] Auto-match by phone error: $e');
     }
   }
 
@@ -104,8 +139,8 @@ class _SalonOnboardingScreenState
         }
 
         final address = response['location_address'] ?? response['address'];
-        final prefillLat = response['location_lat'] ?? response['lat'];
-        final prefillLng = response['location_lng'] ?? response['lng'];
+        final prefillLat = response['latitude'] ?? response['location_lat'] ?? response['lat'];
+        final prefillLng = response['longitude'] ?? response['location_lng'] ?? response['lng'];
         if (address != null && address.toString().isNotEmpty) {
           _addressCtrl.text = _sanitizeLatin(address.toString());
           _pickedAddress = _addressCtrl.text;
@@ -352,8 +387,8 @@ class _SalonOnboardingScreenState
 
       if (!_locationConfirmed) {
         final address = salon['location_address'] ?? salon['address'];
-        final lat = salon['location_lat'] ?? salon['lat'];
-        final lng = salon['location_lng'] ?? salon['lng'];
+        final lat = salon['latitude'] ?? salon['location_lat'] ?? salon['lat'];
+        final lng = salon['longitude'] ?? salon['location_lng'] ?? salon['lng'];
 
         if (address != null && address.toString().isNotEmpty) {
           _addressCtrl.text = _sanitizeLatin(address.toString());
