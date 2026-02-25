@@ -70,7 +70,7 @@ class NotificationService {
 
         // Get FCM token
         _fcmToken = await _messaging!.getToken();
-        debugPrint('[FCM] Token: ${_fcmToken?.substring(0, 20)}...');
+        assert(() { debugPrint('[FCM] Token acquired'); return true; }());
 
         // Store token in database
         await _saveTokenToDatabase();

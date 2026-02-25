@@ -131,9 +131,7 @@ class PaymentMethodsNotifier extends StateNotifier<PaymentMethodsState> {
       final ephemeralKey = data['ephemeralKey'] as String?;
       final customerId = data['customer'] as String?;
 
-      debugPrint('[PaymentMethods] setupIntent: ${setupIntentSecret?.substring(0, 20)}...');
-      debugPrint('[PaymentMethods] customerId: $customerId');
-      debugPrint('[PaymentMethods] ephemeralKey: ${ephemeralKey?.substring(0, 20)}...');
+      assert(() { debugPrint('[PaymentMethods] setup-intent received'); return true; }());
 
       if (setupIntentSecret == null || ephemeralKey == null || customerId == null) {
         const msg = 'Respuesta incompleta del servidor';

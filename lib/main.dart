@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:app_links/app_links.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -50,7 +51,7 @@ void main() async {
   if (stripeKey.isNotEmpty) {
     Stripe.publishableKey = stripeKey;
     Stripe.merchantIdentifier = 'merchant.com.beautycita';
-    debugPrint('[Stripe] Configured with key: ${stripeKey.substring(0, 20)}...');
+    assert(() { debugPrint('[Stripe] Configured'); return true; }());
   } else {
     debugPrint('[Stripe] WARNING: No publishable key found in .env');
   }
@@ -87,6 +88,11 @@ class _BeautyCitaAppState extends ConsumerState<BeautyCitaApp> {
   late final AppLinks _appLinks;
   StreamSubscription<Uri>? _linkSub;
 
+  static final _uuidRegex = RegExp(
+    r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+  );
+  static final _safeParamRegex = RegExp(r'^[a-zA-Z0-9\-_]+$');
+
   @override
   void initState() {
     super.initState();
@@ -107,18 +113,34 @@ class _BeautyCitaAppState extends ConsumerState<BeautyCitaApp> {
     Future.delayed(const Duration(milliseconds: 500), _checkNotificationNavigation);
   }
 
+  static const _allowedNotificationRoutes = {
+    '/bookings',
+    '/chat',
+    '/profile',
+    '/settings',
+  };
+
+  bool _isAllowedRoute(String route) {
+    return _allowedNotificationRoutes.contains(route) ||
+        route.startsWith('/appointment/') ||
+        route.startsWith('/chat/') ||
+        route.startsWith('/booking/');
+  }
+
   void _checkNotificationNavigation() {
     try {
       final pending = NotificationService().consumePendingNavigation();
       if (pending != null && mounted) {
         final route = pending['route'] as String?;
-        if (route != null && route.isNotEmpty) {
-          debugPrint('[Notification] Navigating to: $route');
+        if (route != null && route.isNotEmpty && _isAllowedRoute(route)) {
+          assert(() { debugPrint('[Notification] Navigating to: $route'); return true; }());
           AppRoutes.router.go(route);
+        } else if (route != null && route.isNotEmpty) {
+          assert(() { debugPrint('[Notification] Rejected non-allowlisted route: $route'); return true; }());
         }
       }
     } catch (e) {
-      debugPrint('[Notification] Skipped — not yet initialized: $e');
+      assert(() { debugPrint('[Notification] Skipped — not yet initialized: $e'); return true; }());
     }
   }
 
@@ -172,39 +194,46 @@ class _BeautyCitaAppState extends ConsumerState<BeautyCitaApp> {
   void _handleWebLink(Uri uri) {
     final path = uri.path;
     final params = uri.queryParameters;
-    debugPrint('[DeepLink] Web link: path=$path');
+    assert(() { debugPrint('[DeepLink] Web link: path=$path'); return true; }());
 
     if (path == '/registro' || path.startsWith('/registro')) {
-      // Salon registration with optional prefill from discovered salon
-      final ref = params['ref'] ?? '';
-      final route = ref.isNotEmpty ? '/registro?ref=$ref' : '/registro';
-      // Wait for Supabase to be ready before navigating
+      // Salon registration with optional prefill from discovered salon.
+      // Validate ref is alphanumeric/dash/underscore only — no special chars.
+      final rawRef = params['ref'] ?? '';
+      final safeRef = rawRef.isNotEmpty && _safeParamRegex.hasMatch(rawRef)
+          ? rawRef
+          : '';
+      final route = safeRef.isNotEmpty ? '/registro?ref=$safeRef' : '/registro';
       supabaseReady.future.then((_) {
         if (mounted) AppRoutes.router.go(route);
       });
       return;
     }
 
-    // Salon profile deep link → redirect to registration
+    // Salon profile deep link → redirect to registration.
+    // salonId must be a valid UUID.
     if (path.startsWith('/salon/')) {
       final salonId = path.replaceFirst('/salon/', '');
-      if (salonId.isNotEmpty) {
+      if (salonId.isNotEmpty && _uuidRegex.hasMatch(salonId)) {
         supabaseReady.future.then((_) {
           if (mounted) AppRoutes.router.go('/registro?ref=$salonId');
         });
         return;
       }
+      // Invalid or missing salonId — fall through to home.
     }
 
-    // Cita Express walk-in QR deep link
+    // Cita Express walk-in QR deep link.
+    // bizId must be a valid UUID.
     if (path.startsWith('/cita-express/')) {
       final bizId = path.replaceFirst('/cita-express/', '');
-      if (bizId.isNotEmpty) {
+      if (bizId.isNotEmpty && _uuidRegex.hasMatch(bizId)) {
         supabaseReady.future.then((_) {
           if (mounted) AppRoutes.router.go('/cita-express/$bizId');
         });
         return;
       }
+      // Invalid or missing bizId — fall through to home.
     }
 
     // Default: go home
