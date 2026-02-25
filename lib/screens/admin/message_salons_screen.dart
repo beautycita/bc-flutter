@@ -171,10 +171,11 @@ class _MessageSalonsScreenState extends ConsumerState<MessageSalonsScreen> {
                         )));
                     }
                   }
-                  return SizedBox(
-                    width: 200,
+                  return ConstrainedBox(
+                    constraints: const BoxConstraints(minWidth: 200, maxWidth: 280),
                     child: DropdownButtonFormField<String?>(
                       value: _selectedCity,
+                      isExpanded: true,
                       decoration: InputDecoration(
                         labelText: 'Ciudad',
                         labelStyle: GoogleFonts.nunito(fontSize: 13),

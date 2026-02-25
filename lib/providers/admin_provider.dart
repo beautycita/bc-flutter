@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show AuthState;
 import 'package:beautycita/services/supabase_client.dart';
+import 'package:beautycita/services/user_session.dart';
 
 /// Stream of Supabase auth state changes — re-triggers role fetch on login/logout.
 final _supabaseAuthStreamProvider = StreamProvider<AuthState>((ref) {
@@ -10,11 +11,13 @@ final _supabaseAuthStreamProvider = StreamProvider<AuthState>((ref) {
 });
 
 /// Fetches the current user's role string. Re-evaluates on auth state changes.
-final _userRoleProvider = FutureProvider<String?>((ref) async {
+final userRoleProvider = FutureProvider<String?>((ref) async {
   // Watch auth stream so provider re-runs on sign-in, sign-out, token refresh
-  ref.watch(_supabaseAuthStreamProvider);
+  final authAsync = ref.watch(_supabaseAuthStreamProvider);
 
-  final userId = SupabaseClientService.currentUserId;
+  // Get userId from auth state if available, fallback to currentUserId
+  String? userId = authAsync.valueOrNull?.session?.user.id;
+  userId ??= SupabaseClientService.currentUserId;
   if (userId == null) return null;
 
   try {
@@ -25,17 +28,17 @@ final _userRoleProvider = FutureProvider<String?>((ref) async {
         .single();
 
     final role = response['role'] as String?;
-    debugPrint('AdminProvider: userId=$userId, role=$role');
+    assert(() { debugPrint('AdminProvider: userId=$userId, role=$role'); return true; }());
     return role;
   } catch (e) {
-    debugPrint('AdminProvider: failed to fetch role for $userId: $e');
+    assert(() { debugPrint('AdminProvider: failed to fetch role for $userId: $e'); return true; }());
     return null;
   }
 });
 
 /// True for admin OR superadmin — can access admin panel.
 final isAdminProvider = FutureProvider<bool>((ref) async {
-  final role = await ref.watch(_userRoleProvider.future);
+  final role = await ref.watch(userRoleProvider.future);
   return role == 'admin' || role == 'superadmin';
 });
 
@@ -43,8 +46,13 @@ final isAdminProvider = FutureProvider<bool>((ref) async {
 /// category tree, time rules, notification templates.
 /// Admin role gets read-only access to dashboards + user/dispute management.
 final isSuperAdminProvider = FutureProvider<bool>((ref) async {
-  final role = await ref.watch(_userRoleProvider.future);
+  final role = await ref.watch(userRoleProvider.future);
   return role == 'superadmin';
+});
+
+/// How many times the user has opened the app (from local SharedPreferences).
+final appOpenCountProvider = FutureProvider<int>((ref) async {
+  return UserSession.getAppOpenCount();
 });
 
 /// Fetches all engine settings grouped by group_name.
