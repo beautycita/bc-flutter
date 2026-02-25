@@ -44,12 +44,13 @@ class BusinessServicesScreen extends ConsumerWidget {
                           color: colors.onSurface.withValues(alpha: 0.5),
                         ),
                       ),
-                      const SizedBox(height: AppConstants.paddingMD),
-                      ElevatedButton.icon(
-                        onPressed: () =>
-                            _showServiceForm(context, ref, null),
-                        icon: const Icon(Icons.add),
-                        label: const Text('Agregar Servicio'),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Toca + para agregar tu primer servicio',
+                        style: GoogleFonts.nunito(
+                          fontSize: 12,
+                          color: colors.onSurface.withValues(alpha: 0.35),
+                        ),
                       ),
                     ],
                   ),
