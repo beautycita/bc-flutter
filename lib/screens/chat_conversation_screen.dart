@@ -26,6 +26,7 @@ class _ChatConversationScreenState
   final _scrollController = ScrollController();
   bool _isSending = false;
   final List<ChatMessage> _optimisticMessages = [];
+  String? _resolvedContactType;
 
   @override
   void dispose() {
@@ -48,25 +49,13 @@ class _ChatConversationScreenState
     }
   }
 
-  String get _threadContactType {
-    final threadsAsync = ref.read(chatThreadsProvider);
-    return threadsAsync.whenOrNull(
-      data: (threads) {
-        try {
-          return threads.firstWhere((t) => t.id == widget.threadId).contactType;
-        } catch (_) {
-          return 'aphrodite';
-        }
-      },
-    ) ?? 'aphrodite';
-  }
-
-  bool get _isSupport => _threadContactType == 'support';
-  bool get _isAphrodite => _threadContactType == 'aphrodite';
+  bool get _isSupport => _resolvedContactType == 'support';
+  bool get _isAphrodite => _resolvedContactType == 'aphrodite';
 
   Future<void> _sendMessage() async {
     final text = _textController.text.trim();
     if (text.isEmpty || _isSending) return;
+    if (_resolvedContactType == null) return; // Thread not loaded yet
 
     _textController.clear();
 
@@ -150,6 +139,10 @@ class _ChatConversationScreenState
       },
     );
 
+    // Update resolved contact type for _sendMessage() routing
+    if (thread != null) {
+      _resolvedContactType = thread.contactType;
+    }
     final isAphrodite = thread?.isAphrodite ?? false;
     final isSupport = thread?.isSupport ?? false;
     final title = isAphrodite ? 'Afrodita' : (thread?.displayName ?? 'Chat');

@@ -152,12 +152,16 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
     );
 
-    // Auth check
+    // Soft auth — verify JWT if present but don't block on failure.
+    // This function is read-only and uses service_role for all DB queries.
+    // user_id for preference lookup comes from the request body.
     const authHeader = req.headers.get("authorization") ?? "";
     const token = authHeader.replace("Bearer ", "");
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    if (authError || !user) {
-      return json({ error: "Unauthorized" }, 401);
+    if (token) {
+      const { error: authError } = await supabase.auth.getUser(token);
+      if (authError) {
+        console.warn("[curate-results] Auth soft-fail:", authError.message);
+      }
     }
 
     const body: CurateRequest = await req.json();
