@@ -44,6 +44,8 @@ class _SalonOnboardingScreenState
   double? _pickedLat;
   double? _pickedLng;
   String? _pickedAddress;
+  String? _pickedCity;
+  String? _pickedState;
   bool _locationConfirmed = false;
 
   // Inline autocomplete
@@ -191,6 +193,8 @@ class _SalonOnboardingScreenState
         _pickedLat = location.lat;
         _pickedLng = location.lng;
         _pickedAddress = location.address;
+        _pickedCity = location.city;
+        _pickedState = location.state;
         _addressCtrl.text = location.address;
         _predictions = [];
         _resolvingPlace = false;
@@ -222,6 +226,8 @@ class _SalonOnboardingScreenState
       _pickedLat = null;
       _pickedLng = null;
       _pickedAddress = null;
+      _pickedCity = null;
+      _pickedState = null;
       _locationConfirmed = false;
       _addressCtrl.clear();
       _detailsCtrl.clear();
@@ -269,10 +275,17 @@ class _SalonOnboardingScreenState
         businessData['photo_url'] = _photoUrl;
       }
 
+      // City/state from Places autocomplete (reverse geocoded from address)
+      final city = _pickedCity ??
+          _discoveredSalonData?['location_city'] ??
+          _discoveredSalonData?['city'];
+      if (city != null) businessData['city'] = city;
+      final state = _pickedState ??
+          _discoveredSalonData?['location_state'] ??
+          _discoveredSalonData?['state'];
+      if (state != null) businessData['state'] = state;
+
       if (_discoveredSalonData != null) {
-        final city = _discoveredSalonData!['location_city'] ??
-            _discoveredSalonData!['city'];
-        if (city != null) businessData['city'] = city;
         final rating = _discoveredSalonData!['rating_average'] ??
             _discoveredSalonData!['rating'];
         if (rating != null) businessData['average_rating'] = rating;

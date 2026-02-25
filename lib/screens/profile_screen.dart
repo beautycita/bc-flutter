@@ -17,6 +17,8 @@ import 'package:beautycita/services/lightx_service.dart';
 import 'package:beautycita/services/media_service.dart';
 import 'package:beautycita/services/username_generator.dart';
 import 'package:beautycita/widgets/settings_widgets.dart';
+import 'package:beautycita/providers/admin_provider.dart';
+import 'package:beautycita/providers/business_provider.dart';
 
 // ── AI Avatar Style Model ──
 
@@ -300,6 +302,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             label: 'Media Manager',
             onTap: () => context.push('/media-manager'),
           ),
+
+          // ── Registra tu salon (shown here after 10 app opens for customers) ──
+          _buildRegisterSalonTile(),
 
           const SizedBox(height: AppConstants.paddingLG),
         ],
@@ -1044,6 +1049,35 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
         );
       },
+    );
+  }
+
+  // ── Register salon tile (after 10 app opens, for customers only) ──
+
+  Widget _buildRegisterSalonTile() {
+    final role = ref.watch(userRoleProvider).valueOrNull;
+    if (role == 'admin' || role == 'superadmin' || role == 'stylist') {
+      return const SizedBox.shrink();
+    }
+
+    final isOwner = ref.watch(isBusinessOwnerProvider).valueOrNull ?? false;
+    if (isOwner) return const SizedBox.shrink();
+
+    final appOpens = ref.watch(appOpenCountProvider).valueOrNull ?? 0;
+    if (appOpens < 10) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: AppConstants.paddingLG),
+        const SectionHeader(label: 'Para profesionales'),
+        const SizedBox(height: AppConstants.paddingXS),
+        SettingsTile(
+          icon: Icons.store_rounded,
+          label: 'Registra tu salon',
+          onTap: () => context.push('/registro'),
+        ),
+      ],
     );
   }
 

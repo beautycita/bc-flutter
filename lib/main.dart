@@ -16,6 +16,7 @@ import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/providers/theme_provider.dart';
 // uber_provider import removed — using deep links, no OAuth
 import 'package:beautycita/services/qr_auth_service.dart';
+import 'package:beautycita/services/user_session.dart';
 import 'package:beautycita/screens/business/business_shell_screen.dart';
 import 'package:beautycita/services/toast_service.dart';
 import 'package:beautycita/services/debug_log.dart';
@@ -42,6 +43,9 @@ void main() async {
 
   // Install debug log capture (before anything else that uses debugPrint)
   DebugLog.instance.install();
+
+  // Track app open count (fire-and-forget, no await needed)
+  UserSession.incrementAppOpenCount();
 
   // Initialize dotenv
   await dotenv.load(fileName: '.env');

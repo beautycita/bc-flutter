@@ -11,6 +11,21 @@ class UserSession {
   static const String _keyRegisteredAt = 'registered_at';
   static const String _keyLastLoginAt = 'last_login_at';
   static const String _keySupabaseUserId = 'supabase_user_id';
+  static const String _keyAppOpenCount = 'app_open_count';
+
+  /// Increment and return the app open count.
+  static Future<int> incrementAppOpenCount() async {
+    final prefs = await SharedPreferences.getInstance();
+    final count = (prefs.getInt(_keyAppOpenCount) ?? 0) + 1;
+    await prefs.setInt(_keyAppOpenCount, count);
+    return count;
+  }
+
+  /// Get the current app open count.
+  static Future<int> getAppOpenCount() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_keyAppOpenCount) ?? 0;
+  }
 
   // Sensitive IDs are stored in the OS keystore (Android Keystore / iOS Keychain)
   static const _secureStorage = FlutterSecureStorage();

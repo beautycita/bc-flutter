@@ -172,46 +172,14 @@ class SettingsScreen extends ConsumerWidget {
                   )
                 : const SizedBox.shrink(),
             loading: () => const SizedBox.shrink(),
-            error: (_, _) => const SizedBox.shrink(),
+            error: (e, _) {
+              assert(() { debugPrint('isAdminProvider error: $e'); return true; }());
+              return const SizedBox.shrink();
+            },
           ),
-
-          const SizedBox(height: AppConstants.paddingLG),
 
           // ── Salon / Business section ──
-          Padding(
-            padding: const EdgeInsets.only(left: 4, bottom: 8),
-            child: Text(
-              'PARA PROFESIONALES',
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.2,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-            ),
-          ),
-          ref.watch(isBusinessOwnerProvider).when(
-            data: (isOwner) => isOwner
-                ? SettingsTile(
-                    icon: Icons.storefront_rounded,
-                    label: 'Portal de negocio',
-                    onTap: () => context.push(AppRoutes.business),
-                  )
-                : SettingsTile(
-                    icon: Icons.store_rounded,
-                    label: 'Registra tu salon',
-                    onTap: () => context.push('/registro'),
-                  ),
-            loading: () => SettingsTile(
-              icon: Icons.store_rounded,
-              label: 'Registra tu salon',
-              onTap: () => context.push('/registro'),
-            ),
-            error: (_, _) => SettingsTile(
-              icon: Icons.store_rounded,
-              label: 'Registra tu salon',
-              onTap: () => context.push('/registro'),
-            ),
-          ),
+          _buildProfessionalsSection(context, ref),
 
           const SizedBox(height: AppConstants.paddingLG),
 
@@ -253,6 +221,72 @@ class SettingsScreen extends ConsumerWidget {
           const SizedBox(height: AppConstants.paddingLG),
         ],
       ),
+    );
+  }
+
+  Widget _buildProfessionalsSection(BuildContext context, WidgetRef ref) {
+    final isOwner = ref.watch(isBusinessOwnerProvider).valueOrNull ?? false;
+
+    // Business owners always see their portal
+    if (isOwner) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: AppConstants.paddingLG),
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 8),
+            child: Text(
+              'PARA PROFESIONALES',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.2,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+          ),
+          SettingsTile(
+            icon: Icons.storefront_rounded,
+            label: 'Portal de negocio',
+            onTap: () => context.push(AppRoutes.business),
+          ),
+        ],
+      );
+    }
+
+    // Non-customer roles (admin, superadmin, stylist): hide registration
+    final role = ref.watch(userRoleProvider).valueOrNull;
+    if (role == 'admin' || role == 'superadmin' || role == 'stylist') {
+      return const SizedBox.shrink();
+    }
+
+    // Customer with 10+ opens: hide from settings (shown in profile instead)
+    final appOpens = ref.watch(appOpenCountProvider).valueOrNull ?? 0;
+    if (appOpens >= 10) {
+      return const SizedBox.shrink();
+    }
+
+    // Customer with <10 opens: show registra tu salon
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: AppConstants.paddingLG),
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 8),
+          child: Text(
+            'PARA PROFESIONALES',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.2,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+          ),
+        ),
+        SettingsTile(
+          icon: Icons.store_rounded,
+          label: 'Registra tu salon',
+          onTap: () => context.push('/registro'),
+        ),
+      ],
     );
   }
 
