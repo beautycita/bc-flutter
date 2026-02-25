@@ -41,6 +41,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
   final UserSession _userSession;
   final UsernameGenerator _usernameGenerator;
 
+  DateTime? _lastLoginAttempt;
+  int _loginAttempts = 0;
+
   AuthNotifier({
     required BiometricService biometricService,
     required UserSession userSession,
@@ -129,6 +132,22 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   /// Login with biometric authentication
   Future<bool> login() async {
+    // Rate limit: 3 second cooldown between attempts
+    final now = DateTime.now();
+    if (_lastLoginAttempt != null && now.difference(_lastLoginAttempt!) < const Duration(seconds: 3)) {
+      state = state.copyWith(error: 'Espera un momento antes de intentar de nuevo');
+      return false;
+    }
+    _lastLoginAttempt = now;
+
+    // Exponential backoff after 5 failed attempts
+    _loginAttempts++;
+    if (_loginAttempts > 5) {
+      final backoffSeconds = _loginAttempts * 5;
+      state = state.copyWith(error: 'Demasiados intentos. Espera $backoffSeconds segundos.');
+      return false;
+    }
+
     state = state.copyWith(isLoading: true, error: null);
 
     try {
@@ -160,6 +179,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await _userSession.ensureSupabaseSession();
 
       // Update state
+      _loginAttempts = 0;
       state = state.copyWith(
         isLoading: false,
         isAuthenticated: true,
@@ -177,6 +197,22 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   /// Sign in with email and password (hidden dev/test login)
   Future<bool> signInWithEmail(String email, String password) async {
+    // Rate limit: 3 second cooldown between attempts
+    final now = DateTime.now();
+    if (_lastLoginAttempt != null && now.difference(_lastLoginAttempt!) < const Duration(seconds: 3)) {
+      state = state.copyWith(error: 'Espera un momento antes de intentar de nuevo');
+      return false;
+    }
+    _lastLoginAttempt = now;
+
+    // Exponential backoff after 5 failed attempts
+    _loginAttempts++;
+    if (_loginAttempts > 5) {
+      final backoffSeconds = _loginAttempts * 5;
+      state = state.copyWith(error: 'Demasiados intentos. Espera $backoffSeconds segundos.');
+      return false;
+    }
+
     state = state.copyWith(isLoading: true, error: null);
     try {
       final response = await SupabaseClientService.client.auth
@@ -197,6 +233,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       }
       await _userSession.updateLastLogin();
       final username = await _userSession.getUsername();
+      _loginAttempts = 0;
       state = state.copyWith(
         isLoading: false,
         isAuthenticated: true,

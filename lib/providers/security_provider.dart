@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -50,8 +51,8 @@ class SecurityState {
 }
 
 class SecurityNotifier extends StateNotifier<SecurityState> {
-  static const _googleClientId =
-      '925456539297-48gjim6slsnke7e9lc5h4ca9dhhpqb1e.apps.googleusercontent.com';
+  static String get _googleClientId =>
+      dotenv.env['GOOGLE_OAUTH_CLIENT_ID'] ?? '';
 
   SecurityNotifier() : super(const SecurityState()) {
     checkIdentities();
@@ -191,6 +192,16 @@ class SecurityNotifier extends StateNotifier<SecurityState> {
   /// Email-only users must confirm email first.
   Future<void> addPassword(String password) async {
     if (!SupabaseClientService.isInitialized) return;
+
+    // Password validation
+    if (password.length < 8) {
+      state = state.copyWith(error: 'La contrasena debe tener al menos 8 caracteres');
+      return;
+    }
+    if (!password.contains(RegExp(r'[0-9]'))) {
+      state = state.copyWith(error: 'La contrasena debe contener al menos un numero');
+      return;
+    }
 
     // Google users always have a verified email — allow password immediately
     if (!state.isGoogleLinked) {

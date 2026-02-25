@@ -66,6 +66,8 @@ class ProfileState {
 }
 
 class ProfileNotifier extends StateNotifier<ProfileState> {
+  DateTime? _lastOtpSend;
+
   ProfileNotifier() : super(const ProfileState()) {
     load();
   }
@@ -276,6 +278,14 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
     if (!SupabaseClientService.isInitialized) return false;
     final phone = state.phone;
     if (phone == null || phone.isEmpty) return false;
+
+    // Rate limit: 30 second cooldown between OTP sends
+    final now = DateTime.now();
+    if (_lastOtpSend != null && now.difference(_lastOtpSend!) < const Duration(seconds: 30)) {
+      state = state.copyWith(error: 'Espera 30 segundos antes de reenviar el codigo');
+      return false;
+    }
+    _lastOtpSend = now;
 
     state = state.copyWith(isLoading: true, error: null);
     try {

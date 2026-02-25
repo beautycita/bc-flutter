@@ -237,7 +237,7 @@ class MediaService {
       final testUrl = 'https://beautycita.com/supabase/storage/v1/bucket';
       final accessToken = client.auth.currentSession?.accessToken ?? '';
       debugPrint('MediaService.uploadMedia: testing raw HTTP to $testUrl');
-      debugPrint('MediaService.uploadMedia: accessToken length=${accessToken.length}');
+      assert(() { debugPrint('MediaService.uploadMedia: accessToken present=${accessToken.isNotEmpty}'); return true; }());
       try {
         final testResponse = await http.get(Uri.parse(testUrl));
         debugPrint('MediaService.uploadMedia: test status=${testResponse.statusCode}');

@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import 'supabase_client.dart';
@@ -11,12 +12,15 @@ class UserSession {
   static const String _keyLastLoginAt = 'last_login_at';
   static const String _keySupabaseUserId = 'supabase_user_id';
 
+  // Sensitive IDs are stored in the OS keystore (Android Keystore / iOS Keychain)
+  static const _secureStorage = FlutterSecureStorage();
+
   final Uuid _uuid = const Uuid();
 
   /// Check if user has completed biometric registration
   Future<bool> isRegistered() async {
     final prefs = await SharedPreferences.getInstance();
-    final userId = prefs.getString(_keyUserId);
+    final userId = await _getSecureUserId();
     final username = prefs.getString(_keyUsername);
     return userId != null && username != null;
   }
@@ -26,7 +30,7 @@ class UserSession {
     final prefs = await SharedPreferences.getInstance();
     final now = DateTime.now().toIso8601String();
 
-    await prefs.setString(_keyUserId, _uuid.v4());
+    await _setSecureUserId(_uuid.v4());
     await prefs.setString(_keyUsername, username);
     await prefs.setString(_keyRegisteredAt, now);
     await prefs.setString(_keyLastLoginAt, now);
@@ -35,36 +39,33 @@ class UserSession {
     if (SupabaseClientService.isInitialized && SupabaseClientService.isAuthenticated) {
       final supaId = SupabaseClientService.client.auth.currentUser?.id;
       if (supaId != null) {
-        await prefs.setString(_keySupabaseUserId, supaId);
+        await _setSecureSupabaseUserId(supaId);
       }
     }
   }
 
-  /// Get the stored username
+  /// Get the stored username (not sensitive — publicly displayed, stays in SharedPreferences)
   Future<String?> getUsername() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_keyUsername);
   }
 
-  /// Get the stored local user ID
+  /// Get the stored local user ID from secure storage
   Future<String?> getUserId() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_keyUserId);
+    return _getSecureUserId();
   }
 
-  /// Get the stored Supabase user ID
+  /// Get the stored Supabase user ID from secure storage
   Future<String?> getSupabaseUserId() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_keySupabaseUserId);
+    return _getSecureSupabaseUserId();
   }
 
-  /// Save the current Supabase user ID to local storage
+  /// Save the current Supabase user ID to secure storage
   Future<void> saveSupabaseUserId(String id) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_keySupabaseUserId, id);
+    await _setSecureSupabaseUserId(id);
   }
 
-  /// Get the registration timestamp
+  /// Get the registration timestamp (not sensitive — stays in SharedPreferences)
   Future<String?> getRegisteredAt() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_keyRegisteredAt);
@@ -97,11 +98,10 @@ class UserSession {
     // If already authenticated, we're good.
     if (SupabaseClientService.isAuthenticated) {
       // Sync stored ID if missing
-      final prefs = await SharedPreferences.getInstance();
-      final storedId = prefs.getString(_keySupabaseUserId);
+      final storedId = await _getSecureSupabaseUserId();
       final currentId = SupabaseClientService.client.auth.currentUser?.id;
       if (storedId == null && currentId != null) {
-        await prefs.setString(_keySupabaseUserId, currentId);
+        await _setSecureSupabaseUserId(currentId);
       }
       return true;
     }
@@ -111,41 +111,30 @@ class UserSession {
     // that would duplicate the account. The profile already exists
     // in the DB; we just lost the JWT. We can still read/write via
     // anon key + RLS policies.
-    final prefs = await SharedPreferences.getInstance();
-    final storedSupabaseId = prefs.getString(_keySupabaseUserId);
+    final storedSupabaseId = await _getSecureSupabaseUserId();
     if (storedSupabaseId != null) {
-      debugPrint('Supabase: Have stored user $storedSupabaseId but SDK session lost. '
-          'Creating fresh anonymous session and linking to existing profile.');
+      debugPrint('[UserSession] Have stored user $storedSupabaseId but SDK session lost. '
+          'Creating fresh anonymous session and migrating profile server-side.');
       try {
         final response =
             await SupabaseClientService.client.auth.signInAnonymously();
         final newId = response.user?.id;
         if (newId != null && newId != storedSupabaseId) {
-          // New anon session has a different ID. Merge: update the
-          // existing profile to point to the new auth ID, then delete
-          // the orphaned profile if one was auto-created by trigger.
-          debugPrint('Supabase: Migrating profile $storedSupabaseId -> $newId');
+          debugPrint('[UserSession] Migrating profile $storedSupabaseId -> $newId (server-side)');
+          // Delegate profile migration to the edge function which validates
+          // ownership server-side before touching any profile rows.
           try {
-            // Delete the auto-created profile for the new anon user
-            // (the trigger may have created one with a generic username)
-            await SupabaseClientService.client
-                .from('profiles')
-                .delete()
-                .eq('id', newId);
-            // Update existing profile to new auth ID
-            await SupabaseClientService.client
-                .from('profiles')
-                .update({'id': newId})
-                .eq('id', storedSupabaseId);
+            await SupabaseClientService.client.functions.invoke('migrate-profile', body: {
+              'old_user_id': storedSupabaseId,
+            });
           } catch (e) {
-            debugPrint('Supabase: Profile migration failed: $e');
-            // Fallback: just use new ID, profile may already be correct
+            debugPrint('[UserSession] Profile migration failed: $e');
           }
-          await prefs.setString(_keySupabaseUserId, newId);
+          await _setSecureSupabaseUserId(newId);
         }
         return SupabaseClientService.isAuthenticated;
       } catch (e) {
-        debugPrint('Supabase: Re-auth failed ($e)');
+        debugPrint('[UserSession] Re-auth failed ($e)');
         return false;
       }
     }
@@ -156,7 +145,7 @@ class UserSession {
       final userId = response.user?.id;
       if (userId != null) {
         await saveSupabaseUserId(userId);
-        debugPrint('Supabase: New anonymous session $userId');
+        debugPrint('[UserSession] New anonymous session $userId');
         // Tag registration source as APK (Android build)
         try {
           await SupabaseClientService.client
@@ -167,7 +156,7 @@ class UserSession {
       }
       return SupabaseClientService.isAuthenticated;
     } catch (e) {
-      debugPrint('Supabase: Session creation failed ($e)');
+      debugPrint('[UserSession] Session creation failed ($e)');
       return false;
     }
   }
@@ -175,10 +164,60 @@ class UserSession {
   /// Clear all session data (logout)
   Future<void> clear() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_keyUserId);
     await prefs.remove(_keyUsername);
     await prefs.remove(_keyRegisteredAt);
     await prefs.remove(_keyLastLoginAt);
+    // Remove legacy SharedPreferences keys in case they still exist
+    await prefs.remove(_keyUserId);
     await prefs.remove(_keySupabaseUserId);
+    // Clear secure storage keys
+    await _secureStorage.delete(key: _keyUserId);
+    await _secureStorage.delete(key: _keySupabaseUserId);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Private helpers — secure storage reads with SharedPreferences migration
+  // ---------------------------------------------------------------------------
+
+  /// Read user_id from secure storage, migrating from SharedPreferences if needed.
+  Future<String?> _getSecureUserId() async {
+    String? id = await _secureStorage.read(key: _keyUserId);
+    if (id != null) return id;
+
+    // One-time migration from plaintext SharedPreferences
+    final prefs = await SharedPreferences.getInstance();
+    id = prefs.getString(_keyUserId);
+    if (id != null) {
+      await _secureStorage.write(key: _keyUserId, value: id);
+      await prefs.remove(_keyUserId);
+      debugPrint('[UserSession] Migrated user_id to secure storage');
+    }
+    return id;
+  }
+
+  /// Write user_id to secure storage.
+  Future<void> _setSecureUserId(String id) async {
+    await _secureStorage.write(key: _keyUserId, value: id);
+  }
+
+  /// Read supabase_user_id from secure storage, migrating from SharedPreferences if needed.
+  Future<String?> _getSecureSupabaseUserId() async {
+    String? id = await _secureStorage.read(key: _keySupabaseUserId);
+    if (id != null) return id;
+
+    // One-time migration from plaintext SharedPreferences
+    final prefs = await SharedPreferences.getInstance();
+    id = prefs.getString(_keySupabaseUserId);
+    if (id != null) {
+      await _secureStorage.write(key: _keySupabaseUserId, value: id);
+      await prefs.remove(_keySupabaseUserId);
+      debugPrint('[UserSession] Migrated supabase_user_id to secure storage');
+    }
+    return id;
+  }
+
+  /// Write supabase_user_id to secure storage.
+  Future<void> _setSecureSupabaseUserId(String id) async {
+    await _secureStorage.write(key: _keySupabaseUserId, value: id);
   }
 }
