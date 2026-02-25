@@ -21,7 +21,20 @@ final currentBusinessProvider =
 
 final isBusinessOwnerProvider = FutureProvider.autoDispose<bool>((ref) async {
   final biz = await ref.watch(currentBusinessProvider.future);
-  return biz != null;
+  if (biz == null) return false;
+  return (biz['is_verified'] as bool? ?? false) && (biz['is_active'] as bool? ?? false);
+});
+
+/// Application status for the current user's business registration.
+/// Returns null if no application, or a string: 'pending', 'approved', 'rejected'.
+final applicationStatusProvider = FutureProvider.autoDispose<String?>((ref) async {
+  final biz = await ref.watch(currentBusinessProvider.future);
+  if (biz == null) return null;
+  final isVerified = biz['is_verified'] as bool? ?? false;
+  final isActive = biz['is_active'] as bool? ?? false;
+  if (isVerified && isActive) return 'approved';
+  if (isVerified && !isActive) return 'rejected';
+  return 'pending'; // exists but not yet verified
 });
 
 // ---------------------------------------------------------------------------

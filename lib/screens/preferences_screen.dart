@@ -212,6 +212,7 @@ class PreferencesScreen extends ConsumerWidget {
 
   void _showRadiusSheet(BuildContext context, WidgetRef ref, int currentKm) {
     double sliderValue = currentKm.toDouble();
+    Timer? autoDismiss;
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -237,48 +238,34 @@ class PreferencesScreen extends ConsumerWidget {
                             ),
                       ),
                     ),
-                    Slider(
-                      value: sliderValue,
-                      min: 5,
-                      max: 100,
-                      divisions: 19,
-                      activeColor: Theme.of(context).colorScheme.primary,
-                      label: '${sliderValue.round()} km',
-                      onChanged: (v) => setSheetState(() => sliderValue = v),
-                    ),
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          try {
-                            ref.read(userPrefsProvider.notifier).setSearchRadius(sliderValue.round());
-                            Navigator.pop(ctx);
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: const Text('Radio de busqueda guardado'),
-                                  backgroundColor: Colors.green.shade600,
-                                  behavior: SnackBarBehavior.floating,
-                                  duration: const Duration(seconds: 2),
-                                ),
-                              );
-                            }
-                          } catch (e) {
-                            Navigator.pop(ctx);
-                            _showError(context, e);
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Theme.of(context).colorScheme.primary,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(AppConstants.radiusSM),
+                    Row(
+                      children: [
+                        Text('5 km',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                            )),
+                        Expanded(
+                          child: Slider(
+                            value: sliderValue,
+                            min: 5,
+                            max: 100,
+                            divisions: 19,
+                            activeColor: Theme.of(context).colorScheme.primary,
+                            onChanged: (v) {
+                              setSheetState(() => sliderValue = v);
+                              ref.read(userPrefsProvider.notifier).setSearchRadius(v.round());
+                              autoDismiss?.cancel();
+                              autoDismiss = Timer(const Duration(milliseconds: 400), () {
+                                if (ctx.mounted) Navigator.pop(ctx);
+                              });
+                            },
                           ),
                         ),
-                        child: const Text('Guardar'),
-                      ),
+                        Text('100 km',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                            )),
+                      ],
                     ),
                   ],
                 ),
