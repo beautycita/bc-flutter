@@ -16,6 +16,7 @@ class BookingRepository {
     String? paymentStatus,
     String? paymentMethod,
     String? transportMode,
+    String? staffId,
   }) async {
     final userId = SupabaseClientService.currentUserId;
     if (userId == null) {
@@ -45,6 +46,7 @@ class BookingRepository {
       'notes': notes,
       'status': paymentStatus == 'paid' ? 'confirmed' : 'pending',
       'payment_status': dbPaymentStatus,
+      if (staffId != null) 'staff_id': staffId,
       if (paymentIntentId != null) 'payment_intent_id': paymentIntentId,
       if (transportMode != null) 'transport_mode': transportMode,
     };

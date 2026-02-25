@@ -76,8 +76,8 @@ class _CitaExpressScreenState extends ConsumerState<CitaExpressScreen> {
         return _ServiceSelectView(
           key: const ValueKey('serviceSelect'),
           state: state,
-          onSelect: (type, name) {
-            ref.read(citaExpressProvider.notifier).selectService(type, name);
+          onSelect: (serviceId, name) {
+            ref.read(citaExpressProvider.notifier).selectService(serviceId, name);
           },
         );
       case CitaExpressStep.searching:
@@ -87,7 +87,6 @@ class _CitaExpressScreenState extends ConsumerState<CitaExpressScreen> {
         );
       case CitaExpressStep.results:
       case CitaExpressStep.futureResults:
-      case CitaExpressStep.nearbyResults:
         return _ResultsView(
           key: ValueKey('results_${state.step.name}'),
           state: state,
@@ -104,9 +103,6 @@ class _CitaExpressScreenState extends ConsumerState<CitaExpressScreen> {
           state: state,
           onOtherDay: () {
             ref.read(citaExpressProvider.notifier).tryOtherDay();
-          },
-          onNearby: () {
-            ref.read(citaExpressProvider.notifier).searchNearby();
           },
           onBack: () {
             ref.read(citaExpressProvider.notifier).backToServices();
@@ -193,7 +189,7 @@ class _LoadingView extends StatelessWidget {
 
 class _ServiceSelectView extends StatelessWidget {
   final CitaExpressState state;
-  final void Function(String type, String name) onSelect;
+  final void Function(String serviceId, String name) onSelect;
 
   const _ServiceSelectView({
     super.key,
@@ -326,7 +322,7 @@ class _ServiceSelectView extends StatelessWidget {
             runSpacing: 8,
             children: entry.value.map((svc) {
               final name = svc['name'] as String? ?? '';
-              final type = svc['service_type'] as String? ?? '';
+              final serviceId = svc['id'] as String;
               final price = svc['price'] as num?;
               final duration = svc['duration_minutes'] as int?;
 
@@ -334,7 +330,7 @@ class _ServiceSelectView extends StatelessWidget {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(AppConstants.radiusMD),
                 child: InkWell(
-                  onTap: () => onSelect(type, name),
+                  onTap: () => onSelect(serviceId, name),
                   borderRadius: BorderRadius.circular(AppConstants.radiusMD),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
@@ -488,8 +484,6 @@ class _ResultsView extends StatelessWidget {
       case CitaExpressStep.futureResults:
         final bizName = state.businessInfo?['name'] as String? ?? 'salon';
         headerText = 'Disponible esta semana en $bizName';
-      case CitaExpressStep.nearbyResults:
-        headerText = 'Salones disponibles hoy cerca de ti';
       default:
         headerText = 'Disponible hoy';
     }
@@ -818,14 +812,12 @@ class _ResultCardWidget extends StatelessWidget {
 class _NoSlotsView extends StatelessWidget {
   final CitaExpressState state;
   final VoidCallback onOtherDay;
-  final VoidCallback onNearby;
   final VoidCallback onBack;
 
   const _NoSlotsView({
     super.key,
     required this.state,
     required this.onOtherDay,
-    required this.onNearby,
     required this.onBack,
   });
 
@@ -879,24 +871,13 @@ class _NoSlotsView extends StatelessWidget {
 
           const SizedBox(height: AppConstants.paddingXL),
 
-          // Option 1: Another day
+          // Try another day at same salon
           _ActionCard(
             icon: Icons.calendar_month_rounded,
             title: 'Otro dia',
             subtitle: 'Buscar disponibilidad esta semana en $bizName',
             color: colors.primary,
             onTap: onOtherDay,
-          ),
-
-          const SizedBox(height: AppConstants.paddingMD),
-
-          // Option 2: Nearby salon
-          _ActionCard(
-            icon: Icons.near_me_rounded,
-            title: 'Salon cercano',
-            subtitle: 'Buscar salones disponibles hoy cerca de aqui',
-            color: Colors.teal,
-            onTap: onNearby,
           ),
 
           const Spacer(flex: 2),

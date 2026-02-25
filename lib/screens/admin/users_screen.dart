@@ -408,6 +408,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
     final colors = Theme.of(context).colorScheme;
     final dim = colors.onSurface.withValues(alpha: 0.5);
     final dimIcon = colors.onSurface.withValues(alpha: 0.35);
+    final isSelf = user.id == SupabaseClientService.currentUserId;
 
     showModalBottomSheet(
       context: context,
@@ -706,38 +707,48 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    children: _roles.map((r) {
-                      final isSelected = selectedRole == r;
-                      final rc = _roleColor(r);
-                      return ChoiceChip(
-                        label: Text(r),
-                        selected: isSelected,
-                        onSelected: (_) =>
-                            setSheetState(() => selectedRole = r),
-                        selectedColor: rc.withValues(alpha: 0.2),
-                        backgroundColor: Colors.grey[100],
-                        labelStyle: GoogleFonts.nunito(
-                          fontSize: 13,
-                          fontWeight:
-                              isSelected ? FontWeight.w700 : FontWeight.w500,
-                          color: isSelected
-                              ? rc
-                              : colors.onSurface.withValues(alpha: 0.7),
-                        ),
-                        side: BorderSide(
-                          color: isSelected
-                              ? rc.withValues(alpha: 0.5)
-                              : Colors.transparent,
-                          width: 1,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      );
-                    }).toList(),
-                  ),
+                  if (isSelf)
+                    Text(
+                      'No puedes cambiar tu propio rol',
+                      style: GoogleFonts.nunito(
+                        fontSize: 12,
+                        fontStyle: FontStyle.italic,
+                        color: colors.onSurface.withValues(alpha: 0.4),
+                      ),
+                    )
+                  else
+                    Wrap(
+                      spacing: 8,
+                      children: _roles.map((r) {
+                        final isSelected = selectedRole == r;
+                        final rc = _roleColor(r);
+                        return ChoiceChip(
+                          label: Text(r),
+                          selected: isSelected,
+                          onSelected: (_) =>
+                              setSheetState(() => selectedRole = r),
+                          selectedColor: rc.withValues(alpha: 0.2),
+                          backgroundColor: Colors.grey[100],
+                          labelStyle: GoogleFonts.nunito(
+                            fontSize: 13,
+                            fontWeight:
+                                isSelected ? FontWeight.w700 : FontWeight.w500,
+                            color: isSelected
+                                ? rc
+                                : colors.onSurface.withValues(alpha: 0.7),
+                          ),
+                          side: BorderSide(
+                            color: isSelected
+                                ? rc.withValues(alpha: 0.5)
+                                : Colors.transparent,
+                            width: 1,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        );
+                      }).toList(),
+                    ),
 
                   const SizedBox(height: 20),
 

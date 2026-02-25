@@ -8,6 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart' show FileOptions;
 import '../../config/constants.dart';
 import '../../providers/business_provider.dart';
 import '../../services/supabase_client.dart';
+import '../../widgets/aphrodite_copy_field.dart';
 
 class BusinessStaffScreen extends ConsumerWidget {
   const BusinessStaffScreen({super.key});
@@ -15,63 +16,67 @@ class BusinessStaffScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final staffAsync = ref.watch(businessStaffProvider);
+    final bizAsync = ref.watch(currentBusinessProvider);
     final colors = Theme.of(context).colorScheme;
 
     return staffAsync.when(
       data: (staff) {
+        final biz = bizAsync.valueOrNull;
+        final ownerId = biz?['owner_id'] as String?;
+
+        // Find owner's staff record (matched by user_id)
+        Map<String, dynamic>? ownerStaff;
+        final otherStaff = <Map<String, dynamic>>[];
+        for (final s in staff) {
+          if (s['user_id'] == ownerId) {
+            ownerStaff = s;
+          } else {
+            otherStaff.add(s);
+          }
+        }
+
         return Scaffold(
           backgroundColor: Colors.transparent,
           floatingActionButton: FloatingActionButton(
             onPressed: () => _showAddStaffForm(context, ref),
             child: const Icon(Icons.person_add_rounded),
           ),
-          body: staff.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.people_outline_rounded,
-                          size: 48,
-                          color: colors.onSurface.withValues(alpha: 0.3)),
-                      const SizedBox(height: AppConstants.paddingSM),
-                      Text(
-                        'No hay miembros del equipo',
-                        style: GoogleFonts.nunito(
-                          fontSize: 14,
-                          color: colors.onSurface.withValues(alpha: 0.5),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Toca + para agregar a tu equipo',
-                        style: GoogleFonts.nunito(
-                          fontSize: 12,
-                          color: colors.onSurface.withValues(alpha: 0.35),
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-              : RefreshIndicator(
-                  onRefresh: () async =>
-                      ref.invalidate(businessStaffProvider),
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(AppConstants.paddingMD),
-                    itemCount: staff.length + 1,
-                    itemBuilder: (context, index) {
-                      if (index == staff.length) {
-                        return const SizedBox(height: 80);
-                      }
-                      return _StaffCard(
-                        staff: staff[index],
-                        onTap: () =>
-                            _showStaffDetail(context, ref, staff[index]),
-                        onToggle: () =>
-                            _toggleActive(context, ref, staff[index]),
-                      );
-                    },
-                  ),
-                ),
+          body: RefreshIndicator(
+            onRefresh: () async =>
+                ref.invalidate(businessStaffProvider),
+            child: ListView.builder(
+              padding: const EdgeInsets.all(AppConstants.paddingMD),
+              itemCount: otherStaff.length + 2, // +1 owner + 1 bottom spacer
+              itemBuilder: (context, index) {
+                // Owner card at index 0
+                if (index == 0) {
+                  if (ownerStaff != null) {
+                    return _StaffCard(
+                      staff: ownerStaff,
+                      isOwner: true,
+                      onTap: () => _showStaffDetail(context, ref, ownerStaff!),
+                      onToggle: () => _toggleActive(context, ref, ownerStaff!),
+                    );
+                  }
+                  // No staff record yet — show "create your profile" card
+                  return _CreateOwnerStaffCard(
+                    onTap: () => _createOwnerStaff(context, ref),
+                  );
+                }
+                final staffIndex = index - 1;
+                if (staffIndex >= otherStaff.length) {
+                  return const SizedBox(height: 80);
+                }
+                return _StaffCard(
+                  staff: otherStaff[staffIndex],
+                  onTap: () =>
+                      _showStaffDetail(context, ref, otherStaff[staffIndex]),
+                  onToggle: () =>
+                      _toggleActive(context, ref, otherStaff[staffIndex]),
+                );
+              },
+            ),
+          ),
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -119,6 +124,52 @@ class BusinessStaffScreen extends ConsumerWidget {
       builder: (ctx) => _StaffDetailSheet(staff: staff),
     );
   }
+
+  Future<void> _createOwnerStaff(BuildContext context, WidgetRef ref) async {
+    try {
+      final biz = await ref.read(currentBusinessProvider.future);
+      if (biz == null) return;
+      final ownerId = biz['owner_id'] as String;
+      final bizId = biz['id'] as String;
+
+      // Get owner's profile for name
+      final profile = await SupabaseClientService.client
+          .from('profiles')
+          .select('full_name, username, avatar_url, phone')
+          .eq('id', ownerId)
+          .maybeSingle();
+
+      final fullName = profile?['full_name'] as String? ?? profile?['username'] as String? ?? 'Dueno';
+      final parts = fullName.split(' ');
+      final firstName = parts.first;
+      final lastName = parts.length > 1 ? parts.sublist(1).join(' ') : '';
+
+      await SupabaseClientService.client.from('staff').insert({
+        'business_id': bizId,
+        'user_id': ownerId,
+        'first_name': firstName,
+        'last_name': lastName,
+        'avatar_url': profile?['avatar_url'],
+        'phone': profile?['phone'],
+        'is_active': true,
+        'sort_order': -1, // owner always first
+      });
+
+      ref.invalidate(businessStaffProvider);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Perfil de equipo creado')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -129,11 +180,13 @@ class _StaffCard extends StatelessWidget {
   final Map<String, dynamic> staff;
   final VoidCallback onTap;
   final VoidCallback onToggle;
+  final bool isOwner;
 
   const _StaffCard({
     required this.staff,
     required this.onTap,
     required this.onToggle,
+    this.isOwner = false,
   });
 
   @override
@@ -164,7 +217,9 @@ class _StaffCard extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
         side: BorderSide(
-          color: colors.onSurface.withValues(alpha: 0.08),
+          color: isOwner
+              ? colors.primary.withValues(alpha: 0.25)
+              : colors.onSurface.withValues(alpha: 0.08),
         ),
       ),
       child: ListTile(
@@ -201,6 +256,24 @@ class _StaffCard extends StatelessWidget {
         ),
         subtitle: Row(
           children: [
+            if (isOwner) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                decoration: BoxDecoration(
+                  color: colors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  'Dueno',
+                  style: GoogleFonts.nunito(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    color: colors.primary,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+            ],
             if (rating > 0) ...[
               const Icon(Icons.star_rounded, size: 14, color: Colors.amber),
               const SizedBox(width: 2),
@@ -226,6 +299,76 @@ class _StaffCard extends StatelessWidget {
           value: isActive,
           onChanged: (_) => onToggle(),
           activeTrackColor: colors.primary,
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Create owner staff profile card (shown when owner has no staff record)
+// ---------------------------------------------------------------------------
+
+class _CreateOwnerStaffCard extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _CreateOwnerStaffCard({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return Card(
+      elevation: 0,
+      color: colors.surface,
+      margin: const EdgeInsets.only(bottom: AppConstants.paddingSM),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+        side: BorderSide(
+          color: colors.primary.withValues(alpha: 0.3),
+          width: 1.5,
+        ),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 22,
+                backgroundColor: colors.primary.withValues(alpha: 0.1),
+                child: Icon(Icons.person_add_rounded,
+                    color: colors.primary, size: 22),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Crear mi perfil de estilista',
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: colors.primary,
+                      ),
+                    ),
+                    Text(
+                      'Avatar, servicios, horario...',
+                      style: GoogleFonts.nunito(
+                        fontSize: 12,
+                        color: colors.onSurface.withValues(alpha: 0.5),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.arrow_forward_ios_rounded,
+                  size: 16, color: colors.primary.withValues(alpha: 0.5)),
+            ],
+          ),
         ),
       ),
     );
@@ -506,15 +649,18 @@ class _AddStaffSheetState extends ConsumerState<_AddStaffSheet> {
               ),
               const SizedBox(height: AppConstants.paddingSM),
 
-              // Bio / autobiography
-              TextField(
+              // Bio / autobiography — Aphrodite AI-assisted
+              AphroditeCopyField(
                 controller: _bioCtrl,
+                label: 'Autobiografia',
+                hint: 'Cuenta un poco sobre ti, tu experiencia y estilo...',
+                icon: Icons.person_outline_rounded,
+                fieldType: 'staff_bio',
                 maxLines: 3,
-                maxLength: 500,
-                decoration: _styledInput('Autobiografia',
-                    alignLabelWithHint: true,
-                    hintText:
-                        'Cuenta un poco sobre ti, tu experiencia y estilo...'),
+                context: {
+                  'name': _firstCtrl.text.trim(),
+                  'experience': '${_expCtrl.text} anos',
+                },
               ),
 
               const SizedBox(height: AppConstants.paddingMD),

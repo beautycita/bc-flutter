@@ -147,6 +147,8 @@ class _BusinessCalendarScreenState
                   onAction: _handleAction,
                   onBlockTime: () => _showBlockTimeSheet(context),
                   onRefresh: _refresh,
+                  onLongPressLane: (staffId, time) =>
+                      _showQuickNoteSheet(context, staffId, time),
                 ),
         ),
       ],
@@ -239,7 +241,8 @@ class _BusinessCalendarScreenState
     );
   }
 
-  void _showWalkinSheet(BuildContext context, DateTime? initialTime) {
+  void _showWalkinSheet(BuildContext context, DateTime? initialTime,
+      {String? preselectedStaffId}) {
     final time = initialTime ??
         DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day,
             DateTime.now().hour);
@@ -248,6 +251,19 @@ class _BusinessCalendarScreenState
       isScrollControlled: true,
       builder: (ctx) => _WalkinSheet(
         initialDateTime: time,
+        onSaved: _refresh,
+        preselectedStaffId: preselectedStaffId,
+      ),
+    );
+  }
+
+  void _showQuickNoteSheet(BuildContext context, String staffId, DateTime time) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => _QuickNoteSheet(
+        staffId: staffId,
+        dateTime: time,
         onSaved: _refresh,
       ),
     );
@@ -698,6 +714,7 @@ class _HorizontalTimeline extends StatefulWidget {
   final Future<void> Function(Map<String, dynamic>, String) onAction;
   final VoidCallback onBlockTime;
   final VoidCallback onRefresh;
+  final void Function(String staffId, DateTime time)? onLongPressLane;
 
   const _HorizontalTimeline({
     super.key,
@@ -710,6 +727,7 @@ class _HorizontalTimeline extends StatefulWidget {
     required this.onAction,
     required this.onBlockTime,
     required this.onRefresh,
+    this.onLongPressLane,
   });
 
   @override
@@ -935,6 +953,20 @@ class _HorizontalTimelineState extends State<_HorizontalTimeline> {
                               totalWidth: _totalWidth,
                               nowLineX: nowLineX,
                               onAction: widget.onAction,
+                              onRefresh: widget.onRefresh,
+                              onLongPress: widget.onLongPressLane == null
+                                  ? null
+                                  : (staffId, time) {
+                                      // Replace hour/minute on the widget date
+                                      final dt = DateTime(
+                                        widget.date.year,
+                                        widget.date.month,
+                                        widget.date.day,
+                                        time.hour,
+                                        time.minute,
+                                      );
+                                      widget.onLongPressLane!(staffId, dt);
+                                    },
                             ),
                         ],
                       ),
@@ -942,6 +974,20 @@ class _HorizontalTimelineState extends State<_HorizontalTimeline> {
                   ),
                 ),
               ],
+            ),
+          ),
+        ),
+        // Viewport center marker — subtle tick showing where "Add" time comes from
+        Positioned(
+          left: _staffColumnWidth +
+              (MediaQuery.of(context).size.width - _staffColumnWidth) / 2 - 5,
+          top: 0,
+          child: IgnorePointer(
+            child: CustomPaint(
+              size: const Size(10, 6),
+              painter: _CenterTickPainter(
+                color: colors.primary.withValues(alpha: 0.25),
+              ),
             ),
           ),
         ),
@@ -982,6 +1028,8 @@ class _StaffLane extends StatelessWidget {
   final double totalWidth;
   final double? nowLineX;
   final Future<void> Function(Map<String, dynamic>, String) onAction;
+  final VoidCallback onRefresh;
+  final void Function(String staffId, DateTime time)? onLongPress;
 
   const _StaffLane({
     required this.lane,
@@ -993,6 +1041,8 @@ class _StaffLane extends StatelessWidget {
     required this.totalWidth,
     required this.nowLineX,
     required this.onAction,
+    required this.onRefresh,
+    this.onLongPress,
   });
 
   @override
@@ -1000,59 +1050,74 @@ class _StaffLane extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     final staffColor = _staffColor(laneIndex);
 
-    return Container(
-      height: laneHeight,
-      width: totalWidth,
-      decoration: BoxDecoration(
-        border: Border(
-          top: BorderSide(
-            color: colors.onSurface.withValues(alpha: 0.06),
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onLongPressStart: onLongPress == null
+          ? null
+          : (details) {
+              final localX = details.localPosition.dx;
+              final minutesSinceStart = (localX / hourWidth) * 60;
+              final totalMinutes = minutesSinceStart.round();
+              final hour = (startHour + totalMinutes ~/ 60).clamp(startHour, endHour - 1);
+              final minute = ((totalMinutes % 60) ~/ 5) * 5;
+              final now = DateTime.now();
+              final time = DateTime(now.year, now.month, now.day, hour, minute);
+              onLongPress!(lane.id, time);
+            },
+      child: Container(
+        height: laneHeight,
+        width: totalWidth,
+        decoration: BoxDecoration(
+          border: Border(
+            top: BorderSide(
+              color: colors.onSurface.withValues(alpha: 0.06),
+            ),
           ),
         ),
-      ),
-      child: Stack(
-        children: [
-          // Hour grid lines
-          for (var h = 0; h < endHour - startHour; h++)
-            Positioned(
-              left: h * hourWidth,
-              top: 0,
-              bottom: 0,
-              child: Container(
-                width: 1,
-                color: colors.onSurface.withValues(alpha: 0.04),
+        child: Stack(
+          children: [
+            // Hour grid lines
+            for (var h = 0; h < endHour - startHour; h++)
+              Positioned(
+                left: h * hourWidth,
+                top: 0,
+                bottom: 0,
+                child: Container(
+                  width: 1,
+                  color: colors.onSurface.withValues(alpha: 0.04),
+                ),
               ),
-            ),
 
-          // Schedule blocks (lunch/breaks)
-          for (final block in lane.blocks)
-            _buildBlock(context, block, colors),
+            // Schedule blocks (lunch/breaks)
+            for (final block in lane.blocks)
+              _buildBlock(context, block, colors),
 
-          // Appointment blocks
-          for (final appt in lane.appts)
-            _buildApptBlock(context, appt, staffColor),
+            // Appointment blocks
+            for (final appt in lane.appts)
+              _buildApptBlock(context, appt, staffColor),
 
-          // Now-line
-          if (nowLineX != null)
-            Positioned(
-              left: nowLineX!,
-              top: 0,
-              bottom: 0,
-              child: Container(
-                width: 2,
-                color: const Color(0xFFFFB300),
+            // Now-line
+            if (nowLineX != null)
+              Positioned(
+                left: nowLineX!,
+                top: 0,
+                bottom: 0,
+                child: Container(
+                  width: 2,
+                  color: const Color(0xFFFFB300),
+                ),
               ),
-            ),
-          if (nowLineX != null)
-            Positioned(
-              left: nowLineX! - 4,
-              top: 0,
-              child: CustomPaint(
-                size: const Size(10, 6),
-                painter: _NowTrianglePainter(),
+            if (nowLineX != null)
+              Positioned(
+                left: nowLineX! - 4,
+                top: 0,
+                child: CustomPaint(
+                  size: const Size(10, 6),
+                  painter: _NowTrianglePainter(),
+                ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1073,7 +1138,50 @@ class _StaffLane extends StatelessWidget {
     final width = (right - left).clamp(20.0, totalWidth);
 
     final reason = block['reason'] as String? ?? 'blocked';
-    final label = _reasonLabel(reason);
+    final isNote = reason == 'note';
+    final noteText = block['note'] as String? ?? '';
+    final label = isNote ? noteText : _reasonLabel(reason);
+
+    if (isNote) {
+      return Positioned(
+        left: left,
+        top: 4,
+        height: laneHeight - 8,
+        width: width,
+        child: GestureDetector(
+          onTap: () => _showNoteDetail(context, block),
+          child: Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF9C4), // pale yellow sticky-note
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(
+                color: const Color(0xFFFFD54F), width: 1,
+              ),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Row(
+              children: [
+                const Icon(Icons.sticky_note_2_rounded,
+                    size: 10, color: Color(0xFFF9A825)),
+                const SizedBox(width: 3),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: GoogleFonts.nunito(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF5D4037),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
 
     return Positioned(
       left: left,
@@ -1095,6 +1203,81 @@ class _StaffLane extends StatelessWidget {
           ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
+        ),
+      ),
+    );
+  }
+
+  void _showNoteDetail(BuildContext context, Map<String, dynamic> block) {
+    final noteText = block['note'] as String? ?? '';
+    final startsAt = DateTime.tryParse(block['starts_at'] as String? ?? '')?.toLocal();
+    final blockId = block['id'] as String?;
+    final colors = Theme.of(context).colorScheme;
+
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.sticky_note_2_rounded,
+                    size: 20, color: Color(0xFFF9A825)),
+                const SizedBox(width: 8),
+                Text('Nota',
+                    style: GoogleFonts.poppins(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: colors.onSurface,
+                    )),
+                const Spacer(),
+                if (startsAt != null)
+                  Text(
+                    '${startsAt.hour.toString().padLeft(2, '0')}:${startsAt.minute.toString().padLeft(2, '0')}',
+                    style: GoogleFonts.nunito(
+                      fontSize: 12,
+                      color: colors.onSurface.withValues(alpha: 0.5),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF9C4),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFFFD54F)),
+              ),
+              child: Text(
+                noteText,
+                style: GoogleFonts.nunito(
+                  fontSize: 14,
+                  color: const Color(0xFF5D4037),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            if (blockId != null)
+              TextButton.icon(
+                onPressed: () async {
+                  await SupabaseClientService.client
+                      .from('staff_schedule_blocks')
+                      .delete()
+                      .eq('id', blockId);
+                  onRefresh();
+                  if (ctx.mounted) Navigator.pop(ctx);
+                },
+                icon: const Icon(Icons.delete_outline, size: 18),
+                label: const Text('Eliminar nota'),
+                style: TextButton.styleFrom(
+                  foregroundColor: colors.error,
+                ),
+              ),
+          ],
         ),
       ),
     );
@@ -1182,6 +1365,7 @@ class _StaffLane extends StatelessWidget {
       case 'lunch': return 'Almuerzo';
       case 'day_off': return 'Dia libre';
       case 'vacation': return 'Vacaciones';
+      case 'note': return 'Nota';
       default: return 'Bloqueado';
     }
   }
@@ -1202,6 +1386,26 @@ class _NowTrianglePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+/// Subtle downward tick at the viewport center — shows where "Add" time is taken from
+class _CenterTickPainter extends CustomPainter {
+  final Color color;
+  _CenterTickPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = color;
+    final path = Path()
+      ..moveTo(0, 0)
+      ..lineTo(size.width, 0)
+      ..lineTo(size.width / 2, size.height)
+      ..close();
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _CenterTickPainter old) => old.color != color;
 }
 
 // ---------------------------------------------------------------------------
@@ -1583,11 +1787,23 @@ class _BlockTimeSheet extends ConsumerStatefulWidget {
 
 class _BlockTimeSheetState extends ConsumerState<_BlockTimeSheet> {
   String? _staffId; // null = whole salon
-  DateTime _date = DateTime.now();
+  DateTime _fromDate = DateTime.now();
+  DateTime _toDate = DateTime.now();
   TimeOfDay _startTime = const TimeOfDay(hour: 14, minute: 0);
   TimeOfDay _endTime = const TimeOfDay(hour: 15, minute: 0);
   String _reason = 'lunch';
   bool _saving = false;
+
+  static const _months = [
+    'Ene','Feb','Mar','Abr','May','Jun',
+    'Jul','Ago','Sep','Oct','Nov','Dic',
+  ];
+
+  bool get _isFullDay => _reason == 'vacation' || _reason == 'day_off';
+  bool get _isDateRange => _reason == 'vacation' || _reason == 'other';
+  bool get _showTimes => _reason == 'lunch' || _reason == 'other';
+
+  String _fmtDate(DateTime d) => '${d.day} ${_months[d.month - 1]} ${d.year}';
 
   @override
   Widget build(BuildContext context) {
@@ -1595,10 +1811,8 @@ class _BlockTimeSheetState extends ConsumerState<_BlockTimeSheet> {
 
     return Padding(
       padding: EdgeInsets.fromLTRB(
-        AppConstants.paddingLG,
-        AppConstants.paddingLG,
-        AppConstants.paddingLG,
-        MediaQuery.of(context).viewInsets.bottom + AppConstants.paddingLG,
+        20, 20, 20,
+        MediaQuery.of(context).viewInsets.bottom + 20,
       ),
       child: SingleChildScrollView(
         child: Column(
@@ -1611,85 +1825,194 @@ class _BlockTimeSheetState extends ConsumerState<_BlockTimeSheet> {
                   fontWeight: FontWeight.w600,
                   color: colors.onSurface,
                 )),
-            const SizedBox(height: AppConstants.paddingMD),
-            DropdownButtonFormField<String?>(
-              initialValue: _staffId,
-              decoration: const InputDecoration(labelText: 'Para quien'),
+            const SizedBox(height: 16),
+
+            // Staff
+            _SheetDropdown<String?>(
+              label: 'Para quien',
+              icon: Icons.people_rounded,
+              value: _staffId,
+              hint: 'Todo el salon',
               items: [
-                const DropdownMenuItem(
-                    value: null, child: Text('Todo el salon')),
+                DropdownMenuItem<String?>(
+                  value: null,
+                  child: Text('Todo el salon',
+                      style: GoogleFonts.nunito(fontSize: 14, fontWeight: FontWeight.w600)),
+                ),
                 for (final s in widget.staffList)
-                  DropdownMenuItem(
+                  DropdownMenuItem<String?>(
                     value: s['id'] as String,
-                    child: Text('${s['first_name']} ${s['last_name'] ?? ''}'.trim()),
+                    child: Text(
+                      '${s['first_name']} ${s['last_name'] ?? ''}'.trim(),
+                      style: GoogleFonts.nunito(fontSize: 14, fontWeight: FontWeight.w600),
+                    ),
                   ),
               ],
               onChanged: (v) => setState(() => _staffId = v),
             ),
-            const SizedBox(height: AppConstants.paddingSM),
-            DropdownButtonFormField<String>(
-              initialValue: _reason,
-              decoration: const InputDecoration(labelText: 'Motivo'),
-              items: const [
-                DropdownMenuItem(value: 'lunch', child: Text('Almuerzo')),
-                DropdownMenuItem(value: 'day_off', child: Text('Dia libre')),
-                DropdownMenuItem(value: 'vacation', child: Text('Vacaciones')),
-                DropdownMenuItem(value: 'other', child: Text('Otro')),
-              ],
-              onChanged: (v) => setState(() => _reason = v ?? 'other'),
-            ),
-            const SizedBox(height: AppConstants.paddingSM),
-            ListTile(
-              title: const Text('Fecha'),
-              trailing: Text('${_date.day}/${_date.month}/${_date.year}'),
-              onTap: () async {
-                final d = await showDatePicker(
-                  context: context,
-                  initialDate: _date,
-                  firstDate: DateTime.now(),
-                  lastDate: DateTime(2030),
-                );
-                if (d != null) setState(() => _date = d);
-              },
-            ),
-            Row(
-              children: [
-                Expanded(
-                  child: ListTile(
-                    title: const Text('Desde'),
-                    trailing: Text(_startTime.format(context)),
-                    onTap: () async {
-                      final t = await showTimePicker(
-                        context: context,
-                        initialTime: _startTime,
-                      );
-                      if (t != null) setState(() => _startTime = t);
-                    },
-                  ),
+            const SizedBox(height: 12),
+
+            // Reason
+            _SheetDropdown<String>(
+              label: 'Motivo',
+              icon: Icons.event_busy_rounded,
+              value: _reason,
+              items: [
+                DropdownMenuItem(
+                  value: 'lunch',
+                  child: Text('Almuerzo',
+                      style: GoogleFonts.nunito(fontSize: 14, fontWeight: FontWeight.w600)),
                 ),
-                Expanded(
-                  child: ListTile(
-                    title: const Text('Hasta'),
-                    trailing: Text(_endTime.format(context)),
-                    onTap: () async {
-                      final t = await showTimePicker(
-                        context: context,
-                        initialTime: _endTime,
-                      );
-                      if (t != null) setState(() => _endTime = t);
-                    },
-                  ),
+                DropdownMenuItem(
+                  value: 'day_off',
+                  child: Text('Dia libre',
+                      style: GoogleFonts.nunito(fontSize: 14, fontWeight: FontWeight.w600)),
+                ),
+                DropdownMenuItem(
+                  value: 'vacation',
+                  child: Text('Vacaciones',
+                      style: GoogleFonts.nunito(fontSize: 14, fontWeight: FontWeight.w600)),
+                ),
+                DropdownMenuItem(
+                  value: 'other',
+                  child: Text('Otro',
+                      style: GoogleFonts.nunito(fontSize: 14, fontWeight: FontWeight.w600)),
                 ),
               ],
+              onChanged: (v) => setState(() {
+                _reason = v ?? 'other';
+                // Sync dates if switching to full-day mode
+                if (_isFullDay && _toDate.isBefore(_fromDate)) {
+                  _toDate = _fromDate;
+                }
+              }),
             ),
-            const SizedBox(height: AppConstants.paddingLG),
-            ElevatedButton(
+            const SizedBox(height: 12),
+
+            // Date(s): single date for lunch/day_off, range for vacation/other
+            if (_isDateRange)
+              Row(
+                children: [
+                  Expanded(
+                    child: _PickerTile(
+                      icon: Icons.calendar_today_rounded,
+                      label: _fmtDate(_fromDate),
+                      onTap: () async {
+                        final d = await showDatePicker(
+                          context: context,
+                          initialDate: _fromDate,
+                          firstDate: DateTime.now(),
+                          lastDate: DateTime(2030),
+                        );
+                        if (d != null) {
+                          setState(() {
+                            _fromDate = d;
+                            if (_toDate.isBefore(_fromDate)) _toDate = _fromDate;
+                          });
+                        }
+                      },
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    child: Icon(Icons.arrow_forward_rounded,
+                        size: 16, color: colors.onSurface.withValues(alpha: 0.3)),
+                  ),
+                  Expanded(
+                    child: _PickerTile(
+                      icon: Icons.event_rounded,
+                      label: _fmtDate(_toDate),
+                      onTap: () async {
+                        final d = await showDatePicker(
+                          context: context,
+                          initialDate: _toDate.isBefore(_fromDate) ? _fromDate : _toDate,
+                          firstDate: _fromDate,
+                          lastDate: DateTime(2030),
+                        );
+                        if (d != null) setState(() => _toDate = d);
+                      },
+                    ),
+                  ),
+                ],
+              )
+            else
+              _PickerTile(
+                icon: Icons.calendar_today_rounded,
+                label: _fmtDate(_fromDate),
+                onTap: () async {
+                  final d = await showDatePicker(
+                    context: context,
+                    initialDate: _fromDate,
+                    firstDate: DateTime.now(),
+                    lastDate: DateTime(2030),
+                  );
+                  if (d != null) {
+                    setState(() {
+                      _fromDate = d;
+                      _toDate = d;
+                    });
+                  }
+                },
+              ),
+
+            // Time pickers — only for lunch and other (not day_off / vacation)
+            if (_showTimes) ...[
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _PickerTile(
+                      icon: Icons.access_time_rounded,
+                      label: _startTime.format(context),
+                      onTap: () async {
+                        final t = await showTimePicker(
+                          context: context,
+                          initialTime: _startTime,
+                        );
+                        if (t != null) setState(() => _startTime = t);
+                      },
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    child: Icon(Icons.arrow_forward_rounded,
+                        size: 16, color: colors.onSurface.withValues(alpha: 0.3)),
+                  ),
+                  Expanded(
+                    child: _PickerTile(
+                      icon: Icons.access_time_rounded,
+                      label: _endTime.format(context),
+                      onTap: () async {
+                        final t = await showTimePicker(
+                          context: context,
+                          initialTime: _endTime,
+                        );
+                        if (t != null) setState(() => _endTime = t);
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ],
+
+            if (_isFullDay)
+              Padding(
+                padding: const EdgeInsets.only(top: 8, left: 4),
+                child: Text(
+                  _reason == 'day_off' ? 'Bloqueo de dia completo' : 'Dias completos bloqueados',
+                  style: GoogleFonts.nunito(
+                    fontSize: 12,
+                    color: colors.onSurface.withValues(alpha: 0.4),
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
+
+            const SizedBox(height: 20),
+            _SheetButton(
+              label: 'Bloquear',
+              saving: _saving,
               onPressed: _saving ? null : _save,
-              child: _saving
-                  ? const SizedBox(
-                      width: 20, height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Text('Bloquear'),
             ),
           ],
         ),
@@ -1703,20 +2026,32 @@ class _BlockTimeSheetState extends ConsumerState<_BlockTimeSheet> {
       final biz = await ref.read(currentBusinessProvider.future);
       if (biz == null) throw Exception('No business');
 
-      final startsAt = DateTime(_date.year, _date.month, _date.day,
-          _startTime.hour, _startTime.minute);
-      final endsAt = DateTime(_date.year, _date.month, _date.day,
-          _endTime.hour, _endTime.minute);
+      // Generate one block per day in the date range
+      final rows = <Map<String, dynamic>>[];
+      var current = _fromDate;
+      while (!current.isAfter(_toDate)) {
+        final startsAt = !_showTimes
+            ? DateTime(current.year, current.month, current.day, 0, 0)
+            : DateTime(current.year, current.month, current.day,
+                _startTime.hour, _startTime.minute);
+        final endsAt = !_showTimes
+            ? DateTime(current.year, current.month, current.day, 23, 59, 59)
+            : DateTime(current.year, current.month, current.day,
+                _endTime.hour, _endTime.minute);
+
+        rows.add({
+          'business_id': biz['id'],
+          'staff_id': _staffId,
+          'starts_at': startsAt.toUtc().toIso8601String(),
+          'ends_at': endsAt.toUtc().toIso8601String(),
+          'reason': _reason,
+        });
+        current = current.add(const Duration(days: 1));
+      }
 
       await SupabaseClientService.client
           .from('staff_schedule_blocks')
-          .insert({
-        'business_id': biz['id'],
-        'staff_id': _staffId,
-        'starts_at': startsAt.toUtc().toIso8601String(),
-        'ends_at': endsAt.toUtc().toIso8601String(),
-        'reason': _reason,
-      });
+          .insert(rows);
 
       widget.onSaved();
       if (mounted) Navigator.pop(context);
@@ -1739,10 +2074,12 @@ class _BlockTimeSheetState extends ConsumerState<_BlockTimeSheet> {
 class _WalkinSheet extends ConsumerStatefulWidget {
   final DateTime initialDateTime;
   final VoidCallback onSaved;
+  final String? preselectedStaffId;
 
   const _WalkinSheet({
     required this.initialDateTime,
     required this.onSaved,
+    this.preselectedStaffId,
   });
 
   @override
@@ -1755,7 +2092,11 @@ class _WalkinSheetState extends ConsumerState<_WalkinSheet> {
   String? _serviceId;
   String? _staffId;
   final _notesCtrl = TextEditingController();
+  final _customServiceCtrl = TextEditingController();
   bool _saving = false;
+  bool _isOtherService = false;
+  int _customDuration = 60;
+  List<String> _popularOtherNames = [];
 
   @override
   void initState() {
@@ -1765,11 +2106,41 @@ class _WalkinSheetState extends ConsumerState<_WalkinSheet> {
       hour: widget.initialDateTime.hour,
       minute: (widget.initialDateTime.minute ~/ 5) * 5, // round to 5 min
     );
+    _staffId = widget.preselectedStaffId;
+    _loadPopularOtherNames();
+  }
+
+  Future<void> _loadPopularOtherNames() async {
+    try {
+      final biz = await ref.read(currentBusinessProvider.future);
+      if (biz == null) return;
+      final rows = await SupabaseClientService.client
+          .from('appointments')
+          .select('service_name')
+          .eq('business_id', biz['id'])
+          .isFilter('service_id', null)
+          .not('service_name', 'is', null)
+          .order('created_at', ascending: false)
+          .limit(50);
+      final counts = <String, int>{};
+      for (final r in rows) {
+        final name = (r['service_name'] as String?)?.trim() ?? '';
+        if (name.isNotEmpty) counts[name] = (counts[name] ?? 0) + 1;
+      }
+      final sorted = counts.entries.toList()
+        ..sort((a, b) => b.value.compareTo(a.value));
+      if (mounted) {
+        setState(() {
+          _popularOtherNames = sorted.take(8).map((e) => e.key).toList();
+        });
+      }
+    } catch (_) {}
   }
 
   @override
   void dispose() {
     _notesCtrl.dispose();
+    _customServiceCtrl.dispose();
     super.dispose();
   }
 
@@ -1843,22 +2214,119 @@ class _WalkinSheetState extends ConsumerState<_WalkinSheet> {
 
             // Service dropdown
             servicesAsync.when(
-              data: (services) => DropdownButtonFormField<String>(
-                decoration: const InputDecoration(labelText: 'Servicio'),
-                items: services.map((s) {
-                  return DropdownMenuItem(
-                    value: s['id'] as String,
+              data: (services) => _SheetDropdown<String>(
+                label: 'Servicio',
+                icon: Icons.content_cut_rounded,
+                value: _isOtherService ? '__other__' : _serviceId,
+                hint: 'Selecciona servicio',
+                items: [
+                  ...services.map((s) {
+                    return DropdownMenuItem(
+                      value: s['id'] as String,
+                      child: Text(
+                        '${s['name']} (\$${(s['price'] as num?)?.toStringAsFixed(0) ?? '0'})',
+                        style: GoogleFonts.nunito(fontSize: 14, fontWeight: FontWeight.w600),
+                      ),
+                    );
+                  }),
+                  DropdownMenuItem(
+                    value: '__other__',
                     child: Text(
-                      '${s['name']} (\$${(s['price'] as num?)?.toStringAsFixed(0) ?? '0'})',
+                      'Otro...',
+                      style: GoogleFonts.nunito(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        fontStyle: FontStyle.italic,
+                      ),
                     ),
-                  );
-                }).toList(),
-                onChanged: (v) => setState(() => _serviceId = v),
+                  ),
+                ],
+                onChanged: (v) {
+                  setState(() {
+                    if (v == '__other__') {
+                      _isOtherService = true;
+                      _serviceId = null;
+                    } else {
+                      _isOtherService = false;
+                      _serviceId = v;
+                      _customServiceCtrl.clear();
+                    }
+                  });
+                },
               ),
               loading: () => const LinearProgressIndicator(),
               error: (e, st) => Text('Error: $e'),
             ),
-            const SizedBox(height: AppConstants.paddingSM),
+
+            // Custom service name + duration when "Otro" selected
+            if (_isOtherService) ...[
+              const SizedBox(height: 8),
+              _SheetTextField(
+                controller: _customServiceCtrl,
+                label: 'Nombre del servicio',
+                hint: 'Ej: Trenza, Tinte, Unas...',
+                icon: Icons.edit_rounded,
+                maxLines: 1,
+              ),
+              if (_popularOtherNames.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  children: _popularOtherNames.map((name) {
+                    final selected = _customServiceCtrl.text.trim() == name;
+                    return GestureDetector(
+                      onTap: () => setState(() {
+                        _customServiceCtrl.text = name;
+                        _customServiceCtrl.selection = TextSelection.fromPosition(
+                          TextPosition(offset: name.length),
+                        );
+                      }),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: selected
+                              ? colors.primary.withValues(alpha: 0.15)
+                              : colors.onSurface.withValues(alpha: 0.06),
+                          borderRadius: BorderRadius.circular(16),
+                          border: selected
+                              ? Border.all(color: colors.primary.withValues(alpha: 0.4))
+                              : null,
+                        ),
+                        child: Text(
+                          name,
+                          style: GoogleFonts.nunito(
+                            fontSize: 12,
+                            fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+                            color: selected ? colors.primary : colors.onSurface.withValues(alpha: 0.7),
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ],
+              const SizedBox(height: 8),
+              _SheetDropdown<int>(
+                label: 'Duracion',
+                icon: Icons.timer_outlined,
+                value: _customDuration,
+                hint: 'Duracion',
+                items: [30, 45, 60, 90, 120].map((m) {
+                  return DropdownMenuItem(
+                    value: m,
+                    child: Text(
+                      '$m min',
+                      style: GoogleFonts.nunito(fontSize: 14, fontWeight: FontWeight.w600),
+                    ),
+                  );
+                }).toList(),
+                onChanged: (v) {
+                  if (v != null) setState(() => _customDuration = v);
+                },
+              ),
+            ],
+            const SizedBox(height: 12),
 
             // Staff dropdown
             staffAsync.when(
@@ -1869,17 +2337,22 @@ class _WalkinSheetState extends ConsumerState<_WalkinSheet> {
                   allStaff.add({
                     'id': biz['owner_id'],
                     'first_name': 'Yo',
-                    'last_name': '(Dueño)',
+                    'last_name': '(Dueno)',
                   });
                 }
                 allStaff.addAll(staff);
-                return DropdownButtonFormField<String>(
-                  decoration: const InputDecoration(labelText: 'Estilista'),
+                return _SheetDropdown<String>(
+                  label: 'Estilista',
+                  icon: Icons.person_rounded,
+                  value: _staffId,
+                  hint: 'Selecciona estilista',
                   items: allStaff.map((s) {
                     return DropdownMenuItem(
                       value: s['id'] as String,
                       child: Text(
-                          '${s['first_name']} ${s['last_name'] ?? ''}'.trim()),
+                        '${s['first_name']} ${s['last_name'] ?? ''}'.trim(),
+                        style: GoogleFonts.nunito(fontSize: 14, fontWeight: FontWeight.w600),
+                      ),
                     );
                   }).toList(),
                   onChanged: (v) => setState(() => _staffId = v),
@@ -1888,29 +2361,22 @@ class _WalkinSheetState extends ConsumerState<_WalkinSheet> {
               loading: () => const LinearProgressIndicator(),
               error: (e, st) => Text('Error: $e'),
             ),
-            const SizedBox(height: AppConstants.paddingSM),
+            const SizedBox(height: 12),
 
             // Notes
-            TextField(
+            _SheetTextField(
               controller: _notesCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Notas (opcional)',
-                hintText: 'Ej: Walk-in, pago en efectivo...',
-                prefixIcon: Icon(Icons.sticky_note_2_outlined, size: 20),
-              ),
+              label: 'Notas (opcional)',
+              hint: 'Ej: Walk-in, pago en efectivo...',
+              icon: Icons.sticky_note_2_outlined,
               maxLines: 2,
-              textCapitalization: TextCapitalization.sentences,
             ),
 
-            const SizedBox(height: AppConstants.paddingLG),
-            ElevatedButton(
+            const SizedBox(height: 20),
+            _SheetButton(
+              label: 'Agregar Cita',
+              saving: _saving,
               onPressed: _saving ? null : _save,
-              child: _saving
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Text('Agregar Cita'),
             ),
           ],
         ),
@@ -1919,9 +2385,15 @@ class _WalkinSheetState extends ConsumerState<_WalkinSheet> {
   }
 
   Future<void> _save() async {
-    if (_serviceId == null) {
+    if (!_isOtherService && _serviceId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Selecciona un servicio')),
+      );
+      return;
+    }
+    if (_isOtherService && _customServiceCtrl.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Escribe el nombre del servicio')),
       );
       return;
     }
@@ -1930,10 +2402,21 @@ class _WalkinSheetState extends ConsumerState<_WalkinSheet> {
       final biz = await ref.read(currentBusinessProvider.future);
       if (biz == null) throw Exception('No business');
 
-      final services = await ref.read(businessServicesProvider.future);
-      final service = services.firstWhere((s) => s['id'] == _serviceId);
-      final duration = service['duration_minutes'] as int? ?? 60;
-      final price = (service['price'] as num?)?.toDouble() ?? 0;
+      int duration;
+      double price;
+      String serviceName;
+
+      if (_isOtherService) {
+        duration = _customDuration;
+        price = 0;
+        serviceName = _customServiceCtrl.text.trim();
+      } else {
+        final services = await ref.read(businessServicesProvider.future);
+        final service = services.firstWhere((s) => s['id'] == _serviceId);
+        duration = service['duration_minutes'] as int? ?? 60;
+        price = (service['price'] as num?)?.toDouble() ?? 0;
+        serviceName = service['name'] as String;
+      }
 
       final startsAt = DateTime(
           _date.year, _date.month, _date.day, _time.hour, _time.minute);
@@ -1941,14 +2424,14 @@ class _WalkinSheetState extends ConsumerState<_WalkinSheet> {
 
       final data = <String, dynamic>{
         'business_id': biz['id'],
-        'service_id': _serviceId,
-        'service_name': service['name'],
+        'service_name': serviceName,
         'staff_id': _staffId,
         'starts_at': startsAt.toUtc().toIso8601String(),
         'ends_at': endsAt.toUtc().toIso8601String(),
         'price': price,
         'status': 'confirmed',
       };
+      if (!_isOtherService) data['service_id'] = _serviceId;
       final notes = _notesCtrl.text.trim();
       if (notes.isNotEmpty) data['notes'] = notes;
 
@@ -2042,16 +2525,19 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
         : TimeOfDay.now();
   }
 
+  static const _months = [
+    'Ene','Feb','Mar','Abr','May','Jun',
+    'Jul','Ago','Sep','Oct','Nov','Dic',
+  ];
+
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
 
     return Padding(
       padding: EdgeInsets.fromLTRB(
-        AppConstants.paddingLG,
-        AppConstants.paddingLG,
-        AppConstants.paddingLG,
-        MediaQuery.of(context).viewInsets.bottom + AppConstants.paddingLG,
+        20, 20, 20,
+        MediaQuery.of(context).viewInsets.bottom + 20,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -2063,41 +2549,45 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
                 fontWeight: FontWeight.w600,
                 color: colors.onSurface,
               )),
-          const SizedBox(height: AppConstants.paddingMD),
-          ListTile(
-            leading: const Icon(Icons.calendar_today_rounded),
-            title: const Text('Nueva fecha'),
-            trailing: Text('${_newDate.day}/${_newDate.month}/${_newDate.year}'),
-            onTap: () async {
-              final d = await showDatePicker(
-                context: context,
-                initialDate: _newDate,
-                firstDate: DateTime(2026),
-                lastDate: DateTime(2030),
-              );
-              if (d != null) setState(() => _newDate = d);
-            },
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _PickerTile(
+                  icon: Icons.calendar_today_rounded,
+                  label: '${_newDate.day} ${_months[_newDate.month - 1]}',
+                  onTap: () async {
+                    final d = await showDatePicker(
+                      context: context,
+                      initialDate: _newDate,
+                      firstDate: DateTime(2026),
+                      lastDate: DateTime(2030),
+                    );
+                    if (d != null) setState(() => _newDate = d);
+                  },
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _PickerTile(
+                  icon: Icons.access_time_rounded,
+                  label: _newTime.format(context),
+                  onTap: () async {
+                    final t = await showTimePicker(
+                      context: context,
+                      initialTime: _newTime,
+                    );
+                    if (t != null) setState(() => _newTime = t);
+                  },
+                ),
+              ),
+            ],
           ),
-          ListTile(
-            leading: const Icon(Icons.access_time_rounded),
-            title: const Text('Nueva hora'),
-            trailing: Text(_newTime.format(context)),
-            onTap: () async {
-              final t = await showTimePicker(
-                context: context,
-                initialTime: _newTime,
-              );
-              if (t != null) setState(() => _newTime = t);
-            },
-          ),
-          const SizedBox(height: AppConstants.paddingLG),
-          ElevatedButton(
+          const SizedBox(height: 20),
+          _SheetButton(
+            label: 'Reprogramar',
+            saving: _saving,
             onPressed: _saving ? null : _save,
-            child: _saving
-                ? const SizedBox(
-                    width: 20, height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2))
-                : const Text('Reprogramar'),
           ),
         ],
       ),
@@ -2184,10 +2674,8 @@ class _EditApptSheetState extends ConsumerState<_EditApptSheet> {
 
     return Padding(
       padding: EdgeInsets.fromLTRB(
-        AppConstants.paddingLG,
-        AppConstants.paddingLG,
-        AppConstants.paddingLG,
-        MediaQuery.of(context).viewInsets.bottom + AppConstants.paddingLG,
+        20, 20, 20,
+        MediaQuery.of(context).viewInsets.bottom + 20,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -2199,7 +2687,7 @@ class _EditApptSheetState extends ConsumerState<_EditApptSheet> {
                 fontWeight: FontWeight.w600,
                 color: colors.onSurface,
               )),
-          const SizedBox(height: AppConstants.paddingMD),
+          const SizedBox(height: 16),
           // Staff picker
           staffAsync.when(
             data: (staff) {
@@ -2213,20 +2701,20 @@ class _EditApptSheetState extends ConsumerState<_EditApptSheet> {
                 });
               }
               allStaff.addAll(staff);
-              return DropdownButtonFormField<String>(
+              return _SheetDropdown<String>(
+                label: 'Empleado asignado',
+                icon: Icons.person_rounded,
                 value: allStaff.any((s) => s['id'] == _selectedStaffId)
                     ? _selectedStaffId
                     : null,
-                decoration: const InputDecoration(
-                  labelText: 'Empleado asignado',
-                  prefixIcon: Icon(Icons.person_rounded),
-                ),
+                hint: 'Seleccionar',
                 items: allStaff
                     .map((s) => DropdownMenuItem<String>(
                           value: s['id'] as String,
                           child: Text(
-                              '${s['first_name']} ${s['last_name'] ?? ''}'
-                                  .trim()),
+                            '${s['first_name']} ${s['last_name'] ?? ''}'.trim(),
+                            style: GoogleFonts.nunito(fontSize: 14, fontWeight: FontWeight.w600),
+                          ),
                         ))
                     .toList(),
                 onChanged: (v) => setState(() => _selectedStaffId = v),
@@ -2235,27 +2723,20 @@ class _EditApptSheetState extends ConsumerState<_EditApptSheet> {
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, _) => Text('Error: $e'),
           ),
-          const SizedBox(height: AppConstants.paddingMD),
+          const SizedBox(height: 12),
           // Notes
-          TextField(
+          _SheetTextField(
             controller: _notesCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Notas',
-              prefixIcon: Icon(Icons.note_rounded),
-              hintText: 'Observaciones, cambios...',
-            ),
+            label: 'Notas',
+            hint: 'Observaciones, cambios...',
+            icon: Icons.note_rounded,
             maxLines: 3,
-            textCapitalization: TextCapitalization.sentences,
           ),
-          const SizedBox(height: AppConstants.paddingLG),
-          ElevatedButton(
+          const SizedBox(height: 20),
+          _SheetButton(
+            label: 'Guardar cambios',
+            saving: _saving,
             onPressed: _saving ? null : _save,
-            child: _saving
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2))
-                : const Text('Guardar cambios'),
           ),
         ],
       ),
@@ -2296,7 +2777,147 @@ class _EditApptSheetState extends ConsumerState<_EditApptSheet> {
 }
 
 // ---------------------------------------------------------------------------
-// Quick Notes Sheet — inline note editing
+// Quick Note Sheet — long-press to create a note pegged to time/staff
+// ---------------------------------------------------------------------------
+
+class _QuickNoteSheet extends ConsumerStatefulWidget {
+  final String staffId;
+  final DateTime dateTime;
+  final VoidCallback onSaved;
+
+  const _QuickNoteSheet({
+    required this.staffId,
+    required this.dateTime,
+    required this.onSaved,
+  });
+
+  @override
+  ConsumerState<_QuickNoteSheet> createState() => _QuickNoteSheetState();
+}
+
+class _QuickNoteSheetState extends ConsumerState<_QuickNoteSheet> {
+  final _ctrl = TextEditingController();
+  bool _saving = false;
+
+  static const _months = [
+    'Ene','Feb','Mar','Abr','May','Jun',
+    'Jul','Ago','Sep','Oct','Nov','Dic',
+  ];
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final dt = widget.dateTime;
+    final timeLabel =
+        '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+    final dateLabel = '${dt.day} ${_months[dt.month - 1]}';
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        20, 20, 20,
+        MediaQuery.of(context).viewInsets.bottom + 20,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.sticky_note_2_rounded,
+                  size: 20, color: colors.primary),
+              const SizedBox(width: 8),
+              Text('Nota Rapida',
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: colors.onSurface,
+                  )),
+              const Spacer(),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: colors.onSurface.withValues(alpha: 0.06),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '$dateLabel  $timeLabel',
+                  style: GoogleFonts.nunito(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: colors.onSurface.withValues(alpha: 0.5),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _SheetTextField(
+            controller: _ctrl,
+            label: 'Nota',
+            hint: 'Ej: Cliente llama para confirmar, traer producto X...',
+            icon: Icons.edit_note_rounded,
+            maxLines: 3,
+          ),
+          const SizedBox(height: 16),
+          _SheetButton(
+            label: 'Guardar Nota',
+            saving: _saving,
+            onPressed: _saving ? null : _save,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _save() async {
+    final text = _ctrl.text.trim();
+    if (text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Escribe algo')),
+      );
+      return;
+    }
+    setState(() => _saving = true);
+    try {
+      final biz = await ref.read(currentBusinessProvider.future);
+      if (biz == null) throw Exception('No business');
+
+      final startsAt = widget.dateTime;
+      // Note block: 15 min duration, just a visual marker
+      final endsAt = startsAt.add(const Duration(minutes: 15));
+
+      await SupabaseClientService.client.from('staff_schedule_blocks').insert({
+        'business_id': biz['id'],
+        'staff_id': widget.staffId,
+        'starts_at': startsAt.toUtc().toIso8601String(),
+        'ends_at': endsAt.toUtc().toIso8601String(),
+        'reason': 'note',
+        'note': text,
+      });
+
+      widget.onSaved();
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Notes Sheet — inline note editing for appointments
 // ---------------------------------------------------------------------------
 class _NotesSheet extends StatefulWidget {
   final Map<String, dynamic> appointment;
@@ -2330,10 +2951,8 @@ class _NotesSheetState extends State<_NotesSheet> {
     final colors = Theme.of(context).colorScheme;
     return Padding(
       padding: EdgeInsets.fromLTRB(
-        AppConstants.paddingLG,
-        AppConstants.paddingLG,
-        AppConstants.paddingLG,
-        MediaQuery.of(context).viewInsets.bottom + AppConstants.paddingLG,
+        20, 20, 20,
+        MediaQuery.of(context).viewInsets.bottom + 20,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -2345,23 +2964,15 @@ class _NotesSheetState extends State<_NotesSheet> {
                 fontWeight: FontWeight.w600,
                 color: colors.onSurface,
               )),
-          const SizedBox(height: AppConstants.paddingMD),
-          TextField(
+          const SizedBox(height: 16),
+          _SheetTextField(
             controller: _ctrl,
-            autofocus: true,
-            decoration: InputDecoration(
-              hintText: 'Escribe una nota...',
-              suffixIcon: _ctrl.text.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear_rounded),
-                      onPressed: () => setState(() => _ctrl.clear()),
-                    )
-                  : null,
-            ),
+            label: 'Nota',
+            hint: 'Escribe una nota...',
+            icon: Icons.sticky_note_2_outlined,
             maxLines: 4,
-            textCapitalization: TextCapitalization.sentences,
           ),
-          const SizedBox(height: AppConstants.paddingLG),
+          const SizedBox(height: 16),
           Row(
             children: [
               if ((widget.appointment['notes'] as String?)?.isNotEmpty == true)
@@ -2373,17 +2984,20 @@ class _NotesSheetState extends State<_NotesSheet> {
                           _save();
                         },
                   child: Text('Borrar',
-                      style: TextStyle(color: colors.error)),
+                      style: GoogleFonts.nunito(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: colors.error,
+                      )),
                 ),
               const Spacer(),
-              ElevatedButton(
-                onPressed: _saving ? null : _save,
-                child: _saving
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Text('Guardar'),
+              SizedBox(
+                width: 140,
+                child: _SheetButton(
+                  label: 'Guardar',
+                  saving: _saving,
+                  onPressed: _saving ? null : _save,
+                ),
               ),
             ],
           ),
@@ -2411,5 +3025,212 @@ class _NotesSheetState extends State<_NotesSheet> {
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+}
+
+// ===========================================================================
+// Reusable styled sheet widgets — consistent across all bottom sheets
+// ===========================================================================
+
+/// Styled dropdown with container, border, shadow, prefix icon
+class _SheetDropdown<T> extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final T? value;
+  final String? hint;
+  final List<DropdownMenuItem<T>> items;
+  final ValueChanged<T?> onChanged;
+
+  const _SheetDropdown({
+    required this.label,
+    required this.icon,
+    this.value,
+    this.hint,
+    required this.items,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: colors.primary.withValues(alpha: 0.12)),
+        boxShadow: [
+          BoxShadow(
+            color: colors.primary.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: DropdownButtonFormField<T>(
+        value: value,
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: GoogleFonts.nunito(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: colors.onSurface.withValues(alpha: 0.5),
+          ),
+          hintText: hint,
+          hintStyle: GoogleFonts.nunito(
+            fontSize: 14,
+            color: colors.onSurface.withValues(alpha: 0.35),
+          ),
+          prefixIcon: Icon(icon, size: 20, color: colors.primary.withValues(alpha: 0.6)),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          border: InputBorder.none,
+          enabledBorder: InputBorder.none,
+          focusedBorder: InputBorder.none,
+        ),
+        items: items,
+        onChanged: onChanged,
+        dropdownColor: Colors.white,
+        icon: Icon(Icons.keyboard_arrow_down_rounded,
+            size: 20, color: colors.onSurface.withValues(alpha: 0.4)),
+      ),
+    );
+  }
+}
+
+/// Styled text field with container, border, shadow, prefix icon
+class _SheetTextField extends StatelessWidget {
+  final TextEditingController controller;
+  final String label;
+  final String? hint;
+  final IconData icon;
+  final int maxLines;
+  final TextInputType? keyboardType;
+  final TextCapitalization textCapitalization;
+
+  const _SheetTextField({
+    required this.controller,
+    required this.label,
+    this.hint,
+    required this.icon,
+    this.maxLines = 1,
+    this.keyboardType,
+    this.textCapitalization = TextCapitalization.sentences,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: colors.primary.withValues(alpha: 0.12)),
+        boxShadow: [
+          BoxShadow(
+            color: colors.primary.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: TextField(
+        controller: controller,
+        maxLines: maxLines,
+        keyboardType: keyboardType,
+        textCapitalization: textCapitalization,
+        style: GoogleFonts.nunito(fontSize: 14, color: const Color(0xFF212121)),
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: GoogleFonts.nunito(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: colors.onSurface.withValues(alpha: 0.5),
+          ),
+          hintText: hint,
+          hintStyle: GoogleFonts.nunito(
+            fontSize: 14,
+            color: colors.onSurface.withValues(alpha: 0.35),
+          ),
+          prefixIcon: Icon(icon, size: 20, color: colors.primary.withValues(alpha: 0.6)),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          border: InputBorder.none,
+          enabledBorder: InputBorder.none,
+          focusedBorder: InputBorder.none,
+        ),
+      ),
+    );
+  }
+}
+
+/// Styled gradient button for sheet actions
+class _SheetButton extends StatelessWidget {
+  final String label;
+  final bool saving;
+  final VoidCallback? onPressed;
+
+  const _SheetButton({
+    required this.label,
+    this.saving = false,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final enabled = onPressed != null && !saving;
+    return AnimatedOpacity(
+      opacity: enabled ? 1.0 : 0.5,
+      duration: const Duration(milliseconds: 200),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          gradient: enabled
+              ? LinearGradient(
+                  colors: [colors.primary, const Color(0xFF990033)],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                )
+              : null,
+          color: enabled ? null : const Color(0xFFE0E0E0),
+          boxShadow: enabled
+              ? [
+                  BoxShadow(
+                    color: colors.primary.withValues(alpha: 0.25),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ]
+              : null,
+        ),
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          child: InkWell(
+            onTap: enabled ? onPressed : null,
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              child: Center(
+                child: saving
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white),
+                      )
+                    : Text(
+                        label,
+                        style: GoogleFonts.poppins(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: enabled ? Colors.white : const Color(0xFF9E9E9E),
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

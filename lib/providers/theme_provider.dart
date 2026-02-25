@@ -61,6 +61,8 @@ class ThemeNotifier extends StateNotifier<ThemeState> {
 
   /// Compute and cache hue offsets from base primary for each category color.
   /// Called once when palette changes, not on every drag tick.
+  /// Sat/lightness are normalized to vibrant, readable ranges so hue-shifted
+  /// categories never look muddy (e.g. hair=0.18sat → clamped to 0.50).
   void _cacheCategoryOffsets(BCPalette palette) {
     final baseHsl = HSLColor.fromColor(palette.primary);
     _basePrimaryHue = baseHsl.hue;
@@ -70,8 +72,8 @@ class ThemeNotifier extends StateNotifier<ThemeState> {
     for (final c in palette.categoryColors) {
       final hsl = HSLColor.fromColor(c);
       _catHueOffsets.add(hsl.hue - _basePrimaryHue);
-      _catSaturations.add(hsl.saturation);
-      _catLightnesses.add(hsl.lightness);
+      _catSaturations.add(hsl.saturation.clamp(0.50, 0.80));
+      _catLightnesses.add(hsl.lightness.clamp(0.40, 0.55));
     }
   }
 
@@ -210,13 +212,24 @@ class ThemeNotifier extends StateNotifier<ThemeState> {
   }
 
   /// Create a modified palette with custom primary color from HSV.
-  /// Category colors use pre-cached hue offsets — no Color→HSL per tick.
+  /// Category colors use pre-cached hue offsets with normalized sat/light.
+  /// Secondary and accent colors shift proportionally to maintain harmony.
   BCPalette _applyColorOverride(BCPalette base, double hue, double sat) {
-    final primary = HSVColor.fromAHSV(1.0, hue.clamp(0, 360), sat.clamp(0.1, 1.0), 0.5).toColor();
-    final gradEnd = HSVColor.fromAHSV(1.0, (hue + 15).clamp(0, 360), (sat * 0.8).clamp(0.1, 1.0), 0.65).toColor();
+    final clampedSat = sat.clamp(0.1, 1.0);
+    final primary = HSVColor.fromAHSV(1.0, hue.clamp(0, 360), clampedSat, 0.5).toColor();
+    final gradEnd = HSVColor.fromAHSV(1.0, (hue + 15) % 360, (clampedSat * 0.8).clamp(0.1, 1.0), 0.65).toColor();
 
-    // Use pre-cached offsets — pure arithmetic, no conversions
+    // Shift secondary color by the same hue delta to maintain harmony
     final hueDelta = hue - _basePrimaryHue;
+    final baseSecHsl = HSLColor.fromColor(base.secondary);
+    final secHue = (baseSecHsl.hue + hueDelta) % 360;
+    final secondary = HSLColor.fromAHSL(
+      1.0, secHue < 0 ? secHue + 360 : secHue,
+      baseSecHsl.saturation.clamp(0.50, 0.90),
+      baseSecHsl.lightness,
+    ).toColor();
+
+    // Category colors: use pre-cached offsets + normalized sat/lightness
     final shiftedCategories = List<Color>.generate(_catHueOffsets.length, (i) {
       var newHue = (_basePrimaryHue + _catHueOffsets[i] + hueDelta) % 360;
       if (newHue < 0) newHue += 360;
@@ -230,7 +243,7 @@ class ThemeNotifier extends StateNotifier<ThemeState> {
       brightness: base.brightness,
       primary: primary,
       onPrimary: base.onPrimary,
-      secondary: base.secondary,
+      secondary: secondary,
       onSecondary: base.onSecondary,
       surface: base.surface,
       onSurface: base.onSurface,
@@ -243,7 +256,7 @@ class ThemeNotifier extends StateNotifier<ThemeState> {
       textPrimary: base.textPrimary,
       textSecondary: base.textSecondary,
       textHint: base.textHint,
-      shimmerColor: base.shimmerColor,
+      shimmerColor: secondary,
       success: base.success,
       warning: base.warning,
       info: base.info,
@@ -252,7 +265,11 @@ class ThemeNotifier extends StateNotifier<ThemeState> {
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
       ),
-      accentGradient: base.accentGradient,
+      accentGradient: LinearGradient(
+        colors: [secondary, gradEnd],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
       goldGradientStops: base.goldGradientStops,
       goldGradientPositions: base.goldGradientPositions,
       categoryColors: shiftedCategories,
@@ -264,7 +281,7 @@ class ThemeNotifier extends StateNotifier<ThemeState> {
       glassTint: base.glassTint,
       glassBorderOpacity: base.glassBorderOpacity,
       cinematicPrimary: primary,
-      cinematicAccent: base.cinematicAccent,
+      cinematicAccent: secondary,
       cinematicGradient: base.cinematicGradient,
       statusBarColor: base.statusBarColor,
       statusBarIconBrightness: base.statusBarIconBrightness,
