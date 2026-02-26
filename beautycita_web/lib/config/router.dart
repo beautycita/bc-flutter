@@ -2,7 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../pages/auth/callback_page.dart';
+import '../pages/auth/forgot_page.dart';
 import '../pages/auth/login_page.dart';
+import '../pages/auth/qr_page.dart';
+import '../pages/auth/register_page.dart';
+import '../pages/auth/verify_page.dart';
 import '../pages/error/not_found_page.dart';
 import '../shells/admin_shell.dart';
 import '../shells/business_shell.dart';
@@ -113,25 +118,23 @@ final routerProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(
             path: 'register',
-            builder: (context, state) =>
-                const _Placeholder(WebRoutes.register),
+            builder: (context, state) => const RegisterPage(),
           ),
           GoRoute(
             path: 'verify',
-            builder: (context, state) => const _Placeholder(WebRoutes.verify),
+            builder: (context, state) => const VerifyPage(),
           ),
           GoRoute(
             path: 'callback',
-            builder: (context, state) =>
-                const _Placeholder(WebRoutes.callback),
+            builder: (context, state) => const CallbackPage(),
           ),
           GoRoute(
             path: 'forgot',
-            builder: (context, state) => const _Placeholder(WebRoutes.forgot),
+            builder: (context, state) => const ForgotPage(),
           ),
           GoRoute(
             path: 'qr',
-            builder: (context, state) => const _Placeholder(WebRoutes.qr),
+            builder: (context, state) => const QrPage(),
           ),
         ],
       ),
