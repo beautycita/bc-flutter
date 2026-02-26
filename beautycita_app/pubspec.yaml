@@ -45,6 +45,8 @@ dependencies:
   flutter_map: ^8.2.2
   latlong2: ^0.9.1
   flutter_secure_storage: ^10.0.0
+  beautycita_core:
+    path: ../packages/beautycita_core
 
 dev_dependencies:
   flutter_test:
