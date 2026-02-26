@@ -1,0 +1,14 @@
+name: beautycita_core
+description: Shared models, theme constants, and Supabase config for BeautyCita apps.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.10.0
+  flutter: '>=3.38.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  supabase_flutter: ^2.8.0
+  flutter_dotenv: ^5.2.1
