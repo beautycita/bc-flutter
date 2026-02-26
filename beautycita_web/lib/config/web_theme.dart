@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:beautycita_core/theme.dart';
 
 /// Builds a full [ThemeData] from a [BCPalette].
 ///
 /// Desktop-first styling: larger text, spacious padding, hover states.
+/// Uses font family names directly — no Google Fonts CDN fetching.
 ThemeData buildWebTheme(
   BCPalette palette, {
   Brightness brightness = Brightness.light,
@@ -24,17 +24,17 @@ ThemeData buildWebTheme(
     outlineVariant: palette.divider,
   );
 
-  // Build text styles from palette fonts
-  TextStyle heading(double size, FontWeight weight) =>
-      GoogleFonts.getFont(palette.headingFont).copyWith(
+  // Build text styles from palette fonts — no CDN fetching
+  TextStyle heading(double size, FontWeight weight) => TextStyle(
+        fontFamily: palette.headingFont,
         fontSize: size,
         fontWeight: weight,
         color: palette.textPrimary,
         letterSpacing: -0.2,
       );
 
-  TextStyle body(double size, FontWeight weight) =>
-      GoogleFonts.getFont(palette.bodyFont).copyWith(
+  TextStyle body(double size, FontWeight weight) => TextStyle(
+        fontFamily: palette.bodyFont,
         fontSize: size,
         fontWeight: weight,
         color: palette.textPrimary,

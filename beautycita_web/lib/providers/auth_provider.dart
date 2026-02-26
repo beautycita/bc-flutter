@@ -230,7 +230,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     // Web app: redirect back to the callback page
     if (kIsWeb) {
       final uri = Uri.base;
-      return '${uri.scheme}://${uri.host}${uri.port != 80 && uri.port != 443 ? ':${uri.port}' : ''}/app/auth/callback';
+      return '${uri.scheme}://${uri.host}${uri.port != 80 && uri.port != 443 ? ':${uri.port}' : ''}/auth/callback';
     }
     return 'io.beautycita.web://auth/callback';
   }
