@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:beautycita_core/models.dart';
 import '../../config/constants.dart';
+import '../../data/categories.dart';
 import '../../providers/business_provider.dart';
 import '../../services/supabase_client.dart';
 import '../../widgets/aphrodite_copy_field.dart';
@@ -205,7 +207,13 @@ class _ServiceCard extends StatelessWidget {
     final depositReq = service['deposit_required'] as bool? ?? false;
     final depositPct = (service['deposit_percentage'] as num?)?.toInt() ?? 0;
 
-    final subtitleParts = <String>['${duration}min'];
+    final subcategory = service['subcategory'] as String?;
+
+    final subtitleParts = <String>[];
+    if (subcategory != null && subcategory.isNotEmpty) {
+      subtitleParts.add(subcategory);
+    }
+    subtitleParts.add('${duration}min');
     if (buffer > 0) subtitleParts.add('+${buffer}min buffer');
     subtitleParts.add('\$${price.toStringAsFixed(0)} MXN');
     if (depositReq) subtitleParts.add('Dep: $depositPct%');
@@ -301,9 +309,25 @@ class _ServiceFormSheetState extends ConsumerState<_ServiceFormSheet> {
   late final TextEditingController _bufferCtrl;
   late final TextEditingController _descCtrl;
   late final TextEditingController _depositPctCtrl;
-  late String _category;
+  late final TextEditingController _otherCategoryCtrl;
+
+  ServiceCategory? _selectedCategory;
+  ServiceSubcategory? _selectedSubcategory;
+  ServiceItem? _selectedItem;
+  bool _isOtro = false;
   late bool _depositRequired;
   bool _saving = false;
+
+  static const _otherSuggestions = [
+    'Depilación Láser',
+    'Tratamiento Capilar',
+    'Masaje Linfático',
+    'Microblading',
+    'Limpieza Facial',
+    'Uñas Acrílicas',
+    'Extensiones de Cabello',
+    'Blanqueamiento',
+  ];
 
   @override
   void initState() {
@@ -321,9 +345,44 @@ class _ServiceFormSheetState extends ConsumerState<_ServiceFormSheet> {
     _depositPctCtrl = TextEditingController(
         text:
             (widget.existing?['deposit_percentage'] as num?)?.toString() ?? '0');
-    final rawCat = widget.existing?['category'] as String? ?? 'General';
-    _category = rawCat == 'Servicios Especiales' ? 'Otro' : rawCat;
+    _otherCategoryCtrl = TextEditingController();
     _depositRequired = widget.existing?['deposit_required'] as bool? ?? false;
+
+    // Restore category/subcategory/item from existing service
+    if (widget.existing != null) {
+      final rawCat = widget.existing!['category'] as String? ?? '';
+      final rawSub = widget.existing!['subcategory'] as String?;
+      final rawType = widget.existing!['service_type'] as String?;
+
+      if (rawCat == 'Servicios Especiales' || rawCat == 'Otro') {
+        _isOtro = true;
+        _otherCategoryCtrl.text = rawSub ?? rawCat;
+      } else {
+        // Match by nameEs
+        for (final cat in allCategories) {
+          if (cat.nameEs == rawCat || cat.id == rawCat) {
+            _selectedCategory = cat;
+            if (rawSub != null) {
+              for (final sub in cat.subcategories) {
+                if (sub.nameEs == rawSub || sub.id == rawSub) {
+                  _selectedSubcategory = sub;
+                  if (rawType != null && sub.items != null) {
+                    for (final item in sub.items!) {
+                      if (item.serviceType == rawType || item.id == rawType) {
+                        _selectedItem = item;
+                        break;
+                      }
+                    }
+                  }
+                  break;
+                }
+              }
+            }
+            break;
+          }
+        }
+      }
+    }
   }
 
   @override
@@ -334,6 +393,7 @@ class _ServiceFormSheetState extends ConsumerState<_ServiceFormSheet> {
     _bufferCtrl.dispose();
     _descCtrl.dispose();
     _depositPctCtrl.dispose();
+    _otherCategoryCtrl.dispose();
     super.dispose();
   }
 
@@ -412,25 +472,115 @@ class _ServiceFormSheetState extends ConsumerState<_ServiceFormSheet> {
               decoration: _styledInput('Nombre'),
             ),
             const SizedBox(height: AppConstants.paddingSM),
+            // ── Category dropdown ───────────────────────────────────
             DropdownButtonFormField<String>(
-              value: _category,
-              decoration: _styledInput('Categoria'),
-              items: const [
-                DropdownMenuItem(value: 'General', child: Text('General')),
-                DropdownMenuItem(value: 'Cabello', child: Text('Cabello')),
-                DropdownMenuItem(value: 'Unas', child: Text('Unas')),
-                DropdownMenuItem(value: 'Facial', child: Text('Facial')),
-                DropdownMenuItem(value: 'Corporal', child: Text('Corporal')),
-                DropdownMenuItem(
-                    value: 'Maquillaje', child: Text('Maquillaje')),
-                DropdownMenuItem(value: 'Pestanas', child: Text('Pestanas')),
-                DropdownMenuItem(value: 'Cejas', child: Text('Cejas')),
-                DropdownMenuItem(value: 'Barberia', child: Text('Barberia')),
-                DropdownMenuItem(value: 'Otro', child: Text('Otro')),
+              value: _isOtro
+                  ? '__otro__'
+                  : _selectedCategory?.id,
+              decoration: _styledInput('Categoria *'),
+              items: [
+                for (final cat in allCategories)
+                  DropdownMenuItem(
+                    value: cat.id,
+                    child: Text('${cat.icon} ${cat.nameEs}'),
+                  ),
+                const DropdownMenuItem(
+                  value: '__otro__',
+                  child: Text('Otro'),
+                ),
               ],
-              onChanged: (v) => setState(() => _category = v ?? 'General'),
+              onChanged: (v) {
+                setState(() {
+                  _selectedSubcategory = null;
+                  _selectedItem = null;
+                  if (v == '__otro__') {
+                    _isOtro = true;
+                    _selectedCategory = null;
+                  } else {
+                    _isOtro = false;
+                    _otherCategoryCtrl.clear();
+                    _selectedCategory = allCategories
+                        .where((c) => c.id == v)
+                        .firstOrNull;
+                  }
+                });
+              },
             ),
             const SizedBox(height: AppConstants.paddingSM),
+
+            // ── "Otro" custom category name + suggestion chips ────
+            if (_isOtro) ...[
+              TextField(
+                controller: _otherCategoryCtrl,
+                decoration: _styledInput('Nombre de la categoria *'),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                children: [
+                  for (final s in _otherSuggestions)
+                    ActionChip(
+                      label: Text(s, style: const TextStyle(fontSize: 12)),
+                      visualDensity: VisualDensity.compact,
+                      onPressed: () {
+                        setState(() => _otherCategoryCtrl.text = s);
+                      },
+                    ),
+                ],
+              ),
+              const SizedBox(height: AppConstants.paddingSM),
+            ],
+
+            // ── Subcategory chips (required) ──────────────────────
+            if (_selectedCategory != null) ...[
+              Text('Subcategoria *',
+                  style: GoogleFonts.poppins(
+                      fontSize: 13, fontWeight: FontWeight.w500)),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                children: [
+                  for (final sub in _selectedCategory!.subcategories)
+                    ChoiceChip(
+                      label: Text(sub.nameEs),
+                      selected: _selectedSubcategory?.id == sub.id,
+                      onSelected: (_) {
+                        setState(() {
+                          _selectedSubcategory = sub;
+                          _selectedItem = null;
+                        });
+                      },
+                    ),
+                ],
+              ),
+              const SizedBox(height: AppConstants.paddingSM),
+            ],
+
+            // ── Service item chips (required when items exist) ────
+            if (_selectedSubcategory?.items != null &&
+                _selectedSubcategory!.items!.isNotEmpty) ...[
+              Text('Tipo de servicio *',
+                  style: GoogleFonts.poppins(
+                      fontSize: 13, fontWeight: FontWeight.w500)),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                children: [
+                  for (final item in _selectedSubcategory!.items!)
+                    ChoiceChip(
+                      label: Text(item.nameEs),
+                      selected: _selectedItem?.id == item.id,
+                      onSelected: (_) {
+                        setState(() => _selectedItem = item);
+                      },
+                    ),
+                ],
+              ),
+              const SizedBox(height: AppConstants.paddingSM),
+            ],
             Row(
               children: [
                 Expanded(
@@ -477,7 +627,10 @@ class _ServiceFormSheetState extends ConsumerState<_ServiceFormSheet> {
               autoGenerate: widget.existing == null,
               context: {
                 'service_name': _nameCtrl.text.trim(),
-                'category': _category,
+                'category': _isOtro
+                    ? _otherCategoryCtrl.text.trim()
+                    : (_selectedCategory?.nameEs ?? ''),
+                'subcategory': _selectedSubcategory?.nameEs ?? '',
                 'price': _priceCtrl.text.trim(),
                 'duration': '${_durationCtrl.text.trim()} min',
               },
@@ -561,18 +714,61 @@ class _ServiceFormSheetState extends ConsumerState<_ServiceFormSheet> {
       return;
     }
 
+    // Validate category selection
+    if (!_isOtro && _selectedCategory == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Selecciona una categoria')),
+      );
+      return;
+    }
+    if (_isOtro && _otherCategoryCtrl.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Escribe el nombre de la categoria')),
+      );
+      return;
+    }
+    if (!_isOtro && _selectedSubcategory == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Selecciona una subcategoria')),
+      );
+      return;
+    }
+    if (!_isOtro &&
+        _selectedSubcategory?.items != null &&
+        _selectedSubcategory!.items!.isNotEmpty &&
+        _selectedItem == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Selecciona el tipo de servicio')),
+      );
+      return;
+    }
+
     setState(() => _saving = true);
 
     try {
       final biz = await ref.read(currentBusinessProvider.future);
       if (biz == null) throw Exception('No business found');
 
-      final savedCategory =
-          _category == 'Otro' ? 'Servicios Especiales' : _category;
+      final String savedCategory;
+      final String? savedSubcategory;
+      final String? savedServiceType;
+
+      if (_isOtro) {
+        savedCategory = 'Servicios Especiales';
+        savedSubcategory = _otherCategoryCtrl.text.trim();
+        savedServiceType = null;
+      } else {
+        savedCategory = _selectedCategory!.nameEs;
+        savedSubcategory = _selectedSubcategory!.nameEs;
+        savedServiceType = _selectedItem?.serviceType;
+      }
+
       final data = {
         'business_id': biz['id'],
         'name': name,
         'category': savedCategory,
+        'subcategory': savedSubcategory,
+        'service_type': savedServiceType,
         'price': price,
         'duration_minutes': duration,
         'buffer_minutes': int.tryParse(_bufferCtrl.text.trim()) ?? 0,

@@ -71,6 +71,7 @@ class DiscoveredSalon {
   final String? source; // 'google_maps', 'facebook', 'bing'
   final String? phone;
   final String? city;
+  final String? country; // 'MX', 'US'
   final String waStatus; // 'valid', 'invalid', 'unknown'
   final DateTime? lastContactDate;
   final int interestSignals;
@@ -85,6 +86,7 @@ class DiscoveredSalon {
     this.source,
     this.phone,
     this.city,
+    this.country,
     this.waStatus = 'unknown',
     this.lastContactDate,
     this.interestSignals = 0,
@@ -97,15 +99,20 @@ class DiscoveredSalon {
   factory DiscoveredSalon.fromJson(Map<String, dynamic> json) {
     return DiscoveredSalon(
       id: json['id']?.toString() ?? '',
-      name: json['name'] as String? ?? 'Sin nombre',
+      name: json['business_name'] as String? ?? 'Sin nombre',
       source: json['source'] as String?,
       phone: json['phone'] as String?,
-      city: json['city'] as String?,
-      waStatus: json['wa_status'] as String? ?? 'unknown',
+      city: json['location_city'] as String?,
+      country: json['country'] as String?,
+      waStatus: json['whatsapp_verified'] == true
+          ? 'valid'
+          : json['whatsapp_verified'] == false
+              ? 'invalid'
+              : 'unknown',
       lastContactDate:
-          DateTime.tryParse(json['last_contact_date'] as String? ?? ''),
-      interestSignals: json['interest_signals'] as int? ?? 0,
-      address: json['address'] as String?,
+          DateTime.tryParse(json['last_outreach_at'] as String? ?? ''),
+      interestSignals: json['interest_count'] as int? ?? 0,
+      address: json['location_address'] as String?,
       latitude: (json['latitude'] as num?)?.toDouble(),
       longitude: (json['longitude'] as num?)?.toDouble(),
       createdAt: DateTime.tryParse(json['created_at'] as String? ?? '') ??
@@ -137,6 +144,7 @@ class DiscoveredSalonsData {
 @immutable
 class SalonsFilter {
   final String? city;
+  final String? country;
   final String searchText;
   final bool? verified;
   final int page;
@@ -146,6 +154,7 @@ class SalonsFilter {
 
   const SalonsFilter({
     this.city,
+    this.country,
     this.searchText = '',
     this.verified,
     this.page = 0,
@@ -156,6 +165,7 @@ class SalonsFilter {
 
   SalonsFilter copyWith({
     String? Function()? city,
+    String? Function()? country,
     String? searchText,
     bool? Function()? verified,
     int? page,
@@ -165,6 +175,7 @@ class SalonsFilter {
   }) {
     return SalonsFilter(
       city: city != null ? city() : this.city,
+      country: country != null ? country() : this.country,
       searchText: searchText ?? this.searchText,
       verified: verified != null ? verified() : this.verified,
       page: page ?? this.page,
@@ -175,7 +186,10 @@ class SalonsFilter {
   }
 
   bool get hasActiveFilters =>
-      city != null || searchText.isNotEmpty || verified != null;
+      city != null ||
+      country != null ||
+      searchText.isNotEmpty ||
+      verified != null;
 }
 
 // ── Providers ─────────────────────────────────────────────────────────────────
@@ -278,11 +292,15 @@ final discoveredSalonsProvider =
 
     // Build base query with equality filters
     var query = client.from(BCTables.discoveredSalons).select(
-      'id, name, source, phone, city, wa_status, last_contact_date, '
-      'interest_signals, address, latitude, longitude, created_at',
+      'id, business_name, source, phone, location_city, country, '
+      'whatsapp_verified, last_outreach_at, interest_count, '
+      'location_address, latitude, longitude, created_at',
     );
     if (filter.city != null) {
-      query = query.eq('city', filter.city!);
+      query = query.eq('location_city', filter.city!);
+    }
+    if (filter.country != null) {
+      query = query.eq('country', filter.country!);
     }
 
     // .or() changes return type, so chain everything after it
@@ -290,8 +308,8 @@ final discoveredSalonsProvider =
     if (filter.searchText.isNotEmpty) {
       data = await query
           .or(
-            'name.ilike.%${filter.searchText}%,'
-            'city.ilike.%${filter.searchText}%,'
+            'business_name.ilike.%${filter.searchText}%,'
+            'location_city.ilike.%${filter.searchText}%,'
             'phone.ilike.%${filter.searchText}%',
           )
           .order(sortCol, ascending: filter.sortAscending)
@@ -305,14 +323,17 @@ final discoveredSalonsProvider =
     // Count query
     var countQuery = client.from(BCTables.discoveredSalons).select('id');
     if (filter.city != null) {
-      countQuery = countQuery.eq('city', filter.city!);
+      countQuery = countQuery.eq('location_city', filter.city!);
+    }
+    if (filter.country != null) {
+      countQuery = countQuery.eq('country', filter.country!);
     }
     final int totalCount;
     if (filter.searchText.isNotEmpty) {
       final r = await countQuery
           .or(
-            'name.ilike.%${filter.searchText}%,'
-            'city.ilike.%${filter.searchText}%,'
+            'business_name.ilike.%${filter.searchText}%,'
+            'location_city.ilike.%${filter.searchText}%,'
             'phone.ilike.%${filter.searchText}%',
           )
           .count();

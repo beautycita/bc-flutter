@@ -44,7 +44,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final role = await notifier.getUserRole();
     if (!mounted) return;
     switch (role) {
-      case 'admin':
+      case 'admin' || 'superadmin':
         context.go(WebRoutes.admin);
       case 'stylist':
       case 'business':
