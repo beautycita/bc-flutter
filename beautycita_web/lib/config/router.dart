@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../pages/admin/dashboard_page.dart';
 import '../pages/auth/callback_page.dart';
 import '../pages/auth/forgot_page.dart';
 import '../pages/auth/login_page.dart';
@@ -145,7 +146,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(
             path: WebRoutes.admin,
-            builder: (context, state) => const _Placeholder(WebRoutes.admin),
+            builder: (context, state) => const DashboardPage(),
             routes: [
               GoRoute(
                 path: 'users',
