@@ -2,7 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../pages/admin/analytics_page.dart';
+import '../pages/admin/bookings_page.dart';
+import '../pages/admin/config_page.dart';
 import '../pages/admin/dashboard_page.dart';
+import '../pages/admin/disputes_page.dart';
+import '../pages/admin/finance_page.dart';
+import '../pages/admin/services_page.dart';
+import '../pages/admin/engine_categories_page.dart';
+import '../pages/admin/engine_page.dart';
+import '../pages/admin/engine_profiles_page.dart';
+import '../pages/admin/engine_time_page.dart';
+import '../pages/admin/outreach_page.dart';
+import '../pages/admin/salons_page.dart';
+import '../pages/admin/toggles_page.dart';
+import '../pages/admin/users_page.dart';
 import '../pages/auth/callback_page.dart';
 import '../pages/auth/forgot_page.dart';
 import '../pages/auth/login_page.dart';
@@ -150,75 +164,64 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: 'users',
-                builder: (context, state) =>
-                    const _Placeholder(WebRoutes.adminUsers),
+                builder: (context, state) => const UsersPage(),
               ),
               GoRoute(
                 path: 'salons',
-                builder: (context, state) =>
-                    const _Placeholder(WebRoutes.adminSalons),
+                builder: (context, state) => const SalonsPage(),
               ),
               GoRoute(
                 path: 'bookings',
-                builder: (context, state) =>
-                    const _Placeholder(WebRoutes.adminBookings),
+                builder: (context, state) => const BookingsPage(),
               ),
               GoRoute(
                 path: 'services',
-                builder: (context, state) =>
-                    const _Placeholder(WebRoutes.adminServices),
+                builder: (context, state) => const ServicesPage(),
               ),
               GoRoute(
                 path: 'disputes',
-                builder: (context, state) =>
-                    const _Placeholder(WebRoutes.adminDisputes),
+                builder: (context, state) => const DisputesPage(),
               ),
               GoRoute(
                 path: 'finance',
-                builder: (context, state) =>
-                    const _Placeholder(WebRoutes.adminFinance),
+                builder: (context, state) => const FinancePage(),
               ),
               GoRoute(
                 path: 'analytics',
-                builder: (context, state) =>
-                    const _Placeholder(WebRoutes.adminAnalytics),
+                builder: (context, state) => const AnalyticsPage(),
               ),
               GoRoute(
                 path: 'engine',
-                builder: (context, state) =>
-                    const _Placeholder(WebRoutes.adminEngine),
+                builder: (context, state) => const EnginePage(),
                 routes: [
                   GoRoute(
                     path: 'profiles',
                     builder: (context, state) =>
-                        const _Placeholder(WebRoutes.adminEngineProfiles),
+                        const EngineProfilesPage(),
                   ),
                   GoRoute(
                     path: 'categories',
                     builder: (context, state) =>
-                        const _Placeholder(WebRoutes.adminEngineCategories),
+                        const EngineCategoriesPage(),
                   ),
                   GoRoute(
                     path: 'time',
                     builder: (context, state) =>
-                        const _Placeholder(WebRoutes.adminEngineTime),
+                        const EngineTimePage(),
                   ),
                 ],
               ),
               GoRoute(
                 path: 'outreach',
-                builder: (context, state) =>
-                    const _Placeholder(WebRoutes.adminOutreach),
+                builder: (context, state) => const OutreachPage(),
               ),
               GoRoute(
                 path: 'config',
-                builder: (context, state) =>
-                    const _Placeholder(WebRoutes.adminConfig),
+                builder: (context, state) => const ConfigPage(),
               ),
               GoRoute(
                 path: 'toggles',
-                builder: (context, state) =>
-                    const _Placeholder(WebRoutes.adminToggles),
+                builder: (context, state) => const TogglesPage(),
               ),
             ],
           ),
