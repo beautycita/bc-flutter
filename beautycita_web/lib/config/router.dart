@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:beautycita_core/supabase.dart';
 
 import '../pages/admin/analytics_page.dart';
 import '../pages/admin/bookings_page.dart';
@@ -32,36 +33,36 @@ import '../shells/client_shell.dart';
 
 abstract final class WebRoutes {
   // Auth
-  static const String auth = '/app/auth';
-  static const String register = '/app/auth/register';
-  static const String verify = '/app/auth/verify';
-  static const String callback = '/app/auth/callback';
-  static const String forgot = '/app/auth/forgot';
-  static const String qr = '/app/auth/qr';
+  static const String auth = '/auth';
+  static const String register = '/auth/register';
+  static const String verify = '/auth/verify';
+  static const String callback = '/auth/callback';
+  static const String forgot = '/auth/forgot';
+  static const String qr = '/auth/qr';
 
   // Admin
-  static const String admin = '/app/admin';
-  static const String adminUsers = '/app/admin/users';
-  static const String adminSalons = '/app/admin/salons';
-  static const String adminBookings = '/app/admin/bookings';
-  static const String adminServices = '/app/admin/services';
-  static const String adminDisputes = '/app/admin/disputes';
-  static const String adminFinance = '/app/admin/finance';
-  static const String adminAnalytics = '/app/admin/analytics';
-  static const String adminEngine = '/app/admin/engine';
-  static const String adminEngineProfiles = '/app/admin/engine/profiles';
-  static const String adminEngineCategories = '/app/admin/engine/categories';
-  static const String adminEngineTime = '/app/admin/engine/time';
-  static const String adminOutreach = '/app/admin/outreach';
-  static const String adminConfig = '/app/admin/config';
-  static const String adminToggles = '/app/admin/toggles';
+  static const String admin = '/admin';
+  static const String adminUsers = '/admin/users';
+  static const String adminSalons = '/admin/salons';
+  static const String adminBookings = '/admin/bookings';
+  static const String adminServices = '/admin/services';
+  static const String adminDisputes = '/admin/disputes';
+  static const String adminFinance = '/admin/finance';
+  static const String adminAnalytics = '/admin/analytics';
+  static const String adminEngine = '/admin/engine';
+  static const String adminEngineProfiles = '/admin/engine/profiles';
+  static const String adminEngineCategories = '/admin/engine/categories';
+  static const String adminEngineTime = '/admin/engine/time';
+  static const String adminOutreach = '/admin/outreach';
+  static const String adminConfig = '/admin/config';
+  static const String adminToggles = '/admin/toggles';
 
   // Business
-  static const String negocio = '/app/negocio';
+  static const String negocio = '/negocio';
 
   // Client
-  static const String reservar = '/app/reservar';
-  static const String misCitas = '/app/mis-citas';
+  static const String reservar = '/reservar';
+  static const String misCitas = '/mis-citas';
 }
 
 // ── Placeholder page ─────────────────────────────────────────────────────────
@@ -104,19 +105,16 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: WebRoutes.auth,
     debugLogDiagnostics: true,
 
-    // Redirect logic
+    // Redirect logic — wired to live Supabase auth state
     redirect: (context, state) {
-      // TODO: Wire to actual auth state from Supabase.
-      // ignore: dead_code
-      const isAuthenticated = false;
-      final isAuthRoute = state.matchedLocation.startsWith('/app/auth');
+      final isAuthenticated =
+          BCSupabase.isInitialized && BCSupabase.isAuthenticated;
+      final isAuthRoute = state.matchedLocation.startsWith('/auth');
 
       if (!isAuthenticated && !isAuthRoute) {
         return WebRoutes.auth;
       }
-      // ignore: dead_code
       if (isAuthenticated && isAuthRoute) {
-        // Phase 1 default; role-based redirect later
         return WebRoutes.admin;
       }
       return null;
