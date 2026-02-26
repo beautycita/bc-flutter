@@ -202,7 +202,7 @@ class _RegisteredTab extends ConsumerWidget {
               'Puerto Vallarta': 'Puerto Vallarta',
               'Guadalajara': 'Guadalajara',
               'Cabo San Lucas': 'Cabo San Lucas',
-              'CDMX': 'CDMX',
+              'Ciudad de Mexico': 'CDMX',
               'Monterrey': 'Monterrey',
             },
             onChanged: (value) {
@@ -488,17 +488,20 @@ class _DiscoveredTab extends ConsumerWidget {
           },
         ),
         filters: [
-          _SalonFilterDropdown(
-            value: filter.city,
-            hint: 'Ciudad',
-            items: const {
-              null: 'Todas',
-              'Puerto Vallarta': 'Puerto Vallarta',
-              'Guadalajara': 'Guadalajara',
-              'Cabo San Lucas': 'Cabo San Lucas',
-              'CDMX': 'CDMX',
-              'Monterrey': 'Monterrey',
+          _CountryFilterDropdown(
+            value: filter.country,
+            onChanged: (value) {
+              ref.read(discoveredSalonsFilterProvider.notifier).state =
+                  filter.copyWith(
+                country: () => value,
+                city: () => null,
+                page: 0,
+              );
             },
+          ),
+          _CityFilterDropdown(
+            value: filter.city,
+            country: filter.country,
             onChanged: (value) {
               ref.read(discoveredSalonsFilterProvider.notifier).state =
                   filter.copyWith(city: () => value, page: 0);
@@ -547,7 +550,7 @@ class _DiscoveredTab extends ConsumerWidget {
             ),
           ),
           BCColumn<DiscoveredSalon>(
-            id: 'city',
+            id: 'location_city',
             label: 'Ciudad',
             sortable: true,
             cellBuilder: (salon) => Text(
@@ -555,6 +558,17 @@ class _DiscoveredTab extends ConsumerWidget {
               style: theme.textTheme.bodySmall,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          BCColumn<DiscoveredSalon>(
+            id: 'country',
+            label: 'Pais',
+            width: 50,
+            cellBuilder: (salon) => Text(
+              salon.country ?? '-',
+              style: theme.textTheme.bodySmall?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
           BCColumn<DiscoveredSalon>(
@@ -778,6 +792,184 @@ class _SalonFilterDropdown extends StatelessWidget {
                   ))
               .toList(),
           onChanged: (v) => onChanged(v),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Country filter ───────────────────────────────────────────────────────────
+
+class _CountryFilterDropdown extends StatelessWidget {
+  const _CountryFilterDropdown({
+    required this.value,
+    required this.onChanged,
+  });
+
+  final String? value;
+  final ValueChanged<String?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return _SalonFilterDropdown(
+      value: value,
+      hint: 'Pais',
+      items: const {
+        null: 'Todos',
+        'MX': 'Mexico',
+        'US': 'Estados Unidos',
+      },
+      onChanged: onChanged,
+    );
+  }
+}
+
+// ── City filter with country grouping ────────────────────────────────────────
+
+class _CityFilterDropdown extends StatelessWidget {
+  const _CityFilterDropdown({
+    required this.value,
+    required this.country,
+    required this.onChanged,
+  });
+
+  final String? value;
+  final String? country;
+  final ValueChanged<String?> onChanged;
+
+  // Cities organized by country
+  static const _mxCities = [
+    'Acapulco',
+    'Aguascalientes',
+    'Bahia de Banderas',
+    'Cabo San Lucas',
+    'Campeche',
+    'Cancun',
+    'Chetumal',
+    'Chihuahua',
+    'Ciudad de Mexico',
+    'Colima',
+    'Cuernavaca',
+    'Culiacan',
+    'Durango',
+    'Guadalajara',
+    'Guanajuato',
+    'Hermosillo',
+    'La Paz',
+    'Leon',
+    'Mazatlan',
+    'Merida',
+    'Mexicali',
+    'Monterrey',
+    'Morelia',
+    'Oaxaca',
+    'Pachuca',
+    'Playa del Carmen',
+    'Puebla',
+    'Puerto Vallarta',
+    'Queretaro',
+    'Reynosa',
+    'Saltillo',
+    'San Jose del Cabo',
+    'San Luis Potosi',
+    'Tampico',
+    'Taxco',
+    'Tepic',
+    'Tijuana',
+    'Tlaquepaque',
+    'Toluca',
+    'Tonala',
+    'Torreon',
+    'Tuxtla Gutierrez',
+    'Veracruz',
+    'Villahermosa',
+    'Zacatecas',
+    'Zapopan',
+  ];
+
+  static const _usCities = [
+    'Austin',
+    'Charlotte',
+    'Columbus',
+    'Dallas',
+    'Houston',
+    'Jacksonville',
+    'New York',
+    'Philadelphia',
+    'Phoenix',
+    'San Antonio',
+    'San Diego',
+    'San Jose',
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final headerStyle = theme.textTheme.labelSmall?.copyWith(
+      color: colors.primary,
+      fontWeight: FontWeight.w700,
+      letterSpacing: 0.5,
+    );
+
+    // Build menu items based on selected country
+    final items = <DropdownMenuItem<String?>>[];
+    items.add(const DropdownMenuItem(value: null, child: Text('Todas')));
+
+    if (country == null || country == 'MX') {
+      items.add(DropdownMenuItem(
+        enabled: false,
+        value: '__mx_header__',
+        child: Text('MEXICO', style: headerStyle),
+      ));
+      for (final city in _mxCities) {
+        items.add(DropdownMenuItem(
+          value: city,
+          child: Padding(
+            padding: const EdgeInsets.only(left: 8),
+            child: Text(city),
+          ),
+        ));
+      }
+    }
+
+    if (country == null || country == 'US') {
+      items.add(DropdownMenuItem(
+        enabled: false,
+        value: '__us_header__',
+        child: Text('ESTADOS UNIDOS', style: headerStyle),
+      ));
+      for (final city in _usCities) {
+        items.add(DropdownMenuItem(
+          value: city,
+          child: Padding(
+            padding: const EdgeInsets.only(left: 8),
+            child: Text(city),
+          ),
+        ));
+      }
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: BCSpacing.sm),
+      decoration: BoxDecoration(
+        border: Border.all(color: colors.outlineVariant),
+        borderRadius: BorderRadius.circular(BCSpacing.radiusXs),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String?>(
+          value: value,
+          isDense: true,
+          hint: Text('Ciudad', style: theme.textTheme.bodySmall),
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: colors.onSurface,
+          ),
+          menuMaxHeight: 400,
+          items: items,
+          onChanged: (v) {
+            if (v != null && v.startsWith('__')) return;
+            onChanged(v);
+          },
         ),
       ),
     );

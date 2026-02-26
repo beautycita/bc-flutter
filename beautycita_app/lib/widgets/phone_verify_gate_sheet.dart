@@ -28,10 +28,9 @@ class _PhoneVerifyGateSheetState extends ConsumerState<PhoneVerifyGateSheet> {
   int _step = 1;
   final _phoneController = TextEditingController();
   final _phoneFocusNode = FocusNode();
-  final List<TextEditingController> _otpControllers =
-      List.generate(6, (_) => TextEditingController());
-  final List<FocusNode> _otpFocusNodes =
-      List.generate(6, (_) => FocusNode());
+  final _otpController = TextEditingController();
+  final _otpFocusNode = FocusNode();
+  bool _autoVerifying = false;
   String? _errorMessage;
 
   @override
@@ -42,25 +41,31 @@ class _PhoneVerifyGateSheetState extends ConsumerState<PhoneVerifyGateSheet> {
       final stripped = existingPhone.replaceAll('+52', '').replaceAll(' ', '');
       _phoneController.text = stripped;
     }
+    _otpController.addListener(_onOtpChanged);
   }
 
   @override
   void dispose() {
+    _otpController.removeListener(_onOtpChanged);
     _phoneController.dispose();
     _phoneFocusNode.dispose();
-    for (final c in _otpControllers) {
-      c.dispose();
-    }
-    for (final f in _otpFocusNodes) {
-      f.dispose();
-    }
+    _otpController.dispose();
+    _otpFocusNode.dispose();
     super.dispose();
+  }
+
+  void _onOtpChanged() {
+    setState(() {}); // Rebuild visual boxes
+    // Auto-verify when 6 digits entered
+    if (_otpController.text.length == 6 && !_autoVerifying) {
+      _autoVerifying = true;
+      Future.microtask(() => _onVerify());
+    }
   }
 
   String get _formattedPhone => '+52${_phoneController.text.trim()}';
 
-  String get _collectedOtp =>
-      _otpControllers.map((c) => c.text).join();
+  String get _collectedOtp => _otpController.text;
 
   Future<void> _onSendCode() async {
     setState(() => _errorMessage = null);
@@ -93,18 +98,20 @@ class _PhoneVerifyGateSheetState extends ConsumerState<PhoneVerifyGateSheet> {
     if (success == true || success == null) {
       Navigator.of(context).pop(true);
     } else {
-      setState(() => _errorMessage = 'Codigo incorrecto. Intenta de nuevo.');
+      setState(() {
+        _errorMessage = 'Codigo incorrecto. Intenta de nuevo.';
+        _autoVerifying = false;
+      });
     }
   }
 
   Future<void> _onResend() async {
-    setState(() => _errorMessage = null);
-    for (final c in _otpControllers) {
-      c.clear();
-    }
-    if (_otpFocusNodes.isNotEmpty) {
-      _otpFocusNodes.first.requestFocus();
-    }
+    setState(() {
+      _errorMessage = null;
+      _autoVerifying = false;
+    });
+    _otpController.clear();
+    _otpFocusNode.requestFocus();
     await ref.read(profileProvider.notifier).sendPhoneOtp();
   }
 
@@ -298,49 +305,78 @@ class _PhoneVerifyGateSheetState extends ConsumerState<PhoneVerifyGateSheet> {
   }
 
   Widget _buildOtpRow() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: List.generate(6, (i) => _buildOtpBox(i)),
-    );
-  }
+    final otp = _otpController.text;
 
-  Widget _buildOtpBox(int index) {
-    return SizedBox(
-      width: 44,
-      height: 54,
-      child: TextFormField(
-        controller: _otpControllers[index],
-        focusNode: _otpFocusNodes[index],
-        keyboardType: TextInputType.number,
-        textAlign: TextAlign.center,
-        maxLength: 1,
-        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-        style: GoogleFonts.poppins(
-          fontSize: 20,
-          fontWeight: FontWeight.w700,
-          color: const Color(0xFF5A0A2D),
+    return GestureDetector(
+      onTap: () => _otpFocusNode.requestFocus(),
+      child: AutofillGroup(
+        child: Stack(
+          children: [
+            // Visual display: 6 boxes
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: List.generate(6, (i) {
+                final hasDigit = i < otp.length;
+                final isCurrent = i == otp.length && _otpFocusNode.hasFocus;
+
+                return Container(
+                  width: 44,
+                  height: 54,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF5F0F3),
+                    borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+                    border: Border.all(
+                      color: isCurrent
+                          ? const Color(0xFF5A0A2D)
+                          : hasDigit
+                              ? const Color(0xFF5A0A2D).withOpacity(0.3)
+                              : Colors.transparent,
+                      width: isCurrent ? 1.5 : 1,
+                    ),
+                  ),
+                  alignment: Alignment.center,
+                  child: hasDigit
+                      ? Text(
+                          otp[i],
+                          style: GoogleFonts.poppins(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF5A0A2D),
+                          ),
+                        )
+                      : isCurrent
+                          ? Container(
+                              width: 2,
+                              height: 24,
+                              color: const Color(0xFF5A0A2D),
+                            )
+                          : null,
+                );
+              }),
+            ),
+            // Hidden input field with autofill support
+            Positioned.fill(
+              child: Opacity(
+                opacity: 0,
+                child: TextField(
+                  controller: _otpController,
+                  focusNode: _otpFocusNode,
+                  autofillHints: const [AutofillHints.oneTimeCode],
+                  keyboardType: TextInputType.number,
+                  maxLength: 6,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(6),
+                  ],
+                  decoration: const InputDecoration(
+                    counterText: '',
+                    border: InputBorder.none,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
-        decoration: InputDecoration(
-          counterText: '',
-          filled: true,
-          fillColor: const Color(0xFFF5F0F3),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-            borderSide: BorderSide.none,
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-            borderSide: const BorderSide(color: Color(0xFF5A0A2D), width: 1.5),
-          ),
-          contentPadding: EdgeInsets.zero,
-        ),
-        onChanged: (value) {
-          if (value.length == 1 && index < 5) {
-            _otpFocusNodes[index + 1].requestFocus();
-          } else if (value.isEmpty && index > 0) {
-            _otpFocusNodes[index - 1].requestFocus();
-          }
-        },
       ),
     );
   }

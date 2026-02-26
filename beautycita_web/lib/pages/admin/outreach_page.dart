@@ -7,8 +7,11 @@ import '../../providers/admin_outreach_provider.dart';
 
 /// Outreach pipeline page — `/app/admin/outreach`
 ///
-/// Kanban-style view of discovered salons moving through the pipeline:
-/// Nuevos -> Contactados -> Respondidos -> Interesados -> Onboarded
+/// Kanban-style view of salons moving through the outreach pipeline:
+/// Seleccionados -> Contactados -> Registrados | Rechazados / No alcanzables
+///
+/// "Descubiertos" (28k+) are NOT shown individually — only a count in the
+/// header. Use the Salons page to browse the full discovered list.
 class OutreachPage extends ConsumerStatefulWidget {
   const OutreachPage({super.key});
 
@@ -21,8 +24,9 @@ class _OutreachPageState extends ConsumerState<OutreachPage> {
 
   @override
   Widget build(BuildContext context) {
-    final salonsAsync = ref.watch(discoveredSalonsProvider);
+    final salonsAsync = ref.watch(pipelineSalonsProvider);
     final stageCounts = ref.watch(outreachStageCounts);
+    final discoveredCounts = ref.watch(discoveredCountsProvider);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -35,6 +39,7 @@ class _OutreachPageState extends ConsumerState<OutreachPage> {
           children: [
             _Header(
               stageCounts: stageCounts,
+              discoveredCounts: discoveredCounts,
               isMobile: isMobile,
             ),
             const Divider(height: 1),
@@ -119,17 +124,18 @@ class _OutreachPageState extends ConsumerState<OutreachPage> {
           ),
           const SizedBox(height: 12),
           Text(
-            'Sin salones descubiertos',
+            'Sin salones en el pipeline',
             style: theme.textTheme.bodyMedium?.copyWith(
               color: colors.onSurface.withValues(alpha: 0.5),
             ),
           ),
           const SizedBox(height: 4),
           Text(
-            'El scraper aun no ha encontrado salones.',
+            'Selecciona salones desde la pagina de Salones para iniciar outreach.',
             style: theme.textTheme.bodySmall?.copyWith(
               color: colors.onSurface.withValues(alpha: 0.4),
             ),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
@@ -140,15 +146,20 @@ class _OutreachPageState extends ConsumerState<OutreachPage> {
 // ── Header ─────────────────────────────────────────────────────────────────
 
 class _Header extends StatelessWidget {
-  const _Header({required this.stageCounts, required this.isMobile});
+  const _Header({
+    required this.stageCounts,
+    required this.discoveredCounts,
+    required this.isMobile,
+  });
   final Map<OutreachStage, int> stageCounts;
+  final AsyncValue<Map<String, int>> discoveredCounts;
   final bool isMobile;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
-    final total =
+    final pipelineTotal =
         stageCounts.values.fold<int>(0, (sum, c) => sum + c);
 
     return Padding(
@@ -170,6 +181,44 @@ class _Header extends StatelessWidget {
                       ?.copyWith(fontWeight: FontWeight.w700),
                 ),
               ),
+              // Discovered count (from scraper)
+              discoveredCounts.when(
+                loading: () => const SizedBox.shrink(),
+                error: (_, __) => const SizedBox.shrink(),
+                data: (counts) {
+                  final total = counts['total'] ?? 0;
+                  final mx = counts['MX'] ?? 0;
+                  final us = counts['US'] ?? 0;
+                  if (total == 0) return const SizedBox.shrink();
+                  return Tooltip(
+                    message: 'MX: $mx  |  US: $us',
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: colors.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.radar, size: 14,
+                              color: colors.onSurface.withValues(alpha: 0.5)),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${_formatCount(total)} descubiertos',
+                            style: theme.textTheme.labelMedium?.copyWith(
+                              color: colors.onSurface.withValues(alpha: 0.6),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(width: 8),
               Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -178,7 +227,7 @@ class _Header extends StatelessWidget {
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Text(
-                  '$total salones',
+                  '$pipelineTotal en pipeline',
                   style: theme.textTheme.labelMedium?.copyWith(
                     color: colors.primary,
                     fontWeight: FontWeight.w600,
@@ -193,7 +242,7 @@ class _Header extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: [
-              for (final stage in OutreachStage.values)
+              for (final stage in OutreachStage.kanbanStages)
                 _StageChip(
                   stage: stage,
                   count: stageCounts[stage] ?? 0,
@@ -204,6 +253,11 @@ class _Header extends StatelessWidget {
       ),
     );
   }
+
+  String _formatCount(int n) {
+    if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}k';
+    return '$n';
+  }
 }
 
 class _StageChip extends StatelessWidget {
@@ -212,11 +266,12 @@ class _StageChip extends StatelessWidget {
   final int count;
 
   Color get _color => switch (stage) {
-        OutreachStage.nuevo => const Color(0xFF2196F3),
-        OutreachStage.contactado => const Color(0xFFFF9800),
-        OutreachStage.respondido => const Color(0xFF9C27B0),
-        OutreachStage.interesado => const Color(0xFF4CAF50),
-        OutreachStage.onboarded => const Color(0xFF00BCD4),
+        OutreachStage.discovered => const Color(0xFF607D8B),
+        OutreachStage.selected => const Color(0xFF2196F3),
+        OutreachStage.outreachSent => const Color(0xFFFF9800),
+        OutreachStage.registered => const Color(0xFF4CAF50),
+        OutreachStage.declined => const Color(0xFFF44336),
+        OutreachStage.unreachable => const Color(0xFF9E9E9E),
       };
 
   @override
@@ -258,25 +313,26 @@ class _KanbanBoard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Group salons by stage
+    // Group salons by stage (kanban stages only)
     final grouped = <OutreachStage, List<DiscoveredSalon>>{};
-    for (final stage in OutreachStage.values) {
+    for (final stage in OutreachStage.kanbanStages) {
       grouped[stage] = [];
     }
     for (final salon in salons) {
-      grouped[salon.stage]!.add(salon);
+      if (grouped.containsKey(salon.stage)) {
+        grouped[salon.stage]!.add(salon);
+      }
     }
 
     if (isMobile) {
-      // Mobile: show as tabs
       return DefaultTabController(
-        length: OutreachStage.values.length,
+        length: OutreachStage.kanbanStages.length,
         child: Column(
           children: [
             TabBar(
               isScrollable: true,
               tabs: [
-                for (final stage in OutreachStage.values)
+                for (final stage in OutreachStage.kanbanStages)
                   Tab(
                     text:
                         '${stage.label} (${grouped[stage]!.length})',
@@ -286,7 +342,7 @@ class _KanbanBoard extends StatelessWidget {
             Expanded(
               child: TabBarView(
                 children: [
-                  for (final stage in OutreachStage.values)
+                  for (final stage in OutreachStage.kanbanStages)
                     _ColumnContent(
                       salons: grouped[stage]!,
                       onSelect: onSelect,
@@ -306,14 +362,14 @@ class _KanbanBoard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          for (final stage in OutreachStage.values) ...[
+          for (final stage in OutreachStage.kanbanStages) ...[
             _KanbanColumn(
               stage: stage,
               salons: grouped[stage]!,
               width: isDesktop ? 260.0 : 220.0,
               onSelect: onSelect,
             ),
-            if (stage != OutreachStage.values.last)
+            if (stage != OutreachStage.kanbanStages.last)
               const SizedBox(width: 12),
           ],
         ],
@@ -338,11 +394,12 @@ class _KanbanColumn extends StatelessWidget {
   final ValueChanged<DiscoveredSalon> onSelect;
 
   Color get _headerColor => switch (stage) {
-        OutreachStage.nuevo => const Color(0xFF2196F3),
-        OutreachStage.contactado => const Color(0xFFFF9800),
-        OutreachStage.respondido => const Color(0xFF9C27B0),
-        OutreachStage.interesado => const Color(0xFF4CAF50),
-        OutreachStage.onboarded => const Color(0xFF00BCD4),
+        OutreachStage.discovered => const Color(0xFF607D8B),
+        OutreachStage.selected => const Color(0xFF2196F3),
+        OutreachStage.outreachSent => const Color(0xFFFF9800),
+        OutreachStage.registered => const Color(0xFF4CAF50),
+        OutreachStage.declined => const Color(0xFFF44336),
+        OutreachStage.unreachable => const Color(0xFF9E9E9E),
       };
 
   @override
@@ -544,7 +601,7 @@ class _SalonCardState extends State<_SalonCard> {
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(
-                      widget.salon.city,
+                      '${widget.salon.city}, ${widget.salon.country}',
                       style: theme.textTheme.labelSmall?.copyWith(
                         color: colors.onSurface.withValues(alpha: 0.5),
                       ),
@@ -569,20 +626,13 @@ class _SalonCardState extends State<_SalonCard> {
                           color: Color(0xFF25D366),
                         ),
                       ),
-                    )
-                  else
-                    Text(
-                      '--',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: colors.onSurface.withValues(alpha: 0.3),
-                      ),
                     ),
                 ],
               ),
-              if (widget.salon.lastContactDate != null) ...[
+              if (widget.salon.lastOutreachAt != null) ...[
                 const SizedBox(height: 4),
                 Text(
-                  'Ultimo contacto: ${DateFormat('d/M/yy').format(widget.salon.lastContactDate!)}',
+                  'Ultimo contacto: ${DateFormat('d/M/yy').format(widget.salon.lastOutreachAt!)}',
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: colors.onSurface.withValues(alpha: 0.4),
                     fontSize: 10,
@@ -657,27 +707,41 @@ class _SalonDetail extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _InfoRow(label: 'Ciudad', value: salon.city),
+                  _InfoRow(
+                    label: 'Ciudad',
+                    value: '${salon.city}, ${salon.state ?? salon.country}',
+                  ),
+                  _InfoRow(label: 'Pais', value: salon.country),
                   _InfoRow(label: 'Telefono', value: salon.phone),
                   _InfoRow(
                     label: 'WhatsApp',
-                    value: salon.hasWhatsApp ? 'Si' : 'No',
+                    value: salon.hasWhatsApp ? 'Verificado' : 'No verificado',
                   ),
-                  _InfoRow(
-                    label: 'Etapa',
-                    value: salon.stage.label,
-                  ),
+                  _InfoRow(label: 'Etapa', value: salon.stage.label),
                   if (salon.source != null)
                     _InfoRow(label: 'Fuente', value: salon.source!),
                   if (salon.address != null)
                     _InfoRow(label: 'Direccion', value: salon.address!),
-                  if (salon.notes != null)
-                    _InfoRow(label: 'Notas', value: salon.notes!),
-                  if (salon.lastContactDate != null)
+                  if (salon.ratingAverage != null)
+                    _InfoRow(
+                      label: 'Rating',
+                      value:
+                          '${salon.ratingAverage}${salon.ratingCount != null ? ' (${salon.ratingCount} reviews)' : ''}',
+                    ),
+                  if (salon.categories != null)
+                    _InfoRow(label: 'Categorias', value: salon.categories!),
+                  if (salon.website != null)
+                    _InfoRow(label: 'Website', value: salon.website!),
+                  if (salon.outreachCount > 0)
+                    _InfoRow(
+                      label: 'Contactos',
+                      value: '${salon.outreachCount} veces',
+                    ),
+                  if (salon.lastOutreachAt != null)
                     _InfoRow(
                       label: 'Ultimo contacto',
                       value: DateFormat('d MMM yyyy', 'es')
-                          .format(salon.lastContactDate!),
+                          .format(salon.lastOutreachAt!),
                     ),
                   const SizedBox(height: 16),
 
@@ -827,6 +891,13 @@ class _LogEntryRow extends StatelessWidget {
   const _LogEntryRow({required this.entry});
   final OutreachLogEntry entry;
 
+  IconData get _channelIcon => switch (entry.channel) {
+        'whatsapp' => Icons.message,
+        'sms' => Icons.sms,
+        'email' => Icons.email,
+        _ => Icons.circle,
+      };
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -838,8 +909,8 @@ class _LogEntryRow extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(
-            Icons.circle,
-            size: 8,
+            _channelIcon,
+            size: 14,
             color: colors.primary.withValues(alpha: 0.5),
           ),
           const SizedBox(width: 8),
@@ -848,25 +919,28 @@ class _LogEntryRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  entry.action,
+                  entry.channel.toUpperCase(),
                   style: theme.textTheme.bodySmall?.copyWith(
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 11,
                   ),
                 ),
-                if (entry.notes != null) ...[
+                if (entry.messageText != null) ...[
                   const SizedBox(height: 2),
                   Text(
-                    entry.notes!,
+                    entry.messageText!,
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: colors.onSurface.withValues(alpha: 0.5),
                     ),
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ],
             ),
           ),
           Text(
-            DateFormat('d/M HH:mm').format(entry.createdAt),
+            DateFormat('d/M HH:mm').format(entry.sentAt),
             style: theme.textTheme.labelSmall?.copyWith(
               color: colors.onSurface.withValues(alpha: 0.4),
             ),
