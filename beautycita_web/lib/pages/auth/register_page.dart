@@ -7,50 +7,82 @@ import '../../config/router.dart';
 import '../../providers/auth_provider.dart';
 import 'auth_layout.dart';
 
-/// Login page — email/password + Google/Apple OAuth.
-class LoginPage extends ConsumerStatefulWidget {
-  const LoginPage({super.key});
+/// Registration page — name, email, password + OAuth.
+class RegisterPage extends ConsumerStatefulWidget {
+  const RegisterPage({super.key});
 
   @override
-  ConsumerState<LoginPage> createState() => _LoginPageState();
+  ConsumerState<RegisterPage> createState() => _RegisterPageState();
 }
 
-class _LoginPageState extends ConsumerState<LoginPage> {
+class _RegisterPageState extends ConsumerState<RegisterPage> {
+  final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _obscurePassword = true;
+  bool _acceptedTerms = false;
 
   @override
   void dispose() {
+    _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
-  Future<void> _handleLogin() async {
+  Future<void> _handleRegister() async {
     if (!_formKey.currentState!.validate()) return;
+    if (!_acceptedTerms) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Acepta los terminos para continuar.')),
+      );
+      return;
+    }
     final notifier = ref.read(authProvider.notifier);
-    final success = await notifier.signInWithEmail(
+    final success = await notifier.signUpWithEmail(
       _emailController.text.trim(),
       _passwordController.text,
+      _nameController.text.trim(),
     );
     if (success && mounted) {
-      await _navigateByRole(notifier);
+      // Navigate to verify phone after registration
+      context.go(WebRoutes.verify);
     }
   }
 
-  Future<void> _navigateByRole(AuthNotifier notifier) async {
-    final role = await notifier.getUserRole();
-    if (!mounted) return;
-    switch (role) {
-      case 'admin':
-        context.go(WebRoutes.admin);
-      case 'stylist':
-      case 'business':
-        context.go(WebRoutes.negocio);
+  /// Simple password strength: 0 = weak, 1 = medium, 2 = strong.
+  int _passwordStrength(String password) {
+    if (password.length < 8) return 0;
+    int score = 0;
+    if (password.length >= 10) score++;
+    if (RegExp(r'[A-Z]').hasMatch(password)) score++;
+    if (RegExp(r'[0-9]').hasMatch(password)) score++;
+    if (RegExp(r'[^A-Za-z0-9]').hasMatch(password)) score++;
+    if (score <= 1) return 0;
+    if (score <= 2) return 1;
+    return 2;
+  }
+
+  Color _strengthColor(int strength) {
+    switch (strength) {
+      case 0:
+        return Colors.red;
+      case 1:
+        return Colors.orange;
       default:
-        context.go(WebRoutes.reservar);
+        return Colors.green;
+    }
+  }
+
+  String _strengthLabel(int strength) {
+    switch (strength) {
+      case 0:
+        return 'Debil';
+      case 1:
+        return 'Media';
+      default:
+        return 'Fuerte';
     }
   }
 
@@ -59,7 +91,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final authState = ref.watch(authProvider);
     final theme = Theme.of(context);
 
-    // Show error snackbar
     ref.listen<AuthState>(authProvider, (prev, next) {
       if (next.errorMessage != null && next.errorMessage != prev?.errorMessage) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -82,11 +113,29 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               children: [
                 // ── Heading ────────────────────────────────────────────────
                 Text(
-                  'Iniciar sesion',
+                  'Crear cuenta',
                   style: theme.textTheme.headlineMedium,
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: BCSpacing.xl),
+
+                // ── Name ───────────────────────────────────────────────────
+                TextFormField(
+                  controller: _nameController,
+                  textCapitalization: TextCapitalization.words,
+                  autofillHints: const [AutofillHints.name],
+                  decoration: const InputDecoration(
+                    labelText: 'Nombre',
+                    prefixIcon: Icon(Icons.person_outline),
+                  ),
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) {
+                      return 'Ingresa tu nombre';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: BCSpacing.md),
 
                 // ── Email ──────────────────────────────────────────────────
                 TextFormField(
@@ -113,7 +162,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 TextFormField(
                   controller: _passwordController,
                   obscureText: _obscurePassword,
-                  autofillHints: const [AutofillHints.password],
+                  autofillHints: const [AutofillHints.newPassword],
                   decoration: InputDecoration(
                     labelText: 'Contrasena',
                     prefixIcon: const Icon(Icons.lock_outline),
@@ -127,18 +176,77 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                           setState(() => _obscurePassword = !_obscurePassword),
                     ),
                   ),
+                  onChanged: (_) => setState(() {}),
                   validator: (v) {
-                    if (v == null || v.isEmpty) return 'Ingresa tu contrasena';
+                    if (v == null || v.isEmpty) return 'Ingresa una contrasena';
+                    if (v.length < 8) {
+                      return 'Minimo 8 caracteres';
+                    }
                     return null;
                   },
-                  onFieldSubmitted: (_) => _handleLogin(),
+                ),
+
+                // ── Strength indicator ─────────────────────────────────────
+                if (_passwordController.text.isNotEmpty) ...[
+                  const SizedBox(height: BCSpacing.sm),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: LinearProgressIndicator(
+                          value: (_passwordStrength(
+                                      _passwordController.text) +
+                                  1) /
+                              3,
+                          backgroundColor: theme.colorScheme.outlineVariant,
+                          color: _strengthColor(
+                              _passwordStrength(_passwordController.text)),
+                          minHeight: 4,
+                        ),
+                      ),
+                      const SizedBox(width: BCSpacing.sm),
+                      Text(
+                        _strengthLabel(
+                            _passwordStrength(_passwordController.text)),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: _strengthColor(
+                              _passwordStrength(_passwordController.text)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+                const SizedBox(height: BCSpacing.md),
+
+                // ── Terms checkbox ─────────────────────────────────────────
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Checkbox(
+                      value: _acceptedTerms,
+                      onChanged: (v) =>
+                          setState(() => _acceptedTerms = v ?? false),
+                    ),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () =>
+                            setState(() => _acceptedTerms = !_acceptedTerms),
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: 12),
+                          child: Text(
+                            'Acepto los terminos y condiciones de uso',
+                            style: theme.textTheme.bodySmall,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: BCSpacing.lg),
 
-                // ── Sign in button ─────────────────────────────────────────
+                // ── Register button ────────────────────────────────────────
                 ElevatedButton(
-                  onPressed: authState.isLoading ? null : _handleLogin,
-                  child: const Text('Entrar'),
+                  onPressed: authState.isLoading ? null : _handleRegister,
+                  child: const Text('Crear cuenta'),
                 ),
                 const SizedBox(height: BCSpacing.lg),
 
@@ -162,7 +270,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 ),
                 const SizedBox(height: BCSpacing.md),
 
-                // ── Google button ──────────────────────────────────────────
+                // ── Google ─────────────────────────────────────────────────
                 OutlinedButton.icon(
                   onPressed: authState.isLoading
                       ? null
@@ -173,7 +281,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 ),
                 const SizedBox(height: BCSpacing.sm),
 
-                // ── Apple button ───────────────────────────────────────────
+                // ── Apple ──────────────────────────────────────────────────
                 OutlinedButton.icon(
                   onPressed: authState.isLoading
                       ? null
@@ -184,22 +292,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 ),
                 const SizedBox(height: BCSpacing.lg),
 
-                // ── Forgot password ────────────────────────────────────────
+                // ── Login link ─────────────────────────────────────────────
                 TextButton(
-                  onPressed: () => context.go(WebRoutes.forgot),
-                  child: const Text('Olvidaste tu contrasena?'),
-                ),
-
-                // ── Register link ──────────────────────────────────────────
-                TextButton(
-                  onPressed: () => context.go(WebRoutes.register),
-                  child: const Text('No tienes cuenta? Registrate'),
-                ),
-
-                // ── QR login link ──────────────────────────────────────────
-                TextButton(
-                  onPressed: () => context.go(WebRoutes.qr),
-                  child: const Text('Iniciar con QR'),
+                  onPressed: () => context.go(WebRoutes.auth),
+                  child: const Text('Ya tienes cuenta? Inicia sesion'),
                 ),
               ],
             ),
