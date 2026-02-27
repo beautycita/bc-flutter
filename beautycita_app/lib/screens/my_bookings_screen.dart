@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/config/theme_extension.dart';
@@ -7,6 +8,28 @@ import 'package:beautycita/models/booking.dart';
 import 'package:beautycita/providers/booking_provider.dart';
 import 'package:beautycita/services/supabase_client.dart';
 import 'package:go_router/go_router.dart';
+
+/// Disputes for the current user, keyed by appointment_id.
+final userDisputesProvider =
+    FutureProvider<Map<String, Map<String, dynamic>>>((ref) async {
+  final userId = SupabaseClientService.currentUserId;
+  if (userId == null) return {};
+  final response = await SupabaseClientService.client
+      .from('disputes')
+      .select()
+      .eq('user_id', userId)
+      .order('created_at', ascending: false);
+  final list = (response as List).cast<Map<String, dynamic>>();
+  // Key by appointment_id for quick lookup
+  final map = <String, Map<String, dynamic>>{};
+  for (final d in list) {
+    final apptId = d['appointment_id'] as String?;
+    if (apptId != null && !map.containsKey(apptId)) {
+      map[apptId] = d;
+    }
+  }
+  return map;
+});
 
 /// Filter tabs for the user's bookings list.
 enum _BookingTab { proximas, pasadas, canceladas }
@@ -421,9 +444,283 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
     reasonCtrl.dispose();
   }
 
+  /// Show the salon's offer and let the client accept or reject.
+  Future<void> _showDisputeOffer(Map<String, dynamic> dispute) async {
+    final salonOffer = dispute['salon_offer'] as String? ?? '';
+    final salonOfferAmount = dispute['salon_offer_amount'] as num?;
+    final salonResponse = dispute['salon_response'] as String? ?? '';
+    final disputeId = dispute['id'] as String;
+
+    final offerLabel = switch (salonOffer) {
+      'full_refund' => 'Reembolso total',
+      'partial_refund' => 'Reembolso parcial',
+      'denied' => 'Reembolso negado',
+      _ => salonOffer,
+    };
+    final offerColor = switch (salonOffer) {
+      'full_refund' => Colors.green,
+      'partial_refund' => Colors.orange,
+      'denied' => Colors.red,
+      _ => Colors.grey,
+    };
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+            top: Radius.circular(AppConstants.radiusXL)),
+      ),
+      builder: (ctx) {
+        bool saving = false;
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            return Padding(
+              padding: EdgeInsets.fromLTRB(
+                AppConstants.paddingLG,
+                AppConstants.paddingMD,
+                AppConstants.paddingLG,
+                MediaQuery.of(ctx).viewInsets.bottom + AppConstants.paddingLG,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppConstants.paddingMD),
+                  Text(
+                    'Respuesta del salon',
+                    style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+                  const SizedBox(height: AppConstants.paddingMD),
+
+                  // Offer type
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: offerColor.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+                      border: Border.all(color: offerColor.withValues(alpha: 0.2)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.local_offer_rounded,
+                                size: 18, color: offerColor),
+                            const SizedBox(width: 6),
+                            Text(offerLabel,
+                                style: GoogleFonts.poppins(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                    color: offerColor)),
+                          ],
+                        ),
+                        if (salonOffer == 'partial_refund' &&
+                            salonOfferAmount != null) ...[
+                          const SizedBox(height: 6),
+                          Text(
+                              '\$${salonOfferAmount.toStringAsFixed(0)} MXN',
+                              style: GoogleFonts.poppins(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w800)),
+                        ],
+                        if (salonResponse.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          Text(salonResponse,
+                              style: GoogleFonts.nunito(fontSize: 14)),
+                        ],
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: AppConstants.paddingLG),
+
+                  // Action buttons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: saving
+                              ? null
+                              : () async {
+                                  setSheetState(() => saving = true);
+                                  try {
+                                    await _rejectOffer(disputeId);
+                                    if (ctx.mounted) Navigator.pop(ctx);
+                                  } catch (e) {
+                                    if (ctx.mounted) {
+                                      ScaffoldMessenger.of(ctx).showSnackBar(
+                                        SnackBar(content: Text('Error: $e')),
+                                      );
+                                    }
+                                  } finally {
+                                    if (ctx.mounted) {
+                                      setSheetState(() => saving = false);
+                                    }
+                                  }
+                                },
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.red.shade600,
+                            side: BorderSide(color: Colors.red.shade300),
+                            minimumSize:
+                                const Size(0, AppConstants.minTouchHeight),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(
+                                  AppConstants.radiusLG),
+                            ),
+                          ),
+                          child: const Text('Rechazar y escalar',
+                              style: TextStyle(fontWeight: FontWeight.w700)),
+                        ),
+                      ),
+                      const SizedBox(width: AppConstants.paddingSM),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: saving
+                              ? null
+                              : () async {
+                                  setSheetState(() => saving = true);
+                                  try {
+                                    await _acceptOffer(
+                                        disputeId, salonOffer, salonOfferAmount);
+                                    if (ctx.mounted) Navigator.pop(ctx);
+                                  } catch (e) {
+                                    if (ctx.mounted) {
+                                      ScaffoldMessenger.of(ctx).showSnackBar(
+                                        SnackBar(content: Text('Error: $e')),
+                                      );
+                                    }
+                                  } finally {
+                                    if (ctx.mounted) {
+                                      setSheetState(() => saving = false);
+                                    }
+                                  }
+                                },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green.shade600,
+                            minimumSize:
+                                const Size(0, AppConstants.minTouchHeight),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(
+                                  AppConstants.radiusLG),
+                            ),
+                          ),
+                          child: Text(
+                            salonOffer == 'denied'
+                                ? 'Aceptar decision'
+                                : 'Aceptar oferta',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _acceptOffer(
+      String disputeId, String salonOffer, num? offerAmount) async {
+    final now = DateTime.now().toIso8601String();
+    final updateData = <String, dynamic>{
+      'client_accepted': true,
+      'client_responded_at': now,
+      'status': 'resolved',
+      'resolved_at': now,
+    };
+
+    if (salonOffer == 'partial_refund' && offerAmount != null) {
+      updateData['refund_amount'] = offerAmount.toDouble();
+      updateData['refund_status'] = 'pending';
+      updateData['resolution'] = 'favor_client';
+    } else if (salonOffer == 'denied') {
+      updateData['resolution'] = 'favor_provider';
+    } else {
+      updateData['resolution'] = 'favor_client';
+    }
+
+    await SupabaseClientService.client
+        .from('disputes')
+        .update(updateData)
+        .eq('id', disputeId);
+
+    ref.invalidate(userDisputesProvider);
+    ref.invalidate(userBookingsProvider);
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Oferta aceptada. Disputa resuelta.'),
+          backgroundColor: Colors.green.shade600,
+        ),
+      );
+    }
+  }
+
+  Future<void> _rejectOffer(String disputeId) async {
+    final now = DateTime.now().toIso8601String();
+    await SupabaseClientService.client.from('disputes').update({
+      'client_accepted': false,
+      'client_responded_at': now,
+      'status': 'escalated',
+      'escalated_at': now,
+    }).eq('id', disputeId);
+
+    // Notify admins
+    final admins = await SupabaseClientService.client
+        .from('profiles')
+        .select('id')
+        .inFilter('role', ['admin', 'superadmin']);
+    for (final admin in (admins as List)) {
+      await SupabaseClientService.client.from('notifications').insert({
+        'user_id': admin['id'] as String,
+        'title': 'Disputa escalada',
+        'body': 'Cliente rechazo oferta del salon. Requiere tu atencion.',
+        'channel': 'in_app',
+      });
+    }
+
+    ref.invalidate(userDisputesProvider);
+    ref.invalidate(userBookingsProvider);
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+              'Disputa escalada a administracion. Te contactaremos pronto.'),
+          backgroundColor: Colors.orange.shade600,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final bookingsAsync = ref.watch(userBookingsProvider);
+    final disputesAsync = ref.watch(userDisputesProvider);
+    final disputes = disputesAsync.valueOrNull ?? {};
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
 
@@ -461,7 +758,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
                   color: colorScheme.primary,
                   onRefresh: () async {
                     ref.invalidate(userBookingsProvider);
-                    // Wait for the provider to reload.
+                    ref.invalidate(userDisputesProvider);
                     await ref.read(userBookingsProvider.future);
                   },
                   child: ListView.separated(
@@ -476,7 +773,8 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
                     separatorBuilder: (_, __) =>
                         const SizedBox(height: AppConstants.paddingSM),
                     itemBuilder: (context, index) {
-                      return _buildBookingCard(filtered[index], textTheme);
+                      return _buildBookingCard(
+                          filtered[index], textTheme, disputes);
                     },
                   ),
                 );
@@ -588,11 +886,16 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
     );
   }
 
-  Widget _buildBookingCard(Booking booking, TextTheme textTheme) {
+  Widget _buildBookingCard(Booking booking, TextTheme textTheme,
+      Map<String, Map<String, dynamic>> disputes) {
     final colorScheme = Theme.of(context).colorScheme;
     final ext = Theme.of(context).extension<BCThemeExtension>()!;
     final canCancel =
         booking.status == 'pending' || booking.status == 'confirmed';
+    final dispute = disputes[booking.id];
+    final disputeStatus = dispute?['status'] as String?;
+    final hasActiveDispute = dispute != null && disputeStatus != 'resolved' && disputeStatus != 'rejected';
+    final hasSalonOffer = disputeStatus == 'salon_responded';
 
     return GestureDetector(
       onTap: () => context.push('/appointment/${booking.id}'),
@@ -698,6 +1001,41 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
               ),
             ],
 
+            // Active dispute badge
+            if (hasActiveDispute) ...[
+              const SizedBox(height: AppConstants.paddingSM),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: (hasSalonOffer ? Colors.blue : Colors.orange)
+                      .withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      hasSalonOffer ? Icons.local_offer_rounded : Icons.gavel_rounded,
+                      size: 14,
+                      color: hasSalonOffer ? Colors.blue : Colors.orange,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      hasSalonOffer
+                          ? 'El salon respondio - revisa la oferta'
+                          : disputeStatus == 'escalated'
+                              ? 'Disputa escalada - en revision'
+                              : 'Disputa abierta',
+                      style: textTheme.labelSmall?.copyWith(
+                        color: hasSalonOffer ? Colors.blue : Colors.orange,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
             // Cancel button for pending / confirmed
             if (canCancel) ...[
               const SizedBox(height: AppConstants.paddingSM),
@@ -721,27 +1059,51 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
               ),
             ],
 
-            // Dispute button for completed bookings
+            // Dispute actions for completed bookings
             if (booking.status == 'completed') ...[
               const SizedBox(height: AppConstants.paddingSM),
               Align(
                 alignment: Alignment.centerRight,
-                child: TextButton.icon(
-                  onPressed: () => _openDispute(booking),
-                  icon: Icon(
-                    Icons.flag_outlined,
-                    size: AppConstants.iconSizeSM,
-                    color: Colors.orange.shade700,
-                  ),
-                  label: Text('Reportar problema',
-                      style: TextStyle(color: Colors.orange.shade700)),
-                  style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppConstants.paddingSM,
-                    ),
-                    minimumSize: const Size(0, AppConstants.minTouchHeight - 16),
-                  ),
-                ),
+                child: hasSalonOffer
+                    ? TextButton.icon(
+                        onPressed: () => _showDisputeOffer(dispute!),
+                        icon: Icon(
+                          Icons.visibility_rounded,
+                          size: AppConstants.iconSizeSM,
+                          color: Colors.blue.shade700,
+                        ),
+                        label: Text('Ver oferta',
+                            style: TextStyle(
+                                color: Colors.blue.shade700,
+                                fontWeight: FontWeight.w700)),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppConstants.paddingSM,
+                          ),
+                          minimumSize:
+                              const Size(0, AppConstants.minTouchHeight - 16),
+                        ),
+                      )
+                    : dispute == null
+                        ? TextButton.icon(
+                            onPressed: () => _openDispute(booking),
+                            icon: Icon(
+                              Icons.flag_outlined,
+                              size: AppConstants.iconSizeSM,
+                              color: Colors.orange.shade700,
+                            ),
+                            label: Text('Reportar problema',
+                                style: TextStyle(
+                                    color: Colors.orange.shade700)),
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: AppConstants.paddingSM,
+                              ),
+                              minimumSize: const Size(
+                                  0, AppConstants.minTouchHeight - 16),
+                            ),
+                          )
+                        : const SizedBox.shrink(),
               ),
             ],
           ],

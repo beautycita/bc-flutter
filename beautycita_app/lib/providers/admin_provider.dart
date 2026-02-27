@@ -162,6 +162,7 @@ final adminDashStatsProvider = FutureProvider<AdminStats>((ref) async {
         .select('id')
         .eq('status', 'pending'),
     client.from('disputes').select('id').eq('status', 'open'),
+    client.from('disputes').select('id').eq('status', 'escalated'),
   ]);
 
   double revenue = 0;
@@ -176,6 +177,7 @@ final adminDashStatsProvider = FutureProvider<AdminStats>((ref) async {
     revenueMonth: revenue,
     pendingApplications: (results[4] as List).length,
     openDisputes: (results[5] as List).length,
+    escalatedDisputes: (results[6] as List).length,
   );
 });
 
@@ -501,6 +503,7 @@ class AdminStats {
   final double revenueMonth;
   final int pendingApplications;
   final int openDisputes;
+  final int escalatedDisputes;
 
   const AdminStats({
     required this.totalUsers,
@@ -509,6 +512,7 @@ class AdminStats {
     required this.revenueMonth,
     required this.pendingApplications,
     required this.openDisputes,
+    this.escalatedDisputes = 0,
   });
 }
 
