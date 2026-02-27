@@ -27,16 +27,18 @@ class _DisputesScreenState extends ConsumerState<DisputesScreen> {
 
     return disputesAsync.when(
       data: (disputes) {
-        int open = 0, resolved = 0, rejected = 0;
+        int open = 0, salonResponded = 0, escalated = 0, resolved = 0;
         for (final d in disputes) {
           final s = d['status'] as String? ?? 'open';
           switch (s) {
             case 'open':
               open++;
+            case 'salon_responded':
+              salonResponded++;
+            case 'escalated':
+              escalated++;
             case 'resolved':
               resolved++;
-            case 'rejected':
-              rejected++;
           }
         }
 
@@ -72,13 +74,42 @@ class _DisputesScreenState extends ConsumerState<DisputesScreen> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: _SummaryChip(
+                      label: 'Escaladas',
+                      count: escalated,
+                      color: Colors.deepPurple,
+                      selected: _statusFilter == 'escalated',
+                      onTap: () =>
+                          setState(() => _statusFilter = 'escalated'),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: _SummaryChip(
+                      label: 'Respondidas',
+                      count: salonResponded,
+                      color: Colors.blue,
+                      selected: _statusFilter == 'salon_responded',
+                      onTap: () =>
+                          setState(() => _statusFilter = 'salon_responded'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _SummaryChip(
                       label: 'Resueltas',
                       count: resolved,
                       color: Colors.green,
                       selected: _statusFilter == 'resolved',
-                      onTap: () => setState(() => _statusFilter = 'resolved'),
+                      onTap: () =>
+                          setState(() => _statusFilter = 'resolved'),
                     ),
                   ),
+                  const SizedBox(width: 8),
+                  const Expanded(child: SizedBox()),
                 ],
               ),
 
@@ -247,8 +278,10 @@ class _DisputeCard extends StatelessWidget {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(AppConstants.radiusMD),
               border: Border.all(
-                color: colors.onSurface.withValues(alpha: 0.08),
-                width: 1,
+                color: status == 'escalated'
+                    ? Colors.deepPurple.withValues(alpha: 0.3)
+                    : colors.onSurface.withValues(alpha: 0.08),
+                width: status == 'escalated' ? 1.5 : 1,
               ),
               boxShadow: [
                 BoxShadow(
@@ -268,8 +301,12 @@ class _DisputeCard extends StatelessWidget {
                     color: _statusColor(status).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(Icons.gavel_rounded,
-                      color: _statusColor(status), size: 20),
+                  child: Icon(
+                      status == 'escalated'
+                          ? Icons.priority_high_rounded
+                          : Icons.gavel_rounded,
+                      color: _statusColor(status),
+                      size: 20),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -358,6 +395,8 @@ class _DisputeCard extends StatelessWidget {
   static Color _statusColor(String status) {
     return switch (status) {
       'open' => Colors.orange,
+      'salon_responded' => Colors.blue,
+      'escalated' => Colors.deepPurple,
       'resolved' => Colors.green,
       'rejected' => Colors.red,
       _ => Colors.grey,
@@ -367,6 +406,8 @@ class _DisputeCard extends StatelessWidget {
   static String _statusLabel(String status) {
     return switch (status) {
       'open' => 'Abierta',
+      'salon_responded' => 'Respondida',
+      'escalated' => 'Escalada',
       'resolved' => 'Resuelta',
       'rejected' => 'Rechazada',
       _ => status,
@@ -417,7 +458,13 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
     final resolutionNotes = d['resolution_notes'] as String?;
     final refundAmount = d['refund_amount'] as num?;
     final refundStatus = d['refund_status'] as String?;
-    final isOpen = status == 'open';
+    final canResolve = status == 'open' || status == 'escalated';
+
+    // Salon offer data
+    final salonOffer = d['salon_offer'] as String?;
+    final salonOfferAmount = d['salon_offer_amount'] as num?;
+    final salonResponse = d['salon_response'] as String?;
+    final clientAccepted = d['client_accepted'] as bool?;
 
     // Appointment details
     final appt = d['appointments'] as Map<String, dynamic>?;
@@ -485,25 +532,23 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
                       ),
                     ),
                   ),
-                  _DisputeCard._statusColor(status) != Colors.grey
-                      ? Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: _DisputeCard._statusColor(status)
-                                .withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            _DisputeCard._statusLabel(status),
-                            style: GoogleFonts.poppins(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: _DisputeCard._statusColor(status),
-                            ),
-                          ),
-                        )
-                      : const SizedBox.shrink(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _DisputeCard._statusColor(status)
+                          .withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      _DisputeCard._statusLabel(status),
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: _DisputeCard._statusColor(status),
+                      ),
+                    ),
+                  ),
                 ],
               ),
 
@@ -522,38 +567,75 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
 
               const SizedBox(height: AppConstants.paddingSM),
 
-              // Reason
-              _infoCard(context, 'Razon del Cliente', [
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Text(reason, style: GoogleFonts.nunito(fontSize: 14)),
+              // ── Timeline: Full dispute history ──────────────────────────
+              _infoCard(context, 'Historial de la Disputa', [
+                // 1. Client reason + evidence
+                _timelineStep(
+                  '1. Cliente reporto problema',
+                  reason,
+                  Colors.orange,
+                  Icons.flag_rounded,
                 ),
                 if (clientEvidence != null && clientEvidence.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Text('Evidencia:',
-                      style: GoogleFonts.poppins(
+                  const SizedBox(height: 4),
+                  Text('Evidencia: $clientEvidence',
+                      style: GoogleFonts.nunito(
                           fontSize: 12,
-                          fontWeight: FontWeight.w600,
                           color: colors.onSurface.withValues(alpha: 0.5))),
-                  Text(clientEvidence,
-                      style: GoogleFonts.nunito(fontSize: 13)),
+                ],
+
+                // 2. Salon offer
+                if (salonOffer != null) ...[
+                  const SizedBox(height: 12),
+                  _timelineStep(
+                    '2. Salon respondio',
+                    _offerLabel(salonOffer) +
+                        (salonOfferAmount != null
+                            ? ' - \$${salonOfferAmount.toStringAsFixed(0)} MXN'
+                            : ''),
+                    Colors.blue,
+                    Icons.local_offer_rounded,
+                  ),
+                  if (salonResponse != null && salonResponse.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(salonResponse,
+                        style: GoogleFonts.nunito(
+                            fontSize: 12,
+                            color: colors.onSurface.withValues(alpha: 0.5))),
+                  ],
+                ],
+
+                // 3. Client response
+                if (clientAccepted != null) ...[
+                  const SizedBox(height: 12),
+                  _timelineStep(
+                    '3. Cliente ${clientAccepted ? 'acepto' : 'rechazo'} la oferta',
+                    clientAccepted
+                        ? 'Oferta aceptada'
+                        : 'Oferta rechazada — escalada a admin',
+                    clientAccepted ? Colors.green : Colors.red,
+                    clientAccepted
+                        ? Icons.check_circle_rounded
+                        : Icons.cancel_rounded,
+                  ),
+                ],
+
+                // Business response (old field — stylist_evidence)
+                if (stylistEvidence != null &&
+                    stylistEvidence.isNotEmpty &&
+                    salonOffer == null) ...[
+                  const SizedBox(height: 12),
+                  _timelineStep(
+                    '2. Respuesta del negocio',
+                    stylistEvidence,
+                    Colors.blue,
+                    Icons.store_rounded,
+                  ),
                 ],
               ]),
 
-              // Business response
-              if (stylistEvidence != null && stylistEvidence.isNotEmpty) ...[
-                const SizedBox(height: AppConstants.paddingSM),
-                _infoCard(context, 'Respuesta del Negocio', [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Text(stylistEvidence,
-                        style: GoogleFonts.nunito(fontSize: 14)),
-                  ),
-                ]),
-              ],
-
               // Resolution info (if already resolved)
-              if (!isOpen) ...[
+              if (!canResolve) ...[
                 const SizedBox(height: AppConstants.paddingSM),
                 _infoCard(context, 'Resolucion', [
                   if (resolution != null)
@@ -569,15 +651,29 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
                 ]),
               ],
 
-              // Resolution controls (only for open disputes)
-              if (isOpen) ...[
+              // Resolution controls (for open or escalated disputes)
+              if (canResolve) ...[
                 const SizedBox(height: AppConstants.paddingLG),
-                Text('Resolver Disputa',
+                Text(
+                    status == 'escalated'
+                        ? 'Resolver Disputa Escalada'
+                        : 'Resolver Disputa',
                     style: GoogleFonts.poppins(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
                       color: colors.onSurface,
                     )),
+                if (status == 'escalated') ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'El cliente rechazo la oferta del salon. Tu decides.',
+                    style: GoogleFonts.nunito(
+                      fontSize: 13,
+                      color: Colors.deepPurple,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
                 const SizedBox(height: AppConstants.paddingSM),
 
                 // Outcome selection
@@ -594,11 +690,13 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
                   children: [
                     _outcomeChip('favor_client', 'A favor del cliente',
                         Colors.green),
-                    _outcomeChip('favor_provider', 'A favor del proveedor',
+                    _outcomeChip('favor_provider', 'A favor del estilista',
                         Colors.blue),
-                    _outcomeChip(
-                        'favor_both', 'A favor de ambos', Colors.teal),
-                    _outcomeChip('dismissed', 'Descartar', Colors.grey),
+                    if (status != 'escalated') ...[
+                      _outcomeChip(
+                          'favor_both', 'A favor de ambos', Colors.teal),
+                      _outcomeChip('dismissed', 'Descartar', Colors.grey),
+                    ],
                   ],
                 ),
 
@@ -628,7 +726,9 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
                             style: GoogleFonts.poppins(
                                 fontSize: 14, fontWeight: FontWeight.w600)),
                         subtitle: Text(
-                          'Devolver pago al cliente via Stripe',
+                          status == 'escalated'
+                              ? 'Reembolso desde Stripe Connect del estilista (plataforma cubre hasta \$100 USD)'
+                              : 'Devolver pago al cliente via Stripe',
                           style: GoogleFonts.nunito(fontSize: 12),
                         ),
                         value: _refundEnabled,
@@ -780,6 +880,54 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
     );
   }
 
+  Widget _timelineStep(
+      String title, String description, Color color, IconData icon) {
+    final colors = Theme.of(context).colorScheme;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 24,
+          height: 24,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Icon(icon, size: 14, color: color),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: colors.onSurface.withValues(alpha: 0.7),
+                  )),
+              const SizedBox(height: 2),
+              Text(description,
+                  style: GoogleFonts.nunito(
+                    fontSize: 13,
+                    color: colors.onSurface,
+                  )),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _offerLabel(String offer) {
+    return switch (offer) {
+      'full_refund' => 'Reembolso total',
+      'partial_refund' => 'Reembolso parcial',
+      'denied' => 'Reembolso negado',
+      _ => offer,
+    };
+  }
+
   Widget _outcomeChip(String value, String label, Color color) {
     final isSelected = _selectedOutcome == value;
     return ChoiceChip(
@@ -881,7 +1029,7 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
   String _outcomeLabel(String resolution) {
     return switch (resolution) {
       'favor_client' => 'A favor del cliente',
-      'favor_provider' => 'A favor del proveedor',
+      'favor_provider' => 'A favor del estilista',
       'favor_both' => 'A favor de ambos',
       'dismissed' => 'Descartada',
       _ => resolution,
@@ -922,6 +1070,7 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
         targetId: disputeId,
         details: {
           'resolution': _selectedOutcome,
+          'was_escalated': widget.dispute['status'] == 'escalated',
           'refund_requested': _refundEnabled,
           if (_refundEnabled)
             'refund_amount': double.tryParse(_refundAmountCtrl.text) ?? 0,

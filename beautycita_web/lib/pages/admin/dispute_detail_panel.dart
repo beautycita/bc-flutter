@@ -99,12 +99,89 @@ class _DisputeDetailContentState extends State<DisputeDetailContent> {
         _InfoRow('Cliente', d.clientName),
         _InfoRow('Salon', d.salonName),
 
+        // ── Salon offer section ──────────────────────────────────────────
+        if (d.salonOffer != null) ...[
+          const SizedBox(height: BCSpacing.lg),
+          const Divider(),
+          const SizedBox(height: BCSpacing.md),
+          _SectionTitle('Oferta del salon'),
+          const SizedBox(height: BCSpacing.sm),
+          _InfoRow('Tipo de oferta', d.salonOfferLabel),
+          if (d.salonOfferAmount != null)
+            _InfoRow('Monto ofrecido',
+                '\$${d.salonOfferAmount!.toStringAsFixed(2)} MXN'),
+          if (d.salonResponse != null && d.salonResponse!.isNotEmpty) ...[
+            const SizedBox(height: BCSpacing.sm),
+            Text(
+              'Explicacion del salon:',
+              style: theme.textTheme.labelMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: BCSpacing.xs),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(BCSpacing.sm),
+              decoration: BoxDecoration(
+                color: colors.onSurface.withValues(alpha: 0.04),
+                borderRadius: BorderRadius.circular(BCSpacing.radiusXs),
+              ),
+              child: Text(d.salonResponse!, style: theme.textTheme.bodySmall),
+            ),
+          ],
+          if (d.salonOfferedAt != null)
+            _InfoRow('Oferta enviada', dateFmt.format(d.salonOfferedAt!)),
+        ],
+
+        // ── Client response to offer ────────────────────────────────────
+        if (d.clientAccepted != null) ...[
+          const SizedBox(height: BCSpacing.sm),
+          _InfoRow(
+            'Respuesta cliente',
+            d.clientAccepted! ? 'Acepto la oferta' : 'Rechazo la oferta',
+          ),
+          if (d.clientRespondedAt != null)
+            _InfoRow('Respondio', dateFmt.format(d.clientRespondedAt!)),
+        ],
+
+        // ── Escalation info ──────────────────────────────────────────────
+        if (d.status == 'escalated') ...[
+          const SizedBox(height: BCSpacing.sm),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(BCSpacing.sm),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEDE7F6),
+              borderRadius: BorderRadius.circular(BCSpacing.radiusXs),
+              border: Border.all(color: const Color(0xFF7C4DFF).withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.priority_high_rounded,
+                    color: Color(0xFF7C4DFF), size: 18),
+                const SizedBox(width: BCSpacing.xs),
+                Expanded(
+                  child: Text(
+                    'Cliente rechazo la oferta del salon. Requiere decision administrativa.',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: const Color(0xFF4A148C),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (d.escalatedAt != null)
+            _InfoRow('Escalada', dateFmt.format(d.escalatedAt!)),
+        ],
+
         const SizedBox(height: BCSpacing.lg),
         const Divider(),
         const SizedBox(height: BCSpacing.md),
 
         // ── Resolution workflow ──────────────────────────────────────────
-        if (d.status == 'open' || d.status == 'reviewing') ...[
+        if (d.status == 'open' || d.status == 'reviewing' || d.status == 'escalated') ...[
           _SectionTitle('Resolucion'),
           const SizedBox(height: BCSpacing.sm),
 
@@ -332,6 +409,8 @@ class _StatusChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final (Color bg, Color fg) = switch (status) {
       'open' => (const Color(0xFFFFF3E0), const Color(0xFFE65100)),
+      'salon_responded' => (const Color(0xFFE3F2FD), const Color(0xFF1565C0)),
+      'escalated' => (const Color(0xFFEDE7F6), const Color(0xFF4A148C)),
       'reviewing' => (const Color(0xFFE3F2FD), const Color(0xFF1565C0)),
       'resolved' => (const Color(0xFFE8F5E9), const Color(0xFF2E7D32)),
       'rejected' => (const Color(0xFFFFEBEE), const Color(0xFFC62828)),
@@ -368,6 +447,8 @@ class _TimelineEntry extends StatelessWidget {
 
     final statusLabel = switch (entry.status) {
       'open' => 'Disputa abierta',
+      'salon_responded' => 'Salon respondio',
+      'escalated' => 'Escalada a admin',
       'reviewing' => 'En revision',
       'resolved' => 'Resuelta',
       'rejected' => 'Rechazada',

@@ -14,7 +14,7 @@ class Dispute {
   final String? bookingRef;
   final String type; // 'service_quality', 'no_show', 'overcharge', 'other'
   final double amount;
-  final String status; // 'open', 'reviewing', 'resolved', 'rejected'
+  final String status; // 'open', 'salon_responded', 'escalated', 'resolved', 'rejected'
   final String description;
   final String? evidence; // URL or text
   final String? resolutionNotes;
@@ -23,6 +23,15 @@ class Dispute {
   final DateTime filedAt;
   final DateTime? resolvedAt;
   final List<DisputeTimelineEntry> timeline;
+
+  // Salon offer fields
+  final String? salonOffer; // 'full_refund', 'partial_refund', 'denied'
+  final double? salonOfferAmount;
+  final String? salonResponse;
+  final DateTime? salonOfferedAt;
+  final bool? clientAccepted;
+  final DateTime? clientRespondedAt;
+  final DateTime? escalatedAt;
 
   const Dispute({
     required this.id,
@@ -42,6 +51,13 @@ class Dispute {
     required this.filedAt,
     this.resolvedAt,
     this.timeline = const [],
+    this.salonOffer,
+    this.salonOfferAmount,
+    this.salonResponse,
+    this.salonOfferedAt,
+    this.clientAccepted,
+    this.clientRespondedAt,
+    this.escalatedAt,
   });
 
   factory Dispute.fromJson(Map<String, dynamic> json) {
@@ -53,25 +69,26 @@ class Dispute {
 
     return Dispute(
       id: json['id'] as String,
-      clientId: json['client_id'] as String? ?? '',
+      clientId: json['user_id'] as String? ?? '',
       clientName: json['client_name'] as String? ??
           (json['profiles'] != null
-              ? json['profiles']['display_name'] as String? ?? 'Usuario'
+              ? json['profiles']['full_name'] as String? ??
+                  json['profiles']['username'] as String? ??
+                  'Usuario'
               : 'Usuario'),
-      salonId: json['salon_id'] as String? ?? '',
+      salonId: json['business_id'] as String? ?? '',
       salonName: json['salon_name'] as String? ??
           (json['businesses'] != null
               ? json['businesses']['name'] as String? ?? 'Salon'
               : 'Salon'),
-      bookingRef: json['booking_ref'] as String? ??
-          json['appointment_id'] as String?,
-      type: json['type'] as String? ?? 'other',
-      amount: (json['amount'] as num?)?.toDouble() ?? 0,
+      bookingRef: json['appointment_id'] as String?,
+      type: json['reason'] as String? ?? 'other',
+      amount: (json['refund_amount'] as num?)?.toDouble() ?? 0,
       status: json['status'] as String? ?? 'open',
-      description: json['description'] as String? ?? '',
-      evidence: json['evidence'] as String?,
+      description: json['reason'] as String? ?? '',
+      evidence: json['client_evidence'] as String?,
       resolutionNotes: json['resolution_notes'] as String?,
-      resolutionDecision: json['resolution_decision'] as String?,
+      resolutionDecision: json['resolution'] as String?,
       refundAmount: (json['refund_amount'] as num?)?.toDouble(),
       filedAt: DateTime.tryParse(json['created_at'] as String? ?? '') ??
           DateTime.now(),
@@ -79,6 +96,19 @@ class Dispute {
           ? DateTime.tryParse(json['resolved_at'] as String)
           : null,
       timeline: timeline,
+      salonOffer: json['salon_offer'] as String?,
+      salonOfferAmount: (json['salon_offer_amount'] as num?)?.toDouble(),
+      salonResponse: json['salon_response'] as String?,
+      salonOfferedAt: json['salon_offered_at'] != null
+          ? DateTime.tryParse(json['salon_offered_at'] as String)
+          : null,
+      clientAccepted: json['client_accepted'] as bool?,
+      clientRespondedAt: json['client_responded_at'] != null
+          ? DateTime.tryParse(json['client_responded_at'] as String)
+          : null,
+      escalatedAt: json['escalated_at'] != null
+          ? DateTime.tryParse(json['escalated_at'] as String)
+          : null,
     );
   }
 
@@ -92,10 +122,19 @@ class Dispute {
 
   String get statusLabel => switch (status) {
         'open' => 'Abierta',
+        'salon_responded' => 'Salon respondio',
+        'escalated' => 'Escalada',
         'reviewing' => 'En revision',
         'resolved' => 'Resuelta',
         'rejected' => 'Rechazada',
         _ => status,
+      };
+
+  String get salonOfferLabel => switch (salonOffer) {
+        'full_refund' => 'Reembolso total',
+        'partial_refund' => 'Reembolso parcial',
+        'denied' => 'Reembolso negado',
+        _ => salonOffer ?? '-',
       };
 }
 
@@ -180,13 +219,13 @@ final disputesProvider = FutureProvider<List<Dispute>>((ref) async {
   try {
     var query = BCSupabase.client
         .from(BCTables.disputes)
-        .select('*, profiles!client_id(display_name), businesses!salon_id(name)');
+        .select('*, profiles!disputes_user_id_fkey(full_name, username), businesses!disputes_business_id_fkey(name)');
 
     if (filters.status != null) {
       query = query.eq('status', filters.status!);
     }
     if (filters.type != null) {
-      query = query.eq('type', filters.type!);
+      query = query.eq('reason', filters.type!);
     }
     if (filters.dateFrom != null) {
       query = query.gte('created_at', filters.dateFrom!.toIso8601String());
@@ -203,7 +242,9 @@ final disputesProvider = FutureProvider<List<Dispute>>((ref) async {
       final businessData = row['businesses'] as Map<String, dynamic>?;
       final json = Map<String, dynamic>.from(row);
       if (profileData != null) {
-        json['client_name'] = profileData['display_name'] ?? 'Usuario';
+        json['client_name'] = profileData['full_name'] ??
+            profileData['username'] ??
+            'Usuario';
       }
       if (businessData != null) {
         json['salon_name'] = businessData['name'] ?? 'Salon';

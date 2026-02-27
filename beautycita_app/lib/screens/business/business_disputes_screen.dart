@@ -43,6 +43,8 @@ class _BusinessDisputesScreenState
                   children: [
                     _filterChip('Todas', null),
                     _filterChip('Abiertas', 'open'),
+                    _filterChip('Respondidas', 'salon_responded'),
+                    _filterChip('Escaladas', 'escalated'),
                     _filterChip('Resueltas', 'resolved'),
                     _filterChip('Rechazadas', 'rejected'),
                   ],
@@ -235,10 +237,14 @@ class _DisputeCard extends StatelessWidget {
     );
   }
 
-  Color _statusColor(String status) {
+  static Color _statusColor(String status) {
     switch (status) {
       case 'open':
         return Colors.orange;
+      case 'salon_responded':
+        return Colors.blue;
+      case 'escalated':
+        return Colors.deepPurple;
       case 'resolved':
         return Colors.green;
       case 'rejected':
@@ -248,10 +254,14 @@ class _DisputeCard extends StatelessWidget {
     }
   }
 
-  String _statusLabel(String status) {
+  static String _statusLabel(String status) {
     switch (status) {
       case 'open':
         return 'Abierta';
+      case 'salon_responded':
+        return 'Respondida';
+      case 'escalated':
+        return 'Escalada';
       case 'resolved':
         return 'Resuelta';
       case 'rejected':
@@ -263,7 +273,7 @@ class _DisputeCard extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Dispute detail bottom sheet
+// Dispute detail bottom sheet — with salon offer form
 // ---------------------------------------------------------------------------
 
 class _DisputeDetailSheet extends ConsumerStatefulWidget {
@@ -282,6 +292,8 @@ class _DisputeDetailSheet extends ConsumerStatefulWidget {
 
 class _DisputeDetailSheetState extends ConsumerState<_DisputeDetailSheet> {
   final _responseCtrl = TextEditingController();
+  final _amountCtrl = TextEditingController();
+  String? _selectedOffer; // 'full_refund', 'partial_refund', 'denied'
   bool _saving = false;
 
   @override
@@ -289,11 +301,18 @@ class _DisputeDetailSheetState extends ConsumerState<_DisputeDetailSheet> {
     super.initState();
     _responseCtrl.text =
         widget.dispute['stylist_evidence'] as String? ?? '';
+    // Pre-fill amount from appointment price if available
+    final appt = widget.dispute['appointments'] as Map<String, dynamic>?;
+    final price = appt?['price'] as num?;
+    if (price != null) {
+      _amountCtrl.text = price.toStringAsFixed(0);
+    }
   }
 
   @override
   void dispose() {
     _responseCtrl.dispose();
+    _amountCtrl.dispose();
     super.dispose();
   }
 
@@ -304,9 +323,13 @@ class _DisputeDetailSheetState extends ConsumerState<_DisputeDetailSheet> {
     final status = dispute['status'] as String? ?? 'open';
     final reason = dispute['reason'] as String? ?? '';
     final clientEvidence = dispute['client_evidence'] as String? ?? '';
-    final stylistEvidence = dispute['stylist_evidence'] as String? ?? '';
     final resolution = dispute['resolution'] as String?;
     final isOpen = status == 'open';
+
+    // Salon offer data (for past-open states)
+    final salonOffer = dispute['salon_offer'] as String?;
+    final salonOfferAmount = dispute['salon_offer_amount'] as num?;
+    final salonResponse = dispute['salon_response'] as String?;
 
     return DraggableScrollableSheet(
       initialChildSize: 0.8,
@@ -348,8 +371,10 @@ class _DisputeDetailSheetState extends ConsumerState<_DisputeDetailSheet> {
               const SizedBox(height: AppConstants.paddingMD),
 
               // Info rows
-              _infoRow('Estado', _statusText(status), _statusColor(status)),
-              _infoRow('ID', (dispute['id'] as String?)?.substring(0, 8) ?? ''),
+              _infoRow('Estado', _DisputeCard._statusLabel(status),
+                  _DisputeCard._statusColor(status)),
+              _infoRow(
+                  'ID', (dispute['id'] as String?)?.substring(0, 8) ?? ''),
               if (dispute['appointment_id'] != null)
                 _infoRow('Cita',
                     (dispute['appointment_id'] as String).substring(0, 8)),
@@ -390,43 +415,92 @@ class _DisputeDetailSheetState extends ConsumerState<_DisputeDetailSheet> {
 
               const SizedBox(height: AppConstants.paddingMD),
 
-              // Business response section
-              _sectionLabel('Tu respuesta'),
-              const SizedBox(height: 4),
+              // Show salon's previous offer if already submitted
+              if (salonOffer != null) ...[
+                _sectionLabel('Tu oferta'),
+                const SizedBox(height: 4),
+                _offerSummaryCard(
+                    salonOffer, salonOfferAmount, salonResponse, colors),
+                const SizedBox(height: AppConstants.paddingMD),
+              ],
+
+              // Offer form (only for open disputes)
               if (isOpen) ...[
+                _sectionLabel('Tu oferta de resolucion'),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _offerChip('full_refund', 'Reembolso total',
+                        Colors.green),
+                    _offerChip('partial_refund', 'Reembolso parcial',
+                        Colors.orange),
+                    _offerChip('denied', 'Negar reembolso', Colors.red),
+                  ],
+                ),
+                if (_selectedOffer == 'partial_refund') ...[
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _amountCtrl,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      labelText: 'Monto a reembolsar (MXN)',
+                      prefixText: '\$ ',
+                      border: OutlineInputBorder(
+                        borderRadius:
+                            BorderRadius.circular(AppConstants.radiusMD),
+                      ),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 12),
                 TextField(
                   controller: _responseCtrl,
                   maxLines: 4,
-                  decoration: const InputDecoration(
-                    hintText: 'Escribe tu version de los hechos...',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    hintText: 'Explica tu decision...',
+                    border: OutlineInputBorder(
+                      borderRadius:
+                          BorderRadius.circular(AppConstants.radiusMD),
+                    ),
                   ),
                 ),
-                const SizedBox(height: 8),
-                ElevatedButton(
-                  onPressed: _saving ? null : _submitResponse,
-                  child: _saving
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Text('Enviar Respuesta'),
-                ),
-              ] else
-                Container(
+                const SizedBox(height: 12),
+                SizedBox(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: colors.onSurface.withValues(alpha: 0.04),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    stylistEvidence.isEmpty
-                        ? 'Sin respuesta'
-                        : stylistEvidence,
-                    style: GoogleFonts.nunito(fontSize: 14),
+                  child: ElevatedButton(
+                    onPressed:
+                        _selectedOffer != null && !_saving
+                            ? _submitOffer
+                            : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: colors.primary,
+                      disabledBackgroundColor: Colors.grey.shade300,
+                      minimumSize:
+                          const Size(0, AppConstants.minTouchHeight),
+                      shape: RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.circular(AppConstants.radiusLG),
+                      ),
+                    ),
+                    child: _saving
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white))
+                        : Text(
+                            'Enviar Oferta',
+                            style: GoogleFonts.poppins(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
                   ),
                 ),
+              ],
 
               if (resolution != null) ...[
                 const SizedBox(height: AppConstants.paddingMD),
@@ -451,6 +525,73 @@ class _DisputeDetailSheetState extends ConsumerState<_DisputeDetailSheet> {
           ),
         );
       },
+    );
+  }
+
+  Widget _offerChip(String value, String label, Color color) {
+    final isSelected = _selectedOffer == value;
+    return ChoiceChip(
+      label: Text(label),
+      selected: isSelected,
+      selectedColor: color.withValues(alpha: 0.15),
+      labelStyle: GoogleFonts.poppins(
+        fontSize: 12,
+        fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+        color: isSelected ? color : null,
+      ),
+      onSelected: (_) => setState(() => _selectedOffer = value),
+    );
+  }
+
+  Widget _offerSummaryCard(String offerType, num? amount, String? response,
+      ColorScheme colors) {
+    final offerLabel = switch (offerType) {
+      'full_refund' => 'Reembolso total',
+      'partial_refund' => 'Reembolso parcial',
+      'denied' => 'Reembolso negado',
+      _ => offerType,
+    };
+    final offerColor = switch (offerType) {
+      'full_refund' => Colors.green,
+      'partial_refund' => Colors.orange,
+      'denied' => Colors.red,
+      _ => Colors.grey,
+    };
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: offerColor.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: offerColor.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.local_offer_rounded, size: 16, color: offerColor),
+              const SizedBox(width: 6),
+              Text(offerLabel,
+                  style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: offerColor)),
+            ],
+          ),
+          if (offerType == 'partial_refund' && amount != null) ...[
+            const SizedBox(height: 4),
+            Text('\$${amount.toStringAsFixed(0)} MXN',
+                style: GoogleFonts.poppins(
+                    fontSize: 14, fontWeight: FontWeight.w700)),
+          ],
+          if (response != null && response.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(response, style: GoogleFonts.nunito(fontSize: 13)),
+          ],
+        ],
+      ),
     );
   }
 
@@ -499,37 +640,13 @@ class _DisputeDetailSheetState extends ConsumerState<_DisputeDetailSheet> {
     );
   }
 
-  String _statusText(String status) {
-    switch (status) {
-      case 'open':
-        return 'Abierta';
-      case 'resolved':
-        return 'Resuelta';
-      case 'rejected':
-        return 'Rechazada';
-      default:
-        return status;
-    }
-  }
+  Future<void> _submitOffer() async {
+    if (_selectedOffer == null) return;
 
-  Color _statusColor(String status) {
-    switch (status) {
-      case 'open':
-        return Colors.orange;
-      case 'resolved':
-        return Colors.green;
-      case 'rejected':
-        return Colors.red;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  Future<void> _submitResponse() async {
-    final text = _responseCtrl.text.trim();
-    if (text.isEmpty) {
+    final responseText = _responseCtrl.text.trim();
+    if (responseText.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Escribe una respuesta')),
+        const SnackBar(content: Text('Escribe una explicacion')),
       );
       return;
     }
@@ -537,15 +654,69 @@ class _DisputeDetailSheetState extends ConsumerState<_DisputeDetailSheet> {
     setState(() => _saving = true);
 
     try {
+      final disputeId = widget.dispute['id'] as String;
+      final now = DateTime.now().toIso8601String();
+      final appt = widget.dispute['appointments'] as Map<String, dynamic>?;
+      final price = appt?['price'] as num?;
+
+      final updateData = <String, dynamic>{
+        'salon_offer': _selectedOffer,
+        'salon_response': responseText,
+        'salon_offered_at': now,
+        'stylist_evidence': responseText,
+      };
+
+      if (_selectedOffer == 'full_refund') {
+        // Auto-resolve: full refund
+        updateData['status'] = 'resolved';
+        updateData['resolution'] = 'favor_client';
+        updateData['refund_amount'] = price?.toDouble() ?? 0;
+        updateData['refund_status'] = 'pending';
+        updateData['resolved_at'] = now;
+        updateData['salon_offer_amount'] = price?.toDouble() ?? 0;
+      } else if (_selectedOffer == 'partial_refund') {
+        final amount = double.tryParse(_amountCtrl.text) ?? 0;
+        if (amount <= 0) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Ingresa un monto valido')),
+          );
+          setState(() => _saving = false);
+          return;
+        }
+        updateData['status'] = 'salon_responded';
+        updateData['salon_offer_amount'] = amount;
+      } else {
+        // denied
+        updateData['status'] = 'salon_responded';
+      }
+
       await SupabaseClientService.client
           .from('disputes')
-          .update({'stylist_evidence': text})
-          .eq('id', widget.dispute['id'] as String);
+          .update(updateData)
+          .eq('id', disputeId);
+
+      // Notify client (in-app notification)
+      final clientId = widget.dispute['user_id'] as String?;
+      if (clientId != null) {
+        await SupabaseClientService.client.from('notifications').insert({
+          'user_id': clientId,
+          'title': 'Respuesta a tu disputa',
+          'body': _selectedOffer == 'full_refund'
+              ? 'El salon acepto un reembolso total. Tu disputa fue resuelta.'
+              : 'El salon respondio a tu disputa. Revisa la oferta.',
+          'channel': 'in_app',
+        });
+      }
 
       widget.onChanged();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Respuesta enviada')),
+          SnackBar(
+            content: Text(_selectedOffer == 'full_refund'
+                ? 'Reembolso total enviado. Disputa resuelta.'
+                : 'Oferta enviada al cliente.'),
+            backgroundColor: Colors.green.shade600,
+          ),
         );
         Navigator.pop(context);
       }
