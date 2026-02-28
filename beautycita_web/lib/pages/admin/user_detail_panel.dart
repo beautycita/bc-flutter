@@ -58,12 +58,6 @@ class UserDetailContent extends StatelessWidget {
         _SectionTitle(title: 'Contacto'),
         const SizedBox(height: BCSpacing.sm),
         _InfoRow(
-          icon: Icons.email_outlined,
-          label: 'Email',
-          value: user.email ?? 'No registrado',
-        ),
-        const SizedBox(height: BCSpacing.sm),
-        _InfoRow(
           icon: Icons.phone_outlined,
           label: 'Telefono',
           value: user.phone ?? 'No registrado',
@@ -94,21 +88,30 @@ class UserDetailContent extends StatelessWidget {
         _InfoRow(
           icon: Icons.access_time,
           label: 'Ultimo acceso',
-          value: user.lastActiveAt != null
-              ? dateFormat.format(user.lastActiveAt!)
+          value: user.lastSeen != null
+              ? dateFormat.format(user.lastSeen!)
               : 'Nunca',
         ),
         const SizedBox(height: BCSpacing.sm),
         _InfoRow(
           icon: Icons.circle,
           label: 'Estado',
-          value: user.isActive ? 'Activo' : 'Inactivo',
+          value: switch (user.status) {
+            'active' => 'Activo',
+            'suspended' => 'Suspendido',
+            'archived' => 'Archivado',
+            _ => user.status,
+          },
           trailing: Container(
             width: 8,
             height: 8,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: user.isActive ? Colors.green : Colors.red,
+              color: switch (user.status) {
+                'active' => Colors.green,
+                'suspended' => Colors.orange,
+                _ => Colors.grey,
+              },
             ),
           ),
         ),
@@ -124,30 +127,6 @@ class UserDetailContent extends StatelessWidget {
         const SizedBox(height: BCSpacing.lg),
         const Divider(),
         const SizedBox(height: BCSpacing.md),
-
-        // ── Admin notes ─────────────────────────────────────────────────
-        _SectionTitle(title: 'Notas del admin'),
-        const SizedBox(height: BCSpacing.sm),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(BCSpacing.sm),
-          decoration: BoxDecoration(
-            color: colors.surfaceContainerHighest.withValues(alpha: 0.3),
-            borderRadius: BorderRadius.circular(BCSpacing.radiusXs),
-            border: Border.all(color: colors.outlineVariant),
-          ),
-          child: Text(
-            user.notes?.isNotEmpty == true
-                ? user.notes!
-                : 'Sin notas',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: colors.onSurface.withValues(alpha: 0.7),
-              fontStyle: user.notes?.isNotEmpty == true
-                  ? FontStyle.normal
-                  : FontStyle.italic,
-            ),
-          ),
-        ),
 
         const SizedBox(height: BCSpacing.lg),
         const Divider(),
@@ -180,11 +159,9 @@ class UserDetailContent extends StatelessWidget {
                   ),
                 ),
                 items: const [
-                  DropdownMenuItem(value: 'client', child: Text('Cliente')),
+                  DropdownMenuItem(value: 'customer', child: Text('Cliente')),
                   DropdownMenuItem(
                       value: 'stylist', child: Text('Estilista')),
-                  DropdownMenuItem(
-                      value: 'salon_owner', child: Text('Dueno')),
                   DropdownMenuItem(value: 'admin', child: Text('Admin')),
                 ],
                 onChanged: (value) {
@@ -202,7 +179,7 @@ class UserDetailContent extends StatelessWidget {
           width: double.infinity,
           child: OutlinedButton.icon(
             onPressed: () {
-              // TODO: Toggle active status via Supabase
+              // TODO: Toggle status via Supabase
             },
             icon: Icon(
               user.isActive ? Icons.block : Icons.check_circle_outline,
@@ -232,10 +209,9 @@ class _RoleBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (label, color) = switch (role) {
-      'admin' => ('Admin', Colors.deepPurple),
-      'salon_owner' => ('Dueno', Colors.teal),
+      'admin' || 'superadmin' => ('Admin', Colors.deepPurple),
       'stylist' => ('Estilista', Colors.indigo),
-      'client' => ('Cliente', Colors.blueGrey),
+      'customer' => ('Cliente', Colors.blueGrey),
       _ => (role, Colors.grey),
     };
 

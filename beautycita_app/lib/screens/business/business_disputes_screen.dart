@@ -432,7 +432,47 @@ class _DisputeDetailSheetState extends ConsumerState<_DisputeDetailSheet> {
                 const SizedBox(height: 4),
                 _offerSummaryCard(
                     salonOffer, salonOfferAmount, salonResponse, colors),
-                const SizedBox(height: AppConstants.paddingMD),
+                const SizedBox(height: AppConstants.paddingSM),
+              ],
+
+              // Show client's response to the offer
+              if (dispute['client_accepted'] != null) ...[
+                _sectionLabel('Respuesta del cliente'),
+                const SizedBox(height: 4),
+                _clientResponseCard(dispute, colors),
+                const SizedBox(height: AppConstants.paddingSM),
+              ],
+
+              // Escalation notice
+              if (status == 'escalated') ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.deepPurple.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                        color: Colors.deepPurple.withValues(alpha: 0.2)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.escalator_warning_rounded,
+                          size: 18, color: Colors.deepPurple),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'El cliente rechazo tu oferta. Un administrador revisara y tomara la decision final.',
+                          style: GoogleFonts.nunito(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.deepPurple,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppConstants.paddingSM),
               ],
 
               // Offer form (only for open disputes)
@@ -517,18 +557,7 @@ class _DisputeDetailSheetState extends ConsumerState<_DisputeDetailSheet> {
                 const SizedBox(height: AppConstants.paddingMD),
                 _sectionLabel('Resolucion'),
                 const SizedBox(height: 4),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                        color: Colors.green.withValues(alpha: 0.2)),
-                  ),
-                  child: Text(resolution,
-                      style: GoogleFonts.nunito(fontSize: 14)),
-                ),
+                _resolutionCard(dispute, colors),
               ],
 
               const SizedBox(height: AppConstants.paddingXL),
@@ -652,6 +681,257 @@ class _DisputeDetailSheetState extends ConsumerState<_DisputeDetailSheet> {
     );
   }
 
+  Widget _clientResponseCard(Map<String, dynamic> dispute, ColorScheme colors) {
+    final accepted = dispute['client_accepted'] as bool;
+    final respondedAt = dispute['client_responded_at'] as String?;
+
+    String? dateStr;
+    if (respondedAt != null) {
+      final dt = DateTime.tryParse(respondedAt)?.toLocal();
+      if (dt != null) {
+        dateStr = '${dt.day}/${dt.month}/${dt.year} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+      }
+    }
+
+    final color = accepted ? Colors.green : Colors.red;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            accepted ? Icons.check_circle_rounded : Icons.cancel_rounded,
+            size: 20,
+            color: color,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  accepted ? 'Cliente acepto tu oferta' : 'Cliente rechazo tu oferta',
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: color,
+                  ),
+                ),
+                if (dateStr != null)
+                  Text(dateStr,
+                      style: GoogleFonts.nunito(
+                        fontSize: 11,
+                        color: colors.onSurface.withValues(alpha: 0.4),
+                      )),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _resolutionCard(Map<String, dynamic> dispute, ColorScheme colors) {
+    final resolution = dispute['resolution'] as String?;
+    final resolutionNotes = dispute['resolution_notes'] as String?;
+    final refundAmount = dispute['refund_amount'] as num?;
+    final refundStatus = dispute['refund_status'] as String?;
+    final resolvedAt = dispute['resolved_at'] as String?;
+    final clientAccepted = dispute['client_accepted'] as bool?;
+    final status = dispute['status'] as String? ?? '';
+
+    // Translate resolution key
+    final (String label, Color color, IconData icon) = switch (resolution) {
+      'favor_client' => ('A favor del cliente', Colors.green, Icons.person_rounded),
+      'favor_provider' => ('A favor del salon', Colors.blue, Icons.store_rounded),
+      'favor_both' => ('A favor de ambos', Colors.teal, Icons.handshake_rounded),
+      'dismissed' => ('Descartada', Colors.grey, Icons.cancel_outlined),
+      _ => (resolution ?? '-', Colors.grey, Icons.info_outline),
+    };
+
+    // Build a human-readable summary
+    String summary;
+    if (resolution == 'favor_client') {
+      if (refundAmount != null && refundAmount > 0) {
+        summary = 'Se resolvio a favor del cliente con un reembolso de \$${refundAmount.toStringAsFixed(0)} MXN.';
+      } else {
+        summary = 'Se resolvio a favor del cliente.';
+      }
+    } else if (resolution == 'favor_provider') {
+      if (clientAccepted == true && status == 'resolved') {
+        summary = 'El cliente acepto la decision del salon. No se proceso reembolso.';
+      } else {
+        summary = 'Se resolvio a favor del salon. No se proceso reembolso.';
+      }
+    } else if (resolution == 'favor_both') {
+      summary = 'Se resolvio a favor de ambas partes.';
+    } else if (resolution == 'dismissed') {
+      summary = 'La disputa fue descartada.';
+    } else {
+      summary = 'Disputa resuelta.';
+    }
+
+    // Translate refund status
+    final refundStatusLabel = switch (refundStatus) {
+      'pending' => 'Pendiente',
+      'processed' => 'Procesado',
+      'failed' => 'Fallido',
+      _ => refundStatus,
+    };
+
+    // Format resolved date
+    String? resolvedDate;
+    if (resolvedAt != null) {
+      final dt = DateTime.tryParse(resolvedAt)?.toLocal();
+      if (dt != null) {
+        resolvedDate = '${dt.day}/${dt.month}/${dt.year} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+      }
+    }
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.08),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(11)),
+            ),
+            child: Row(
+              children: [
+                Icon(icon, size: 18, color: color),
+                const SizedBox(width: 8),
+                Text(label,
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: color,
+                    )),
+              ],
+            ),
+          ),
+          // Body
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(summary,
+                    style: GoogleFonts.nunito(
+                      fontSize: 13,
+                      color: colors.onSurface.withValues(alpha: 0.8),
+                      height: 1.4,
+                    )),
+                if (refundAmount != null && refundAmount > 0) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(Icons.payments_rounded, size: 14,
+                          color: colors.onSurface.withValues(alpha: 0.4)),
+                      const SizedBox(width: 6),
+                      Text('Reembolso: \$${refundAmount.toStringAsFixed(0)} MXN',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: colors.onSurface.withValues(alpha: 0.6),
+                          )),
+                      if (refundStatusLabel != null) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: refundStatus == 'processed'
+                                ? Colors.green.withValues(alpha: 0.1)
+                                : refundStatus == 'failed'
+                                    ? Colors.red.withValues(alpha: 0.1)
+                                    : Colors.orange.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(refundStatusLabel,
+                              style: GoogleFonts.poppins(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: refundStatus == 'processed'
+                                    ? Colors.green
+                                    : refundStatus == 'failed'
+                                        ? Colors.red
+                                        : Colors.orange,
+                              )),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+                if (resolutionNotes != null && resolutionNotes.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: colors.onSurface.withValues(alpha: 0.04),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border(
+                        left: BorderSide(
+                            color: colors.onSurface.withValues(alpha: 0.15),
+                            width: 3),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Notas del administrador',
+                            style: GoogleFonts.poppins(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: colors.onSurface.withValues(alpha: 0.4),
+                              letterSpacing: 0.3,
+                            )),
+                        const SizedBox(height: 2),
+                        Text(resolutionNotes,
+                            style: GoogleFonts.nunito(
+                              fontSize: 12,
+                              color: colors.onSurface.withValues(alpha: 0.7),
+                            )),
+                      ],
+                    ),
+                  ),
+                ],
+                if (resolvedDate != null) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(Icons.access_time_rounded, size: 12,
+                          color: colors.onSurface.withValues(alpha: 0.3)),
+                      const SizedBox(width: 4),
+                      Text('Resuelto: $resolvedDate',
+                          style: GoogleFonts.nunito(
+                            fontSize: 11,
+                            color: colors.onSurface.withValues(alpha: 0.4),
+                          )),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _submitOffer() async {
     if (_selectedOffer == null) return;
 
@@ -716,6 +996,18 @@ class _DisputeDetailSheetState extends ConsumerState<_DisputeDetailSheet> {
           .from('disputes')
           .update(updateData)
           .eq('id', disputeId);
+
+      // If full_refund, process the actual Stripe refund (fire-and-forget)
+      if (_selectedOffer == 'full_refund') {
+        SupabaseClientService.client.functions.invoke(
+          'process-dispute-refund',
+          body: {'dispute_id': disputeId},
+        ).then((_) {
+          debugPrint('Dispute refund processed for $disputeId');
+        }).catchError((e) {
+          debugPrint('Dispute refund failed for $disputeId: $e');
+        });
+      }
 
       // Notify client (in-app notification) — non-blocking
       final clientId = widget.dispute['user_id'] as String?;

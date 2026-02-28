@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../config/breakpoints.dart';
+import '../config/router.dart';
+import '../providers/auth_provider.dart';
 import '../widgets/admin_sidebar.dart';
 
 // ── Sidebar state ─────────────────────────────────────────────────────────────
@@ -87,6 +89,11 @@ class _AdminShellState extends ConsumerState<AdminShell> {
     context.go(route);
   }
 
+  Future<void> _signOut() async {
+    await ref.read(authProvider.notifier).signOut();
+    if (mounted) context.go(WebRoutes.auth);
+  }
+
   @override
   Widget build(BuildContext context) {
     final isExpanded = ref.watch(sidebarExpandedProvider);
@@ -156,6 +163,7 @@ class _AdminShellState extends ConsumerState<AdminShell> {
             isExpanded: true,
             onToggle: () => Navigator.of(context).pop(),
             onNavTap: _navigate,
+            onSignOut: _signOut,
           ),
         ),
       ),
@@ -187,6 +195,7 @@ class _AdminShellState extends ConsumerState<AdminShell> {
               onToggle: () {
                 ref.read(sidebarExpandedProvider.notifier).state = !isExpanded;
               },
+              onSignOut: _signOut,
             ),
           ),
           // ── Vertical divider ─────────────────────────────────────────

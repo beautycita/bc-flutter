@@ -118,19 +118,9 @@ class _VerifyPageState extends ConsumerState<VerifyPage> {
       final data = response.data as Map<String, dynamic>?;
       if (data?['verified'] == true) {
         if (!mounted) return;
-        // Navigate by role after verification
-        final notifier = ref.read(authProvider.notifier);
-        final role = await notifier.getUserRole();
+        final role = await ref.read(authProvider.notifier).getUserRole();
         if (!mounted) return;
-        switch (role) {
-          case 'admin':
-            context.go(WebRoutes.admin);
-          case 'stylist':
-          case 'business':
-            context.go(WebRoutes.negocio);
-          default:
-            context.go(WebRoutes.reservar);
-        }
+        context.go(routeForRole(role));
       } else {
         setState(() {
           _error = 'Codigo incorrecto. Intenta de nuevo.';

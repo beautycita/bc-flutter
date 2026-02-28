@@ -30,8 +30,11 @@ dependencies:
   flutter_dotenv: ^5.2.1
   http: ^1.2.0
 
-  # UI
+  # Files
+  file_picker: ^8.0.0
 
+  # UI
+  qr_flutter: ^4.1.0
   flutter_animate: ^4.5.2
   fl_chart: ^0.70.0
   data_table_2: ^2.5.0

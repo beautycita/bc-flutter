@@ -495,27 +495,6 @@ class _BusinessSettingsScreenState
                   setState(
                       () => _hours[dayIndex] = day.copyWith(close: t));
                 }),
-                const Spacer(),
-                // Add break button
-                IconButton(
-                  icon: Icon(Icons.free_breakfast_rounded,
-                      size: 18,
-                      color: colors.onSurface.withValues(alpha: 0.4)),
-                  tooltip: 'Agregar descanso',
-                  onPressed: () {
-                    setState(() {
-                      _hours[dayIndex] = day.copyWith(
-                        breaks: [
-                          ...day.breaks,
-                          _BreakWindow(
-                            start: const TimeOfDay(hour: 14, minute: 0),
-                            end: const TimeOfDay(hour: 15, minute: 0),
-                          ),
-                        ],
-                      );
-                    });
-                  },
-                ),
               ] else
                 Text(
                   'Cerrado',
@@ -526,53 +505,6 @@ class _BusinessSettingsScreenState
                 ),
             ],
           ),
-          // Breaks
-          if (day.isOpen)
-            for (var bi = 0; bi < day.breaks.length; bi++)
-              Padding(
-                padding: const EdgeInsets.only(left: 80, top: 4),
-                child: Row(
-                  children: [
-                    Icon(Icons.free_breakfast_rounded,
-                        size: 14,
-                        color: colors.onSurface.withValues(alpha: 0.3)),
-                    const SizedBox(width: 6),
-                    _timeButton(context, day.breaks[bi].start, (t) {
-                      setState(() {
-                        final newBreaks = List<_BreakWindow>.from(day.breaks);
-                        newBreaks[bi] = _BreakWindow(start: t, end: newBreaks[bi].end);
-                        _hours[dayIndex] = day.copyWith(breaks: newBreaks);
-                      });
-                    }),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: Text('-',
-                          style: GoogleFonts.nunito(
-                              fontSize: 12,
-                              color: colors.onSurface.withValues(alpha: 0.4))),
-                    ),
-                    _timeButton(context, day.breaks[bi].end, (t) {
-                      setState(() {
-                        final newBreaks = List<_BreakWindow>.from(day.breaks);
-                        newBreaks[bi] = _BreakWindow(start: newBreaks[bi].start, end: t);
-                        _hours[dayIndex] = day.copyWith(breaks: newBreaks);
-                      });
-                    }),
-                    IconButton(
-                      icon: Icon(Icons.close, size: 16, color: colors.error),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                      onPressed: () {
-                        setState(() {
-                          final newBreaks = List<_BreakWindow>.from(day.breaks)
-                            ..removeAt(bi);
-                          _hours[dayIndex] = day.copyWith(breaks: newBreaks);
-                        });
-                      },
-                    ),
-                  ],
-                ),
-              ),
         ],
       ),
     );

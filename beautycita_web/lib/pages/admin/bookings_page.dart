@@ -219,7 +219,7 @@ class _BookingsPageState extends ConsumerState<BookingsPage> {
             ),
           ),
           BCColumn<AdminBooking>(
-            id: 'scheduled_at',
+            id: 'starts_at',
             label: 'Fecha/Hora',
             sortable: true,
             width: 130,

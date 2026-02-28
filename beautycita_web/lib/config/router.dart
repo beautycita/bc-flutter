@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:beautycita_core/supabase.dart';
 
+import '../providers/auth_provider.dart';
+
 import '../pages/admin/analytics_page.dart';
 import '../pages/admin/bookings_page.dart';
 import '../pages/admin/config_page.dart';
@@ -18,6 +20,15 @@ import '../pages/admin/outreach_page.dart';
 import '../pages/admin/salons_page.dart';
 import '../pages/admin/toggles_page.dart';
 import '../pages/admin/users_page.dart';
+import '../pages/business/biz_calendar_page.dart';
+import '../pages/business/biz_dashboard_page.dart';
+import '../pages/business/biz_disputes_page.dart';
+import '../pages/business/biz_payments_page.dart';
+import '../pages/business/biz_services_page.dart';
+import '../pages/business/biz_qr_page.dart';
+import '../pages/business/biz_reviews_page.dart';
+import '../pages/business/biz_settings_page.dart';
+import '../pages/business/biz_staff_page.dart';
 import '../pages/auth/callback_page.dart';
 import '../pages/auth/forgot_page.dart';
 import '../pages/auth/login_page.dart';
@@ -25,7 +36,6 @@ import '../pages/auth/qr_page.dart';
 import '../pages/auth/register_page.dart';
 import '../pages/auth/verify_page.dart';
 import '../pages/error/not_found_page.dart';
-import '../pages/landing_page.dart';
 import '../shells/admin_shell.dart';
 import '../shells/business_shell.dart';
 import '../shells/client_shell.dart';
@@ -63,10 +73,32 @@ abstract final class WebRoutes {
 
   // Business
   static const String negocio = '/negocio';
+  static const String negocioCalendar = '/negocio/calendar';
+  static const String negocioServices = '/negocio/services';
+  static const String negocioStaff = '/negocio/staff';
+  static const String negocioPayments = '/negocio/payments';
+  static const String negocioSettings = '/negocio/settings';
+  static const String negocioDisputes = '/negocio/disputes';
+  static const String negocioQr = '/negocio/qr';
+  static const String negocioReviews = '/negocio/reviews';
 
   // Client
   static const String reservar = '/reservar';
   static const String misCitas = '/mis-citas';
+}
+
+/// Map user role → correct portal route.
+String routeForRole(String? role) {
+  switch (role) {
+    case 'admin':
+    case 'superadmin':
+      return WebRoutes.admin;
+    case 'stylist':
+    case 'business':
+      return WebRoutes.negocio;
+    default:
+      return WebRoutes.reservar;
+  }
 }
 
 // ── Placeholder page ─────────────────────────────────────────────────────────
@@ -106,15 +138,18 @@ class _Placeholder extends StatelessWidget {
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
-    initialLocation: WebRoutes.home,
+    initialLocation: WebRoutes.auth,
     debugLogDiagnostics: true,
 
     // Redirect logic — wired to live Supabase auth state.
-    // If Supabase hasn't initialized yet, let the page render and handle
-    // its own loading/error state instead of blocking navigation.
-    redirect: (context, state) {
+    // Role-based: admin→/admin, stylist→/negocio, customer→/reservar.
+    redirect: (context, state) async {
       final path = state.matchedLocation;
-      final isPublicRoute = path == '/' || path.startsWith('/auth');
+
+      // `/` inside Flutter → redirect to login (static page is the homepage)
+      if (path == '/') return WebRoutes.auth;
+
+      final isPublicRoute = path.startsWith('/auth');
 
       // If Supabase never initialized (offline, failed, etc.),
       // only allow public routes — redirect protected routes to /auth
@@ -129,9 +164,30 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (!isAuthenticated && !isPublicRoute) {
         return WebRoutes.auth;
       }
-      if (isAuthenticated && path.startsWith('/auth')) {
-        return WebRoutes.admin;
+
+      // Authenticated user on auth page → send to correct portal by role
+      if (isAuthenticated && isPublicRoute) {
+        final role = await ref.read(authProvider.notifier).getUserRole();
+        return routeForRole(role);
       }
+
+      // Block non-admin from admin routes
+      if (isAuthenticated && path.startsWith('/admin')) {
+        final role = await ref.read(authProvider.notifier).getUserRole();
+        if (role != 'admin' && role != 'superadmin') {
+          return routeForRole(role);
+        }
+      }
+
+      // Block non-business from business routes
+      if (isAuthenticated && path.startsWith('/negocio')) {
+        final role = await ref.read(authProvider.notifier).getUserRole();
+        if (role != 'stylist' && role != 'business' &&
+            role != 'admin' && role != 'superadmin') {
+          return routeForRole(role);
+        }
+      }
+
       return null;
     },
 
@@ -139,12 +195,6 @@ final routerProvider = Provider<GoRouter>((ref) {
     errorBuilder: (context, state) => const NotFoundPage(),
 
     routes: [
-      // ── Landing page (public, no auth) ────────────────────────────────────
-      GoRoute(
-        path: WebRoutes.home,
-        builder: (context, state) => const LandingPage(),
-      ),
-
       // ── Auth routes (no shell) ───────────────────────────────────────────
       GoRoute(
         path: WebRoutes.auth,
@@ -253,8 +303,41 @@ final routerProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(
             path: WebRoutes.negocio,
-            builder: (context, state) =>
-                const _Placeholder(WebRoutes.negocio),
+            builder: (context, state) => const BizDashboardPage(),
+            routes: [
+              GoRoute(
+                path: 'calendar',
+                builder: (context, state) => const BizCalendarPage(),
+              ),
+              GoRoute(
+                path: 'services',
+                builder: (context, state) => const BizServicesPage(),
+              ),
+              GoRoute(
+                path: 'staff',
+                builder: (context, state) => const BizStaffPage(),
+              ),
+              GoRoute(
+                path: 'payments',
+                builder: (context, state) => const BizPaymentsPage(),
+              ),
+              GoRoute(
+                path: 'settings',
+                builder: (context, state) => const BizSettingsPage(),
+              ),
+              GoRoute(
+                path: 'disputes',
+                builder: (context, state) => const BizDisputesPage(),
+              ),
+              GoRoute(
+                path: 'qr',
+                builder: (context, state) => const BizQrPage(),
+              ),
+              GoRoute(
+                path: 'reviews',
+                builder: (context, state) => const BizReviewsPage(),
+              ),
+            ],
           ),
         ],
       ),

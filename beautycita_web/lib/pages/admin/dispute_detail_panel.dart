@@ -181,7 +181,7 @@ class _DisputeDetailContentState extends State<DisputeDetailContent> {
         const SizedBox(height: BCSpacing.md),
 
         // ── Resolution workflow ──────────────────────────────────────────
-        if (d.status == 'open' || d.status == 'reviewing' || d.status == 'escalated') ...[
+        if (d.status == 'open' || d.status == 'reviewing' || d.status == 'salon_responded' || d.status == 'escalated') ...[
           _SectionTitle('Resolucion'),
           const SizedBox(height: BCSpacing.sm),
 

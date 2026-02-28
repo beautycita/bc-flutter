@@ -104,8 +104,28 @@ class _CitaExpressScreenState extends ConsumerState<CitaExpressScreen> {
           onOtherDay: () {
             ref.read(citaExpressProvider.notifier).tryOtherDay();
           },
+          onNearby: () {
+            ref.read(citaExpressProvider.notifier).findNearbyAlternatives();
+          },
           onBack: () {
             ref.read(citaExpressProvider.notifier).backToServices();
+          },
+        );
+      case CitaExpressStep.nearbySearching:
+        return _SearchingView(
+          key: const ValueKey('nearbySearching'),
+          serviceName: state.selectedServiceName ?? '',
+          customMessage: 'Buscando salones cercanos...',
+        );
+      case CitaExpressStep.nearbyResults:
+        return _NearbyResultsView(
+          key: const ValueKey('nearbyResults'),
+          state: state,
+          onSelect: (card) {
+            ref.read(citaExpressProvider.notifier).selectNearbyResult(card);
+          },
+          onBack: () {
+            ref.read(citaExpressProvider.notifier).backToNoSlots();
           },
         );
       case CitaExpressStep.confirming:
@@ -425,7 +445,8 @@ class _ServiceSelectView extends StatelessWidget {
 
 class _SearchingView extends StatelessWidget {
   final String serviceName;
-  const _SearchingView({super.key, required this.serviceName});
+  final String? customMessage;
+  const _SearchingView({super.key, required this.serviceName, this.customMessage});
 
   @override
   Widget build(BuildContext context) {
@@ -437,7 +458,7 @@ class _SearchingView extends StatelessWidget {
           CircularProgressIndicator(color: colors.primary),
           const SizedBox(height: AppConstants.paddingLG),
           Text(
-            'Buscando disponibilidad',
+            customMessage ?? 'Buscando disponibilidad',
             style: GoogleFonts.poppins(
               fontSize: 16,
               fontWeight: FontWeight.w600,
@@ -812,12 +833,14 @@ class _ResultCardWidget extends StatelessWidget {
 class _NoSlotsView extends StatelessWidget {
   final CitaExpressState state;
   final VoidCallback onOtherDay;
+  final VoidCallback onNearby;
   final VoidCallback onBack;
 
   const _NoSlotsView({
     super.key,
     required this.state,
     required this.onOtherDay,
+    required this.onNearby,
     required this.onBack,
   });
 
@@ -869,6 +892,26 @@ class _NoSlotsView extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
 
+          // Show error from nearby search (GPS denied, no results, etc.)
+          if (state.error != null) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: colors.error.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                state.error!,
+                style: GoogleFonts.nunito(
+                  fontSize: 12,
+                  color: colors.error,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ],
+
           const SizedBox(height: AppConstants.paddingXL),
 
           // Try another day at same salon
@@ -878,6 +921,17 @@ class _NoSlotsView extends StatelessWidget {
             subtitle: 'Buscar disponibilidad esta semana en $bizName',
             color: colors.primary,
             onTap: onOtherDay,
+          ),
+
+          const SizedBox(height: 12),
+
+          // Nearby salons with availability
+          _ActionCard(
+            icon: Icons.near_me_rounded,
+            title: 'Salones cercanos',
+            subtitle: 'Buscar salones cercanos disponibles hoy',
+            color: Colors.teal,
+            onTap: onNearby,
           ),
 
           const Spacer(flex: 2),
@@ -970,6 +1024,98 @@ class _ActionCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Nearby Results
+// ---------------------------------------------------------------------------
+
+class _NearbyResultsView extends StatelessWidget {
+  final CitaExpressState state;
+  final void Function(ResultCard) onSelect;
+  final VoidCallback onBack;
+
+  const _NearbyResultsView({
+    super.key,
+    required this.state,
+    required this.onSelect,
+    required this.onBack,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final results = state.nearbyAlternatives ?? [];
+
+    return ListView(
+      padding: const EdgeInsets.all(AppConstants.paddingMD),
+      children: [
+        // Header
+        Row(
+          children: [
+            IconButton(
+              icon: Icon(Icons.arrow_back_rounded,
+                  color: colors.onSurface, size: 22),
+              onPressed: onBack,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Salones cercanos con disponibilidad hoy',
+                    style: GoogleFonts.poppins(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: colors.onSurface,
+                    ),
+                  ),
+                  if (state.selectedServiceName != null)
+                    Text(
+                      'Para ${state.selectedServiceName}',
+                      style: GoogleFonts.nunito(
+                        fontSize: 13,
+                        color: colors.primary,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: AppConstants.paddingMD),
+
+        // Result cards
+        for (final result in results) ...[
+          _ResultCardWidget(
+            result: result,
+            isWalkin: false,
+            onReserve: () => onSelect(result),
+          ),
+          const SizedBox(height: AppConstants.paddingSM),
+        ],
+
+        if (results.isEmpty)
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.all(AppConstants.paddingXL),
+              child: Text(
+                'No se encontraron salones cercanos disponibles.',
+                style: GoogleFonts.nunito(
+                  fontSize: 14,
+                  color: colors.onSurface.withValues(alpha: 0.5),
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

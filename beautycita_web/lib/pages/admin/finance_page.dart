@@ -706,7 +706,7 @@ class _PayoutRow extends StatelessWidget {
     final colors = theme.colorScheme;
 
     final (Color statusBg, Color statusFg) = switch (payout.status) {
-      'completed' => (const Color(0xFFE8F5E9), const Color(0xFF2E7D32)),
+      'succeeded' => (const Color(0xFFE8F5E9), const Color(0xFF2E7D32)),
       'pending' => (const Color(0xFFFFF3E0), const Color(0xFFE65100)),
       'processing' => (const Color(0xFFE3F2FD), const Color(0xFF1565C0)),
       'failed' => (const Color(0xFFFFEBEE), const Color(0xFFC62828)),
@@ -927,9 +927,9 @@ class _FeeRow extends StatelessWidget {
           ),
           Expanded(
             child: Text(
-              fee.status == 'completed' ? 'Cobrada' : 'Pendiente',
+              fee.status == 'succeeded' ? 'Cobrada' : 'Pendiente',
               style: theme.textTheme.bodySmall?.copyWith(
-                color: fee.status == 'completed'
+                color: fee.status == 'succeeded'
                     ? const Color(0xFF4CAF50)
                     : const Color(0xFFFF9800),
                 fontWeight: FontWeight.w500,

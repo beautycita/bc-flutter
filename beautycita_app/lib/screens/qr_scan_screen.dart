@@ -427,7 +427,7 @@ class _QrScanScreenState extends State<QrScanScreen> with SingleTickerProviderSt
                     borderSide: BorderSide(color: primary, width: 2),
                   ),
                 ),
-                textCapitalization: TextCapitalization.characters,
+                textCapitalization: TextCapitalization.none,
                 onSubmitted: (_) => _submitManualCode(),
               ),
             ),

@@ -217,16 +217,16 @@ final revenueByCategoryProvider =
     // Get payments with appointment data
     final data = await BCSupabase.client
         .from(BCTables.payments)
-        .select('amount, appointments!appointment_id(category_name)')
+        .select('amount, appointments!appointment_id(service_name)')
         .gte('created_at', startOfMonth)
-        .eq('status', 'completed');
+        .eq('status', 'succeeded');
 
     final byCategory = <String, double>{};
     for (final row in data) {
       final amount = (row['amount'] as num?)?.toDouble() ?? 0;
       final apt = row['appointments'] as Map<String, dynamic>?;
       final category =
-          apt?['category_name'] as String? ?? 'Sin categoria';
+          apt?['service_name'] as String? ?? 'Sin categoria';
       byCategory[category] = (byCategory[category] ?? 0) + amount;
     }
 
@@ -254,14 +254,14 @@ final peakHoursProvider = FutureProvider<PeakHoursData>((ref) async {
 
     final data = await BCSupabase.client
         .from(BCTables.appointments)
-        .select('scheduled_at')
-        .gte('scheduled_at', thirtyDaysAgo);
+        .select('starts_at')
+        .gte('starts_at', thirtyDaysAgo);
 
     final grid = List.generate(7, (_) => List.filled(24, 0));
 
     for (final row in data) {
       final dt =
-          DateTime.tryParse(row['scheduled_at'] as String? ?? '');
+          DateTime.tryParse(row['starts_at'] as String? ?? '');
       if (dt != null) {
         final dayIndex = dt.weekday - 1; // Mon=0..Sun=6
         final hour = dt.hour;

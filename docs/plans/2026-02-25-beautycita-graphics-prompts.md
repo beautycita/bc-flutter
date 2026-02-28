@@ -20,16 +20,16 @@ These are the primary category grid icons — large, recognizable, used on both 
 |---|----------|--------|
 | 1 | `cat_cabello.png` | A stylized pair of scissors crossed with a flowing lock of wavy hair. Elegant and minimal with rose and gold tones. Centered composition, icon style. |
 | 2 | `cat_unas.png` | A graceful hand with perfectly manicured nails, fingers slightly fanned. One nail accented in gold, the rest in deep rose. Elegant, icon style. |
-| 3 | `cat_pestanas.png` | A single elegant eye viewed from the side, with long dramatic eyelash extensions fanning outward. Minimal detail, rose and gold accents. |
-| 4 | `cat_maquillaje.png` | A stylized makeup brush and compact mirror arranged artistically. Soft powder dust floating in gold tones. Minimal, elegant. |
-| 5 | `cat_cejas.png` | A perfectly arched eyebrow with a fine microblading pen beneath it. Clean geometric lines. Rose and gold. |
-| 6 | `cat_facial.png` | A serene face silhouette in profile with a gentle glow emanating from the skin. Spa-like, peaceful. Soft rose tones. |
-| 7 | `cat_depilacion.png` | A minimalist illustration of smooth, radiant skin with a subtle sparkle effect. Clean and elegant, not clinical. Gold accents. |
-| 8 | `cat_masaje.png` | Two hands performing a gentle massage motion on an abstract body form. Flowing, peaceful energy lines. Rose and gold. |
-| 9 | `cat_barberia.png` | A classic straight razor and barber comb crossed in an X. Masculine but elegant. Gold metallic accents on deep rose. |
-| 10 | `cat_spa.png` | A lotus flower opening above smooth spa stones. Tranquil, balanced composition. Soft rose and gold gradient. |
-| 11 | `cat_novia.png` | A bridal veil draped elegantly with small floral accents. Romantic, soft. Gold and rose details on white. |
-| 12 | `cat_color.png` | Abstract flowing streams of color (rose, gold, auburn, blonde) blending together like hair dye mixing. Artistic, fluid. |
+| 3 | `cat_pestanas.png` | A single elegant eye viewed from the side, with long dramatic eyelash extensions fanning outward. Minimal detail, rose and gold accents. icon style. |
+| 4 | `cat_maquillaje.png` | A stylized makeup brush and compact mirror arranged artistically. Soft powder dust floating in gold tones. Minimal, elegant. icon style. |
+| 5 | `cat_cejas.png` | A perfectly arched eyebrow with a fine microblading pen beneath it. Clean geometric lines. Rose and gold. icon style. |
+| 6 | `cat_facial.png` | A serene face silhouette in profile with a gentle glow emanating from the skin. Spa-like, peaceful. Soft rose tones. icon style. |
+| 7 | `cat_depilacion.png` | A minimalist illustration of smooth, radiant skin with a subtle sparkle effect. Clean and elegant, not clinical. Gold accents. icon style. |
+| 8 | `cat_masaje.png` | Two hands performing a gentle massage motion on an abstract body form. Flowing, peaceful energy lines. Rose and gold. icon style. |
+| 9 | `cat_barberia.png` | A classic straight razor and barber comb crossed in an X. Masculine but elegant. Gold metallic accents on deep rose. icon style. |
+| 10 | `cat_spa.png` | A lotus flower opening above smooth spa stones. Tranquil, balanced composition. Soft rose and gold gradient. icon style. |
+| 11 | `cat_novia.png` | A bridal veil draped elegantly with small floral accents. Romantic, soft. Gold and rose details on white. icon style. |
+| 12 | `cat_color.png` | Abstract flowing streams of color (rose, gold, auburn, blonde) blending together like hair dye mixing. Artistic, fluid. icon style. |
 
 ---
 

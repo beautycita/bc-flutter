@@ -58,20 +58,11 @@ class _CallbackPageState extends ConsumerState<CallbackPage> {
       }
     }
 
-    // Auth successful — navigate by role
-    final notifier = ref.read(authProvider.notifier);
-    final role = await notifier.getUserRole();
+    // Navigate by role
     if (!mounted) return;
-
-    switch (role) {
-      case 'admin':
-        context.go(WebRoutes.admin);
-      case 'stylist':
-      case 'business':
-        context.go(WebRoutes.negocio);
-      default:
-        context.go(WebRoutes.reservar);
-    }
+    final role = await ref.read(authProvider.notifier).getUserRole();
+    if (!mounted) return;
+    context.go(routeForRole(role));
   }
 
   @override

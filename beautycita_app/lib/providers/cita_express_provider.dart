@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 import '../models/curate_result.dart';
+import '../services/curate_service.dart';
 import '../services/supabase_client.dart';
 import '../repositories/booking_repository.dart';
 
@@ -18,8 +20,9 @@ enum CitaExpressStep {
   confirming,
   booking,
   booked,
+  nearbySearching,
+  nearbyResults,
   error,
-  // nearbyResults removed — walk-in QR is always at THIS salon
 }
 
 class CitaExpressState {
@@ -35,6 +38,7 @@ class CitaExpressState {
   final String? bookingId;
   final String? error;
   final String paymentMethod;
+  final List<ResultCard>? nearbyAlternatives;
 
   const CitaExpressState({
     this.step = CitaExpressStep.loading,
@@ -49,6 +53,7 @@ class CitaExpressState {
     this.bookingId,
     this.error,
     this.paymentMethod = 'card',
+    this.nearbyAlternatives,
   });
 
   CitaExpressState copyWith({
@@ -64,6 +69,7 @@ class CitaExpressState {
     String? bookingId,
     String? error,
     String? paymentMethod,
+    List<ResultCard>? nearbyAlternatives,
   }) {
     return CitaExpressState(
       step: step ?? this.step,
@@ -78,6 +84,7 @@ class CitaExpressState {
       bookingId: bookingId ?? this.bookingId,
       error: error,
       paymentMethod: paymentMethod ?? this.paymentMethod,
+      nearbyAlternatives: nearbyAlternatives ?? this.nearbyAlternatives,
     );
   }
 }
@@ -250,6 +257,83 @@ class CitaExpressNotifier extends StateNotifier<CitaExpressState> {
       state = state.copyWith(
         step: CitaExpressStep.error,
         error: 'Error al crear la cita: $e',
+      );
+    }
+  }
+
+  /// Go back from nearby results to noSlotsToday.
+  void backToNoSlots() {
+    state = state.copyWith(
+      step: CitaExpressStep.noSlotsToday,
+      nearbyAlternatives: null,
+    );
+  }
+
+  /// Select a nearby alternative and proceed to confirm.
+  void selectNearbyResult(ResultCard result) {
+    state = state.copyWith(
+      step: CitaExpressStep.confirming,
+      selectedResult: result,
+    );
+  }
+
+  /// Find nearby salons with availability for the same service type.
+  Future<void> findNearbyAlternatives() async {
+    state = state.copyWith(step: CitaExpressStep.nearbySearching);
+
+    try {
+      // Request location
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        state = state.copyWith(
+          step: CitaExpressStep.noSlotsToday,
+          error: 'Necesitamos tu ubicacion para buscar salones cercanos',
+        );
+        return;
+      }
+
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.medium,
+        ),
+      );
+
+      // Call curate-results with NO business_id → radius search + auto-expand
+      final curateService = CurateService();
+      final response = await curateService.curateResults(CurateRequest(
+        serviceType: state.selectedServiceType ?? '',
+        location: LatLng(lat: position.latitude, lng: position.longitude),
+        transportMode: 'car',
+        overrideWindow: const OverrideWindow(range: 'today'),
+        // business_id intentionally NOT set → radius search
+      ));
+
+      // Filter out the original scanned salon
+      final filtered = response.results
+          .where((r) => r.business.id != state.businessId)
+          .toList();
+
+      if (filtered.isEmpty) {
+        state = state.copyWith(
+          step: CitaExpressStep.noSlotsToday,
+          error: 'No hay salones cercanos con disponibilidad hoy',
+        );
+        return;
+      }
+
+      state = state.copyWith(
+        step: CitaExpressStep.nearbyResults,
+        nearbyAlternatives: filtered.take(3).toList(),
+      );
+    } catch (e) {
+      debugPrint('[CitaExpress] Nearby alternatives error: $e');
+      state = state.copyWith(
+        step: CitaExpressStep.noSlotsToday,
+        error: 'Error buscando salones cercanos: $e',
       );
     }
   }

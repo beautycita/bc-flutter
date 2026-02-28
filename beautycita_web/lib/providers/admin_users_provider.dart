@@ -8,47 +8,43 @@ import 'package:beautycita_core/supabase.dart';
 class AdminUser {
   final String id;
   final String username;
-  final String? email;
+  final String? fullName;
   final String role;
   final String? phone;
   final bool phoneVerified;
   final DateTime createdAt;
-  final DateTime? lastActiveAt;
-  final bool isActive;
+  final DateTime? lastSeen;
+  final String status; // 'active', 'suspended', 'archived'
   final String? avatarUrl;
-  final String? notes;
 
   const AdminUser({
     required this.id,
     required this.username,
-    this.email,
+    this.fullName,
     required this.role,
     this.phone,
     this.phoneVerified = false,
     required this.createdAt,
-    this.lastActiveAt,
-    this.isActive = true,
+    this.lastSeen,
+    this.status = 'active',
     this.avatarUrl,
-    this.notes,
   });
+
+  bool get isActive => status == 'active';
 
   factory AdminUser.fromJson(Map<String, dynamic> json) {
     return AdminUser(
       id: json['id'] as String? ?? '',
-      username: json['display_name'] as String? ??
-          json['username'] as String? ??
-          'Sin nombre',
-      email: json['email'] as String?,
-      role: json['role'] as String? ?? 'client',
+      username: json['username'] as String? ?? 'Sin nombre',
+      fullName: json['full_name'] as String?,
+      role: json['role'] as String? ?? 'customer',
       phone: json['phone'] as String?,
       phoneVerified: json['phone_verified'] as bool? ?? false,
       createdAt: DateTime.tryParse(json['created_at'] as String? ?? '') ??
           DateTime.now(),
-      lastActiveAt:
-          DateTime.tryParse(json['last_active_at'] as String? ?? ''),
-      isActive: json['is_active'] as bool? ?? true,
+      lastSeen: DateTime.tryParse(json['last_seen'] as String? ?? ''),
+      status: json['status'] as String? ?? 'active',
       avatarUrl: json['avatar_url'] as String?,
-      notes: json['admin_notes'] as String?,
     );
   }
 }
@@ -128,14 +124,14 @@ final adminUsersProvider = FutureProvider<UsersPageData>((ref) async {
 
     // Build base query with equality filters first
     var query = client.from(BCTables.profiles).select(
-      'id, display_name, username, email, role, phone, phone_verified, '
-      'created_at, last_active_at, is_active, avatar_url, admin_notes',
+      'id, username, full_name, role, phone, phone_verified, '
+      'created_at, last_seen, status, avatar_url',
     );
     if (filter.role != null) {
       query = query.eq('role', filter.role!);
     }
     if (filter.status != null) {
-      query = query.eq('is_active', filter.status == 'active');
+      query = query.eq('status', filter.status!);
     }
 
     // .or() returns PostgrestTransformBuilder, so chain everything after it
@@ -143,8 +139,8 @@ final adminUsersProvider = FutureProvider<UsersPageData>((ref) async {
     if (filter.searchText.isNotEmpty) {
       data = await query
           .or(
-            'display_name.ilike.%${filter.searchText}%,'
-            'email.ilike.%${filter.searchText}%,'
+            'username.ilike.%${filter.searchText}%,'
+            'full_name.ilike.%${filter.searchText}%,'
             'phone.ilike.%${filter.searchText}%',
           )
           .order(sortCol, ascending: filter.sortAscending)
@@ -161,14 +157,14 @@ final adminUsersProvider = FutureProvider<UsersPageData>((ref) async {
       countQuery = countQuery.eq('role', filter.role!);
     }
     if (filter.status != null) {
-      countQuery = countQuery.eq('is_active', filter.status == 'active');
+      countQuery = countQuery.eq('status', filter.status!);
     }
     final int totalCount;
     if (filter.searchText.isNotEmpty) {
       final countResult = await countQuery
           .or(
-            'display_name.ilike.%${filter.searchText}%,'
-            'email.ilike.%${filter.searchText}%,'
+            'username.ilike.%${filter.searchText}%,'
+            'full_name.ilike.%${filter.searchText}%,'
             'phone.ilike.%${filter.searchText}%',
           )
           .count();

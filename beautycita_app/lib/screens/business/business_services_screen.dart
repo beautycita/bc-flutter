@@ -313,10 +313,12 @@ class _ServiceFormSheetState extends ConsumerState<_ServiceFormSheet> {
 
   ServiceCategory? _selectedCategory;
   ServiceSubcategory? _selectedSubcategory;
-  ServiceItem? _selectedItem;
+  ServiceItem? _selectedItem; // used in edit mode only
+  final Set<ServiceItem> _selectedItems = {}; // multiselect for new services
   bool _isOtro = false;
   late bool _depositRequired;
   bool _saving = false;
+  final FocusNode _depositPctFocus = FocusNode();
 
   static const _otherSuggestions = [
     'Depilación Láser',
@@ -370,6 +372,7 @@ class _ServiceFormSheetState extends ConsumerState<_ServiceFormSheet> {
                     for (final item in sub.items!) {
                       if (item.serviceType == rawType || item.id == rawType) {
                         _selectedItem = item;
+                        _selectedItems.add(item);
                         break;
                       }
                     }
@@ -393,6 +396,7 @@ class _ServiceFormSheetState extends ConsumerState<_ServiceFormSheet> {
     _bufferCtrl.dispose();
     _descCtrl.dispose();
     _depositPctCtrl.dispose();
+    _depositPctFocus.dispose();
     _otherCategoryCtrl.dispose();
     super.dispose();
   }
@@ -469,8 +473,24 @@ class _ServiceFormSheetState extends ConsumerState<_ServiceFormSheet> {
             const SizedBox(height: AppConstants.paddingMD),
             TextField(
               controller: _nameCtrl,
-              decoration: _styledInput('Nombre'),
+              decoration: _styledInput(
+                _selectedItems.length > 1
+                    ? 'Nombre (opcional, se genera automaticamente)'
+                    : 'Nombre',
+              ),
             ),
+            if (_selectedItems.length > 1)
+              Padding(
+                padding: const EdgeInsets.only(top: 4, left: 4),
+                child: Text(
+                  'Se crearan ${_selectedItems.length} servicios: '
+                  '${_selectedItems.map((i) => '${_selectedSubcategory?.nameEs ?? ''} ${i.nameEs}').join(', ')}',
+                  style: GoogleFonts.nunito(
+                    fontSize: 11,
+                    color: colors.primary.withValues(alpha: 0.7),
+                  ),
+                ),
+              ),
             const SizedBox(height: AppConstants.paddingSM),
             // ── Category dropdown ───────────────────────────────────
             DropdownButtonFormField<String>(
@@ -503,6 +523,7 @@ class _ServiceFormSheetState extends ConsumerState<_ServiceFormSheet> {
                         .where((c) => c.id == v)
                         .firstOrNull;
                   }
+                  _selectedItems.clear();
                 });
               },
             ),
@@ -550,6 +571,7 @@ class _ServiceFormSheetState extends ConsumerState<_ServiceFormSheet> {
                         setState(() {
                           _selectedSubcategory = sub;
                           _selectedItem = null;
+                          _selectedItems.clear();
                         });
                       },
                     ),
@@ -561,22 +583,50 @@ class _ServiceFormSheetState extends ConsumerState<_ServiceFormSheet> {
             // ── Service item chips (required when items exist) ────
             if (_selectedSubcategory?.items != null &&
                 _selectedSubcategory!.items!.isNotEmpty) ...[
-              Text('Tipo de servicio *',
-                  style: GoogleFonts.poppins(
-                      fontSize: 13, fontWeight: FontWeight.w500)),
+              Text(
+                isEdit ? 'Tipo de servicio *' : 'Tipos de servicio *',
+                style: GoogleFonts.poppins(
+                    fontSize: 13, fontWeight: FontWeight.w500),
+              ),
+              if (!isEdit)
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Text(
+                    'Puedes seleccionar varios para agregarlos con el mismo precio',
+                    style: GoogleFonts.nunito(
+                      fontSize: 11,
+                      color: colors.onSurface.withValues(alpha: 0.45),
+                    ),
+                  ),
+                ),
               const SizedBox(height: 6),
               Wrap(
                 spacing: 8,
                 runSpacing: 6,
                 children: [
                   for (final item in _selectedSubcategory!.items!)
-                    ChoiceChip(
-                      label: Text(item.nameEs),
-                      selected: _selectedItem?.id == item.id,
-                      onSelected: (_) {
-                        setState(() => _selectedItem = item);
-                      },
-                    ),
+                    if (isEdit)
+                      ChoiceChip(
+                        label: Text(item.nameEs),
+                        selected: _selectedItem?.id == item.id,
+                        onSelected: (_) {
+                          setState(() => _selectedItem = item);
+                        },
+                      )
+                    else
+                      FilterChip(
+                        label: Text(item.nameEs),
+                        selected: _selectedItems.contains(item),
+                        onSelected: (selected) {
+                          setState(() {
+                            if (selected) {
+                              _selectedItems.add(item);
+                            } else {
+                              _selectedItems.remove(item);
+                            }
+                          });
+                        },
+                      ),
                 ],
               ),
               const SizedBox(height: AppConstants.paddingSM),
@@ -664,8 +714,15 @@ class _ServiceFormSheetState extends ConsumerState<_ServiceFormSheet> {
                         'Cobrar deposito al reservar este servicio',
                         style: GoogleFonts.nunito(fontSize: 12)),
                     value: _depositRequired,
-                    onChanged: (v) =>
-                        setState(() => _depositRequired = v),
+                    onChanged: (v) {
+                      setState(() => _depositRequired = v);
+                      if (v) {
+                        _depositPctCtrl.clear();
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          _depositPctFocus.requestFocus();
+                        });
+                      }
+                    },
                     activeTrackColor: colors.primary,
                   ),
                   if (_depositRequired) ...[
@@ -674,6 +731,7 @@ class _ServiceFormSheetState extends ConsumerState<_ServiceFormSheet> {
                       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
                       child: TextField(
                         controller: _depositPctCtrl,
+                        focusNode: _depositPctFocus,
                         keyboardType: TextInputType.number,
                         decoration: _styledInput('Porcentaje de deposito',
                             suffixText: '%'),
@@ -693,7 +751,11 @@ class _ServiceFormSheetState extends ConsumerState<_ServiceFormSheet> {
                       height: 20,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : Text(isEdit ? 'Guardar' : 'Agregar'),
+                  : Text(isEdit
+                      ? 'Guardar'
+                      : _selectedItems.length > 1
+                          ? 'Agregar ${_selectedItems.length} servicios'
+                          : 'Agregar'),
             ),
             const SizedBox(height: AppConstants.paddingSM),
           ],
@@ -706,8 +768,18 @@ class _ServiceFormSheetState extends ConsumerState<_ServiceFormSheet> {
     final name = _nameCtrl.text.trim();
     final price = double.tryParse(_priceCtrl.text.trim());
     final duration = int.tryParse(_durationCtrl.text.trim());
+    final isEdit = widget.existing != null;
+    final isMultiSelect = !isEdit &&
+        _selectedItems.length > 1;
 
-    if (name.isEmpty || price == null || duration == null) {
+    // Name is optional when multiselecting (auto-generated)
+    if (!isMultiSelect && name.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Completa todos los campos requeridos')),
+      );
+      return;
+    }
+    if (price == null || duration == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Completa todos los campos requeridos')),
       );
@@ -733,14 +805,22 @@ class _ServiceFormSheetState extends ConsumerState<_ServiceFormSheet> {
       );
       return;
     }
+    // Validate item selection based on mode
     if (!_isOtro &&
         _selectedSubcategory?.items != null &&
-        _selectedSubcategory!.items!.isNotEmpty &&
-        _selectedItem == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Selecciona el tipo de servicio')),
-      );
-      return;
+        _selectedSubcategory!.items!.isNotEmpty) {
+      if (isEdit && _selectedItem == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Selecciona el tipo de servicio')),
+        );
+        return;
+      }
+      if (!isEdit && _selectedItems.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Selecciona al menos un tipo de servicio')),
+        );
+        return;
+      }
     }
 
     setState(() => _saving = true);
@@ -751,48 +831,96 @@ class _ServiceFormSheetState extends ConsumerState<_ServiceFormSheet> {
 
       final String savedCategory;
       final String? savedSubcategory;
-      final String? savedServiceType;
 
       if (_isOtro) {
         savedCategory = 'Servicios Especiales';
         savedSubcategory = _otherCategoryCtrl.text.trim();
-        savedServiceType = null;
       } else {
         savedCategory = _selectedCategory!.nameEs;
         savedSubcategory = _selectedSubcategory!.nameEs;
-        savedServiceType = _selectedItem?.serviceType;
       }
 
-      final data = {
-        'business_id': biz['id'],
-        'name': name,
-        'category': savedCategory,
-        'subcategory': savedSubcategory,
-        'service_type': savedServiceType,
-        'price': price,
-        'duration_minutes': duration,
-        'buffer_minutes': int.tryParse(_bufferCtrl.text.trim()) ?? 0,
-        'description': _descCtrl.text.trim().isEmpty
-            ? null
-            : _descCtrl.text.trim(),
-        'deposit_required': _depositRequired,
-        'deposit_percentage': _depositRequired
-            ? (int.tryParse(_depositPctCtrl.text.trim()) ?? 0)
-            : 0,
-        'is_active': true,
-      };
+      final buffer = int.tryParse(_bufferCtrl.text.trim()) ?? 0;
+      final desc = _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim();
+      final depPct = _depositRequired
+          ? (int.tryParse(_depositPctCtrl.text.trim()) ?? 0)
+          : 0;
 
-      if (widget.existing != null) {
+      if (isEdit) {
+        // ── Single update (edit mode) ──
+        final data = {
+          'business_id': biz['id'],
+          'name': name,
+          'category': savedCategory,
+          'subcategory': savedSubcategory,
+          'service_type': _selectedItem?.serviceType,
+          'price': price,
+          'duration_minutes': duration,
+          'buffer_minutes': buffer,
+          'description': desc,
+          'deposit_required': _depositRequired,
+          'deposit_percentage': depPct,
+          'is_active': true,
+        };
         await SupabaseClientService.client
             .from('services')
             .update(data)
             .eq('id', widget.existing!['id'] as String);
+      } else if (_selectedItems.length > 1) {
+        // ── Batch insert (multiselect) ──
+        final rows = _selectedItems.map((item) {
+          final autoName = name.isNotEmpty
+              ? '$name - ${item.nameEs}'
+              : '${savedSubcategory ?? ''} ${item.nameEs}';
+          return {
+            'business_id': biz['id'],
+            'name': autoName,
+            'category': savedCategory,
+            'subcategory': savedSubcategory,
+            'service_type': item.serviceType,
+            'price': price,
+            'duration_minutes': duration,
+            'buffer_minutes': buffer,
+            'description': desc,
+            'deposit_required': _depositRequired,
+            'deposit_percentage': depPct,
+            'is_active': true,
+          };
+        }).toList();
+        await SupabaseClientService.client.from('services').insert(rows);
       } else {
+        // ── Single insert ──
+        final singleItem = _selectedItems.isNotEmpty
+            ? _selectedItems.first
+            : null;
+        final data = {
+          'business_id': biz['id'],
+          'name': name,
+          'category': savedCategory,
+          'subcategory': savedSubcategory,
+          'service_type': _isOtro ? null : singleItem?.serviceType,
+          'price': price,
+          'duration_minutes': duration,
+          'buffer_minutes': buffer,
+          'description': desc,
+          'deposit_required': _depositRequired,
+          'deposit_percentage': depPct,
+          'is_active': true,
+        };
         await SupabaseClientService.client.from('services').insert(data);
       }
 
       widget.onSaved();
-      if (mounted) Navigator.pop(context);
+      if (mounted) {
+        if (isMultiSelect) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${_selectedItems.length} servicios agregados'),
+            ),
+          );
+        }
+        Navigator.pop(context);
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

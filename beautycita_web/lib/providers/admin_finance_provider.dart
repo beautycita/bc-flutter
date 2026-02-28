@@ -82,7 +82,7 @@ class PayoutRecord {
   final String id;
   final String salonName;
   final double amount;
-  final String status; // 'pending', 'processing', 'completed', 'failed'
+  final String status; // 'pending', 'succeeded', 'failed', 'refunded'
   final String method; // 'stripe', 'bank_transfer'
   final DateTime date;
 
@@ -113,7 +113,7 @@ class PayoutRecord {
   String get statusLabel => switch (status) {
         'pending' => 'Pendiente',
         'processing' => 'Procesando',
-        'completed' => 'Completado',
+        'succeeded' => 'Completado',
         'failed' => 'Fallido',
         _ => status,
       };
@@ -165,7 +165,7 @@ final financeKpisProvider = FutureProvider<FinanceKpis>((ref) async {
         .from(BCTables.payments)
         .select('amount, platform_fee')
         .gte('created_at', startOfMonth)
-        .eq('status', 'completed');
+        .eq('status', 'succeeded');
 
     double totalRevenue = 0;
     double platformFees = 0;
@@ -180,7 +180,7 @@ final financeKpisProvider = FutureProvider<FinanceKpis>((ref) async {
         .select('amount')
         .gte('created_at', prevMonthStart)
         .lt('created_at', startOfMonth)
-        .eq('status', 'completed');
+        .eq('status', 'succeeded');
 
     double prevRevenue = 0;
     for (final row in prevPayments) {
@@ -235,7 +235,7 @@ final monthlyRevenueProvider = FutureProvider<MonthlyRevenue>((ref) async {
         .from(BCTables.payments)
         .select('amount, created_at')
         .gte('created_at', start)
-        .eq('status', 'completed');
+        .eq('status', 'succeeded');
 
     // Aggregate by month
     final monthly = <int, double>{};
@@ -287,7 +287,7 @@ final paymentMethodsProvider =
         .from(BCTables.payments)
         .select('amount, method')
         .gte('created_at', startOfMonth)
-        .eq('status', 'completed');
+        .eq('status', 'succeeded');
 
     double stripe = 0;
     double btcpay = 0;

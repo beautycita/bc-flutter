@@ -87,9 +87,8 @@ class _UsersPageState extends ConsumerState<UsersPage> {
             hint: 'Rol',
             items: const {
               null: 'Todos',
-              'client': 'Cliente',
+              'customer': 'Cliente',
               'stylist': 'Estilista',
-              'salon_owner': 'Dueno',
               'admin': 'Admin',
             },
             onChanged: (value) {
@@ -104,7 +103,8 @@ class _UsersPageState extends ConsumerState<UsersPage> {
             items: const {
               null: 'Todos',
               'active': 'Activo',
-              'inactive': 'Inactivo',
+              'suspended': 'Suspendido',
+              'archived': 'Archivado',
             },
             onChanged: (value) {
               ref.read(usersFilterProvider.notifier).state =
@@ -141,27 +141,32 @@ class _UsersPageState extends ConsumerState<UsersPage> {
                 ),
                 const SizedBox(width: BCSpacing.sm),
                 Flexible(
-                  child: Text(
-                    user.username,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      fontWeight: FontWeight.w500,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        user.fullName ?? user.username,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.w500,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (user.fullName != null)
+                        Text(
+                          '@${user.username}',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colors.onSurface.withValues(alpha: 0.5),
+                            fontSize: 11,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                    ],
                   ),
                 ),
               ],
-            ),
-          ),
-          BCColumn<AdminUser>(
-            id: 'email',
-            label: 'Email',
-            sortable: true,
-            cellBuilder: (user) => Text(
-              user.email ?? '-',
-              style: theme.textTheme.bodySmall,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
           ),
           BCColumn<AdminUser>(
@@ -213,13 +218,13 @@ class _UsersPageState extends ConsumerState<UsersPage> {
             ),
           ),
           BCColumn<AdminUser>(
-            id: 'last_active_at',
+            id: 'last_seen',
             label: 'Ultimo acceso',
             sortable: true,
             width: 100,
             cellBuilder: (user) => Text(
-              user.lastActiveAt != null
-                  ? dateFormat.format(user.lastActiveAt!)
+              user.lastSeen != null
+                  ? dateFormat.format(user.lastSeen!)
                   : 'Nunca',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: colors.onSurface.withValues(alpha: 0.7),
@@ -228,11 +233,11 @@ class _UsersPageState extends ConsumerState<UsersPage> {
             ),
           ),
           BCColumn<AdminUser>(
-            id: 'is_active',
+            id: 'status',
             label: 'Estado',
             width: 80,
             cellBuilder: (user) => _StatusChip(
-              isActive: user.isActive,
+              status: user.status,
             ),
           ),
         ],
@@ -315,10 +320,9 @@ class _RoleChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (label, color) = switch (role) {
-      'admin' => ('Admin', Colors.deepPurple),
-      'salon_owner' => ('Dueno', Colors.teal),
+      'admin' || 'superadmin' => ('Admin', Colors.deepPurple),
       'stylist' => ('Estilista', Colors.indigo),
-      'client' => ('Cliente', Colors.blueGrey),
+      'customer' => ('Cliente', Colors.blueGrey),
       _ => (role, Colors.grey),
     };
 
@@ -341,13 +345,17 @@ class _RoleChip extends StatelessWidget {
 }
 
 class _StatusChip extends StatelessWidget {
-  const _StatusChip({required this.isActive});
-  final bool isActive;
+  const _StatusChip({required this.status});
+  final String status;
 
   @override
   Widget build(BuildContext context) {
-    final color = isActive ? Colors.green : Colors.red;
-    final label = isActive ? 'Activo' : 'Inactivo';
+    final (label, color) = switch (status) {
+      'active' => ('Activo', Colors.green),
+      'suspended' => ('Suspendido', Colors.orange),
+      'archived' => ('Archivado', Colors.grey),
+      _ => (status, Colors.grey),
+    };
 
     return Row(
       mainAxisSize: MainAxisSize.min,
