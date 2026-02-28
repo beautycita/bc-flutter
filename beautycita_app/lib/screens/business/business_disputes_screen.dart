@@ -124,6 +124,12 @@ class _BusinessDisputesScreenState
       builder: (ctx) =>
           _DisputeDetailSheet(dispute: dispute, onChanged: () {
             ref.invalidate(businessDisputesProvider);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('Oferta enviada'),
+                backgroundColor: Colors.green.shade600,
+              ),
+            );
           }),
     );
   }
@@ -331,20 +337,25 @@ class _DisputeDetailSheetState extends ConsumerState<_DisputeDetailSheet> {
     final salonOfferAmount = dispute['salon_offer_amount'] as num?;
     final salonResponse = dispute['salon_response'] as String?;
 
-    return DraggableScrollableSheet(
-      initialChildSize: 0.8,
-      minChildSize: 0.4,
-      maxChildSize: 0.95,
-      builder: (context, scrollController) {
-        return Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).scaffoldBackgroundColor,
-            borderRadius:
-                const BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: ListView(
-            controller: scrollController,
-            padding: const EdgeInsets.all(AppConstants.paddingLG),
+    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+    final keyboardOpen = keyboardHeight > 0;
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: keyboardHeight),
+      child: DraggableScrollableSheet(
+        initialChildSize: keyboardOpen ? 0.95 : 0.8,
+        minChildSize: 0.4,
+        maxChildSize: 0.95,
+        builder: (context, scrollController) {
+          return Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: ListView(
+              controller: scrollController,
+              padding: const EdgeInsets.all(AppConstants.paddingLG),
             children: [
               // Drag handle
               Center(
@@ -525,6 +536,7 @@ class _DisputeDetailSheetState extends ConsumerState<_DisputeDetailSheet> {
           ),
         );
       },
+      ),
     );
   }
 
@@ -656,8 +668,6 @@ class _DisputeDetailSheetState extends ConsumerState<_DisputeDetailSheet> {
     try {
       final disputeId = widget.dispute['id'] as String;
       final now = DateTime.now().toIso8601String();
-      final appt = widget.dispute['appointments'] as Map<String, dynamic>?;
-      final price = appt?['price'] as num?;
 
       final updateData = <String, dynamic>{
         'salon_offer': _selectedOffer,
@@ -667,13 +677,25 @@ class _DisputeDetailSheetState extends ConsumerState<_DisputeDetailSheet> {
       };
 
       if (_selectedOffer == 'full_refund') {
-        // Auto-resolve: full refund
+        // Auto-resolve: full refund — look up price from the appointment
+        final apptId = widget.dispute['appointment_id'] as String?;
+        double price = 0;
+        if (apptId != null) {
+          try {
+            final apptRow = await SupabaseClientService.client
+                .from('appointments')
+                .select('price')
+                .eq('id', apptId)
+                .maybeSingle();
+            price = (apptRow?['price'] as num?)?.toDouble() ?? 0;
+          } catch (_) {}
+        }
         updateData['status'] = 'resolved';
         updateData['resolution'] = 'favor_client';
-        updateData['refund_amount'] = price?.toDouble() ?? 0;
+        updateData['refund_amount'] = price;
         updateData['refund_status'] = 'pending';
         updateData['resolved_at'] = now;
-        updateData['salon_offer_amount'] = price?.toDouble() ?? 0;
+        updateData['salon_offer_amount'] = price;
       } else if (_selectedOffer == 'partial_refund') {
         final amount = double.tryParse(_amountCtrl.text) ?? 0;
         if (amount <= 0) {
@@ -695,29 +717,21 @@ class _DisputeDetailSheetState extends ConsumerState<_DisputeDetailSheet> {
           .update(updateData)
           .eq('id', disputeId);
 
-      // Notify client (in-app notification)
+      // Notify client (in-app notification) — non-blocking
       final clientId = widget.dispute['user_id'] as String?;
       if (clientId != null) {
-        await SupabaseClientService.client.from('notifications').insert({
+        SupabaseClientService.client.from('notifications').insert({
           'user_id': clientId,
           'title': 'Respuesta a tu disputa',
           'body': _selectedOffer == 'full_refund'
               ? 'El salon acepto un reembolso total. Tu disputa fue resuelta.'
               : 'El salon respondio a tu disputa. Revisa la oferta.',
           'channel': 'in_app',
-        });
+        }).then((_) {}).catchError((_) {});
       }
 
       widget.onChanged();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(_selectedOffer == 'full_refund'
-                ? 'Reembolso total enviado. Disputa resuelta.'
-                : 'Oferta enviada al cliente.'),
-            backgroundColor: Colors.green.shade600,
-          ),
-        );
         Navigator.pop(context);
       }
     } catch (e) {
