@@ -869,3 +869,48 @@ final adminSalonReviewsProvider = FutureProvider.family<List<Map<String, dynamic
       .limit(10);
   return (response as List).cast<Map<String, dynamic>>();
 });
+
+// ---------------------------------------------------------------------------
+// Pipeline Providers
+// ---------------------------------------------------------------------------
+
+/// Searches discovered salons via the `search_discovered_salons` RPC.
+/// Takes a Map of optional parameters (query, status_filter, city_filter, etc.).
+final searchDiscoveredSalonsProvider = FutureProvider.family<List<Map<String, dynamic>>, Map<String, dynamic>>((ref, params) async {
+  final response = await SupabaseClientService.client.rpc('search_discovered_salons', params: {
+    'query': params['query'] ?? '',
+    if (params['status_filter'] != null) 'status_filter': params['status_filter'],
+    if (params['city_filter'] != null) 'city_filter_param': params['city_filter'],
+    if (params['has_whatsapp'] != null) 'has_whatsapp': params['has_whatsapp'],
+    if (params['has_interest'] != null) 'has_interest': params['has_interest'],
+    if (params['source_filter'] != null) 'source_filter': params['source_filter'],
+    'result_limit': params['result_limit'] ?? 50,
+    'result_offset': params['result_offset'] ?? 0,
+  });
+  return (response as List).cast<Map<String, dynamic>>();
+});
+
+/// Aggregates discovered_salons by status for the funnel metrics header.
+final pipelineFunnelStatsProvider = FutureProvider<Map<String, int>>((ref) async {
+  final response = await SupabaseClientService.client
+      .from('discovered_salons')
+      .select('status');
+  final list = (response as List).cast<Map<String, dynamic>>();
+  final counts = <String, int>{};
+  for (final row in list) {
+    final status = row['status'] as String? ?? 'unknown';
+    counts[status] = (counts[status] ?? 0) + 1;
+  }
+  return counts;
+});
+
+/// Fetches outreach history for a specific discovered salon (expanded with notes/outcome).
+final pipelineOutreachLogProvider = FutureProvider.family<List<Map<String, dynamic>>, String>((ref, salonId) async {
+  final response = await SupabaseClientService.client
+      .from('salon_outreach_log')
+      .select('*')
+      .eq('discovered_salon_id', salonId)
+      .order('sent_at', ascending: false)
+      .limit(50);
+  return (response as List).cast<Map<String, dynamic>>();
+});
