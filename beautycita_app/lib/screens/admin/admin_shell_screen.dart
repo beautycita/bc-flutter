@@ -8,7 +8,8 @@ import 'service_profile_editor_screen.dart';
 import 'engine_settings_editor_screen.dart';
 import 'category_tree_screen.dart';
 import 'time_rules_screen.dart';
-import 'salon_management_screen.dart';
+import 'admin_salones_screen.dart';
+import 'admin_pipeline_screen.dart';
 import 'analytics_screen.dart';
 import 'notification_templates_screen.dart';
 import 'dashboard_screen.dart';
@@ -18,7 +19,6 @@ import 'applications_screen.dart';
 import 'bookings_screen.dart';
 import 'feature_toggles_screen.dart';
 import 'reviews_screen.dart';
-import 'message_salons_screen.dart';
 import 'admin_chat_screen.dart';
 
 /// Index of the currently selected admin tab.
@@ -37,7 +37,7 @@ class AdminShellScreen extends ConsumerWidget {
     _AdminTab(icon: Icons.store, label: 'Salones', section: 'Gestion'),
     _AdminTab(icon: Icons.analytics, label: 'Analitica', section: 'Gestion'),
     _AdminTab(icon: Icons.rate_review, label: 'Resenas', section: 'Gestion'),
-    _AdminTab(icon: Icons.message, label: 'Mensajes Salones', section: 'Gestion'),
+    _AdminTab(icon: Icons.rocket_launch_rounded, label: 'Pipeline', section: 'Gestion'),
     _AdminTab(icon: Icons.chat_rounded, label: 'Chat', section: 'Gestion'),
   ];
 
@@ -210,13 +210,13 @@ class _AdminContent extends ConsumerWidget {
       case 'Disputas':
         return const DisputesScreen();
       case 'Salones':
-        return const SalonManagementScreen();
+        return const AdminSalonesScreen();
       case 'Analitica':
         return const AnalyticsScreen();
       case 'Resenas':
         return const ReviewsScreen();
-      case 'Mensajes Salones':
-        return const MessageSalonsScreen();
+      case 'Pipeline':
+        return const AdminPipelineScreen();
       case 'Chat':
         return const AdminChatScreen();
       case 'Perfiles de Servicio':
