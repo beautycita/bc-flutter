@@ -409,6 +409,9 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
     final dim = colors.onSurface.withValues(alpha: 0.5);
     final dimIcon = colors.onSurface.withValues(alpha: 0.35);
     final isSelf = user.id == SupabaseClientService.currentUserId;
+    final isMeSuperAdmin =
+        ref.read(isSuperAdminProvider).valueOrNull ?? false;
+    final targetIsSuperAdmin = user.role == 'superadmin';
 
     showModalBottomSheet(
       context: context,
@@ -716,10 +719,21 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
                         color: colors.onSurface.withValues(alpha: 0.4),
                       ),
                     )
+                  else if (!isMeSuperAdmin && targetIsSuperAdmin)
+                    Text(
+                      'Solo un superadmin puede cambiar el rol de otro superadmin',
+                      style: GoogleFonts.nunito(
+                        fontSize: 12,
+                        fontStyle: FontStyle.italic,
+                        color: colors.onSurface.withValues(alpha: 0.4),
+                      ),
+                    )
                   else
                     Wrap(
                       spacing: 8,
-                      children: _roles.map((r) {
+                      children: _roles
+                          .where((r) => isMeSuperAdmin || r != 'superadmin')
+                          .map((r) {
                         final isSelected = selectedRole == r;
                         final rc = _roleColor(r);
                         return ChoiceChip(
@@ -888,6 +902,26 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
     Navigator.of(ctx).pop();
 
     try {
+      // Block non-superadmin from changing superadmin roles
+      final isMeSuperAdmin =
+          ref.read(isSuperAdminProvider).valueOrNull ?? false;
+      if (!isMeSuperAdmin && user.role == 'superadmin' && newRole != user.role) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Solo un superadmin puede cambiar el rol de otro superadmin')),
+          );
+        }
+        return;
+      }
+      if (!isMeSuperAdmin && newRole == 'superadmin') {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Solo un superadmin puede asignar el rol de superadmin')),
+          );
+        }
+        return;
+      }
+
       // Archiving a user who never verified phone → delete completely
       if (newStatus == 'archived' && !user.phoneVerified) {
         await SupabaseClientService.client

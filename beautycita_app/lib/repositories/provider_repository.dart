@@ -22,7 +22,7 @@ class ProviderRepository {
   /// Search providers using the search_providers RPC function.
   Future<List<Provider>> searchProviders(String query) async {
     final response = await SupabaseClientService.client
-        .rpc('search_providers', params: {'search_query': query});
+        .rpc('search_businesses', params: {'p_query': query});
 
     return (response as List)
         .map((json) => Provider.fromJson(json as Map<String, dynamic>))
@@ -81,7 +81,7 @@ class ProviderRepository {
     }
 
     final response = await SupabaseClientService.client
-        .rpc('nearby_providers', params: params);
+        .rpc('nearby_businesses', params: params);
 
     return (response as List)
         .map((json) => Provider.fromJson(json as Map<String, dynamic>))

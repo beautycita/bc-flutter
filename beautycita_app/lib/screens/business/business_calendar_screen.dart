@@ -6,6 +6,12 @@ import '../../config/constants.dart';
 import '../../providers/business_provider.dart';
 import '../../services/supabase_client.dart';
 
+/// Returns true if the business owner already has a staff record in the list.
+bool _ownerHasStaffRecord(String? ownerId, List<Map<String, dynamic>> staff) {
+  if (ownerId == null) return false;
+  return staff.any((s) => s['user_id'] == ownerId);
+}
+
 class BusinessCalendarScreen extends ConsumerStatefulWidget {
   const BusinessCalendarScreen({super.key});
 
@@ -101,7 +107,7 @@ class _BusinessCalendarScreenState
                     selected: _staffFilter == null,
                     onTap: () => setState(() => _staffFilter = null),
                   ),
-                  if (ownerId != null)
+                  if (ownerId != null && !_ownerHasStaffRecord(ownerId, staff))
                     _FilterChip(
                       label: 'Yo',
                       selected: _staffFilter == ownerId,
@@ -220,9 +226,10 @@ class _BusinessCalendarScreenState
     final staffList = staffAsync.valueOrNull ?? [];
     final biz = ref.read(currentBusinessProvider).valueOrNull;
 
-    // Include owner as first staff option
+    // Include owner as first staff option (only if not already a staff member)
     final allStaff = <Map<String, dynamic>>[];
-    if (biz != null) {
+    final blockOwnerId = biz?['owner_id'] as String?;
+    if (biz != null && !_ownerHasStaffRecord(blockOwnerId, staffList)) {
       allStaff.add({
         'id': biz['owner_id'],
         'first_name': 'Yo',
@@ -514,9 +521,9 @@ class _SummaryCard extends StatelessWidget {
     final appts = apptsAsync.valueOrNull ?? [];
     final staff = staffAsync.valueOrNull ?? [];
 
-    // Build staff list with owner first
+    // Build staff list with owner first (skip if owner already has a staff record)
     final allStaff = <_StaffInfo>[];
-    if (ownerId != null) {
+    if (ownerId != null && !_ownerHasStaffRecord(ownerId, staff)) {
       allStaff.add(_StaffInfo(id: ownerId!, name: 'Yo'));
     }
     for (final s in staff) {
@@ -812,9 +819,9 @@ class _HorizontalTimelineState extends State<_HorizontalTimeline> {
     final blocks = widget.blocksAsync.valueOrNull ?? [];
     final staff = widget.staffAsync.valueOrNull ?? [];
 
-    // Build staff lanes
+    // Build staff lanes (skip owner if already a staff member)
     final lanes = <_LaneData>[];
-    if (widget.ownerId != null) {
+    if (widget.ownerId != null && !_ownerHasStaffRecord(widget.ownerId, staff)) {
       lanes.add(_LaneData(id: widget.ownerId!, name: 'Yo'));
     }
     for (final s in staff) {
@@ -1786,13 +1793,21 @@ class _BlockTimeSheet extends ConsumerStatefulWidget {
 }
 
 class _BlockTimeSheetState extends ConsumerState<_BlockTimeSheet> {
-  String? _staffId; // null = whole salon
+  late String? _staffId;
   DateTime _fromDate = DateTime.now();
   DateTime _toDate = DateTime.now();
   TimeOfDay _startTime = const TimeOfDay(hour: 14, minute: 0);
   TimeOfDay _endTime = const TimeOfDay(hour: 15, minute: 0);
-  String _reason = 'lunch';
+  String _reason = 'day_off';
   bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _staffId = widget.staffList.isNotEmpty
+        ? widget.staffList.first['id'] as String?
+        : null;
+  }
 
   static const _months = [
     'Ene','Feb','Mar','Abr','May','Jun',
@@ -1802,6 +1817,7 @@ class _BlockTimeSheetState extends ConsumerState<_BlockTimeSheet> {
   bool get _isFullDay => _reason == 'vacation' || _reason == 'day_off';
   bool get _isDateRange => _reason == 'vacation' || _reason == 'other';
   bool get _showTimes => _reason == 'lunch' || _reason == 'other';
+  bool get _isSingleDate => _reason == 'day_off' || _reason == 'lunch';
 
   String _fmtDate(DateTime d) => '${d.day} ${_months[d.month - 1]} ${d.year}';
 
@@ -1829,16 +1845,11 @@ class _BlockTimeSheetState extends ConsumerState<_BlockTimeSheet> {
 
             // Staff
             _SheetDropdown<String?>(
-              label: 'Para quien',
-              icon: Icons.people_rounded,
+              label: 'Empleado',
+              icon: Icons.person_rounded,
               value: _staffId,
-              hint: 'Todo el salon',
+              hint: 'Seleccionar empleado',
               items: [
-                DropdownMenuItem<String?>(
-                  value: null,
-                  child: Text('Todo el salon',
-                      style: GoogleFonts.nunito(fontSize: 14, fontWeight: FontWeight.w600)),
-                ),
                 for (final s in widget.staffList)
                   DropdownMenuItem<String?>(
                     value: s['id'] as String,
@@ -1889,8 +1900,88 @@ class _BlockTimeSheetState extends ConsumerState<_BlockTimeSheet> {
             ),
             const SizedBox(height: 12),
 
-            // Date(s): single date for lunch/day_off, range for vacation/other
-            if (_isDateRange)
+            // ── Lunch: time pickers only (today) ──
+            if (_reason == 'lunch') ...[
+              Row(
+                children: [
+                  Expanded(
+                    child: _PickerTile(
+                      icon: Icons.access_time_rounded,
+                      label: _startTime.format(context),
+                      onTap: () async {
+                        final t = await showTimePicker(
+                          context: context,
+                          initialTime: _startTime,
+                        );
+                        if (t != null) {
+                          setState(() {
+                            _startTime = t;
+                            _endTime = TimeOfDay(
+                              hour: (t.hour + 1) % 24,
+                              minute: t.minute,
+                            );
+                          });
+                        }
+                      },
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    child: Icon(Icons.arrow_forward_rounded,
+                        size: 16, color: colors.onSurface.withValues(alpha: 0.3)),
+                  ),
+                  Expanded(
+                    child: _PickerTile(
+                      icon: Icons.access_time_rounded,
+                      label: _endTime.format(context),
+                      onTap: () async {
+                        final t = await showTimePicker(
+                          context: context,
+                          initialTime: _endTime,
+                        );
+                        if (t != null) setState(() => _endTime = t);
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ],
+
+            // ── Day off: single date (full day) ──
+            if (_reason == 'day_off') ...[
+              _PickerTile(
+                icon: Icons.calendar_today_rounded,
+                label: _fmtDate(_fromDate),
+                onTap: () async {
+                  final d = await showDatePicker(
+                    context: context,
+                    initialDate: _fromDate,
+                    firstDate: DateTime.now(),
+                    lastDate: DateTime(2030),
+                  );
+                  if (d != null) {
+                    setState(() {
+                      _fromDate = d;
+                      _toDate = d;
+                    });
+                  }
+                },
+              ),
+              Padding(
+                padding: const EdgeInsets.only(top: 8, left: 4),
+                child: Text(
+                  'Bloqueo de dia completo',
+                  style: GoogleFonts.nunito(
+                    fontSize: 12,
+                    color: colors.onSurface.withValues(alpha: 0.4),
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
+            ],
+
+            // ── Vacation: date range (full days) ──
+            if (_reason == 'vacation') ...[
               Row(
                 children: [
                   Expanded(
@@ -1934,29 +2025,66 @@ class _BlockTimeSheetState extends ConsumerState<_BlockTimeSheet> {
                     ),
                   ),
                 ],
-              )
-            else
-              _PickerTile(
-                icon: Icons.calendar_today_rounded,
-                label: _fmtDate(_fromDate),
-                onTap: () async {
-                  final d = await showDatePicker(
-                    context: context,
-                    initialDate: _fromDate,
-                    firstDate: DateTime.now(),
-                    lastDate: DateTime(2030),
-                  );
-                  if (d != null) {
-                    setState(() {
-                      _fromDate = d;
-                      _toDate = d;
-                    });
-                  }
-                },
               ),
+              Padding(
+                padding: const EdgeInsets.only(top: 8, left: 4),
+                child: Text(
+                  'Dias completos bloqueados',
+                  style: GoogleFonts.nunito(
+                    fontSize: 12,
+                    color: colors.onSurface.withValues(alpha: 0.4),
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
+            ],
 
-            // Time pickers — only for lunch and other (not day_off / vacation)
-            if (_showTimes) ...[
+            // ── Other: date range + time pickers ──
+            if (_reason == 'other') ...[
+              Row(
+                children: [
+                  Expanded(
+                    child: _PickerTile(
+                      icon: Icons.calendar_today_rounded,
+                      label: _fmtDate(_fromDate),
+                      onTap: () async {
+                        final d = await showDatePicker(
+                          context: context,
+                          initialDate: _fromDate,
+                          firstDate: DateTime.now(),
+                          lastDate: DateTime(2030),
+                        );
+                        if (d != null) {
+                          setState(() {
+                            _fromDate = d;
+                            if (_toDate.isBefore(_fromDate)) _toDate = _fromDate;
+                          });
+                        }
+                      },
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    child: Icon(Icons.arrow_forward_rounded,
+                        size: 16, color: colors.onSurface.withValues(alpha: 0.3)),
+                  ),
+                  Expanded(
+                    child: _PickerTile(
+                      icon: Icons.event_rounded,
+                      label: _fmtDate(_toDate),
+                      onTap: () async {
+                        final d = await showDatePicker(
+                          context: context,
+                          initialDate: _toDate.isBefore(_fromDate) ? _fromDate : _toDate,
+                          firstDate: _fromDate,
+                          lastDate: DateTime(2030),
+                        );
+                        if (d != null) setState(() => _toDate = d);
+                      },
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -1995,19 +2123,6 @@ class _BlockTimeSheetState extends ConsumerState<_BlockTimeSheet> {
               ),
             ],
 
-            if (_isFullDay)
-              Padding(
-                padding: const EdgeInsets.only(top: 8, left: 4),
-                child: Text(
-                  _reason == 'day_off' ? 'Bloqueo de dia completo' : 'Dias completos bloqueados',
-                  style: GoogleFonts.nunito(
-                    fontSize: 12,
-                    color: colors.onSurface.withValues(alpha: 0.4),
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-              ),
-
             const SizedBox(height: 20),
             _SheetButton(
               label: 'Bloquear',
@@ -2021,6 +2136,12 @@ class _BlockTimeSheetState extends ConsumerState<_BlockTimeSheet> {
   }
 
   Future<void> _save() async {
+    if (_staffId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Selecciona un empleado')),
+      );
+      return;
+    }
     setState(() => _saving = true);
     try {
       final biz = await ref.read(currentBusinessProvider.future);
@@ -2333,7 +2454,8 @@ class _WalkinSheetState extends ConsumerState<_WalkinSheet> {
               data: (staff) {
                 final allStaff = <Map<String, dynamic>>[];
                 final biz = bizAsync.valueOrNull;
-                if (biz != null) {
+                final wiOwnerId = biz?['owner_id'] as String?;
+                if (biz != null && !_ownerHasStaffRecord(wiOwnerId, staff)) {
                   allStaff.add({
                     'id': biz['owner_id'],
                     'first_name': 'Yo',
@@ -2693,7 +2815,8 @@ class _EditApptSheetState extends ConsumerState<_EditApptSheet> {
             data: (staff) {
               final allStaff = <Map<String, dynamic>>[];
               final biz = bizAsync.valueOrNull;
-              if (biz != null) {
+              final editOwnerId = biz?['owner_id'] as String?;
+              if (biz != null && !_ownerHasStaffRecord(editOwnerId, staff)) {
                 allStaff.add({
                   'id': biz['owner_id'],
                   'first_name': 'Yo',

@@ -458,7 +458,7 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
     final resolutionNotes = d['resolution_notes'] as String?;
     final refundAmount = d['refund_amount'] as num?;
     final refundStatus = d['refund_status'] as String?;
-    final canResolve = status == 'open' || status == 'escalated';
+    final canResolve = status == 'open' || status == 'salon_responded' || status == 'escalated';
 
     // Salon offer data
     final salonOffer = d['salon_offer'] as String?;
@@ -568,88 +568,191 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
               const SizedBox(height: AppConstants.paddingSM),
 
               // ── Timeline: Full dispute history ──────────────────────────
-              _infoCard(context, 'Historial de la Disputa', [
-                // 1. Client reason + evidence
-                _timelineStep(
-                  '1. Cliente reporto problema',
-                  reason,
-                  Colors.orange,
-                  Icons.flag_rounded,
-                ),
-                if (clientEvidence != null && clientEvidence.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text('Evidencia: $clientEvidence',
-                      style: GoogleFonts.nunito(
-                          fontSize: 12,
-                          color: colors.onSurface.withValues(alpha: 0.5))),
-                ],
+              Text('Historial de la Disputa',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: colors.onSurface.withValues(alpha: 0.5),
+                  )),
+              const SizedBox(height: 12),
 
-                // 2. Salon offer
-                if (salonOffer != null) ...[
-                  const SizedBox(height: 12),
-                  _timelineStep(
-                    '2. Salon respondio',
-                    _offerLabel(salonOffer) +
-                        (salonOfferAmount != null
-                            ? ' - \$${salonOfferAmount.toStringAsFixed(0)} MXN'
-                            : ''),
-                    Colors.blue,
-                    Icons.local_offer_rounded,
-                  ),
-                  if (salonResponse != null && salonResponse.isNotEmpty) ...[
+              // 1. Client filed dispute
+              _timelineCard(
+                stepNumber: '1',
+                title: 'Cliente reporto problema',
+                color: Colors.orange,
+                icon: Icons.flag_rounded,
+                children: [
+                  _quoteBubble(reason, 'Cliente', Colors.orange),
+                  if (clientEvidence != null && clientEvidence.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(Icons.attach_file_rounded,
+                            size: 14,
+                            color: colors.onSurface.withValues(alpha: 0.4)),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text('Evidencia adjunta',
+                              style: GoogleFonts.nunito(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: colors.onSurface.withValues(alpha: 0.4),
+                              )),
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 4),
-                    Text(salonResponse,
-                        style: GoogleFonts.nunito(
-                            fontSize: 12,
-                            color: colors.onSurface.withValues(alpha: 0.5))),
+                    _quoteBubble(clientEvidence, null, Colors.grey),
                   ],
                 ],
+              ),
 
-                // 3. Client response
-                if (clientAccepted != null) ...[
-                  const SizedBox(height: 12),
-                  _timelineStep(
-                    '3. Cliente ${clientAccepted ? 'acepto' : 'rechazo'} la oferta',
-                    clientAccepted
-                        ? 'Oferta aceptada'
-                        : 'Oferta rechazada — escalada a admin',
-                    clientAccepted ? Colors.green : Colors.red,
-                    clientAccepted
-                        ? Icons.check_circle_rounded
-                        : Icons.cancel_rounded,
-                  ),
-                ],
-
-                // Business response (old field — stylist_evidence)
-                if (stylistEvidence != null &&
-                    stylistEvidence.isNotEmpty &&
-                    salonOffer == null) ...[
-                  const SizedBox(height: 12),
-                  _timelineStep(
-                    '2. Respuesta del negocio',
-                    stylistEvidence,
-                    Colors.blue,
-                    Icons.store_rounded,
-                  ),
-                ],
-              ]),
-
-              // Resolution info (if already resolved)
-              if (!canResolve) ...[
-                const SizedBox(height: AppConstants.paddingSM),
-                _infoCard(context, 'Resolucion', [
-                  if (resolution != null)
-                    _infoRow('Resultado', _outcomeLabel(resolution)),
-                  if (resolutionNotes != null && resolutionNotes.isNotEmpty)
-                    _infoRow('Notas', resolutionNotes),
-                  if (refundAmount != null && refundAmount > 0) ...[
-                    _infoRow('Reembolso',
-                        '\$${refundAmount.toStringAsFixed(0)} MXN'),
-                    if (refundStatus != null)
-                      _infoRow('Estado reembolso', refundStatus),
+              // 2. Salon offer
+              if (salonOffer != null) ...[
+                _timelineConnector(),
+                _timelineCard(
+                  stepNumber: '2',
+                  title: 'Salon respondio',
+                  color: Colors.blue,
+                  icon: Icons.local_offer_rounded,
+                  children: [
+                    // Offer badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: salonOffer == 'denied'
+                            ? Colors.red.withValues(alpha: 0.08)
+                            : Colors.blue.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: salonOffer == 'denied'
+                              ? Colors.red.withValues(alpha: 0.2)
+                              : Colors.blue.withValues(alpha: 0.2),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            salonOffer == 'denied'
+                                ? Icons.block_rounded
+                                : Icons.monetization_on_rounded,
+                            size: 14,
+                            color: salonOffer == 'denied'
+                                ? Colors.red
+                                : Colors.blue,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            _offerLabel(salonOffer) +
+                                (salonOfferAmount != null
+                                    ? '  •  \$${salonOfferAmount.toStringAsFixed(0)} MXN'
+                                    : ''),
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: salonOffer == 'denied'
+                                  ? Colors.red
+                                  : Colors.blue,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (salonResponse != null &&
+                        salonResponse.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      _quoteBubble(salonResponse, 'Salon', Colors.blue),
+                    ],
                   ],
-                ]),
+                ),
               ],
+
+              // 2b. Old-style business response (before offer system)
+              if (stylistEvidence != null &&
+                  stylistEvidence.isNotEmpty &&
+                  salonOffer == null) ...[
+                _timelineConnector(),
+                _timelineCard(
+                  stepNumber: '2',
+                  title: 'Respuesta del negocio',
+                  color: Colors.blue,
+                  icon: Icons.store_rounded,
+                  children: [
+                    _quoteBubble(stylistEvidence, 'Salon', Colors.blue),
+                  ],
+                ),
+              ],
+
+              // 3. Client response to offer
+              if (clientAccepted != null) ...[
+                _timelineConnector(),
+                _timelineCard(
+                  stepNumber: '3',
+                  title: clientAccepted!
+                      ? 'Cliente acepto la oferta'
+                      : 'Cliente rechazo la oferta',
+                  color: clientAccepted! ? Colors.green : Colors.red,
+                  icon: clientAccepted!
+                      ? Icons.check_circle_rounded
+                      : Icons.cancel_rounded,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: (clientAccepted! ? Colors.green : Colors.red)
+                            .withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        clientAccepted!
+                            ? 'Oferta aceptada — disputa resuelta'
+                            : 'Oferta rechazada — escalada a admin',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color:
+                              clientAccepted! ? Colors.green : Colors.red,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+
+              // 4. Resolution (if resolved)
+              if (resolution != null) ...[
+                _timelineConnector(),
+                _timelineCard(
+                  stepNumber: (clientAccepted != null ? '4' : salonOffer != null ? '3' : '2'),
+                  title: 'Resolucion',
+                  color: Colors.green.shade700,
+                  icon: Icons.gavel_rounded,
+                  children: [
+                    _infoRow('Resultado', _outcomeLabel(resolution)),
+                    if (resolutionNotes != null &&
+                        resolutionNotes.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      _quoteBubble(
+                          resolutionNotes, 'Admin', Colors.deepPurple),
+                    ],
+                    if (refundAmount != null && refundAmount > 0) ...[
+                      const SizedBox(height: 4),
+                      _infoRow('Reembolso',
+                          '\$${refundAmount.toStringAsFixed(0)} MXN'),
+                      if (refundStatus != null)
+                        _infoRow('Estado', refundStatus),
+                    ],
+                  ],
+                ),
+              ],
+
+              const SizedBox(height: AppConstants.paddingSM),
+
+              // (Resolution info is now part of the timeline above)
 
               // Resolution controls (for open or escalated disputes)
               if (canResolve) ...[
@@ -880,42 +983,135 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
     );
   }
 
-  Widget _timelineStep(
-      String title, String description, Color color, IconData icon) {
+  /// A full timeline card with step number, icon, title, and child content.
+  Widget _timelineCard({
+    required String stepNumber,
+    required String title,
+    required Color color,
+    required IconData icon,
+    required List<Widget> children,
+  }) {
     final colors = Theme.of(context).colorScheme;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: 24,
-          height: 24,
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(6),
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.06),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
-          child: Icon(icon, size: 14, color: color),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header bar
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.06),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(11)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 22,
+                  height: 22,
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Center(
+                    child: Text(stepNumber,
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: color,
+                        )),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Icon(icon, size: 15, color: color),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(title,
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: colors.onSurface.withValues(alpha: 0.8),
+                      )),
+                ),
+              ],
+            ),
+          ),
+          // Content
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: children,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Vertical connector line between timeline cards.
+  Widget _timelineConnector() {
+    return Padding(
+      padding: const EdgeInsets.only(left: 22),
+      child: Container(
+        width: 2,
+        height: 20,
+        color: Theme.of(context)
+            .colorScheme
+            .onSurface
+            .withValues(alpha: 0.12),
+      ),
+    );
+  }
+
+  /// A styled quote bubble for user/salon/admin text.
+  Widget _quoteBubble(String text, String? author, Color accentColor) {
+    final colors = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: accentColor.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(8),
+        border: Border(
+          left: BorderSide(color: accentColor.withValues(alpha: 0.4), width: 3),
         ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (author != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 3),
+              child: Text(author,
                   style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: colors.onSurface.withValues(alpha: 0.7),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: accentColor.withValues(alpha: 0.7),
+                    letterSpacing: 0.5,
                   )),
-              const SizedBox(height: 2),
-              Text(description,
-                  style: GoogleFonts.nunito(
-                    fontSize: 13,
-                    color: colors.onSurface,
-                  )),
-            ],
-          ),
-        ),
-      ],
+            ),
+          Text(text,
+              style: GoogleFonts.nunito(
+                fontSize: 13,
+                color: colors.onSurface.withValues(alpha: 0.8),
+                height: 1.4,
+              )),
+        ],
+      ),
     );
   }
 
@@ -1077,7 +1273,7 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
         },
       );
 
-      // If refund enabled, update the appointment payment status
+      // If refund enabled, update the appointment payment status and process Stripe refund
       if (_refundEnabled) {
         final appointmentId =
             widget.dispute['appointment_id'] as String?;
@@ -1086,6 +1282,24 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
               .from('appointments')
               .update({'payment_status': 'refund_pending'})
               .eq('id', appointmentId);
+        }
+
+        // Process the actual Stripe refund via edge function
+        try {
+          await SupabaseClientService.client.functions.invoke(
+            'process-dispute-refund',
+            body: {'dispute_id': disputeId},
+          );
+        } catch (refundErr) {
+          debugPrint('Dispute refund processing failed: $refundErr');
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Disputa resuelta, pero el reembolso fallo: $refundErr'),
+                backgroundColor: Colors.orange.shade600,
+              ),
+            );
+          }
         }
       }
 

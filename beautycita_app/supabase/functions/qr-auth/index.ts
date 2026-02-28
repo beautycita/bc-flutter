@@ -60,6 +60,77 @@ serve(async (req) => {
       return json({ session_id: data.id, code: data.code });
     }
 
+    // ===== CHECK =====
+    if (action === "check") {
+      const { code } = body;
+      if (!code) return json({ error: "code is required" }, 400);
+
+      const { data: session, error: sessError } = await supabase
+        .from("qr_auth_sessions")
+        .select("id, status")
+        .eq("code", code)
+        .maybeSingle();
+
+      if (sessError) throw sessError;
+      if (!session) return json({ authorized: false });
+
+      return json({
+        authorized: session.status === "authorized",
+        session_id: session.id,
+      });
+    }
+
+    // ===== REGISTER WEB SESSION =====
+    if (action === "register_session") {
+      const authHeader = req.headers.get("Authorization") ?? "";
+      const token = authHeader.replace("Bearer ", "");
+      if (!token) return json({ error: "Authorization required" }, 401);
+
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser(token);
+      if (authError || !user) return json({ error: "Invalid token" }, 401);
+
+      // Check if user already has an active web session
+      const { data: existing } = await supabase
+        .from("qr_auth_sessions")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("status", "consumed")
+        .limit(1)
+        .maybeSingle();
+
+      if (existing) {
+        // Refresh the existing session's timestamp
+        await supabase
+          .from("qr_auth_sessions")
+          .update({ consumed_at: new Date().toISOString() })
+          .eq("id", existing.id);
+        return json({ success: true, session_id: existing.id });
+      }
+
+      // Create a new session record for this web login
+      const { data, error } = await supabase
+        .from("qr_auth_sessions")
+        .insert({
+          code: generateCode(),
+          status: "consumed",
+          user_id: user.id,
+          email: user.email,
+          authorized_at: new Date().toISOString(),
+          consumed_at: new Date().toISOString(),
+          expires_at: new Date(
+            Date.now() + 30 * 24 * 60 * 60 * 1000
+          ).toISOString(), // 30 days
+        })
+        .select("id")
+        .single();
+
+      if (error) throw error;
+      return json({ success: true, session_id: data.id });
+    }
+
     // ===== AUTHORIZE =====
     if (action === "authorize") {
       const { code } = body;

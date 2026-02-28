@@ -923,12 +923,20 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
       final match = data.where((s) => s['day_of_week'] == day).toList();
       if (match.isNotEmpty) {
         final s = match.first;
+        final rawBreaks = s['breaks'] as List<dynamic>? ?? [];
+        final breaks = rawBreaks
+            .map((b) => _BreakWindow(
+                  start: _parseTime(b['start'] as String?),
+                  end: _parseTime(b['end'] as String?),
+                ))
+            .toList();
         return _DaySchedule(
           id: s['id'] as String?,
           dayOfWeek: day,
           isAvailable: s['is_available'] as bool? ?? false,
           startTime: _parseTime(s['start_time'] as String?),
           endTime: _parseTime(s['end_time'] as String?),
+          breaks: breaks,
         );
       }
       return _DaySchedule(
@@ -1241,69 +1249,146 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      child: Row(
+      child: Column(
         children: [
-          SizedBox(
-            width: 36,
-            child: Text(
-              _dayNames[dayIndex],
-              style: GoogleFonts.poppins(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: day.isAvailable
-                    ? colors.onSurface
-                    : colors.onSurface.withValues(alpha: 0.3),
+          Row(
+            children: [
+              SizedBox(
+                width: 36,
+                child: Text(
+                  _dayNames[dayIndex],
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: day.isAvailable
+                        ? colors.onSurface
+                        : colors.onSurface.withValues(alpha: 0.3),
+                  ),
+                ),
               ),
-            ),
-          ),
-          SizedBox(
-            width: 40,
-            child: Switch(
-              value: day.isAvailable,
-              onChanged: (v) {
-                setState(() {
-                  _schedule![dayIndex] = day.copyWith(isAvailable: v);
-                  _scheduleModified = true;
-                });
-              },
-              activeTrackColor: colors.primary,
-            ),
-          ),
-          if (day.isAvailable) ...[
-            _timeTap(
-              context,
-              day.startTime,
-              (t) {
-                setState(() {
-                  _schedule![dayIndex] = day.copyWith(startTime: t);
-                  _scheduleModified = true;
-                });
-              },
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Text('-',
+              SizedBox(
+                width: 40,
+                child: Switch(
+                  value: day.isAvailable,
+                  onChanged: (v) {
+                    setState(() {
+                      _schedule![dayIndex] = day.copyWith(isAvailable: v);
+                      _scheduleModified = true;
+                    });
+                  },
+                  activeTrackColor: colors.primary,
+                ),
+              ),
+              if (day.isAvailable) ...[
+                _timeTap(
+                  context,
+                  day.startTime,
+                  (t) {
+                    setState(() {
+                      _schedule![dayIndex] = day.copyWith(startTime: t);
+                      _scheduleModified = true;
+                    });
+                  },
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Text('-',
+                      style: GoogleFonts.nunito(
+                          color: colors.onSurface.withValues(alpha: 0.4))),
+                ),
+                _timeTap(
+                  context,
+                  day.endTime,
+                  (t) {
+                    setState(() {
+                      _schedule![dayIndex] = day.copyWith(endTime: t);
+                      _scheduleModified = true;
+                    });
+                  },
+                ),
+                const Spacer(),
+                // Add break button
+                IconButton(
+                  icon: Icon(Icons.free_breakfast_rounded,
+                      size: 16,
+                      color: colors.onSurface.withValues(alpha: 0.4)),
+                  tooltip: 'Agregar descanso',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  onPressed: () {
+                    setState(() {
+                      _schedule![dayIndex] = day.copyWith(
+                        breaks: [
+                          ...day.breaks,
+                          const _BreakWindow(
+                            start: TimeOfDay(hour: 14, minute: 0),
+                            end: TimeOfDay(hour: 15, minute: 0),
+                          ),
+                        ],
+                      );
+                      _scheduleModified = true;
+                    });
+                  },
+                ),
+              ] else
+                Text(
+                  'No disponible',
                   style: GoogleFonts.nunito(
-                      color: colors.onSurface.withValues(alpha: 0.4))),
-            ),
-            _timeTap(
-              context,
-              day.endTime,
-              (t) {
-                setState(() {
-                  _schedule![dayIndex] = day.copyWith(endTime: t);
-                  _scheduleModified = true;
-                });
-              },
-            ),
-          ] else
-            Text(
-              'No disponible',
-              style: GoogleFonts.nunito(
-                fontSize: 13,
-                color: colors.onSurface.withValues(alpha: 0.3),
+                    fontSize: 13,
+                    color: colors.onSurface.withValues(alpha: 0.3),
+                  ),
+                ),
+            ],
+          ),
+          // Break rows
+          if (day.isAvailable)
+            for (var bi = 0; bi < day.breaks.length; bi++)
+              Padding(
+                padding: const EdgeInsets.only(left: 76, top: 4),
+                child: Row(
+                  children: [
+                    Icon(Icons.free_breakfast_rounded,
+                        size: 12,
+                        color: colors.onSurface.withValues(alpha: 0.3)),
+                    const SizedBox(width: 4),
+                    _timeTap(context, day.breaks[bi].start, (t) {
+                      setState(() {
+                        final newBreaks = List<_BreakWindow>.from(day.breaks);
+                        newBreaks[bi] = _BreakWindow(start: t, end: newBreaks[bi].end);
+                        _schedule![dayIndex] = day.copyWith(breaks: newBreaks);
+                        _scheduleModified = true;
+                      });
+                    }),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 3),
+                      child: Text('-',
+                          style: GoogleFonts.nunito(
+                              fontSize: 12,
+                              color: colors.onSurface.withValues(alpha: 0.4))),
+                    ),
+                    _timeTap(context, day.breaks[bi].end, (t) {
+                      setState(() {
+                        final newBreaks = List<_BreakWindow>.from(day.breaks);
+                        newBreaks[bi] = _BreakWindow(start: newBreaks[bi].start, end: t);
+                        _schedule![dayIndex] = day.copyWith(breaks: newBreaks);
+                        _scheduleModified = true;
+                      });
+                    }),
+                    const SizedBox(width: 4),
+                    InkWell(
+                      onTap: () {
+                        setState(() {
+                          final newBreaks = List<_BreakWindow>.from(day.breaks)
+                            ..removeAt(bi);
+                          _schedule![dayIndex] = day.copyWith(breaks: newBreaks);
+                          _scheduleModified = true;
+                        });
+                      },
+                      child: Icon(Icons.close, size: 14, color: colors.error),
+                    ),
+                  ],
+                ),
               ),
-            ),
         ],
       ),
     );
@@ -1351,6 +1436,12 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
         'is_available': day.isAvailable,
         'start_time': _formatTime(day.startTime),
         'end_time': _formatTime(day.endTime),
+        'breaks': day.breaks
+            .map((b) => {
+                  'start': _formatTime(b.start),
+                  'end': _formatTime(b.end),
+                })
+            .toList(),
       }).toList();
 
       await SupabaseClientService.client
@@ -1646,10 +1737,11 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
 
   Future<void> _showAddTimeOff(
       BuildContext context, WidgetRef ref, String staffId) async {
+    DateTime singleDate = DateTime.now();
     DateTime startDate = DateTime.now();
     DateTime endDate = DateTime.now().add(const Duration(days: 1));
-    TimeOfDay startTime = const TimeOfDay(hour: 9, minute: 0);
-    TimeOfDay endTime = const TimeOfDay(hour: 18, minute: 0);
+    TimeOfDay startTime = const TimeOfDay(hour: 14, minute: 0);
+    TimeOfDay endTime = const TimeOfDay(hour: 15, minute: 0);
     String reason = 'day_off';
 
     if (!context.mounted) return;
@@ -1659,6 +1751,10 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setSheetState) {
+            final showDateRange = reason == 'vacation' || reason == 'other';
+            final showSingleDate = reason == 'day_off';
+            final showTimePickers = reason == 'lunch' || reason == 'other';
+
             return Padding(
               padding: EdgeInsets.fromLTRB(
                 AppConstants.paddingLG,
@@ -1693,58 +1789,131 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
                           setSheetState(() => reason = v ?? 'day_off'),
                     ),
                     const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _dateTile(ctx, 'Inicio', startDate, (d) {
-                            setSheetState(() => startDate = d);
-                          }),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: _dateTile(ctx, 'Fin', endDate, (d) {
-                            setSheetState(() => endDate = d);
-                          }),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _timeTile(ctx, 'Hora inicio', startTime,
-                              (t) {
-                            setSheetState(() => startTime = t);
-                          }),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: _timeTile(ctx, 'Hora fin', endTime, (t) {
-                            setSheetState(() => endTime = t);
-                          }),
-                        ),
-                      ],
-                    ),
+
+                    // Lunch: time pickers only (1-hour block today)
+                    if (reason == 'lunch') ...[
+                      Text('Hora del almuerzo',
+                          style: GoogleFonts.nunito(
+                              fontSize: 12,
+                              color: Theme.of(ctx).colorScheme.onSurface
+                                  .withValues(alpha: 0.5))),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _timeTile(ctx, 'Inicio', startTime, (t) {
+                              setSheetState(() {
+                                startTime = t;
+                                // Auto-set end to 1 hour later
+                                endTime = TimeOfDay(
+                                  hour: (t.hour + 1) % 24,
+                                  minute: t.minute,
+                                );
+                              });
+                            }),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _timeTile(ctx, 'Fin', endTime, (t) {
+                              setSheetState(() => endTime = t);
+                            }),
+                          ),
+                        ],
+                      ),
+                    ],
+
+                    // Day off: single date picker only (full day)
+                    if (showSingleDate)
+                      _dateTile(ctx, 'Fecha', singleDate, (d) {
+                        setSheetState(() => singleDate = d);
+                      }),
+
+                    // Vacation / Other: date range
+                    if (showDateRange) ...[
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _dateTile(ctx, 'Desde', startDate, (d) {
+                              setSheetState(() => startDate = d);
+                            }),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _dateTile(ctx, 'Hasta', endDate, (d) {
+                              setSheetState(() => endDate = d);
+                            }),
+                          ),
+                        ],
+                      ),
+                    ],
+
+                    // Other: also show time pickers
+                    if (reason == 'other') ...[
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _timeTile(ctx, 'Hora inicio', startTime,
+                                (t) {
+                              setSheetState(() => startTime = t);
+                            }),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _timeTile(ctx, 'Hora fin', endTime, (t) {
+                              setSheetState(() => endTime = t);
+                            }),
+                          ),
+                        ],
+                      ),
+                    ],
+
                     const SizedBox(height: 16),
                     ElevatedButton(
                       onPressed: () async {
                         final biz =
                             await ref.read(currentBusinessProvider.future);
                         if (biz == null) return;
-                        final startsAt = DateTime(
-                          startDate.year,
-                          startDate.month,
-                          startDate.day,
-                          startTime.hour,
-                          startTime.minute,
-                        );
-                        final endsAt = DateTime(
-                          endDate.year,
-                          endDate.month,
-                          endDate.day,
-                          endTime.hour,
-                          endTime.minute,
-                        );
+
+                        DateTime startsAt;
+                        DateTime endsAt;
+
+                        switch (reason) {
+                          case 'lunch':
+                            // Today, time range only
+                            final now = DateTime.now();
+                            startsAt = DateTime(now.year, now.month, now.day,
+                                startTime.hour, startTime.minute);
+                            endsAt = DateTime(now.year, now.month, now.day,
+                                endTime.hour, endTime.minute);
+                          case 'day_off':
+                            // Single full day (00:00 - 23:59)
+                            startsAt = DateTime(singleDate.year,
+                                singleDate.month, singleDate.day, 0, 0);
+                            endsAt = DateTime(singleDate.year,
+                                singleDate.month, singleDate.day, 23, 59);
+                          case 'vacation':
+                            // Date range, full days
+                            startsAt = DateTime(startDate.year,
+                                startDate.month, startDate.day, 0, 0);
+                            endsAt = DateTime(endDate.year, endDate.month,
+                                endDate.day, 23, 59);
+                          default:
+                            // Other: date range + time
+                            startsAt = DateTime(
+                                startDate.year,
+                                startDate.month,
+                                startDate.day,
+                                startTime.hour,
+                                startTime.minute);
+                            endsAt = DateTime(
+                                endDate.year,
+                                endDate.month,
+                                endDate.day,
+                                endTime.hour,
+                                endTime.minute);
+                        }
+
                         await SupabaseClientService.client
                             .from('staff_schedule_blocks')
                             .insert({
@@ -1904,12 +2073,19 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
 // Day schedule model
 // ---------------------------------------------------------------------------
 
+class _BreakWindow {
+  final TimeOfDay start;
+  final TimeOfDay end;
+  const _BreakWindow({required this.start, required this.end});
+}
+
 class _DaySchedule {
   final String? id;
   final int dayOfWeek;
   final bool isAvailable;
   final TimeOfDay startTime;
   final TimeOfDay endTime;
+  final List<_BreakWindow> breaks;
 
   const _DaySchedule({
     this.id,
@@ -1917,12 +2093,14 @@ class _DaySchedule {
     required this.isAvailable,
     required this.startTime,
     required this.endTime,
+    this.breaks = const [],
   });
 
   _DaySchedule copyWith({
     bool? isAvailable,
     TimeOfDay? startTime,
     TimeOfDay? endTime,
+    List<_BreakWindow>? breaks,
   }) {
     return _DaySchedule(
       id: id,
@@ -1930,6 +2108,7 @@ class _DaySchedule {
       isAvailable: isAvailable ?? this.isAvailable,
       startTime: startTime ?? this.startTime,
       endTime: endTime ?? this.endTime,
+      breaks: breaks ?? this.breaks,
     );
   }
 }

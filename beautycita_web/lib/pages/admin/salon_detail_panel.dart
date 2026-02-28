@@ -15,11 +15,6 @@ class RegisteredSalonDetailContent extends StatelessWidget {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
     final dateFormat = DateFormat('d MMM yyyy', 'es');
-    final currencyFormat = NumberFormat.currency(
-      locale: 'es_MX',
-      symbol: r'$',
-      decimalDigits: 0,
-    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -31,10 +26,10 @@ class RegisteredSalonDetailContent extends StatelessWidget {
               CircleAvatar(
                 radius: BCSpacing.avatarLg / 2,
                 backgroundColor: colors.primary.withValues(alpha: 0.1),
-                backgroundImage: salon.logoUrl != null
-                    ? NetworkImage(salon.logoUrl!)
+                backgroundImage: salon.photoUrl != null
+                    ? NetworkImage(salon.photoUrl!)
                     : null,
-                child: salon.logoUrl == null
+                child: salon.photoUrl == null
                     ? Icon(
                         Icons.store,
                         size: BCSpacing.iconLg,
@@ -81,21 +76,23 @@ class RegisteredSalonDetailContent extends StatelessWidget {
         Row(
           children: [
             _StatCard(
-              label: 'Servicios',
-              value: '${salon.servicesCount}',
-              icon: Icons.content_cut,
+              label: 'Rating',
+              value: salon.rating > 0
+                  ? salon.rating.toStringAsFixed(1)
+                  : '-',
+              icon: Icons.star,
             ),
             const SizedBox(width: BCSpacing.sm),
             _StatCard(
-              label: 'Staff',
-              value: '${salon.staffCount}',
-              icon: Icons.people,
+              label: 'Reviews',
+              value: '${salon.totalReviews}',
+              icon: Icons.rate_review,
             ),
             const SizedBox(width: BCSpacing.sm),
             _StatCard(
-              label: 'Reservas',
-              value: '${salon.bookingsCount}',
-              icon: Icons.calendar_today,
+              label: 'Tier',
+              value: '${salon.tier}',
+              icon: Icons.workspace_premium,
             ),
           ],
         ),
@@ -121,12 +118,6 @@ class RegisteredSalonDetailContent extends StatelessWidget {
                 )
               : null,
         ),
-        const SizedBox(height: BCSpacing.sm),
-        _InfoRow(
-          icon: Icons.attach_money,
-          label: 'Ingresos',
-          value: currencyFormat.format(salon.revenue),
-        ),
 
         const SizedBox(height: BCSpacing.lg),
         const Divider(),
@@ -136,21 +127,9 @@ class RegisteredSalonDetailContent extends StatelessWidget {
         _SectionTitle(title: 'Contacto'),
         const SizedBox(height: BCSpacing.sm),
         _InfoRow(
-          icon: Icons.person,
-          label: 'Dueno',
-          value: salon.ownerName ?? 'No registrado',
-        ),
-        const SizedBox(height: BCSpacing.sm),
-        _InfoRow(
           icon: Icons.phone_outlined,
           label: 'Telefono',
           value: salon.phone ?? 'No registrado',
-        ),
-        const SizedBox(height: BCSpacing.sm),
-        _InfoRow(
-          icon: Icons.email_outlined,
-          label: 'Email',
-          value: salon.email ?? 'No registrado',
         ),
         const SizedBox(height: BCSpacing.sm),
         _InfoRow(
@@ -484,9 +463,10 @@ class _StripeStatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (label, color) = switch (status) {
-      'connected' => ('Stripe OK', Colors.green),
-      'pending' => ('Stripe pendiente', Colors.orange),
-      _ => ('Sin Stripe', Colors.grey),
+      'complete' => ('Stripe OK', Colors.green),
+      'pending' || 'pending_verification' => ('Stripe pendiente', Colors.orange),
+      'not_started' => ('Sin Stripe', Colors.grey),
+      _ => (status, Colors.grey),
     };
 
     return Container(

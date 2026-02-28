@@ -641,6 +641,316 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
     );
   }
 
+  /// Show resolution result for a completed dispute.
+  void _showDisputeResult(Map<String, dynamic> dispute) {
+    final resolution = dispute['resolution'] as String?;
+    final resolutionNotes = dispute['resolution_notes'] as String?;
+    final refundAmount = dispute['refund_amount'] as num?;
+    final refundStatus = dispute['refund_status'] as String?;
+    final resolvedAt = dispute['resolved_at'] as String?;
+    final salonOffer = dispute['salon_offer'] as String?;
+    final salonResponse = dispute['salon_response'] as String?;
+    final salonOfferAmount = dispute['salon_offer_amount'] as num?;
+    final status = dispute['status'] as String?;
+
+    // Translate
+    final (String resLabel, Color resColor, IconData resIcon) = switch (resolution) {
+      'favor_client' => ('A favor tuyo', Colors.green, Icons.check_circle_rounded),
+      'favor_provider' => ('A favor del salon', Colors.blue, Icons.store_rounded),
+      'favor_both' => ('A favor de ambos', Colors.teal, Icons.handshake_rounded),
+      'dismissed' => ('Descartada', Colors.grey, Icons.cancel_outlined),
+      _ => ('Resuelta', Colors.green, Icons.check_circle_rounded),
+    };
+
+    final offerLabel = switch (salonOffer) {
+      'full_refund' => 'Reembolso total',
+      'partial_refund' => 'Reembolso parcial',
+      'denied' => 'Reembolso negado',
+      _ => null,
+    };
+
+    final refundStatusLabel = switch (refundStatus) {
+      'pending' => 'Pendiente',
+      'processed' => 'Procesado',
+      'failed' => 'Fallido',
+      _ => null,
+    };
+
+    String? resolvedDate;
+    if (resolvedAt != null) {
+      final dt = DateTime.tryParse(resolvedAt)?.toLocal();
+      if (dt != null) {
+        resolvedDate = '${dt.day}/${dt.month}/${dt.year} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+      }
+    }
+
+    // Summary text
+    String summary;
+    if (resolution == 'favor_client') {
+      if (refundAmount != null && refundAmount > 0) {
+        summary = 'Tu disputa se resolvio a tu favor. Se proceso un reembolso de \$${refundAmount.toStringAsFixed(0)} MXN.';
+      } else {
+        summary = 'Tu disputa se resolvio a tu favor.';
+      }
+    } else if (resolution == 'favor_provider') {
+      summary = 'La disputa se resolvio a favor del salon. No se proceso reembolso.';
+    } else if (resolution == 'favor_both') {
+      summary = 'La disputa se resolvio a favor de ambas partes.';
+    } else if (resolution == 'dismissed') {
+      summary = 'La disputa fue descartada.';
+    } else if (status == 'rejected') {
+      summary = 'La disputa fue rechazada.';
+    } else {
+      summary = 'La disputa fue resuelta.';
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+            top: Radius.circular(AppConstants.radiusXL)),
+      ),
+      builder: (ctx) {
+        final colors = Theme.of(ctx).colorScheme;
+        return Padding(
+          padding: EdgeInsets.fromLTRB(
+            AppConstants.paddingLG,
+            AppConstants.paddingMD,
+            AppConstants.paddingLG,
+            MediaQuery.of(ctx).viewInsets.bottom + AppConstants.paddingLG,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppConstants.paddingMD),
+              Text(
+                'Resultado de la disputa',
+                style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+              const SizedBox(height: AppConstants.paddingMD),
+
+              // Resolution header card
+              Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: resColor.withValues(alpha: 0.04),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: resColor.withValues(alpha: 0.2)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: resColor.withValues(alpha: 0.08),
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(11)),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(resIcon, size: 18, color: resColor),
+                          const SizedBox(width: 8),
+                          Text(resLabel,
+                              style: GoogleFonts.poppins(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                color: resColor,
+                              )),
+                        ],
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(summary,
+                              style: GoogleFonts.nunito(
+                                fontSize: 14,
+                                color: colors.onSurface.withValues(alpha: 0.8),
+                                height: 1.4,
+                              )),
+                          if (refundAmount != null && refundAmount > 0) ...[
+                            const SizedBox(height: 10),
+                            Row(
+                              children: [
+                                Icon(Icons.payments_rounded, size: 16,
+                                    color: colors.onSurface.withValues(alpha: 0.4)),
+                                const SizedBox(width: 6),
+                                Text('\$${refundAmount.toStringAsFixed(0)} MXN',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                    )),
+                                if (refundStatusLabel != null) ...[
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: refundStatus == 'processed'
+                                          ? Colors.green.withValues(alpha: 0.1)
+                                          : refundStatus == 'failed'
+                                              ? Colors.red.withValues(alpha: 0.1)
+                                              : Colors.orange.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(refundStatusLabel,
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w600,
+                                          color: refundStatus == 'processed'
+                                              ? Colors.green
+                                              : refundStatus == 'failed'
+                                                  ? Colors.red
+                                                  : Colors.orange,
+                                        )),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Salon's offer if applicable
+              if (salonOffer != null && offerLabel != null) ...[
+                const SizedBox(height: AppConstants.paddingMD),
+                Text('Oferta del salon',
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1,
+                      color: colors.onSurface.withValues(alpha: 0.4),
+                    )),
+                const SizedBox(height: 4),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: colors.onSurface.withValues(alpha: 0.03),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border(
+                      left: BorderSide(
+                          color: Colors.blue.withValues(alpha: 0.4), width: 3),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(offerLabel +
+                              (salonOfferAmount != null
+                                  ? '  •  \$${salonOfferAmount.toStringAsFixed(0)} MXN'
+                                  : ''),
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.blue,
+                          )),
+                      if (salonResponse != null && salonResponse.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(salonResponse,
+                            style: GoogleFonts.nunito(
+                              fontSize: 12,
+                              color: colors.onSurface.withValues(alpha: 0.6),
+                            )),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+
+              // Admin notes
+              if (resolutionNotes != null && resolutionNotes.isNotEmpty) ...[
+                const SizedBox(height: AppConstants.paddingMD),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: colors.onSurface.withValues(alpha: 0.03),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border(
+                      left: BorderSide(
+                          color: Colors.deepPurple.withValues(alpha: 0.4), width: 3),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Notas del administrador',
+                          style: GoogleFonts.poppins(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.deepPurple.withValues(alpha: 0.6),
+                          )),
+                      const SizedBox(height: 2),
+                      Text(resolutionNotes,
+                          style: GoogleFonts.nunito(
+                            fontSize: 12,
+                            color: colors.onSurface.withValues(alpha: 0.7),
+                          )),
+                    ],
+                  ),
+                ),
+              ],
+
+              // Resolved date
+              if (resolvedDate != null) ...[
+                const SizedBox(height: AppConstants.paddingSM),
+                Row(
+                  children: [
+                    Icon(Icons.access_time_rounded, size: 12,
+                        color: colors.onSurface.withValues(alpha: 0.3)),
+                    const SizedBox(width: 4),
+                    Text('Resuelto: $resolvedDate',
+                        style: GoogleFonts.nunito(
+                          fontSize: 11,
+                          color: colors.onSurface.withValues(alpha: 0.4),
+                        )),
+                  ],
+                ),
+              ],
+
+              const SizedBox(height: AppConstants.paddingLG),
+
+              // Close button
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(0, AppConstants.minTouchHeight),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppConstants.radiusLG),
+                    ),
+                  ),
+                  child: const Text('Cerrar'),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _acceptOffer(
       String disputeId, String salonOffer, num? offerAmount) async {
     final now = DateTime.now().toIso8601String();
@@ -665,6 +975,18 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
         .from('disputes')
         .update(updateData)
         .eq('id', disputeId);
+
+    // If a refund is pending, process the actual Stripe refund (fire-and-forget)
+    if (salonOffer == 'partial_refund' || salonOffer == 'full_refund') {
+      SupabaseClientService.client.functions.invoke(
+        'process-dispute-refund',
+        body: {'dispute_id': disputeId},
+      ).then((_) {
+        debugPrint('Dispute refund processed for $disputeId');
+      }).catchError((e) {
+        debugPrint('Dispute refund failed for $disputeId: $e');
+      });
+    }
 
     ref.invalidate(userDisputesProvider);
     ref.invalidate(userBookingsProvider);
@@ -895,6 +1217,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
     final dispute = disputes[booking.id];
     final disputeStatus = dispute?['status'] as String?;
     final hasActiveDispute = dispute != null && disputeStatus != 'resolved' && disputeStatus != 'rejected';
+    final hasResolvedDispute = dispute != null && (disputeStatus == 'resolved' || disputeStatus == 'rejected');
     final hasSalonOffer = disputeStatus == 'salon_responded';
 
     return GestureDetector(
@@ -1001,6 +1324,41 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
               ),
             ],
 
+            // Resolved dispute badge
+            if (hasResolvedDispute) ...[
+              const SizedBox(height: AppConstants.paddingSM),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: (disputeStatus == 'resolved' ? Colors.green : Colors.red)
+                      .withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      disputeStatus == 'resolved'
+                          ? Icons.check_circle_rounded
+                          : Icons.block_rounded,
+                      size: 14,
+                      color: disputeStatus == 'resolved' ? Colors.green : Colors.red,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      disputeStatus == 'resolved'
+                          ? 'Disputa resuelta'
+                          : 'Disputa rechazada',
+                      style: textTheme.labelSmall?.copyWith(
+                        color: disputeStatus == 'resolved' ? Colors.green : Colors.red,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
             // Active dispute badge
             if (hasActiveDispute) ...[
               const SizedBox(height: AppConstants.paddingSM),
@@ -1084,17 +1442,18 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
                               const Size(0, AppConstants.minTouchHeight - 16),
                         ),
                       )
-                    : dispute == null
+                    : hasResolvedDispute
                         ? TextButton.icon(
-                            onPressed: () => _openDispute(booking),
+                            onPressed: () => _showDisputeResult(dispute!),
                             icon: Icon(
-                              Icons.flag_outlined,
+                              Icons.info_outline_rounded,
                               size: AppConstants.iconSizeSM,
-                              color: Colors.orange.shade700,
+                              color: Colors.green.shade700,
                             ),
-                            label: Text('Reportar problema',
+                            label: Text('Ver resultado',
                                 style: TextStyle(
-                                    color: Colors.orange.shade700)),
+                                    color: Colors.green.shade700,
+                                    fontWeight: FontWeight.w700)),
                             style: TextButton.styleFrom(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: AppConstants.paddingSM,
@@ -1103,7 +1462,26 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
                                   0, AppConstants.minTouchHeight - 16),
                             ),
                           )
-                        : const SizedBox.shrink(),
+                        : dispute == null
+                            ? TextButton.icon(
+                                onPressed: () => _openDispute(booking),
+                                icon: Icon(
+                                  Icons.flag_outlined,
+                                  size: AppConstants.iconSizeSM,
+                                  color: Colors.orange.shade700,
+                                ),
+                                label: Text('Reportar problema',
+                                    style: TextStyle(
+                                        color: Colors.orange.shade700)),
+                                style: TextButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: AppConstants.paddingSM,
+                                  ),
+                                  minimumSize: const Size(
+                                      0, AppConstants.minTouchHeight - 16),
+                                ),
+                              )
+                            : const SizedBox.shrink(),
               ),
             ],
           ],

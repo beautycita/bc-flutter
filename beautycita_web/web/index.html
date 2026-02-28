@@ -419,7 +419,7 @@
     document.getElementById('landing').style.display = 'none';
     document.getElementById('flutter-loading').style.display = 'flex';
     var s = document.createElement('script');
-    s.src = 'flutter_bootstrap.js'; s.async = true;
+    s.src = 'flutter_bootstrap.js?v=' + Date.now(); s.async = true;
     document.body.appendChild(s);
 
     // Timeout: if Flutter hasn't rendered after 10s, show error

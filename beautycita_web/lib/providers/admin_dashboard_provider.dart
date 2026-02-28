@@ -140,7 +140,7 @@ final dashboardKpisProvider = FutureProvider<DashboardKpis>((ref) async {
         .from('payments')
         .select('amount')
         .gte('created_at', startOfMonth)
-        .eq('status', 'completed');
+        .eq('status', 'succeeded');
 
     double monthlyRevenue = 0;
     for (final row in paymentRows) {
@@ -155,7 +155,7 @@ final dashboardKpisProvider = FutureProvider<DashboardKpis>((ref) async {
         .select('amount')
         .gte('created_at', prevMonthStart)
         .lt('created_at', startOfMonth)
-        .eq('status', 'completed');
+        .eq('status', 'succeeded');
 
     double prevRevenue = 0;
     for (final row in prevPayments) {
@@ -231,7 +231,9 @@ final activityFeedProvider = StreamProvider<List<ActivityItem>>((ref) {
         id: 'usr_${row['id']}',
         type: 'user',
         title: 'Nuevo usuario',
-        subtitle: row['display_name'] as String? ?? 'Usuario',
+        subtitle: row['full_name'] as String? ??
+            row['username'] as String? ??
+            'Usuario',
         timestamp: DateTime.tryParse(row['created_at'] as String? ?? '') ??
             DateTime.now(),
       ));
@@ -270,7 +272,7 @@ final dashboardAlertsProvider = FutureProvider<DashboardAlerts>((ref) async {
       client
           .from('businesses')
           .select('id')
-          .eq('verified', false)
+          .eq('is_verified', false)
           .count(),
       // Failed payments
       client
@@ -343,7 +345,7 @@ final revenueTrendProvider = FutureProvider<RevenueTrend>((ref) async {
         .from('payments')
         .select('amount, created_at')
         .gte('created_at', start)
-        .eq('status', 'completed');
+        .eq('status', 'succeeded');
 
     // Aggregate by day
     final dailyRevenue = <int, double>{};

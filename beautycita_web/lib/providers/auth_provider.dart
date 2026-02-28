@@ -47,6 +47,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  /// Cached role to avoid repeated DB queries during navigation.
+  String? _cachedRole;
+
   /// Sign in with email + password.
   Future<bool> signInWithEmail(String email, String password) async {
     if (!BCSupabase.isInitialized) {
@@ -62,6 +65,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
         password: password,
       );
       state = state.copyWith(isLoading: false, user: response.user);
+      if (response.user != null) {
+        registerWebSession(); // fire-and-forget
+      }
       return response.user != null;
     } on AuthException catch (e) {
       state = state.copyWith(
@@ -95,6 +101,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
         data: {'display_name': name},
       );
       state = state.copyWith(isLoading: false, user: response.user);
+      if (response.user != null) {
+        registerWebSession(); // fire-and-forget
+      }
       return response.user != null;
     } on AuthException catch (e) {
       state = state.copyWith(
@@ -191,6 +200,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   /// Sign out the current user.
   Future<void> signOut() async {
     if (!BCSupabase.isInitialized) return;
+    _cachedRole = null;
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       await BCSupabase.client.auth.signOut();
@@ -204,7 +214,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   /// Query the profiles table for the user's role.
+  /// Caches the result so subsequent calls (router redirects) are instant.
   Future<String?> getUserRole() async {
+    if (_cachedRole != null && state.user != null) return _cachedRole;
     if (!BCSupabase.isInitialized || state.user == null) return null;
     try {
       final data = await BCSupabase.client
@@ -212,10 +224,29 @@ class AuthNotifier extends StateNotifier<AuthState> {
           .select('role')
           .eq('id', state.user!.id)
           .maybeSingle();
-      return data?['role'] as String?;
+      _cachedRole = data?['role'] as String?;
+      return _cachedRole;
     } catch (e) {
       debugPrint('getUserRole error: $e');
       return null;
+    }
+  }
+
+  /// Set the authenticated user (e.g., after QR login).
+  void setUser(User user) {
+    state = state.copyWith(user: user, isLoading: false, clearError: true);
+  }
+
+  /// Register this web session so the mobile device manager can see it.
+  Future<void> registerWebSession() async {
+    if (!BCSupabase.isInitialized || state.user == null) return;
+    try {
+      await BCSupabase.client.functions.invoke(
+        'qr-auth',
+        body: {'action': 'register_session'},
+      );
+    } catch (e) {
+      debugPrint('registerWebSession error: $e');
     }
   }
 
@@ -266,11 +297,17 @@ final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
 });
 
 /// Stream of Supabase auth state changes.
+/// Also registers the web session when a user signs in (catches OAuth + refresh).
 final authStateStreamProvider = StreamProvider<AuthState>((ref) {
   if (!BCSupabase.isInitialized) {
     return Stream.value(const AuthState());
   }
   return BCSupabase.client.auth.onAuthStateChange.map((data) {
-    return AuthState(user: data.session?.user);
+    final user = data.session?.user;
+    // Register web session on sign-in events (OAuth, page refresh with session)
+    if (user != null && data.event.name == 'signedIn') {
+      ref.read(authProvider.notifier).registerWebSession();
+    }
+    return AuthState(user: user);
   });
 });

@@ -139,11 +139,6 @@ class _RegisteredTab extends ConsumerWidget {
     final colors = theme.colorScheme;
     final filter = ref.watch(registeredSalonsFilterProvider);
     final salonsAsync = ref.watch(registeredSalonsProvider);
-    final currencyFormat = NumberFormat.currency(
-      locale: 'es_MX',
-      symbol: r'$',
-      decimalDigits: 0,
-    );
 
     final items = salonsAsync.valueOrNull?.salons ?? [];
     final totalCount = salonsAsync.valueOrNull?.totalCount ?? 0;
@@ -250,10 +245,10 @@ class _RegisteredTab extends ConsumerWidget {
                   radius: 14,
                   backgroundColor:
                       colors.primary.withValues(alpha: 0.1),
-                  backgroundImage: salon.logoUrl != null
-                      ? NetworkImage(salon.logoUrl!)
+                  backgroundImage: salon.photoUrl != null
+                      ? NetworkImage(salon.photoUrl!)
                       : null,
-                  child: salon.logoUrl == null
+                  child: salon.photoUrl == null
                       ? Icon(Icons.store, size: 14, color: colors.primary)
                       : null,
                 ),
@@ -283,28 +278,28 @@ class _RegisteredTab extends ConsumerWidget {
             ),
           ),
           BCColumn<RegisteredSalon>(
-            id: 'services_count',
-            label: 'Servicios',
-            sortable: true,
-            width: 80,
+            id: 'phone',
+            label: 'Telefono',
             cellBuilder: (salon) => Text(
-              '${salon.servicesCount}',
+              salon.phone ?? '-',
               style: theme.textTheme.bodySmall,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
           BCColumn<RegisteredSalon>(
-            id: 'rating',
+            id: 'average_rating',
             label: 'Rating',
             sortable: true,
             width: 80,
             cellBuilder: (salon) => Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.star, size: 14, color: Colors.amber),
+                const Icon(Icons.star, size: 14, color: Colors.amber),
                 const SizedBox(width: 2),
                 Text(
                   salon.rating > 0
-                      ? salon.rating.toStringAsFixed(1)
+                      ? '${salon.rating.toStringAsFixed(1)} (${salon.totalReviews})'
                       : '-',
                   style: theme.textTheme.bodySmall,
                 ),
@@ -312,37 +307,26 @@ class _RegisteredTab extends ConsumerWidget {
             ),
           ),
           BCColumn<RegisteredSalon>(
-            id: 'bookings_count',
-            label: 'Reservas',
-            sortable: true,
-            width: 80,
+            id: 'tier',
+            label: 'Tier',
+            width: 60,
             cellBuilder: (salon) => Text(
-              '${salon.bookingsCount}',
-              style: theme.textTheme.bodySmall,
-            ),
-          ),
-          BCColumn<RegisteredSalon>(
-            id: 'revenue',
-            label: 'Ingresos',
-            sortable: true,
-            width: 100,
-            cellBuilder: (salon) => Text(
-              currencyFormat.format(salon.revenue),
+              'T${salon.tier}',
               style: theme.textTheme.bodySmall?.copyWith(
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
           BCColumn<RegisteredSalon>(
-            id: 'stripe_status',
+            id: 'stripe_onboarding_status',
             label: 'Stripe',
-            width: 90,
+            width: 100,
             cellBuilder: (salon) => _StripeChip(
               status: salon.stripeStatus,
             ),
           ),
           BCColumn<RegisteredSalon>(
-            id: 'verified',
+            id: 'is_verified',
             label: 'Verificado',
             width: 70,
             cellBuilder: (salon) => Icon(
@@ -681,9 +665,10 @@ class _StripeChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (label, color) = switch (status) {
-      'connected' => ('OK', Colors.green),
-      'pending' => ('Pendiente', Colors.orange),
-      _ => ('Sin', Colors.grey),
+      'complete' => ('OK', Colors.green),
+      'pending' || 'pending_verification' => ('Pendiente', Colors.orange),
+      'not_started' => ('Sin iniciar', Colors.grey),
+      _ => (status, Colors.grey),
     };
 
     return Container(

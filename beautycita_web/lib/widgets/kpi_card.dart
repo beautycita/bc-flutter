@@ -15,6 +15,7 @@ class KpiCard extends StatefulWidget {
     this.iconColor,
     this.changePercent,
     this.prefix = '',
+    this.sparklineData,
     super.key,
   });
 
@@ -29,6 +30,10 @@ class KpiCard extends StatefulWidget {
 
   /// Optional prefix for the value (e.g. "\$").
   final String prefix;
+
+  /// Optional 7-day sparkline data points. If non-null and non-empty,
+  /// renders a tiny trend line below the value.
+  final List<double>? sparklineData;
 
   @override
   State<KpiCard> createState() => _KpiCardState();
@@ -101,7 +106,23 @@ class _KpiCardState extends State<KpiCard> {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: 4),
+            // Sparkline
+            if (widget.sparklineData != null && widget.sparklineData!.length >= 2)
+              Padding(
+                padding: const EdgeInsets.only(top: 8, bottom: 4),
+                child: SizedBox(
+                  height: 24,
+                  child: CustomPaint(
+                    size: const Size(double.infinity, 24),
+                    painter: _SparklinePainter(
+                      data: widget.sparklineData!,
+                      color: effectiveIconColor,
+                    ),
+                  ),
+                ),
+              )
+            else
+              const SizedBox(height: 4),
             // Label
             Text(
               widget.label,
@@ -166,4 +187,64 @@ class _ChangeChip extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Tiny sparkline painter for 7-day trend visualization.
+class _SparklinePainter extends CustomPainter {
+  _SparklinePainter({required this.data, required this.color});
+  final List<double> data;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (data.length < 2) return;
+
+    final maxVal = data.reduce((a, b) => a > b ? a : b);
+    final minVal = data.reduce((a, b) => a < b ? a : b);
+    final range = maxVal - minVal;
+    final effectiveRange = range == 0 ? 1.0 : range;
+
+    final stepX = size.width / (data.length - 1);
+    final points = <Offset>[];
+    for (var i = 0; i < data.length; i++) {
+      final x = i * stepX;
+      final y = size.height - ((data[i] - minVal) / effectiveRange) * (size.height - 4) - 2;
+      points.add(Offset(x, y));
+    }
+
+    // Fill gradient
+    final fillPath = Path()..moveTo(points.first.dx, size.height);
+    for (final p in points) {
+      fillPath.lineTo(p.dx, p.dy);
+    }
+    fillPath.lineTo(points.last.dx, size.height);
+    fillPath.close();
+
+    final fillPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [color.withValues(alpha: 0.2), color.withValues(alpha: 0.02)],
+      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
+    canvas.drawPath(fillPath, fillPaint);
+
+    // Line
+    final linePath = Path()..moveTo(points.first.dx, points.first.dy);
+    for (var i = 1; i < points.length; i++) {
+      linePath.lineTo(points[i].dx, points[i].dy);
+    }
+    final linePaint = Paint()
+      ..color = color
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+    canvas.drawPath(linePath, linePaint);
+
+    // End dot
+    canvas.drawCircle(points.last, 2.5, Paint()..color = color);
+  }
+
+  @override
+  bool shouldRepaint(covariant _SparklinePainter old) =>
+      old.data != data || old.color != color;
 }

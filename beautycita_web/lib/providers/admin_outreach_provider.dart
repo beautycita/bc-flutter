@@ -169,6 +169,11 @@ final pipelineSalonsProvider =
   if (!BCSupabase.isInitialized) return [];
 
   try {
+    // Explicit in_ is more index-friendly than neq('discovered') on 28k rows.
+    final pipelineStatuses = OutreachStage.kanbanStages
+        .map((s) => s.dbValue)
+        .toList();
+
     final data = await BCSupabase.client
         .from(BCTables.discoveredSalons)
         .select(
@@ -177,8 +182,10 @@ final pipelineSalonsProvider =
           'location_address, rating_average, rating_count, categories, website, '
           'facebook_url, instagram_url, feature_image_url, created_at',
         )
-        .neq('status', 'discovered')
-        .order('last_outreach_at', ascending: false);
+        .inFilter('status', pipelineStatuses)
+        .order('last_outreach_at', ascending: false)
+        .limit(500)
+        .timeout(const Duration(seconds: 10));
 
     return data.map((row) => DiscoveredSalon.fromMap(row)).toList();
   } catch (e) {
@@ -195,33 +202,37 @@ final discoveredCountsProvider =
   try {
     final client = BCSupabase.client;
 
-    // Total discovered
-    final total = await client
-        .from(BCTables.discoveredSalons)
-        .select('id')
-        .eq('status', 'discovered')
-        .count();
-
-    // MX count
-    final mx = await client
-        .from(BCTables.discoveredSalons)
-        .select('id')
-        .eq('status', 'discovered')
-        .eq('country', 'MX')
-        .count();
-
-    // US count
-    final us = await client
-        .from(BCTables.discoveredSalons)
-        .select('id')
-        .eq('status', 'discovered')
-        .eq('country', 'US')
-        .count();
+    // Run counts in parallel with timeouts.
+    final results = await Future.wait([
+      client
+          .from(BCTables.discoveredSalons)
+          .select('id')
+          .eq('status', 'discovered')
+          .limit(1)
+          .count()
+          .timeout(const Duration(seconds: 10)),
+      client
+          .from(BCTables.discoveredSalons)
+          .select('id')
+          .eq('status', 'discovered')
+          .eq('country', 'MX')
+          .limit(1)
+          .count()
+          .timeout(const Duration(seconds: 10)),
+      client
+          .from(BCTables.discoveredSalons)
+          .select('id')
+          .eq('status', 'discovered')
+          .eq('country', 'US')
+          .limit(1)
+          .count()
+          .timeout(const Duration(seconds: 10)),
+    ]);
 
     return {
-      'total': total.count,
-      'MX': mx.count,
-      'US': us.count,
+      'total': results[0].count,
+      'MX': results[1].count,
+      'US': results[2].count,
     };
   } catch (e) {
     debugPrint('Discovered counts error: $e');

@@ -9,35 +9,31 @@ class RegisteredSalon {
   final String id;
   final String name;
   final String? city;
-  final int servicesCount;
+  final String? state;
   final double rating;
-  final int bookingsCount;
-  final double revenue;
-  final String stripeStatus; // 'connected', 'pending', 'none'
+  final int totalReviews;
+  final String stripeStatus; // 'not_started', 'pending', 'complete'
   final bool verified;
+  final bool isActive;
   final String? phone;
-  final String? email;
-  final String? ownerName;
-  final int staffCount;
+  final int tier;
   final DateTime createdAt;
-  final String? logoUrl;
+  final String? photoUrl;
 
   const RegisteredSalon({
     required this.id,
     required this.name,
     this.city,
-    this.servicesCount = 0,
+    this.state,
     this.rating = 0,
-    this.bookingsCount = 0,
-    this.revenue = 0,
-    this.stripeStatus = 'none',
+    this.totalReviews = 0,
+    this.stripeStatus = 'not_started',
     this.verified = false,
+    this.isActive = true,
     this.phone,
-    this.email,
-    this.ownerName,
-    this.staffCount = 0,
+    this.tier = 1,
     required this.createdAt,
-    this.logoUrl,
+    this.photoUrl,
   });
 
   factory RegisteredSalon.fromJson(Map<String, dynamic> json) {
@@ -45,19 +41,17 @@ class RegisteredSalon {
       id: json['id'] as String? ?? '',
       name: json['name'] as String? ?? 'Sin nombre',
       city: json['city'] as String?,
-      servicesCount: json['services_count'] as int? ?? 0,
-      rating: (json['rating'] as num?)?.toDouble() ?? 0,
-      bookingsCount: json['bookings_count'] as int? ?? 0,
-      revenue: (json['revenue'] as num?)?.toDouble() ?? 0,
-      stripeStatus: json['stripe_status'] as String? ?? 'none',
-      verified: json['verified'] as bool? ?? false,
+      state: json['state'] as String?,
+      rating: (json['average_rating'] as num?)?.toDouble() ?? 0,
+      totalReviews: json['total_reviews'] as int? ?? 0,
+      stripeStatus: json['stripe_onboarding_status'] as String? ?? 'not_started',
+      verified: json['is_verified'] as bool? ?? false,
+      isActive: json['is_active'] as bool? ?? true,
       phone: json['phone'] as String?,
-      email: json['email'] as String?,
-      ownerName: json['owner_name'] as String?,
-      staffCount: json['staff_count'] as int? ?? 0,
+      tier: json['tier'] as int? ?? 1,
       createdAt: DateTime.tryParse(json['created_at'] as String? ?? '') ??
           DateTime.now(),
-      logoUrl: json['logo_url'] as String?,
+      photoUrl: json['photo_url'] as String?,
     );
   }
 }
@@ -216,15 +210,15 @@ final registeredSalonsProvider =
 
     // Build base query with equality filters
     var query = client.from(BCTables.businesses).select(
-      'id, name, city, services_count, rating, bookings_count, revenue, '
-      'stripe_status, verified, phone, email, owner_name, staff_count, '
-      'created_at, logo_url',
+      'id, name, city, state, average_rating, total_reviews, '
+      'stripe_onboarding_status, is_verified, is_active, phone, tier, '
+      'created_at, photo_url',
     );
     if (filter.city != null) {
       query = query.eq('city', filter.city!);
     }
     if (filter.verified != null) {
-      query = query.eq('verified', filter.verified!);
+      query = query.eq('is_verified', filter.verified!);
     }
 
     // .or() changes return type, so chain everything after it
@@ -250,7 +244,7 @@ final registeredSalonsProvider =
       countQuery = countQuery.eq('city', filter.city!);
     }
     if (filter.verified != null) {
-      countQuery = countQuery.eq('verified', filter.verified!);
+      countQuery = countQuery.eq('is_verified', filter.verified!);
     }
     final int totalCount;
     if (filter.searchText.isNotEmpty) {

@@ -40,7 +40,6 @@ class _ConfigPageState extends ConsumerState<ConfigPage> {
           .eq('id', entry.id);
 
       ref.invalidate(appConfigProvider);
-      ref.invalidate(apiStatusProvider);
       ref.invalidate(featureTogglesProvider);
 
       if (mounted) {
@@ -77,10 +76,6 @@ class _ConfigPageState extends ConsumerState<ConfigPage> {
             children: [
               _Header(isMobile: isMobile),
               const SizedBox(height: 24),
-
-              // API status section
-              _ApiStatusSection(ref: ref, isDesktop: isDesktop),
-              const SizedBox(height: 32),
 
               // Config table
               _ConfigTableSection(
@@ -134,136 +129,6 @@ class _Header extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-// ── API Status Section ─────────────────────────────────────────────────────
-
-class _ApiStatusSection extends StatelessWidget {
-  const _ApiStatusSection({required this.ref, required this.isDesktop});
-  final WidgetRef ref;
-  final bool isDesktop;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final statusAsync = ref.watch(apiStatusProvider);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Estado de APIs',
-          style: theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 12),
-        statusAsync.when(
-          loading: () => const Center(
-            child: Padding(
-              padding: EdgeInsets.all(24),
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
-          ),
-          error: (e, _) => Text('Error: $e'),
-          data: (statuses) {
-            return Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                for (final status in statuses)
-                  _ApiStatusCard(status: status),
-              ],
-            );
-          },
-        ),
-      ],
-    );
-  }
-}
-
-class _ApiStatusCard extends StatefulWidget {
-  const _ApiStatusCard({required this.status});
-  final ApiStatus status;
-
-  @override
-  State<_ApiStatusCard> createState() => _ApiStatusCardState();
-}
-
-class _ApiStatusCardState extends State<_ApiStatusCard> {
-  bool _hovering = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-    final isConnected = widget.status.isConnected;
-    final dotColor =
-        isConnected ? const Color(0xFF4CAF50) : const Color(0xFFE53935);
-
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovering = true),
-      onExit: (_) => setState(() => _hovering = false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        width: 200,
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: _hovering
-                ? dotColor.withValues(alpha: 0.4)
-                : colors.outlineVariant,
-          ),
-        ),
-        child: Row(
-          children: [
-            // Status dot
-            Container(
-              width: 10,
-              height: 10,
-              decoration: BoxDecoration(
-                color: dotColor,
-                shape: BoxShape.circle,
-                boxShadow: isConnected
-                    ? [
-                        BoxShadow(
-                          color: dotColor.withValues(alpha: 0.4),
-                          blurRadius: 6,
-                        ),
-                      ]
-                    : null,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    widget.status.name,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  Text(
-                    widget.status.statusText,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: dotColor,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -558,7 +423,7 @@ class _ConfigRowState extends State<_ConfigRow> {
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
-                    widget.entry.type,
+                    widget.entry.dataType,
                     style: theme.textTheme.labelSmall?.copyWith(
                       fontFamily: 'monospace',
                       color: colors.onSurface.withValues(alpha: 0.5),

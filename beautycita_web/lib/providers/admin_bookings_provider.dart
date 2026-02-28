@@ -50,38 +50,40 @@ class AdminBooking {
 
   factory AdminBooking.fromJson(Map<String, dynamic> json) {
     final id = json['id']?.toString() ?? '';
+    // Compute duration from starts_at/ends_at
+    final startsAt = DateTime.tryParse(json['starts_at'] as String? ?? '');
+    final endsAt = DateTime.tryParse(json['ends_at'] as String? ?? '');
+    final duration = (startsAt != null && endsAt != null)
+        ? endsAt.difference(startsAt).inMinutes
+        : 60;
+
     return AdminBooking(
       id: id,
       shortId: id.length > 8 ? id.substring(0, 8) : id,
-      clientName: json['client_name'] as String? ??
-          (json['profiles'] is Map
-              ? (json['profiles']['display_name'] as String? ?? 'Cliente')
-              : 'Cliente'),
-      clientId: json['client_id'] as String?,
-      salonName: json['salon_name'] as String? ??
-          (json['businesses'] is Map
-              ? (json['businesses']['name'] as String? ?? 'Salon')
-              : 'Salon'),
+      clientName: json['profiles'] is Map
+          ? (json['profiles']['full_name'] as String? ??
+              json['profiles']['username'] as String? ??
+              'Cliente')
+          : 'Cliente',
+      clientId: json['user_id'] as String?,
+      salonName: json['businesses'] is Map
+          ? (json['businesses']['name'] as String? ?? 'Salon')
+          : 'Salon',
       salonId: json['business_id'] as String?,
       service: json['service_name'] as String? ?? 'Servicio',
-      dateTime:
-          DateTime.tryParse(json['scheduled_at'] as String? ?? '') ??
-              DateTime.now(),
-      durationMinutes: json['duration_minutes'] as int? ?? 60,
+      dateTime: startsAt ?? DateTime.now(),
+      durationMinutes: duration,
       status: json['status'] as String? ?? 'pending',
-      amount: (json['amount'] as num?)?.toDouble() ?? 0,
-      paymentStatus: json['payment_status'] as String? ?? 'pending',
-      paymentMethod: json['payment_method'] as String?,
+      amount: (json['price'] as num?)?.toDouble() ?? 0,
+      paymentStatus: json['payment_status'] as String? ?? 'unpaid',
+      paymentMethod: null,
       paymentIntentId: json['payment_intent_id'] as String?,
       notes: json['notes'] as String?,
       createdAt: DateTime.tryParse(json['created_at'] as String? ?? '') ??
           DateTime.now(),
-      confirmedAt:
-          DateTime.tryParse(json['confirmed_at'] as String? ?? ''),
-      completedAt:
-          DateTime.tryParse(json['completed_at'] as String? ?? ''),
-      cancelledAt:
-          DateTime.tryParse(json['cancelled_at'] as String? ?? ''),
+      confirmedAt: null,
+      completedAt: null,
+      cancelledAt: null,
     );
   }
 }
@@ -168,11 +170,9 @@ final adminBookingsProvider = FutureProvider<BookingsPageData>((ref) async {
 
     // Main query with joins to profiles and businesses
     var query = client.from(BCTables.appointments).select(
-      'id, client_id, business_id, service_name, scheduled_at, '
-      'duration_minutes, status, amount, payment_status, payment_method, '
-      'payment_intent_id, notes, created_at, confirmed_at, completed_at, '
-      'cancelled_at, '
-      'profiles!appointments_client_id_fkey(display_name), '
+      'id, user_id, business_id, service_name, starts_at, ends_at, '
+      'status, price, payment_status, payment_intent_id, notes, created_at, '
+      'profiles!appointments_user_id_fkey(full_name, username), '
       'businesses!appointments_business_id_fkey(name)',
     );
 
@@ -182,11 +182,11 @@ final adminBookingsProvider = FutureProvider<BookingsPageData>((ref) async {
     }
     if (filter.dateFrom != null) {
       query = query.gte(
-          'scheduled_at', filter.dateFrom!.toIso8601String());
+          'starts_at', filter.dateFrom!.toIso8601String());
     }
     if (filter.dateTo != null) {
       query = query.lte(
-        'scheduled_at',
+        'starts_at',
         filter.dateTo!
             .add(const Duration(days: 1))
             .toIso8601String(),
@@ -194,7 +194,7 @@ final adminBookingsProvider = FutureProvider<BookingsPageData>((ref) async {
     }
 
     // .or() returns PostgrestTransformBuilder — chain order+range after it
-    final sortCol = filter.sortColumn ?? 'scheduled_at';
+    final sortCol = filter.sortColumn ?? 'starts_at';
     final from = filter.page * filter.pageSize;
     final to = from + filter.pageSize - 1;
 
@@ -217,11 +217,11 @@ final adminBookingsProvider = FutureProvider<BookingsPageData>((ref) async {
     }
     if (filter.dateFrom != null) {
       countQuery = countQuery.gte(
-          'scheduled_at', filter.dateFrom!.toIso8601String());
+          'starts_at', filter.dateFrom!.toIso8601String());
     }
     if (filter.dateTo != null) {
       countQuery = countQuery.lte(
-        'scheduled_at',
+        'starts_at',
         filter.dateTo!
             .add(const Duration(days: 1))
             .toIso8601String(),

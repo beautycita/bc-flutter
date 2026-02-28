@@ -23,6 +23,27 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   bool _obscurePassword = true;
   bool _retrying = false;
+  bool _initializing = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _waitForInit();
+  }
+
+  Future<void> _waitForInit() async {
+    if (BCSupabase.isInitialized) {
+      if (mounted) setState(() => _initializing = false);
+      return;
+    }
+    await BCSupabase.initialize();
+    if (!mounted) return;
+    setState(() => _initializing = false);
+    // If a session was restored, navigate to the right place
+    if (BCSupabase.isAuthenticated) {
+      _navigateByRole(ref.read(authProvider.notifier));
+    }
+  }
 
   @override
   void dispose() {
@@ -44,25 +65,26 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   }
 
   Future<void> _handleRetry() async {
-    setState(() => _retrying = true);
-    await BCSupabase.initialize();
-    if (mounted) {
-      setState(() => _retrying = false);
+    setState(() {
+      _retrying = true;
+      _initializing = true;
+    });
+    await BCSupabase.initialize(force: true);
+    if (!mounted) return;
+    setState(() {
+      _retrying = false;
+      _initializing = false;
+    });
+    if (BCSupabase.isAuthenticated) {
+      _navigateByRole(ref.read(authProvider.notifier));
     }
   }
 
   Future<void> _navigateByRole(AuthNotifier notifier) async {
+    if (!mounted) return;
     final role = await notifier.getUserRole();
     if (!mounted) return;
-    switch (role) {
-      case 'admin' || 'superadmin':
-        context.go(WebRoutes.admin);
-      case 'stylist':
-      case 'business':
-        context.go(WebRoutes.negocio);
-      default:
-        context.go(WebRoutes.reservar);
-    }
+    context.go(routeForRole(role));
   }
 
   @override
@@ -82,6 +104,25 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         );
       }
     });
+
+    // Still waiting for Supabase init — show loading
+    if (_initializing) {
+      return AuthLayout(
+        formContent: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: BCSpacing.md),
+            Text(
+              'Conectando...',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
     // If Supabase failed to initialize, show error state with retry
     if (BCSupabase.initFailed) {
@@ -256,7 +297,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         ),
         const SizedBox(height: BCSpacing.sm),
         Text(
-          'Intenta de nuevo en unos momentos.',
+          BCSupabase.initError ?? 'Error desconocido',
           style: theme.textTheme.bodyMedium?.copyWith(
             color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
           ),

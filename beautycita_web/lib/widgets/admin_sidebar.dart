@@ -50,12 +50,14 @@ class AdminSidebar extends StatelessWidget {
     required this.isExpanded,
     required this.onToggle,
     this.onNavTap,
+    this.onSignOut,
     super.key,
   });
 
   final bool isExpanded;
   final VoidCallback onToggle;
   final void Function(String route)? onNavTap;
+  final VoidCallback? onSignOut;
 
   @override
   Widget build(BuildContext context) {
@@ -106,7 +108,7 @@ class AdminSidebar extends StatelessWidget {
 
           // ── Bottom section: user + collapse toggle ────────────────────
           const Divider(height: 1),
-          _UserSection(isExpanded: isExpanded),
+          _UserSection(isExpanded: isExpanded, onSignOut: onSignOut),
           _CollapseToggle(isExpanded: isExpanded, onToggle: onToggle),
           const SizedBox(height: 8),
         ],
@@ -290,8 +292,9 @@ class _SidebarNavTileState extends State<_SidebarNavTile> {
 // ── User section ──────────────────────────────────────────────────────────────
 
 class _UserSection extends StatefulWidget {
-  const _UserSection({required this.isExpanded});
+  const _UserSection({required this.isExpanded, this.onSignOut});
   final bool isExpanded;
+  final VoidCallback? onSignOut;
 
   @override
   State<_UserSection> createState() => _UserSectionState();
@@ -310,9 +313,7 @@ class _UserSectionState extends State<_UserSection> {
       onExit: (_) => setState(() => _hovering = false),
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
-        onTap: () {
-          // TODO: Wire to actual sign-out logic
-        },
+        onTap: widget.onSignOut,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
           padding: EdgeInsets.symmetric(
