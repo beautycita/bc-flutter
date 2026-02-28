@@ -811,3 +811,61 @@ class NotificationTemplate {
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// Admin Salones Providers
+// ---------------------------------------------------------------------------
+
+/// Searches salons via the `search_salons` RPC function.
+final searchSalonsProvider = FutureProvider.family<List<Map<String, dynamic>>, String>((ref, query) async {
+  if (query.trim().length < 2) return [];
+  final response = await SupabaseClientService.client.rpc('search_salons', params: {
+    'query': query.trim(),
+    'result_limit': 50,
+    'result_offset': 0,
+  });
+  return (response as List).cast<Map<String, dynamic>>();
+});
+
+/// Fetches full business details with owner profile joined.
+final adminSalonDetailProvider = FutureProvider.family<Map<String, dynamic>?, String>((ref, businessId) async {
+  final response = await SupabaseClientService.client
+      .from('businesses')
+      .select('*, profiles!businesses_owner_id_fkey(id, display_name, phone, email)')
+      .eq('id', businessId)
+      .maybeSingle();
+  return response;
+});
+
+/// Recent appointments for a salon (last 10).
+final adminSalonAppointmentsProvider = FutureProvider.family<List<Map<String, dynamic>>, String>((ref, businessId) async {
+  final response = await SupabaseClientService.client
+      .from('appointments')
+      .select('id, user_id, service_id, date, time, status, payment_status, price, profiles!appointments_user_id_fkey(display_name), services(name)')
+      .eq('business_id', businessId)
+      .order('date', ascending: false)
+      .limit(10);
+  return (response as List).cast<Map<String, dynamic>>();
+});
+
+/// Open disputes for a salon.
+final adminSalonDisputesProvider = FutureProvider.family<List<Map<String, dynamic>>, String>((ref, businessId) async {
+  final response = await SupabaseClientService.client
+      .from('disputes')
+      .select('id, status, reason, created_at, resolution, refund_amount')
+      .eq('business_id', businessId)
+      .inFilter('status', ['open', 'salon_responded', 'escalated'])
+      .order('created_at', ascending: false);
+  return (response as List).cast<Map<String, dynamic>>();
+});
+
+/// Recent reviews for a salon (last 10).
+final adminSalonReviewsProvider = FutureProvider.family<List<Map<String, dynamic>>, String>((ref, businessId) async {
+  final response = await SupabaseClientService.client
+      .from('reviews')
+      .select('id, rating, comment, created_at, profiles!reviews_user_id_fkey(display_name)')
+      .eq('business_id', businessId)
+      .order('created_at', ascending: false)
+      .limit(10);
+  return (response as List).cast<Map<String, dynamic>>();
+});
