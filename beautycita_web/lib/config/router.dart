@@ -25,6 +25,7 @@ import '../pages/auth/qr_page.dart';
 import '../pages/auth/register_page.dart';
 import '../pages/auth/verify_page.dart';
 import '../pages/error/not_found_page.dart';
+import '../pages/landing_page.dart';
 import '../shells/admin_shell.dart';
 import '../shells/business_shell.dart';
 import '../shells/client_shell.dart';
@@ -32,6 +33,9 @@ import '../shells/client_shell.dart';
 // ── Route paths ──────────────────────────────────────────────────────────────
 
 abstract final class WebRoutes {
+  // Public
+  static const String home = '/';
+
   // Auth
   static const String auth = '/auth';
   static const String register = '/auth/register';
@@ -102,19 +106,30 @@ class _Placeholder extends StatelessWidget {
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
-    initialLocation: WebRoutes.auth,
+    initialLocation: WebRoutes.home,
     debugLogDiagnostics: true,
 
-    // Redirect logic — wired to live Supabase auth state
+    // Redirect logic — wired to live Supabase auth state.
+    // If Supabase hasn't initialized yet, let the page render and handle
+    // its own loading/error state instead of blocking navigation.
     redirect: (context, state) {
-      final isAuthenticated =
-          BCSupabase.isInitialized && BCSupabase.isAuthenticated;
-      final isAuthRoute = state.matchedLocation.startsWith('/auth');
+      final path = state.matchedLocation;
+      final isPublicRoute = path == '/' || path.startsWith('/auth');
 
-      if (!isAuthenticated && !isAuthRoute) {
+      // If Supabase never initialized (offline, failed, etc.),
+      // only allow public routes — redirect protected routes to /auth
+      // where the login page will show an appropriate error.
+      if (!BCSupabase.isInitialized) {
+        if (!isPublicRoute) return WebRoutes.auth;
+        return null;
+      }
+
+      final isAuthenticated = BCSupabase.isAuthenticated;
+
+      if (!isAuthenticated && !isPublicRoute) {
         return WebRoutes.auth;
       }
-      if (isAuthenticated && isAuthRoute) {
+      if (isAuthenticated && path.startsWith('/auth')) {
         return WebRoutes.admin;
       }
       return null;
@@ -124,6 +139,12 @@ final routerProvider = Provider<GoRouter>((ref) {
     errorBuilder: (context, state) => const NotFoundPage(),
 
     routes: [
+      // ── Landing page (public, no auth) ────────────────────────────────────
+      GoRoute(
+        path: WebRoutes.home,
+        builder: (context, state) => const LandingPage(),
+      ),
+
       // ── Auth routes (no shell) ───────────────────────────────────────────
       GoRoute(
         path: WebRoutes.auth,
