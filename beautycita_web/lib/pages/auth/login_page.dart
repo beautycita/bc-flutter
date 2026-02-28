@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:beautycita_core/supabase.dart';
 import 'package:beautycita_core/theme.dart';
 
 import '../../config/router.dart';
@@ -8,6 +9,7 @@ import '../../providers/auth_provider.dart';
 import 'auth_layout.dart';
 
 /// Login page — email/password + Google/Apple OAuth.
+/// Handles offline/error states when Supabase is unreachable.
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
 
@@ -20,6 +22,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _obscurePassword = true;
+  bool _retrying = false;
 
   @override
   void dispose() {
@@ -37,6 +40,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     );
     if (success && mounted) {
       await _navigateByRole(notifier);
+    }
+  }
+
+  Future<void> _handleRetry() async {
+    setState(() => _retrying = true);
+    await BCSupabase.initialize();
+    if (mounted) {
+      setState(() => _retrying = false);
     }
   }
 
@@ -61,7 +72,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
     // Show error snackbar
     ref.listen<AuthState>(authProvider, (prev, next) {
-      if (next.errorMessage != null && next.errorMessage != prev?.errorMessage) {
+      if (next.errorMessage != null &&
+          next.errorMessage != prev?.errorMessage) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(next.errorMessage!),
@@ -70,6 +82,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         );
       }
     });
+
+    // If Supabase failed to initialize, show error state with retry
+    if (BCSupabase.initFailed) {
+      return AuthLayout(
+        formContent: _buildOfflineError(theme),
+      );
+    }
 
     return AuthLayout(
       formContent: Stack(
@@ -147,8 +166,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   children: [
                     const Expanded(child: Divider()),
                     Padding(
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: BCSpacing.md),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: BCSpacing.md),
                       child: Text(
                         'o continua con',
                         style: theme.textTheme.bodySmall?.copyWith(
@@ -215,6 +234,52 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             ),
         ],
       ),
+    );
+  }
+
+  /// Error UI when Supabase initialization failed (offline, timed out, etc.)
+  Widget _buildOfflineError(ThemeData theme) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Icon(
+          Icons.cloud_off_outlined,
+          size: 64,
+          color: theme.colorScheme.error.withValues(alpha: 0.7),
+        ),
+        const SizedBox(height: BCSpacing.lg),
+        Text(
+          'No se pudo conectar al servidor',
+          style: theme.textTheme.headlineSmall,
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: BCSpacing.sm),
+        Text(
+          'Intenta de nuevo en unos momentos.',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: BCSpacing.xl),
+        ElevatedButton.icon(
+          onPressed: _retrying ? null : _handleRetry,
+          icon: _retrying
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.refresh),
+          label: Text(_retrying ? 'Conectando...' : 'Reintentar'),
+        ),
+        const SizedBox(height: BCSpacing.lg),
+        TextButton(
+          onPressed: () => context.go(WebRoutes.home),
+          child: const Text('Volver al inicio'),
+        ),
+      ],
     );
   }
 }

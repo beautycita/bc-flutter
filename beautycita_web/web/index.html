@@ -4,14 +4,444 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <base href="$FLUTTER_BASE_HREF">
-  <title>BeautyCita</title>
-  <meta name="description" content="BeautyCita — Panel de administración y reservas inteligentes.">
+  <title>BeautyCita - Registra tu salon gratis</title>
+  <meta name="description" content="BeautyCita conecta clientas con tu salon. 3% por reserva. Sin mensualidad. Sin letra chica.">
   <meta name="theme-color" content="#C2185B">
+  <meta property="og:title" content="BeautyCita - Registra tu salon gratis">
+  <meta property="og:description" content="Tus clientas te encuentran. Tu solo haces lo que amas. 3% por reserva, sin mensualidad.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://beautycita.com">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@500;700&display=swap" rel="stylesheet">
   <style>
-    body { margin: 0; background: #FFF8F0; }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#FFF8F0;color:#2D2D2D;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+    a{text-decoration:none;color:inherit}
+    .container{max-width:1180px;margin:0 auto;padding:0 48px}
+
+    /* ── Nav ──────────────────────────────────────────────────── */
+    .nav{position:sticky;top:0;z-index:100;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,0.05)}
+    .nav .container{display:flex;align-items:center;justify-content:space-between;height:64px}
+    .nav-brand{font-size:1.6rem;font-weight:800;color:#C2185B;letter-spacing:-.3px}
+    .nav-right{display:flex;align-items:center;gap:12px}
+    .nav-link{font-size:.875rem;font-weight:600;color:#C2185B;padding:9px 20px;border:2px solid #C2185B;border-radius:22px;transition:all .2s}
+    .nav-link:hover{background:#C2185B;color:#fff}
+    .nav-cta{font-size:.875rem;font-weight:700;color:#fff;background:#C2185B;padding:9px 22px;border-radius:22px;border:none;cursor:pointer;transition:all .2s}
+    .nav-cta:hover{background:#9C1450}
+    .hamburger{display:none;background:none;border:none;cursor:pointer}
+    .hamburger svg{width:28px;height:28px;color:#C2185B}
+
+    /* ── Hero ─────────────────────────────────────────────────── */
+    .hero{position:relative;background:linear-gradient(135deg,#8C1245 0%,#A91555 25%,#C2185B 55%,#E91E63 100%);overflow:hidden}
+    .hero .container{display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center;min-height:calc(100vh - 64px);padding-top:60px;padding-bottom:60px}
+    .hero-bg{position:absolute;inset:0;pointer-events:none;opacity:.1}
+    .hero-bg svg{width:100%;height:100%;object-fit:cover}
+    .hero-text{position:relative;z-index:2}
+    .hero-text h1{font-family:'Playfair Display',Georgia,serif;font-size:3.6rem;font-weight:700;color:#fff;line-height:1.1;margin-bottom:24px}
+    .hero-sub{font-size:1.2rem;color:rgba(255,255,255,.85);line-height:1.65;margin-bottom:40px;max-width:480px}
+    .btn{display:inline-flex;align-items:center;gap:10px;padding:16px 36px;border-radius:28px;font-weight:700;font-size:1rem;cursor:pointer;border:none;transition:all .25s;text-decoration:none}
+    .btn-register{background:#fff;color:#C2185B;font-size:1.05rem;box-shadow:0 4px 24px rgba(0,0,0,.15)}
+    .btn-register:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,.25)}
+    .btn-register svg{width:22px;height:22px}
+    .hero-login{display:inline-block;margin-top:20px;color:rgba(255,255,255,.75);font-size:.95rem;transition:color .2s}
+    .hero-login:hover{color:#fff}
+    .hero-visual{position:relative;z-index:2;display:flex;align-items:center;justify-content:center}
+    .hero-visual-inner{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:28px;padding:48px 40px;width:100%;max-width:440px}
+    .flow-step{display:flex;align-items:center;gap:20px;padding:14px 0}
+    .flow-num{width:48px;height:48px;background:#FFB300;border-radius:14px;display:flex;align-items:center;justify-content:center;font-weight:800;color:#1a1a1a;font-size:1.2rem;flex-shrink:0}
+    .flow-label{color:#fff;font-size:1.1rem;font-weight:500;flex:1}
+    .flow-icon{color:rgba(255,255,255,.45);font-size:1.6rem}
+    .flow-arrow{text-align:center;color:rgba(255,255,255,.25);font-size:1.1rem;padding:4px 0}
+    .scroll-hint{text-align:center;margin-top:40px;animation:bounce 2s infinite}
+    .scroll-hint svg{width:28px;height:28px;color:rgba(255,255,255,.4)}
+    @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(6px)}}
+
+    /* ── Section base ────────────────────────────────────────── */
+    .section{padding:100px 0}
+    .section-title{font-family:'Playfair Display',Georgia,serif;font-size:2.6rem;font-weight:700;text-align:center;margin-bottom:12px;color:#1a1a1a}
+    .section-subtitle{font-size:1.1rem;color:#777;text-align:center;margin-bottom:56px;max-width:520px;margin-left:auto;margin-right:auto;line-height:1.5}
+
+    /* ── Calculator ──────────────────────────────────────────── */
+    .calc{background:#FFF8F0}
+    .calc-layout{display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:start}
+    .calc-sliders{padding-top:12px}
+    .slider-group{margin-bottom:32px}
+    .slider-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+    .slider-label{font-weight:600;font-size:1rem;color:#444}
+    .slider-value{font-weight:700;color:#C2185B;font-size:1.1rem}
+    input[type=range]{-webkit-appearance:none;width:100%;height:6px;border-radius:3px;background:linear-gradient(90deg,#C2185B var(--pct,50%),#E0D5CC var(--pct,50%));outline:none;cursor:pointer}
+    input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:#C2185B;border:3px solid #fff;box-shadow:0 2px 10px rgba(0,0,0,.2);cursor:pointer;transition:box-shadow .2s}
+    input[type=range]::-webkit-slider-thumb:hover{box-shadow:0 2px 16px rgba(194,24,91,.4)}
+    input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;background:#C2185B;border:3px solid #fff;box-shadow:0 2px 10px rgba(0,0,0,.2);cursor:pointer}
+    .calc-results{background:#fff;border-radius:24px;padding:40px;box-shadow:0 4px 24px rgba(0,0,0,.04);border:1px solid rgba(0,0,0,.05)}
+    .compare{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:28px}
+    .compare-card{padding:28px 20px;border-radius:18px;text-align:center}
+    .compare-card.competitor{background:rgba(220,38,38,.05);border:1px solid rgba(220,38,38,.1)}
+    .compare-card.bc{background:rgba(34,197,94,.05);border:1px solid rgba(34,197,94,.1)}
+    .compare-card h3{font-size:.95rem;font-weight:700;margin-bottom:14px;color:#555}
+    .compare-price{font-size:2.2rem;font-weight:900;margin-bottom:4px}
+    .competitor .compare-price{color:#DC2626}
+    .bc .compare-price{color:#22C55E}
+    .compare-period{color:#999;font-size:.85rem}
+    .compare-annual{font-weight:600;color:#777;margin-top:10px;font-size:.85rem}
+    .savings{text-align:center;margin-bottom:24px}
+    .savings-title{font-size:1.6rem;font-weight:800;color:#22C55E}
+    .savings-desc{color:#888;font-size:.9rem;margin-top:8px;line-height:1.5}
+    .savings-link{display:inline-block;color:#C2185B;font-weight:600;margin-top:14px;font-size:.95rem;transition:color .2s}
+    .savings-link:hover{color:#9C1450}
+    .btn-gold{display:block;width:100%;text-align:center;background:linear-gradient(135deg,#FFB300,#FFA000);color:#1a1a1a;font-weight:700;padding:16px;border-radius:28px;font-size:1.05rem;border:none;cursor:pointer;transition:all .25s}
+    .btn-gold:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(255,179,0,.35)}
+
+    /* ── Receipts ─────────────────────────────────────────────── */
+    .receipts{background:linear-gradient(135deg,#1a1a1a 0%,#2a2a2a 100%);padding:80px 0}
+    .receipts-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+    .receipt-card{padding:40px 32px;border-radius:24px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.07);text-align:center;transition:all .3s}
+    .receipt-card:hover{background:rgba(255,255,255,.08);transform:translateY(-4px)}
+    .receipt-num{font-size:3rem;font-weight:900;color:#FFB300;margin-bottom:12px;letter-spacing:-.5px}
+    .receipt-desc{color:rgba(255,255,255,.6);font-size:.95rem;line-height:1.5}
+    .tagline-bar{background:linear-gradient(135deg,#C2185B,#A01550);padding:48px 0;text-align:center}
+    .tagline-bar p{font-size:1.6rem;font-weight:700;color:#fff;letter-spacing:-.3px}
+
+    /* ── How it works ─────────────────────────────────────────── */
+    .how{background:#FFF8F0}
+    .how-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:48px}
+    .how-step{text-align:center;padding:40px 24px;background:#fff;border-radius:24px;border:1px solid rgba(0,0,0,.04);box-shadow:0 2px 16px rgba(0,0,0,.03);transition:all .3s}
+    .how-step:hover{transform:translateY(-6px);box-shadow:0 12px 36px rgba(0,0,0,.07)}
+    .step-num{width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#C2185B,#E91E63);color:#fff;font-size:1.5rem;font-weight:800;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;box-shadow:0 4px 16px rgba(194,24,91,.25)}
+    .step-icon{font-size:2.2rem;margin-bottom:16px}
+    .step-title{font-size:1.15rem;font-weight:700;margin-bottom:8px;color:#1a1a1a}
+    .step-desc{color:#888;font-size:.95rem;line-height:1.5}
+
+    /* ── For clients ──────────────────────────────────────────── */
+    .clients{background:linear-gradient(135deg,#FFF0F3 0%,#FFF8F0 100%)}
+    .clients .container{text-align:center}
+    .clients-sub{color:#666;font-size:1.15rem;line-height:1.6;margin-bottom:40px;max-width:480px;margin-left:auto;margin-right:auto}
+    .btn-download{display:inline-flex;align-items:center;gap:10px;background:#FFB300;color:#1a1a1a;padding:16px 40px;border-radius:28px;font-weight:700;font-size:1.1rem;border:none;cursor:pointer;transition:all .25s;box-shadow:0 4px 16px rgba(255,179,0,.2)}
+    .btn-download:hover{background:#FFA000;transform:translateY(-2px);box-shadow:0 8px 28px rgba(255,179,0,.35)}
+    .btn-download svg{width:22px;height:22px}
+    .alt-downloads{display:flex;justify-content:center;gap:32px;margin-top:20px;font-size:.875rem}
+    .alt-downloads a{color:#999;display:flex;align-items:center;gap:6px;transition:color .2s}
+    .alt-downloads a:hover{color:#C2185B}
+
+    /* ── Footer ───────────────────────────────────────────────── */
+    .footer{background:#1a1a1a;padding:48px 0}
+    .footer .container{text-align:center}
+    .footer-brand{font-size:1.6rem;font-weight:800;color:#fff;margin-bottom:6px}
+    .footer-tagline{color:rgba(255,255,255,.45);font-size:.9rem;margin-bottom:24px}
+    .footer-links{display:flex;flex-wrap:wrap;justify-content:center;gap:24px;margin-bottom:24px}
+    .footer-links a{color:rgba(255,255,255,.55);font-size:.875rem;transition:color .2s}
+    .footer-links a:hover{color:#fff}
+    .footer-copy{color:rgba(255,255,255,.25);font-size:.8rem}
+
+    /* ── Responsive (desktop-first, scale down) ──────────────── */
+    @media(max-width:1024px){
+      .container{padding:0 32px}
+      .hero .container{grid-template-columns:1fr;text-align:center;gap:48px;min-height:auto;padding-top:48px;padding-bottom:48px}
+      .hero-text h1{font-size:2.8rem}
+      .hero-sub{margin-left:auto;margin-right:auto}
+      .hero-visual-inner{margin:0 auto}
+      .calc-layout{grid-template-columns:1fr;gap:40px;max-width:560px;margin:0 auto}
+    }
+    @media(max-width:768px){
+      .container{padding:0 20px}
+      .nav-right .nav-link,.nav-right .nav-cta{display:none}
+      .hamburger{display:block}
+      .hero-text h1{font-size:2.1rem}
+      .hero-sub{font-size:1rem}
+      .section{padding:64px 0}
+      .section-title{font-size:2rem}
+      .how-steps{grid-template-columns:1fr;gap:24px;max-width:400px;margin:0 auto}
+      .receipts-grid{grid-template-columns:1fr;max-width:400px;margin:0 auto}
+      .tagline-bar p{font-size:1.2rem;padding:0 20px}
+      .receipt-num{font-size:2.4rem}
+    }
+
+    /* ── Flutter loading overlay (for /auth /admin) ──────────── */
+    #flutter-loading{display:none;position:fixed;inset:0;z-index:9999;align-items:center;justify-content:center;flex-direction:column;background:linear-gradient(135deg,#660033,#990033,#C2185B);font-family:'Inter',sans-serif}
+    #flutter-loading h1{color:#fff;font-size:2.5rem;font-weight:700;margin:0 0 12px}
+    #flutter-loading p{color:rgba(255,255,255,.7);font-size:1rem;margin:0}
+    .spinner{width:40px;height:40px;margin-top:32px;border:3px solid rgba(255,255,255,.2);border-top-color:#FFB300;border-radius:50%;animation:spin .8s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
   </style>
 </head>
 <body>
-  <script src="flutter_bootstrap.js" async></script>
+
+<div id="landing">
+
+  <!-- ── Nav ──────────────────────────────────────────────────── -->
+  <nav class="nav">
+    <div class="container" style="display:flex;align-items:center;justify-content:space-between;height:64px">
+      <div class="nav-brand">BeautyCita</div>
+      <div class="nav-right">
+        <a href="/registro" class="nav-cta">REGISTRA TU SALON</a>
+        <a href="/auth" class="nav-link">Iniciar sesion</a>
+        <button class="hamburger" onclick="document.querySelector('.nav-right').classList.toggle('show')" aria-label="Menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ── Hero ─────────────────────────────────────────────────── -->
+  <section class="hero">
+    <div class="hero-bg">
+      <svg viewBox="0 0 1400 800" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+        <g fill="none" stroke="white" stroke-width="1.5" opacity="0.5">
+          <ellipse cx="200" cy="300" rx="100" ry="55"/><circle cx="200" cy="300" r="28"/><circle cx="200" cy="300" r="12"/>
+          <path d="M100 300 Q150 250 200 245 Q250 250 300 300"/><path d="M100 300 Q150 350 200 355 Q250 350 300 300"/>
+          <path d="M120 280 L100 255M150 265 L138 238M180 256 L174 228M200 254 L200 224M220 256 L226 228M250 265 L262 238M280 280 L300 255"/>
+          <path d="M1000 250 Q1050 210 1100 250 Q1150 210 1200 250" stroke-width="2"/><path d="M1000 250 Q1100 320 1200 250" stroke-width="2"/><path d="M1100 250 L1100 230"/>
+          <circle cx="180" cy="600" r="30"/><circle cx="260" cy="600" r="30"/><path d="M215 600 L340 480" stroke-width="2"/><path d="M225 600 L340 505" stroke-width="2"/>
+          <rect x="1100" y="480" width="50" height="80" rx="10"/><rect x="1110" y="455" width="30" height="30" rx="5"/><line x1="1125" y1="430" x2="1125" y2="455" stroke-width="3"/>
+          <path d="M650 100 Q662 125 650 145 Q638 125 650 100"/><path d="M720 140 Q730 160 720 175 Q710 160 720 140"/><path d="M580 120 Q588 138 580 150 Q572 138 580 120"/>
+          <path d="M750 500 Q770 520 750 540 Q730 520 750 500"/><path d="M800 550 Q815 565 800 580 Q785 565 800 550"/>
+          <rect x="1050" y="600" width="70" height="14" rx="7"/><line x1="1062" y1="614" x2="1062" y2="670"/><line x1="1074" y1="614" x2="1074" y2="670"/><line x1="1086" y1="614" x2="1086" y2="670"/><line x1="1098" y1="614" x2="1098" y2="670"/><line x1="1110" y1="614" x2="1110" y2="670"/>
+          <circle cx="500" cy="650" r="40" stroke-dasharray="8 6"/><circle cx="900" cy="150" r="35" stroke-dasharray="6 8"/>
+        </g>
+      </svg>
+    </div>
+    <div class="container" style="display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center;min-height:calc(100vh - 64px);padding-top:60px;padding-bottom:60px;position:relative;z-index:2">
+      <div class="hero-text">
+        <h1>Tus clientas te encuentran.<br>Tu solo haces lo que amas.</h1>
+        <p class="hero-sub">BeautyCita conecta clientas con tu salon. 3% por reserva. Sin mensualidad. Sin letra chica.</p>
+        <a href="/registro" class="btn btn-register">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+          REGISTRA TU SALON &mdash; GRATIS
+        </a>
+        <br>
+        <a href="/auth" class="hero-login">Ya tienes cuenta? Iniciar sesion</a>
+      </div>
+      <div class="hero-visual">
+        <div class="hero-visual-inner">
+          <div class="flow-step">
+            <div class="flow-num">1</div>
+            <div class="flow-label">Elige tu servicio</div>
+            <div class="flow-icon">&#9986;</div>
+          </div>
+          <div class="flow-arrow">&#8595;</div>
+          <div class="flow-step">
+            <div class="flow-num">2</div>
+            <div class="flow-label">BeautyCita busca por ti</div>
+            <div class="flow-icon">&#10024;</div>
+          </div>
+          <div class="flow-arrow">&#8595;</div>
+          <div class="flow-step">
+            <div class="flow-num">3</div>
+            <div class="flow-label">Reserva con un toque</div>
+            <div class="flow-icon">&#10004;</div>
+          </div>
+          <div class="scroll-hint">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Calculator ───────────────────────────────────────────── -->
+  <section class="section calc" id="calculator">
+    <div class="container">
+      <h2 class="section-title">Haz la cuenta</h2>
+      <p class="section-subtitle">Cuanto te cuesta tu plataforma actual?</p>
+      <div class="calc-layout">
+        <div class="calc-sliders">
+          <div class="slider-group">
+            <div class="slider-header">
+              <span class="slider-label">Reservas por mes</span>
+              <span class="slider-value" id="resVal">80</span>
+            </div>
+            <input type="range" id="resSlider" min="10" max="200" value="80" step="5">
+          </div>
+          <div class="slider-group">
+            <div class="slider-header">
+              <span class="slider-label">Ticket promedio (MXN)</span>
+              <span class="slider-value" id="tickVal">MX$500</span>
+            </div>
+            <input type="range" id="tickSlider" min="200" max="2000" value="500" step="50">
+          </div>
+          <div class="savings" style="text-align:left;margin-top:40px">
+            <div class="savings-title" id="savingsAmt">Ahorro anual: MX$12,000</div>
+            <div class="savings-desc" id="savingsDesc">Eso es 24 servicios de MX$500 que trabajas gratis para ellos.</div>
+            <a href="/comisiones" class="savings-link">Ver comparacion detallada &rarr;</a>
+          </div>
+        </div>
+        <div class="calc-results">
+          <div class="compare">
+            <div class="compare-card competitor">
+              <h3>La competencia</h3>
+              <div class="compare-price" id="compMonth">MX$2,200</div>
+              <div class="compare-period">por mes</div>
+              <div class="compare-annual" id="compYear">MX$26,400 por ano</div>
+            </div>
+            <div class="compare-card bc">
+              <h3>BeautyCita</h3>
+              <div class="compare-price" id="bcMonth">MX$1,200</div>
+              <div class="compare-period">por mes</div>
+              <div class="compare-annual" id="bcYear">MX$14,400 por ano</div>
+            </div>
+          </div>
+          <button class="btn-gold" onclick="location.href='/registro'">QUEDATE CON TU DINERO</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Receipts ─────────────────────────────────────────────── -->
+  <section class="receipts">
+    <div class="container">
+      <div class="receipts-grid">
+        <div class="receipt-card">
+          <div class="receipt-num">240,000+</div>
+          <div class="receipt-desc">reservas diarias procesan las grandes plataformas</div>
+        </div>
+        <div class="receipt-card">
+          <div class="receipt-num">$1.2M+</div>
+          <div class="receipt-desc">USD extraidos diariamente de estilistas</div>
+        </div>
+        <div class="receipt-card">
+          <div class="receipt-num">$192,000</div>
+          <div class="receipt-desc">genera su dinero AL DIA en intereses &mdash; mas de lo que ganas en un ano</div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="tagline-bar">
+    <p>3%. Eso es todo. Nosotros ganamos cuando tu ganas.</p>
+  </section>
+
+  <!-- ── How it works ─────────────────────────────────────────── -->
+  <section class="section how">
+    <div class="container">
+      <h2 class="section-title">Como funciona</h2>
+      <p class="section-subtitle" style="margin-bottom:56px">Tres pasos. Sin complicaciones.</p>
+      <div class="how-steps">
+        <div class="how-step">
+          <div class="step-num">1</div>
+          <div class="step-icon">&#127978;</div>
+          <div class="step-title">Registrate en 60 segundos</div>
+          <div class="step-desc">Sin costo, sin contrato, sin tarjeta</div>
+        </div>
+        <div class="how-step">
+          <div class="step-num">2</div>
+          <div class="step-icon">&#128101;</div>
+          <div class="step-title">Tus clientas te encuentran</div>
+          <div class="step-desc">BeautyCita las conecta con tu salon</div>
+        </div>
+        <div class="how-step">
+          <div class="step-num">3</div>
+          <div class="step-icon">&#128176;</div>
+          <div class="step-title">Tu solo cobras</div>
+          <div class="step-desc">3% por reserva. El resto es tuyo.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── For clients ──────────────────────────────────────────── -->
+  <section class="section clients">
+    <div class="container">
+      <h2 class="section-title">Para tus clientas</h2>
+      <p class="clients-sub">Reservan en 30 segundos desde su celular. Sin llamadas, sin esperas.</p>
+      <div style="text-align:center">
+        <a href="https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/apk/beautycita.apk" class="btn-download">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.6 11.48l1.34-2.33c.09-.15.05-.34-.09-.42-.15-.09-.34-.05-.42.09l-1.35 2.34C15.77 10.44 14.42 10 13 10s-2.77.44-4.08 1.16L7.57 8.82c-.09-.15-.27-.18-.42-.09-.14.09-.18.27-.09.42L8.4 11.48C5.54 12.98 3.52 15.71 3.15 19h17.69C20.48 15.71 18.46 12.98 17.6 11.48zM8.87 16.5c-.41 0-.75-.34-.75-.75s.34-.75.75-.75.75.34.75.75-.34.75-.75.75zm6.26 0c-.41 0-.75-.34-.75-.75s.34-.75.75-.75.75.34.75.75-.34.75-.75.75z"/></svg>
+          DESCARGAR APP (ARM64)
+        </a>
+        <div class="alt-downloads">
+          <a href="https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/apk/beautycita.apk">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+            ARM 32-bit
+          </a>
+          <span style="color:#ddd">|</span>
+          <a href="https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/apk/beautycita.apk">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+            x86_64
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Footer ───────────────────────────────────────────────── -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-brand">BeautyCita</div>
+      <div class="footer-tagline">Tu agente de belleza inteligente</div>
+      <div class="footer-links">
+        <a href="#">Privacidad</a>
+        <a href="#">Terminos</a>
+        <a href="#">Sobre Nosotros</a>
+        <a href="#">Contacto</a>
+        <a href="#">Ayuda</a>
+      </div>
+      <div class="footer-copy">&copy; 2026 BeautyCita. Todos los derechos reservados.</div>
+    </div>
+  </footer>
+
+</div>
+
+<!-- Flutter loading (for /auth, /admin, etc.) -->
+<div id="flutter-loading">
+  <h1>BeautyCita</h1>
+  <p>Cargando...</p>
+  <div class="spinner"></div>
+</div>
+
+<script>
+(function(){
+  var res = document.getElementById('resSlider');
+  var tick = document.getElementById('tickSlider');
+  if (!res || !tick) return;
+  function fmt(n){ return 'MX$' + n.toLocaleString('es-MX'); }
+  function updatePct(el){ el.style.setProperty('--pct', ((el.value - el.min) / (el.max - el.min) * 100) + '%'); }
+  function calc(){
+    var r = parseInt(res.value), t = parseInt(tick.value);
+    var compM = Math.round(r * t * 0.055), bcM = Math.round(r * t * 0.03);
+    var savings = (compM - bcM) * 12, freeServices = Math.round(savings / t);
+    document.getElementById('resVal').textContent = r;
+    document.getElementById('tickVal').textContent = fmt(t);
+    document.getElementById('compMonth').textContent = fmt(compM);
+    document.getElementById('compYear').textContent = fmt(compM * 12) + ' por ano';
+    document.getElementById('bcMonth').textContent = fmt(bcM);
+    document.getElementById('bcYear').textContent = fmt(bcM * 12) + ' por ano';
+    document.getElementById('savingsAmt').textContent = 'Ahorro anual: ' + fmt(savings);
+    document.getElementById('savingsDesc').textContent = 'Eso es ' + freeServices + ' servicios de ' + fmt(t) + ' que trabajas gratis para ellos.';
+    updatePct(res); updatePct(tick);
+  }
+  res.addEventListener('input', calc);
+  tick.addEventListener('input', calc);
+  calc();
+})();
+(function(){
+  var path = window.location.pathname;
+  if (path !== '/' && path !== '') {
+    document.getElementById('landing').style.display = 'none';
+    document.getElementById('flutter-loading').style.display = 'flex';
+    var s = document.createElement('script');
+    s.src = 'flutter_bootstrap.js'; s.async = true;
+    document.body.appendChild(s);
+
+    // Timeout: if Flutter hasn't rendered after 10s, show error
+    var loadTimer = setTimeout(function(){
+      var fl = document.getElementById('flutter-loading');
+      if (fl && fl.style.display !== 'none') {
+        fl.innerHTML = '<h1 style="color:#fff;font-size:2rem;font-weight:700;margin:0 0 12px">BeautyCita</h1>'
+          + '<p style="color:rgba(255,255,255,.85);font-size:1.1rem;margin:0 0 24px">No se pudo cargar la aplicacion.</p>'
+          + '<button onclick="location.reload()" style="background:#FFB300;color:#1a1a1a;border:none;padding:12px 32px;border-radius:24px;font-weight:700;font-size:1rem;cursor:pointer">Reintentar</button>'
+          + '<a href="/" style="display:block;margin-top:16px;color:rgba(255,255,255,.6);font-size:.9rem">Volver al inicio</a>';
+      }
+    }, 10000);
+
+    window.addEventListener('flutter-first-frame', function(){
+      clearTimeout(loadTimer);
+    });
+  }
+})();
+window.addEventListener('flutter-first-frame', function(){
+  var f = document.getElementById('flutter-loading');
+  if (f) { f.style.display = 'none'; f.remove(); }
+});
+</script>
 </body>
 </html>
