@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../providers/auth_provider.dart';
 import '../config/constants.dart';
+import '../services/toast_service.dart';
 
 
 class AuthScreen extends ConsumerStatefulWidget {
@@ -278,24 +279,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
   }
 
   void _showErrorSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          message,
-          style: GoogleFonts.nunito(
-            fontWeight: FontWeight.w600,
-            fontSize: 14,
-          ),
-        ),
-        backgroundColor: Theme.of(context).colorScheme.error,
-        behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.all(AppConstants.paddingLG),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-        ),
-        duration: const Duration(seconds: 3),
-      ),
-    );
+    ToastService.showError(message);
   }
 
   @override

@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../config/constants.dart';
 import '../../providers/admin_provider.dart';
 import '../../services/supabase_client.dart';
+import '../../services/toast_service.dart';
 
 class DisputesScreen extends ConsumerStatefulWidget {
   const DisputesScreen({super.key});
@@ -1290,36 +1291,19 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
             'process-dispute-refund',
             body: {'dispute_id': disputeId},
           );
-        } catch (refundErr) {
+        } catch (refundErr, refundStack) {
           debugPrint('Dispute refund processing failed: $refundErr');
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Disputa resuelta, pero el reembolso fallo: $refundErr'),
-                backgroundColor: Colors.orange.shade600,
-              ),
-            );
-          }
+          ToastService.showErrorWithDetails('Disputa resuelta, pero el reembolso fallo', refundErr, refundStack);
         }
       }
 
       widget.onChanged();
       if (mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content:
-                Text('Disputa resuelta: ${_outcomeLabel(_selectedOutcome!)}'),
-            backgroundColor: Colors.green.shade600,
-          ),
-        );
+        ToastService.showSuccess('Disputa resuelta: ${_outcomeLabel(_selectedOutcome!)}');
       }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
+    } catch (e, stack) {
+      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -1327,9 +1311,7 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
 
   Future<void> _suspendAccount(String? userId, String label) async {
     if (userId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('ID de usuario no disponible')),
-      );
+      ToastService.showWarning('ID de usuario no disponible');
       return;
     }
 
@@ -1371,28 +1353,15 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
         },
       );
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Cuenta de $label suspendida'),
-            backgroundColor: Colors.red.shade600,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
+      ToastService.showSuccess('Cuenta de $label suspendida');
+    } catch (e, stack) {
+      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
     }
   }
 
   Future<void> _withholdPayouts(String? businessId) async {
     if (businessId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('ID de negocio no disponible')),
-      );
+      ToastService.showWarning('ID de negocio no disponible');
       return;
     }
 
@@ -1433,20 +1402,9 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
         details: {'reason': 'dispute_${widget.dispute['id']}'},
       );
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Pagos al negocio retenidos'),
-            backgroundColor: Colors.deepPurple,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
+      ToastService.showSuccess('Pagos al negocio retenidos');
+    } catch (e, stack) {
+      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
     }
   }
 }

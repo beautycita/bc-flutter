@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../providers/admin_provider.dart';
 import '../../services/supabase_client.dart';
+import '../../services/toast_service.dart';
 
 // ---------------------------------------------------------------------------
 // Entry point
@@ -236,12 +237,8 @@ class _LeadDetailSheetState extends State<_LeadDetailSheet> {
         _editingName = false;
       });
       widget.onChanged?.call();
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al guardar: $e')),
-        );
-      }
+    } catch (e, stack) {
+      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
     } finally {
       if (mounted) setState(() => _savingName = false);
     }
@@ -261,14 +258,10 @@ class _LeadDetailSheetState extends State<_LeadDetailSheet> {
           .eq('id', _lead['id'] as String);
       setState(() => _lead['status'] = newStatus);
       widget.onChanged?.call();
-    } catch (e) {
+    } catch (e, stack) {
       // revert on failure
       setState(() => _status = _lead['status'] as String? ?? 'discovered');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
+      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
     } finally {
       if (mounted) setState(() => _savingStatus = false);
     }
@@ -1271,13 +1264,9 @@ class _LeadDetailSheetState extends State<_LeadDetailSheet> {
                           if (dialogCtx.mounted) {
                             Navigator.of(dialogCtx).pop();
                           }
-                        } catch (e) {
+                        } catch (e, stack) {
                           setDialogState(() => saving = false);
-                          if (dialogCtx.mounted) {
-                            ScaffoldMessenger.of(dialogCtx).showSnackBar(
-                              SnackBar(content: Text('Error: $e')),
-                            );
-                          }
+                          ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
                         }
                       },
                 style: ElevatedButton.styleFrom(
@@ -1517,11 +1506,7 @@ class _LeadDetailSheetState extends State<_LeadDetailSheet> {
   Future<void> _launch(String url) async {
     final uri = Uri.parse(url);
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('No se pudo abrir: $url')),
-        );
-      }
+      ToastService.showWarning('No se pudo abrir: $url');
     }
   }
 }

@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../config/constants.dart';
 import '../../providers/admin_provider.dart';
 import '../../services/supabase_client.dart';
+import '../../services/toast_service.dart';
 
 class UsersScreen extends ConsumerStatefulWidget {
   const UsersScreen({super.key});
@@ -906,19 +907,11 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
       final isMeSuperAdmin =
           ref.read(isSuperAdminProvider).valueOrNull ?? false;
       if (!isMeSuperAdmin && user.role == 'superadmin' && newRole != user.role) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Solo un superadmin puede cambiar el rol de otro superadmin')),
-          );
-        }
+        ToastService.showWarning('Solo un superadmin puede cambiar el rol de otro superadmin');
         return;
       }
       if (!isMeSuperAdmin && newRole == 'superadmin') {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Solo un superadmin puede asignar el rol de superadmin')),
-          );
-        }
+        ToastService.showWarning('Solo un superadmin puede asignar el rol de superadmin');
         return;
       }
 
@@ -939,12 +932,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
         );
 
         ref.invalidate(adminUsersProvider);
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Usuario eliminado (sin telefono verificado)')),
-          );
-        }
+        ToastService.showSuccess('Usuario eliminado (sin telefono verificado)');
         return;
       }
 
@@ -977,18 +965,9 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
       }
 
       ref.invalidate(adminUsersProvider);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Usuario actualizado')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
+      ToastService.showSuccess('Usuario actualizado');
+    } catch (e, stack) {
+      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
     }
   }
 }

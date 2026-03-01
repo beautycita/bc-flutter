@@ -188,9 +188,9 @@ final pipelineSalonsProvider =
         .timeout(const Duration(seconds: 10));
 
     return data.map((row) => DiscoveredSalon.fromMap(row)).toList();
-  } catch (e) {
-    debugPrint('Pipeline salons error: $e');
-    return [];
+  } catch (e, st) {
+    debugPrint('Pipeline salons error: $e\n${st.toString().split('\n').take(5).join('\n')}');
+    rethrow;
   }
 });
 
@@ -234,9 +234,9 @@ final discoveredCountsProvider =
       'MX': results[1].count,
       'US': results[2].count,
     };
-  } catch (e) {
-    debugPrint('Discovered counts error: $e');
-    return {'total': 0, 'MX': 0, 'US': 0};
+  } catch (e, st) {
+    debugPrint('Discovered counts error: $e\n${st.toString().split('\n').take(5).join('\n')}');
+    rethrow;
   }
 });
 

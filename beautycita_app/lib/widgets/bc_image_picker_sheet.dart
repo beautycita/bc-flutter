@@ -10,6 +10,7 @@ import 'package:image_picker/image_picker.dart';
 import '../config/constants.dart';
 import '../providers/media_provider.dart';
 import '../services/media_service.dart';
+import 'package:beautycita/services/toast_service.dart';
 
 /// Source of the selected image.
 enum BCImageSource {
@@ -458,12 +459,7 @@ class _BCImagePickerBodyState extends State<_BCImagePickerBody> {
   }
 
   void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red.shade600,
-      ),
-    );
+    ToastService.showError(message);
   }
 }
 

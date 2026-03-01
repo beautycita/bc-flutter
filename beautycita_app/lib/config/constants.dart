@@ -2,7 +2,8 @@ class AppConstants {
   // App Identity
   static const String appName = 'BeautyCita';
   static const String tagline = 'Tu agente de belleza inteligente';
-  static const String version = '1.0.0'; // Should match pubspec.yaml
+  static const String version = '1.1.7';
+  static const String tableErrorReports = 'user_error_reports';
 
   // Animation Durations
   static const Duration splashDuration = Duration(seconds: 2);

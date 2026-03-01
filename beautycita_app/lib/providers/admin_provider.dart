@@ -891,15 +891,30 @@ final searchDiscoveredSalonsProvider = FutureProvider.family<List<Map<String, dy
 });
 
 /// Aggregates discovered_salons by status for the funnel metrics header.
+/// Uses parallel count queries (indexed) instead of loading all 35k+ rows.
 final pipelineFunnelStatsProvider = FutureProvider<Map<String, int>>((ref) async {
-  final response = await SupabaseClientService.client
-      .from('discovered_salons')
-      .select('status');
-  final list = (response as List).cast<Map<String, dynamic>>();
+  final client = SupabaseClientService.client;
+  const statuses = [
+    'discovered',
+    'selected',
+    'outreach_sent',
+    'registered',
+    'declined',
+    'unreachable',
+  ];
+
+  final results = await Future.wait([
+    for (final status in statuses)
+      client
+          .from('discovered_salons')
+          .select('id')
+          .eq('status', status)
+          .count(),
+  ]);
+
   final counts = <String, int>{};
-  for (final row in list) {
-    final status = row['status'] as String? ?? 'unknown';
-    counts[status] = (counts[status] ?? 0) + 1;
+  for (var i = 0; i < statuses.length; i++) {
+    counts[statuses[i]] = results[i].count;
   }
   return counts;
 });

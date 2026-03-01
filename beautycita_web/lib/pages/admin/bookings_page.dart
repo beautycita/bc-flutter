@@ -70,6 +70,38 @@ class _BookingsPageState extends ConsumerState<BookingsPage> {
       decimalDigits: 0,
     );
 
+    // Surface errors
+    if (bookingsAsync.hasError) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.error_outline, size: 48,
+                  color: colors.error.withValues(alpha: 0.5)),
+              const SizedBox(height: 12),
+              Text('Error cargando reservas',
+                  style: theme.textTheme.titleMedium),
+              const SizedBox(height: 8),
+              SelectableText(
+                '${bookingsAsync.error}',
+                style: theme.textTheme.bodySmall?.copyWith(
+                    color: colors.error),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                onPressed: () => ref.invalidate(adminBookingsProvider),
+                icon: const Icon(Icons.refresh, size: 18),
+                label: const Text('Reintentar'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     final items = bookingsAsync.valueOrNull?.bookings ?? [];
     final totalCount = bookingsAsync.valueOrNull?.totalCount ?? 0;
     final isLoading = bookingsAsync.isLoading;

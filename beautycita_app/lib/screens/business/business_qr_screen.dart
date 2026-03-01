@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../../config/constants.dart';
 import '../../providers/business_provider.dart';
+import '../../services/toast_service.dart';
 
 class BusinessQrScreen extends ConsumerWidget {
   const BusinessQrScreen({super.key});
@@ -231,19 +232,9 @@ class _QrContentState extends State<_QrContent> {
 
       // For now, show a message — full gallery save would need
       // path_provider + image_gallery_saver packages
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Captura de pantalla para guardar la imagen'),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
+      ToastService.showInfo('Captura de pantalla para guardar la imagen');
+    } catch (e, stack) {
+      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -255,17 +246,7 @@ class _QrContentState extends State<_QrContent> {
       // For sharing, we'd use share_plus package
       // For now, copy URL to clipboard
       // (share_plus not yet in deps)
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('URL: ${widget.qrUrl}'),
-            action: SnackBarAction(
-              label: 'Copiar',
-              onPressed: () {},
-            ),
-          ),
-        );
-      }
+      ToastService.showInfo('URL: ${widget.qrUrl}');
     } finally {
       if (mounted) setState(() => _saving = false);
     }

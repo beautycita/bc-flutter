@@ -6,6 +6,7 @@ import 'package:beautycita/models/provider.dart' as models;
 import 'package:beautycita/providers/provider_provider.dart';
 import 'package:beautycita/providers/booking_provider.dart';
 import 'package:beautycita/providers/payment_methods_provider.dart';
+import 'package:beautycita/services/toast_service.dart';
 
 class BookingScreen extends ConsumerStatefulWidget {
   final String providerId;
@@ -97,12 +98,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
 
   Future<void> _confirmBooking(models.ProviderService? service) async {
     if (_scheduledAt == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Selecciona una fecha y hora para tu cita'),
-          backgroundColor: Colors.orange,
-        ),
-      );
+      ToastService.showWarning('Selecciona una fecha y hora para tu cita');
       return;
     }
 
@@ -125,24 +121,12 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
       ref.invalidate(userBookingsProvider);
       ref.invalidate(upcomingBookingsProvider);
 
+      ToastService.showSuccess(AppConstants.successBookingCreated);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text(AppConstants.successBookingCreated),
-            backgroundColor: Colors.green.shade600,
-          ),
-        );
         context.go('/my-bookings');
       }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al reservar: $e'),
-            backgroundColor: Colors.red.shade600,
-          ),
-        );
-      }
+    } catch (e, stack) {
+      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
     } finally {
       if (mounted) {
         setState(() => _isSubmitting = false);

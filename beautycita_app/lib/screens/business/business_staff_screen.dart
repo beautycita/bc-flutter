@@ -8,6 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart' show FileOptions;
 import '../../config/constants.dart';
 import '../../providers/business_provider.dart';
 import '../../services/supabase_client.dart';
+import '../../services/toast_service.dart';
 import '../../widgets/aphrodite_copy_field.dart';
 
 class BusinessStaffScreen extends ConsumerWidget {
@@ -96,12 +97,8 @@ class BusinessStaffScreen extends ConsumerWidget {
           .from('staff')
           .update({'is_active': !current}).eq('id', id);
       ref.invalidate(businessStaffProvider);
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
+    } catch (e, stack) {
+      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
     }
   }
 
@@ -157,17 +154,9 @@ class BusinessStaffScreen extends ConsumerWidget {
 
       ref.invalidate(businessStaffProvider);
 
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Perfil de equipo creado')),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
+      ToastService.showSuccess('Perfil de equipo creado');
+    } catch (e, stack) {
+      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
     }
   }
 }
@@ -784,9 +773,7 @@ class _AddStaffSheetState extends ConsumerState<_AddStaffSheet> {
   Future<void> _save() async {
     final first = _firstCtrl.text.trim();
     if (first.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Nombre es requerido')),
-      );
+      ToastService.showInfo('Nombre es requerido');
       return;
     }
 
@@ -834,12 +821,8 @@ class _AddStaffSheetState extends ConsumerState<_AddStaffSheet> {
 
       widget.onSaved();
       if (mounted) Navigator.pop(context);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
+    } catch (e, stack) {
+      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -1187,17 +1170,9 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
         'experience_years': int.tryParse(_expCtrl.text.trim()) ?? 0,
       }).eq('id', staffId);
       ref.invalidate(businessStaffProvider);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Perfil actualizado')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
+      ToastService.showSuccess('Perfil actualizado');
+    } catch (e, stack) {
+      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
     } finally {
       if (mounted) setState(() => _savingProfile = false);
     }
@@ -1454,17 +1429,9 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
       // Invalidate provider so next open gets fresh IDs
       ref.invalidate(staffScheduleProvider(staffId));
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Horario guardado')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
+      ToastService.showSuccess('Horario guardado');
+    } catch (e, stack) {
+      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
     } finally {
       if (mounted) setState(() => _savingSchedule = false);
     }
@@ -1519,12 +1486,8 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
                           .delete()
                           .eq('id', s['id'] as String);
                       ref.invalidate(staffServicesProvider(staffId));
-                    } catch (e) {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Error: $e')),
-                        );
-                      }
+                    } catch (e, stack) {
+                      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
                     }
                   },
                 ),
@@ -1551,11 +1514,7 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
         bizServices.where((s) => !assignedIds.contains(s['id'])).toList();
 
     if (available.isEmpty) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Todos los servicios ya estan asignados')),
-        );
-      }
+      ToastService.showInfo('Todos los servicios ya estan asignados');
       return;
     }
 
@@ -1678,12 +1637,8 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
                           .delete()
                           .eq('id', b['id'] as String);
                       ref.invalidate(staffBlocksProvider(staffId));
-                    } catch (e) {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Error: $e')),
-                        );
-                      }
+                    } catch (e, stack) {
+                      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
                     }
                   },
                 ),

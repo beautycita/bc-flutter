@@ -15,6 +15,7 @@ import '../providers/security_provider.dart';
 import '../services/places_service.dart';
 import '../services/supabase_client.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show UserAttributes;
+import '../services/toast_service.dart';
 
 class SalonOnboardingScreen extends ConsumerStatefulWidget {
   final String? refCode;
@@ -265,12 +266,7 @@ class _SalonOnboardingScreenState
       });
     } else {
       setState(() => _resolvingPlace = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No se pudo obtener la ubicacion'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      ToastService.showError('No se pudo obtener la ubicacion');
     }
   }
 
@@ -519,12 +515,8 @@ class _SalonOnboardingScreenState
         _businessId = businessId;
         _registered = true;
       });
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-        );
-      }
+    } catch (e, stack) {
+      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -1998,15 +1990,8 @@ class _SuccessScreenState extends State<_SuccessScreen>
       } else {
         throw Exception('No onboarding URL returned');
       }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+    } catch (e, stack) {
+      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
     } finally {
       if (mounted) setState(() => _loadingStripe = false);
     }

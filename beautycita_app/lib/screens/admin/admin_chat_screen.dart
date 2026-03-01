@@ -7,6 +7,7 @@ import '../../models/chat_thread.dart';
 import '../../models/chat_message.dart';
 import '../../providers/chat_provider.dart';
 import '../../services/supabase_client.dart';
+import '../../services/toast_service.dart';
 
 /// Admin chat terminal — WhatsApp-style with BeautyCita branding.
 /// Shows all admin threads on the left, conversation on the right (or full-screen on phone).
@@ -376,12 +377,8 @@ class _ConversationPaneState extends ConsumerState<_ConversationPane> {
         'last_message_text': text,
         'last_message_at': DateTime.now().toUtc().toIso8601String(),
       }).eq('id', widget.threadId);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
+    } catch (e, stack) {
+      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
     }
 
     if (mounted) {

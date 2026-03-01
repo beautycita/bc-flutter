@@ -8,6 +8,8 @@ import '../config/constants.dart';
 import '../config/theme_extension.dart';
 import '../models/curate_result.dart';
 import '../providers/booking_flow_provider.dart';
+import '../providers/btc_wallet_provider.dart';
+import '../providers/payment_methods_provider.dart';
 import '../providers/profile_provider.dart';
 import '../widgets/cinematic_question_text.dart';
 import '../widgets/phone_verify_gate_sheet.dart';
@@ -208,7 +210,7 @@ class _SuccessBanner extends StatelessWidget {
     String subtitle;
     switch (paymentMethod) {
       case 'oxxo':
-        subtitle = 'Ve a tu OXXO mas cercano para completar el pago';
+        subtitle = 'Acude a OXXO o 7-Eleven para completar el pago';
       case 'bitcoin':
         subtitle = 'Completa el pago en Bitcoin para confirmar';
       default:
@@ -459,7 +461,7 @@ class _PriceBreakdown extends StatelessWidget {
 // Payment method selector
 // ---------------------------------------------------------------------------
 
-class _PaymentMethodSelector extends StatelessWidget {
+class _PaymentMethodSelector extends ConsumerStatefulWidget {
   final String selected;
   final ValueChanged<String> onSelect;
 
@@ -469,7 +471,30 @@ class _PaymentMethodSelector extends StatelessWidget {
   });
 
   @override
+  ConsumerState<_PaymentMethodSelector> createState() => _PaymentMethodSelectorState();
+}
+
+class _PaymentMethodSelectorState extends ConsumerState<_PaymentMethodSelector> {
+  bool _didAutoSelect = false;
+
+  @override
   Widget build(BuildContext context) {
+    final cards = ref.watch(paymentMethodsProvider).cards;
+    final btcWallet = ref.watch(btcWalletProvider);
+    final hasCards = cards.isNotEmpty;
+    final btcEnabled = btcWallet.totpEnabled;
+
+    // Smart preselection: card if user has saved cards, otherwise cash
+    if (!_didAutoSelect) {
+      _didAutoSelect = true;
+      final preferred = hasCards ? 'card' : 'oxxo';
+      if (widget.selected != preferred) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          widget.onSelect(preferred);
+        });
+      }
+    }
+
     return Row(
       children: [
         _PaymentMethodCard(
@@ -477,26 +502,27 @@ class _PaymentMethodSelector extends StatelessWidget {
           label: 'Tarjeta',
           subtitle: 'Pago inmediato',
           method: 'card',
-          isSelected: selected == 'card',
-          onTap: () => onSelect('card'),
+          isSelected: widget.selected == 'card',
+          onTap: () => widget.onSelect('card'),
         ),
         const SizedBox(width: 10),
         _PaymentMethodCard(
           icon: Icons.store,
-          label: 'OXXO',
-          subtitle: 'Paga en tienda',
+          label: 'Efectivo',
+          subtitle: 'OXXO, 7-Eleven',
           method: 'oxxo',
-          isSelected: selected == 'oxxo',
-          onTap: () => onSelect('oxxo'),
+          isSelected: widget.selected == 'oxxo',
+          onTap: () => widget.onSelect('oxxo'),
         ),
         const SizedBox(width: 10),
         _PaymentMethodCard(
           icon: Icons.currency_bitcoin,
           label: 'Bitcoin',
-          subtitle: 'Pago con crypto',
+          subtitle: btcEnabled ? 'Pago con crypto' : 'Configura wallet',
           method: 'bitcoin',
-          isSelected: selected == 'bitcoin',
-          onTap: () => onSelect('bitcoin'),
+          isSelected: widget.selected == 'bitcoin',
+          enabled: btcEnabled,
+          onTap: btcEnabled ? () => widget.onSelect('bitcoin') : null,
         ),
       ],
     );
@@ -509,7 +535,8 @@ class _PaymentMethodCard extends StatelessWidget {
   final String subtitle;
   final String method;
   final bool isSelected;
-  final VoidCallback onTap;
+  final bool enabled;
+  final VoidCallback? onTap;
 
   const _PaymentMethodCard({
     required this.icon,
@@ -517,73 +544,80 @@ class _PaymentMethodCard extends StatelessWidget {
     required this.subtitle,
     required this.method,
     required this.isSelected,
-    required this.onTap,
+    this.enabled = true,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final palette = Theme.of(context).colorScheme;
     final ext = Theme.of(context).extension<BCThemeExtension>()!;
+    final disabled = !enabled;
 
     return Expanded(
       child: GestureDetector(
-        onTap: () {
-          HapticFeedback.lightImpact();
-          onTap();
-        },
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: ext.goldGradientDirectional(),
-            borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-            boxShadow: isSelected
-                ? [
-                    BoxShadow(
-                      color: const Color(0xFFD4AF37).withValues(alpha: 0.5),
-                      blurRadius: 10,
-                      offset: const Offset(0, 3),
-                    ),
-                  ]
-                : null,
-          ),
+        onTap: disabled
+            ? null
+            : () {
+                HapticFeedback.lightImpact();
+                onTap?.call();
+              },
+        child: Opacity(
+          opacity: disabled ? 0.4 : 1.0,
           child: Container(
-            margin: const EdgeInsets.all(2),
-            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),
             decoration: BoxDecoration(
-              color: isSelected ? const Color(0xFFFFF8DC) : Colors.white,
-              borderRadius: BorderRadius.circular(AppConstants.radiusMD - 2),
+              gradient: ext.goldGradientDirectional(),
+              borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+              boxShadow: isSelected && !disabled
+                  ? [
+                      BoxShadow(
+                        color: const Color(0xFFD4AF37).withValues(alpha: 0.5),
+                        blurRadius: 10,
+                        offset: const Offset(0, 3),
+                      ),
+                    ]
+                  : null,
             ),
-            child: Column(
-              children: [
-                Icon(
-                  icon,
-                  size: 28,
-                  color: isSelected
-                      ? const Color(0xFFB8860B)
-                      : palette.onSurface.withValues(alpha: 0.5),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  label,
-                  style: GoogleFonts.poppins(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: isSelected
-                        ? const Color(0xFF8B6914)
-                        : palette.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.nunito(
-                    fontSize: 10,
-                    color: isSelected
-                        ? const Color(0xFFA67C00)
+            child: Container(
+              margin: const EdgeInsets.all(2),
+              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),
+              decoration: BoxDecoration(
+                color: isSelected && !disabled ? const Color(0xFFFFF8DC) : Colors.white,
+                borderRadius: BorderRadius.circular(AppConstants.radiusMD - 2),
+              ),
+              child: Column(
+                children: [
+                  Icon(
+                    icon,
+                    size: 28,
+                    color: isSelected && !disabled
+                        ? const Color(0xFFB8860B)
                         : palette.onSurface.withValues(alpha: 0.5),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 6),
+                  Text(
+                    label,
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: isSelected && !disabled
+                          ? const Color(0xFF8B6914)
+                          : palette.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.nunito(
+                      fontSize: 10,
+                      color: isSelected && !disabled
+                          ? const Color(0xFFA67C00)
+                          : palette.onSurface.withValues(alpha: 0.5),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

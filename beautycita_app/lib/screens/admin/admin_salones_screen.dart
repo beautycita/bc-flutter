@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../config/constants.dart';
 import '../../providers/admin_provider.dart';
 import '../../services/export_service.dart';
+import '../../services/toast_service.dart';
 // TODO(task8): AdminSalonDetailScreen will be fully implemented in Task 8
 import 'admin_salon_detail_screen.dart';
 
@@ -574,15 +575,8 @@ class _ExportBottomSheetState extends State<_ExportBottomSheet> {
         title: 'Salones BeautyCita${widget.query.isNotEmpty ? " - ${widget.query}" : ""}',
       );
       if (mounted) Navigator.pop(context);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al exportar: $e'),
-            backgroundColor: Colors.red[600],
-          ),
-        );
-      }
+    } catch (e, stack) {
+      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
     } finally {
       if (mounted) setState(() => _exporting = false);
     }

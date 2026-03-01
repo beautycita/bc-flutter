@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../config/constants.dart';
 import '../../providers/admin_provider.dart';
 import '../../services/supabase_client.dart';
+import '../../services/toast_service.dart';
 
 class TimeRulesScreen extends ConsumerStatefulWidget {
   const TimeRulesScreen({super.key});
@@ -315,21 +316,10 @@ class _RuleEditorState extends State<_RuleEditor> {
             'is_active': _isActive,
           }).eq('id', widget.rule.id);
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Regla guardada'),
-            backgroundColor: Theme.of(context).colorScheme.primary,
-          ),
-        );
-      }
+      ToastService.showSuccess('Regla guardada');
       widget.onSaved();
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-        );
-      }
+    } catch (e, stack) {
+      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
     } finally {
       if (mounted) setState(() => _saving = false);
     }

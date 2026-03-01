@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../config/constants.dart';
 import '../../providers/business_provider.dart';
 import '../../services/supabase_client.dart';
+import '../../services/toast_service.dart';
 
 class BusinessPaymentsScreen extends ConsumerStatefulWidget {
   const BusinessPaymentsScreen({super.key});
@@ -241,15 +242,11 @@ class _BusinessPaymentsScreenState
 
       // Refresh status when user returns
       ref.invalidate(currentBusinessProvider);
-    } catch (e) {
+    } catch (e, stack) {
       try {
         navigator.pop();
       } catch (_) {}
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
+      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
     }
   }
 }

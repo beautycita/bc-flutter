@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../config/constants.dart';
 import '../../providers/admin_provider.dart';
 import '../../services/supabase_client.dart';
+import '../../services/toast_service.dart';
 
 class NotificationTemplatesScreen extends ConsumerStatefulWidget {
   const NotificationTemplatesScreen({super.key});
@@ -124,19 +125,10 @@ class _NotificationTemplatesScreenState
       ref.invalidate(notificationTemplatesProvider);
       if (mounted) {
         setState(() => _editingId = null);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Plantilla guardada'),
-            backgroundColor: Theme.of(context).colorScheme.primary,
-          ),
-        );
       }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-        );
-      }
+      ToastService.showSuccess('Plantilla guardada');
+    } catch (e, stack) {
+      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
     } finally {
       if (mounted) setState(() => _saving = false);
     }

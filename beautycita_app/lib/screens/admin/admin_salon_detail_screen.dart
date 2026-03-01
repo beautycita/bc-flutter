@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../config/constants.dart';
 import '../../providers/admin_provider.dart';
 import '../../services/supabase_client.dart';
+import '../../services/toast_service.dart';
 
 class AdminSalonDetailScreen extends ConsumerStatefulWidget {
   final String businessId;
@@ -35,15 +36,8 @@ class _AdminSalonDetailScreenState
           .from('businesses')
           .update({'tier': newTier}).eq('id', widget.businessId);
       ref.invalidate(adminSalonDetailProvider(widget.businessId));
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al cambiar tier: $e'),
-            backgroundColor: Colors.red[600],
-          ),
-        );
-      }
+    } catch (e, stack) {
+      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
     } finally {
       if (mounted) setState(() => _tierUpdating = false);
     }
@@ -60,15 +54,8 @@ class _AdminSalonDetailScreenState
           .from('businesses')
           .update({'is_active': value}).eq('id', widget.businessId);
       ref.invalidate(adminSalonDetailProvider(widget.businessId));
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al cambiar estado: $e'),
-            backgroundColor: Colors.red[600],
-          ),
-        );
-      }
+    } catch (e, stack) {
+      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
     } finally {
       if (mounted) setState(() => _activeUpdating = false);
     }
@@ -106,14 +93,7 @@ class _AdminSalonDetailScreenState
 
     if (confirmed == true && mounted) {
       await _setActive(false);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Salon suspendido'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      ToastService.showSuccess('Salon suspendido');
     }
   }
 
@@ -124,11 +104,7 @@ class _AdminSalonDetailScreenState
   Future<void> _launchUrl(String url) async {
     final uri = Uri.parse(url);
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('No se puede abrir: $url')),
-        );
-      }
+      ToastService.showWarning('No se puede abrir: $url');
     }
   }
 
