@@ -1,7 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+const ALLOWED_ORIGIN = "https://beautycita.com";
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
@@ -42,9 +43,7 @@ Deno.serve(async (req) => {
     });
   }
 
-  // Use service role only after caller is authenticated — avoids any
-  // client-side forgery; ownership is implicit because the caller holds
-  // the JWT for user.id (the new auth ID we are migrating to).
+  // Use service role only after caller is authenticated.
   const db = createClient(supabaseUrl, serviceKey);
 
   // Verify the old profile actually exists before touching anything
@@ -61,6 +60,34 @@ Deno.serve(async (req) => {
     });
   }
 
+  // SECURITY: Only allow migration of anonymous stub profiles.
+  // If the old auth user has a real email (not a generated @qr.beautycita.app),
+  // it's a real account and cannot be claimed by another user.
+  const { data: oldAuthUser } = await db.auth.admin.getUserById(old_user_id);
+  if (oldAuthUser?.user?.email &&
+      !oldAuthUser.user.email.endsWith("@qr.beautycita.app") &&
+      oldAuthUser.user.email_confirmed_at) {
+    console.warn(`[migrate-profile] Blocked: old_user_id ${old_user_id} has confirmed email`);
+    return new Response(JSON.stringify({ error: "Cannot migrate a confirmed account" }), {
+      status: 403,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  // Also block if old profile has a phone (real user, not stub)
+  const { data: oldProfileFull } = await db
+    .from("profiles")
+    .select("phone")
+    .eq("id", old_user_id)
+    .single();
+  if (oldProfileFull?.phone) {
+    console.warn(`[migrate-profile] Blocked: old_user_id ${old_user_id} has phone`);
+    return new Response(JSON.stringify({ error: "Cannot migrate a profile with phone" }), {
+      status: 403,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
   // Delete the auto-created profile for the new auth user (if the DB
   // trigger created a stub row with a generated username we don't want)
   await db.from("profiles").delete().eq("id", user.id);
@@ -73,7 +100,7 @@ Deno.serve(async (req) => {
 
   if (updateErr) {
     console.error("[migrate-profile] Update failed:", updateErr);
-    return new Response(JSON.stringify({ error: updateErr.message }), {
+    return new Response(JSON.stringify({ error: "Migration failed" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

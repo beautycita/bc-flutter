@@ -9,15 +9,17 @@ const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY") ?? "";
 const STRIPE_API = "https://api.stripe.com/v1";
 
+const ALLOWED_ORIGIN = "https://beautycita.com";
+const corsHeaders = {
+  "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
+  "Access-Control-Allow-Headers":
+    "authorization, content-type, x-client-info, apikey",
+};
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: {
-      "Content-Type": "application/json",
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Headers":
-        "authorization, content-type, x-client-info, apikey",
-    },
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }
 
@@ -105,12 +107,7 @@ async function ensureCustomer(
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, {
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST",
-        "Access-Control-Allow-Headers":
-          "authorization, content-type, x-client-info, apikey",
-      },
+      headers: { ...corsHeaders, "Access-Control-Allow-Methods": "POST" },
     });
   }
 
@@ -196,6 +193,13 @@ Deno.serve(async (req: Request) => {
         return json({ error: "payment_method_id required" }, 400);
       }
 
+      // Verify the payment method belongs to the caller's Stripe customer
+      const customerId = await ensureCustomer(supabase, user.id, user.email ?? undefined);
+      const pm = await stripeGet(`/payment_methods/${paymentMethodId}`);
+      if (pm.customer !== customerId) {
+        return json({ error: "Not authorized to detach this payment method" }, 403);
+      }
+
       await stripePost(`/payment_methods/${paymentMethodId}/detach`);
       return json({ detached: true });
     }
@@ -203,6 +207,6 @@ Deno.serve(async (req: Request) => {
     return json({ error: `Unknown action: ${action}` }, 400);
   } catch (err) {
     console.error("stripe-payment-methods error:", err);
-    return json({ error: String(err) }, 500);
+    return json({ error: "Internal server error" }, 500);
   }
 });

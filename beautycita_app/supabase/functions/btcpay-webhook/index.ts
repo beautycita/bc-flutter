@@ -51,12 +51,18 @@ serve(async (req) => {
     const signature = req.headers.get("BTCPay-Sig");
     const body = await req.text();
 
-    if (BTCPAY_WEBHOOK_SECRET && signature) {
-      const expectedSig = `sha256=${await computeHmac(BTCPAY_WEBHOOK_SECRET, body)}`;
-      if (signature !== expectedSig) {
-        console.error("[BTCPAY-WEBHOOK] Invalid signature");
-        return new Response("Invalid signature", { status: 401 });
-      }
+    if (!BTCPAY_WEBHOOK_SECRET) {
+      console.error("[BTCPAY-WEBHOOK] BTCPAY_WEBHOOK_SECRET not configured — rejecting");
+      return new Response("Webhook secret not configured", { status: 500 });
+    }
+    if (!signature) {
+      console.error("[BTCPAY-WEBHOOK] Missing BTCPay-Sig header");
+      return new Response("Missing signature", { status: 401 });
+    }
+    const expectedSig = `sha256=${await computeHmac(BTCPAY_WEBHOOK_SECRET, body)}`;
+    if (signature !== expectedSig) {
+      console.error("[BTCPAY-WEBHOOK] Invalid signature");
+      return new Response("Invalid signature", { status: 401 });
     }
 
     const event: BTCPayWebhookEvent = JSON.parse(body);

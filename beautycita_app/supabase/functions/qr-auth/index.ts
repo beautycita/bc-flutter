@@ -1,8 +1,9 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+const ALLOWED_ORIGIN = "https://beautycita.com";
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
 };
@@ -49,15 +50,19 @@ serve(async (req) => {
         if (!existing) break;
       }
 
+      // Generate a verify_token — only the web client that creates the session
+      // receives this token, and it's required to call verify later.
+      const verifyToken = generateCode(32);
+
       const { data, error } = await supabase
         .from("qr_auth_sessions")
-        .insert({ code })
+        .insert({ code, verify_token: verifyToken })
         .select("id, code")
         .single();
 
       if (error) throw error;
 
-      return json({ session_id: data.id, code: data.code });
+      return json({ session_id: data.id, code: data.code, verify_token: verifyToken });
     }
 
     // ===== CHECK =====
@@ -213,18 +218,25 @@ serve(async (req) => {
 
     // ===== VERIFY =====
     if (action === "verify") {
-      const { session_id } = body;
+      const { session_id, verify_token } = body;
       if (!session_id) return json({ error: "session_id is required" }, 400);
+      if (!verify_token) return json({ error: "verify_token is required" }, 400);
 
       const { data: session, error: sessError } = await supabase
         .from("qr_auth_sessions")
-        .select("id, status, email, email_otp, expires_at")
+        .select("id, status, email, email_otp, expires_at, verify_token")
         .eq("id", session_id)
         .eq("status", "authorized")
         .maybeSingle();
 
       if (sessError) throw sessError;
       if (!session) return json({ error: "Session not authorized" }, 404);
+
+      // Verify the caller holds the verify_token (only the web client that
+      // created this session knows the token — prevents session_id guessing)
+      if (!session.verify_token || session.verify_token !== verify_token) {
+        return json({ error: "Invalid verify token" }, 403);
+      }
 
       // Check expiry
       if (new Date(session.expires_at) < new Date()) {
@@ -235,12 +247,14 @@ serve(async (req) => {
         return json({ error: "Session expired" }, 410);
       }
 
-      // Mark consumed
+      // Mark consumed and clear OTP from DB
       await supabase
         .from("qr_auth_sessions")
         .update({
           status: "consumed",
           consumed_at: new Date().toISOString(),
+          email_otp: null,
+          verify_token: null,
         })
         .eq("id", session.id);
 
@@ -340,6 +354,6 @@ serve(async (req) => {
     return json({ error: "Unknown action" }, 400);
   } catch (err) {
     console.error("qr-auth error:", err);
-    return json({ error: err.message }, 500);
+    return json({ error: "Internal server error" }, 500);
   }
 });
