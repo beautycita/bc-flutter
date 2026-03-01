@@ -77,7 +77,7 @@ function json(body: unknown, status = 200) {
     status,
     headers: {
       "Content-Type": "application/json",
-      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Origin": "https://beautycita.com",
     },
   });
 }
@@ -132,18 +132,19 @@ Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, {
       headers: {
-        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Origin": "https://beautycita.com",
         "Access-Control-Allow-Methods": "POST, OPTIONS",
         "Access-Control-Allow-Headers": "authorization, content-type, apikey",
       },
     });
   }
 
-  // Verify this is called by a cron job or has admin auth
+  // Verify cron secret or service-role key (NOT spoofable includes check)
   const authHeader = req.headers.get("authorization") ?? "";
   const cronSecret = Deno.env.get("CRON_SECRET") ?? "";
-
-  if (authHeader !== `Bearer ${cronSecret}` && !authHeader.includes("supabase")) {
+  const isValidCron = cronSecret && authHeader === `Bearer ${cronSecret}`;
+  const isServiceRole = authHeader === `Bearer ${SUPABASE_SERVICE_KEY}`;
+  if (!isValidCron && !isServiceRole) {
     return json({ error: "Unauthorized" }, 401);
   }
 
@@ -264,6 +265,6 @@ Deno.serve(async (req: Request) => {
     });
   } catch (err) {
     console.error("scheduled-followup error:", err);
-    return json({ error: String(err) }, 500);
+    return json({ error: "Internal server error" }, 500);
   }
 });

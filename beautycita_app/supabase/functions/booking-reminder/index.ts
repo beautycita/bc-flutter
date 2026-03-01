@@ -21,7 +21,7 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": "https://beautycita.com",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
 };
@@ -42,7 +42,10 @@ Deno.serve(async (req) => {
   const authHeader = req.headers.get("authorization") ?? "";
   const cronSecret = Deno.env.get("CRON_SECRET") ?? "";
 
-  if (authHeader !== `Bearer ${cronSecret}` && !authHeader.includes("supabase")) {
+  // Verify cron secret or service-role key (NOT spoofable includes check)
+  const isValidCron = cronSecret && authHeader === `Bearer ${cronSecret}`;
+  const isServiceRole = authHeader === `Bearer ${SUPABASE_SERVICE_KEY}`;
+  if (!isValidCron && !isServiceRole) {
     return json({ error: "Unauthorized" }, 401);
   }
 
@@ -165,6 +168,6 @@ Deno.serve(async (req) => {
     });
   } catch (err) {
     console.error("[REMINDER] Handler error:", (err as Error).message);
-    return json({ error: (err as Error).message }, 500);
+    return json({ error: "Internal server error" }, 500);
   }
 });

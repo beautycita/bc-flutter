@@ -166,23 +166,47 @@ function getTimeUntil(date: Date): string {
   return diffDays === 1 ? "mañana" : `en ${diffDays} días`;
 }
 
+const ALLOWED_ORIGIN = "https://beautycita.com";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, x-client-info, apikey",
+};
+
 Deno.serve(async (req) => {
-  // CORS preflight
   if (req.method === "OPTIONS") {
-    return new Response(null, {
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization",
-      },
-    });
+    return new Response(null, { headers: corsHeaders });
   }
 
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Method not allowed" }), {
       status: 405,
-      headers: { "Content-Type": "application/json" },
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
+  }
+
+  // ── Auth: require valid JWT or service-role key (for internal calls) ──
+  const authHeader = req.headers.get("authorization") ?? "";
+  const token = authHeader.replace("Bearer ", "");
+  if (!token) {
+    return new Response(JSON.stringify({ error: "Authorization required" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  // Allow service-role key (internal edge-function-to-edge-function calls)
+  const isServiceRole = token === SUPABASE_SERVICE_KEY;
+  if (!isServiceRole) {
+    // Validate as user JWT
+    const { data: { user }, error: authErr } = await supabase.auth.getUser(token);
+    if (authErr || !user) {
+      return new Response(JSON.stringify({ error: "Invalid token" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
   }
 
   try {
@@ -285,17 +309,14 @@ Deno.serve(async (req) => {
       }),
       {
         status: 200,
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-        },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     );
   } catch (error) {
     console.error("[FCM] Handler error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });

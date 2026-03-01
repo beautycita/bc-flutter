@@ -13,8 +13,9 @@ const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const BEAUTYPI_WA_URL = Deno.env.get("BEAUTYPI_WA_URL") ?? "";
 const BEAUTYPI_WA_TOKEN = Deno.env.get("BEAUTYPI_WA_TOKEN") ?? "";
 
+const ALLOWED_ORIGIN = "https://beautycita.com";
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
 };
@@ -98,6 +99,25 @@ Deno.serve(async (req) => {
     return json({ error: "Method not allowed" }, 405);
   }
 
+  // ── Auth: require valid JWT or service-role key ──
+  const authHeader = req.headers.get("authorization") ?? "";
+  const token = authHeader.replace("Bearer ", "");
+  if (!token) {
+    return json({ error: "Authorization required" }, 401);
+  }
+
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+  const isServiceRole = token === SUPABASE_SERVICE_KEY;
+  let callerId: string | null = null;
+
+  if (!isServiceRole) {
+    const { data: { user }, error: authErr } = await supabase.auth.getUser(token);
+    if (authErr || !user) {
+      return json({ error: "Invalid token" }, 401);
+    }
+    callerId = user.id;
+  }
+
   try {
     const body: ConfirmationRequest = await req.json();
     const { booking_id, has_email } = body;
@@ -105,8 +125,6 @@ Deno.serve(async (req) => {
     if (!booking_id) {
       return json({ error: "booking_id is required" }, 400);
     }
-
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
     // -----------------------------------------------------------------------
     // 1. Fetch booking details with business join
@@ -136,6 +154,19 @@ Deno.serve(async (req) => {
     }
 
     const appt = booking as unknown as BookingDetails;
+
+    // Verify caller owns this booking (skip for service-role internal calls)
+    if (callerId && appt.user_id !== callerId) {
+      // Also allow business owner
+      const { data: biz } = await supabase
+        .from("businesses")
+        .select("owner_id")
+        .eq("id", appt.business_id)
+        .single();
+      if (!biz || biz.owner_id !== callerId) {
+        return json({ error: "Not authorized for this booking" }, 403);
+      }
+    }
     const salonName = appt.businesses?.name ?? "Salon";
     const salonAddress = appt.businesses?.address ?? "";
 
@@ -280,6 +311,6 @@ Deno.serve(async (req) => {
     });
   } catch (err) {
     console.error("[BOOKING-CONFIRM] Handler error:", (err as Error).message);
-    return json({ error: (err as Error).message }, 500);
+    return json({ error: "Internal server error" }, 500);
   }
 });

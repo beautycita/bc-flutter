@@ -2,6 +2,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:beautycita_core/supabase.dart';
 
+/// Strip PostgREST filter metacharacters to prevent filter injection via .or().
+String _sanitize(String input) =>
+    input.replaceAll(RegExp(r'[.,()\\]'), '').trim();
+
 // ── Data classes ──────────────────────────────────────────────────────────────
 
 @immutable
@@ -139,9 +143,9 @@ final adminUsersProvider = FutureProvider<UsersPageData>((ref) async {
     if (filter.searchText.isNotEmpty) {
       data = await query
           .or(
-            'username.ilike.%${filter.searchText}%,'
-            'full_name.ilike.%${filter.searchText}%,'
-            'phone.ilike.%${filter.searchText}%',
+            'username.ilike.%${_sanitize(filter.searchText)}%,'
+            'full_name.ilike.%${_sanitize(filter.searchText)}%,'
+            'phone.ilike.%${_sanitize(filter.searchText)}%',
           )
           .order(sortCol, ascending: filter.sortAscending)
           .range(from, to);
@@ -163,9 +167,9 @@ final adminUsersProvider = FutureProvider<UsersPageData>((ref) async {
     if (filter.searchText.isNotEmpty) {
       final countResult = await countQuery
           .or(
-            'username.ilike.%${filter.searchText}%,'
-            'full_name.ilike.%${filter.searchText}%,'
-            'phone.ilike.%${filter.searchText}%',
+            'username.ilike.%${_sanitize(filter.searchText)}%,'
+            'full_name.ilike.%${_sanitize(filter.searchText)}%,'
+            'phone.ilike.%${_sanitize(filter.searchText)}%',
           )
           .count();
       totalCount = countResult.count;

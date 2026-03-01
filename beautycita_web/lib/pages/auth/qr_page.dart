@@ -24,6 +24,7 @@ class QrPage extends ConsumerStatefulWidget {
 class _QrPageState extends ConsumerState<QrPage> {
   String? _authCode;
   String? _sessionId;
+  String? _verifyToken;
   bool _isLoading = true;
   bool _isExpired = false;
   bool _isSigningIn = false;
@@ -73,6 +74,7 @@ class _QrPageState extends ConsumerState<QrPage> {
       final data = response.data as Map<String, dynamic>?;
       final code = data?['code'] as String?;
       final sessionId = data?['session_id'] as String?;
+      final verifyToken = data?['verify_token'] as String?;
 
       if (code == null) {
         setState(() {
@@ -85,6 +87,7 @@ class _QrPageState extends ConsumerState<QrPage> {
       setState(() {
         _authCode = code;
         _sessionId = sessionId;
+        _verifyToken = verifyToken;
         _isLoading = false;
       });
 
@@ -132,7 +135,7 @@ class _QrPageState extends ConsumerState<QrPage> {
     try {
       final response = await BCSupabase.client.functions.invoke(
         'qr-auth',
-        body: {'action': 'verify', 'session_id': sessionId},
+        body: {'action': 'verify', 'session_id': sessionId, 'verify_token': _verifyToken},
       );
       final data = response.data as Map<String, dynamic>?;
       final email = data?['email'] as String?;

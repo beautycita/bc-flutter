@@ -10,15 +10,19 @@ const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY") ?? "";
 const STRIPE_API = "https://api.stripe.com/v1";
 const APP_URL = Deno.env.get("APP_URL") ?? "https://beautycita.com";
 
+const ALLOWED_ORIGIN = "https://beautycita.com";
+
+const corsHeaders = {
+  "Content-Type": "application/json",
+  "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
+  "Access-Control-Allow-Headers":
+    "authorization, content-type, x-client-info, apikey",
+};
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: {
-      "Content-Type": "application/json",
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Headers":
-        "authorization, content-type, x-client-info, apikey",
-    },
+    headers: corsHeaders,
   });
 }
 
@@ -56,10 +60,8 @@ Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, {
       headers: {
-        "Access-Control-Allow-Origin": "*",
+        ...corsHeaders,
         "Access-Control-Allow-Methods": "POST",
-        "Access-Control-Allow-Headers":
-          "authorization, content-type, x-client-info, apikey",
       },
     });
   }
@@ -72,7 +74,18 @@ Deno.serve(async (req: Request) => {
     return json({ error: "Stripe not configured" }, 500);
   }
 
+  // ── Auth: require valid JWT ──
+  const authHeader = req.headers.get("authorization") ?? "";
+  const token = authHeader.replace("Bearer ", "");
+  if (!token) {
+    return json({ error: "Authorization required" }, 401);
+  }
+
   const supabase = createClient(supabaseUrl, serviceKey);
+  const { data: { user }, error: authErr } = await supabase.auth.getUser(token);
+  if (authErr || !user) {
+    return json({ error: "Invalid token" }, 401);
+  }
 
   try {
     const body = await req.json();
@@ -83,15 +96,20 @@ Deno.serve(async (req: Request) => {
       return json({ error: "business_id required" }, 400);
     }
 
-    // Fetch business data
+    // Fetch business data + verify ownership
     const { data: business, error: bizError } = await supabase
       .from("businesses")
-      .select("id, name, phone, whatsapp, address, stripe_account_id")
+      .select("id, name, phone, whatsapp, address, stripe_account_id, owner_id")
       .eq("id", businessId)
       .single();
 
     if (bizError || !business) {
       return json({ error: "Business not found" }, 404);
+    }
+
+    // Verify caller owns this business
+    if (business.owner_id !== user.id) {
+      return json({ error: "Not authorized for this business" }, 403);
     }
 
     if (action === "create-account") {
@@ -248,6 +266,6 @@ Deno.serve(async (req: Request) => {
     return json({ error: `Unknown action: ${action}` }, 400);
   } catch (err) {
     console.error("stripe-connect-onboard error:", err);
-    return json({ error: String(err) }, 500);
+    return json({ error: "Internal server error" }, 500);
   }
 });

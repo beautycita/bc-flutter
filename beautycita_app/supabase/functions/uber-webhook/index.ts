@@ -51,14 +51,9 @@ async function verifySignature(
 
 Deno.serve(async (req: Request) => {
   // Uber only sends POST
+  // Webhooks are server-to-server — no CORS needed
   if (req.method === "OPTIONS") {
-    return new Response(null, {
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST",
-        "Access-Control-Allow-Headers": "*",
-      },
-    });
+    return new Response(null, { status: 204 });
   }
 
   if (req.method !== "POST") {
@@ -71,15 +66,15 @@ Deno.serve(async (req: Request) => {
 
   console.log(`[uber-webhook] Received event (env=${environment})`);
 
-  // Verify HMAC signature
-  if (SIGNING_KEYS.length > 0) {
-    const valid = await verifySignature(rawBody, uberSignature);
-    if (!valid) {
-      console.error("[uber-webhook] Invalid signature — rejecting");
-      return new Response("", { status: 401 });
-    }
-  } else {
-    console.warn("[uber-webhook] No signing key set — skipping signature verification");
+  // Verify HMAC signature — mandatory
+  if (SIGNING_KEYS.length === 0) {
+    console.error("[uber-webhook] No signing key configured — rejecting");
+    return new Response("", { status: 500 });
+  }
+  const valid = await verifySignature(rawBody, uberSignature);
+  if (!valid) {
+    console.error("[uber-webhook] Invalid signature — rejecting");
+    return new Response("", { status: 401 });
   }
 
   let event: {
