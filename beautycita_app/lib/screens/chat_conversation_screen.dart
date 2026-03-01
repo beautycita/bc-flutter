@@ -9,6 +9,7 @@ import '../config/theme_extension.dart';
 import '../models/chat_message.dart';
 import '../providers/chat_provider.dart';
 import '../services/supabase_client.dart';
+import 'package:beautycita/services/toast_service.dart';
 
 class ChatConversationScreen extends ConsumerStatefulWidget {
   final String threadId;
@@ -109,12 +110,8 @@ class _ChatConversationScreenState
         'last_message_text': text,
         'last_message_at': DateTime.now().toUtc().toIso8601String(),
       }).eq('id', widget.threadId);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
+    } catch (e, stack) {
+      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
     }
   }
 
@@ -436,11 +433,7 @@ class _ChatConversationScreenState
     final image = await picker.pickImage(source: ImageSource.gallery, maxWidth: 1200);
     if (image == null) return;
     // TODO: upload image and send as chat message
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Adjuntos disponibles pronto')),
-      );
-    }
+    ToastService.showInfo('Adjuntos disponibles pronto');
   }
 }
 

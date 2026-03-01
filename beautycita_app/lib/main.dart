@@ -174,14 +174,7 @@ class _BeautyCitaAppState extends ConsumerState<BeautyCitaApp> {
           AppRoutes.business,
           (route) => false,
         );
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Stripe conectado — tus servicios estan listos'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
+        ToastService.showSuccess('Stripe conectado — tus servicios estan listos');
         break;
       case 'cita-express':
         // beautycita://cita-express/{bizId}
@@ -259,24 +252,11 @@ class _BeautyCitaAppState extends ConsumerState<BeautyCitaApp> {
     final service = QrAuthService();
     final result = await service.authorizeSession(code, sessionId);
 
-    if (!mounted) return;
-
     switch (result) {
       case QrAuthSuccess():
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Dispositivo vinculado exitosamente'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        ToastService.showSuccess('Dispositivo vinculado exitosamente');
       case QrAuthError(:final message):
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(message),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 4),
-          ),
-        );
+        ToastService.showError(message);
     }
   }
 

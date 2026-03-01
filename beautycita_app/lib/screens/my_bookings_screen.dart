@@ -8,6 +8,7 @@ import 'package:beautycita/models/booking.dart';
 import 'package:beautycita/providers/booking_provider.dart';
 import 'package:beautycita/services/supabase_client.dart';
 import 'package:go_router/go_router.dart';
+import 'package:beautycita/services/toast_service.dart';
 
 /// Disputes for the current user, keyed by appointment_id.
 final userDisputesProvider =
@@ -254,23 +255,9 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
         ref.invalidate(userBookingsProvider);
         ref.invalidate(upcomingBookingsProvider);
 
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text(AppConstants.successBookingCancelled),
-              backgroundColor: Colors.green.shade600,
-            ),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error al cancelar: $e'),
-              backgroundColor: Colors.red.shade600,
-            ),
-          );
-        }
+        ToastService.showSuccess(AppConstants.successBookingCancelled);
+      } catch (e, stack) {
+        ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
       }
     }
   }
@@ -421,23 +408,9 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
           'status': 'open',
         });
 
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('Reporte enviado. Te contactaremos pronto.'),
-              backgroundColor: Colors.green.shade600,
-            ),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error: $e'),
-              backgroundColor: Colors.red.shade600,
-            ),
-          );
-        }
+        ToastService.showSuccess('Reporte enviado. Te contactaremos pronto.');
+      } catch (e, stack) {
+        ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
       }
     }
 
@@ -561,12 +534,8 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
                                   try {
                                     await _rejectOffer(disputeId);
                                     if (ctx.mounted) Navigator.pop(ctx);
-                                  } catch (e) {
-                                    if (ctx.mounted) {
-                                      ScaffoldMessenger.of(ctx).showSnackBar(
-                                        SnackBar(content: Text('Error: $e')),
-                                      );
-                                    }
+                                  } catch (e, stack) {
+                                    ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
                                   } finally {
                                     if (ctx.mounted) {
                                       setSheetState(() => saving = false);
@@ -598,12 +567,8 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
                                     await _acceptOffer(
                                         disputeId, salonOffer, salonOfferAmount);
                                     if (ctx.mounted) Navigator.pop(ctx);
-                                  } catch (e) {
-                                    if (ctx.mounted) {
-                                      ScaffoldMessenger.of(ctx).showSnackBar(
-                                        SnackBar(content: Text('Error: $e')),
-                                      );
-                                    }
+                                  } catch (e, stack) {
+                                    ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
                                   } finally {
                                     if (ctx.mounted) {
                                       setSheetState(() => saving = false);
@@ -991,14 +956,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
     ref.invalidate(userDisputesProvider);
     ref.invalidate(userBookingsProvider);
 
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Oferta aceptada. Disputa resuelta.'),
-          backgroundColor: Colors.green.shade600,
-        ),
-      );
-    }
+    ToastService.showSuccess('Oferta aceptada. Disputa resuelta.');
   }
 
   Future<void> _rejectOffer(String disputeId) async {
@@ -1027,15 +985,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
     ref.invalidate(userDisputesProvider);
     ref.invalidate(userBookingsProvider);
 
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text(
-              'Disputa escalada a administracion. Te contactaremos pronto.'),
-          backgroundColor: Colors.orange.shade600,
-        ),
-      );
-    }
+    ToastService.showWarning('Disputa escalada a administracion. Te contactaremos pronto.');
   }
 
   @override

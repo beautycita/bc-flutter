@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:beautycita/services/toast_service.dart';
 import '../providers/media_provider.dart';
 import '../providers/business_provider.dart';
 import '../services/media_service.dart';
@@ -44,20 +45,10 @@ class _MediaManagerScreenState extends ConsumerState<MediaManagerScreen>
   void _onSaveToGallery(MediaItem item) async {
     final service = ref.read(mediaServiceProvider);
     final success = await service.saveUrlToGallery(item.url);
-    if (mounted) {
-      final primary = Theme.of(context).colorScheme.primary;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            success ? 'Guardado en galeria' : 'Error al guardar',
-            style: GoogleFonts.nunito(),
-          ),
-          duration: const Duration(seconds: 2),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor:
-              success ? primary : Colors.red.shade400,
-        ),
-      );
+    if (success) {
+      ToastService.showSuccess('Guardado en galeria');
+    } else {
+      ToastService.showError('Error al guardar');
     }
   }
 
@@ -108,18 +99,7 @@ class _MediaManagerScreenState extends ConsumerState<MediaManagerScreen>
     final section = _sectionForTab(tabIndex);
 
     if (section == null) {
-      final onSurfaceLight = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'No puedes subir a chats',
-            style: GoogleFonts.nunito(),
-          ),
-          duration: const Duration(seconds: 2),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: onSurfaceLight,
-        ),
-      );
+      ToastService.showWarning('No puedes subir a chats');
       return;
     }
     debugPrint('MediaManager: section = $section');
@@ -132,31 +112,8 @@ class _MediaManagerScreenState extends ConsumerState<MediaManagerScreen>
       return;
     }
 
-    final primary = Theme.of(context).colorScheme.primary;
-
-    // Show loading snackbar
     HapticFeedback.lightImpact();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Text('Subiendo...', style: GoogleFonts.nunito()),
-          ],
-        ),
-        duration: const Duration(seconds: 30),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: primary,
-      ),
-    );
+    ToastService.showInfo('Subiendo...');
 
     // Upload
     final service = ref.read(mediaServiceProvider);
@@ -165,39 +122,14 @@ class _MediaManagerScreenState extends ConsumerState<MediaManagerScreen>
       section: section,
     );
 
-    if (!mounted) return;
-
-    // Clear loading snackbar and show result
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-
     if (uploaded != null) {
       // Invalidate providers to refresh the grid
       ref.invalidate(personalMediaProvider);
       ref.invalidate(businessMediaProvider);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Subido exitosamente',
-            style: GoogleFonts.nunito(),
-          ),
-          duration: const Duration(seconds: 2),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: primary,
-        ),
-      );
+      ToastService.showSuccess('Subido exitosamente');
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Error al subir',
-            style: GoogleFonts.nunito(),
-          ),
-          duration: const Duration(seconds: 2),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: Colors.red.shade400,
-        ),
-      );
+      ToastService.showError('Error al subir');
     }
   }
 

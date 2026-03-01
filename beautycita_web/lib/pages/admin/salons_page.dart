@@ -140,6 +140,38 @@ class _RegisteredTab extends ConsumerWidget {
     final filter = ref.watch(registeredSalonsFilterProvider);
     final salonsAsync = ref.watch(registeredSalonsProvider);
 
+    // Surface errors instead of hiding them
+    if (salonsAsync.hasError) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.error_outline, size: 48,
+                  color: colors.error.withValues(alpha: 0.5)),
+              const SizedBox(height: 12),
+              Text('Error cargando salones',
+                  style: theme.textTheme.titleMedium),
+              const SizedBox(height: 8),
+              SelectableText(
+                '${salonsAsync.error}',
+                style: theme.textTheme.bodySmall?.copyWith(
+                    color: colors.error),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                onPressed: () => ref.invalidate(registeredSalonsProvider),
+                icon: const Icon(Icons.refresh, size: 18),
+                label: const Text('Reintentar'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     final items = salonsAsync.valueOrNull?.salons ?? [];
     final totalCount = salonsAsync.valueOrNull?.totalCount ?? 0;
     final isLoading = salonsAsync.isLoading;
@@ -183,10 +215,7 @@ class _RegisteredTab extends ConsumerWidget {
                   )
                 : null,
           ),
-          onChanged: (value) {
-            ref.read(registeredSalonsFilterProvider.notifier).state =
-                filter.copyWith(searchText: value, page: 0);
-          },
+          onChanged: (value) => setRegisteredSearch(ref, value),
         ),
         filters: [
           _SalonFilterDropdown(
@@ -423,6 +452,38 @@ class _DiscoveredTab extends ConsumerWidget {
     final salonsAsync = ref.watch(discoveredSalonsProvider);
     final dateFormat = DateFormat('d MMM yy', 'es');
 
+    // Surface errors
+    if (salonsAsync.hasError) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.error_outline, size: 48,
+                  color: colors.error.withValues(alpha: 0.5)),
+              const SizedBox(height: 12),
+              Text('Error cargando salones descubiertos',
+                  style: theme.textTheme.titleMedium),
+              const SizedBox(height: 8),
+              SelectableText(
+                '${salonsAsync.error}',
+                style: theme.textTheme.bodySmall?.copyWith(
+                    color: colors.error),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                onPressed: () => ref.invalidate(discoveredSalonsProvider),
+                icon: const Icon(Icons.refresh, size: 18),
+                label: const Text('Reintentar'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     final items = salonsAsync.valueOrNull?.salons ?? [];
     final totalCount = salonsAsync.valueOrNull?.totalCount ?? 0;
     final isLoading = salonsAsync.isLoading;
@@ -466,10 +527,7 @@ class _DiscoveredTab extends ConsumerWidget {
                   )
                 : null,
           ),
-          onChanged: (value) {
-            ref.read(discoveredSalonsFilterProvider.notifier).state =
-                filter.copyWith(searchText: value, page: 0);
-          },
+          onChanged: (value) => setDiscoveredSearch(ref, value),
         ),
         filters: [
           _CountryFilterDropdown(

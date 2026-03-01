@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:beautycita/config/constants.dart';
+import 'package:beautycita/services/toast_service.dart';
 
 /// Consistent card decoration — same as btc_wallet_screen
 BoxDecoration _cardDecoration(ColorScheme cs) => BoxDecoration(
@@ -45,15 +46,6 @@ class CashPaymentData {
     return DateTime(d.year, d.month, d.day, 23, 59, 59);
   }
 
-  /// Demo placeholder data
-  factory CashPaymentData.demo() {
-    return CashPaymentData(
-      amountMxn: 450.00,
-      referenceNumber: '1234 5678 9012 3456',
-      createdAt: DateTime.now(),
-      serviceName: 'Corte de cabello',
-    );
-  }
 }
 
 class CashPaymentScreen extends ConsumerWidget {
@@ -63,7 +55,13 @@ class CashPaymentScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final payment = data ?? CashPaymentData.demo();
+    if (data == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Pago en efectivo')),
+        body: const Center(child: Text('Sin datos de pago')),
+      );
+    }
+    final payment = data!;
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
     final onSurfaceLight = colorScheme.onSurface.withValues(alpha: 0.5);
@@ -177,13 +175,7 @@ class CashPaymentScreen extends ConsumerWidget {
                     Clipboard.setData(
                       ClipboardData(text: payment.referenceNumber.replaceAll(' ', '')),
                     );
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Referencia copiada'),
-                        behavior: SnackBarBehavior.floating,
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
+                    ToastService.showSuccess('Referencia copiada');
                   },
                   icon: const Icon(Icons.copy_rounded, size: 16),
                   label: const Text('Copiar'),
@@ -348,12 +340,7 @@ class CashPaymentScreen extends ConsumerWidget {
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Proximamente - generacion automatica'),
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
+                      ToastService.showInfo('Proximamente - generacion automatica');
                     },
                     icon: const Icon(Icons.refresh_rounded, size: 18),
                     label: const Text('Nuevo codigo'),

@@ -19,6 +19,7 @@ import 'package:beautycita/services/username_generator.dart';
 import 'package:beautycita/widgets/settings_widgets.dart';
 import 'package:beautycita/providers/admin_provider.dart';
 import 'package:beautycita/providers/business_provider.dart';
+import 'package:beautycita/services/toast_service.dart';
 
 // ── AI Avatar Style Model ──
 
@@ -466,22 +467,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       await ref.read(authStateProvider.notifier).updateUsername(username);
       if (!mounted) return;
       setState(() => _editingUsername = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Usuario actualizado'),
-          backgroundColor: Colors.green.shade600,
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 2),
-        ),
-      );
+      ToastService.showSuccess('Usuario actualizado');
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Error al actualizar usuario'),
-          backgroundColor: Colors.red.shade600,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      ToastService.showError('Error al actualizar usuario');
     }
   }
 
@@ -597,13 +585,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Future<void> _uploadCroppedAvatar(Uint8List bytes) async {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Subiendo foto (${(bytes.length / 1024).toStringAsFixed(0)} KB)...'),
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 1),
-      ),
-    );
+    ToastService.showInfo('Subiendo foto (${(bytes.length / 1024).toStringAsFixed(0)} KB)...');
 
     final fileName = 'avatar_${DateTime.now().millisecondsSinceEpoch}.png';
     final url =
@@ -611,23 +593,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     if (!mounted) return;
 
     if (url != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Foto actualizada'),
-          backgroundColor: Colors.green.shade600,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      ToastService.showSuccess('Foto actualizada');
     } else {
       final error = ref.read(profileProvider).error ?? 'Error desconocido';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: $error'),
-          backgroundColor: Colors.red.shade600,
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 5),
-        ),
-      );
+      ToastService.showError('Error: $error');
     }
   }
 
@@ -702,27 +671,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         // Non-critical — avatar is already saved
       }
 
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Avatar IA creado'),
-          backgroundColor: Colors.green.shade600,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      ToastService.showSuccess('Avatar IA creado');
     } catch (e, st) {
       debugPrint('[Avatar] ERROR: $e');
       debugPrint('[Avatar] Stack trace: $st');
       if (!mounted) return;
       Navigator.of(context).pop(); // dismiss loading
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: $e'),
-          backgroundColor: Colors.red.shade600,
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 8),
-        ),
-      );
+      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, st);
     }
   }
 
@@ -798,14 +753,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
     if (location != null && mounted) {
       ref.read(tempSearchLocationProvider.notifier).state = location;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Buscando desde: ${location.address}'),
-          backgroundColor: Colors.green.shade600,
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 2),
-        ),
-      );
+      ToastService.showSuccess('Buscando desde: ${location.address}');
     }
   }
 
@@ -853,13 +801,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   onPressed: () async {
                     final phone = controller.text.trim().replaceAll(' ', '');
                     if (phone.length < 12) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: const Text('Numero invalido'),
-                          backgroundColor: Colors.red.shade600,
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
+                      ToastService.showError('Numero invalido');
                       return;
                     }
                     Navigator.pop(ctx);
@@ -888,14 +830,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   void _showOtpSheet(BuildContext context) async {
     final sent = await ref.read(profileProvider.notifier).sendPhoneOtp();
     if (!sent || !mounted) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('No se pudo enviar el codigo'),
-            backgroundColor: Colors.red.shade600,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+      if (!sent) {
+        ToastService.showError('No se pudo enviar el codigo');
       }
       return;
     }
@@ -944,14 +880,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     if (otp.length != 6) return;
                     Navigator.pop(ctx);
                     final ok = await ref.read(profileProvider.notifier).verifyPhoneOtp(otp);
-                    if (ok && mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: const Text('Telefono verificado'),
-                          backgroundColor: Colors.green.shade600,
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
+                    if (ok) {
+                      ToastService.showSuccess('Telefono verificado');
                     }
                   },
                   style: ElevatedButton.styleFrom(
@@ -984,15 +914,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
     if (picked != null && mounted) {
       await ref.read(profileProvider.notifier).updateBirthday(picked);
-      if (mounted && ref.read(profileProvider).error == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Fecha de nacimiento guardada'),
-            backgroundColor: Colors.green.shade600,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 2),
-          ),
-        );
+      if (ref.read(profileProvider).error == null) {
+        ToastService.showSuccess('Fecha de nacimiento guardada');
       }
     }
   }
@@ -1032,15 +955,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     onTap: () async {
                       Navigator.pop(ctx);
                       await ref.read(profileProvider.notifier).updateGender(g);
-                      if (mounted && ref.read(profileProvider).error == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: const Text('Genero guardado'),
-                            backgroundColor: Colors.green.shade600,
-                            behavior: SnackBarBehavior.floating,
-                            duration: const Duration(seconds: 2),
-                          ),
-                        );
+                      if (ref.read(profileProvider).error == null) {
+                        ToastService.showSuccess('Genero guardado');
                       }
                     },
                   ),
@@ -1090,14 +1006,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     await ref.read(profileProvider.notifier).updateFullName(name);
     if (!mounted) return;
     setState(() => _editingName = false);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Nombre actualizado'),
-        backgroundColor: Colors.green.shade600,
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 2),
-      ),
-    );
+    ToastService.showSuccess('Nombre actualizado');
   }
 }
 
@@ -1268,16 +1177,10 @@ class _AvatarCropEditorState extends State<_AvatarCropEditor> {
       } else if (mounted) {
         Navigator.pop(context);
       }
-    } catch (e) {
+    } catch (e, stack) {
       if (mounted) {
         setState(() => _processing = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al recortar: $e'),
-            backgroundColor: Colors.red.shade600,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
       }
     }
   }

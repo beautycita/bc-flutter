@@ -6,6 +6,7 @@ import '../../config/constants.dart';
 import '../../data/categories.dart';
 import '../../providers/business_provider.dart';
 import '../../services/supabase_client.dart';
+import '../../services/toast_service.dart';
 import '../../widgets/aphrodite_copy_field.dart';
 
 class BusinessServicesScreen extends ConsumerWidget {
@@ -115,12 +116,8 @@ class BusinessServicesScreen extends ConsumerWidget {
           .from('services')
           .update({'is_active': !current}).eq('id', id);
       ref.invalidate(businessServicesProvider);
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
+    } catch (e, stack) {
+      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
     }
   }
 
@@ -156,17 +153,9 @@ class BusinessServicesScreen extends ConsumerWidget {
           .delete()
           .eq('id', id);
       ref.invalidate(businessServicesProvider);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Servicio eliminado')),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
+      ToastService.showSuccess('Servicio eliminado');
+    } catch (e, stack) {
+      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
     }
   }
 
@@ -774,35 +763,25 @@ class _ServiceFormSheetState extends ConsumerState<_ServiceFormSheet> {
 
     // Name is optional when multiselecting (auto-generated)
     if (!isMultiSelect && name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Completa todos los campos requeridos')),
-      );
+      ToastService.showWarning('Completa todos los campos requeridos');
       return;
     }
     if (price == null || duration == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Completa todos los campos requeridos')),
-      );
+      ToastService.showWarning('Completa todos los campos requeridos');
       return;
     }
 
     // Validate category selection
     if (!_isOtro && _selectedCategory == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Selecciona una categoria')),
-      );
+      ToastService.showWarning('Selecciona una categoria');
       return;
     }
     if (_isOtro && _otherCategoryCtrl.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Escribe el nombre de la categoria')),
-      );
+      ToastService.showWarning('Escribe el nombre de la categoria');
       return;
     }
     if (!_isOtro && _selectedSubcategory == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Selecciona una subcategoria')),
-      );
+      ToastService.showWarning('Selecciona una subcategoria');
       return;
     }
     // Validate item selection based on mode
@@ -810,15 +789,11 @@ class _ServiceFormSheetState extends ConsumerState<_ServiceFormSheet> {
         _selectedSubcategory?.items != null &&
         _selectedSubcategory!.items!.isNotEmpty) {
       if (isEdit && _selectedItem == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Selecciona el tipo de servicio')),
-        );
+        ToastService.showWarning('Selecciona el tipo de servicio');
         return;
       }
       if (!isEdit && _selectedItems.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Selecciona al menos un tipo de servicio')),
-        );
+        ToastService.showWarning('Selecciona al menos un tipo de servicio');
         return;
       }
     }
@@ -913,20 +888,12 @@ class _ServiceFormSheetState extends ConsumerState<_ServiceFormSheet> {
       widget.onSaved();
       if (mounted) {
         if (isMultiSelect) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('${_selectedItems.length} servicios agregados'),
-            ),
-          );
+          ToastService.showSuccess('${_selectedItems.length} servicios agregados');
         }
         Navigator.pop(context);
       }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
+    } catch (e, stack) {
+      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
     } finally {
       if (mounted) setState(() => _saving = false);
     }

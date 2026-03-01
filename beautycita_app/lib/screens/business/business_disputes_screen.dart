@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../config/constants.dart';
 import '../../providers/business_provider.dart';
 import '../../services/supabase_client.dart';
+import '../../services/toast_service.dart';
 
 class BusinessDisputesScreen extends ConsumerStatefulWidget {
   const BusinessDisputesScreen({super.key});
@@ -124,12 +125,7 @@ class _BusinessDisputesScreenState
       builder: (ctx) =>
           _DisputeDetailSheet(dispute: dispute, onChanged: () {
             ref.invalidate(businessDisputesProvider);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text('Oferta enviada'),
-                backgroundColor: Colors.green.shade600,
-              ),
-            );
+            ToastService.showSuccess('Oferta enviada');
           }),
     );
   }
@@ -937,9 +933,7 @@ class _DisputeDetailSheetState extends ConsumerState<_DisputeDetailSheet> {
 
     final responseText = _responseCtrl.text.trim();
     if (responseText.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Escribe una explicacion')),
-      );
+      ToastService.showWarning('Escribe una explicacion');
       return;
     }
 
@@ -979,9 +973,7 @@ class _DisputeDetailSheetState extends ConsumerState<_DisputeDetailSheet> {
       } else if (_selectedOffer == 'partial_refund') {
         final amount = double.tryParse(_amountCtrl.text) ?? 0;
         if (amount <= 0) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Ingresa un monto valido')),
-          );
+          ToastService.showWarning('Ingresa un monto valido');
           setState(() => _saving = false);
           return;
         }
@@ -1026,12 +1018,8 @@ class _DisputeDetailSheetState extends ConsumerState<_DisputeDetailSheet> {
       if (mounted) {
         Navigator.pop(context);
       }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
+    } catch (e, stack) {
+      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
     } finally {
       if (mounted) setState(() => _saving = false);
     }

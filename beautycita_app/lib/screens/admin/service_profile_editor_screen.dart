@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../config/constants.dart';
 import '../../providers/admin_provider.dart';
 import '../../services/supabase_client.dart';
+import '../../services/toast_service.dart';
 
 class ServiceProfileEditorScreen extends ConsumerStatefulWidget {
   const ServiceProfileEditorScreen({super.key});
@@ -109,25 +110,12 @@ class _ServiceProfileEditorScreenState
           .eq('service_type', _editing!.serviceType);
 
       ref.invalidate(serviceProfilesProvider);
-
+      ToastService.showSuccess('${_editing!.serviceType} guardado');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${_editing!.serviceType} guardado'),
-            backgroundColor: Theme.of(context).colorScheme.primary,
-          ),
-        );
         setState(() => _editing = null);
       }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+    } catch (e, stack) {
+      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
     } finally {
       if (mounted) setState(() => _saving = false);
     }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:beautycita_core/supabase.dart';
@@ -200,154 +202,186 @@ final discoveredSalonsFilterProvider = StateProvider<SalonsFilter>(
   (ref) => const SalonsFilter(),
 );
 
+/// Debounced search text for registered salons.
+final _registeredSearchDebounced = StateProvider<String>((ref) => '');
+
+/// Debounced search text for discovered salons.
+final _discoveredSearchDebounced = StateProvider<String>((ref) => '');
+
+/// Timer handles for debounce — kept outside providers.
+Timer? _registeredDebounceTimer;
+Timer? _discoveredDebounceTimer;
+
+/// Call this from UI instead of directly setting filter.searchText.
+void setRegisteredSearch(WidgetRef ref, String text) {
+  // Update filter immediately for UI (clear button visibility etc.)
+  ref.read(registeredSalonsFilterProvider.notifier).state =
+      ref.read(registeredSalonsFilterProvider).copyWith(searchText: text, page: 0);
+  // Debounce the actual query trigger
+  _registeredDebounceTimer?.cancel();
+  _registeredDebounceTimer = Timer(const Duration(milliseconds: 400), () {
+    ref.read(_registeredSearchDebounced.notifier).state = text;
+  });
+}
+
+/// Call this from UI instead of directly setting filter.searchText.
+void setDiscoveredSearch(WidgetRef ref, String text) {
+  ref.read(discoveredSalonsFilterProvider.notifier).state =
+      ref.read(discoveredSalonsFilterProvider).copyWith(searchText: text, page: 0);
+  _discoveredDebounceTimer?.cancel();
+  _discoveredDebounceTimer = Timer(const Duration(milliseconds: 400), () {
+    ref.read(_discoveredSearchDebounced.notifier).state = text;
+  });
+}
+
 final registeredSalonsProvider =
     FutureProvider<RegisteredSalonsData>((ref) async {
   final filter = ref.watch(registeredSalonsFilterProvider);
+  // Watch the debounced search — provider only re-runs when debounce fires.
+  final debouncedSearch = ref.watch(_registeredSearchDebounced);
 
-  if (!BCSupabase.isInitialized) return RegisteredSalonsData.empty;
-
-  try {
-    final client = BCSupabase.client;
-    final sortCol = filter.sortColumn ?? 'created_at';
-    final from = filter.page * filter.pageSize;
-    final to = from + filter.pageSize - 1;
-
-    // Build base query with equality filters
-    var query = client.from(BCTables.businesses).select(
-      'id, name, city, state, average_rating, total_reviews, '
-      'stripe_onboarding_status, is_verified, is_active, phone, tier, '
-      'created_at, photo_url',
-    );
-    if (filter.city != null) {
-      query = query.eq('city', filter.city!);
-    }
-    if (filter.verified != null) {
-      query = query.eq('is_verified', filter.verified!);
-    }
-
-    // .or() changes return type, so chain everything after it
-    final List data;
-    if (filter.searchText.isNotEmpty) {
-      data = await query
-          .or(
-            'name.ilike.%${_sanitize(filter.searchText)}%,'
-            'city.ilike.%${_sanitize(filter.searchText)}%,'
-            'phone.ilike.%${_sanitize(filter.searchText)}%',
-          )
-          .order(sortCol, ascending: filter.sortAscending)
-          .range(from, to);
-    } else {
-      data = await query
-          .order(sortCol, ascending: filter.sortAscending)
-          .range(from, to);
-    }
-
-    // Count query
-    var countQuery = client.from(BCTables.businesses).select('id');
-    if (filter.city != null) {
-      countQuery = countQuery.eq('city', filter.city!);
-    }
-    if (filter.verified != null) {
-      countQuery = countQuery.eq('is_verified', filter.verified!);
-    }
-    final int totalCount;
-    if (filter.searchText.isNotEmpty) {
-      final r = await countQuery
-          .or(
-            'name.ilike.%${_sanitize(filter.searchText)}%,'
-            'city.ilike.%${_sanitize(filter.searchText)}%,'
-            'phone.ilike.%${_sanitize(filter.searchText)}%',
-          )
-          .count();
-      totalCount = r.count;
-    } else {
-      final r = await countQuery.count();
-      totalCount = r.count;
-    }
-
-    final salons = data
-        .map((row) => RegisteredSalon.fromJson(row as Map<String, dynamic>))
-        .toList();
-
-    return RegisteredSalonsData(salons: salons, totalCount: totalCount);
-  } catch (e) {
-    debugPrint('Registered salons error: $e');
+  if (!BCSupabase.isInitialized) {
+    debugPrint('[registeredSalons] BCSupabase not initialized');
     return RegisteredSalonsData.empty;
   }
+
+  // Use the debounced value for the actual query
+  final searchText = debouncedSearch;
+
+  final client = BCSupabase.client;
+  final sortCol = filter.sortColumn ?? 'created_at';
+  final from = filter.page * filter.pageSize;
+  final to = from + filter.pageSize - 1;
+
+  // Build base query with equality filters
+  var query = client.from(BCTables.businesses).select(
+    'id, name, city, state, average_rating, total_reviews, '
+    'stripe_onboarding_status, is_verified, is_active, phone, tier, '
+    'created_at, photo_url',
+  );
+  if (filter.city != null) {
+    query = query.eq('city', filter.city!);
+  }
+  if (filter.verified != null) {
+    query = query.eq('is_verified', filter.verified!);
+  }
+
+  final List<dynamic> data;
+  if (searchText.isNotEmpty) {
+    data = await query
+        .or(
+          'name.ilike.%${_sanitize(searchText)}%,'
+          'city.ilike.%${_sanitize(searchText)}%,'
+          'phone.ilike.%${_sanitize(searchText)}%',
+        )
+        .order(sortCol, ascending: filter.sortAscending)
+        .range(from, to);
+  } else {
+    data = await query
+        .order(sortCol, ascending: filter.sortAscending)
+        .range(from, to);
+  }
+
+  // Count query — run in parallel with data query next time, but keep simple for now
+  var countQuery = client.from(BCTables.businesses).select('id');
+  if (filter.city != null) {
+    countQuery = countQuery.eq('city', filter.city!);
+  }
+  if (filter.verified != null) {
+    countQuery = countQuery.eq('is_verified', filter.verified!);
+  }
+  final int totalCount;
+  if (searchText.isNotEmpty) {
+    final r = await countQuery
+        .or(
+          'name.ilike.%${_sanitize(searchText)}%,'
+          'city.ilike.%${_sanitize(searchText)}%,'
+          'phone.ilike.%${_sanitize(searchText)}%',
+        )
+        .count();
+    totalCount = r.count;
+  } else {
+    final r = await countQuery.count();
+    totalCount = r.count;
+  }
+
+  final salons = data
+      .map((row) => RegisteredSalon.fromJson(row as Map<String, dynamic>))
+      .toList();
+
+  return RegisteredSalonsData(salons: salons, totalCount: totalCount);
 });
 
 final discoveredSalonsProvider =
     FutureProvider<DiscoveredSalonsData>((ref) async {
   final filter = ref.watch(discoveredSalonsFilterProvider);
+  final debouncedSearch = ref.watch(_discoveredSearchDebounced);
 
-  if (!BCSupabase.isInitialized) return DiscoveredSalonsData.empty;
-
-  try {
-    final client = BCSupabase.client;
-    final sortCol = filter.sortColumn ?? 'created_at';
-    final from = filter.page * filter.pageSize;
-    final to = from + filter.pageSize - 1;
-
-    // Build base query with equality filters
-    var query = client.from(BCTables.discoveredSalons).select(
-      'id, business_name, source, phone, location_city, country, '
-      'whatsapp_verified, last_outreach_at, interest_count, '
-      'location_address, latitude, longitude, created_at',
-    );
-    if (filter.city != null) {
-      query = query.eq('location_city', filter.city!);
-    }
-    if (filter.country != null) {
-      query = query.eq('country', filter.country!);
-    }
-
-    // .or() changes return type, so chain everything after it
-    final List data;
-    if (filter.searchText.isNotEmpty) {
-      data = await query
-          .or(
-            'business_name.ilike.%${_sanitize(filter.searchText)}%,'
-            'location_city.ilike.%${_sanitize(filter.searchText)}%,'
-            'phone.ilike.%${_sanitize(filter.searchText)}%',
-          )
-          .order(sortCol, ascending: filter.sortAscending)
-          .range(from, to);
-    } else {
-      data = await query
-          .order(sortCol, ascending: filter.sortAscending)
-          .range(from, to);
-    }
-
-    // Count query
-    var countQuery = client.from(BCTables.discoveredSalons).select('id');
-    if (filter.city != null) {
-      countQuery = countQuery.eq('location_city', filter.city!);
-    }
-    if (filter.country != null) {
-      countQuery = countQuery.eq('country', filter.country!);
-    }
-    final int totalCount;
-    if (filter.searchText.isNotEmpty) {
-      final r = await countQuery
-          .or(
-            'business_name.ilike.%${_sanitize(filter.searchText)}%,'
-            'location_city.ilike.%${_sanitize(filter.searchText)}%,'
-            'phone.ilike.%${_sanitize(filter.searchText)}%',
-          )
-          .count();
-      totalCount = r.count;
-    } else {
-      final r = await countQuery.count();
-      totalCount = r.count;
-    }
-
-    final salons = data
-        .map((row) => DiscoveredSalon.fromJson(row as Map<String, dynamic>))
-        .toList();
-
-    return DiscoveredSalonsData(salons: salons, totalCount: totalCount);
-  } catch (e) {
-    debugPrint('Discovered salons error: $e');
+  if (!BCSupabase.isInitialized) {
+    debugPrint('[discoveredSalons] BCSupabase not initialized');
     return DiscoveredSalonsData.empty;
   }
+
+  final searchText = debouncedSearch;
+
+  final client = BCSupabase.client;
+  final sortCol = filter.sortColumn ?? 'created_at';
+  final from = filter.page * filter.pageSize;
+  final to = from + filter.pageSize - 1;
+
+  var query = client.from(BCTables.discoveredSalons).select(
+    'id, business_name, source, phone, location_city, country, '
+    'whatsapp_verified, last_outreach_at, interest_count, '
+    'location_address, latitude, longitude, created_at',
+  );
+  if (filter.city != null) {
+    query = query.eq('location_city', filter.city!);
+  }
+  if (filter.country != null) {
+    query = query.eq('country', filter.country!);
+  }
+
+  final List<dynamic> data;
+  if (searchText.isNotEmpty) {
+    data = await query
+        .or(
+          'business_name.ilike.%${_sanitize(searchText)}%,'
+          'location_city.ilike.%${_sanitize(searchText)}%,'
+          'phone.ilike.%${_sanitize(searchText)}%',
+        )
+        .order(sortCol, ascending: filter.sortAscending)
+        .range(from, to);
+  } else {
+    data = await query
+        .order(sortCol, ascending: filter.sortAscending)
+        .range(from, to);
+  }
+
+  var countQuery = client.from(BCTables.discoveredSalons).select('id');
+  if (filter.city != null) {
+    countQuery = countQuery.eq('location_city', filter.city!);
+  }
+  if (filter.country != null) {
+    countQuery = countQuery.eq('country', filter.country!);
+  }
+  final int totalCount;
+  if (searchText.isNotEmpty) {
+    final r = await countQuery
+        .or(
+          'business_name.ilike.%${_sanitize(searchText)}%,'
+          'location_city.ilike.%${_sanitize(searchText)}%,'
+          'phone.ilike.%${_sanitize(searchText)}%',
+        )
+        .count();
+    totalCount = r.count;
+  } else {
+    final r = await countQuery.count();
+    totalCount = r.count;
+  }
+
+  final salons = data
+      .map((row) => DiscoveredSalon.fromJson(row as Map<String, dynamic>))
+      .toList();
+
+  return DiscoveredSalonsData(salons: salons, totalCount: totalCount);
 });

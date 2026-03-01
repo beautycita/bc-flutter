@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/services/supabase_client.dart';
+import 'package:beautycita/services/toast_service.dart';
 
 class DeviceSession {
   final String id;
@@ -257,15 +258,7 @@ class DeviceManagerScreen extends ConsumerWidget {
                         onPressed: () async {
                           Navigator.pop(ctx, true);
                           await ref.read(deviceSessionsProvider.notifier).revokeSession(session.id);
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: const Text('Sesion cerrada'),
-                                backgroundColor: Colors.green.shade600,
-                                behavior: SnackBarBehavior.floating,
-                              ),
-                            );
-                          }
+                          ToastService.showSuccess('Sesion cerrada');
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.red.shade500,

@@ -7,6 +7,7 @@ import 'package:beautycita/providers/booking_flow_provider.dart'
     show placesServiceProvider;
 import 'package:beautycita/services/location_service.dart';
 import 'package:beautycita/services/places_service.dart';
+import 'package:beautycita/services/toast_service.dart';
 
 /// Shows a LocationPickerSheet as a modal bottom sheet.
 /// Returns a [PlaceLocation] if the user selects a location, or null if dismissed.
@@ -106,12 +107,7 @@ class _LocationPickerBodyState extends State<_LocationPickerBody> {
       Navigator.pop(context, location);
     } else {
       setState(() => _resolving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('No se pudo obtener la ubicacion'),
-          backgroundColor: Colors.red.shade600,
-        ),
-      );
+      ToastService.showError('No se pudo obtener la ubicacion');
     }
   }
 
@@ -128,12 +124,7 @@ class _LocationPickerBodyState extends State<_LocationPickerBody> {
       );
     } else {
       setState(() => _resolving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('No se pudo obtener tu ubicacion'),
-          backgroundColor: Colors.red.shade600,
-        ),
-      );
+      ToastService.showError('No se pudo obtener tu ubicacion');
     }
   }
 

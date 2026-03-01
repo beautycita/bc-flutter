@@ -38,6 +38,38 @@ class _UsersPageState extends ConsumerState<UsersPage> {
     final usersAsync = ref.watch(adminUsersProvider);
     final dateFormat = DateFormat('d MMM yy', 'es');
 
+    // Surface errors
+    if (usersAsync.hasError) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.error_outline, size: 48,
+                  color: colors.error.withValues(alpha: 0.5)),
+              const SizedBox(height: 12),
+              Text('Error cargando usuarios',
+                  style: theme.textTheme.titleMedium),
+              const SizedBox(height: 8),
+              SelectableText(
+                '${usersAsync.error}',
+                style: theme.textTheme.bodySmall?.copyWith(
+                    color: colors.error),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                onPressed: () => ref.invalidate(adminUsersProvider),
+                icon: const Icon(Icons.refresh, size: 18),
+                label: const Text('Reintentar'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     final items = usersAsync.valueOrNull?.users ?? [];
     final totalCount = usersAsync.valueOrNull?.totalCount ?? 0;
     final isLoading = usersAsync.isLoading;

@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../config/constants.dart';
 import '../../providers/admin_provider.dart';
 import '../../services/supabase_client.dart';
+import '../../services/toast_service.dart';
 
 class EngineSettingsEditorScreen extends ConsumerStatefulWidget {
   const EngineSettingsEditorScreen({super.key});
@@ -33,21 +34,9 @@ class _EngineSettingsEditorScreenState
       }
       ref.invalidate(engineSettingsProvider);
       _edits.clear();
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Configuración guardada'),
-            backgroundColor: Theme.of(context).colorScheme.primary,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-        );
-      }
+      ToastService.showSuccess('Configuracion guardada');
+    } catch (e, stack) {
+      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
     } finally {
       if (mounted) setState(() => _saving = false);
     }

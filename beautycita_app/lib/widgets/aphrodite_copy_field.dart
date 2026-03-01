@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/aphrodite_service.dart';
+import 'package:beautycita/services/toast_service.dart';
 
 /// A text field with an Aphrodite AI copy-generation button.
 /// Shows pre-generated text and a refresh icon to generate new suggestions.
@@ -71,13 +72,8 @@ class _AphroditeCopyFieldState extends State<AphroditeCopyField>
         );
       }
     } on AphroditeException catch (e) {
-      if (mounted && e.statusCode == 429) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.message),
-            backgroundColor: Colors.orange.shade700,
-          ),
-        );
+      if (e.statusCode == 429) {
+        ToastService.showWarning(e.message);
       }
     } catch (_) {
       // Silent fail — field stays editable

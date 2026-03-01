@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../config/constants.dart';
 import '../../services/supabase_client.dart';
+import '../../services/toast_service.dart';
 
 /// Provider to fetch discovered salons with WA-verified status for messaging.
 final _messageSalonsProvider = FutureProvider.family<List<Map<String, dynamic>>, _SalonFilter>(
@@ -336,24 +337,12 @@ class _MessageSalonsScreenState extends ConsumerState<MessageSalonsScreen> {
 
       if (mounted && dialogCtx.mounted) {
         Navigator.pop(dialogCtx);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Mensaje enviado (test mode)', style: GoogleFonts.nunito()),
-            backgroundColor: Colors.green[600],
-          ),
-        );
+        ToastService.showSuccess('Mensaje enviado (test mode)');
         // Refresh the list
         ref.invalidate(_messageSalonsProvider(_filter));
       }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e', style: GoogleFonts.nunito()),
-            backgroundColor: Colors.red[600],
-          ),
-        );
-      }
+    } catch (e, stack) {
+      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
     } finally {
       if (mounted) setState(() => _sending = false);
     }
@@ -579,18 +568,9 @@ class _MessageSalonsScreenState extends ConsumerState<MessageSalonsScreen> {
                             .eq('id', salonId);
                         if (ctx.mounted) Navigator.pop(ctx);
                         ref.invalidate(_messageSalonsProvider(_filter));
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Salon actualizado', style: GoogleFonts.nunito()),
-                              backgroundColor: Colors.green[600]),
-                          );
-                        }
-                      } catch (e) {
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red[600]),
-                          );
-                        }
+                        ToastService.showSuccess('Salon actualizado');
+                      } catch (e, stack) {
+                        ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
                       } finally {
                         if (ctx.mounted) setDialogState(() => saving = false);
                       }

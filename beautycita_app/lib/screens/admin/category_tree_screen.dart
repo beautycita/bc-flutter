@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../config/constants.dart';
 import '../../providers/admin_provider.dart';
 import '../../services/supabase_client.dart';
+import '../../services/toast_service.dart';
 
 class CategoryTreeScreen extends ConsumerStatefulWidget {
   const CategoryTreeScreen({super.key});
@@ -309,15 +310,7 @@ class _CategoryTreeScreenState extends ConsumerState<CategoryTreeScreen> {
 
                 ref.invalidate(categoryTreeProvider);
                 if (ctx.mounted) Navigator.pop(ctx);
-
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('${nameEsCtrl.text} guardado'),
-                      backgroundColor: colors.primary,
-                    ),
-                  );
-                }
+                ToastService.showSuccess('${nameEsCtrl.text} guardado');
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: colors.primary,

@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../config/constants.dart';
 import '../../providers/admin_provider.dart';
 import '../../services/supabase_client.dart';
+import '../../services/toast_service.dart';
 
 class FeatureTogglesScreen extends ConsumerStatefulWidget {
   const FeatureTogglesScreen({super.key});
@@ -40,20 +41,10 @@ class _FeatureTogglesScreenState
         targetId: key,
         details: {'new_value': value.toString()},
       );
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content:
-                  Text('$key: ${value ? "activado" : "desactivado"}')),
-        );
-      }
-    } catch (e) {
+      ToastService.showSuccess('$key: ${value ? "activado" : "desactivado"}');
+    } catch (e, stack) {
       setState(() => _localValues[key] = prev);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
+      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
     }
   }
 

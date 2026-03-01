@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:beautycita/config/theme.dart';
+import 'package:beautycita/config/routes.dart';
+import 'package:beautycita/repositories/error_report_repository.dart';
+import 'package:beautycita/widgets/bc_toast_overlay.dart';
 
-/// Global toast service for showing error and success messages
-/// Uses a GlobalKey to access ScaffoldMessenger from anywhere
+/// Global toast service — overlay-based, works without BuildContext.
+///
+/// Wire [navigatorKey] into GoRouter so the overlay resolves.
+/// Keep [messengerKey] during migration (old SnackBar calls still work).
 class ToastService {
   static final GlobalKey<ScaffoldMessengerState> messengerKey =
       GlobalKey<ScaffoldMessengerState>();
@@ -10,88 +14,151 @@ class ToastService {
   static final GlobalKey<NavigatorState> navigatorKey =
       GlobalKey<NavigatorState>();
 
-  /// Show an error toast at the top of the screen
-  static void showError(String message) {
-    _show(
+  static OverlayEntry? _currentEntry;
+
+  // ── Public API (same signatures as before) ──
+
+  static void showError(String message, {String? technicalDetails}) {
+    _showOverlay(
+      type: BCToastType.error,
       message: message,
-      backgroundColor: Colors.red.shade600,
-      icon: Icons.error_outline_rounded,
+      technicalDetails: technicalDetails,
     );
   }
 
-  /// Show a success toast at the top of the screen
   static void showSuccess(String message) {
-    _show(
-      message: message,
-      backgroundColor: Colors.green.shade600,
-      icon: Icons.check_circle_outline_rounded,
-    );
+    _showOverlay(type: BCToastType.success, message: message);
   }
 
-  /// Show an info toast at the top of the screen
   static void showInfo(String message) {
-    _show(
+    _showOverlay(type: BCToastType.info, message: message);
+  }
+
+  static void showWarning(String message, {String? technicalDetails}) {
+    _showOverlay(
+      type: BCToastType.warning,
       message: message,
-      backgroundColor: BeautyCitaTheme.primaryRose,
-      icon: Icons.info_outline_rounded,
+      technicalDetails: technicalDetails,
     );
   }
 
-  /// Show a warning toast at the top of the screen
-  static void showWarning(String message) {
-    _show(
-      message: message,
-      backgroundColor: Colors.orange.shade600,
-      icon: Icons.warning_amber_rounded,
-    );
+  /// Convenience for catch blocks: shows friendly message + stores raw details.
+  static void showErrorWithDetails(String message, Object error,
+      [StackTrace? stack]) {
+    final details = stack != null
+        ? '${error.runtimeType}: $error\n${stack.toString().split('\n').take(8).join('\n')}'
+        : '${error.runtimeType}: $error';
+    showError(message, technicalDetails: details);
   }
 
-  static void _show({
+  // ── Internal ──
+
+  static String _currentScreenName() {
+    try {
+      return AppRoutes.router.routeInformationProvider.value.uri.path;
+    } catch (_) {
+      return 'unknown';
+    }
+  }
+
+  static void _showOverlay({
+    required BCToastType type,
     required String message,
-    required Color backgroundColor,
-    required IconData icon,
+    String? technicalDetails,
   }) {
-    final messenger = messengerKey.currentState;
-    if (messenger == null) {
-      debugPrint('[ToastService] No ScaffoldMessenger available: $message');
+    // Remove previous toast
+    _removeCurrentEntry();
+
+    final overlay = navigatorKey.currentState?.overlay;
+    if (overlay == null) {
+      // Fallback to old SnackBar path if overlay not available yet
+      _fallbackSnackBar(message, type);
       return;
     }
 
-    // Clear any existing snackbars
-    messenger.clearSnackBars();
-
-    messenger.showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(icon, color: Colors.white, size: 20),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                message,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
+    final screenName = _currentScreenName();
+    OverlayEntry? entry;
+    entry = OverlayEntry(
+      builder: (context) => SafeArea(
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: BCToastOverlay(
+              type: type,
+              message: message,
+              technicalDetails: technicalDetails,
+              screenName: screenName,
+              onDismiss: () {
+                entry?.remove();
+                if (_currentEntry == entry) _currentEntry = null;
+              },
+              onReport: technicalDetails != null
+                  ? (details) => _submitReport(
+                        message: message,
+                        details: details,
+                        screenName: screenName,
+                      )
+                  : null,
             ),
-          ],
+          ),
         ),
-        backgroundColor: backgroundColor,
-        behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.only(
-          top: 16,
-          left: 16,
-          right: 16,
-          bottom: 16,
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        duration: const Duration(seconds: 4),
-        dismissDirection: DismissDirection.up,
       ),
     );
+
+    _currentEntry = entry;
+    overlay.insert(entry);
+  }
+
+  static void _removeCurrentEntry() {
+    try {
+      _currentEntry?.remove();
+    } catch (_) {
+      // Entry may already be removed
+    }
+    _currentEntry = null;
+  }
+
+  static void _fallbackSnackBar(String message, BCToastType type) {
+    final messenger = messengerKey.currentState;
+    if (messenger == null) {
+      debugPrint('[ToastService] No messenger: $message');
+      return;
+    }
+    Color bg;
+    switch (type) {
+      case BCToastType.error:
+        bg = Colors.red.shade600;
+      case BCToastType.warning:
+        bg = Colors.orange.shade600;
+      case BCToastType.success:
+        bg = Colors.green.shade600;
+      case BCToastType.info:
+        bg = Colors.blue.shade600;
+    }
+    messenger.clearSnackBars();
+    messenger.showSnackBar(SnackBar(
+      content: Text(message, style: const TextStyle(color: Colors.white)),
+      backgroundColor: bg,
+      behavior: SnackBarBehavior.floating,
+      duration: const Duration(seconds: 4),
+    ));
+  }
+
+  static Future<void> _submitReport({
+    required String message,
+    required String details,
+    required String screenName,
+  }) async {
+    try {
+      await ErrorReportRepository.submit(
+        errorMessage: message,
+        errorDetails: details,
+        screenName: screenName,
+      );
+    } catch (e) {
+      debugPrint('[ToastService] Report failed: $e');
+    }
   }
 
   /// Convert common error types to user-friendly messages
@@ -99,7 +166,8 @@ class ToastService {
     final msg = error.toString();
 
     // Network errors
-    if (msg.contains('SocketException') || msg.contains('Connection refused')) {
+    if (msg.contains('SocketException') ||
+        msg.contains('Connection refused')) {
       return 'Sin conexion a internet';
     }
     if (msg.contains('TimeoutException') || msg.contains('timed out')) {
@@ -143,7 +211,7 @@ class ToastService {
       return msg.replaceFirst('Exception: ', '');
     }
 
-    // Return original if no match, but truncate if too long
+    // Truncate if too long
     if (msg.length > 100) {
       return '${msg.substring(0, 97)}...';
     }

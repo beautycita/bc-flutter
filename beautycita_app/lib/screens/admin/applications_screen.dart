@@ -7,6 +7,7 @@ import '../../config/constants.dart';
 import '../../providers/admin_provider.dart';
 import '../../providers/chat_provider.dart';
 import '../../services/supabase_client.dart';
+import '../../services/toast_service.dart';
 
 class ApplicationsScreen extends ConsumerWidget {
   const ApplicationsScreen({super.key});
@@ -529,12 +530,8 @@ class _ApplicationCard extends ConsumerWidget {
       if (context.mounted) {
         context.push('/chat/$threadId');
       }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error iniciando chat: $e')),
-        );
-      }
+    } catch (e, stack) {
+      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
     }
   }
 
@@ -559,17 +556,9 @@ class _ApplicationCard extends ConsumerWidget {
       );
       ref.invalidate(adminApplicationsProvider);
       ref.invalidate(adminDashStatsProvider);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Solicitud aprobada')),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
+      ToastService.showSuccess('Solicitud aprobada');
+    } catch (e, stack) {
+      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
     }
   }
 
@@ -632,17 +621,9 @@ class _ApplicationCard extends ConsumerWidget {
       );
       ref.invalidate(adminApplicationsProvider);
       ref.invalidate(adminDashStatsProvider);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Solicitud rechazada')),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
+      ToastService.showSuccess('Solicitud rechazada');
+    } catch (e, stack) {
+      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
     }
     reasonCtrl.dispose();
   }

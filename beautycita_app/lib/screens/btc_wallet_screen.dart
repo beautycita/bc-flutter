@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/providers/btc_wallet_provider.dart';
+import 'package:beautycita/services/toast_service.dart';
 import 'package:beautycita/widgets/totp_input_widget.dart';
 
 const _btcOrange = Color(0xFFF7931A);
@@ -102,12 +103,7 @@ class _BtcWalletScreenState extends ConsumerState<BtcWalletScreen> {
                     colorScheme: cs,
                     onTap: () {
                       if (!state.totpEnabled) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Configura 2FA primero'),
-                            behavior: SnackBarBehavior.floating,
-                          ),
-                        );
+                        ToastService.showWarning('Configura 2FA primero');
                         return;
                       }
                       setState(() {
@@ -127,21 +123,11 @@ class _BtcWalletScreenState extends ConsumerState<BtcWalletScreen> {
                     colorScheme: cs,
                     onTap: () {
                       if (!state.totpEnabled) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Configura 2FA primero'),
-                            behavior: SnackBarBehavior.floating,
-                          ),
-                        );
+                        ToastService.showWarning('Configura 2FA primero');
                         return;
                       }
                       if (state.confirmedBtc <= 0) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('No tienes saldo disponible'),
-                            behavior: SnackBarBehavior.floating,
-                          ),
-                        );
+                        ToastService.showWarning('No tienes saldo disponible');
                         return;
                       }
                       _showWithdrawSheet(state);
@@ -382,9 +368,7 @@ class _BtcWalletScreenState extends ConsumerState<BtcWalletScreen> {
                     tooltip: 'Copiar direccion',
                     onPressed: () {
                       Clipboard.setData(ClipboardData(text: address));
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Direccion copiada'), behavior: SnackBarBehavior.floating, duration: Duration(seconds: 2)),
-                      );
+                      ToastService.showSuccess('Direccion copiada');
                     },
                   ),
                 ],
@@ -623,9 +607,7 @@ class _TotpSetupSheetState extends State<_TotpSetupSheet> {
                 GestureDetector(
                   onTap: () {
                     Clipboard.setData(ClipboardData(text: widget.secret));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Codigo copiado'), behavior: SnackBarBehavior.floating, duration: Duration(seconds: 2)),
-                    );
+                    ToastService.showSuccess('Codigo copiado');
                   },
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

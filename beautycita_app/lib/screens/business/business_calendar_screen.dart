@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../config/constants.dart';
 import '../../providers/business_provider.dart';
 import '../../services/supabase_client.dart';
+import '../../services/toast_service.dart';
 
 /// Returns true if the business owner already has a staff record in the list.
 bool _ownerHasStaffRecord(String? ownerId, List<Map<String, dynamic>> staff) {
@@ -207,17 +208,9 @@ class _BusinessCalendarScreenState
           .from('appointments')
           .update({'status': action}).eq('id', id);
       _refresh();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Cita actualizada')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
+      ToastService.showSuccess('Cita actualizada');
+    } catch (e, stack) {
+      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
     }
   }
 
@@ -2137,9 +2130,7 @@ class _BlockTimeSheetState extends ConsumerState<_BlockTimeSheet> {
 
   Future<void> _save() async {
     if (_staffId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Selecciona un empleado')),
-      );
+      ToastService.showWarning('Selecciona un empleado');
       return;
     }
     setState(() => _saving = true);
@@ -2176,12 +2167,8 @@ class _BlockTimeSheetState extends ConsumerState<_BlockTimeSheet> {
 
       widget.onSaved();
       if (mounted) Navigator.pop(context);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
+    } catch (e, stack) {
+      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -2508,15 +2495,11 @@ class _WalkinSheetState extends ConsumerState<_WalkinSheet> {
 
   Future<void> _save() async {
     if (!_isOtherService && _serviceId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Selecciona un servicio')),
-      );
+      ToastService.showWarning('Selecciona un servicio');
       return;
     }
     if (_isOtherService && _customServiceCtrl.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Escribe el nombre del servicio')),
-      );
+      ToastService.showWarning('Escribe el nombre del servicio');
       return;
     }
     setState(() => _saving = true);
@@ -2561,12 +2544,8 @@ class _WalkinSheetState extends ConsumerState<_WalkinSheet> {
 
       widget.onSaved();
       if (mounted) Navigator.pop(context);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
+    } catch (e, stack) {
+      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -2741,12 +2720,8 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
 
       widget.onSaved();
       if (mounted) Navigator.pop(context);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
+    } catch (e, stack) {
+      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -2887,12 +2862,8 @@ class _EditApptSheetState extends ConsumerState<_EditApptSheet> {
       }
       widget.onSaved();
       if (mounted) Navigator.pop(context);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
+    } catch (e, stack) {
+      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -3002,9 +2973,7 @@ class _QuickNoteSheetState extends ConsumerState<_QuickNoteSheet> {
   Future<void> _save() async {
     final text = _ctrl.text.trim();
     if (text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Escribe algo')),
-      );
+      ToastService.showWarning('Escribe algo');
       return;
     }
     setState(() => _saving = true);
@@ -3027,12 +2996,8 @@ class _QuickNoteSheetState extends ConsumerState<_QuickNoteSheet> {
 
       widget.onSaved();
       if (mounted) Navigator.pop(context);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
+    } catch (e, stack) {
+      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -3139,12 +3104,8 @@ class _NotesSheetState extends State<_NotesSheet> {
           .update({'notes': notes.isEmpty ? null : notes}).eq('id', id);
       widget.onSaved();
       if (mounted) Navigator.pop(context);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
+    } catch (e, stack) {
+      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
     } finally {
       if (mounted) setState(() => _saving = false);
     }

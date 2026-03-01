@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:beautycita/services/toast_service.dart';
 import '../config/constants.dart';
 import '../models/curate_result.dart';
 
@@ -92,18 +93,9 @@ class _TimeOverrideSheetState extends State<TimeOverrideSheet> {
     Navigator.of(context).pop();
     widget.onSelect(window);
 
-    // Show snackbar after closing the sheet
+    // Show toast after closing the sheet
     Future.delayed(const Duration(milliseconds: 300), () {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Hora seleccionada'),
-            backgroundColor: Colors.green.shade600,
-            duration: const Duration(seconds: 1),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
+      ToastService.showSuccess('Hora seleccionada');
     });
   }
 

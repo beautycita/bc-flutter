@@ -182,8 +182,8 @@ final adminUsersProvider = FutureProvider<UsersPageData>((ref) async {
         AdminUser.fromJson(row as Map<String, dynamic>)).toList();
 
     return UsersPageData(users: users, totalCount: totalCount);
-  } catch (e) {
-    debugPrint('Admin users error: $e');
-    return UsersPageData.empty;
+  } catch (e, st) {
+    debugPrint('Admin users error: $e\n${st.toString().split('\n').take(5).join('\n')}');
+    rethrow;
   }
 });

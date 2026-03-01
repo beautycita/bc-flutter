@@ -16,6 +16,7 @@ import 'package:beautycita/providers/route_provider.dart';
 import 'package:beautycita/providers/uber_provider.dart';
 import 'package:beautycita/services/location_service.dart';
 import 'package:beautycita/services/supabase_client.dart';
+import 'package:beautycita/services/toast_service.dart';
 import 'package:beautycita/widgets/route_map_widget.dart';
 import 'package:beautycita/widgets/location_picker_sheet.dart';
 
@@ -156,15 +157,8 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
           .update({'transport_mode': mode})
           .eq('id', booking.id);
       ref.invalidate(bookingDetailProvider(widget.bookingId));
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al actualizar transporte: $e'),
-            backgroundColor: Colors.red.shade600,
-          ),
-        );
-      }
+    } catch (e, stack) {
+      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
     } finally {
       if (mounted) setState(() => _isUpdatingTransport = false);
     }
@@ -300,14 +294,7 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
                         bookingDetailProvider(widget.bookingId));
                     ref.invalidate(userBookingsProvider);
                     if (ctx.mounted) Navigator.pop(ctx);
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: const Text('Notas actualizadas'),
-                          backgroundColor: Colors.green.shade600,
-                        ),
-                      );
-                    }
+                    ToastService.showSuccess('Notas actualizadas');
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: colorScheme.primary,
@@ -446,24 +433,12 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
       ref.invalidate(userBookingsProvider);
       ref.invalidate(upcomingBookingsProvider);
 
+      ToastService.showSuccess('Cita cancelada');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Cita cancelada'),
-            backgroundColor: Colors.green.shade600,
-          ),
-        );
         context.pop();
       }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al cancelar: $e'),
-            backgroundColor: Colors.red.shade600,
-          ),
-        );
-      }
+    } catch (e, stack) {
+      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
     } finally {
       if (mounted) setState(() => _isCancelling = false);
     }

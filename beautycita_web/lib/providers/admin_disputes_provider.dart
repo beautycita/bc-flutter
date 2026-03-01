@@ -219,7 +219,7 @@ final disputesProvider = FutureProvider<List<Dispute>>((ref) async {
   try {
     var query = BCSupabase.client
         .from(BCTables.disputes)
-        .select('*, profiles!disputes_user_id_fkey(full_name, username), businesses!disputes_business_id_fkey(name)');
+        .select('*, profiles!disputes_user_id_profiles_fkey(full_name, username), businesses!disputes_business_id_fkey(name)');
 
     if (filters.status != null) {
       query = query.eq('status', filters.status!);

@@ -176,7 +176,7 @@ final adminBookingsProvider = FutureProvider<BookingsPageData>((ref) async {
     var query = client.from(BCTables.appointments).select(
       'id, user_id, business_id, service_name, starts_at, ends_at, '
       'status, price, payment_status, payment_intent_id, notes, created_at, '
-      'profiles!appointments_user_id_fkey(full_name, username), '
+      'profiles!appointments_user_id_profiles_fkey(full_name, username), '
       'businesses!appointments_business_id_fkey(name)',
     );
 
@@ -247,8 +247,8 @@ final adminBookingsProvider = FutureProvider<BookingsPageData>((ref) async {
         .toList();
 
     return BookingsPageData(bookings: bookings, totalCount: totalCount);
-  } catch (e) {
-    debugPrint('Admin bookings error: $e');
-    return BookingsPageData.empty;
+  } catch (e, st) {
+    debugPrint('Admin bookings error: $e\n${st.toString().split('\n').take(5).join('\n')}');
+    rethrow;
   }
 });

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:beautycita/services/toast_service.dart';
 import '../services/lightx_service.dart';
 import '../services/media_service.dart';
 
@@ -232,7 +233,6 @@ class _ToolViewState extends ConsumerState<_ToolView>
   }
 
   void _autoSave(String resultUrl, String toolType, String stylePrompt) async {
-    final primary = Theme.of(context).colorScheme.primary;
     try {
       final mediaService = MediaService();
       final saved = await mediaService.saveLightXResult(
@@ -240,52 +240,26 @@ class _ToolViewState extends ConsumerState<_ToolView>
         toolType: toolType,
         stylePrompt: stylePrompt,
       );
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              saved != null ? 'Guardado automaticamente' : 'No se pudo guardar (inicia sesion)',
-              style: GoogleFonts.nunito(),
-            ),
-            duration: const Duration(seconds: 2),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: saved != null ? primary : Colors.orange,
-          ),
-        );
+      if (saved != null) {
+        ToastService.showSuccess('Guardado automaticamente');
+      } else {
+        ToastService.showWarning('No se pudo guardar (inicia sesion)');
       }
-    } catch (e) {
+    } catch (e, stack) {
       debugPrint('Auto-save error: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al guardar: $e', style: GoogleFonts.nunito()),
-            duration: const Duration(seconds: 3),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: Colors.red.shade400,
-          ),
-        );
-      }
+      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
     }
   }
 
   void _saveToGallery() async {
     if (_resultUrl == null) return;
-    final primary = Theme.of(context).colorScheme.primary;
     try {
       final mediaService = MediaService();
       final success = await mediaService.saveUrlToGallery(_resultUrl!);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              success ? 'Guardado en galeria' : 'Error al guardar',
-              style: GoogleFonts.nunito(),
-            ),
-            duration: const Duration(seconds: 2),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: success ? primary : Colors.red.shade400,
-          ),
-        );
+      if (success) {
+        ToastService.showSuccess('Guardado en galeria');
+      } else {
+        ToastService.showError('Error al guardar');
       }
     } catch (e) {
       debugPrint('Save to gallery error: $e');
@@ -850,7 +824,6 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
   }
 
   void _autoSave(String resultUrl) async {
-    final primary = Theme.of(context).colorScheme.primary;
     try {
       final mediaService = MediaService();
       final saved = await mediaService.saveLightXResult(
@@ -858,18 +831,10 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
         toolType: 'face_swap',
         stylePrompt: _selectedSample?.label ?? 'Custom look swap',
       );
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              saved != null ? 'Guardado automaticamente' : 'No se pudo guardar (inicia sesion)',
-              style: GoogleFonts.nunito(),
-            ),
-            duration: const Duration(seconds: 2),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: saved != null ? primary : Colors.orange,
-          ),
-        );
+      if (saved != null) {
+        ToastService.showSuccess('Guardado automaticamente');
+      } else {
+        ToastService.showWarning('No se pudo guardar (inicia sesion)');
       }
     } catch (e) {
       debugPrint('Auto-save error: $e');
@@ -878,19 +843,13 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
 
   void _saveToGallery() async {
     if (_resultUrl == null) return;
-    final primary = Theme.of(context).colorScheme.primary;
     try {
       final mediaService = MediaService();
       final success = await mediaService.saveUrlToGallery(_resultUrl!);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(success ? 'Guardado en galeria' : 'Error al guardar', style: GoogleFonts.nunito()),
-            duration: const Duration(seconds: 2),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: success ? primary : Colors.red.shade400,
-          ),
-        );
+      if (success) {
+        ToastService.showSuccess('Guardado en galeria');
+      } else {
+        ToastService.showError('Error al guardar');
       }
     } catch (e) {
       debugPrint('Save to gallery error: $e');

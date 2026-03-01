@@ -133,12 +133,6 @@ class SettingsScreen extends ConsumerWidget {
             label: 'Metodos de pago',
             onTap: () => context.push('/settings/payment-methods'),
           ),
-          if (ref.watch(isSuperAdminProvider).valueOrNull == true)
-            SettingsTile(
-              icon: Icons.palette_outlined,
-              label: 'Apariencia',
-              onTap: () => context.push('/settings/appearance'),
-            ),
           SettingsTile(
             icon: Icons.shield_outlined,
             label: 'Seguridad y cuenta',

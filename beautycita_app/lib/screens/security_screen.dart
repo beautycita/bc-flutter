@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/providers/security_provider.dart';
+import 'package:beautycita/services/toast_service.dart';
 import 'package:beautycita/widgets/settings_widgets.dart';
 
 class SecurityScreen extends ConsumerStatefulWidget {
@@ -29,23 +30,11 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
     // Listen for success/error messages
     ref.listen<SecurityState>(securityProvider, (prev, next) {
       if (next.successMessage != null && next.successMessage != prev?.successMessage) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(next.successMessage!),
-            backgroundColor: Colors.green.shade600,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        ToastService.showSuccess(next.successMessage!);
         ref.read(securityProvider.notifier).clearMessages();
       }
       if (next.error != null && next.error != prev?.error) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(next.error!),
-            backgroundColor: Colors.red.shade600,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        ToastService.showError(next.error!);
         ref.read(securityProvider.notifier).clearMessages();
       }
     });
@@ -129,16 +118,10 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
               onTap: _canAddPassword(sec)
                   ? () => _showPasswordSheet(context)
                   : () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            sec.isEmailAdded
-                                ? 'Confirma tu email primero (revisa tu bandeja)'
-                                : 'Agrega tu email primero',
-                          ),
-                          backgroundColor: Colors.orange.shade700,
-                          behavior: SnackBarBehavior.floating,
-                        ),
+                      ToastService.showWarning(
+                        sec.isEmailAdded
+                            ? 'Confirma tu email primero (revisa tu bandeja)'
+                            : 'Agrega tu email primero',
                       );
                     },
             ),
@@ -232,13 +215,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
                   onPressed: () {
                     final email = controller.text.trim();
                     if (email.isEmpty || !email.contains('@')) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: const Text('Ingresa un email valido'),
-                          backgroundColor: Colors.red.shade600,
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
+                      ToastService.showError('Ingresa un email valido');
                       return;
                     }
                     Navigator.pop(ctx);
@@ -323,23 +300,11 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
                         final pass = passController.text;
                         final confirm = confirmController.text;
                         if (pass.length < 6) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: const Text('La contrasena debe tener al menos 6 caracteres'),
-                              backgroundColor: Colors.red.shade600,
-                              behavior: SnackBarBehavior.floating,
-                            ),
-                          );
+                          ToastService.showError('La contrasena debe tener al menos 6 caracteres');
                           return;
                         }
                         if (pass != confirm) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: const Text('Las contrasenas no coinciden'),
-                              backgroundColor: Colors.red.shade600,
-                              behavior: SnackBarBehavior.floating,
-                            ),
-                          );
+                          ToastService.showError('Las contrasenas no coinciden');
                           return;
                         }
                         Navigator.pop(ctx);

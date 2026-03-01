@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/config/routes.dart';
 import 'package:beautycita/providers/payment_methods_provider.dart';
-import 'package:beautycita/screens/cash_payment_screen.dart';
+import 'package:beautycita/services/toast_service.dart';
 import 'package:beautycita/widgets/settings_widgets.dart';
 
 class PaymentMethodsScreen extends ConsumerStatefulWidget {
@@ -23,6 +23,56 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
     });
   }
 
+  void _showCashInfo(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final cs = Theme.of(context).colorScheme;
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppConstants.radiusLG)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                buildSheetHeader(context, 'Pago en efectivo'),
+                const SizedBox(height: 8),
+                _CashInfoStep(number: 1, text: 'Al reservar tu cita, selecciona "Efectivo" como metodo de pago.'),
+                _CashInfoStep(number: 2, text: 'Recibiras un codigo de deposito con el monto exacto.'),
+                _CashInfoStep(number: 3, text: 'Acude a cualquier OXXO o 7-Eleven y deposita con el codigo.'),
+                _CashInfoStep(number: 4, text: 'Tu cita se confirma automaticamente al recibir el pago.', isLast: true),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: cs.primary.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(AppConstants.radiusSM),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline, size: 18, color: cs.primary),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'El codigo tambien se enviara a tu correo electronico.',
+                          style: textTheme.bodySmall?.copyWith(color: cs.primary),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final pm = ref.watch(paymentMethodsProvider);
@@ -33,23 +83,11 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
     // Listen for messages
     ref.listen<PaymentMethodsState>(paymentMethodsProvider, (prev, next) {
       if (next.successMessage != null && next.successMessage != prev?.successMessage) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(next.successMessage!),
-            backgroundColor: Colors.green.shade600,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        ToastService.showSuccess(next.successMessage!);
         ref.read(paymentMethodsProvider.notifier).clearMessages();
       }
       if (next.error != null && next.error != prev?.error) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(next.error!),
-            backgroundColor: Colors.red.shade600,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        ToastService.showError(next.error!);
         ref.read(paymentMethodsProvider.notifier).clearMessages();
       }
     });
@@ -102,7 +140,7 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
           const SectionHeader(label: 'Otros metodos'),
           const SizedBox(height: AppConstants.paddingXS),
 
-          // OXXO
+          // Cash
           _OtherMethodTile(
             icon: Icons.store_rounded,
             iconColor: const Color(0xFFCC0000),
@@ -110,10 +148,7 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
             subtitle: 'OXXO, 7-Eleven, tiendas de conveniencia',
             badgeText: 'Disponible',
             badgeColor: Colors.green.shade600,
-            onTap: () => context.push(
-              AppRoutes.cashPayment,
-              extra: CashPaymentData.demo(),
-            ),
+            onTap: () => _showCashInfo(context),
           ),
 
           const SizedBox(height: AppConstants.paddingXS),
@@ -352,6 +387,58 @@ class _OtherMethodTile extends StatelessWidget {
             ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _CashInfoStep extends StatelessWidget {
+  final int number;
+  final String text;
+  final bool isLast;
+
+  const _CashInfoStep({
+    required this.number,
+    required this.text,
+    this.isLast = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final cs = Theme.of(context).colorScheme;
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: isLast ? 0 : 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 24,
+            height: 24,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: cs.primary.withValues(alpha: 0.08),
+              border: Border.all(color: cs.primary.withValues(alpha: 0.2), width: 1.5),
+            ),
+            child: Center(
+              child: Text(
+                '$number',
+                style: textTheme.labelSmall?.copyWith(
+                  color: cs.primary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(text, style: textTheme.bodyMedium),
+            ),
+          ),
+        ],
       ),
     );
   }
