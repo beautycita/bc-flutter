@@ -19,15 +19,47 @@ import '../../data/categories.dart';
 import '../../providers/booking_flow_provider.dart';
 import '../../providers/curate_provider.dart';
 import '../../providers/payment_provider.dart';
+import '../../services/geolocation_web.dart';
 import '../../services/stripe_web.dart';
 
 // ── Main page ────────────────────────────────────────────────────────────────
 
-class ReservarPage extends ConsumerWidget {
+class ReservarPage extends ConsumerStatefulWidget {
   const ReservarPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ReservarPage> createState() => _ReservarPageState();
+}
+
+class _ReservarPageState extends ConsumerState<ReservarPage> {
+  bool _locationRequested = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _requestLocationIfNeeded();
+    });
+  }
+
+  Future<void> _requestLocationIfNeeded() async {
+    if (_locationRequested) return;
+    final flowState = ref.read(bookingFlowProvider);
+    if (flowState.userLat != null) return; // already have location
+
+    _locationRequested = true;
+    try {
+      final (lat, lng) = await getWebLocation();
+      if (!mounted) return;
+      ref.read(bookingFlowProvider.notifier).setLocation(lat, lng);
+    } catch (_) {
+      // Location denied or unavailable — the results step handles this
+      // gracefully by showing the "Necesitamos tu ubicacion" message.
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final flowState = ref.watch(bookingFlowProvider);
 
     return LayoutBuilder(
@@ -937,9 +969,30 @@ class _ResultsStepState extends ConsumerState<_ResultsStep> {
     setState(() => _callTriggered = false);
     ref.read(bookingFlowProvider.notifier).setLoading(true);
     ref.read(bookingFlowProvider.notifier).setError(null);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _triggerEngineCallIfNeeded();
-    });
+
+    // If location was missing, re-request it before retrying the engine call
+    final flowState = ref.read(bookingFlowProvider);
+    if (flowState.userLat == null || flowState.userLng == null) {
+      _retryWithGeolocation();
+    } else {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _triggerEngineCallIfNeeded();
+      });
+    }
+  }
+
+  Future<void> _retryWithGeolocation() async {
+    try {
+      final (lat, lng) = await getWebLocation();
+      if (!mounted) return;
+      ref.read(bookingFlowProvider.notifier).setLocation(lat, lng);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _triggerEngineCallIfNeeded();
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ref.read(bookingFlowProvider.notifier).setError('location_missing');
+    }
   }
 
   @override
