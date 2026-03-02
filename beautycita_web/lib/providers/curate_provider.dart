@@ -22,6 +22,10 @@ Future<CurateResponse> callCurateEngine({
     body: request.toJson(),
   );
 
+  if (response.status == 404) {
+    throw Exception('404 not found');
+  }
+
   if (response.status != 200) {
     throw Exception('Error del motor: ${response.status}');
   }
