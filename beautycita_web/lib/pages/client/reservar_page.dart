@@ -9,7 +9,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show OtpType;
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/breakpoints.dart';
 import '../../data/categories.dart';
@@ -139,13 +142,10 @@ class _ActiveStep extends ConsumerWidget {
         return _ResultsStep(width: width);
       case BookingStep.payment:
         return _PaymentStep(width: width);
-      default:
-        return Center(
-          child: Padding(
-            padding: const EdgeInsets.only(top: BCSpacing.xxl),
-            child: Text('Step: ${flowState.step.name}'),
-          ),
-        );
+      case BookingStep.transport:
+        return _TransportStep(width: width);
+      case BookingStep.confirmed:
+        return _ConfirmationView(width: width);
     }
   }
 }
@@ -2723,6 +2723,473 @@ class _PhoneVerificationState extends State<_PhoneVerification> {
             ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ── Transport step ───────────────────────────────────────────────────────────
+
+class _TransportStep extends ConsumerStatefulWidget {
+  const _TransportStep({required this.width});
+
+  final double width;
+
+  @override
+  ConsumerState<_TransportStep> createState() => _TransportStepState();
+}
+
+class _TransportStepState extends ConsumerState<_TransportStep> {
+  String? _selected;
+  bool _saving = false;
+
+  Future<void> _selectTransport(String mode) async {
+    if (_saving) return;
+
+    setState(() {
+      _selected = mode;
+      _saving = true;
+    });
+
+    try {
+      final flowState = ref.read(bookingFlowProvider);
+      if (flowState.bookingId != null) {
+        await BCSupabase.client
+            .from('appointments')
+            .update({'transport_mode': mode})
+            .eq('id', flowState.bookingId!);
+      }
+
+      ref.read(bookingFlowProvider.notifier).setTransportMode(mode);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _saving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al guardar transporte: $e')),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isMobile = WebBreakpoints.isMobile(widget.width);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '\u00bfC\u00f3mo llegar\u00e1s?',
+          style: theme.textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: BCSpacing.sm),
+        Text(
+          'Selecciona tu medio de transporte',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+          ),
+        ),
+        const SizedBox(height: BCSpacing.lg),
+        if (_saving && _selected != null)
+          const Padding(
+            padding: EdgeInsets.only(bottom: BCSpacing.md),
+            child: Center(child: CircularProgressIndicator()),
+          ),
+        _buildTransportCards(theme, isMobile),
+      ],
+    );
+  }
+
+  Widget _buildTransportCards(ThemeData theme, bool isMobile) {
+    final cards = [
+      _TransportOption(
+        icon: Icons.directions_car,
+        label: 'En mi carro',
+        mode: 'car',
+        selected: _selected == 'car',
+        onTap: () => _selectTransport('car'),
+        theme: theme,
+      ),
+      _TransportOption(
+        icon: Icons.local_taxi,
+        label: 'Uber',
+        subtitle: 'Pr\u00f3ximamente: programar viaje autom\u00e1tico',
+        mode: 'uber',
+        selected: _selected == 'uber',
+        onTap: () => _selectTransport('uber'),
+        theme: theme,
+      ),
+      _TransportOption(
+        icon: Icons.directions_bus,
+        label: 'Transporte P\u00fablico',
+        mode: 'transit',
+        selected: _selected == 'transit',
+        onTap: () => _selectTransport('transit'),
+        theme: theme,
+      ),
+    ];
+
+    if (isMobile) {
+      return Column(
+        children: cards
+            .map((c) => Padding(
+                  padding: const EdgeInsets.only(bottom: BCSpacing.md),
+                  child: c,
+                ))
+            .toList(),
+      );
+    }
+
+    return Row(
+      children: cards
+          .map((c) => Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: BCSpacing.sm,
+                  ),
+                  child: c,
+                ),
+              ))
+          .toList(),
+    );
+  }
+}
+
+class _TransportOption extends StatelessWidget {
+  const _TransportOption({
+    required this.icon,
+    required this.label,
+    required this.mode,
+    required this.selected,
+    required this.onTap,
+    required this.theme,
+    this.subtitle,
+  });
+
+  final IconData icon;
+  final String label;
+  final String mode;
+  final bool selected;
+  final VoidCallback onTap;
+  final ThemeData theme;
+  final String? subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(BCSpacing.radiusMd),
+        side: BorderSide(
+          color: selected
+              ? theme.colorScheme.primary
+              : theme.colorScheme.outline.withValues(alpha: 0.2),
+          width: selected ? 2.5 : 1,
+        ),
+      ),
+      elevation: selected ? BCSpacing.elevationMedium : BCSpacing.elevationLow,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(BCSpacing.radiusMd),
+        onTap: onTap,
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 120),
+          padding: const EdgeInsets.all(BCSpacing.md),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 48,
+                color: selected
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.onSurface.withValues(alpha: 0.7),
+              ),
+              const SizedBox(height: BCSpacing.sm),
+              Text(
+                label,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: selected
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.onSurface,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              if (subtitle != null) ...[
+                const SizedBox(height: BCSpacing.xs),
+                Text(
+                  subtitle!,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                    fontStyle: FontStyle.italic,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Confirmation view ────────────────────────────────────────────────────────
+
+class _ConfirmationView extends ConsumerWidget {
+  const _ConfirmationView({required this.width});
+
+  final double width;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final flowState = ref.watch(bookingFlowProvider);
+    final result = flowState.selectedResult;
+    final isMobile = WebBreakpoints.isMobile(width);
+
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 520),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const SizedBox(height: BCSpacing.xl),
+
+            // Animated checkmark
+            Icon(
+              Icons.check_circle,
+              size: 80,
+              color: const Color(0xFF4CAF50),
+            )
+                .animate()
+                .scale(
+                  begin: const Offset(0, 0),
+                  end: const Offset(1, 1),
+                  duration: 500.ms,
+                  curve: Curves.elasticOut,
+                )
+                .fade(duration: 300.ms),
+
+            const SizedBox(height: BCSpacing.lg),
+
+            Text(
+              '\u00a1Reservaci\u00f3n confirmada!',
+              style: theme.textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: theme.colorScheme.primary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+
+            const SizedBox(height: BCSpacing.sm),
+
+            // Booking ID
+            if (flowState.bookingId != null)
+              Text(
+                'ID: ${flowState.bookingId!.length > 8 ? flowState.bookingId!.substring(0, 8) : flowState.bookingId!}',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontFamily: 'monospace',
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
+              ),
+
+            const SizedBox(height: BCSpacing.lg),
+
+            // Summary card
+            if (result != null) _buildSummaryCard(theme, flowState, result),
+
+            const SizedBox(height: BCSpacing.lg),
+
+            // WhatsApp contact button
+            if (result != null && result.business.whatsapp != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: BCSpacing.md),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: BCSpacing.minTouchHeight,
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.chat, color: Color(0xFF25D366)),
+                    label: const Text('Contactar sal\u00f3n'),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Color(0xFF25D366)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.circular(BCSpacing.radiusSm),
+                      ),
+                    ),
+                    onPressed: () {
+                      final phone =
+                          result.business.whatsapp!.replaceAll(RegExp(r'[^\d]'), '');
+                      launchUrl(Uri.parse('https://wa.me/$phone'));
+                    },
+                  ),
+                ),
+              ),
+
+            // Action buttons
+            if (isMobile)
+              Column(
+                children: [
+                  SizedBox(
+                    width: double.infinity,
+                    height: BCSpacing.minTouchHeight,
+                    child: FilledButton(
+                      onPressed: () => context.go('/mis-citas'),
+                      child: const Text(
+                        'Ver mis citas',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: BCSpacing.sm),
+                  SizedBox(
+                    width: double.infinity,
+                    height: BCSpacing.minTouchHeight,
+                    child: OutlinedButton(
+                      onPressed: () =>
+                          ref.read(bookingFlowProvider.notifier).reset(),
+                      child: const Text(
+                        'Hacer otra reservaci\u00f3n',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            else
+              Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: BCSpacing.minTouchHeight,
+                      child: OutlinedButton(
+                        onPressed: () =>
+                            ref.read(bookingFlowProvider.notifier).reset(),
+                        child: const Text(
+                          'Hacer otra reservaci\u00f3n',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: BCSpacing.md),
+                  Expanded(
+                    child: SizedBox(
+                      height: BCSpacing.minTouchHeight,
+                      child: FilledButton(
+                        onPressed: () => context.go('/mis-citas'),
+                        child: const Text(
+                          'Ver mis citas',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+            const SizedBox(height: BCSpacing.xxl),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSummaryCard(
+    ThemeData theme,
+    BookingFlowState flowState,
+    ResultCard result,
+  ) {
+    final slot = result.slot;
+    final startTime = slot.startTime;
+    final formattedDate = DateFormat('EEEE d MMMM, yyyy', 'es').format(startTime);
+    final formattedTime = DateFormat('h:mm a').format(startTime);
+    final price = result.service.price;
+    final currency = result.service.currency.toUpperCase();
+
+    String transportLabel;
+    switch (flowState.transportMode) {
+      case 'car':
+        transportLabel = 'En mi carro';
+      case 'uber':
+        transportLabel = 'Uber';
+      case 'transit':
+        transportLabel = 'Transporte P\u00fablico';
+      default:
+        transportLabel = flowState.transportMode ?? '—';
+    }
+
+    return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(BCSpacing.radiusMd),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(BCSpacing.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Resumen',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: BCSpacing.md),
+            _summaryRow(theme, 'Servicio', result.service.name),
+            _summaryRow(theme, 'Sal\u00f3n', result.business.name),
+            _summaryRow(theme, 'Fecha', formattedDate),
+            _summaryRow(theme, 'Hora', formattedTime),
+            _summaryRow(
+              theme,
+              'Precio',
+              '\$${price.toStringAsFixed(2)} $currency',
+            ),
+            _summaryRow(theme, 'Transporte', transportLabel),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _summaryRow(ThemeData theme, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: BCSpacing.sm),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 100,
+            child: Text(
+              label,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
