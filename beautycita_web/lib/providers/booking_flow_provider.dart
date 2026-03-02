@@ -186,6 +186,11 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
     state = state.copyWith(showingDiscovered: true);
   }
 
+  /// Hide discovered salons and return to curated results.
+  void hideDiscovered() {
+    state = state.copyWith(showingDiscovered: false);
+  }
+
   /// Select a result card. Advances to payment step.
   void selectResult(ResultCard result) {
     state = state.copyWith(

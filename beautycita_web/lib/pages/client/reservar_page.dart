@@ -954,31 +954,11 @@ class _ResultsStepState extends ConsumerState<_ResultsStep> {
 
     final response = flowState.curateResponse!;
 
-    // ── Empty results (auto-switches to discovered in provider) ──
-    if (response.results.isEmpty) {
-      if (flowState.showingDiscovered) {
-        // Task 6 will handle discovered salons. Placeholder for now.
-        return Center(
-          child: Padding(
-            padding: const EdgeInsets.only(top: BCSpacing.xxl),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.search, size: BCSpacing.iconXl,
-                    color: theme.colorScheme.primary.withValues(alpha: 0.5)),
-                const SizedBox(height: BCSpacing.md),
-                Text(
-                  'Buscando salones descubiertos cerca de ti...',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
-          ),
-        );
-      }
+    // ── Discovered salons view (empty results fallback OR user tapped "Ver más") ──
+    if (flowState.showingDiscovered) {
+      return _DiscoveredSalonsList(
+        hasResults: response.results.isNotEmpty,
+      );
     }
 
     // ── Results display ──
@@ -1534,6 +1514,376 @@ class _ResultCardWidgetState extends State<_ResultCardWidget> {
           ),
         ],
       ],
+    );
+  }
+}
+
+// ── Discovered salons list (WhatsApp-style invite) ───────────────────────────
+
+class _DiscoveredSalonsList extends ConsumerStatefulWidget {
+  const _DiscoveredSalonsList({required this.hasResults});
+
+  /// Whether there are curated results the user can go back to.
+  final bool hasResults;
+
+  @override
+  ConsumerState<_DiscoveredSalonsList> createState() =>
+      _DiscoveredSalonsListState();
+}
+
+class _DiscoveredSalonsListState extends ConsumerState<_DiscoveredSalonsList> {
+  static const _waGreen = Color(0xFF25D366);
+
+  bool _loading = true;
+  String? _error;
+  final Set<String> _invitedIds = {};
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _fetchDiscovered());
+  }
+
+  Future<void> _fetchDiscovered() async {
+    if (!mounted) return;
+
+    final existing = ref.read(bookingFlowProvider).discoveredSalons;
+    if (existing.isNotEmpty) {
+      setState(() => _loading = false);
+      return;
+    }
+
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      final response = await BCSupabase.client
+          .from('discovered_salons')
+          .select(
+              'id, business_name, location_address, phone, whatsapp_verified, categories, feature_image_url, rating_average, rating_count')
+          .not('phone', 'is', null)
+          .order('rating_count', ascending: false)
+          .limit(25);
+
+      if (!mounted) return;
+
+      final salons = (response as List).cast<Map<String, dynamic>>();
+      ref.read(bookingFlowProvider.notifier).setDiscoveredSalons(salons);
+      setState(() => _loading = false);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = e.toString();
+      });
+    }
+  }
+
+  Future<void> _inviteSalon(String salonId) async {
+    if (_invitedIds.contains(salonId)) return;
+
+    try {
+      await BCSupabase.client.functions.invoke(
+        'outreach-discovered-salon',
+        body: {
+          'salon_id': salonId,
+          'invited_by': BCSupabase.client.auth.currentUser?.id,
+        },
+      );
+    } catch (_) {
+      // Silently mark as invited even on error — edge function may not exist yet.
+    }
+
+    if (!mounted) return;
+    setState(() => _invitedIds.add(salonId));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final salons = ref.watch(bookingFlowProvider).discoveredSalons;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ── Back button (only if curated results exist) ──
+        if (widget.hasResults) ...[
+          TextButton.icon(
+            onPressed: () =>
+                ref.read(bookingFlowProvider.notifier).hideDiscovered(),
+            icon: const Icon(Icons.arrow_back, size: 18),
+            label: const Text('Volver a resultados'),
+            style: TextButton.styleFrom(
+              foregroundColor: theme.colorScheme.primary,
+              padding: EdgeInsets.zero,
+            ),
+          ),
+          const SizedBox(height: BCSpacing.md),
+        ],
+
+        // ── Header ──
+        Text(
+          'Estos salones aun no estan en BeautyCita',
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: BCSpacing.xs),
+        Text(
+          '\u00a1Invitalos y recibe beneficios!',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+          ),
+        ),
+        const Divider(height: BCSpacing.xl),
+
+        // ── Content ──
+        if (_loading)
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.only(top: BCSpacing.xxl),
+              child: CircularProgressIndicator(),
+            ),
+          )
+        else if (_error != null)
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.only(top: BCSpacing.xl),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.error_outline,
+                      size: BCSpacing.iconXl,
+                      color: theme.colorScheme.error),
+                  const SizedBox(height: BCSpacing.md),
+                  Text(
+                    'No se pudieron cargar los salones',
+                    style: theme.textTheme.titleSmall,
+                  ),
+                  const SizedBox(height: BCSpacing.md),
+                  FilledButton(
+                    onPressed: _fetchDiscovered,
+                    child: const Text('Reintentar'),
+                  ),
+                ],
+              ),
+            ),
+          )
+        else if (salons.isEmpty)
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.only(top: BCSpacing.xl),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.storefront_outlined,
+                      size: BCSpacing.iconXl,
+                      color: theme.colorScheme.primary.withValues(alpha: 0.4)),
+                  const SizedBox(height: BCSpacing.md),
+                  Text(
+                    'No encontramos salones descubiertos por ahora',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color:
+                          theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          )
+        else
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: salons.length,
+            separatorBuilder: (_, __) =>
+                const Divider(height: 1, indent: 64),
+            itemBuilder: (context, index) =>
+                _buildSalonRow(salons[index], theme),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildSalonRow(Map<String, dynamic> salon, ThemeData theme) {
+    final salonId = salon['id']?.toString() ?? '';
+    final name = salon['business_name'] as String? ?? 'Sin nombre';
+    final address = salon['location_address'] as String?;
+    final imageUrl = salon['feature_image_url'] as String?;
+    final waVerified = salon['whatsapp_verified'] as bool? ?? false;
+    final ratingAvg = (salon['rating_average'] as num?)?.toDouble();
+    final ratingCount = salon['rating_count'] as int? ?? 0;
+    final invited = _invitedIds.contains(salonId);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        vertical: BCSpacing.sm,
+        horizontal: BCSpacing.xs,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // ── Photo / Avatar ──
+          _buildAvatar(name, imageUrl, theme),
+          const SizedBox(width: BCSpacing.md),
+
+          // ── Info ──
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Name + WhatsApp badge
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        name,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (waVerified) ...[
+                      const SizedBox(width: BCSpacing.xs),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _waGreen.withValues(alpha: 0.12),
+                          borderRadius:
+                              BorderRadius.circular(BCSpacing.radiusXs),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.check, size: 12, color: _waGreen),
+                            const SizedBox(width: 2),
+                            Text(
+                              'WhatsApp',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: _waGreen,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 10,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+
+                // Address
+                if (address != null && address.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Icon(Icons.location_on,
+                          size: 14,
+                          color: theme.colorScheme.onSurface
+                              .withValues(alpha: 0.5)),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          address,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurface
+                                .withValues(alpha: 0.6),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+
+                // Rating
+                if (ratingAvg != null && ratingCount > 0) ...[
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      const Icon(Icons.star_rounded,
+                          size: 14, color: Color(0xFFFFB300)),
+                      const SizedBox(width: 2),
+                      Text(
+                        '${ratingAvg.toStringAsFixed(1)} ($ratingCount rese\u00f1as)',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurface
+                              .withValues(alpha: 0.6),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+
+          const SizedBox(width: BCSpacing.sm),
+
+          // ── Invite button ──
+          invited
+              ? Text(
+                  'Invitacion enviada \u2713',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: _waGreen,
+                    fontWeight: FontWeight.w600,
+                  ),
+                )
+              : OutlinedButton(
+                  onPressed: () => _inviteSalon(salonId),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: _waGreen,
+                    side: const BorderSide(color: _waGreen),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: BCSpacing.md,
+                      vertical: BCSpacing.xs,
+                    ),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: const Text(
+                    'Invitar',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAvatar(String name, String? imageUrl, ThemeData theme) {
+    const size = 48.0;
+
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      return CircleAvatar(
+        radius: size / 2,
+        backgroundImage: NetworkImage(imageUrl),
+        onBackgroundImageError: (_, __) {},
+        child: null,
+      );
+    }
+
+    final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
+    return CircleAvatar(
+      radius: size / 2,
+      backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.12),
+      child: Text(
+        initial,
+        style: TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.w700,
+          color: theme.colorScheme.primary,
+        ),
+      ),
     );
   }
 }
