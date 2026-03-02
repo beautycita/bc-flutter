@@ -1,14 +1,22 @@
+import 'dart:async';
+import 'dart:html' as html;
+import 'dart:ui_web' as ui_web;
+
 import 'package:beautycita_core/models.dart';
 import 'package:beautycita_core/supabase.dart';
 import 'package:beautycita_core/theme.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show OtpType;
 
 import '../../config/breakpoints.dart';
 import '../../data/categories.dart';
 import '../../providers/booking_flow_provider.dart';
 import '../../providers/curate_provider.dart';
+import '../../providers/payment_provider.dart';
+import '../../services/stripe_web.dart';
 
 // ── Main page ────────────────────────────────────────────────────────────────
 
@@ -129,6 +137,8 @@ class _ActiveStep extends ConsumerWidget {
         return _FollowUpStep(width: width);
       case BookingStep.results:
         return _ResultsStep(width: width);
+      case BookingStep.payment:
+        return _PaymentStep(width: width);
       default:
         return Center(
           child: Padding(
@@ -1882,6 +1892,836 @@ class _DiscoveredSalonsListState extends ConsumerState<_DiscoveredSalonsList> {
           fontSize: 20,
           fontWeight: FontWeight.w700,
           color: theme.colorScheme.primary,
+        ),
+      ),
+    );
+  }
+}
+
+// ── Payment step ─────────────────────────────────────────────────────────────
+
+class _PaymentStep extends ConsumerStatefulWidget {
+  const _PaymentStep({required this.width});
+
+  final double width;
+
+  @override
+  ConsumerState<_PaymentStep> createState() => _PaymentStepState();
+}
+
+class _PaymentStepState extends ConsumerState<_PaymentStep> {
+  bool _isAuthenticated = false;
+  bool _creatingIntent = false;
+  bool _confirmingPayment = false;
+  String? _clientSecret;
+  String? _paymentIntentId;
+  String? _error;
+  StripeWeb? _stripe;
+  String? _stripeContainerId;
+  bool _elementMounted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAuth();
+  }
+
+  @override
+  void dispose() {
+    _stripe?.dispose();
+    super.dispose();
+  }
+
+  void _checkAuth() {
+    final user = BCSupabase.client.auth.currentUser;
+    _isAuthenticated = user != null;
+    if (_isAuthenticated) {
+      _initPayment();
+    }
+  }
+
+  void _onAuthSuccess() {
+    if (!mounted) return;
+    setState(() {
+      _isAuthenticated = true;
+    });
+    _initPayment();
+  }
+
+  Future<void> _initPayment() async {
+    if (_clientSecret != null) return; // Already created
+    setState(() {
+      _creatingIntent = true;
+      _error = null;
+    });
+
+    try {
+      final flowState = ref.read(bookingFlowProvider);
+      final result = flowState.selectedResult!;
+      final user = BCSupabase.client.auth.currentUser!;
+
+      final intentResult = await createWebPaymentIntent(
+        serviceId: result.service.id,
+        businessId: result.business.id,
+        staffId: result.staff.id,
+        scheduledAt: result.slot.startsAt,
+        amountCents: (result.service.price * 100).round(),
+        userId: user.id,
+      );
+
+      if (!mounted) return;
+
+      final clientSecret = intentResult['client_secret'] as String?;
+      final paymentIntentId = intentResult['payment_intent_id'] as String? ??
+          intentResult['id'] as String?;
+
+      if (clientSecret == null || clientSecret.isEmpty) {
+        throw Exception('No se obtuvo client_secret del servidor');
+      }
+
+      setState(() {
+        _clientSecret = clientSecret;
+        _paymentIntentId = paymentIntentId;
+        _creatingIntent = false;
+      });
+
+      // Mount Stripe element after frame renders
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _mountStripeElement();
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _creatingIntent = false;
+        _error = e.toString();
+      });
+    }
+  }
+
+  void _mountStripeElement() {
+    if (_clientSecret == null || _elementMounted) return;
+
+    final stripeKey = dotenv.env['STRIPE_PUBLIC_KEY'] ?? '';
+    if (stripeKey.isEmpty) {
+      setState(() => _error = 'Stripe key not configured');
+      return;
+    }
+
+    _stripe = StripeWeb(stripeKey);
+    final containerId = _stripeContainerId;
+    if (containerId == null) return;
+
+    try {
+      _stripe!.mountPaymentElement(_clientSecret!, containerId);
+      setState(() => _elementMounted = true);
+    } catch (e) {
+      setState(() => _error = 'Error montando formulario de pago: $e');
+    }
+  }
+
+  Future<void> _confirmPayment() async {
+    if (_stripe == null || !_elementMounted) return;
+
+    setState(() {
+      _confirmingPayment = true;
+      _error = null;
+    });
+
+    try {
+      final returnUrl =
+          '${Uri.base.origin}/reservar?payment_status=success';
+      final errorMsg = await _stripe!.confirmPayment(returnUrl);
+
+      if (errorMsg != null) {
+        if (!mounted) return;
+        setState(() {
+          _confirmingPayment = false;
+          _error = errorMsg;
+        });
+        return;
+      }
+
+      // Payment succeeded — create appointment
+      final flowState = ref.read(bookingFlowProvider);
+      final result = flowState.selectedResult!;
+      final user = BCSupabase.client.auth.currentUser!;
+
+      final appointmentId = await createAppointment(
+        userId: user.id,
+        businessId: result.business.id,
+        staffId: result.staff.id,
+        serviceId: result.service.id,
+        serviceName: result.service.name,
+        serviceType:
+            flowState.selectedService?.serviceType ?? result.service.id,
+        startsAt: result.slot.startsAt,
+        endsAt: result.slot.endsAt,
+        price: result.service.price,
+        paymentIntentId: _paymentIntentId ?? '',
+      );
+
+      if (!mounted) return;
+      ref.read(bookingFlowProvider.notifier).setBookingConfirmed(appointmentId);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _confirmingPayment = false;
+        _error = e.toString();
+      });
+    }
+  }
+
+  String _formatSlotDate(String isoString) {
+    try {
+      final dt = DateTime.parse(isoString);
+      final dayFormat = DateFormat('EEEE d MMMM', 'es');
+      final timeFormat = DateFormat('h:mm a', 'es');
+      return '${dayFormat.format(dt)}, ${timeFormat.format(dt)}';
+    } catch (_) {
+      return isoString;
+    }
+  }
+
+  String _formatPrice(double price, String currency) {
+    if (currency.toUpperCase() == 'MXN') {
+      return '\$${price.toStringAsFixed(0)} MXN';
+    }
+    return '\$${price.toStringAsFixed(0)} $currency';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final flowState = ref.watch(bookingFlowProvider);
+    final result = flowState.selectedResult;
+
+    if (result == null) {
+      return const Center(child: Text('Sin resultado seleccionado'));
+    }
+
+    final isMobile = WebBreakpoints.isMobile(widget.width);
+
+    // On desktop, show summary and payment side by side
+    if (!isMobile) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(child: _buildBookingSummary(result, theme)),
+          const SizedBox(width: BCSpacing.lg),
+          Expanded(child: _buildPaymentSection(result, theme)),
+        ],
+      );
+    }
+
+    // On mobile, stack vertically
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildBookingSummary(result, theme),
+        const Divider(height: BCSpacing.xl),
+        _buildPaymentSection(result, theme),
+      ],
+    );
+  }
+
+  Widget _buildBookingSummary(ResultCard result, ThemeData theme) {
+    final flowState = ref.read(bookingFlowProvider);
+    final category = flowState.selectedCategory;
+
+    return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(BCSpacing.radiusMd),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(BCSpacing.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Resumen de tu cita',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: BCSpacing.lg),
+
+            // Category
+            if (category != null)
+              _summaryRow(
+                icon: Icons.category_outlined,
+                label: category.nameEs,
+                theme: theme,
+              ),
+
+            // Service
+            _summaryRow(
+              icon: Icons.content_cut,
+              label: result.service.name,
+              theme: theme,
+            ),
+
+            // Salon
+            _summaryRow(
+              icon: Icons.storefront_outlined,
+              label: result.business.name,
+              theme: theme,
+              subtitle: result.business.address,
+            ),
+
+            // Stylist
+            _summaryRow(
+              icon: Icons.person_outline,
+              label: result.staff.name,
+              theme: theme,
+            ),
+
+            // Date/Time
+            _summaryRow(
+              icon: Icons.calendar_today_outlined,
+              label: _formatSlotDate(result.slot.startsAt),
+              theme: theme,
+            ),
+
+            // Duration
+            _summaryRow(
+              icon: Icons.timer_outlined,
+              label: '${result.service.durationMinutes} minutos',
+              theme: theme,
+            ),
+
+            const Divider(height: BCSpacing.xl),
+
+            // Price
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Total',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  _formatPrice(result.service.price, result.service.currency),
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _summaryRow({
+    required IconData icon,
+    required String label,
+    required ThemeData theme,
+    String? subtitle,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: BCSpacing.md),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            icon,
+            size: 20,
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+          ),
+          const SizedBox(width: BCSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                if (subtitle != null && subtitle.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurface
+                          .withValues(alpha: 0.6),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPaymentSection(ResultCard result, ThemeData theme) {
+    if (!_isAuthenticated) {
+      return _PhoneVerification(onSuccess: _onAuthSuccess);
+    }
+
+    return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(BCSpacing.radiusMd),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(BCSpacing.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Pago',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: BCSpacing.lg),
+
+            // Error
+            if (_error != null) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(BCSpacing.md),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.error.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(BCSpacing.radiusSm),
+                  border: Border.all(
+                    color: theme.colorScheme.error.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.error_outline,
+                        size: 20, color: theme.colorScheme.error),
+                    const SizedBox(width: BCSpacing.sm),
+                    Expanded(
+                      child: Text(
+                        _error!,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.error,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: BCSpacing.md),
+            ],
+
+            // Loading state while creating PaymentIntent
+            if (_creatingIntent) ...[
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: BCSpacing.xl),
+                  child: Column(
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(height: BCSpacing.md),
+                      Text('Preparando formulario de pago...'),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+
+            // Stripe Payment Element
+            if (_clientSecret != null && !_creatingIntent) ...[
+              _StripeElementContainer(
+                onContainerReady: (containerId) {
+                  _stripeContainerId = containerId;
+                  // Mount after a brief delay to ensure DOM is ready
+                  Future.delayed(const Duration(milliseconds: 300), () {
+                    if (mounted) _mountStripeElement();
+                  });
+                },
+              ),
+              const SizedBox(height: BCSpacing.lg),
+              SizedBox(
+                width: double.infinity,
+                height: BCSpacing.minTouchHeight,
+                child: FilledButton(
+                  onPressed:
+                      _confirmingPayment || !_elementMounted ? null : _confirmPayment,
+                  child: _confirmingPayment
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(
+                          'Confirmar y Pagar \u2014 ${_formatPrice(result.service.price, result.service.currency)}',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                ),
+              ),
+            ],
+
+            // Retry button on error when no client secret
+            if (_error != null && _clientSecret == null && !_creatingIntent) ...[
+              const SizedBox(height: BCSpacing.md),
+              Center(
+                child: FilledButton(
+                  onPressed: _initPayment,
+                  child: const Text('Reintentar'),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Stripe Element Container (HtmlElementView wrapper) ───────────────────────
+
+class _StripeElementContainer extends StatefulWidget {
+  const _StripeElementContainer({required this.onContainerReady});
+
+  final ValueChanged<String> onContainerReady;
+
+  @override
+  State<_StripeElementContainer> createState() =>
+      _StripeElementContainerState();
+}
+
+class _StripeElementContainerState extends State<_StripeElementContainer> {
+  late final String _viewType;
+
+  @override
+  void initState() {
+    super.initState();
+    // Unique view type per instance
+    _viewType =
+        'stripe-payment-element-${DateTime.now().millisecondsSinceEpoch}';
+    final containerId = 'payment-element-container';
+
+    // Register the platform view factory
+    ui_web.platformViewRegistry.registerViewFactory(
+      _viewType,
+      (int viewId) {
+        final div = html.DivElement();
+        div.id = containerId;
+        div.style.minHeight = '300px';
+        return div;
+      },
+    );
+
+    // Notify parent of the container ID
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      widget.onContainerReady(containerId);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 350,
+      child: HtmlElementView(viewType: _viewType),
+    );
+  }
+}
+
+// ── Phone verification widget ────────────────────────────────────────────────
+
+class _PhoneVerification extends StatefulWidget {
+  const _PhoneVerification({required this.onSuccess});
+
+  final VoidCallback onSuccess;
+
+  @override
+  State<_PhoneVerification> createState() => _PhoneVerificationState();
+}
+
+class _PhoneVerificationState extends State<_PhoneVerification> {
+  final _phoneController = TextEditingController();
+  final _otpController = TextEditingController();
+  bool _otpSent = false;
+  bool _loading = false;
+  String? _error;
+  int _resendCountdown = 0;
+  Timer? _resendTimer;
+
+  @override
+  void dispose() {
+    _phoneController.dispose();
+    _otpController.dispose();
+    _resendTimer?.cancel();
+    super.dispose();
+  }
+
+  String get _fullPhoneNumber {
+    final raw = _phoneController.text.replaceAll(RegExp(r'\D'), '');
+    // If user already typed country code, don't double-add
+    if (raw.startsWith('52')) return '+$raw';
+    return '+52$raw';
+  }
+
+  void _startResendTimer() {
+    _resendCountdown = 60;
+    _resendTimer?.cancel();
+    _resendTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      setState(() {
+        _resendCountdown--;
+        if (_resendCountdown <= 0) timer.cancel();
+      });
+    });
+  }
+
+  Future<void> _sendOtp() async {
+    final phone = _fullPhoneNumber;
+    if (phone.length < 12) {
+      setState(() => _error = 'Ingresa un numero valido de 10 digitos');
+      return;
+    }
+
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      await BCSupabase.client.auth.signInWithOtp(phone: phone);
+      if (!mounted) return;
+      setState(() {
+        _otpSent = true;
+        _loading = false;
+      });
+      _startResendTimer();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = 'Error enviando codigo: $e';
+      });
+    }
+  }
+
+  Future<void> _verifyOtp() async {
+    final code = _otpController.text.trim();
+    if (code.length != 6) {
+      setState(() => _error = 'Ingresa el codigo de 6 digitos');
+      return;
+    }
+
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      await BCSupabase.client.auth.verifyOTP(
+        phone: _fullPhoneNumber,
+        token: code,
+        type: OtpType.sms,
+      );
+      if (!mounted) return;
+      widget.onSuccess();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = 'Codigo incorrecto o expirado';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(BCSpacing.radiusMd),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(BCSpacing.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header
+            Row(
+              children: [
+                Icon(
+                  Icons.phone_android,
+                  color: theme.colorScheme.primary,
+                  size: 28,
+                ),
+                const SizedBox(width: BCSpacing.sm),
+                Text(
+                  'Verifica tu numero para continuar',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: BCSpacing.xs),
+            Text(
+              'Te enviaremos un codigo por SMS',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
+            ),
+            const SizedBox(height: BCSpacing.lg),
+
+            // Error
+            if (_error != null) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(BCSpacing.sm),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.error.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(BCSpacing.radiusSm),
+                ),
+                child: Text(
+                  _error!,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.error,
+                  ),
+                ),
+              ),
+              const SizedBox(height: BCSpacing.md),
+            ],
+
+            // Phone input
+            if (!_otpSent) ...[
+              TextField(
+                controller: _phoneController,
+                keyboardType: TextInputType.phone,
+                decoration: InputDecoration(
+                  labelText: 'Numero de celular',
+                  prefixText: '+52 ',
+                  prefixIcon: const Icon(Icons.phone_outlined),
+                  hintText: '33 1234 5678',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(BCSpacing.radiusSm),
+                  ),
+                ),
+                onSubmitted: (_) => _sendOtp(),
+              ),
+              const SizedBox(height: BCSpacing.lg),
+              SizedBox(
+                width: double.infinity,
+                height: BCSpacing.minTouchHeight,
+                child: FilledButton(
+                  onPressed: _loading ? null : _sendOtp,
+                  child: _loading
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text(
+                          'Enviar codigo',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                ),
+              ),
+            ],
+
+            // OTP input
+            if (_otpSent) ...[
+              Text(
+                'Codigo enviado a $_fullPhoneNumber',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: BCSpacing.md),
+              TextField(
+                controller: _otpController,
+                keyboardType: TextInputType.number,
+                maxLength: 6,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 8,
+                ),
+                decoration: InputDecoration(
+                  labelText: 'Codigo de verificacion',
+                  counterText: '',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(BCSpacing.radiusSm),
+                  ),
+                ),
+                onSubmitted: (_) => _verifyOtp(),
+              ),
+              const SizedBox(height: BCSpacing.lg),
+              SizedBox(
+                width: double.infinity,
+                height: BCSpacing.minTouchHeight,
+                child: FilledButton(
+                  onPressed: _loading ? null : _verifyOtp,
+                  child: _loading
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text(
+                          'Verificar',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                ),
+              ),
+              const SizedBox(height: BCSpacing.md),
+
+              // Resend button
+              Center(
+                child: _resendCountdown > 0
+                    ? Text(
+                        'Reenviar codigo en ${_resendCountdown}s',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurface
+                              .withValues(alpha: 0.5),
+                        ),
+                      )
+                    : TextButton(
+                        onPressed: _loading ? null : _sendOtp,
+                        child: Text(
+                          'Reenviar codigo',
+                          style: TextStyle(
+                            color: theme.colorScheme.primary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+              ),
+            ],
+          ],
         ),
       ),
     );
