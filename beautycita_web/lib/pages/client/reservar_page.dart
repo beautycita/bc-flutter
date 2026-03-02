@@ -3206,6 +3206,10 @@ class _SummarySidebar extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final hasCategory = flowState.selectedCategory != null;
+    final hasService = flowState.selectedService != null;
+    final hasFollowUps = flowState.followUpAnswers.isNotEmpty;
+    final hasResult = flowState.selectedResult != null;
+    final primaryColor = theme.colorScheme.primary;
 
     return Padding(
       padding: const EdgeInsets.all(BCSpacing.lg),
@@ -3213,33 +3217,308 @@ class _SummarySidebar extends StatelessWidget {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(BCSpacing.radiusMd),
         ),
-        child: Padding(
+        elevation: BCSpacing.elevationLow,
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(BCSpacing.lg),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                'Tu Reservaci\u00f3n',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
+              // ── Header (always visible) ──
+              Row(
+                children: [
+                  Icon(
+                    Icons.event_note_rounded,
+                    color: primaryColor,
+                    size: BCSpacing.iconMd,
+                  ),
+                  const SizedBox(width: BCSpacing.sm),
+                  Text(
+                    'Tu Reservaci\u00f3n',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: primaryColor,
+                    ),
+                  ),
+                ],
+              ),
+
+              // ── Empty state ──
+              if (!hasCategory)
+                Padding(
+                  padding: const EdgeInsets.only(top: BCSpacing.lg),
+                  child: Text(
+                    'Selecciona un servicio para comenzar',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurface
+                          .withValues(alpha: 0.5),
+                    ),
+                  ),
+                ),
+
+              // ── Category row ──
+              _SidebarAnimatedSection(
+                visible: hasCategory,
+                child: _SidebarRow(
+                  icon: Text(
+                    flowState.selectedCategory?.icon ?? '',
+                    style: const TextStyle(fontSize: 20),
+                  ),
+                  label: flowState.selectedCategory?.nameEs ?? '',
+                  labelStyle: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
-              const SizedBox(height: BCSpacing.md),
-              Text(
-                hasCategory
-                    ? flowState.selectedCategory!.nameEs
-                    : 'Selecciona un servicio',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: hasCategory
-                      ? theme.colorScheme.onSurface
-                      : theme.colorScheme.onSurface.withValues(alpha: 0.5),
+
+              // ── Service row ──
+              _SidebarAnimatedSection(
+                visible: hasService,
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 28),
+                  child: Text(
+                    hasService
+                        ? '${flowState.selectedSubcategory?.nameEs ?? ''}'
+                            ' > ${flowState.selectedService!.nameEs}'
+                        : '',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurface
+                          .withValues(alpha: 0.7),
+                    ),
+                  ),
+                ),
+              ),
+
+              // ── Follow-up preferences ──
+              _SidebarAnimatedSection(
+                visible: hasFollowUps,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: BCSpacing.sm),
+                    Divider(
+                      color: theme.colorScheme.onSurface
+                          .withValues(alpha: 0.1),
+                    ),
+                    const SizedBox(height: BCSpacing.sm),
+                    _SidebarRow(
+                      icon: Icon(
+                        Icons.tune_rounded,
+                        size: 18,
+                        color: theme.colorScheme.secondary,
+                      ),
+                      label: 'Preferencias',
+                      labelStyle: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: BCSpacing.xs),
+                    ...flowState.followUpAnswers.entries.map(
+                      (entry) => Padding(
+                        padding: const EdgeInsets.only(
+                          left: 28,
+                          bottom: BCSpacing.xs,
+                        ),
+                        child: Text(
+                          '${_humanizeKey(entry.key)}: ${entry.value}',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurface
+                                .withValues(alpha: 0.7),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // ── Selected result details ──
+              _SidebarAnimatedSection(
+                visible: hasResult,
+                child: Builder(
+                  builder: (context) {
+                    if (!hasResult) return const SizedBox.shrink();
+                    final result = flowState.selectedResult!;
+                    final startTime = result.slot.startTime;
+                    final dayFormat = DateFormat('EEE d MMM', 'es');
+                    final timeFormat = DateFormat('h:mm a', 'es');
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: BCSpacing.sm),
+                        Divider(
+                          color: theme.colorScheme.onSurface
+                              .withValues(alpha: 0.1),
+                        ),
+                        const SizedBox(height: BCSpacing.sm),
+
+                        // Salon name
+                        _SidebarRow(
+                          icon: Icon(
+                            Icons.store_rounded,
+                            size: 18,
+                            color: theme.colorScheme.secondary,
+                          ),
+                          label: result.business.name,
+                          labelStyle: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: BCSpacing.xs),
+
+                        // Stylist
+                        _SidebarRow(
+                          icon: Icon(
+                            Icons.person_rounded,
+                            size: 18,
+                            color: theme.colorScheme.onSurface
+                                .withValues(alpha: 0.6),
+                          ),
+                          label: result.staff.name,
+                        ),
+                        const SizedBox(height: BCSpacing.xs),
+
+                        // Rating
+                        _SidebarRow(
+                          icon: Icon(
+                            Icons.star_rounded,
+                            size: 18,
+                            color: Colors.amber.shade700,
+                          ),
+                          label:
+                              '${result.staff.rating.toStringAsFixed(1)} '
+                              '(${result.staff.totalReviews})',
+                        ),
+                        const SizedBox(height: BCSpacing.xs),
+
+                        // Date & time
+                        _SidebarRow(
+                          icon: Icon(
+                            Icons.calendar_today_rounded,
+                            size: 18,
+                            color: theme.colorScheme.onSurface
+                                .withValues(alpha: 0.6),
+                          ),
+                          label:
+                              '${dayFormat.format(startTime)}, '
+                              '${timeFormat.format(startTime)}',
+                        ),
+                        const SizedBox(height: BCSpacing.xs),
+
+                        // Duration
+                        _SidebarRow(
+                          icon: Icon(
+                            Icons.timer_outlined,
+                            size: 18,
+                            color: theme.colorScheme.onSurface
+                                .withValues(alpha: 0.6),
+                          ),
+                          label:
+                              '${result.service.durationMinutes} min',
+                        ),
+
+                        // ── Price ──
+                        const SizedBox(height: BCSpacing.md),
+                        Divider(
+                          color: theme.colorScheme.onSurface
+                              .withValues(alpha: 0.1),
+                        ),
+                        const SizedBox(height: BCSpacing.md),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.payments_rounded,
+                              size: 22,
+                              color: theme.colorScheme.secondary,
+                            ),
+                            const SizedBox(width: BCSpacing.sm),
+                            Text(
+                              '\$${result.service.price.toStringAsFixed(0)} '
+                              '${result.service.currency}',
+                              style:
+                                  theme.textTheme.headlineSmall?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                color: primaryColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  /// Converts a follow-up key like "nail_length" to "Nail length".
+  static String _humanizeKey(String key) {
+    if (key.isEmpty) return key;
+    final spaced = key.replaceAll('_', ' ');
+    return spaced[0].toUpperCase() + spaced.substring(1);
+  }
+}
+
+/// Animated section that smoothly reveals/hides content in the sidebar.
+class _SidebarAnimatedSection extends StatelessWidget {
+  const _SidebarAnimatedSection({
+    required this.visible,
+    required this.child,
+  });
+
+  final bool visible;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeInOut,
+      alignment: Alignment.topCenter,
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 250),
+        opacity: visible ? 1.0 : 0.0,
+        child: visible ? child : const SizedBox.shrink(),
+      ),
+    );
+  }
+}
+
+/// A simple icon + label row used throughout the sidebar.
+class _SidebarRow extends StatelessWidget {
+  const _SidebarRow({
+    required this.icon,
+    required this.label,
+    this.labelStyle,
+  });
+
+  final Widget icon;
+  final String label;
+  final TextStyle? labelStyle;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(width: 22, child: Center(child: icon)),
+        const SizedBox(width: BCSpacing.sm - 2),
+        Expanded(
+          child: Text(
+            label,
+            style: labelStyle ??
+                theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
+                ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -3255,31 +3534,165 @@ class _StickyBottomBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final hasCategory = flowState.selectedCategory != null;
+    final hasService = flowState.selectedService != null;
+    final hasResult = flowState.selectedResult != null;
+    final isPaymentStep = flowState.step == BookingStep.payment;
+    final showBar =
+        flowState.step.index > BookingStep.category.index;
 
-    return Container(
-      height: 72,
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeInOut,
+      height: showBar ? 72 : 0,
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            offset: const Offset(0, -2),
-            blurRadius: 8,
+        boxShadow: showBar
+            ? [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.1),
+                  offset: const Offset(0, -2),
+                  blurRadius: 8,
+                ),
+              ]
+            : [],
+      ),
+      child: showBar
+          ? Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: BCSpacing.md,
+                vertical: BCSpacing.sm,
+              ),
+              child: Row(
+                children: [
+                  // ── Left: compact summary ──
+                  Expanded(
+                    child: _buildLeftSummary(
+                      theme,
+                      hasCategory: hasCategory,
+                      hasService: hasService,
+                      hasResult: hasResult,
+                    ),
+                  ),
+
+                  // ── Right: action button (payment step only) ──
+                  if (isPaymentStep && hasResult)
+                    FilledButton(
+                      onPressed: null, // Handled by the payment step itself
+                      style: FilledButton.styleFrom(
+                        backgroundColor: theme.colorScheme.primary,
+                        foregroundColor: theme.colorScheme.onPrimary,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: BCSpacing.lg,
+                          vertical: BCSpacing.sm,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius:
+                              BorderRadius.circular(BCSpacing.radiusSm),
+                        ),
+                      ),
+                      child: Text(
+                        'Pagar \$${flowState.selectedResult!.service.price.toStringAsFixed(0)}',
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: theme.colorScheme.onPrimary,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            )
+          : const SizedBox.shrink(),
+    );
+  }
+
+  Widget _buildLeftSummary(
+    ThemeData theme, {
+    required bool hasCategory,
+    required bool hasService,
+    required bool hasResult,
+  }) {
+    if (hasResult) {
+      // Show price when a result is selected
+      final result = flowState.selectedResult!;
+      return Row(
+        children: [
+          Text(
+            flowState.selectedCategory?.icon ?? '',
+            style: const TextStyle(fontSize: 18),
+          ),
+          const SizedBox(width: BCSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  result.business.name,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  '\$${result.service.price.toStringAsFixed(0)} '
+                  '${result.service.currency}',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
-      ),
-      padding: const EdgeInsets.symmetric(
-        horizontal: BCSpacing.md,
-        vertical: BCSpacing.sm,
-      ),
-      child: Center(
-        child: Text(
-          hasCategory ? flowState.selectedCategory!.nameEs : '',
-          style: theme.textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.w600,
+      );
+    }
+
+    if (hasService) {
+      return Row(
+        children: [
+          Text(
+            flowState.selectedCategory?.icon ?? '',
+            style: const TextStyle(fontSize: 18),
           ),
-        ),
-      ),
-    );
+          const SizedBox(width: BCSpacing.sm),
+          Expanded(
+            child: Text(
+              flowState.selectedService!.nameEs,
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      );
+    }
+
+    if (hasCategory) {
+      return Row(
+        children: [
+          Text(
+            flowState.selectedCategory!.icon,
+            style: const TextStyle(fontSize: 18),
+          ),
+          const SizedBox(width: BCSpacing.sm),
+          Expanded(
+            child: Text(
+              flowState.selectedCategory!.nameEs,
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      );
+    }
+
+    return const SizedBox.shrink();
   }
 }
