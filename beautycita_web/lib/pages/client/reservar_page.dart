@@ -1,4 +1,5 @@
 import 'package:beautycita_core/models.dart';
+import 'package:beautycita_core/supabase.dart';
 import 'package:beautycita_core/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -122,6 +123,8 @@ class _ActiveStep extends ConsumerWidget {
           category: flowState.selectedCategory!,
           width: width,
         );
+      case BookingStep.followUp:
+        return _FollowUpStep(width: width);
       default:
         return Center(
           child: Padding(
@@ -399,6 +402,460 @@ class _ServiceSelectionState extends ConsumerState<_ServiceSelection> {
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Follow-up questions step ─────────────────────────────────────────────────
+
+class _FollowUpStep extends ConsumerStatefulWidget {
+  const _FollowUpStep({required this.width});
+
+  final double width;
+
+  @override
+  ConsumerState<_FollowUpStep> createState() => _FollowUpStepState();
+}
+
+class _FollowUpStepState extends ConsumerState<_FollowUpStep> {
+  List<FollowUpQuestion>? _questions;
+  bool _loading = true;
+  String? _error;
+  int _currentIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchQuestions();
+  }
+
+  Future<void> _fetchQuestions() async {
+    final flowState = ref.read(bookingFlowProvider);
+    final serviceType = flowState.selectedService?.serviceType;
+    if (serviceType == null) {
+      _skipToResults();
+      return;
+    }
+
+    try {
+      // Check if this service type has follow-up questions
+      final profile = await BCSupabase.client
+          .from('service_profiles')
+          .select('max_follow_up_questions')
+          .eq('service_type', serviceType)
+          .maybeSingle();
+
+      final maxQuestions =
+          profile?['max_follow_up_questions'] as int? ?? 0;
+
+      if (maxQuestions == 0) {
+        _skipToResults();
+        return;
+      }
+
+      // Fetch the actual questions
+      final rows = await BCSupabase.client
+          .from('follow_up_questions')
+          .select()
+          .eq('service_type', serviceType)
+          .order('question_order');
+
+      final parsed = (rows as List<dynamic>)
+          .map((r) =>
+              FollowUpQuestion.fromJson(r as Map<String, dynamic>))
+          .toList();
+
+      if (parsed.isEmpty) {
+        _skipToResults();
+        return;
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _questions = parsed;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+        _loading = false;
+      });
+    }
+  }
+
+  void _skipToResults() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.read(bookingFlowProvider.notifier).skipFollowUps();
+      }
+    });
+  }
+
+  bool get _allRequiredAnswered {
+    if (_questions == null) return false;
+    final answers = ref.read(bookingFlowProvider).followUpAnswers;
+    return _questions!.every(
+        (q) => !q.isRequired || answers.containsKey(q.questionKey));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    // Watch to re-render when answers change
+    final flowState = ref.watch(bookingFlowProvider);
+
+    if (_loading) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.only(top: BCSpacing.xxl),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    if (_error != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.only(top: BCSpacing.xxl),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.error_outline,
+                  size: BCSpacing.iconXl,
+                  color: theme.colorScheme.error),
+              const SizedBox(height: BCSpacing.md),
+              Text(
+                'Error cargando preguntas',
+                style: theme.textTheme.titleMedium,
+              ),
+              const SizedBox(height: BCSpacing.sm),
+              TextButton(
+                onPressed: () {
+                  setState(() {
+                    _loading = true;
+                    _error = null;
+                  });
+                  _fetchQuestions();
+                },
+                child: const Text('Reintentar'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final questions = _questions!;
+    final current = questions[_currentIndex];
+    final answers = flowState.followUpAnswers;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ── Progress indicator ──
+        Text(
+          'Pregunta ${_currentIndex + 1} de ${questions.length}',
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+          ),
+        ),
+        const SizedBox(height: BCSpacing.xs),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(BCSpacing.radiusXs),
+          child: LinearProgressIndicator(
+            value: (_currentIndex + 1) / questions.length,
+            minHeight: 4,
+          ),
+        ),
+        const SizedBox(height: BCSpacing.lg),
+
+        // ── Question text ──
+        Text(
+          current.questionTextEs,
+          style: theme.textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: BCSpacing.lg),
+
+        // ── Answer input (varies by type) ──
+        _buildAnswerInput(current, answers, theme),
+        const SizedBox(height: BCSpacing.xl),
+
+        // ── Navigation buttons ──
+        Row(
+          children: [
+            if (_currentIndex > 0)
+              OutlinedButton(
+                onPressed: () => setState(() => _currentIndex--),
+                child: const Text('Anterior'),
+              ),
+            const Spacer(),
+            if (_currentIndex < questions.length - 1)
+              FilledButton(
+                onPressed: answers.containsKey(current.questionKey)
+                    ? () => setState(() => _currentIndex++)
+                    : null,
+                child: const Text('Siguiente'),
+              ),
+            if (_currentIndex == questions.length - 1)
+              FilledButton(
+                onPressed: _allRequiredAnswered
+                    ? () => ref
+                        .read(bookingFlowProvider.notifier)
+                        .submitFollowUps()
+                    : null,
+                child: const Text('Continuar'),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAnswerInput(
+    FollowUpQuestion question,
+    Map<String, String> answers,
+    ThemeData theme,
+  ) {
+    switch (question.answerType) {
+      case 'visual_cards':
+        return _buildVisualCards(question, answers, theme);
+      case 'yes_no':
+        return _buildYesNo(question, answers, theme);
+      case 'date_picker':
+        return _buildDatePicker(question, answers, theme);
+      default:
+        return Text('Tipo de pregunta desconocido: ${question.answerType}');
+    }
+  }
+
+  Widget _buildVisualCards(
+    FollowUpQuestion question,
+    Map<String, String> answers,
+    ThemeData theme,
+  ) {
+    final options = question.options ?? [];
+    if (options.isEmpty) {
+      return const Text('Sin opciones disponibles.');
+    }
+    final selected = answers[question.questionKey];
+    final crossAxisCount = WebBreakpoints.isDesktop(widget.width) ? 4 : 2;
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: options.length,
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: crossAxisCount,
+        mainAxisSpacing: BCSpacing.md,
+        crossAxisSpacing: BCSpacing.md,
+        childAspectRatio: 0.9,
+      ),
+      itemBuilder: (context, index) {
+        final option = options[index];
+        final isSelected = selected == option.value;
+        return _VisualOptionCard(
+          option: option,
+          isSelected: isSelected,
+          onTap: () {
+            ref
+                .read(bookingFlowProvider.notifier)
+                .answerFollowUp(question.questionKey, option.value);
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildYesNo(
+    FollowUpQuestion question,
+    Map<String, String> answers,
+    ThemeData theme,
+  ) {
+    final selected = answers[question.questionKey];
+    return Row(
+      children: [
+        Expanded(
+          child: SizedBox(
+            height: BCSpacing.largeTouchHeight,
+            child: selected == 'yes'
+                ? FilledButton(
+                    onPressed: () => ref
+                        .read(bookingFlowProvider.notifier)
+                        .answerFollowUp(question.questionKey, 'yes'),
+                    child: const Text('S\u00ed',
+                        style: TextStyle(fontSize: 18)),
+                  )
+                : OutlinedButton(
+                    onPressed: () => ref
+                        .read(bookingFlowProvider.notifier)
+                        .answerFollowUp(question.questionKey, 'yes'),
+                    child: const Text('S\u00ed',
+                        style: TextStyle(fontSize: 18)),
+                  ),
+          ),
+        ),
+        const SizedBox(width: BCSpacing.md),
+        Expanded(
+          child: SizedBox(
+            height: BCSpacing.largeTouchHeight,
+            child: selected == 'no'
+                ? FilledButton(
+                    onPressed: () => ref
+                        .read(bookingFlowProvider.notifier)
+                        .answerFollowUp(question.questionKey, 'no'),
+                    child: const Text('No',
+                        style: TextStyle(fontSize: 18)),
+                  )
+                : OutlinedButton(
+                    onPressed: () => ref
+                        .read(bookingFlowProvider.notifier)
+                        .answerFollowUp(question.questionKey, 'no'),
+                    child: const Text('No',
+                        style: TextStyle(fontSize: 18)),
+                  ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDatePicker(
+    FollowUpQuestion question,
+    Map<String, String> answers,
+    ThemeData theme,
+  ) {
+    final selected = answers[question.questionKey];
+    final hasDate = selected != null && selected.isNotEmpty;
+    return SizedBox(
+      height: BCSpacing.largeTouchHeight,
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: () async {
+          final now = DateTime.now();
+          final picked = await showDatePicker(
+            context: context,
+            initialDate: now.add(const Duration(days: 1)),
+            firstDate: now,
+            lastDate: now.add(const Duration(days: 365)),
+            locale: const Locale('es', 'MX'),
+          );
+          if (picked != null) {
+            final formatted =
+                '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+            ref
+                .read(bookingFlowProvider.notifier)
+                .answerFollowUp(question.questionKey, formatted);
+          }
+        },
+        icon: const Icon(Icons.calendar_today),
+        label: Text(
+          hasDate ? selected : 'Seleccionar fecha',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: hasDate ? FontWeight.w600 : FontWeight.w400,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Visual option card ──────────────────────────────────────────────────────
+
+class _VisualOptionCard extends StatefulWidget {
+  const _VisualOptionCard({
+    required this.option,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final FollowUpOption option;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  State<_VisualOptionCard> createState() => _VisualOptionCardState();
+}
+
+class _VisualOptionCardState extends State<_VisualOptionCard> {
+  bool _hovering = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovering = true),
+      onExit: (_) => setState(() => _hovering = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        child: Card(
+          elevation: _hovering
+              ? BCSpacing.elevationMedium
+              : BCSpacing.elevationLow,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(BCSpacing.radiusMd),
+            side: widget.isSelected
+                ? BorderSide(
+                    color: theme.colorScheme.primary,
+                    width: 2.5,
+                  )
+                : BorderSide.none,
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: widget.onTap,
+            borderRadius: BorderRadius.circular(BCSpacing.radiusMd),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (widget.option.imageUrl != null) ...[
+                  Expanded(
+                    flex: 3,
+                    child: Image.network(
+                      widget.option.imageUrl!,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      errorBuilder: (_, __, ___) => const Icon(
+                        Icons.image_not_supported_outlined,
+                        size: BCSpacing.iconLg,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: BCSpacing.sm),
+                ],
+                Expanded(
+                  flex: widget.option.imageUrl != null ? 1 : 2,
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: BCSpacing.sm,
+                      ),
+                      child: Text(
+                        widget.option.labelEs,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: widget.isSelected
+                              ? FontWeight.w700
+                              : FontWeight.w500,
+                          color: widget.isSelected
+                              ? theme.colorScheme.primary
+                              : null,
+                        ),
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
