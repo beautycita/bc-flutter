@@ -18,6 +18,7 @@ import '../pages/admin/engine_page.dart';
 import '../pages/admin/engine_profiles_page.dart';
 import '../pages/admin/engine_time_page.dart';
 import '../pages/admin/outreach_page.dart';
+import '../pages/admin/applications_page.dart';
 import '../pages/admin/salons_page.dart';
 import '../pages/admin/toggles_page.dart';
 import '../pages/admin/users_page.dart';
@@ -30,6 +31,7 @@ import '../pages/business/biz_qr_page.dart';
 import '../pages/business/biz_reviews_page.dart';
 import '../pages/business/biz_settings_page.dart';
 import '../pages/business/biz_staff_page.dart';
+import '../pages/client/reservar_page.dart';
 import '../pages/auth/callback_page.dart';
 import '../pages/auth/forgot_page.dart';
 import '../pages/auth/login_page.dart';
@@ -59,6 +61,7 @@ abstract final class WebRoutes {
   static const String admin = '/admin';
   static const String adminUsers = '/admin/users';
   static const String adminSalons = '/admin/salons';
+  static const String adminApplications = '/admin/applications';
   static const String adminBookings = '/admin/bookings';
   static const String adminServices = '/admin/services';
   static const String adminDisputes = '/admin/disputes';
@@ -241,6 +244,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                 builder: (context, state) => const SalonsPage(),
               ),
               GoRoute(
+                path: 'applications',
+                builder: (context, state) => const ApplicationsPage(),
+              ),
+              GoRoute(
                 path: 'bookings',
                 builder: (context, state) => const BookingsPage(),
               ),
@@ -349,8 +356,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(
             path: WebRoutes.reservar,
-            builder: (context, state) =>
-                const _Placeholder(WebRoutes.reservar),
+            builder: (context, state) => const ReservarPage(),
           ),
           GoRoute(
             path: WebRoutes.misCitas,
