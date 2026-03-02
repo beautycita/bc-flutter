@@ -117,6 +117,11 @@ class _ActiveStep extends ConsumerWidget {
     switch (flowState.step) {
       case BookingStep.category:
         return _CategoryGrid(width: width);
+      case BookingStep.service:
+        return _ServiceSelection(
+          category: flowState.selectedCategory!,
+          width: width,
+        );
       default:
         return Center(
           child: Padding(
@@ -239,6 +244,161 @@ class _CategoryCardState extends State<_CategoryCard> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ── Service selection (subcategory chips + service items) ────────────────────
+
+class _ServiceSelection extends ConsumerStatefulWidget {
+  const _ServiceSelection({required this.category, required this.width});
+
+  final ServiceCategory category;
+  final double width;
+
+  @override
+  ConsumerState<_ServiceSelection> createState() => _ServiceSelectionState();
+}
+
+class _ServiceSelectionState extends ConsumerState<_ServiceSelection> {
+  int _selectedSubIndex = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final subs = widget.category.subcategories;
+    final selectedSub = subs[_selectedSubIndex];
+    final hasItems = selectedSub.items != null && selectedSub.items!.isNotEmpty;
+
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 250),
+      child: Column(
+        key: ValueKey('service_selection_${widget.category.id}'),
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Header: emoji + category name ──
+          Text(
+            '${widget.category.icon} ${widget.category.nameEs}',
+            style: theme.textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: BCSpacing.lg),
+
+          // ── Subcategory chips ──
+          Wrap(
+            spacing: BCSpacing.sm,
+            runSpacing: BCSpacing.sm,
+            children: [
+              for (int i = 0; i < subs.length; i++)
+                ChoiceChip(
+                  label: Text(subs[i].nameEs),
+                  selected: i == _selectedSubIndex,
+                  selectedColor:
+                      widget.category.color.withValues(alpha: 0.2),
+                  labelStyle: TextStyle(
+                    color: i == _selectedSubIndex
+                        ? widget.category.color
+                        : theme.colorScheme.onSurface,
+                    fontWeight: i == _selectedSubIndex
+                        ? FontWeight.w600
+                        : FontWeight.w400,
+                  ),
+                  side: BorderSide(
+                    color: i == _selectedSubIndex
+                        ? widget.category.color
+                        : theme.colorScheme.outline.withValues(alpha: 0.3),
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius:
+                        BorderRadius.circular(BCSpacing.radiusFull),
+                  ),
+                  onSelected: (selected) {
+                    if (!selected) return;
+                    final tappedSub = subs[i];
+                    final tappedHasItems = tappedSub.items != null &&
+                        tappedSub.items!.isNotEmpty;
+
+                    if (!tappedHasItems) {
+                      // Leaf subcategory — act as direct service selection
+                      ref
+                          .read(bookingFlowProvider.notifier)
+                          .selectService(
+                            tappedSub,
+                            ServiceItem(
+                              id: tappedSub.id,
+                              subcategoryId: tappedSub.id,
+                              nameEs: tappedSub.nameEs,
+                              serviceType: tappedSub.id,
+                            ),
+                          );
+                    } else {
+                      setState(() => _selectedSubIndex = i);
+                    }
+                  },
+                ),
+            ],
+          ),
+          const SizedBox(height: BCSpacing.lg),
+
+          // ── Service items list (only if selected sub has items) ──
+          if (hasItems)
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: selectedSub.items!.length,
+              separatorBuilder: (_, __) =>
+                  const Divider(height: 1, indent: 48),
+              itemBuilder: (context, index) {
+                final item = selectedSub.items![index];
+                return ListTile(
+                  leading: Container(
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      color: widget.category.color,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  title: Text(
+                    item.nameEs,
+                    style: theme.textTheme.bodyLarge,
+                  ),
+                  trailing: Icon(
+                    Icons.chevron_right,
+                    color: theme.colorScheme.onSurface
+                        .withValues(alpha: 0.4),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: BCSpacing.sm,
+                    vertical: BCSpacing.xs,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius:
+                        BorderRadius.circular(BCSpacing.radiusXs),
+                  ),
+                  onTap: () => ref
+                      .read(bookingFlowProvider.notifier)
+                      .selectService(selectedSub, item),
+                );
+              },
+            ),
+
+          // ── Hint for leaf subcategories ──
+          if (!hasItems)
+            Padding(
+              padding: const EdgeInsets.only(top: BCSpacing.md),
+              child: Text(
+                'Toca "${selectedSub.nameEs}" para continuar',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurface
+                      .withValues(alpha: 0.5),
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
