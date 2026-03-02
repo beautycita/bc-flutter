@@ -3,10 +3,12 @@ import 'package:beautycita_core/supabase.dart';
 import 'package:beautycita_core/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../../config/breakpoints.dart';
 import '../../data/categories.dart';
 import '../../providers/booking_flow_provider.dart';
+import '../../providers/curate_provider.dart';
 
 // ── Main page ────────────────────────────────────────────────────────────────
 
@@ -125,6 +127,8 @@ class _ActiveStep extends ConsumerWidget {
         );
       case BookingStep.followUp:
         return _FollowUpStep(width: width);
+      case BookingStep.results:
+        return _ResultsStep(width: width);
       default:
         return Center(
           child: Padding(
@@ -857,6 +861,679 @@ class _VisualOptionCardState extends State<_VisualOptionCard> {
           ),
         ),
       ),
+    );
+  }
+}
+
+// ── Results step (curate engine call + result cards) ─────────────────────────
+
+class _ResultsStep extends ConsumerStatefulWidget {
+  const _ResultsStep({required this.width});
+
+  final double width;
+
+  @override
+  ConsumerState<_ResultsStep> createState() => _ResultsStepState();
+}
+
+class _ResultsStepState extends ConsumerState<_ResultsStep> {
+  bool _callTriggered = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _triggerEngineCallIfNeeded();
+    });
+  }
+
+  void _triggerEngineCallIfNeeded() {
+    if (_callTriggered) return;
+    final flowState = ref.read(bookingFlowProvider);
+    if (!flowState.isLoading || flowState.curateResponse != null) return;
+
+    // Check location
+    if (flowState.userLat == null || flowState.userLng == null) {
+      ref.read(bookingFlowProvider.notifier).setError(
+        'location_missing',
+      );
+      return;
+    }
+
+    _callTriggered = true;
+    _callEngine(flowState);
+  }
+
+  Future<void> _callEngine(BookingFlowState flowState) async {
+    try {
+      final response = await callCurateEngine(
+        serviceType: flowState.selectedService!.serviceType,
+        lat: flowState.userLat!,
+        lng: flowState.userLng!,
+        followUpAnswers: flowState.followUpAnswers.isNotEmpty
+            ? flowState.followUpAnswers
+            : null,
+        userId: BCSupabase.currentUserId,
+      );
+      if (!mounted) return;
+      ref.read(bookingFlowProvider.notifier).setCurateResponse(response);
+    } catch (e) {
+      if (!mounted) return;
+      ref.read(bookingFlowProvider.notifier).setError(e.toString());
+    }
+  }
+
+  void _retry() {
+    setState(() => _callTriggered = false);
+    ref.read(bookingFlowProvider.notifier).setLoading(true);
+    ref.read(bookingFlowProvider.notifier).setError(null);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _triggerEngineCallIfNeeded();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final flowState = ref.watch(bookingFlowProvider);
+
+    // ── Location missing ──
+    if (flowState.error == 'location_missing') {
+      return _buildLocationMissing(theme);
+    }
+
+    // ── Error state ──
+    if (flowState.error != null && flowState.error != 'location_missing') {
+      return _buildError(theme, flowState.error!);
+    }
+
+    // ── Loading state ──
+    if (flowState.isLoading || flowState.curateResponse == null) {
+      return _buildLoadingSkeleton(theme);
+    }
+
+    final response = flowState.curateResponse!;
+
+    // ── Empty results (auto-switches to discovered in provider) ──
+    if (response.results.isEmpty) {
+      if (flowState.showingDiscovered) {
+        // Task 6 will handle discovered salons. Placeholder for now.
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.only(top: BCSpacing.xxl),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.search, size: BCSpacing.iconXl,
+                    color: theme.colorScheme.primary.withValues(alpha: 0.5)),
+                const SizedBox(height: BCSpacing.md),
+                Text(
+                  'Buscando salones descubiertos cerca de ti...',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+    }
+
+    // ── Results display ──
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Mejores opciones para ti',
+          style: theme.textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: BCSpacing.lg),
+        for (final result in response.results)
+          Padding(
+            padding: const EdgeInsets.only(bottom: BCSpacing.md),
+            child: _ResultCardWidget(
+              result: result,
+              width: widget.width,
+              onReservar: () =>
+                  ref.read(bookingFlowProvider.notifier).selectResult(result),
+            ),
+          ),
+        const SizedBox(height: BCSpacing.sm),
+        Center(
+          child: TextButton(
+            onPressed: () =>
+                ref.read(bookingFlowProvider.notifier).showDiscovered(),
+            child: Text(
+              'Ver mas salones cerca de ti',
+              style: TextStyle(
+                color: theme.colorScheme.primary,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLocationMissing(ThemeData theme) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.only(top: BCSpacing.xxl),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.location_off,
+                size: BCSpacing.iconXl,
+                color: theme.colorScheme.error.withValues(alpha: 0.7)),
+            const SizedBox(height: BCSpacing.md),
+            Text(
+              'Necesitamos tu ubicacion para encontrar salones cercanos',
+              style: theme.textTheme.titleMedium,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: BCSpacing.lg),
+            FilledButton.icon(
+              onPressed: _retry,
+              icon: const Icon(Icons.my_location),
+              label: const Text('Reintentar'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildError(ThemeData theme, String error) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.only(top: BCSpacing.xxl),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.error_outline,
+                size: BCSpacing.iconXl, color: theme.colorScheme.error),
+            const SizedBox(height: BCSpacing.md),
+            Text(
+              'Error buscando salones',
+              style: theme.textTheme.titleMedium,
+            ),
+            const SizedBox(height: BCSpacing.sm),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: BCSpacing.xl),
+              child: Text(
+                error,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(height: BCSpacing.lg),
+            FilledButton(
+              onPressed: _retry,
+              child: const Text('Reintentar'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLoadingSkeleton(ThemeData theme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Buscando las mejores opciones...',
+          style: theme.textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: BCSpacing.lg),
+        for (int i = 0; i < 3; i++)
+          Padding(
+            padding: const EdgeInsets.only(bottom: BCSpacing.md),
+            child: _SkeletonCard(),
+          ),
+      ],
+    );
+  }
+}
+
+// ── Skeleton card (loading placeholder) ──────────────────────────────────────
+
+class _SkeletonCard extends StatefulWidget {
+  @override
+  State<_SkeletonCard> createState() => _SkeletonCardState();
+}
+
+class _SkeletonCardState extends State<_SkeletonCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
+    _animation = Tween<double>(begin: 0.08, end: 0.18).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        final opacity = _animation.value;
+        return Card(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(BCSpacing.radiusMd),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(BCSpacing.md),
+            child: Column(
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Photo placeholder
+                    Container(
+                      width: 100,
+                      height: 100,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.withValues(alpha: opacity),
+                        borderRadius:
+                            BorderRadius.circular(BCSpacing.radiusSm),
+                      ),
+                    ),
+                    const SizedBox(width: BCSpacing.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Name placeholder
+                          Container(
+                            height: 20,
+                            width: 180,
+                            decoration: BoxDecoration(
+                              color: Colors.grey.withValues(alpha: opacity),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                          const SizedBox(height: BCSpacing.sm),
+                          // Rating placeholder
+                          Container(
+                            height: 16,
+                            width: 120,
+                            decoration: BoxDecoration(
+                              color: Colors.grey.withValues(alpha: opacity),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                          const SizedBox(height: BCSpacing.sm),
+                          // Service placeholder
+                          Container(
+                            height: 16,
+                            width: 150,
+                            decoration: BoxDecoration(
+                              color: Colors.grey.withValues(alpha: opacity),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                          const SizedBox(height: BCSpacing.sm),
+                          // Slot placeholder
+                          Container(
+                            height: 16,
+                            width: 200,
+                            decoration: BoxDecoration(
+                              color: Colors.grey.withValues(alpha: opacity),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: BCSpacing.md),
+                // Button placeholder
+                Container(
+                  height: BCSpacing.minTouchHeight,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withValues(alpha: opacity),
+                    borderRadius: BorderRadius.circular(BCSpacing.radiusXs),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ── Result card ──────────────────────────────────────────────────────────────
+
+class _ResultCardWidget extends StatefulWidget {
+  const _ResultCardWidget({
+    required this.result,
+    required this.width,
+    required this.onReservar,
+  });
+
+  final ResultCard result;
+  final double width;
+  final VoidCallback onReservar;
+
+  @override
+  State<_ResultCardWidget> createState() => _ResultCardWidgetState();
+}
+
+class _ResultCardWidgetState extends State<_ResultCardWidget> {
+  bool _hovering = false;
+
+  static const _goldColor = Color(0xFFFFB300);
+
+  String _formatSlotDate(String isoString) {
+    try {
+      final dt = DateTime.parse(isoString);
+      // Format: "mar 4, 2:00 PM" style in Spanish
+      final dayFormat = DateFormat('MMM d', 'es');
+      final timeFormat = DateFormat('h:mm a', 'es');
+      return '${dayFormat.format(dt)}, ${timeFormat.format(dt)}';
+    } catch (_) {
+      return isoString;
+    }
+  }
+
+  String _formatPrice(double price, String currency) {
+    if (currency.toUpperCase() == 'MXN') {
+      return '\$${price.toStringAsFixed(0)} MXN';
+    }
+    return '\$${price.toStringAsFixed(0)} $currency';
+  }
+
+  String _formatDaysAgo(int days) {
+    if (days == 0) return 'hoy';
+    if (days == 1) return 'hace 1 dia';
+    return 'hace $days dias';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final result = widget.result;
+    final isMobile = WebBreakpoints.isMobile(widget.width);
+    final photoSize = isMobile ? 90.0 : 120.0;
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovering = true),
+      onExit: (_) => setState(() => _hovering = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        child: Card(
+          elevation: _hovering
+              ? BCSpacing.elevationMedium
+              : BCSpacing.elevationLow,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(BCSpacing.radiusMd),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(BCSpacing.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ── Top row: photo + details ──
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Salon photo
+                    _buildPhoto(result.business, photoSize, theme),
+                    const SizedBox(width: BCSpacing.md),
+                    // Details
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Salon name + rating row
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  result.business.name,
+                                  style:
+                                      theme.textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: BCSpacing.sm),
+                              _buildRating(result.staff, theme),
+                            ],
+                          ),
+                          const SizedBox(height: BCSpacing.xs),
+
+                          // Stylist
+                          _buildInfoRow(
+                            Icons.person_outline,
+                            _buildStylistText(result.staff),
+                            theme,
+                          ),
+                          const SizedBox(height: BCSpacing.xs),
+
+                          // Service
+                          _buildInfoRow(
+                            Icons.content_cut,
+                            result.service.name,
+                            theme,
+                          ),
+                          const SizedBox(height: BCSpacing.xs),
+
+                          // Slot + duration
+                          _buildInfoRow(
+                            Icons.calendar_today_outlined,
+                            '${_formatSlotDate(result.slot.startsAt)} \u00b7 ${result.service.durationMinutes} min',
+                            theme,
+                          ),
+                          const SizedBox(height: BCSpacing.xs),
+
+                          // Travel
+                          _buildInfoRow(
+                            Icons.directions_car_outlined,
+                            '${result.transport.durationMin} min \u00b7 ${result.transport.distanceKm.toStringAsFixed(1)} km',
+                            theme,
+                          ),
+                          const SizedBox(height: BCSpacing.sm),
+
+                          // Price
+                          Text(
+                            _formatPrice(
+                              result.service.price,
+                              result.service.currency,
+                            ),
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: theme.colorScheme.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+
+                // ── Review snippet ──
+                if (result.reviewSnippet != null &&
+                    !result.reviewSnippet!.isFallback) ...[
+                  const Divider(height: BCSpacing.lg),
+                  _buildReviewSnippet(result.reviewSnippet!, theme),
+                ],
+
+                const SizedBox(height: BCSpacing.md),
+
+                // ── RESERVAR button ──
+                SizedBox(
+                  width: double.infinity,
+                  height: BCSpacing.minTouchHeight,
+                  child: FilledButton(
+                    onPressed: widget.onReservar,
+                    child: const Text(
+                      'RESERVAR',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPhoto(
+      BusinessInfo business, double size, ThemeData theme) {
+    if (business.photoUrl != null && business.photoUrl!.isNotEmpty) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(BCSpacing.radiusSm),
+        child: Image.network(
+          business.photoUrl!,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) =>
+              _buildPhotoPlaceholder(size, theme),
+        ),
+      );
+    }
+    return _buildPhotoPlaceholder(size, theme);
+  }
+
+  Widget _buildPhotoPlaceholder(double size, ThemeData theme) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primary.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(BCSpacing.radiusSm),
+      ),
+      child: Icon(
+        Icons.storefront_outlined,
+        size: size * 0.4,
+        color: theme.colorScheme.primary.withValues(alpha: 0.4),
+      ),
+    );
+  }
+
+  Widget _buildRating(StaffInfo staff, ThemeData theme) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.star_rounded, size: 18, color: _goldColor),
+        const SizedBox(width: 2),
+        Text(
+          staff.rating.toStringAsFixed(1),
+          style: theme.textTheme.bodyMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: _goldColor,
+          ),
+        ),
+        const SizedBox(width: 2),
+        Text(
+          '(${staff.totalReviews})',
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _buildStylistText(StaffInfo staff) {
+    final buffer = StringBuffer(staff.name);
+    if (staff.experienceYears != null && staff.experienceYears! > 0) {
+      buffer.write(' \u00b7 ${staff.experienceYears} a\u00f1os exp');
+    }
+    return buffer.toString();
+  }
+
+  Widget _buildInfoRow(IconData icon, String text, ThemeData theme) {
+    return Row(
+      children: [
+        Icon(
+          icon,
+          size: 16,
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+        ),
+        const SizedBox(width: BCSpacing.xs),
+        Expanded(
+          child: Text(
+            text,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildReviewSnippet(ReviewSnippet snippet, ThemeData theme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '\u201c${snippet.text}\u201d',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            fontStyle: FontStyle.italic,
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+          ),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+        if (snippet.authorName != null || snippet.daysAgo != null) ...[
+          const SizedBox(height: BCSpacing.xs),
+          Text(
+            [
+              if (snippet.authorName != null) '\u2014 ${snippet.authorName}',
+              if (snippet.daysAgo != null)
+                _formatDaysAgo(snippet.daysAgo!),
+            ].join(', '),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+            ),
+          ),
+        ],
+      ],
     );
   }
 }
