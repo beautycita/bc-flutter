@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:html' as html;
 import 'dart:ui_web' as ui_web;
 
 import 'package:beautycita_core/models.dart';
@@ -13,6 +12,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show OtpType;
 import 'package:url_launcher/url_launcher.dart';
+import 'package:web/web.dart' as web;
 
 import '../../config/breakpoints.dart';
 import '../../data/categories.dart';
@@ -160,25 +160,40 @@ class _ActiveStep extends ConsumerWidget {
   }
 
   Widget _buildStep(BuildContext context) {
+    final Widget stepWidget;
     switch (flowState.step) {
       case BookingStep.category:
-        return _CategoryGrid(width: width);
+        stepWidget = _CategoryGrid(width: width);
       case BookingStep.service:
-        return _ServiceSelection(
+        stepWidget = _ServiceSelection(
           category: flowState.selectedCategory!,
           width: width,
         );
       case BookingStep.followUp:
-        return _FollowUpStep(width: width);
+        stepWidget = _FollowUpStep(width: width);
       case BookingStep.results:
-        return _ResultsStep(width: width);
+        stepWidget = _ResultsStep(width: width);
       case BookingStep.payment:
-        return _PaymentStep(width: width);
+        stepWidget = _PaymentStep(width: width);
       case BookingStep.transport:
-        return _TransportStep(width: width);
+        stepWidget = _TransportStep(width: width);
       case BookingStep.confirmed:
-        return _ConfirmationView(width: width);
+        stepWidget = _ConfirmationView(width: width);
     }
+
+    // Animate step transitions: fade + slide in from the right
+    return KeyedSubtree(
+      key: ValueKey(flowState.step),
+      child: stepWidget
+          .animate()
+          .fadeIn(duration: 200.ms, curve: Curves.easeOut)
+          .slideX(
+            begin: 0.05,
+            end: 0,
+            duration: 200.ms,
+            curve: Curves.easeOut,
+          ),
+    );
   }
 }
 
@@ -256,8 +271,10 @@ class _CategoryCardState extends State<_CategoryCard> {
     return MouseRegion(
       onEnter: (_) => setState(() => _hovering = true),
       onExit: (_) => setState(() => _hovering = false),
-      child: AnimatedContainer(
+      child: AnimatedScale(
+        scale: _hovering ? 1.04 : 1.0,
         duration: const Duration(milliseconds: 150),
+        curve: Curves.easeOut,
         child: Card(
           elevation: _hovering ? BCSpacing.elevationMedium : BCSpacing.elevationLow,
           shape: RoundedRectangleBorder(
@@ -273,6 +290,7 @@ class _CategoryCardState extends State<_CategoryCard> {
                 Text(
                   widget.category.icon,
                   style: const TextStyle(fontSize: 40),
+                  semanticsLabel: widget.category.nameEs,
                 ),
                 const SizedBox(height: BCSpacing.sm),
                 Padding(
@@ -577,15 +595,18 @@ class _FollowUpStepState extends ConsumerState<_FollowUpStep> {
                 style: theme.textTheme.titleMedium,
               ),
               const SizedBox(height: BCSpacing.sm),
-              TextButton(
-                onPressed: () {
-                  setState(() {
-                    _loading = true;
-                    _error = null;
-                  });
-                  _fetchQuestions();
-                },
-                child: const Text('Reintentar'),
+              SizedBox(
+                height: BCSpacing.minTouchHeight,
+                child: TextButton(
+                  onPressed: () {
+                    setState(() {
+                      _loading = true;
+                      _error = null;
+                    });
+                    _fetchQuestions();
+                  },
+                  child: const Text('Reintentar'),
+                ),
               ),
             ],
           ),
@@ -837,8 +858,10 @@ class _VisualOptionCardState extends State<_VisualOptionCard> {
     return MouseRegion(
       onEnter: (_) => setState(() => _hovering = true),
       onExit: (_) => setState(() => _hovering = false),
-      child: AnimatedContainer(
+      child: AnimatedScale(
+        scale: _hovering ? 1.03 : 1.0,
         duration: const Duration(milliseconds: 150),
+        curve: Curves.easeOut,
         child: Card(
           elevation: _hovering
               ? BCSpacing.elevationMedium
@@ -866,6 +889,7 @@ class _VisualOptionCardState extends State<_VisualOptionCard> {
                       widget.option.imageUrl!,
                       fit: BoxFit.cover,
                       width: double.infinity,
+                      semanticLabel: widget.option.labelEs,
                       errorBuilder: (_, __, ___) => const Icon(
                         Icons.image_not_supported_outlined,
                         size: BCSpacing.iconLg,
@@ -947,9 +971,19 @@ class _ResultsStepState extends ConsumerState<_ResultsStep> {
   }
 
   Future<void> _callEngine(BookingFlowState flowState) async {
+    // Guard: skip engine call if service has no serviceType
+    final serviceType = flowState.selectedService?.serviceType;
+    if (serviceType == null || serviceType.isEmpty) {
+      if (!mounted) return;
+      ref.read(bookingFlowProvider.notifier).setError(
+        'service_unavailable',
+      );
+      return;
+    }
+
     try {
       final response = await callCurateEngine(
-        serviceType: flowState.selectedService!.serviceType,
+        serviceType: serviceType,
         lat: flowState.userLat!,
         lng: flowState.userLng!,
         followUpAnswers: flowState.followUpAnswers.isNotEmpty
@@ -961,7 +995,13 @@ class _ResultsStepState extends ConsumerState<_ResultsStep> {
       ref.read(bookingFlowProvider.notifier).setCurateResponse(response);
     } catch (e) {
       if (!mounted) return;
-      ref.read(bookingFlowProvider.notifier).setError(e.toString());
+      final errorMsg = e.toString();
+      // Handle edge function not existing (404)
+      if (errorMsg.contains('404') || errorMsg.contains('not found')) {
+        ref.read(bookingFlowProvider.notifier).setError('service_unavailable');
+      } else {
+        ref.read(bookingFlowProvider.notifier).setError(errorMsg);
+      }
     }
   }
 
@@ -1005,8 +1045,15 @@ class _ResultsStepState extends ConsumerState<_ResultsStep> {
       return _buildLocationMissing(theme);
     }
 
+    // ── Service temporarily unavailable (edge function 404) ──
+    if (flowState.error == 'service_unavailable') {
+      return _buildServiceUnavailable(theme);
+    }
+
     // ── Error state ──
-    if (flowState.error != null && flowState.error != 'location_missing') {
+    if (flowState.error != null &&
+        flowState.error != 'location_missing' &&
+        flowState.error != 'service_unavailable') {
       return _buildError(theme, flowState.error!);
     }
 
@@ -1051,7 +1098,7 @@ class _ResultsStepState extends ConsumerState<_ResultsStep> {
             onPressed: () =>
                 ref.read(bookingFlowProvider.notifier).showDiscovered(),
             child: Text(
-              'Ver mas salones cerca de ti',
+              'Ver m\u00e1s salones cerca de ti',
               style: TextStyle(
                 color: theme.colorScheme.primary,
                 fontWeight: FontWeight.w500,
@@ -1080,10 +1127,59 @@ class _ResultsStepState extends ConsumerState<_ResultsStep> {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: BCSpacing.lg),
-            FilledButton.icon(
-              onPressed: _retry,
-              icon: const Icon(Icons.my_location),
-              label: const Text('Reintentar'),
+            SizedBox(
+              height: BCSpacing.minTouchHeight,
+              child: FilledButton.icon(
+                onPressed: _retry,
+                icon: const Icon(Icons.my_location),
+                label: const Text('Reintentar'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildServiceUnavailable(ThemeData theme) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.only(top: BCSpacing.xxl),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.construction_rounded,
+                size: BCSpacing.iconXl,
+                color: theme.colorScheme.secondary),
+            const SizedBox(height: BCSpacing.md),
+            Text(
+              'Servicio temporalmente no disponible',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: BCSpacing.sm),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: BCSpacing.xl),
+              child: Text(
+                'Estamos trabajando para habilitar este servicio. '
+                'Intenta de nuevo mas tarde.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            const SizedBox(height: BCSpacing.lg),
+            SizedBox(
+              height: BCSpacing.minTouchHeight,
+              child: OutlinedButton.icon(
+                onPressed: () =>
+                    ref.read(bookingFlowProvider.notifier).goBack(),
+                icon: const Icon(Icons.arrow_back),
+                label: const Text('Elegir otro servicio'),
+              ),
             ),
           ],
         ),
@@ -1119,9 +1215,12 @@ class _ResultsStepState extends ConsumerState<_ResultsStep> {
               ),
             ),
             const SizedBox(height: BCSpacing.lg),
-            FilledButton(
-              onPressed: _retry,
-              child: const Text('Reintentar'),
+            SizedBox(
+              height: BCSpacing.minTouchHeight,
+              child: FilledButton(
+                onPressed: _retry,
+                child: const Text('Reintentar'),
+              ),
             ),
           ],
         ),
@@ -1218,7 +1317,7 @@ class _SkeletonCardState extends State<_SkeletonCard>
                             width: 180,
                             decoration: BoxDecoration(
                               color: Colors.grey.withValues(alpha: opacity),
-                              borderRadius: BorderRadius.circular(4),
+                              borderRadius: BorderRadius.circular(BCSpacing.xs),
                             ),
                           ),
                           const SizedBox(height: BCSpacing.sm),
@@ -1228,7 +1327,7 @@ class _SkeletonCardState extends State<_SkeletonCard>
                             width: 120,
                             decoration: BoxDecoration(
                               color: Colors.grey.withValues(alpha: opacity),
-                              borderRadius: BorderRadius.circular(4),
+                              borderRadius: BorderRadius.circular(BCSpacing.xs),
                             ),
                           ),
                           const SizedBox(height: BCSpacing.sm),
@@ -1238,7 +1337,7 @@ class _SkeletonCardState extends State<_SkeletonCard>
                             width: 150,
                             decoration: BoxDecoration(
                               color: Colors.grey.withValues(alpha: opacity),
-                              borderRadius: BorderRadius.circular(4),
+                              borderRadius: BorderRadius.circular(BCSpacing.xs),
                             ),
                           ),
                           const SizedBox(height: BCSpacing.sm),
@@ -1248,7 +1347,7 @@ class _SkeletonCardState extends State<_SkeletonCard>
                             width: 200,
                             decoration: BoxDecoration(
                               color: Colors.grey.withValues(alpha: opacity),
-                              borderRadius: BorderRadius.circular(4),
+                              borderRadius: BorderRadius.circular(BCSpacing.xs),
                             ),
                           ),
                         ],
@@ -1332,8 +1431,10 @@ class _ResultCardWidgetState extends State<_ResultCardWidget> {
     return MouseRegion(
       onEnter: (_) => setState(() => _hovering = true),
       onExit: (_) => setState(() => _hovering = false),
-      child: AnimatedContainer(
+      child: AnimatedScale(
+        scale: _hovering ? 1.01 : 1.0,
         duration: const Duration(milliseconds: 150),
+        curve: Curves.easeOut,
         child: Card(
           elevation: _hovering
               ? BCSpacing.elevationMedium
@@ -1471,6 +1572,7 @@ class _ResultCardWidgetState extends State<_ResultCardWidget> {
           width: size,
           height: size,
           fit: BoxFit.cover,
+          semanticLabel: 'Foto de ${business.name}',
           errorBuilder: (_, __, ___) =>
               _buildPhotoPlaceholder(size, theme),
         ),
@@ -1726,9 +1828,12 @@ class _DiscoveredSalonsListState extends ConsumerState<_DiscoveredSalonsList> {
                     style: theme.textTheme.titleSmall,
                   ),
                   const SizedBox(height: BCSpacing.md),
-                  FilledButton(
-                    onPressed: _fetchDiscovered,
-                    child: const Text('Reintentar'),
+                  SizedBox(
+                    height: BCSpacing.minTouchHeight,
+                    child: FilledButton(
+                      onPressed: _fetchDiscovered,
+                      child: const Text('Reintentar'),
+                    ),
                   ),
                 ],
               ),
@@ -1746,7 +1851,7 @@ class _DiscoveredSalonsListState extends ConsumerState<_DiscoveredSalonsList> {
                       color: theme.colorScheme.primary.withValues(alpha: 0.4)),
                   const SizedBox(height: BCSpacing.md),
                   Text(
-                    'No encontramos salones descubiertos por ahora',
+                    'No hay salones descubiertos en tu zona a\u00fan',
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color:
                           theme.colorScheme.onSurface.withValues(alpha: 0.6),
@@ -2427,9 +2532,12 @@ class _PaymentStepState extends ConsumerState<_PaymentStep> {
             if (_error != null && _clientSecret == null && !_creatingIntent) ...[
               const SizedBox(height: BCSpacing.md),
               Center(
-                child: FilledButton(
-                  onPressed: _initPayment,
-                  child: const Text('Reintentar'),
+                child: SizedBox(
+                  height: BCSpacing.minTouchHeight,
+                  child: FilledButton(
+                    onPressed: _initPayment,
+                    child: const Text('Reintentar'),
+                  ),
                 ),
               ),
             ],
@@ -2467,7 +2575,7 @@ class _StripeElementContainerState extends State<_StripeElementContainer> {
     ui_web.platformViewRegistry.registerViewFactory(
       _viewType,
       (int viewId) {
-        final div = html.DivElement();
+        final div = web.document.createElement('div') as web.HTMLDivElement;
         div.id = containerId;
         div.style.minHeight = '300px';
         return div;
