@@ -33,6 +33,7 @@ class BookingFlowState {
   final String? error;
   final double? userLat;
   final double? userLng;
+  final String? locationName;
 
   const BookingFlowState({
     this.step = BookingStep.category,
@@ -50,6 +51,7 @@ class BookingFlowState {
     this.error,
     this.userLat,
     this.userLng,
+    this.locationName,
   });
 
   BookingFlowState copyWith({
@@ -68,6 +70,7 @@ class BookingFlowState {
     String? error,
     double? userLat,
     double? userLng,
+    String? locationName,
     // Explicit clear flags for nullable fields
     bool clearCategory = false,
     bool clearSubcategory = false,
@@ -77,6 +80,7 @@ class BookingFlowState {
     bool clearTransportMode = false,
     bool clearBookingId = false,
     bool clearError = false,
+    bool clearLocationName = false,
   }) {
     return BookingFlowState(
       step: step ?? this.step,
@@ -102,6 +106,9 @@ class BookingFlowState {
       error: clearError ? null : (error ?? this.error),
       userLat: userLat ?? this.userLat,
       userLng: userLng ?? this.userLng,
+      locationName: clearLocationName
+          ? null
+          : (locationName ?? this.locationName),
     );
   }
 }
@@ -118,6 +125,7 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
       selectedCategory: category,
       userLat: state.userLat,
       userLng: state.userLng,
+      locationName: state.locationName,
     );
   }
 
@@ -230,9 +238,14 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
     );
   }
 
-  /// Store user location.
+  /// Store user location (from GPS — clears any manual city name).
   void setLocation(double lat, double lng) {
-    state = state.copyWith(userLat: lat, userLng: lng);
+    state = state.copyWith(userLat: lat, userLng: lng, clearLocationName: true);
+  }
+
+  /// Store user location with a display name (from manual city input).
+  void setLocationWithName(double lat, double lng, String name) {
+    state = state.copyWith(userLat: lat, userLng: lng, locationName: name);
   }
 
   /// Navigate one step backward, clearing downstream state.
@@ -243,6 +256,7 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
           step: BookingStep.category,
           userLat: state.userLat,
           userLng: state.userLng,
+          locationName: state.locationName,
         );
       case BookingStep.followUp:
         state = state.copyWith(
@@ -301,6 +315,7 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
     state = BookingFlowState(
       userLat: state.userLat,
       userLng: state.userLng,
+      locationName: state.locationName,
     );
   }
 }
