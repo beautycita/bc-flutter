@@ -47,13 +47,15 @@ class _KpiCardState extends State<KpiCard> {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
     final effectiveIconColor = widget.iconColor ?? colors.primary;
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final isMobile = screenWidth < 800;
 
     return MouseRegion(
       onEnter: (_) => setState(() => _hovering = true),
       onExit: (_) => setState(() => _hovering = false),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.all(isMobile ? 14 : 20),
         decoration: BoxDecoration(
           color: colors.surface,
           borderRadius: BorderRadius.circular(12),
@@ -73,68 +75,126 @@ class _KpiCardState extends State<KpiCard> {
                 ]
               : null,
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
+        child: isMobile
+            ? _buildMobileLayout(theme, colors, effectiveIconColor)
+            : _buildDesktopLayout(theme, colors, effectiveIconColor),
+      ),
+    );
+  }
+
+  Widget _buildMobileLayout(
+    ThemeData theme,
+    ColorScheme colors,
+    Color effectiveIconColor,
+  ) {
+    return Row(
+      children: [
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: effectiveIconColor.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, size: 20, color: effectiveIconColor),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '${widget.prefix}${widget.value}',
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: colors.onSurface,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              Text(
+                widget.label,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colors.onSurface.withValues(alpha: 0.6),
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+        if (widget.changePercent != null)
+          _ChangeChip(percent: widget.changePercent!),
+      ],
+    );
+  }
+
+  Widget _buildDesktopLayout(
+    ThemeData theme,
+    ColorScheme colors,
+    Color effectiveIconColor,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Icon with colored background
+        Row(
           children: [
-            // Icon with colored background
-            Row(
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: effectiveIconColor.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(icon, size: 22, color: effectiveIconColor),
-                ),
-                const Spacer(),
-                // Change indicator
-                if (widget.changePercent != null)
-                  _ChangeChip(percent: widget.changePercent!),
-              ],
-            ),
-            const SizedBox(height: 16),
-            // Value
-            Text(
-              '${widget.prefix}${widget.value}',
-              style: theme.textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: colors.onSurface,
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: effectiveIconColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+              child: Icon(icon, size: 22, color: effectiveIconColor),
             ),
-            // Sparkline
-            if (widget.sparklineData != null && widget.sparklineData!.length >= 2)
-              Padding(
-                padding: const EdgeInsets.only(top: 8, bottom: 4),
-                child: SizedBox(
-                  height: 24,
-                  child: CustomPaint(
-                    size: const Size(double.infinity, 24),
-                    painter: _SparklinePainter(
-                      data: widget.sparklineData!,
-                      color: effectiveIconColor,
-                    ),
-                  ),
-                ),
-              )
-            else
-              const SizedBox(height: 4),
-            // Label
-            Text(
-              widget.label,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: colors.onSurface.withValues(alpha: 0.6),
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
+            const Spacer(),
+            // Change indicator
+            if (widget.changePercent != null)
+              _ChangeChip(percent: widget.changePercent!),
           ],
         ),
-      ),
+        const SizedBox(height: 16),
+        // Value
+        Text(
+          '${widget.prefix}${widget.value}',
+          style: theme.textTheme.headlineMedium?.copyWith(
+            fontWeight: FontWeight.w700,
+            color: colors.onSurface,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        // Sparkline
+        if (widget.sparklineData != null && widget.sparklineData!.length >= 2)
+          Padding(
+            padding: const EdgeInsets.only(top: 8, bottom: 4),
+            child: SizedBox(
+              height: 24,
+              child: CustomPaint(
+                size: const Size(double.infinity, 24),
+                painter: _SparklinePainter(
+                  data: widget.sparklineData!,
+                  color: effectiveIconColor,
+                ),
+              ),
+            ),
+          )
+        else
+          const SizedBox(height: 4),
+        // Label
+        Text(
+          widget.label,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: colors.onSurface.withValues(alpha: 0.6),
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
     );
   }
 

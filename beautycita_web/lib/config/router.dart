@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:beautycita_core/supabase.dart';
@@ -31,6 +30,7 @@ import '../pages/business/biz_qr_page.dart';
 import '../pages/business/biz_reviews_page.dart';
 import '../pages/business/biz_settings_page.dart';
 import '../pages/business/biz_staff_page.dart';
+import '../pages/client/mis_citas_page.dart';
 import '../pages/client/reservar_page.dart';
 import '../pages/auth/callback_page.dart';
 import '../pages/auth/forgot_page.dart';
@@ -102,39 +102,6 @@ String routeForRole(String? role) {
       return WebRoutes.negocio;
     default:
       return WebRoutes.reservar;
-  }
-}
-
-// ── Placeholder page ─────────────────────────────────────────────────────────
-
-class _Placeholder extends StatelessWidget {
-  const _Placeholder(this.path);
-  final String path;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.construction, size: 48, color: theme.colorScheme.primary),
-          const SizedBox(height: 16),
-          Text(
-            'Proximamente',
-            style: theme.textTheme.headlineSmall,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            path,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-              fontFamily: 'monospace',
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }
 
@@ -360,8 +327,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: WebRoutes.misCitas,
-            builder: (context, state) =>
-                const _Placeholder(WebRoutes.misCitas),
+            builder: (context, state) => const MisCitasPage(),
           ),
         ],
       ),

@@ -83,7 +83,14 @@ async function ensureCustomer(
     .single();
 
   if (profile?.stripe_customer_id) {
-    return profile.stripe_customer_id;
+    // Verify the stored customer still exists in Stripe (handles test→live key switch)
+    try {
+      await stripeGet(`/customers/${profile.stripe_customer_id}`);
+      return profile.stripe_customer_id;
+    } catch {
+      // Customer doesn't exist in current Stripe mode — recreate below
+      console.error(`Stale Stripe customer ${profile.stripe_customer_id} for user ${userId}, recreating`);
+    }
   }
 
   // Create new Stripe customer

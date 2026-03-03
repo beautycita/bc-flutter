@@ -26,149 +26,112 @@ class PreferencesScreen extends ConsumerWidget {
           vertical: AppConstants.paddingMD,
         ),
         children: [
-          // ── Preferencias card ──
+          // ── Preferencias ──
           const SectionHeader(label: 'Preferencias'),
-          const SizedBox(height: AppConstants.paddingXS),
-
-          Container(
-            decoration: BoxDecoration(
-              color: cs.surface,
-              borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-              border: Border.all(color: cs.outline.withValues(alpha: 0.1)),
+          SettingsTile(
+            icon: Icons.attach_money_rounded,
+            label: 'Presupuesto',
+            trailing: Text(
+              _priceLabel(prefsState.priceComfort),
+              style: textTheme.bodyMedium?.copyWith(
+                color: cs.onSurface.withValues(alpha: 0.5),
+              ),
             ),
-            child: Column(
-              children: [
-                SettingsTile(
-                  icon: Icons.attach_money_rounded,
-                  label: 'Presupuesto',
-                  trailing: Text(
-                    _priceLabel(prefsState.priceComfort),
-                    style: textTheme.bodyMedium?.copyWith(
-                      color: cs.onSurface.withValues(alpha: 0.5),
-                    ),
-                  ),
-                  onTap: () => _showPriceSheet(context, ref, prefsState.priceComfort),
-                ),
-                Divider(height: 1, indent: 48, color: cs.outline.withValues(alpha: 0.08)),
-                SettingsTile(
-                  icon: Icons.speed_rounded,
-                  label: 'Calidad vs Rapidez',
-                  trailing: Text(
-                    _qualityLabel(prefsState.qualitySpeed),
-                    style: textTheme.bodyMedium?.copyWith(
-                      color: cs.onSurface.withValues(alpha: 0.5),
-                    ),
-                  ),
-                  onTap: () => _showQualitySheet(context, ref, prefsState.qualitySpeed),
-                ),
-                Divider(height: 1, indent: 48, color: cs.outline.withValues(alpha: 0.08)),
-                SettingsTile(
-                  icon: Icons.explore_rounded,
-                  label: 'Explorar vs Lealtad',
-                  trailing: Text(
-                    _exploreLabel(prefsState.exploreLoyalty),
-                    style: textTheme.bodyMedium?.copyWith(
-                      color: cs.onSurface.withValues(alpha: 0.5),
-                    ),
-                  ),
-                  onTap: () => _showExploreSheet(context, ref, prefsState.exploreLoyalty),
-                ),
-                Divider(height: 1, indent: 48, color: cs.outline.withValues(alpha: 0.08)),
-                SettingsTile(
-                  icon: Icons.radar_rounded,
-                  label: 'Radio de busqueda',
-                  trailing: Text(
-                    '${prefsState.searchRadiusKm} km',
-                    style: textTheme.bodyMedium?.copyWith(
-                      color: cs.onSurface.withValues(alpha: 0.5),
-                    ),
-                  ),
-                  onTap: () => _showRadiusSheet(context, ref, prefsState.searchRadiusKm),
-                ),
-              ],
+            onTap: () => _showPriceSheet(context, ref, prefsState.priceComfort),
+          ),
+          SettingsTile(
+            icon: Icons.speed_rounded,
+            label: 'Calidad vs Rapidez',
+            trailing: Text(
+              _qualityLabel(prefsState.qualitySpeed),
+              style: textTheme.bodyMedium?.copyWith(
+                color: cs.onSurface.withValues(alpha: 0.5),
+              ),
             ),
+            onTap: () => _showQualitySheet(context, ref, prefsState.qualitySpeed),
+          ),
+          SettingsTile(
+            icon: Icons.explore_rounded,
+            label: 'Explorar vs Lealtad',
+            trailing: Text(
+              _exploreLabel(prefsState.exploreLoyalty),
+              style: textTheme.bodyMedium?.copyWith(
+                color: cs.onSurface.withValues(alpha: 0.5),
+              ),
+            ),
+            onTap: () => _showExploreSheet(context, ref, prefsState.exploreLoyalty),
+          ),
+          SettingsTile(
+            icon: Icons.radar_rounded,
+            label: 'Radio de busqueda',
+            trailing: Text(
+              '${prefsState.searchRadiusKm} km',
+              style: textTheme.bodyMedium?.copyWith(
+                color: cs.onSurface.withValues(alpha: 0.5),
+              ),
+            ),
+            onTap: () => _showRadiusSheet(context, ref, prefsState.searchRadiusKm),
           ),
 
           const SizedBox(height: AppConstants.paddingLG),
 
           // ── Tamano de texto ──
           const SectionHeader(label: 'Tamano de texto'),
-          const SizedBox(height: AppConstants.paddingXS),
-
-          Builder(builder: (context) {
-            final themeState = ref.watch(themeProvider);
-            return Container(
-              padding: const EdgeInsets.all(AppConstants.paddingMD),
-              decoration: BoxDecoration(
-                color: cs.surface,
-                borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-                border: Border.all(color: cs.outline.withValues(alpha: 0.1)),
-              ),
-              child: _FontScaleSlider(
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppConstants.paddingSM,
+              vertical: AppConstants.paddingXS,
+            ),
+            child: Builder(builder: (context) {
+              final themeState = ref.watch(themeProvider);
+              return _FontScaleSlider(
                 value: themeState.fontScale,
                 onChanged: (v) => ref.read(themeProvider.notifier).setFontScale(v),
-              ),
-            );
-          }),
+              );
+            }),
+          ),
 
           const SizedBox(height: AppConstants.paddingLG),
 
-          // ── Notificaciones card ──
+          // ── Notificaciones ──
           const SectionHeader(label: 'Notificaciones'),
-          const SizedBox(height: AppConstants.paddingXS),
-
-          Container(
-            decoration: BoxDecoration(
-              color: cs.surface,
-              borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-              border: Border.all(color: cs.outline.withValues(alpha: 0.1)),
-            ),
-            child: Column(
-              children: [
-                // Master notifications toggle
-                SettingsTile(
-                  icon: Icons.notifications_outlined,
-                  label: 'Todas las notificaciones',
-                  trailing: Switch(
-                    value: prefsState.notificationsEnabled,
-                    activeColor: cs.primary,
-                    onChanged: (_) {
-                      ref.read(userPrefsProvider.notifier).toggleNotifications();
-                    },
-                  ),
-                ),
-
-                // Individual notification toggles (nested under master)
-                if (prefsState.notificationsEnabled) ...[
-                  Divider(height: 1, indent: 48, color: cs.outline.withValues(alpha: 0.08)),
-                  _NotifChildTile(
-                    icon: Icons.calendar_today_outlined,
-                    label: 'Recordatorios de citas',
-                    value: prefsState.notifyBookingReminders,
-                    onChanged: (_) => ref.read(userPrefsProvider.notifier).toggleBookingReminders(),
-                  ),
-                  _NotifChildTile(
-                    icon: Icons.update_outlined,
-                    label: 'Cambios en citas',
-                    value: prefsState.notifyAppointmentUpdates,
-                    onChanged: (_) => ref.read(userPrefsProvider.notifier).toggleAppointmentUpdates(),
-                  ),
-                  _NotifChildTile(
-                    icon: Icons.chat_bubble_outline,
-                    label: 'Mensajes',
-                    value: prefsState.notifyMessages,
-                    onChanged: (_) => ref.read(userPrefsProvider.notifier).toggleMessages(),
-                  ),
-                  _NotifChildTile(
-                    icon: Icons.local_offer_outlined,
-                    label: 'Promociones',
-                    value: prefsState.notifyPromotions,
-                    onChanged: (_) => ref.read(userPrefsProvider.notifier).togglePromotions(),
-                  ),
-                ],
-              ],
+          SettingsTile(
+            icon: Icons.notifications_outlined,
+            label: 'Todas las notificaciones',
+            trailing: Switch(
+              value: prefsState.notificationsEnabled,
+              activeColor: cs.primary,
+              onChanged: (_) {
+                ref.read(userPrefsProvider.notifier).toggleNotifications();
+              },
             ),
           ),
+          if (prefsState.notificationsEnabled) ...[
+            _NotifChildTile(
+              icon: Icons.calendar_today_outlined,
+              label: 'Recordatorios de citas',
+              value: prefsState.notifyBookingReminders,
+              onChanged: (_) => ref.read(userPrefsProvider.notifier).toggleBookingReminders(),
+            ),
+            _NotifChildTile(
+              icon: Icons.update_outlined,
+              label: 'Cambios en citas',
+              value: prefsState.notifyAppointmentUpdates,
+              onChanged: (_) => ref.read(userPrefsProvider.notifier).toggleAppointmentUpdates(),
+            ),
+            _NotifChildTile(
+              icon: Icons.chat_bubble_outline,
+              label: 'Mensajes',
+              value: prefsState.notifyMessages,
+              onChanged: (_) => ref.read(userPrefsProvider.notifier).toggleMessages(),
+            ),
+            _NotifChildTile(
+              icon: Icons.local_offer_outlined,
+              label: 'Promociones',
+              value: prefsState.notifyPromotions,
+              onChanged: (_) => ref.read(userPrefsProvider.notifier).togglePromotions(),
+            ),
+          ],
 
           const SizedBox(height: AppConstants.paddingLG),
         ],

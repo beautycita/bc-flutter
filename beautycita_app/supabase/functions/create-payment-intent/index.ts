@@ -140,8 +140,17 @@ serve(async (req) => {
       .single();
 
     if (profile?.stripe_customer_id) {
-      stripeCustomerId = profile.stripe_customer_id;
-    } else {
+      // Verify customer exists in current Stripe mode (handles test→live key switch)
+      try {
+        await stripe.customers.retrieve(profile.stripe_customer_id);
+        stripeCustomerId = profile.stripe_customer_id;
+      } catch {
+        console.error(`Stale Stripe customer ${profile.stripe_customer_id}, recreating`);
+        stripeCustomerId = undefined;
+      }
+    }
+
+    if (!stripeCustomerId) {
       // Create Stripe customer
       const customer = await stripe.customers.create({
         email: user.email,

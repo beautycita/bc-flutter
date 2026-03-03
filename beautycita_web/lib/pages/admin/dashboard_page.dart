@@ -234,13 +234,47 @@ class _KpiLoadingGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final width = MediaQuery.sizeOf(context).width;
+    final isMobile = WebBreakpoints.isMobile(width);
+    final isDesktop = WebBreakpoints.isDesktop(width);
+    final crossAxisCount = isMobile ? 1 : isDesktop ? 4 : 2;
+    final aspectRatio = isMobile ? 3.0 : isDesktop ? 1.8 : 1.6;
+
+    if (isMobile) {
+      return Column(
+        children: List.generate(4, (i) {
+          return Padding(
+            padding: EdgeInsets.only(bottom: i < 3 ? 12 : 0),
+            child: Container(
+              height: 80,
+              decoration: BoxDecoration(
+                color: colors.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: colors.outlineVariant),
+              ),
+              child: Center(
+                child: SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: colors.primary.withValues(alpha: 0.5),
+                  ),
+                ),
+              ),
+            ),
+          );
+        }),
+      );
+    }
+
     return GridView.count(
-      crossAxisCount: 4,
+      crossAxisCount: crossAxisCount,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       crossAxisSpacing: 16,
       mainAxisSpacing: 16,
-      childAspectRatio: 1.8,
+      childAspectRatio: aspectRatio,
       children: List.generate(4, (_) {
         return Container(
           decoration: BoxDecoration(
@@ -312,10 +346,11 @@ class _ActivityFeed extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
+    final isMobile = MediaQuery.sizeOf(context).width < 800;
     final feedAsync = ref.watch(activityFeedProvider);
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(isMobile ? 14 : 20),
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(12),
@@ -510,10 +545,11 @@ class _AlertsPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
+    final isMobile = MediaQuery.sizeOf(context).width < 800;
     final alertsAsync = ref.watch(dashboardAlertsProvider);
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(isMobile ? 14 : 20),
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(12),
@@ -789,8 +825,9 @@ class _RevenueChartSection extends StatelessWidget {
 
 Widget _chartPlaceholder(BuildContext context) {
   final colors = Theme.of(context).colorScheme;
+  final isMobile = MediaQuery.sizeOf(context).width < 800;
   return Container(
-    height: 260,
+    height: isMobile ? 210 : 260,
     decoration: BoxDecoration(
       color: colors.surface,
       borderRadius: BorderRadius.circular(12),

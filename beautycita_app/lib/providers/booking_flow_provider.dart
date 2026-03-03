@@ -365,12 +365,13 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
             colors: PaymentSheetAppearanceColors(
               primary: Color(0xFF660033),
               background: Color(0xFFF9F9F9),
-              componentBackground: Color(0xFFF5F5F5),
+              componentBackground: Color(0xFFFFFFFF),
               componentBorder: Color(0xFFBDBDBD),
               componentDivider: Color(0xFFE0E0E0),
               primaryText: Color(0xFF000000),
-              secondaryText: Color(0xFF424242),
-              placeholderText: Color(0xFF9E9E9E),
+              secondaryText: Color(0xFF212121),
+              componentText: Color(0xFF000000),
+              placeholderText: Color(0xFF757575),
               icon: Color(0xFF660033),
               error: Color(0xFFD32F2F),
             ),
@@ -381,6 +382,11 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
             primaryButton: PaymentSheetPrimaryButtonAppearance(
               colors: PaymentSheetPrimaryButtonTheme(
                 light: PaymentSheetPrimaryButtonThemeColors(
+                  background: Color(0xFF660033),
+                  text: Color(0xFFFFFFFF),
+                  border: Color(0xFF660033),
+                ),
+                dark: PaymentSheetPrimaryButtonThemeColors(
                   background: Color(0xFF660033),
                   text: Color(0xFFFFFFFF),
                   border: Color(0xFF660033),

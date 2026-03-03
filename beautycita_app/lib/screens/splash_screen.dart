@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../config/constants.dart';
 import '../main.dart' show supabaseReady;
 import '../providers/auth_provider.dart';
+import '../services/updater_service.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -63,6 +64,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   Future<void> _checkAuthAndNavigate() async {
     // Wait for Supabase to finish initializing (runs in background since main)
     await supabaseReady.future;
+
+    // OTA update check (silent, non-blocking — downloads patch in background)
+    UpdaterService.instance.checkAndUpdate();
 
     try {
       await ref.read(authStateProvider.notifier).checkRegistration();

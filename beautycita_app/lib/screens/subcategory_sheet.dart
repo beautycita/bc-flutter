@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/category.dart';
 import '../config/constants.dart';
 import '../providers/booking_flow_provider.dart';
-import '../widgets/cinematic_question_text.dart';
 
 String _getCategoryQuestion(String categoryId) {
   switch (categoryId) {
@@ -108,18 +109,24 @@ class SubcategorySheet extends StatelessWidget {
                     ),
                     const SizedBox(width: 16),
 
-                    // Cinematic question text
+                    // Question text
                     Expanded(
-                      child: CinematicQuestionText(
-                        text: _getCategoryQuestion(category.id),
-                        primaryColor: category.color,
-                        accentColor: palette.secondary,
-                        fontSize: 19,
+                      child: Text(
+                        _getCategoryQuestion(category.id),
+                        style: GoogleFonts.poppins(
+                          fontSize: 19,
+                          fontWeight: FontWeight.w700,
+                          color: palette.onSurface,
+                          height: 1.3,
+                        ),
                       ),
                     ),
                   ],
                 ),
-              ),
+              )
+                  .animate()
+                  .fadeIn(duration: 350.ms, curve: Curves.easeOut)
+                  .slideX(begin: -0.05, end: 0, duration: 350.ms, curve: Curves.easeOutCubic),
 
               // Subcategories list
               Expanded(
@@ -130,11 +137,26 @@ class SubcategorySheet extends StatelessWidget {
                     Wrap(
                       spacing: 10,
                       runSpacing: 10,
-                      children: category.subcategories.map((subcategory) {
+                      children: category.subcategories.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final subcategory = entry.value;
                         return _SubcategoryPill(
                           subcategory: subcategory,
                           categoryColor: category.color,
-                        );
+                        )
+                            .animate()
+                            .fadeIn(
+                              duration: 300.ms,
+                              delay: (50 * index).ms,
+                              curve: Curves.easeOut,
+                            )
+                            .slideX(
+                              begin: 0.08,
+                              end: 0,
+                              duration: 300.ms,
+                              delay: (50 * index).ms,
+                              curve: Curves.easeOutCubic,
+                            );
                       }).toList(),
                     ),
                   ],
@@ -200,11 +222,17 @@ class _SubcategoryPillState extends State<_SubcategoryPill> {
       onTapDown: (_) => setState(() => _isPressed = true),
       onTapUp: (_) {
         setState(() => _isPressed = false);
+        HapticFeedback.selectionClick();
         _handleTap(context);
       },
       onTapCancel: () => setState(() => _isPressed = false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 100),
+      child: AnimatedScale(
+        scale: _isPressed ? 0.96 : 1.0,
+        duration: const Duration(milliseconds: 150),
+        curve: _isPressed ? Curves.easeInCubic : Curves.elasticOut,
+        child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.easeOutCubic,
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         decoration: BoxDecoration(
           color: _isPressed ? color.withValues(alpha: 0.12) : Colors.white,
@@ -244,6 +272,7 @@ class _SubcategoryPillState extends State<_SubcategoryPill> {
             ],
           ],
         ),
+      ),
       ),
     );
   }
@@ -321,7 +350,10 @@ class _ServiceItemsSheet extends StatelessWidget {
                     ),
                   ],
                 ),
-              ),
+              )
+                  .animate()
+                  .fadeIn(duration: 350.ms, curve: Curves.easeOut)
+                  .slideX(begin: -0.05, end: 0, duration: 350.ms, curve: Curves.easeOutCubic),
 
               // Items list
               Expanded(
@@ -337,7 +369,20 @@ class _ServiceItemsSheet extends StatelessWidget {
                         item: item,
                         categoryColor: categoryColor,
                       ),
-                    );
+                    )
+                        .animate()
+                        .fadeIn(
+                          duration: 300.ms,
+                          delay: (60 * index).ms,
+                          curve: Curves.easeOut,
+                        )
+                        .slideX(
+                          begin: 0.06,
+                          end: 0,
+                          duration: 300.ms,
+                          delay: (60 * index).ms,
+                          curve: Curves.easeOutCubic,
+                        );
                   },
                 ),
               ),
@@ -384,11 +429,17 @@ class _ServiceItemTileState extends ConsumerState<_ServiceItemTile> {
       onTapDown: (_) => setState(() => _isPressed = true),
       onTapUp: (_) {
         setState(() => _isPressed = false);
+        HapticFeedback.lightImpact();
         _handleTap(context);
       },
       onTapCancel: () => setState(() => _isPressed = false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 100),
+      child: AnimatedScale(
+        scale: _isPressed ? 0.97 : 1.0,
+        duration: const Duration(milliseconds: 120),
+        curve: _isPressed ? Curves.easeInCubic : Curves.elasticOut,
+        child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.easeOutCubic,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         decoration: BoxDecoration(
           color: _isPressed
@@ -435,6 +486,7 @@ class _ServiceItemTileState extends ConsumerState<_ServiceItemTile> {
             ),
           ],
         ),
+      ),
       ),
     );
   }

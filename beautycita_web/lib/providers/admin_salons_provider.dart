@@ -25,6 +25,8 @@ class RegisteredSalon {
   final int tier;
   final DateTime createdAt;
   final String? photoUrl;
+  final String? municipalLicenseUrl;
+  final String municipalLicenseStatus; // 'none', 'pending', 'approved', 'rejected'
 
   const RegisteredSalon({
     required this.id,
@@ -40,6 +42,8 @@ class RegisteredSalon {
     this.tier = 1,
     required this.createdAt,
     this.photoUrl,
+    this.municipalLicenseUrl,
+    this.municipalLicenseStatus = 'none',
   });
 
   factory RegisteredSalon.fromJson(Map<String, dynamic> json) {
@@ -58,6 +62,8 @@ class RegisteredSalon {
       createdAt: DateTime.tryParse(json['created_at'] as String? ?? '') ??
           DateTime.now(),
       photoUrl: json['photo_url'] as String?,
+      municipalLicenseUrl: json['municipal_license_url'] as String?,
+      municipalLicenseStatus: json['municipal_license_status'] as String? ?? 'none',
     );
   }
 }
@@ -257,7 +263,7 @@ final registeredSalonsProvider =
   var query = client.from(BCTables.businesses).select(
     'id, name, city, state, average_rating, total_reviews, '
     'stripe_onboarding_status, is_verified, is_active, phone, tier, '
-    'created_at, photo_url',
+    'created_at, photo_url, municipal_license_url, municipal_license_status',
   );
   if (filter.city != null) {
     query = query.eq('city', filter.city!);

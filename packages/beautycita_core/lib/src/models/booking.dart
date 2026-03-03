@@ -14,6 +14,7 @@ class Booking {
   final DateTime createdAt;
   final String? providerName;
   final String? transportMode;
+  final String? paymentStatus;
   final double? depositAmount;
   final DateTime? updatedAt;
 
@@ -33,6 +34,7 @@ class Booking {
     required this.createdAt,
     this.providerName,
     this.transportMode,
+    this.paymentStatus,
     this.depositAmount,
     this.updatedAt,
   });
@@ -70,6 +72,7 @@ class Booking {
       createdAt: DateTime.parse(json['created_at'] as String),
       providerName: providerName,
       transportMode: json['transport_mode'] as String?,
+      paymentStatus: json['payment_status'] as String?,
       depositAmount: (json['deposit_amount'] as num?)?.toDouble(),
       updatedAt: json['updated_at'] != null
           ? DateTime.parse(json['updated_at'] as String)
@@ -93,6 +96,7 @@ class Booking {
       'notes': notes,
       'created_at': createdAt.toIso8601String(),
       'transport_mode': transportMode,
+      'payment_status': paymentStatus,
       'deposit_amount': depositAmount,
     };
   }
@@ -101,6 +105,7 @@ class Booking {
     String? status,
     String? notes,
     String? transportMode,
+    String? paymentStatus,
   }) {
     return Booking(
       id: id,
@@ -118,6 +123,7 @@ class Booking {
       createdAt: createdAt,
       providerName: providerName,
       transportMode: transportMode ?? this.transportMode,
+      paymentStatus: paymentStatus ?? this.paymentStatus,
       depositAmount: depositAmount,
       updatedAt: updatedAt,
     );
