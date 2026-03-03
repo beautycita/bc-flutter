@@ -1,20 +1,34 @@
+import 'package:beautycita_core/supabase.dart';
 import 'package:beautycita_core/theme.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../providers/admin_salons_provider.dart';
 
 /// Detail panel content for a registered salon.
-class RegisteredSalonDetailContent extends StatelessWidget {
+class RegisteredSalonDetailContent extends ConsumerStatefulWidget {
   const RegisteredSalonDetailContent({required this.salon, super.key});
 
   final RegisteredSalon salon;
+
+  @override
+  ConsumerState<RegisteredSalonDetailContent> createState() =>
+      _RegisteredSalonDetailContentState();
+}
+
+class _RegisteredSalonDetailContentState
+    extends ConsumerState<RegisteredSalonDetailContent> {
+  bool _togglingVerified = false;
+  bool _approvingLicense = false;
+  bool _rejectingLicense = false;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
     final dateFormat = DateFormat('d MMM yyyy', 'es');
+    final salon = widget.salon;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -142,21 +156,55 @@ class RegisteredSalonDetailContent extends StatelessWidget {
         const Divider(),
         const SizedBox(height: BCSpacing.md),
 
+        // ── License ──────────────────────────────────────────────────
+        _SectionTitle(title: 'Licencia Municipal'),
+        const SizedBox(height: BCSpacing.sm),
+        _buildLicenseSection(context, salon),
+
+        const SizedBox(height: BCSpacing.lg),
+        const Divider(),
+        const SizedBox(height: BCSpacing.md),
+
         // ── Actions ────────────────────────────────────────────────────
         _SectionTitle(title: 'Acciones'),
         const SizedBox(height: BCSpacing.sm),
         SizedBox(
           width: double.infinity,
           child: OutlinedButton.icon(
-            onPressed: () {
-              // TODO: Toggle verified status
-            },
-            icon: Icon(
-              salon.verified
-                  ? Icons.remove_circle_outline
-                  : Icons.verified_outlined,
-              size: 18,
-            ),
+            onPressed: _togglingVerified
+                ? null
+                : () async {
+                    setState(() => _togglingVerified = true);
+                    try {
+                      await BCSupabase.client
+                          .from(BCTables.businesses)
+                          .update({'is_verified': !salon.verified})
+                          .eq('id', salon.id);
+                      ref.invalidate(registeredSalonsProvider);
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Error: $e')),
+                        );
+                      }
+                    } finally {
+                      if (mounted) {
+                        setState(() => _togglingVerified = false);
+                      }
+                    }
+                  },
+            icon: _togglingVerified
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Icon(
+                    salon.verified
+                        ? Icons.remove_circle_outline
+                        : Icons.verified_outlined,
+                    size: 18,
+                  ),
             label: Text(
               salon.verified ? 'Quitar verificacion' : 'Verificar salon',
             ),
@@ -166,6 +214,133 @@ class RegisteredSalonDetailContent extends StatelessWidget {
             ),
           ),
         ),
+      ],
+    );
+  }
+
+  Widget _buildLicenseSection(BuildContext context, RegisteredSalon salon) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+
+    if (salon.municipalLicenseStatus == 'none' ||
+        salon.municipalLicenseUrl == null) {
+      return Row(
+        children: [
+          Icon(Icons.info_outline,
+              size: 16, color: colors.onSurface.withValues(alpha: 0.4)),
+          const SizedBox(width: BCSpacing.sm),
+          Text(
+            'Sin licencia subida',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: colors.onSurface.withValues(alpha: 0.5),
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Thumbnail
+        ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: Image.network(
+            salon.municipalLicenseUrl!,
+            height: 120,
+            width: double.infinity,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => Container(
+              height: 120,
+              color: colors.surfaceContainerHighest,
+              child: const Center(child: Icon(Icons.broken_image)),
+            ),
+          ),
+        ),
+        const SizedBox(height: BCSpacing.sm),
+        _LicenseStatusBadge(status: salon.municipalLicenseStatus),
+        // Approve/reject buttons if pending
+        if (salon.municipalLicenseStatus == 'pending') ...[
+          const SizedBox(height: BCSpacing.sm),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _approvingLicense
+                      ? null
+                      : () async {
+                          setState(() => _approvingLicense = true);
+                          try {
+                            final userId = BCSupabase.currentUserId;
+                            await BCSupabase.client
+                                .from(BCTables.businesses)
+                                .update({
+                              'municipal_license_status': 'approved',
+                              'municipal_license_reviewed_at':
+                                  DateTime.now().toUtc().toIso8601String(),
+                              'municipal_license_reviewed_by': userId,
+                            }).eq('id', salon.id);
+                            ref.invalidate(registeredSalonsProvider);
+                          } catch (e) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Error: $e')),
+                              );
+                            }
+                          } finally {
+                            if (mounted) {
+                              setState(() => _approvingLicense = false);
+                            }
+                          }
+                        },
+                  icon: const Icon(Icons.check, size: 16),
+                  label: const Text('Aprobar'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.green,
+                  ),
+                ),
+              ),
+              const SizedBox(width: BCSpacing.sm),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _rejectingLicense
+                      ? null
+                      : () async {
+                          setState(() => _rejectingLicense = true);
+                          try {
+                            final userId = BCSupabase.currentUserId;
+                            await BCSupabase.client
+                                .from(BCTables.businesses)
+                                .update({
+                              'municipal_license_status': 'rejected',
+                              'municipal_license_reviewed_at':
+                                  DateTime.now().toUtc().toIso8601String(),
+                              'municipal_license_reviewed_by': userId,
+                            }).eq('id', salon.id);
+                            ref.invalidate(registeredSalonsProvider);
+                          } catch (e) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Error: $e')),
+                              );
+                            }
+                          } finally {
+                            if (mounted) {
+                              setState(() => _rejectingLicense = false);
+                            }
+                          }
+                        },
+                  icon: const Icon(Icons.close, size: 16),
+                  label: const Text('Rechazar'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.red,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ],
     );
   }
@@ -482,6 +657,52 @@ class _StripeStatusBadge extends StatelessWidget {
           fontSize: 11,
           fontWeight: FontWeight.w600,
         ),
+      ),
+    );
+  }
+}
+
+class _LicenseStatusBadge extends StatelessWidget {
+  const _LicenseStatusBadge({required this.status});
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    final (label, color) = switch (status) {
+      'pending' => ('Pendiente de revision', Colors.orange),
+      'approved' => ('Verificado', Colors.green),
+      'rejected' => ('Rechazada', Colors.red),
+      _ => ('Sin licencia', Colors.grey),
+    };
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(BCSpacing.radiusFull),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            status == 'approved'
+                ? Icons.verified
+                : status == 'rejected'
+                    ? Icons.cancel
+                    : Icons.schedule,
+            size: 12,
+            color: color,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }

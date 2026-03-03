@@ -55,6 +55,12 @@ android {
             )
         }
     }
+
+    packaging {
+        jniLibs {
+            pickFirsts += listOf("lib/arm64-v8a/libapp.so", "lib/armeabi-v7a/libapp.so", "lib/x86_64/libapp.so")
+        }
+    }
 }
 
 flutter {

@@ -1,8 +1,10 @@
 import 'dart:convert';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:beautycita_core/supabase.dart';
 import 'package:beautycita_core/theme.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show FileOptions;
 
 import '../../config/breakpoints.dart';
 import '../../providers/business_portal_provider.dart';
@@ -60,6 +62,11 @@ class _SettingsContentState extends ConsumerState<_SettingsContent> {
   static const _dayKeys = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
   final Map<String, _DayHours> _hours = {};
 
+  // License
+  String _licenseStatus = 'none';
+  String? _licenseUrl;
+  bool _uploadingLicense = false;
+
   bool _saving = false;
 
   @override
@@ -82,6 +89,9 @@ class _SettingsContentState extends ConsumerState<_SettingsContent> {
     _depositRequired = b['deposit_required'] as bool? ?? false;
     _depositPercent = (b['deposit_percent'] as num?)?.toDouble() ?? 0;
     _noShowPolicy = b['no_show_policy'] as String? ?? 'forfeit_deposit';
+
+    _licenseStatus = b['municipal_license_status'] as String? ?? 'none';
+    _licenseUrl = b['municipal_license_url'] as String?;
 
     _loadHours(b);
   }
@@ -233,6 +243,31 @@ class _SettingsContentState extends ConsumerState<_SettingsContent> {
                         const SizedBox(height: BCSpacing.md),
                         TextFormField(controller: _descCtrl, decoration: const InputDecoration(labelText: 'Descripcion'), maxLines: 3),
                       ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Municipal license
+                  _SectionCard(
+                    title: 'Licencia Municipal',
+                    icon: Icons.verified_outlined,
+                    child: _LicenseUploadContent(
+                      licenseStatus: _licenseStatus,
+                      licenseUrl: _licenseUrl,
+                      uploading: _uploadingLicense,
+                      businessId: widget.biz['id'] as String,
+                      onUploadStart: () =>
+                          setState(() => _uploadingLicense = true),
+                      onUploadEnd: (url) {
+                        setState(() {
+                          _uploadingLicense = false;
+                          _licenseUrl = url;
+                          _licenseStatus = 'pending';
+                        });
+                        ref.invalidate(currentBusinessProvider);
+                      },
+                      onUploadError: () =>
+                          setState(() => _uploadingLicense = false),
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -597,6 +632,175 @@ class _SectionCard extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           child,
+        ],
+      ),
+    );
+  }
+}
+
+// ── License Upload Content ──────────────────────────────────────────────────
+
+class _LicenseUploadContent extends StatelessWidget {
+  const _LicenseUploadContent({
+    required this.licenseStatus,
+    required this.licenseUrl,
+    required this.uploading,
+    required this.businessId,
+    required this.onUploadStart,
+    required this.onUploadEnd,
+    required this.onUploadError,
+  });
+
+  final String licenseStatus;
+  final String? licenseUrl;
+  final bool uploading;
+  final String businessId;
+  final VoidCallback onUploadStart;
+  final ValueChanged<String> onUploadEnd;
+  final VoidCallback onUploadError;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Opcional. Sube una foto de tu licencia municipal para obtener la insignia de negocio verificado.',
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: colors.onSurface.withValues(alpha: 0.6),
+          ),
+        ),
+        const SizedBox(height: BCSpacing.md),
+
+        // Show current license image if uploaded
+        if (licenseUrl != null) ...[
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.network(
+              licenseUrl!,
+              height: 160,
+              width: double.infinity,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Container(
+                height: 160,
+                color: colors.surfaceContainerHighest,
+                child: const Center(child: Icon(Icons.broken_image)),
+              ),
+            ),
+          ),
+          const SizedBox(height: BCSpacing.sm),
+          _LicenseStatusIndicator(status: licenseStatus),
+          const SizedBox(height: BCSpacing.md),
+        ],
+
+        // Upload button
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: uploading ? null : () => _pickAndUpload(context),
+            icon: uploading
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.upload_file, size: 18),
+            label: Text(licenseUrl != null
+                ? 'Reemplazar licencia'
+                : 'Subir licencia'),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _pickAndUpload(BuildContext context) async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+      withData: true,
+    );
+    if (result == null || result.files.isEmpty) return;
+
+    final file = result.files.first;
+    if (file.bytes == null) return;
+
+    onUploadStart();
+    try {
+      final ext = file.extension ?? 'jpg';
+      final path = '$businessId/license.$ext';
+
+      await BCSupabase.client.storage
+          .from('business-licenses')
+          .uploadBinary(
+            path,
+            file.bytes!,
+            fileOptions: const FileOptions(cacheControl: '3600', upsert: true),
+          );
+
+      final publicUrl = BCSupabase.client.storage
+          .from('business-licenses')
+          .getPublicUrl(path);
+
+      // Update DB
+      await BCSupabase.client.from(BCTables.businesses).update({
+        'municipal_license_url': publicUrl,
+        'municipal_license_status': 'pending',
+      }).eq('id', businessId);
+
+      onUploadEnd(publicUrl);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Licencia subida — pendiente de revision')),
+        );
+      }
+    } catch (e) {
+      onUploadError();
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error subiendo licencia: $e')),
+        );
+      }
+    }
+  }
+}
+
+class _LicenseStatusIndicator extends StatelessWidget {
+  const _LicenseStatusIndicator({required this.status});
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    final (label, color, icon) = switch (status) {
+      'pending' => ('Pendiente de revision', Colors.orange, Icons.schedule),
+      'approved' => ('Verificado', Colors.green, Icons.verified),
+      'rejected' => ('Rechazada', Colors.red, Icons.cancel),
+      _ => ('Sin licencia', Colors.grey, Icons.help_outline),
+    };
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(BCSpacing.radiusFull),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ],
       ),
     );

@@ -26,6 +26,7 @@ const _navItems = <_NavItem>[
   _NavItem(label: 'Dashboard', icon: Icons.home_outlined, route: WebRoutes.admin),
   _NavItem(label: 'Usuarios', icon: Icons.people_outlined, route: WebRoutes.adminUsers),
   _NavItem(label: 'Salones', icon: Icons.store_outlined, route: WebRoutes.adminSalons),
+  _NavItem(label: 'Solicitudes', icon: Icons.assignment_outlined, route: WebRoutes.adminApplications),
   _NavItem(label: 'Reservas', icon: Icons.calendar_today_outlined, route: WebRoutes.adminBookings),
   _NavItem(label: 'Servicios', icon: Icons.spa_outlined, route: WebRoutes.adminServices),
   _NavItem(label: 'Disputas', icon: Icons.gavel_outlined, route: WebRoutes.adminDisputes),

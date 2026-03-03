@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -257,7 +258,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     index: index,
                     variant: ref.watch(currentVariantProvider),
                     onTap: () => _showSubcategorySheet(context, category),
-                  );
+                  )
+                      .animate()
+                      .fadeIn(
+                        duration: 400.ms,
+                        delay: (80 * index).ms,
+                        curve: Curves.easeOut,
+                      )
+                      .slideY(
+                        begin: 0.15,
+                        end: 0,
+                        duration: 400.ms,
+                        delay: (80 * index).ms,
+                        curve: Curves.easeOutCubic,
+                      )
+                      .scale(
+                        begin: const Offset(0.92, 0.92),
+                        end: const Offset(1.0, 1.0),
+                        duration: 400.ms,
+                        delay: (80 * index).ms,
+                        curve: Curves.easeOutCubic,
+                      );
                 },
               ),
             ),
@@ -301,7 +322,9 @@ class _HeroColorPickerState extends ConsumerState<_HeroColorPicker> {
 
   Timer? _longPressTimer;
   int? _candidatePointer;
-  static const _longPressDuration = Duration(milliseconds: 400);
+  Offset? _candidateStart;
+  static const _longPressDuration = Duration(seconds: 4);
+  static const _moveThreshold = 10.0;
 
   @override
   void dispose() {
@@ -341,24 +364,46 @@ class _HeroColorPickerState extends ConsumerState<_HeroColorPicker> {
     });
   }
 
+  // Default gradient pair: pink 330° (#FF3399) → blue-violet 270° (#9933FF)
+  static const _hueOffset = -60.0; // hue2 = hue1 + offset
+
+  /// Build a gradient color pair from a hue + saturation.
+  /// Maintains the 60° offset between the two colors.
+  static (Color, Color) _gradientPair(double hue, double sat) {
+    final h1 = hue % 360;
+    var h2 = (hue + _hueOffset) % 360;
+    if (h2 < 0) h2 += 360;
+    final c1 = HSLColor.fromAHSL(1.0, h1, sat.clamp(0.5, 1.0), 0.45).toColor();
+    final c2 = HSLColor.fromAHSL(1.0, h2, sat.clamp(0.4, 0.9), 0.40).toColor();
+    return (c1, c2);
+  }
+
   @override
   Widget build(BuildContext context) {
     final palette = Theme.of(context).colorScheme;
-    // During drag, compute hero color from live providers (no ThemeData).
+    // During drag, compute gradient pair from live providers (no ThemeData).
     final liveHue = ref.watch(liveHueProvider);
     final liveSat = ref.watch(liveSatProvider);
 
-    Color heroColor;
+    Color grad1, grad2;
     if (liveHue != null && liveSat != null) {
-      heroColor = HSVColor.fromAHSV(1.0, liveHue, liveSat.clamp(0.1, 1.0), 0.5).toColor();
+      (grad1, grad2) = _gradientPair(liveHue, liveSat);
     } else {
-      heroColor = palette.primary;
+      // At rest: use saved custom hue or fall back to default pink/blue
+      final notifier = ref.read(themeProvider.notifier);
+      if (notifier.hasCustomColor) {
+        (grad1, grad2) = _gradientPair(notifier.customHue!, notifier.customSat!);
+      } else {
+        grad1 = const Color(0xFFFF3399);
+        grad2 = const Color(0xFF9933FF);
+      }
     }
 
     return Listener(
       onPointerDown: (e) {
         if (!_active) {
           _candidatePointer = e.pointer;
+          _candidateStart = e.localPosition;
           _longPressTimer?.cancel();
           _longPressTimer = Timer(_longPressDuration, () {
             if (_candidatePointer == e.pointer) {
@@ -380,6 +425,15 @@ class _HeroColorPickerState extends ConsumerState<_HeroColorPicker> {
         }
       },
       onPointerMove: (e) {
+        // Cancel activation if finger moves during the 4s hold
+        if (!_active && e.pointer == _candidatePointer && _candidateStart != null) {
+          if ((e.localPosition - _candidateStart!).distance > _moveThreshold) {
+            _longPressTimer?.cancel();
+            _candidatePointer = null;
+            _candidateStart = null;
+          }
+          return;
+        }
         if (!_active) return;
         if (e.pointer == _huePointer) _updateHue(e.localPosition);
         else if (e.pointer == _satPointer) _updateSat(e.localPosition);
@@ -388,6 +442,7 @@ class _HeroColorPickerState extends ConsumerState<_HeroColorPicker> {
         if (!_active && e.pointer == _candidatePointer) {
           _longPressTimer?.cancel();
           _candidatePointer = null;
+          _candidateStart = null;
           return;
         }
         if (e.pointer == _satPointer) {
@@ -400,6 +455,7 @@ class _HeroColorPickerState extends ConsumerState<_HeroColorPicker> {
         if (e.pointer == _candidatePointer) {
           _longPressTimer?.cancel();
           _candidatePointer = null;
+          _candidateStart = null;
         }
         if (e.pointer == _huePointer) _finish();
         else if (e.pointer == _satPointer) _satPointer = null;
@@ -416,12 +472,13 @@ class _HeroColorPickerState extends ConsumerState<_HeroColorPicker> {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    HSLColor.fromColor(heroColor).withLightness(0.35).toColor().withValues(alpha: 0.7),
-                    heroColor.withValues(alpha: 0.55),
-                    HSLColor.fromColor(heroColor).withLightness(0.20).toColor().withValues(alpha: 0.7),
+                    grad1.withValues(alpha: 0.7),
+                    Color.lerp(grad1, grad2, 0.3)!.withValues(alpha: 0.7),
+                    grad2.withValues(alpha: 0.7),
                   ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+                  stops: const [0.0, 0.6, 1.0],
+                  begin: const Alignment(-1.0, -0.15),
+                  end: const Alignment(1.0, 0.15),
                 ),
               ),
             ),
@@ -530,10 +587,15 @@ class _CategoryCardState extends ConsumerState<_CategoryCard>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 120),
+      duration: const Duration(milliseconds: 100),
+      reverseDuration: const Duration(milliseconds: 300),
     );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.93).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Curves.easeInCubic,
+        reverseCurve: Curves.elasticOut,
+      ),
     );
   }
 
@@ -588,13 +650,16 @@ class _CategoryCardState extends ConsumerState<_CategoryCard>
         onTapUp: (_) {
           _controller.reverse();
           setState(() => _isPressed = false);
+          HapticFeedback.lightImpact();
           widget.onTap();
         },
         onTapCancel: () {
           _controller.reverse();
           setState(() => _isPressed = false);
         },
-        child: Container(
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),

@@ -788,14 +788,13 @@ class _NoResultsWithNearbySalonsState
   @override
   Widget build(BuildContext context) {
     final loc = widget.userLocation;
-    // Build service query from serviceType (machine key) for keyword matching
-    final serviceQuery = widget.serviceType ?? widget.serviceName;
+    // No service filtering — these are salons to invite, show all nearby
     final salonsAsync = loc != null
         ? ref.watch(nearbySalonsProvider((
             lat: loc.lat,
             lng: loc.lng,
-            limit: 10,
-            serviceQuery: serviceQuery,
+            limit: 20,
+            serviceQuery: null,
           )))
         : null;
 

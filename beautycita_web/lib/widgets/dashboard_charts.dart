@@ -16,11 +16,14 @@ class BookingsBarChart extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final isMobile = screenWidth < 800;
     final maxVal = data.counts.reduce(math.max).toDouble();
     final maxY = maxVal > 0 ? (maxVal * 1.3).ceilToDouble() : 10.0;
+    final barWidth = isMobile ? 16.0 : 28.0;
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(isMobile ? 14 : 20),
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(12),
@@ -35,9 +38,9 @@ class BookingsBarChart extends StatelessWidget {
               fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           SizedBox(
-            height: 200,
+            height: isMobile ? 160 : 200,
             child: BarChart(
               BarChartData(
                 maxY: maxY,
@@ -71,7 +74,7 @@ class BookingsBarChart extends StatelessWidget {
                   ),
                   leftTitles: AxisTitles(
                     sideTitles: SideTitles(
-                      showTitles: true,
+                      showTitles: !isMobile,
                       reservedSize: 32,
                       getTitlesWidget: (value, meta) {
                         if (value == meta.max || value == meta.min) {
@@ -95,11 +98,12 @@ class BookingsBarChart extends StatelessWidget {
                           return const SizedBox.shrink();
                         }
                         return Padding(
-                          padding: const EdgeInsets.only(top: 8),
+                          padding: const EdgeInsets.only(top: 6),
                           child: Text(
-                            data.labels[idx],
+                            isMobile ? data.labels[idx].substring(0, math.min(2, data.labels[idx].length)) : data.labels[idx],
                             style: theme.textTheme.labelSmall?.copyWith(
                               color: colors.onSurface.withValues(alpha: 0.6),
+                              fontSize: isMobile ? 10 : null,
                             ),
                           ),
                         );
@@ -127,7 +131,7 @@ class BookingsBarChart extends StatelessWidget {
                         color: isToday
                             ? colors.primary
                             : colors.primary.withValues(alpha: 0.4),
-                        width: 28,
+                        width: barWidth,
                         borderRadius: const BorderRadius.only(
                           topLeft: Radius.circular(4),
                           topRight: Radius.circular(4),
@@ -156,11 +160,13 @@ class RevenueLineChart extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final isMobile = screenWidth < 800;
     final maxVal = data.values.reduce(math.max);
     final maxY = maxVal > 0 ? (maxVal * 1.2).ceilToDouble() : 1000.0;
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(isMobile ? 14 : 20),
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(12),
@@ -175,9 +181,9 @@ class RevenueLineChart extends StatelessWidget {
               fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           SizedBox(
-            height: 200,
+            height: isMobile ? 160 : 200,
             child: LineChart(
               LineChartData(
                 maxY: maxY,
@@ -217,7 +223,7 @@ class RevenueLineChart extends StatelessWidget {
                   ),
                   leftTitles: AxisTitles(
                     sideTitles: SideTitles(
-                      showTitles: true,
+                      showTitles: !isMobile,
                       reservedSize: 48,
                       getTitlesWidget: (value, meta) {
                         if (value == meta.max || value == meta.min) {
@@ -238,18 +244,19 @@ class RevenueLineChart extends StatelessWidget {
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
-                      interval: 7,
+                      interval: isMobile ? 10 : 7,
                       getTitlesWidget: (value, meta) {
                         final idx = value.toInt();
                         if (idx < 0 || idx >= data.labels.length) {
                           return const SizedBox.shrink();
                         }
                         return Padding(
-                          padding: const EdgeInsets.only(top: 8),
+                          padding: const EdgeInsets.only(top: 6),
                           child: Text(
                             data.labels[idx],
                             style: theme.textTheme.labelSmall?.copyWith(
                               color: colors.onSurface.withValues(alpha: 0.6),
+                              fontSize: isMobile ? 10 : null,
                             ),
                           ),
                         );
