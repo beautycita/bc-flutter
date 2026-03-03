@@ -19,6 +19,7 @@ import '../../data/categories.dart';
 import '../../providers/booking_flow_provider.dart';
 import '../../providers/curate_provider.dart';
 import '../../providers/payment_provider.dart';
+import '../../services/geocoding_web.dart';
 import '../../services/geolocation_web.dart';
 import '../../services/stripe_web.dart';
 
@@ -1040,9 +1041,22 @@ class _ResultsStepState extends ConsumerState<_ResultsStep> {
     final theme = Theme.of(context);
     final flowState = ref.watch(bookingFlowProvider);
 
-    // ── Location missing ──
+    // ── Location missing — show city input form instead of dead end ──
     if (flowState.error == 'location_missing') {
-      return _buildLocationMissing(theme);
+      return _LocationInputForm(
+        onLocationSelected: (lat, lng, name) {
+          ref
+              .read(bookingFlowProvider.notifier)
+              .setLocationWithName(lat, lng, name);
+          ref.read(bookingFlowProvider.notifier).setError(null);
+          ref.read(bookingFlowProvider.notifier).setLoading(true);
+          setState(() => _callTriggered = false);
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _triggerEngineCallIfNeeded();
+          });
+        },
+        onRetryGps: () => _retryWithGeolocation(),
+      );
     }
 
     // ── Service temporarily unavailable (edge function 404) ──
@@ -1075,6 +1089,14 @@ class _ResultsStepState extends ConsumerState<_ResultsStep> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Location banner when using manual city
+        if (flowState.locationName != null)
+          _LocationBanner(
+            cityName: flowState.locationName!,
+            onCambiar: () {
+              ref.read(bookingFlowProvider.notifier).setError('location_missing');
+            },
+          ),
         Text(
           'Mejores opciones para ti',
           style: theme.textTheme.headlineSmall?.copyWith(
@@ -1107,37 +1129,6 @@ class _ResultsStepState extends ConsumerState<_ResultsStep> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildLocationMissing(ThemeData theme) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.only(top: BCSpacing.xxl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.location_off,
-                size: BCSpacing.iconXl,
-                color: theme.colorScheme.error.withValues(alpha: 0.7)),
-            const SizedBox(height: BCSpacing.md),
-            Text(
-              'Necesitamos tu ubicacion para encontrar salones cercanos',
-              style: theme.textTheme.titleMedium,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: BCSpacing.lg),
-            SizedBox(
-              height: BCSpacing.minTouchHeight,
-              child: FilledButton.icon(
-                onPressed: _retry,
-                icon: const Icon(Icons.my_location),
-                label: const Text('Reintentar'),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -1245,6 +1236,258 @@ class _ResultsStepState extends ConsumerState<_ResultsStep> {
             child: _SkeletonCard(),
           ),
       ],
+    );
+  }
+}
+
+// ── Location input form (replaces dead-end when GPS denied) ──────────────────
+
+class _LocationInputForm extends StatefulWidget {
+  const _LocationInputForm({
+    required this.onLocationSelected,
+    required this.onRetryGps,
+  });
+
+  final void Function(double lat, double lng, String name) onLocationSelected;
+  final VoidCallback onRetryGps;
+
+  @override
+  State<_LocationInputForm> createState() => _LocationInputFormState();
+}
+
+class _LocationInputFormState extends State<_LocationInputForm> {
+  final _controller = TextEditingController();
+  Timer? _debounce;
+  List<GeoPlace> _suggestions = [];
+  bool _searching = false;
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onQueryChanged(String query) {
+    _debounce?.cancel();
+    if (query.trim().length < 2) {
+      setState(() {
+        _suggestions = [];
+        _searching = false;
+      });
+      return;
+    }
+    setState(() => _searching = true);
+    _debounce = Timer(const Duration(milliseconds: 500), () async {
+      final results = await geocodeSuggestions(query);
+      if (!mounted) return;
+      setState(() {
+        _suggestions = results;
+        _searching = false;
+      });
+    });
+  }
+
+  /// Shorten "Guadalajara, Jalisco, Mexico" style names to
+  /// keep them readable — take the first 3 comma-separated parts.
+  String _shortenName(String displayName) {
+    final parts = displayName.split(',').map((s) => s.trim()).toList();
+    if (parts.length <= 3) return displayName;
+    return parts.take(3).join(', ');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 460),
+        child: Padding(
+          padding: const EdgeInsets.only(top: BCSpacing.xl),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Header
+              Row(
+                children: [
+                  Icon(Icons.location_on_outlined,
+                      size: 28, color: theme.colorScheme.primary),
+                  const SizedBox(width: BCSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      '\u00bfDonde buscas tu servicio?',
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: BCSpacing.lg),
+
+              // Text field
+              TextField(
+                controller: _controller,
+                onChanged: _onQueryChanged,
+                autofocus: true,
+                decoration: InputDecoration(
+                  hintText: 'Ciudad, Estado (ej: Guadalajara, JAL)',
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: _searching
+                      ? const Padding(
+                          padding: EdgeInsets.all(12),
+                          child: SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        )
+                      : _controller.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: () {
+                                _controller.clear();
+                                _onQueryChanged('');
+                              },
+                            )
+                          : null,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+              const SizedBox(height: BCSpacing.sm),
+
+              // Suggestions list
+              if (_suggestions.isNotEmpty)
+                Container(
+                  constraints: const BoxConstraints(maxHeight: 240),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color:
+                          theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+                    ),
+                  ),
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    padding: EdgeInsets.zero,
+                    itemCount: _suggestions.length,
+                    separatorBuilder: (_, __) => Divider(
+                      height: 1,
+                      color:
+                          theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+                    ),
+                    itemBuilder: (context, index) {
+                      final place = _suggestions[index];
+                      final shortName = _shortenName(place.displayName);
+                      return ListTile(
+                        leading: Icon(Icons.place,
+                            color: theme.colorScheme.primary, size: 20),
+                        title: Text(
+                          shortName,
+                          style: theme.textTheme.bodyMedium,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        dense: true,
+                        onTap: () => widget.onLocationSelected(
+                          place.lat,
+                          place.lng,
+                          shortName,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+
+              // No results hint
+              if (!_searching &&
+                  _suggestions.isEmpty &&
+                  _controller.text.trim().length >= 2)
+                Padding(
+                  padding: const EdgeInsets.only(top: BCSpacing.sm),
+                  child: Text(
+                    'No se encontraron resultados. Intenta con otro nombre.',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+
+              const SizedBox(height: BCSpacing.lg),
+
+              // GPS retry button (secondary)
+              Center(
+                child: TextButton.icon(
+                  onPressed: widget.onRetryGps,
+                  icon: const Icon(Icons.my_location, size: 18),
+                  label: const Text('Usar mi ubicacion'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Location banner (shown when using manual city) ───────────────────────────
+
+class _LocationBanner extends StatelessWidget {
+  const _LocationBanner({required this.cityName, required this.onCambiar});
+
+  final String cityName;
+  final VoidCallback onCambiar;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      margin: const EdgeInsets.only(bottom: BCSpacing.md),
+      padding: const EdgeInsets.symmetric(
+        horizontal: BCSpacing.md,
+        vertical: BCSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.location_on,
+              size: 16, color: theme.colorScheme.primary),
+          const SizedBox(width: BCSpacing.sm),
+          Expanded(
+            child: Text(
+              'Buscando cerca de: $cityName',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: onCambiar,
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: BCSpacing.sm),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: Text(
+              'Cambiar',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.primary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1724,11 +1967,29 @@ class _DiscoveredSalonsListState extends ConsumerState<_DiscoveredSalonsList> {
     });
 
     try {
-      final response = await BCSupabase.client
+      final flowState = ref.read(bookingFlowProvider);
+      final lat = flowState.userLat;
+      final lng = flowState.userLng;
+
+      // ~50km bounding box (0.45 degrees ≈ 50km)
+      const delta = 0.45;
+
+      var query = BCSupabase.client
           .from('discovered_salons')
           .select(
-              'id, business_name, location_address, phone, whatsapp_verified, categories, feature_image_url, rating_average, rating_count')
-          .not('phone', 'is', null)
+              'id, business_name, location_address, phone, whatsapp_verified, categories, feature_image_url, rating_average, rating_count, latitude, longitude')
+          .not('phone', 'is', null);
+
+      // Filter by proximity if we have user location
+      if (lat != null && lng != null) {
+        query = query
+            .gte('latitude', lat - delta)
+            .lte('latitude', lat + delta)
+            .gte('longitude', lng - delta)
+            .lte('longitude', lng + delta);
+      }
+
+      final response = await query
           .order('rating_count', ascending: false)
           .limit(25);
 
