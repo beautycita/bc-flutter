@@ -196,7 +196,7 @@ class _BeautyCitaAppState extends ConsumerState<BeautyCitaApp> {
       case 'stripe-complete':
         debugPrint('[DeepLink] Stripe onboarding complete');
         // Navigate to business shell, Pagos tab
-        ref.read(businessTabProvider.notifier).state = 6;
+        ref.read(businessTabProvider.notifier).state = 7;
         Navigator.of(context).pushNamedAndRemoveUntil(
           AppRoutes.business,
           (route) => false,

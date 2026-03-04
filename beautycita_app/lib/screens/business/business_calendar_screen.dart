@@ -25,7 +25,6 @@ class _BusinessCalendarScreenState
     extends ConsumerState<BusinessCalendarScreen> {
   final _timelineKey = GlobalKey<_HorizontalTimelineState>();
   late DateTime _selectedDate;
-  bool _weekView = false;
   String? _staffFilter; // null = all staff
 
   @override
@@ -35,16 +34,17 @@ class _BusinessCalendarScreenState
   }
 
   DateTimeRange get _range {
-    if (_weekView) {
-      final start = _selectedDate.subtract(
-          Duration(days: _selectedDate.weekday - 1));
-      final end = DateTime(start.year, start.month, start.day + 6, 23, 59, 59);
-      return DateTimeRange(start: start, end: end);
-    }
     final start = DateTime(_selectedDate.year, _selectedDate.month,
         _selectedDate.day);
     final end = DateTime(_selectedDate.year, _selectedDate.month,
         _selectedDate.day, 23, 59, 59);
+    return DateTimeRange(start: start, end: end);
+  }
+
+  DateTimeRange get _weekRange {
+    final start = _selectedDate.subtract(
+        Duration(days: _selectedDate.weekday - 1));
+    final end = DateTime(start.year, start.month, start.day + 6, 23, 59, 59);
     return DateTimeRange(start: start, end: end);
   }
 
@@ -58,6 +58,11 @@ class _BusinessCalendarScreenState
     final blocksAsync = ref.watch(businessScheduleBlocksProvider(
       (start: range.start.toUtc().toIso8601String(), end: range.end.toUtc().toIso8601String()),
     ));
+    // Week data for the compact strip
+    final weekRange = _weekRange;
+    final weekApptsAsync = ref.watch(businessAppointmentsProvider(
+      (start: weekRange.start.toUtc().toIso8601String(), end: weekRange.end.toUtc().toIso8601String()),
+    ));
     final staffAsync = ref.watch(businessStaffProvider);
     final bizAsync = ref.watch(currentBusinessProvider);
     final ownerId = bizAsync.valueOrNull?['owner_id'] as String?;
@@ -65,8 +70,7 @@ class _BusinessCalendarScreenState
     return Column(
       children: [
         // Summary card
-        if (!_weekView)
-          _SummaryCard(
+        _SummaryCard(
             date: _selectedDate,
             apptsAsync: apptsAsync,
             staffAsync: staffAsync,
@@ -81,14 +85,11 @@ class _BusinessCalendarScreenState
         // Navigation bar
         _DateNavBar(
           selectedDate: _selectedDate,
-          weekView: _weekView,
-          range: range,
           onPrev: () => setState(() => _selectedDate = _selectedDate
-              .subtract(Duration(days: _weekView ? 7 : 1))),
+              .subtract(const Duration(days: 1))),
           onNext: () => setState(() => _selectedDate = _selectedDate
-              .add(Duration(days: _weekView ? 7 : 1))),
+              .add(const Duration(days: 1))),
           onPickDate: _pickDate,
-          onToggleView: (v) => setState(() => _weekView = v),
         ),
 
         // Staff filter chips
@@ -132,18 +133,12 @@ class _BusinessCalendarScreenState
 
         const SizedBox(height: 4),
 
-        // Timeline body
+        // Timeline body + compact week strip
         Expanded(
-          child: _weekView
-              ? _WeekView(
-                  range: range,
-                  apptsAsync: apptsAsync,
-                  onDayTap: (d) => setState(() {
-                    _selectedDate = d;
-                    _weekView = false;
-                  }),
-                )
-              : _HorizontalTimeline(
+          child: Column(
+            children: [
+              Expanded(
+                child: _HorizontalTimeline(
                   key: _timelineKey,
                   date: _selectedDate,
                   apptsAsync: apptsAsync,
@@ -157,6 +152,16 @@ class _BusinessCalendarScreenState
                   onLongPressLane: (staffId, time) =>
                       _showQuickNoteSheet(context, staffId, time),
                 ),
+              ),
+              // Compact week strip at bottom
+              _CompactWeekStrip(
+                weekRange: weekRange,
+                selectedDate: _selectedDate,
+                weekApptsAsync: weekApptsAsync,
+                onDayTap: (d) => setState(() => _selectedDate = d),
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -367,21 +372,15 @@ class _BusinessCalendarScreenState
 
 class _DateNavBar extends StatelessWidget {
   final DateTime selectedDate;
-  final bool weekView;
-  final DateTimeRange range;
   final VoidCallback onPrev;
   final VoidCallback onNext;
   final VoidCallback onPickDate;
-  final ValueChanged<bool> onToggleView;
 
   const _DateNavBar({
     required this.selectedDate,
-    required this.weekView,
-    required this.range,
     required this.onPrev,
     required this.onNext,
     required this.onPickDate,
-    required this.onToggleView,
   });
 
   @override
@@ -402,9 +401,7 @@ class _DateNavBar extends StatelessWidget {
             child: GestureDetector(
               onTap: onPickDate,
               child: Text(
-                weekView
-                    ? '${_fmtShort(range.start)} - ${_fmtShort(range.end)}'
-                    : _fmtFull(selectedDate),
+                _fmtFull(selectedDate),
                 textAlign: TextAlign.center,
                 style: GoogleFonts.poppins(
                   fontSize: 15,
@@ -417,17 +414,6 @@ class _DateNavBar extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.chevron_right_rounded),
             onPressed: onNext,
-          ),
-          SegmentedButton<bool>(
-            segments: const [
-              ButtonSegment(value: false, label: Text('Dia')),
-              ButtonSegment(value: true, label: Text('Sem')),
-            ],
-            selected: {weekView},
-            onSelectionChanged: (v) => onToggleView(v.first),
-            style: SegmentedButton.styleFrom(
-              textStyle: GoogleFonts.nunito(fontSize: 12),
-            ),
           ),
         ],
       ),
@@ -442,8 +428,6 @@ class _DateNavBar extends StatelessWidget {
 
   String _fmtFull(DateTime d) =>
       '${_days[d.weekday - 1]}, ${d.day} ${_months[d.month - 1]} ${d.year}';
-
-  String _fmtShort(DateTime d) => '${d.day}/${d.month}';
 }
 
 // ---------------------------------------------------------------------------
@@ -1634,7 +1618,141 @@ class _ActionTile extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Week overview
+// Compact week strip (bottom of day view)
+// ---------------------------------------------------------------------------
+
+class _CompactWeekStrip extends StatelessWidget {
+  final DateTimeRange weekRange;
+  final DateTime selectedDate;
+  final AsyncValue<List<Map<String, dynamic>>> weekApptsAsync;
+  final ValueChanged<DateTime> onDayTap;
+
+  const _CompactWeekStrip({
+    required this.weekRange,
+    required this.selectedDate,
+    required this.weekApptsAsync,
+    required this.onDayTap,
+  });
+
+  static const _dayNames = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final appts = weekApptsAsync.valueOrNull ?? [];
+    final now = DateTime.now();
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          top: BorderSide(
+            color: colors.onSurface.withValues(alpha: 0.08),
+          ),
+        ),
+      ),
+      child: Row(
+        children: List.generate(7, (i) {
+          final day = weekRange.start.add(Duration(days: i));
+          final dayCount = appts.where((a) {
+            final dt = DateTime.tryParse(a['starts_at'] as String? ?? '');
+            return dt != null &&
+                dt.year == day.year &&
+                dt.month == day.month &&
+                dt.day == day.day;
+          }).length;
+
+          final isToday = day.year == now.year &&
+              day.month == now.month &&
+              day.day == now.day;
+          final isSelected = day.year == selectedDate.year &&
+              day.month == selectedDate.month &&
+              day.day == selectedDate.day;
+
+          return Expanded(
+            child: GestureDetector(
+              onTap: () => onDayTap(day),
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 2),
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? colors.primary.withValues(alpha: 0.12)
+                      : isToday
+                          ? colors.primary.withValues(alpha: 0.04)
+                          : Colors.transparent,
+                  borderRadius: BorderRadius.circular(8),
+                  border: isSelected
+                      ? Border.all(color: colors.primary, width: 1.5)
+                      : isToday
+                          ? Border.all(
+                              color: colors.primary.withValues(alpha: 0.3))
+                          : null,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _dayNames[i],
+                      style: GoogleFonts.poppins(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: isSelected
+                            ? colors.primary
+                            : colors.onSurface.withValues(alpha: 0.4),
+                      ),
+                    ),
+                    const SizedBox(height: 1),
+                    Text(
+                      '${day.day}',
+                      style: GoogleFonts.poppins(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: isSelected
+                            ? colors.primary
+                            : isToday
+                                ? colors.primary
+                                : colors.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    if (dayCount > 0)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 5, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? colors.primary
+                              : colors.primary.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          '$dayCount',
+                          style: GoogleFonts.poppins(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: isSelected
+                                ? Colors.white
+                                : colors.primary,
+                          ),
+                        ),
+                      )
+                    else
+                      const SizedBox(height: 14),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Week overview (legacy, kept for reference)
 // ---------------------------------------------------------------------------
 
 class _WeekView extends StatelessWidget {
