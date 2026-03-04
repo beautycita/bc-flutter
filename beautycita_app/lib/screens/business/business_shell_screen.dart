@@ -12,6 +12,7 @@ import 'business_disputes_screen.dart';
 import 'business_qr_screen.dart';
 import 'business_payments_screen.dart';
 import 'business_settings_screen.dart';
+import 'business_staff_analytics_screen.dart';
 
 final businessTabProvider = StateProvider<int>((ref) => 0);
 
@@ -21,6 +22,7 @@ class BusinessShellScreen extends ConsumerWidget {
   static const _tabs = <_BizTab>[
     _BizTab(icon: Icons.dashboard_rounded, label: 'Inicio'),
     _BizTab(icon: Icons.calendar_month_rounded, label: 'Calendario'),
+    _BizTab(icon: Icons.analytics_rounded, label: 'Rendimiento'),
     _BizTab(icon: Icons.design_services_rounded, label: 'Servicios'),
     _BizTab(icon: Icons.people_rounded, label: 'Equipo'),
     _BizTab(icon: Icons.gavel_rounded, label: 'Disputas'),
@@ -178,6 +180,7 @@ class _BusinessContent extends ConsumerWidget {
         children: [
           _DashboardTab(),
           const BusinessCalendarScreen(),
+          const BusinessStaffAnalyticsScreen(),
           const BusinessServicesScreen(),
           const BusinessStaffScreen(),
           const BusinessDisputesScreen(),

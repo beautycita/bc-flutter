@@ -354,6 +354,195 @@ final businessReviewsProvider =
 });
 
 // ---------------------------------------------------------------------------
+// Staff productivity analytics
+// ---------------------------------------------------------------------------
+
+/// Fetches staff analytics for a given period.
+/// period: 'week' or 'month'
+final staffProductivityProvider = FutureProvider.family<
+    StaffProductivityData, String>(
+  (ref, period) async {
+    final biz = await ref.watch(currentBusinessProvider.future);
+    if (biz == null) return StaffProductivityData.empty();
+
+    final bizId = biz['id'] as String;
+    final ownerId = biz['owner_id'] as String?;
+    final client = SupabaseClientService.client;
+    final now = DateTime.now();
+
+    final DateTime periodStart;
+    if (period == 'week') {
+      periodStart = now.subtract(Duration(days: now.weekday - 1));
+    } else {
+      periodStart = DateTime(now.year, now.month, 1);
+    }
+    final startStr = DateTime(periodStart.year, periodStart.month,
+            periodStart.day)
+        .toUtc()
+        .toIso8601String();
+    final endStr = now.toUtc().toIso8601String();
+
+    // Fetch staff, completed appointments, and reviews in parallel
+    final staffFuture = client
+        .from('staff')
+        .select()
+        .eq('business_id', bizId)
+        .order('sort_order');
+    final apptsFuture = client
+        .from('appointments')
+        .select('staff_id, price, starts_at, ends_at, status')
+        .eq('business_id', bizId)
+        .gte('starts_at', startStr)
+        .lte('starts_at', endStr);
+    final reviewsFuture = client
+        .from('reviews')
+        .select('staff_id, rating')
+        .eq('business_id', bizId)
+        .gte('created_at', startStr)
+        .lte('created_at', endStr);
+
+    final results = await Future.wait([staffFuture, apptsFuture, reviewsFuture]);
+    final staffRows =
+        (results[0] as List).cast<Map<String, dynamic>>();
+    final apptRows =
+        (results[1] as List).cast<Map<String, dynamic>>();
+    final reviewRows =
+        (results[2] as List).cast<Map<String, dynamic>>();
+
+    final staffEntries = <StaffProductivityEntry>[];
+    for (final s in staffRows) {
+      final sid = s['id'] as String;
+      final staffAppts = apptRows.where((a) => a['staff_id'] == sid);
+      final completed =
+          staffAppts.where((a) => a['status'] == 'completed').toList();
+      final noShows =
+          staffAppts.where((a) => a['status'] == 'no_show').length;
+      final totalAppts = staffAppts.length;
+
+      double revenue = 0;
+      double hoursWorked = 0;
+      final Map<int, double> dailyHours = {}; // weekday -> hours
+
+      for (final a in completed) {
+        revenue += (a['price'] as num?)?.toDouble() ?? 0;
+        final start = DateTime.tryParse(a['starts_at'] as String? ?? '');
+        final end = DateTime.tryParse(a['ends_at'] as String? ?? '');
+        if (start != null && end != null) {
+          final hrs = end.difference(start).inMinutes / 60.0;
+          hoursWorked += hrs;
+          dailyHours[start.weekday] =
+              (dailyHours[start.weekday] ?? 0) + hrs;
+        }
+      }
+
+      final staffReviews = reviewRows.where((r) => r['staff_id'] == sid);
+      final reviewCount = staffReviews.length;
+      double avgRating = 0;
+      if (reviewCount > 0) {
+        avgRating = staffReviews
+                .map((r) => (r['rating'] as num?)?.toDouble() ?? 0)
+                .reduce((a, b) => a + b) /
+            reviewCount;
+      }
+
+      staffEntries.add(StaffProductivityEntry(
+        staffId: sid,
+        name:
+            '${s['first_name'] ?? ''} ${s['last_name'] ?? ''}'.trim(),
+        firstName: s['first_name'] as String? ?? '',
+        totalAppointments: totalAppts,
+        completedAppointments: completed.length,
+        noShows: noShows,
+        revenue: revenue,
+        hoursWorked: hoursWorked,
+        dailyHours: dailyHours,
+        reviewCount: reviewCount,
+        avgRating: avgRating,
+        allTimeRating:
+            (s['average_rating'] as num?)?.toDouble() ?? 0,
+        allTimeReviews: s['total_reviews'] as int? ?? 0,
+      ));
+    }
+
+    return StaffProductivityData(
+      period: period,
+      entries: staffEntries,
+      ownerId: ownerId,
+    );
+  },
+);
+
+class StaffProductivityEntry {
+  final String staffId;
+  final String name;
+  final String firstName;
+  final int totalAppointments;
+  final int completedAppointments;
+  final int noShows;
+  final double revenue;
+  final double hoursWorked;
+  final Map<int, double> dailyHours; // weekday (1=Mon) -> hours
+  final int reviewCount;
+  final double avgRating;
+  final double allTimeRating;
+  final int allTimeReviews;
+
+  const StaffProductivityEntry({
+    required this.staffId,
+    required this.name,
+    required this.firstName,
+    required this.totalAppointments,
+    required this.completedAppointments,
+    required this.noShows,
+    required this.revenue,
+    required this.hoursWorked,
+    required this.dailyHours,
+    required this.reviewCount,
+    required this.avgRating,
+    required this.allTimeRating,
+    required this.allTimeReviews,
+  });
+}
+
+class StaffProductivityData {
+  final String period;
+  final List<StaffProductivityEntry> entries;
+  final String? ownerId;
+
+  const StaffProductivityData({
+    required this.period,
+    required this.entries,
+    this.ownerId,
+  });
+
+  factory StaffProductivityData.empty() =>
+      const StaffProductivityData(period: 'week', entries: []);
+
+  StaffProductivityEntry? get topEarner {
+    if (entries.isEmpty) return null;
+    return entries.reduce((a, b) => a.revenue > b.revenue ? a : b);
+  }
+
+  StaffProductivityEntry? get mostReviewed {
+    if (entries.isEmpty) return null;
+    return entries.reduce(
+        (a, b) => a.reviewCount > b.reviewCount ? a : b);
+  }
+
+  StaffProductivityEntry? get mostBooked {
+    if (entries.isEmpty) return null;
+    return entries.reduce(
+        (a, b) => a.totalAppointments > b.totalAppointments ? a : b);
+  }
+
+  double get totalRevenue =>
+      entries.fold(0, (sum, e) => sum + e.revenue);
+
+  double get totalHours =>
+      entries.fold(0, (sum, e) => sum + e.hoursWorked);
+}
+
+// ---------------------------------------------------------------------------
 // Models
 // ---------------------------------------------------------------------------
 
