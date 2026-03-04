@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../config/constants.dart';
 import '../config/palettes.dart';
+import '../providers/profile_provider.dart';
+import '../providers/security_provider.dart';
 import '../services/supabase_client.dart';
+import '../services/toast_service.dart';
 import 'invite_salon_screen.dart' show DiscoveredSalon;
 
 /// WhatsApp chat background color
@@ -15,16 +19,16 @@ String _sanitize(String text) {
   return text.replaceAll(RegExp(r'[^\u0000-\u024F\u1E00-\u1EFF\u2000-\u206F\u2070-\u209F\u20A0-\u20CF\u2100-\u214F\s]'), '').trim();
 }
 
-class DiscoveredSalonDetailScreen extends StatefulWidget {
+class DiscoveredSalonDetailScreen extends ConsumerStatefulWidget {
   final DiscoveredSalon salon;
 
   const DiscoveredSalonDetailScreen({super.key, required this.salon});
 
   @override
-  State<DiscoveredSalonDetailScreen> createState() => _DiscoveredSalonDetailScreenState();
+  ConsumerState<DiscoveredSalonDetailScreen> createState() => _DiscoveredSalonDetailScreenState();
 }
 
-class _DiscoveredSalonDetailScreenState extends State<DiscoveredSalonDetailScreen>
+class _DiscoveredSalonDetailScreenState extends ConsumerState<DiscoveredSalonDetailScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _breathingController;
   late Animation<double> _breathingAnimation;
@@ -433,6 +437,16 @@ class _DiscoveredSalonDetailScreenState extends State<DiscoveredSalonDetailScree
   }
 
   void _handleInvite() {
+    // Identity gate: verified phone OR verified email required
+    final profile = ref.read(profileProvider);
+    final sec = ref.read(securityProvider);
+    if (!profile.hasVerifiedPhone && !sec.isEmailConfirmed) {
+      ToastService.showWarning(
+        'Verifica tu telefono o email en Ajustes > Seguridad para invitar salones.',
+      );
+      return;
+    }
+
     final phone = widget.salon.whatsapp ?? widget.salon.phone;
     if (phone != null) {
       final params = <String, String>{

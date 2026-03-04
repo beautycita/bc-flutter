@@ -32,6 +32,8 @@ import 'package:beautycita/screens/cash_payment_screen.dart';
 import 'package:beautycita/screens/cita_express_screen.dart';
 import 'package:beautycita/screens/legal_screens.dart';
 import 'package:beautycita/screens/business/business_shell_screen.dart';
+import 'package:beautycita/screens/discovered_salon_confirm_screen.dart';
+import 'package:beautycita/screens/post_registration_screen.dart';
 
 
 class AppRoutes {
@@ -65,6 +67,8 @@ class AppRoutes {
   static const String btcWallet = '/settings/btc-wallet';
   static const String cashPayment = '/settings/cash-payment';
   static const String citaExpress = '/cita-express/:businessId';
+  static const String discoveredSalonConfirm = '/discovered-salon-confirm';
+  static const String postRegistration = '/post-registration';
   static const String legal = '/legal';
   static const String terms = '/legal'; // back-compat
   static const String privacy = '/legal'; // back-compat
@@ -612,6 +616,36 @@ class AppRoutes {
             },
           );
         },
+      ),
+      GoRoute(
+        path: discoveredSalonConfirm,
+        name: 'discovered-salon-confirm',
+        pageBuilder: (context, state) {
+          final salonData = state.extra as Map<String, dynamic>;
+          return CustomTransitionPage(
+            key: state.pageKey,
+            child: DiscoveredSalonConfirmScreen(salonData: salonData),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              final tween = Tween(begin: const Offset(0.0, 1.0), end: Offset.zero)
+                  .chain(CurveTween(curve: Curves.easeInOutCubic));
+              return SlideTransition(
+                position: animation.drive(tween),
+                child: child,
+              );
+            },
+          );
+        },
+      ),
+      GoRoute(
+        path: postRegistration,
+        name: 'post-registration',
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const PostRegistrationScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+        ),
       ),
     ],
     errorPageBuilder: (context, state) => MaterialPage(

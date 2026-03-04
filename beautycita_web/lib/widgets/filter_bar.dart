@@ -27,10 +27,11 @@ class FilterBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
+    final isMobile = MediaQuery.sizeOf(context).width < 600;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: BCSpacing.md,
+      padding: EdgeInsets.symmetric(
+        horizontal: isMobile ? BCSpacing.sm : BCSpacing.md,
         vertical: BCSpacing.sm,
       ),
       child: Wrap(
@@ -41,7 +42,7 @@ class FilterBar extends StatelessWidget {
           // Search field — constrain max width so it doesn't stretch endlessly
           if (searchField != null)
             ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 320),
+              constraints: BoxConstraints(maxWidth: isMobile ? 200 : 320),
               child: searchField!,
             ),
 

@@ -21,6 +21,8 @@ import 'package:beautycita/screens/business/business_shell_screen.dart';
 import 'package:beautycita/services/toast_service.dart';
 import 'package:beautycita/services/debug_log.dart';
 import 'package:beautycita/services/presence_service.dart';
+import 'package:beautycita/services/screenshot_detector_service.dart';
+import 'package:beautycita/screens/screenshot_editor_screen.dart';
 import 'package:go_router/go_router.dart';
 
 /// Completes when Supabase is ready (or failed). Splash screen awaits this.
@@ -91,6 +93,7 @@ class BeautyCitaApp extends ConsumerStatefulWidget {
 class _BeautyCitaAppState extends ConsumerState<BeautyCitaApp> {
   late final AppLinks _appLinks;
   StreamSubscription<Uri>? _linkSub;
+  StreamSubscription<Uint8List>? _screenshotSub;
 
   static final _uuidRegex = RegExp(
     r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
@@ -102,6 +105,30 @@ class _BeautyCitaAppState extends ConsumerState<BeautyCitaApp> {
     super.initState();
     _appLinks = AppLinks();
     _initDeepLinks();
+    _initScreenshotDetection();
+  }
+
+  void _initScreenshotDetection() {
+    ScreenshotDetectorService.startListening();
+    _screenshotSub =
+        ScreenshotDetectorService.onScreenshotTaken.listen((bytes) {
+      debugPrint('[Screenshot] Dart received ${bytes.length} bytes');
+      if (!mounted) return;
+      final nav = ToastService.navigatorKey.currentState;
+      if (nav == null) {
+        debugPrint('[Screenshot] Navigator not ready yet');
+        return;
+      }
+      nav.push(
+        MaterialPageRoute(
+          fullscreenDialog: true,
+          builder: (_) => ScreenshotEditorScreen(screenshotBytes: bytes),
+        ),
+      );
+      debugPrint('[Screenshot] Pushed editor screen');
+    }, onError: (e) {
+      debugPrint('[Screenshot] Stream error: $e');
+    });
   }
 
   void _initDeepLinks() {
@@ -262,6 +289,8 @@ class _BeautyCitaAppState extends ConsumerState<BeautyCitaApp> {
 
   @override
   void dispose() {
+    _screenshotSub?.cancel();
+    ScreenshotDetectorService.stopListening();
     _linkSub?.cancel();
     super.dispose();
   }

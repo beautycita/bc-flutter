@@ -67,6 +67,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
     // OTA update check (silent, non-blocking — downloads patch in background)
     UpdaterService.instance.checkAndUpdate();
+    // APK version check (result checked after home screen loads)
+    UpdaterService.instance.checkForApkUpdate();
 
     try {
       await ref.read(authStateProvider.notifier).checkRegistration();

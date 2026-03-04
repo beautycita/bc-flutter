@@ -1,5 +1,6 @@
 import 'package:beautycita_core/theme.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
 import '../../providers/admin_users_provider.dart';
@@ -14,7 +15,8 @@ class UserDetailContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
-    final dateFormat = DateFormat('d MMM yyyy, HH:mm', 'es');
+    final dateFmt = DateFormat('d MMM yyyy, HH:mm', 'es');
+    final dateFmtShort = DateFormat('d MMM yyyy', 'es');
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -44,9 +46,38 @@ class UserDetailContent extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                 ),
               ),
+              if (user.fullName != null && user.fullName!.isNotEmpty) ...[
+                const SizedBox(height: 2),
+                Text(
+                  user.fullName!,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colors.onSurface.withValues(alpha: 0.5),
+                  ),
+                ),
+              ],
               const SizedBox(height: BCSpacing.xs),
               _RoleBadge(role: user.role),
             ],
+          ),
+        ),
+
+        const SizedBox(height: BCSpacing.lg),
+        const Divider(),
+        const SizedBox(height: BCSpacing.md),
+
+        // ── Auth method ───────────────────────────────────────────────
+        _SectionTitle(title: 'Autenticacion'),
+        const SizedBox(height: BCSpacing.sm),
+        _AuthProvidersRow(providers: user.authProviders),
+        const SizedBox(height: BCSpacing.xs),
+        _InfoRow(
+          icon: Icons.lock_outline,
+          label: 'Contrasena',
+          value: user.hasPassword ? 'Configurada' : 'Sin contrasena',
+          trailing: Icon(
+            user.hasPassword ? Icons.check_circle : Icons.cancel_outlined,
+            size: 16,
+            color: user.hasPassword ? Colors.green : Colors.grey,
           ),
         ),
 
@@ -58,19 +89,63 @@ class UserDetailContent extends StatelessWidget {
         _SectionTitle(title: 'Contacto'),
         const SizedBox(height: BCSpacing.sm),
         _InfoRow(
+          icon: Icons.email_outlined,
+          label: 'Email',
+          value: user.email ?? 'No registrado',
+          trailing: user.email != null
+              ? _VerificationBadge(
+                  verified: user.emailVerified,
+                  verifiedAt: user.emailConfirmedAt,
+                )
+              : null,
+        ),
+        const SizedBox(height: BCSpacing.sm),
+        _InfoRow(
           icon: Icons.phone_outlined,
           label: 'Telefono',
           value: user.phone ?? 'No registrado',
           trailing: user.phone != null
-              ? Icon(
-                  user.phoneVerified
-                      ? Icons.verified
-                      : Icons.warning_amber_rounded,
-                  size: 16,
-                  color: user.phoneVerified ? Colors.green : Colors.orange,
+              ? _VerificationBadge(
+                  verified: user.phoneVerified,
+                  verifiedAt: user.phoneVerifiedAt,
                 )
               : null,
         ),
+
+        const SizedBox(height: BCSpacing.lg),
+        const Divider(),
+        const SizedBox(height: BCSpacing.md),
+
+        // ── Personal info ───────────────────────────────────────────────
+        _SectionTitle(title: 'Personal'),
+        const SizedBox(height: BCSpacing.sm),
+        _InfoRow(
+          icon: Icons.cake_outlined,
+          label: 'Cumpleanos',
+          value: user.birthday != null
+              ? dateFmtShort.format(user.birthday!)
+              : 'No registrado',
+        ),
+        const SizedBox(height: BCSpacing.sm),
+        _InfoRow(
+          icon: Icons.person_outline,
+          label: 'Genero',
+          value: switch (user.gender) {
+            'male' => 'Masculino',
+            'female' => 'Femenino',
+            'other' => 'Otro',
+            String g when g.isNotEmpty => g,
+            _ => 'No registrado',
+          },
+        ),
+        if (user.homeAddress != null && user.homeAddress!.isNotEmpty) ...[
+          const SizedBox(height: BCSpacing.sm),
+          _InfoRow(
+            icon: Icons.home_outlined,
+            label: 'Direccion',
+            value: user.homeAddress!,
+          ),
+        ],
 
         const SizedBox(height: BCSpacing.lg),
         const Divider(),
@@ -82,16 +157,32 @@ class UserDetailContent extends StatelessWidget {
         _InfoRow(
           icon: Icons.calendar_today_outlined,
           label: 'Registrado',
-          value: dateFormat.format(user.createdAt),
+          value: dateFmt.format(user.createdAt),
+        ),
+        const SizedBox(height: BCSpacing.sm),
+        _InfoRow(
+          icon: Icons.login,
+          label: 'Ultimo login',
+          value: user.lastSignInAt != null
+              ? dateFmt.format(user.lastSignInAt!)
+              : 'Nunca',
         ),
         const SizedBox(height: BCSpacing.sm),
         _InfoRow(
           icon: Icons.access_time,
           label: 'Ultimo acceso',
           value: user.lastSeen != null
-              ? dateFormat.format(user.lastSeen!)
+              ? dateFmt.format(user.lastSeen!)
               : 'Nunca',
         ),
+        if (user.updatedAt != null) ...[
+          const SizedBox(height: BCSpacing.sm),
+          _InfoRow(
+            icon: Icons.edit_outlined,
+            label: 'Perfil actualizado',
+            value: dateFmt.format(user.updatedAt!),
+          ),
+        ],
         const SizedBox(height: BCSpacing.sm),
         _InfoRow(
           icon: Icons.circle,
@@ -116,17 +207,7 @@ class UserDetailContent extends StatelessWidget {
           ),
         ),
         const SizedBox(height: BCSpacing.sm),
-        _InfoRow(
-          icon: Icons.fingerprint,
-          label: 'ID',
-          value: user.id.length > 8
-              ? '${user.id.substring(0, 8)}...'
-              : user.id,
-        ),
-
-        const SizedBox(height: BCSpacing.lg),
-        const Divider(),
-        const SizedBox(height: BCSpacing.md),
+        _CopyableIdRow(id: user.id),
 
         const SizedBox(height: BCSpacing.lg),
         const Divider(),
@@ -194,6 +275,155 @@ class UserDetailContent extends StatelessWidget {
               ),
             ),
           ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Auth providers row ───────────────────────────────────────────────────────
+
+class _AuthProvidersRow extends StatelessWidget {
+  const _AuthProvidersRow({required this.providers});
+  final List<String> providers;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+
+    if (providers.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.only(left: 28),
+        child: Text(
+          'Sin metodo de autenticacion',
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: colors.onSurface.withValues(alpha: 0.5),
+          ),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(left: 28),
+      child: Wrap(
+        spacing: BCSpacing.xs,
+        runSpacing: BCSpacing.xs,
+        children: providers.map((p) {
+          final (icon, label, color) = switch (p) {
+            'google' => (Icons.g_mobiledata, 'Google', Colors.red),
+            'email' => (Icons.email, 'Email', Colors.blue),
+            'phone' => (Icons.phone, 'Telefono', Colors.teal),
+            _ => (Icons.key, p, Colors.grey),
+          };
+          return Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(BCSpacing.radiusFull),
+              border: Border.all(color: color.withValues(alpha: 0.2)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 16, color: color),
+                const SizedBox(width: 4),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: color,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+
+// ── Verification badge ───────────────────────────────────────────────────────
+
+class _VerificationBadge extends StatelessWidget {
+  const _VerificationBadge({
+    required this.verified,
+    this.verifiedAt,
+  });
+
+  final bool verified;
+  final DateTime? verifiedAt;
+
+  @override
+  Widget build(BuildContext context) {
+    final fmt = DateFormat('d MMM yy', 'es');
+
+    return Tooltip(
+      message: verified && verifiedAt != null
+          ? 'Verificado ${fmt.format(verifiedAt!)}'
+          : 'No verificado',
+      child: Icon(
+        verified ? Icons.verified : Icons.warning_amber_rounded,
+        size: 16,
+        color: verified ? Colors.green : Colors.orange,
+      ),
+    );
+  }
+}
+
+// ── Copyable ID row ─────────────────────────────────────────────────────────
+
+class _CopyableIdRow extends StatelessWidget {
+  const _CopyableIdRow({required this.id});
+  final String id;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+
+    return Row(
+      children: [
+        Icon(Icons.fingerprint, size: 16,
+            color: colors.onSurface.withValues(alpha: 0.5)),
+        const SizedBox(width: BCSpacing.sm),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'ID',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: colors.onSurface.withValues(alpha: 0.5),
+                ),
+              ),
+              Text(
+                id,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  fontFamily: 'monospace',
+                  fontSize: 10,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+        IconButton(
+          icon: const Icon(Icons.copy, size: 14),
+          tooltip: 'Copiar ID',
+          visualDensity: VisualDensity.compact,
+          onPressed: () {
+            Clipboard.setData(ClipboardData(text: id));
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('ID copiado'),
+                duration: Duration(seconds: 1),
+              ),
+            );
+          },
         ),
       ],
     );
@@ -287,7 +517,7 @@ class _InfoRow extends StatelessWidget {
               Text(
                 value,
                 style: theme.textTheme.bodySmall,
-                maxLines: 1,
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
             ],

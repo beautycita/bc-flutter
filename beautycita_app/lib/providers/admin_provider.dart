@@ -1,8 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show AuthState;
 import 'package:beautycita/services/supabase_client.dart';
 import 'package:beautycita/services/user_session.dart';
+import 'package:beautycita/services/location_service.dart';
 
 /// Stream of Supabase auth state changes — re-triggers role fetch on login/logout.
 final _supabaseAuthStreamProvider = StreamProvider<AuthState>((ref) {
@@ -48,6 +50,37 @@ final isAdminProvider = FutureProvider<bool>((ref) async {
 final isSuperAdminProvider = FutureProvider<bool>((ref) async {
   final role = await ref.watch(userRoleProvider.future);
   return role == 'superadmin';
+});
+
+/// True for RP (Public Relations / Outreach) role.
+final isRpProvider = FutureProvider<bool>((ref) async {
+  final role = await ref.watch(userRoleProvider.future);
+  return role == 'rp';
+});
+
+/// True only for 'customer' role — used to gate customer-only UI (e.g. Aphrodite chat).
+/// Returns true while loading (most users are customers, avoids flash-of-missing-button).
+final isCustomerProvider = FutureProvider<bool>((ref) async {
+  final role = await ref.watch(userRoleProvider.future);
+  return role == 'customer' || role == null;
+});
+
+/// Geo-fence center for RP employees (Puerto Vallarta).
+const _rpGeofenceCenterLat = 20.6534;
+const _rpGeofenceCenterLng = -105.2253;
+const _rpGeofenceRadiusKm = 300.0;
+
+/// True if user is within the 300km RP geo-fence. Only meaningful for RP users.
+final rpWithinGeofenceProvider = FutureProvider<bool>((ref) async {
+  final location = await LocationService.getCurrentLocation();
+  if (location == null) return false;
+  final distanceMeters = Geolocator.distanceBetween(
+    location.lat,
+    location.lng,
+    _rpGeofenceCenterLat,
+    _rpGeofenceCenterLng,
+  );
+  return distanceMeters <= (_rpGeofenceRadiusKm * 1000);
 });
 
 /// How many times the user has opened the app (from local SharedPreferences).
@@ -875,8 +908,10 @@ final adminSalonReviewsProvider = FutureProvider.family<List<Map<String, dynamic
 // ---------------------------------------------------------------------------
 
 /// Searches discovered salons via the `search_discovered_salons` RPC.
-/// Takes a Map of optional parameters (query, status_filter, city_filter, etc.).
-final searchDiscoveredSalonsProvider = FutureProvider.family<List<Map<String, dynamic>>, Map<String, dynamic>>((ref, params) async {
+/// Uses a String key for stable Riverpod caching (Map has reference equality).
+/// Params are passed separately via [pipelineSearchParamsProvider].
+final searchDiscoveredSalonsProvider = FutureProvider.family<List<Map<String, dynamic>>, String>((ref, key) async {
+  final params = ref.read(pipelineSearchParamsProvider);
   final response = await SupabaseClientService.client.rpc('search_discovered_salons', params: {
     'query': params['query'] ?? '',
     if (params['status_filter'] != null) 'status_filter': params['status_filter'],
@@ -889,6 +924,10 @@ final searchDiscoveredSalonsProvider = FutureProvider.family<List<Map<String, dy
   });
   return (response as List).cast<Map<String, dynamic>>();
 });
+
+/// Holds the current pipeline search parameters. Set by the pipeline screen
+/// before watching [searchDiscoveredSalonsProvider].
+final pipelineSearchParamsProvider = StateProvider<Map<String, dynamic>>((ref) => {});
 
 /// Aggregates discovered_salons by status for the funnel metrics header.
 /// Uses parallel count queries (indexed) instead of loading all 35k+ rows.

@@ -58,6 +58,9 @@ class ChatMessage {
   /// Whether this is from support agent
   bool get isFromSupport => senderType == 'support';
 
+  /// Whether this is from Eros AI support
+  bool get isFromEros => senderType == 'eros';
+
   /// Whether this message contains an image
   bool get hasMedia => mediaUrl != null && mediaUrl!.isNotEmpty;
 
