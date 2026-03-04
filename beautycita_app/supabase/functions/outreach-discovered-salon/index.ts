@@ -157,6 +157,55 @@ serve(async (req: Request) => {
         return jsonResponse({ error: "discovered_salon_id required" }, 400);
       }
 
+      // ── Identity verification gate ──
+      // User must have verified phone OR verified email
+      const hasVerifiedEmail = user.email_confirmed_at != null;
+      const { data: profile } = await serviceClient
+        .from("profiles")
+        .select("phone_verified_at")
+        .eq("id", user.id)
+        .single();
+      const hasVerifiedPhone = profile?.phone_verified_at != null;
+
+      if (!hasVerifiedEmail && !hasVerifiedPhone) {
+        return jsonResponse({
+          error: "identity_required",
+          message: "Verifica tu telefono o email antes de invitar salones.",
+        }, 403);
+      }
+
+      // ── Abuse prevention ──
+      // Daily limit: max 10 unique salon invites per day
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const { count: todayInvites } = await serviceClient
+        .from("salon_interest_signals")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .gte("created_at", todayStart.toISOString());
+
+      if ((todayInvites ?? 0) >= 10) {
+        return jsonResponse({
+          error: "daily_limit",
+          message: "Alcanzaste el limite diario de invitaciones. Intenta manana.",
+        }, 429);
+      }
+
+      // Cooldown: minimum 30 seconds between invites (prevents rapid-fire)
+      const thirtySecsAgo = new Date(Date.now() - 30_000).toISOString();
+      const { count: recentInvites } = await serviceClient
+        .from("salon_interest_signals")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .gte("created_at", thirtySecsAgo);
+
+      if ((recentInvites ?? 0) >= 1) {
+        return jsonResponse({
+          error: "cooldown",
+          message: "Espera unos segundos entre invitaciones.",
+        }, 429);
+      }
+
       // 1. Upsert interest signal (unique per user+salon)
       const { error: signalError } = await serviceClient
         .from("salon_interest_signals")

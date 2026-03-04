@@ -153,7 +153,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
             icon: Icons.info_outline_rounded,
             label: 'Version',
             trailing: Text(
-              '0.1.0',
+              '${AppConstants.version} (${AppConstants.buildNumber})',
               style: textTheme.bodyMedium?.copyWith(
                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
               ),

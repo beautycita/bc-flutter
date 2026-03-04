@@ -17,6 +17,8 @@ class ProfileState {
   final String? gender;
   final bool isLoading;
   final String? error;
+  /// Non-null when verified phone matches a discovered salon that hasn't been claimed yet.
+  final Map<String, dynamic>? discoveredSalonMatch;
 
   const ProfileState({
     this.avatarUrl,
@@ -30,6 +32,7 @@ class ProfileState {
     this.gender,
     this.isLoading = false,
     this.error,
+    this.discoveredSalonMatch,
   });
 
   bool get hasVerifiedPhone => phone != null && phone!.isNotEmpty && phoneVerified;
@@ -48,6 +51,8 @@ class ProfileState {
     bool clearGender = false,
     bool? isLoading,
     String? error,
+    Map<String, dynamic>? discoveredSalonMatch,
+    bool clearDiscoveredSalonMatch = false,
   }) {
     return ProfileState(
       avatarUrl: avatarUrl ?? this.avatarUrl,
@@ -61,6 +66,7 @@ class ProfileState {
       gender: clearGender ? null : (gender ?? this.gender),
       isLoading: isLoading ?? this.isLoading,
       error: error,
+      discoveredSalonMatch: clearDiscoveredSalonMatch ? null : (discoveredSalonMatch ?? this.discoveredSalonMatch),
     );
   }
 }
@@ -326,6 +332,10 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
         throw Exception(data?['error'] ?? 'Codigo incorrecto');
       }
       state = state.copyWith(phoneVerified: true, isLoading: false);
+
+      // Check if verified phone matches a discovered salon
+      await _checkDiscoveredSalonMatch(phone);
+
       return true;
     } catch (e) {
       debugPrint('ProfileNotifier.verifyPhoneOtp error: $e');
@@ -334,6 +344,36 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
       state = state.copyWith(isLoading: false, error: msg);
       return false;
     }
+  }
+
+  /// Check if a phone number matches a discovered salon that hasn't been registered yet.
+  Future<void> _checkDiscoveredSalonMatch(String phone) async {
+    try {
+      final digits = phone.replaceAll(RegExp(r'[^\d]'), '');
+      if (digits.length < 10) return;
+      final last10 = digits.substring(digits.length - 10);
+
+      final match = await SupabaseClientService.client
+          .from('discovered_salons')
+          .select()
+          .or('phone.ilike.%$last10,whatsapp.ilike.%$last10')
+          .neq('status', 'registered')
+          .limit(1)
+          .maybeSingle();
+
+      if (match != null) {
+        debugPrint('ProfileNotifier: Discovered salon match found: ${match['business_name']}');
+        state = state.copyWith(discoveredSalonMatch: match);
+      }
+    } catch (e) {
+      debugPrint('ProfileNotifier._checkDiscoveredSalonMatch error: $e');
+      // Non-fatal — don't block the verification success
+    }
+  }
+
+  /// Clear the discovered salon match (e.g., user declined "Es tu salon?")
+  void clearDiscoveredSalonMatch() {
+    state = state.copyWith(clearDiscoveredSalonMatch: true);
   }
 
   Future<void> updateBirthday(DateTime? birthday) async {

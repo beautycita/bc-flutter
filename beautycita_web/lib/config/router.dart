@@ -39,6 +39,8 @@ import '../pages/auth/qr_page.dart';
 import '../pages/auth/register_page.dart';
 import '../pages/auth/verify_page.dart';
 import '../pages/error/not_found_page.dart';
+import '../pages/landing_page.dart';
+import '../pages/support/soporte_page.dart';
 import '../shells/admin_shell.dart';
 import '../shells/business_shell.dart';
 import '../shells/client_shell.dart';
@@ -89,6 +91,9 @@ abstract final class WebRoutes {
   // Client
   static const String reservar = '/reservar';
   static const String misCitas = '/mis-citas';
+
+  // Public
+  static const String soporte = '/soporte';
 }
 
 /// Map user role → correct portal route.
@@ -109,7 +114,7 @@ String routeForRole(String? role) {
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
-    initialLocation: WebRoutes.auth,
+    initialLocation: WebRoutes.home,
     debugLogDiagnostics: kDebugMode,
 
     // Redirect logic — wired to live Supabase auth state.
@@ -117,10 +122,8 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) async {
       final path = state.matchedLocation;
 
-      // `/` inside Flutter → redirect to login (static page is the homepage)
-      if (path == '/') return WebRoutes.auth;
-
-      final isPublicRoute = path.startsWith('/auth');
+      final isPublicRoute =
+          path == '/' || path.startsWith('/auth') || path == '/soporte';
 
       // If Supabase never initialized (offline, failed, etc.),
       // only allow public routes — redirect protected routes to /auth
@@ -137,7 +140,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
 
       // Authenticated user on auth page → send to correct portal by role
-      if (isAuthenticated && isPublicRoute) {
+      // (but allow `/` and `/soporte` — those are viewable when logged in)
+      if (isAuthenticated && path.startsWith('/auth')) {
         final role = await ref.read(authProvider.notifier).getUserRole();
         return routeForRole(role);
       }
@@ -166,6 +170,18 @@ final routerProvider = Provider<GoRouter>((ref) {
     errorBuilder: (context, state) => const NotFoundPage(),
 
     routes: [
+      // ── Landing page (public, no shell) ────────────────────────────────
+      GoRoute(
+        path: WebRoutes.home,
+        builder: (context, state) => const LandingPage(),
+      ),
+
+      // ── Support page (public, no shell) ────────────────────────────────
+      GoRoute(
+        path: WebRoutes.soporte,
+        builder: (context, state) => const SoportePage(),
+      ),
+
       // ── Auth routes (no shell) ───────────────────────────────────────────
       GoRoute(
         path: WebRoutes.auth,

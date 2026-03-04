@@ -134,6 +134,21 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
   bool _selectionMode = false;
   bool _metricsExpanded = false;
 
+  /// Stable string key for the family provider (Map has reference equality,
+  /// which creates a new provider on every rebuild). This encodes all filters
+  /// into a single string so Riverpod can cache correctly.
+  String get _searchKey {
+    final parts = <String>[_searchQuery];
+    if (_statusFilters.isNotEmpty) {
+      final sorted = _statusFilters.toList()..sort();
+      parts.add('s:${sorted.join(',')}');
+    }
+    if (_hasWhatsapp == true) parts.add('wa:1');
+    if (_hasInterest == true) parts.add('int:1');
+    if (_sourceFilter != null) parts.add('src:$_sourceFilter');
+    return parts.join('|');
+  }
+
   Map<String, dynamic> get _searchParams => {
         'query': _searchQuery,
         if (_statusFilters.isNotEmpty)
@@ -271,7 +286,7 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
     final count = _selectedIds.length;
     // TODO: batch update via supabase when detail sheet is implemented
     // For now just invalidate the providers to force a refresh
-    ref.invalidate(searchDiscoveredSalonsProvider(_searchParams));
+    ref.invalidate(searchDiscoveredSalonsProvider(_searchKey));
     ref.invalidate(pipelineFunnelStatsProvider);
 
     if (mounted) {
@@ -313,7 +328,7 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
     if (confirmed != true || !mounted) return;
 
     // TODO: implement actual delete via supabase delete on discovered_salons
-    ref.invalidate(searchDiscoveredSalonsProvider(_searchParams));
+    ref.invalidate(searchDiscoveredSalonsProvider(_searchKey));
     ref.invalidate(pipelineFunnelStatsProvider);
     _exitSelection();
 
@@ -326,7 +341,9 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final statsAsync = ref.watch(pipelineFunnelStatsProvider);
-    final leadsAsync = ref.watch(searchDiscoveredSalonsProvider(_searchParams));
+    // Set params before watching so the provider can read them
+    ref.read(pipelineSearchParamsProvider.notifier).state = _searchParams;
+    final leadsAsync = ref.watch(searchDiscoveredSalonsProvider(_searchKey));
 
     return Stack(
       children: [
@@ -550,7 +567,7 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
               const SizedBox(height: 16),
               TextButton.icon(
                 onPressed: () => ref
-                    .invalidate(searchDiscoveredSalonsProvider(_searchParams)),
+                    .invalidate(searchDiscoveredSalonsProvider(_searchKey)),
                 icon: const Icon(Icons.refresh, size: 18),
                 label: Text('Reintentar', style: GoogleFonts.nunito()),
               ),

@@ -15,11 +15,20 @@ class AdminUser {
   final String? fullName;
   final String role;
   final String? phone;
-  final bool phoneVerified;
-  final DateTime createdAt;
-  final DateTime? lastSeen;
-  final String status; // 'active', 'suspended', 'archived'
+  final DateTime? phoneVerifiedAt;
+  final String? email;
+  final DateTime? emailConfirmedAt;
+  final List<String> authProviders; // e.g. ['google', 'email', 'phone']
+  final bool hasPassword;
+  final DateTime? birthday;
+  final String? gender;
+  final String? homeAddress;
   final String? avatarUrl;
+  final DateTime createdAt;
+  final DateTime? updatedAt;
+  final DateTime? lastSeen;
+  final DateTime? lastSignInAt;
+  final String status;
 
   const AdminUser({
     required this.id,
@@ -27,28 +36,61 @@ class AdminUser {
     this.fullName,
     required this.role,
     this.phone,
-    this.phoneVerified = false,
-    required this.createdAt,
-    this.lastSeen,
-    this.status = 'active',
+    this.phoneVerifiedAt,
+    this.email,
+    this.emailConfirmedAt,
+    this.authProviders = const [],
+    this.hasPassword = false,
+    this.birthday,
+    this.gender,
+    this.homeAddress,
     this.avatarUrl,
+    required this.createdAt,
+    this.updatedAt,
+    this.lastSeen,
+    this.lastSignInAt,
+    this.status = 'active',
   });
 
   bool get isActive => status == 'active';
+  bool get phoneVerified => phoneVerifiedAt != null;
+  bool get emailVerified => emailConfirmedAt != null;
+  bool get usesGoogle => authProviders.contains('google');
 
   factory AdminUser.fromJson(Map<String, dynamic> json) {
+    // auth_providers can be a JSON array like ["google","email"] or null
+    final rawProviders = json['auth_providers'];
+    final providers = <String>[];
+    if (rawProviders is List) {
+      for (final p in rawProviders) {
+        if (p is String) providers.add(p);
+      }
+    }
+
     return AdminUser(
       id: json['id'] as String? ?? '',
       username: json['username'] as String? ?? 'Sin nombre',
       fullName: json['full_name'] as String?,
       role: json['role'] as String? ?? 'customer',
       phone: json['phone'] as String?,
-      phoneVerified: json['phone_verified'] as bool? ?? false,
+      phoneVerifiedAt:
+          DateTime.tryParse(json['phone_verified_at'] as String? ?? ''),
+      email: json['email'] as String?,
+      emailConfirmedAt:
+          DateTime.tryParse(json['email_confirmed_at'] as String? ?? ''),
+      authProviders: providers,
+      hasPassword: json['has_password'] as bool? ?? false,
+      birthday: DateTime.tryParse(json['birthday'] as String? ?? ''),
+      gender: json['gender'] as String?,
+      homeAddress: json['home_address'] as String?,
+      avatarUrl: json['avatar_url'] as String?,
       createdAt: DateTime.tryParse(json['created_at'] as String? ?? '') ??
           DateTime.now(),
+      updatedAt: DateTime.tryParse(json['updated_at'] as String? ?? ''),
       lastSeen: DateTime.tryParse(json['last_seen'] as String? ?? ''),
+      lastSignInAt:
+          DateTime.tryParse(json['last_sign_in_at'] as String? ?? ''),
       status: json['status'] as String? ?? 'active',
-      avatarUrl: json['avatar_url'] as String?,
     );
   }
 }
@@ -122,68 +164,29 @@ final adminUsersProvider = FutureProvider<UsersPageData>((ref) async {
 
   try {
     final client = BCSupabase.client;
-    final sortCol = filter.sortColumn ?? 'created_at';
-    final from = filter.page * filter.pageSize;
-    final to = from + filter.pageSize - 1;
 
-    // Build base query with equality filters first
-    var query = client.from(BCTables.profiles).select(
-      'id, username, full_name, role, phone, phone_verified, '
-      'created_at, last_seen, status, avatar_url',
-    );
-    if (filter.role != null) {
-      query = query.eq('role', filter.role!);
-    }
-    if (filter.status != null) {
-      query = query.eq('status', filter.status!);
-    }
+    final result = await client.rpc('admin_list_users', params: {
+      'p_role': filter.role,
+      'p_status': filter.status,
+      'p_search': _sanitize(filter.searchText),
+      'p_sort': filter.sortColumn ?? 'created_at',
+      'p_asc': filter.sortAscending,
+      'p_offset': filter.page * filter.pageSize,
+      'p_limit': filter.pageSize,
+    });
 
-    // .or() returns PostgrestTransformBuilder, so chain everything after it
-    final List data;
-    if (filter.searchText.isNotEmpty) {
-      data = await query
-          .or(
-            'username.ilike.%${_sanitize(filter.searchText)}%,'
-            'full_name.ilike.%${_sanitize(filter.searchText)}%,'
-            'phone.ilike.%${_sanitize(filter.searchText)}%',
-          )
-          .order(sortCol, ascending: filter.sortAscending)
-          .range(from, to);
-    } else {
-      data = await query
-          .order(sortCol, ascending: filter.sortAscending)
-          .range(from, to);
-    }
+    final data = result as Map<String, dynamic>;
+    final usersJson = data['users'] as List? ?? [];
+    final total = data['total'] as int? ?? 0;
 
-    // Count query — separate chain
-    var countQuery = client.from(BCTables.profiles).select('id');
-    if (filter.role != null) {
-      countQuery = countQuery.eq('role', filter.role!);
-    }
-    if (filter.status != null) {
-      countQuery = countQuery.eq('status', filter.status!);
-    }
-    final int totalCount;
-    if (filter.searchText.isNotEmpty) {
-      final countResult = await countQuery
-          .or(
-            'username.ilike.%${_sanitize(filter.searchText)}%,'
-            'full_name.ilike.%${_sanitize(filter.searchText)}%,'
-            'phone.ilike.%${_sanitize(filter.searchText)}%',
-          )
-          .count();
-      totalCount = countResult.count;
-    } else {
-      final countResult = await countQuery.count();
-      totalCount = countResult.count;
-    }
+    final users = usersJson
+        .map((row) => AdminUser.fromJson(row as Map<String, dynamic>))
+        .toList();
 
-    final users = data.map((row) =>
-        AdminUser.fromJson(row as Map<String, dynamic>)).toList();
-
-    return UsersPageData(users: users, totalCount: totalCount);
+    return UsersPageData(users: users, totalCount: total);
   } catch (e, st) {
-    debugPrint('Admin users error: $e\n${st.toString().split('\n').take(5).join('\n')}');
+    debugPrint(
+        'Admin users error: $e\n${st.toString().split('\n').take(5).join('\n')}');
     rethrow;
   }
 });

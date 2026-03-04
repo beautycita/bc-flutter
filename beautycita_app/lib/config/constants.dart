@@ -2,7 +2,10 @@ class AppConstants {
   // App Identity
   static const String appName = 'BeautyCita';
   static const String tagline = 'Tu agente de belleza inteligente';
-  static const String version = '1.1.8';
+  static const String version = '0.9.0';
+  static const int buildNumber = 43010;
+  static const String versionCheckUrl =
+      'https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/apk/version.json';
   static const String tableErrorReports = 'user_error_reports';
 
   // Animation Durations
@@ -117,6 +120,11 @@ class AppConstants {
   static const String bucketAvatars = 'avatars';
   static const String bucketServiceImages = 'service_images';
   static const String bucketProviderImages = 'provider_images';
+
+  // Update Dismissal
+  static const String keyUpdateDismissedBuild = 'update_dismissed_build';
+  static const String keyUpdateDismissedAt = 'update_dismissed_at';
+  static const Duration updateDismissCooldown = Duration(hours: 24);
 
   // Cache Keys
   static const String cacheKeyCategories = 'cache_categories';

@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:beautycita_core/theme.dart';
 import 'package:flutter/material.dart';
 
@@ -91,6 +93,18 @@ class BCDataTable<T> extends StatelessWidget {
   /// Subtitle for the empty-state display.
   final String? emptySubtitle;
 
+  /// Calculate the minimum width needed to display all columns.
+  double _minContentWidth() {
+    const checkboxWidth = 40.0;
+    const rowPadding = BCSpacing.md * 2; // horizontal padding
+    const defaultFlexMin = 120.0; // minimum for flex columns
+    double total = checkboxWidth + rowPadding;
+    for (final col in columns) {
+      total += (col.width ?? defaultFlexMin) + BCSpacing.sm * 2;
+    }
+    return total;
+  }
+
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
@@ -113,57 +127,81 @@ class BCDataTable<T> extends StatelessWidget {
     final allSelected =
         items.isNotEmpty && selectedItems.length == items.length;
 
-    return Column(
-      children: [
-        // ── Header row ─────────────────────────────────────────────────
-        _HeaderRow<T>(
-          columns: columns,
-          allSelected: allSelected,
-          sortColumn: sortColumn,
-          sortAscending: sortAscending,
-          onSort: onSort,
-          onSelectAll: (selected) {
-            if (selected) {
-              onSelectionChanged(items.toSet());
-            } else {
-              onSelectionChanged({});
-            }
-          },
-        ),
-        const Divider(height: 1),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final minWidth = _minContentWidth();
+        final availableWidth = constraints.maxWidth;
+        final tableWidth = math.max(availableWidth, minWidth);
+        final needsHScroll = tableWidth > availableWidth;
 
-        // ── Data rows ──────────────────────────────────────────────────
-        Expanded(
-          child: ListView.builder(
-            itemCount: items.length,
-            itemBuilder: (context, index) {
-              final item = items[index];
-              final isChecked = selectedItems.contains(item);
-              final isHighlighted = item == selectedItem;
-
-              return _DataRow<T>(
-                item: item,
+        Widget tableContent = SizedBox(
+          width: needsHScroll ? tableWidth : null,
+          child: Column(
+            children: [
+              // ── Header row ───────────────────────────────────────────
+              _HeaderRow<T>(
                 columns: columns,
-                isChecked: isChecked,
-                isHighlighted: isHighlighted,
-                isEven: index.isEven,
-                onTap: () => onRowTap(item),
-                onCheckChanged: (checked) {
-                  final updated = Set<T>.from(selectedItems);
-                  if (checked) {
-                    updated.add(item);
+                allSelected: allSelected,
+                sortColumn: sortColumn,
+                sortAscending: sortAscending,
+                onSort: onSort,
+                onSelectAll: (selected) {
+                  if (selected) {
+                    onSelectionChanged(items.toSet());
                   } else {
-                    updated.remove(item);
+                    onSelectionChanged({});
                   }
-                  onSelectionChanged(updated);
                 },
-                colors: colors,
-                theme: theme,
-              );
-            },
+              ),
+              const Divider(height: 1),
+
+              // ── Data rows ────────────────────────────────────────────
+              Expanded(
+                child: ListView.builder(
+                  itemCount: items.length,
+                  itemBuilder: (context, index) {
+                    final item = items[index];
+                    final isChecked = selectedItems.contains(item);
+                    final isHighlighted = item == selectedItem;
+
+                    return _DataRow<T>(
+                      item: item,
+                      columns: columns,
+                      isChecked: isChecked,
+                      isHighlighted: isHighlighted,
+                      isEven: index.isEven,
+                      onTap: () => onRowTap(item),
+                      onCheckChanged: (checked) {
+                        final updated = Set<T>.from(selectedItems);
+                        if (checked) {
+                          updated.add(item);
+                        } else {
+                          updated.remove(item);
+                        }
+                        onSelectionChanged(updated);
+                      },
+                      colors: colors,
+                      theme: theme,
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
-        ),
-      ],
+        );
+
+        if (needsHScroll) {
+          return Scrollbar(
+            thumbVisibility: true,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: tableContent,
+            ),
+          );
+        }
+
+        return tableContent;
+      },
     );
   }
 }

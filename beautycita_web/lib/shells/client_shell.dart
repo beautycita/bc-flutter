@@ -15,11 +15,22 @@ class ClientShell extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         toolbarHeight: 56,
-        title: Text(
-          'BeautyCita',
-          style: theme.textTheme.titleLarge?.copyWith(
-            color: theme.colorScheme.primary,
-            fontWeight: FontWeight.w700,
+        leading: IconButton(
+          icon: Icon(Icons.home_outlined, color: theme.colorScheme.primary),
+          tooltip: 'Inicio',
+          onPressed: () => context.go(WebRoutes.home),
+        ),
+        title: GestureDetector(
+          onTap: () => context.go(WebRoutes.home),
+          child: MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: Text(
+              'BeautyCita',
+              style: theme.textTheme.titleLarge?.copyWith(
+                color: theme.colorScheme.primary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ),
         ),
         centerTitle: false,

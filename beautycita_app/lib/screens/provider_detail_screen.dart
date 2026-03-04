@@ -4,9 +4,10 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:beautycita/models/provider.dart' as models;
 import 'package:beautycita/providers/provider_provider.dart';
+import 'package:beautycita/providers/chat_provider.dart';
 import 'package:beautycita/config/constants.dart';
-import 'package:beautycita/config/palettes.dart';
 import '../config/theme_extension.dart';
+import '../services/toast_service.dart';
 
 class ProviderDetailScreen extends ConsumerWidget {
   final String providerId;
@@ -105,9 +106,8 @@ class ProviderDetailScreen extends ConsumerWidget {
                       if (provider.address != null)
                         _buildAddressSection(context, provider),
 
-                      // Contact buttons
-                      if (provider.phone != null || provider.whatsapp != null)
-                        _buildContactSection(context, provider),
+                      // Contact — message via BeautyCita chat
+                      _buildContactSection(context, ref, provider),
 
                       // Social media links
                       if (provider.instagramHandle != null ||
@@ -366,9 +366,10 @@ class ProviderDetailScreen extends ConsumerWidget {
   }
 
   // ---------------------------------------------------------------------------
-  // Contact section: phone + WhatsApp
+  // Contact section: message via BeautyCita chat
   // ---------------------------------------------------------------------------
-  Widget _buildContactSection(BuildContext context, models.Provider provider) {
+  Widget _buildContactSection(
+      BuildContext context, WidgetRef ref, models.Provider provider) {
     return Padding(
       padding: const EdgeInsets.only(bottom: AppConstants.paddingMD),
       child: Column(
@@ -381,34 +382,44 @@ class ProviderDetailScreen extends ConsumerWidget {
                 ),
           ),
           const SizedBox(height: AppConstants.paddingSM),
-          Row(
-            children: [
-              if (provider.phone != null)
-                Expanded(
-                  child: _ContactButton(
-                    icon: Icons.phone_outlined,
-                    label: 'Llamar',
-                    onTap: () => _launchUrl('tel:${provider.phone}'),
-                  ),
-                ),
-              if (provider.phone != null && provider.whatsapp != null)
-                const SizedBox(width: AppConstants.paddingSM),
-              if (provider.whatsapp != null)
-                Expanded(
-                  child: _ContactButton(
-                    icon: Icons.chat_outlined,
-                    label: 'WhatsApp',
-                    color: kWhatsAppGreen,
-                    onTap: () => _launchUrl(
-                      'https://wa.me/${provider.whatsapp}',
-                    ),
-                  ),
-                ),
-            ],
+          SizedBox(
+            width: double.infinity,
+            child: _ContactButton(
+              icon: Icons.chat_rounded,
+              label: 'Enviar mensaje',
+              color: Theme.of(context).colorScheme.primary,
+              onTap: () => _openSalonChat(context, ref, provider),
+            ),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _openSalonChat(
+      BuildContext context, WidgetRef ref, models.Provider provider) async {
+    // Show loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final thread =
+          await ref.read(salonChatThreadProvider(provider.id).future);
+      if (!context.mounted) return;
+      Navigator.of(context).pop(); // dismiss loading
+      if (thread != null) {
+        context.push('/chat/${thread.id}');
+      } else {
+        ToastService.showError('No se pudo iniciar el chat');
+      }
+    } catch (e) {
+      if (!context.mounted) return;
+      Navigator.of(context).pop(); // dismiss loading
+      ToastService.showError('Error al conectar con el salon');
+    }
   }
 
   // ---------------------------------------------------------------------------

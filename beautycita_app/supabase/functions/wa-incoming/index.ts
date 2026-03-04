@@ -57,7 +57,7 @@ Deno.serve(async (req) => {
     const { data: threads, error: findErr } = await db
       .from("chat_threads")
       .select("id, user_id, contact_type")
-      .eq("contact_type", "support")
+      .in("contact_type", ["support", "salon"])
       .ilike("id", `${thread_prefix}%`)
       .limit(1);
 
@@ -73,7 +73,7 @@ Deno.serve(async (req) => {
       .from("chat_messages")
       .insert({
         thread_id: thread.id,
-        sender_type: "support",
+        sender_type: thread.contact_type === "salon" ? "salon" : "support",
         content_type: "text",
         text_content: message,
         metadata: { from_phone, via: "whatsapp" },

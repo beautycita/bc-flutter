@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:beautycita/services/supabase_client.dart';
@@ -80,8 +81,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  /// Register a new user with biometric authentication
-  Future<bool> register() async {
+  /// Register a new user with biometric authentication.
+  /// [fullName] and [phone] are collected before biometric in the auth screen.
+  Future<bool> register({String? fullName, String? phone}) async {
     state = state.copyWith(isLoading: true, error: null);
 
     try {
@@ -113,6 +115,33 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
       // Save to local session (also stores Supabase user ID)
       await _userSession.register(username);
+
+      // Save name + phone to profile if provided
+      if (fullName != null || phone != null) {
+        try {
+          final userId = await _userSession.getSupabaseUserId();
+          if (userId != null) {
+            final updates = <String, dynamic>{};
+            if (fullName != null && fullName.isNotEmpty) {
+              updates['full_name'] = fullName;
+            }
+            if (phone != null && phone.isNotEmpty) {
+              updates['phone'] = phone;
+              updates['phone_verified'] = true;
+              updates['phone_verified_at'] = DateTime.now().toIso8601String();
+            }
+            if (updates.isNotEmpty) {
+              await SupabaseClientService.client
+                  .from('profiles')
+                  .update(updates)
+                  .eq('id', userId);
+            }
+          }
+        } catch (e) {
+          // Non-fatal: profile update failure shouldn't block registration
+          debugPrint('Failed to save profile data during registration: $e');
+        }
+      }
 
       // Update state
       state = state.copyWith(
@@ -243,6 +272,54 @@ class AuthNotifier extends StateNotifier<AuthState> {
     } catch (e) {
       final msg = ToastService.friendlyError(e);
       ToastService.showError(msg);
+      state = state.copyWith(isLoading: false, error: msg);
+      return false;
+    }
+  }
+
+  /// Register with email and password (hidden alternative auth)
+  Future<bool> signUpWithEmail(String email, String password) async {
+    // Rate limit: 3 second cooldown between attempts
+    final now = DateTime.now();
+    if (_lastLoginAttempt != null &&
+        now.difference(_lastLoginAttempt!) < const Duration(seconds: 3)) {
+      state = state.copyWith(
+          error: 'Espera un momento antes de intentar de nuevo');
+      return false;
+    }
+    _lastLoginAttempt = now;
+
+    _loginAttempts++;
+    if (_loginAttempts > 5) {
+      final backoffSeconds = _loginAttempts * 5;
+      state = state.copyWith(
+          error: 'Demasiados intentos. Espera $backoffSeconds segundos.');
+      return false;
+    }
+
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      final response = await SupabaseClientService.client.auth
+          .signUp(email: email, password: password);
+      if (response.user == null) {
+        const msg = 'No se pudo crear la cuenta';
+        state = state.copyWith(isLoading: false, error: msg);
+        return false;
+      }
+      final displayName = response.user!.email?.split('@')[0] ?? 'user';
+      await _userSession.saveSupabaseUserId(response.user!.id);
+      await _userSession.register(displayName);
+      await _userSession.updateLastLogin();
+      final username = await _userSession.getUsername();
+      _loginAttempts = 0;
+      state = state.copyWith(
+        isLoading: false,
+        isAuthenticated: true,
+        username: username,
+      );
+      return true;
+    } catch (e) {
+      final msg = ToastService.friendlyError(e);
       state = state.copyWith(isLoading: false, error: msg);
       return false;
     }

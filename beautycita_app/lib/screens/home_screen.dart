@@ -7,6 +7,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../models/category.dart';
 import '../providers/category_provider.dart';
 import '../providers/business_provider.dart';
@@ -14,6 +15,7 @@ import '../providers/admin_provider.dart';
 import '../config/constants.dart';
 import '../config/theme_extension.dart';
 import '../services/gesture_exclusion_service.dart';
+import '../services/updater_service.dart';
 import '../themes/category_icons.dart';
 import '../providers/theme_provider.dart';
 import '../themes/theme_variant.dart';
@@ -32,6 +34,35 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   bool _exclusionSet = false;
+  bool _updateDialogShown = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => _showApkUpdateIfNeeded());
+  }
+
+  void _showApkUpdateIfNeeded() {
+    if (_updateDialogShown) return;
+    final updater = UpdaterService.instance;
+    if (!updater.apkUpdateAvailable || !mounted) return;
+    _updateDialogShown = true;
+
+    showDialog(
+      context: context,
+      barrierDismissible: !updater.apkUpdateRequired,
+      builder: (ctx) => _ApkUpdateDialog(
+        version: updater.apkUpdateVersion,
+        url: updater.apkUpdateUrl,
+        required: updater.apkUpdateRequired,
+        onDismiss: () {
+          updater.dismissApkUpdate();
+          Navigator.of(ctx).pop();
+        },
+      ),
+    );
+  }
 
   void _updateGestureExclusion(bool isBizOwner, bool isAdmin) {
     if (_exclusionSet) return;
@@ -76,6 +107,45 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final palette = Theme.of(context).colorScheme;
 
     final topSectionHeight = screenHeight * 0.34;
+
+    // RP geo-fence: block if outside 300km radius
+    final isRp = ref.watch(isRpProvider);
+    final rpInZone = ref.watch(rpWithinGeofenceProvider);
+    if (isRp.valueOrNull == true && rpInZone.valueOrNull == false) {
+      return Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.location_off_rounded,
+                    size: 64, color: palette.error),
+                const SizedBox(height: 16),
+                Text(
+                  'Fuera de zona',
+                  style: GoogleFonts.poppins(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w600,
+                    color: palette.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Debes estar dentro de 300km de tu zona asignada para usar la app.',
+                  style: GoogleFonts.nunito(
+                    fontSize: 15,
+                    color: palette.onSurface.withValues(alpha: 0.6),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
 
     // Edge-swipe drawers: business (left) for service providers, admin (right) for admins
     final isBizOwner = ref.watch(isBusinessOwnerProvider);
@@ -166,11 +236,33 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   );
                                 },
                               ),
-                              _HeaderButton(
-                                icon: Icons.chat_bubble_outline_rounded,
-                                onTap: () => context.push('/chat'),
+                              // Aphrodite chat — customer role only
+                              Consumer(
+                                builder: (context, ref, _) {
+                                  final isCustomer = ref.watch(isCustomerProvider);
+                                  return isCustomer.when(
+                                    data: (yes) => yes
+                                        ? Padding(
+                                            padding: const EdgeInsets.only(
+                                                right: AppConstants.paddingSM),
+                                            child: _HeaderButton(
+                                              icon: Icons.chat_bubble_outline_rounded,
+                                              onTap: () => context.push('/chat'),
+                                            ),
+                                          )
+                                        : const SizedBox.shrink(),
+                                    loading: () => Padding(
+                                      padding: const EdgeInsets.only(
+                                          right: AppConstants.paddingSM),
+                                      child: _HeaderButton(
+                                        icon: Icons.chat_bubble_outline_rounded,
+                                        onTap: () => context.push('/chat'),
+                                      ),
+                                    ),
+                                    error: (_, __) => const SizedBox.shrink(),
+                                  );
+                                },
                               ),
-                              const SizedBox(width: AppConstants.paddingSM),
                               _HeaderButton(
                                 icon: Icons.settings_outlined,
                                 onTap: () => context.push('/settings'),
@@ -978,6 +1070,75 @@ class _HomeAdminDrawer extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ── APK Update Dialog ──
+
+class _ApkUpdateDialog extends StatelessWidget {
+  final String version;
+  final String url;
+  final bool required;
+  final VoidCallback onDismiss;
+
+  const _ApkUpdateDialog({
+    required this.version,
+    required this.url,
+    required this.required,
+    required this.onDismiss,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = Theme.of(context).colorScheme;
+    return AlertDialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+      ),
+      title: Row(
+        children: [
+          Icon(Icons.system_update_rounded, color: palette.primary, size: 28),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Nueva version disponible',
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+      content: Text(
+        required
+            ? 'La version $version es necesaria para continuar usando BeautyCita.'
+            : 'La version $version esta disponible con mejoras y correcciones.',
+        style: GoogleFonts.nunito(fontSize: 15),
+      ),
+      actions: [
+        if (!required)
+          TextButton(
+            onPressed: onDismiss,
+            child: Text(
+              'Mas tarde',
+              style: GoogleFonts.nunito(
+                color: palette.onSurface.withValues(alpha: 0.6),
+              ),
+            ),
+          ),
+        ElevatedButton.icon(
+          onPressed: () {
+            launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+          },
+          icon: const Icon(Icons.download_rounded),
+          label: Text(
+            'Actualizar',
+            style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+          ),
+        ),
+      ],
     );
   }
 }

@@ -174,3 +174,48 @@ final sendSupportMessageProvider =
     StateNotifierProvider<SendSupportMessageNotifier, AsyncValue<void>>((ref) {
   return SendSupportMessageNotifier();
 });
+
+/// Get or create salon chat thread for a specific business.
+final salonChatThreadProvider =
+    FutureProvider.family<ChatThread?, String>((ref, businessId) async {
+  if (!SupabaseClientService.isInitialized) return null;
+  final userId = SupabaseClientService.currentUserId;
+  if (userId == null) return null;
+
+  final client = SupabaseClientService.client;
+  final res = await client.functions
+      .invoke('salon-chat', body: {'action': 'init', 'business_id': businessId});
+
+  if (res.status != 200) return null;
+  final data = res.data as Map<String, dynamic>;
+  if (data['thread'] == null) return null;
+  return ChatThread.fromJson(data['thread'] as Map<String, dynamic>);
+});
+
+/// Sends salon chat messages through the edge function (triggers WA notification).
+class SendSalonMessageNotifier extends StateNotifier<AsyncValue<void>> {
+  SendSalonMessageNotifier() : super(const AsyncValue.data(null));
+
+  Future<bool> send(String threadId, String message) async {
+    state = const AsyncValue.loading();
+    try {
+      final client = SupabaseClientService.client;
+      final res = await client.functions.invoke('salon-chat',
+          body: {'action': 'send', 'thread_id': threadId, 'message': message});
+
+      if (res.status != 200) {
+        state = AsyncValue.error('Failed', StackTrace.current);
+        return false;
+      }
+      state = const AsyncValue.data(null);
+      return true;
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      return false;
+    }
+  }
+}
+
+final sendSalonMessageProvider =
+    StateNotifierProvider<SendSalonMessageNotifier, AsyncValue<void>>(
+        (ref) => SendSalonMessageNotifier());

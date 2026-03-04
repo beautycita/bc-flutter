@@ -18,7 +18,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
   String? _roleFilter;
   String? _statusFilter = 'active'; // default to active users only
 
-  static const _roles = ['customer', 'stylist', 'admin', 'superadmin'];
+  static const _roles = ['customer', 'stylist', 'admin', 'superadmin', 'rp'];
   static const _statuses = ['active', 'suspended', 'archived'];
 
   List<AdminUser> _filtered(List<AdminUser> users) {

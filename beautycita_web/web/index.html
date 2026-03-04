@@ -6,10 +6,10 @@
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <base href="$FLUTTER_BASE_HREF">
   <title>BeautyCita - Registra tu salon gratis</title>
-  <meta name="description" content="BeautyCita conecta clientas con tu salon. 3% por reserva. Sin mensualidad. Sin letra chica.">
-  <meta name="theme-color" content="#C2185B">
-  <meta property="og:title" content="BeautyCita - Registra tu salon gratis">
-  <meta property="og:description" content="Tus clientas te encuentran. Tu solo haces lo que amas. 3% por reserva, sin mensualidad.">
+  <meta name="description" content="BeautyCita conecta clientas con tu salon. Registro en 60 segundos. Sin mensualidad. Sin cuotas de entrada.">
+  <meta name="theme-color" content="#990033">
+  <meta property="og:title" content="BeautyCita - Recibe mas clientes sin esfuerzo">
+  <meta property="og:description" content="Tus clientas te encuentran. Registro en 60 segundos por WhatsApp. Sin cuotas de entrada.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://beautycita.com">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -17,65 +17,110 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@500;700&display=swap" rel="stylesheet">
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#FFF8F0;color:#2D2D2D;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+    html,body{overflow-x:hidden;max-width:100vw}
+    body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#FFF8F0;color:#2D2D2D;-webkit-font-smoothing:antialiased}
+    #landing{overflow-x:hidden}
     a{text-decoration:none;color:inherit}
     .container{max-width:1180px;margin:0 auto;padding:0 48px}
+    .reveal{opacity:0;transform:translateY(30px);transition:opacity .7s ease,transform .7s ease}
+    .reveal.visible{opacity:1;transform:translateY(0)}
 
     /* ── Nav ──────────────────────────────────────────────────── */
-    .nav{position:sticky;top:0;z-index:100;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,0.05)}
-    .nav .container{display:flex;align-items:center;justify-content:space-between;height:64px}
-    .nav-brand{font-size:1.6rem;font-weight:800;color:#C2185B;letter-spacing:-.3px}
+    .nav{position:sticky;top:0;z-index:100;background:rgba(255,255,255,.97);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);transition:box-shadow .3s}
+    .nav.scrolled{box-shadow:0 2px 20px rgba(0,0,0,.08)}
+    .nav .container{display:flex;align-items:center;justify-content:space-between;height:68px}
+    .nav-brand{font-size:1.6rem;font-weight:800;background:linear-gradient(135deg,#990033,#C2185B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-.3px}
     .nav-right{display:flex;align-items:center;gap:12px}
-    .nav-link{font-size:.875rem;font-weight:600;color:#C2185B;padding:9px 20px;border:2px solid #C2185B;border-radius:22px;transition:all .2s}
-    .nav-link:hover{background:#C2185B;color:#fff}
-    .nav-cta{font-size:.875rem;font-weight:700;color:#fff;background:#C2185B;padding:9px 22px;border-radius:22px;border:none;cursor:pointer;transition:all .2s}
-    .nav-cta:hover{background:#9C1450}
-    .hamburger{display:none;background:none;border:none;cursor:pointer}
-    .hamburger svg{width:28px;height:28px;color:#C2185B}
+    .nav-link{font-size:.875rem;font-weight:500;color:#555;padding:8px 16px;border-radius:20px;transition:all .2s}
+    .nav-link:hover{color:#990033;background:rgba(153,0,51,.05)}
+    .nav-cta{font-size:.875rem;font-weight:700;color:#1a1a1a;background:linear-gradient(135deg,#FFB300,#FFA000);padding:10px 24px;border-radius:24px;border:none;cursor:pointer;transition:all .25s;box-shadow:0 2px 8px rgba(255,179,0,.25)}
+    .nav-cta:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(255,179,0,.4)}
+    .hamburger{display:none;background:none;border:none;cursor:pointer;padding:8px}
+    .hamburger svg{width:28px;height:28px;color:#990033}
+
+    /* Mobile nav drawer */
+    .mobile-drawer{display:none;position:fixed;inset:0;z-index:200}
+    .mobile-drawer.open{display:block}
+    .drawer-overlay{position:absolute;inset:0;background:rgba(0,0,0,.4);backdrop-filter:blur(4px)}
+    .drawer-panel{position:absolute;top:0;right:0;width:280px;height:100%;background:#fff;padding:24px;display:flex;flex-direction:column;gap:8px;transform:translateX(100%);transition:transform .3s ease;box-shadow:-4px 0 24px rgba(0,0,0,.1)}
+    .mobile-drawer.open .drawer-panel{transform:translateX(0)}
+    .drawer-close{align-self:flex-end;background:none;border:none;cursor:pointer;padding:8px}
+    .drawer-close svg{width:24px;height:24px;color:#666}
+    .drawer-link{font-size:1.1rem;font-weight:500;padding:14px 16px;border-radius:12px;color:#333;transition:background .2s}
+    .drawer-link:hover{background:rgba(153,0,51,.05)}
+    .drawer-cta{font-size:1rem;font-weight:700;color:#1a1a1a;background:linear-gradient(135deg,#FFB300,#FFA000);padding:14px 24px;border-radius:24px;text-align:center;margin-top:8px}
 
     /* ── Hero ─────────────────────────────────────────────────── */
-    .hero{position:relative;background:linear-gradient(135deg,#8C1245 0%,#A91555 25%,#C2185B 55%,#E91E63 100%);overflow:hidden}
-    .hero .container{display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center;min-height:calc(100vh - 64px);padding-top:60px;padding-bottom:60px}
-    .hero-bg{position:absolute;inset:0;pointer-events:none;opacity:.1}
-    .hero-bg svg{width:100%;height:100%;object-fit:cover}
-    .hero-text{position:relative;z-index:2}
-    .hero-text h1{font-family:'Playfair Display',Georgia,serif;font-size:3.6rem;font-weight:700;color:#fff;line-height:1.1;margin-bottom:24px}
-    .hero-sub{font-size:1.2rem;color:rgba(255,255,255,.85);line-height:1.65;margin-bottom:40px;max-width:480px}
-    .btn{display:inline-flex;align-items:center;gap:10px;padding:16px 36px;border-radius:28px;font-weight:700;font-size:1rem;cursor:pointer;border:none;transition:all .25s;text-decoration:none}
-    .btn-register{background:#fff;color:#C2185B;font-size:1.05rem;box-shadow:0 4px 24px rgba(0,0,0,.15)}
-    .btn-register:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,.25)}
-    .btn-register svg{width:22px;height:22px}
-    .hero-login{display:inline-block;margin-top:20px;color:rgba(255,255,255,.75);font-size:.95rem;transition:color .2s}
-    .hero-login:hover{color:#fff}
-    .hero-visual{position:relative;z-index:2;display:flex;align-items:center;justify-content:center}
-    .hero-visual-inner{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:28px;padding:48px 40px;width:100%;max-width:440px}
-    .flow-step{display:flex;align-items:center;gap:20px;padding:14px 0}
-    .flow-num{width:48px;height:48px;background:#FFB300;border-radius:14px;display:flex;align-items:center;justify-content:center;font-weight:800;color:#1a1a1a;font-size:1.2rem;flex-shrink:0}
-    .flow-label{color:#fff;font-size:1.1rem;font-weight:500;flex:1}
-    .flow-icon{color:rgba(255,255,255,.45);font-size:1.6rem}
-    .flow-arrow{text-align:center;color:rgba(255,255,255,.25);font-size:1.1rem;padding:4px 0}
-    .scroll-hint{text-align:center;margin-top:40px;animation:bounce 2s infinite}
-    .scroll-hint svg{width:28px;height:28px;color:rgba(255,255,255,.4)}
-    @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(6px)}}
+    .hero{position:relative;background:linear-gradient(135deg,#660022 0%,#990033 40%,#C2185B 100%);overflow:hidden}
+    .hero::before{content:'';position:absolute;top:-50%;right:-20%;width:80%;height:200%;background:radial-gradient(circle,rgba(255,179,0,.08) 0%,transparent 60%);pointer-events:none}
+    .hero .container{display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center;min-height:calc(100vh - 68px);padding-top:60px;padding-bottom:60px;position:relative;z-index:2}
+    .hero-text{position:relative}
+    .hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.15);padding:8px 16px;border-radius:20px;font-size:.8rem;font-weight:600;color:rgba(255,255,255,.9);margin-bottom:24px}
+    .hero-badge-dot{width:8px;height:8px;background:#22C55E;border-radius:50%;animation:pulse-dot 2s infinite}
+    @keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.4}}
+    .hero-text h1{font-family:'Playfair Display',Georgia,serif;font-size:3.6rem;font-weight:700;color:#fff;line-height:1.08;margin-bottom:24px}
+    .hero-text h1 span{color:#FFB300}
+    .hero-sub{font-size:1.15rem;color:rgba(255,255,255,.8);line-height:1.7;margin-bottom:36px;max-width:480px}
+    .hero-btns{display:flex;gap:16px;flex-wrap:wrap}
+    .btn-primary{display:inline-flex;align-items:center;gap:10px;padding:16px 32px;border-radius:28px;font-weight:700;font-size:1.05rem;cursor:pointer;border:none;transition:all .25s;background:linear-gradient(135deg,#FFB300,#FFA000);color:#1a1a1a;box-shadow:0 4px 20px rgba(255,179,0,.3)}
+    .btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(255,179,0,.45)}
+    .btn-secondary{display:inline-flex;align-items:center;gap:8px;padding:16px 28px;border-radius:28px;font-weight:600;font-size:1rem;cursor:pointer;border:2px solid rgba(255,255,255,.3);background:transparent;color:#fff;transition:all .25s}
+    .btn-secondary:hover{border-color:rgba(255,255,255,.6);background:rgba(255,255,255,.08)}
+    .hero-visual{position:relative;display:flex;align-items:center;justify-content:center}
 
-    /* ── Section base ────────────────────────────────────────── */
-    .section{padding:100px 0}
-    .section-title{font-family:'Playfair Display',Georgia,serif;font-size:2.6rem;font-weight:700;text-align:center;margin-bottom:12px;color:#1a1a1a}
-    .section-subtitle{font-size:1.1rem;color:#777;text-align:center;margin-bottom:56px;max-width:520px;margin-left:auto;margin-right:auto;line-height:1.5}
+    /* Phone mockup */
+    .phone-mockup{position:relative;width:280px;height:580px;background:#111;border-radius:40px;padding:12px;box-shadow:0 20px 60px rgba(0,0,0,.3),0 0 0 2px rgba(255,255,255,.1);overflow:hidden}
+    .phone-notch{position:absolute;top:8px;left:50%;transform:translateX(-50%);width:100px;height:24px;background:#111;border-radius:0 0 16px 16px;z-index:3}
+    .phone-screen{width:100%;height:100%;border-radius:30px;overflow:hidden;position:relative;background:linear-gradient(180deg,#FFF0F3 0%,#FFF8F0 30%,#fff 100%)}
+    .phone-screen-placeholder{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:20px;text-align:center}
+    .phone-screen-placeholder .psp-icon{font-size:2.5rem;opacity:.5}
+    .phone-screen-placeholder .psp-text{font-size:.75rem;color:#999;line-height:1.4}
+    .phone-glow{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:400px;height:400px;background:radial-gradient(circle,rgba(255,179,0,.15) 0%,transparent 70%);pointer-events:none;z-index:0}
+
+    /* ── Value Props ──────────────────────────────────────────── */
+    .value-props{background:#FFF8F0;padding:100px 0}
+    .value-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:56px}
+    .value-card{background:#fff;border-radius:20px;padding:32px 28px;border:1px solid rgba(0,0,0,.04);transition:all .3s;cursor:default}
+    .value-card:hover{transform:translateY(-4px);box-shadow:0 12px 40px rgba(0,0,0,.06)}
+    .value-icon{width:52px;height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;margin-bottom:20px}
+    .value-icon.rose{background:rgba(153,0,51,.08);color:#990033}
+    .value-icon.gold{background:rgba(255,179,0,.12);color:#E09900}
+    .value-icon.green{background:rgba(34,197,94,.08);color:#16A34A}
+    .value-card h3{font-size:1.1rem;font-weight:700;margin-bottom:8px;color:#1a1a1a}
+    .value-card p{font-size:.95rem;color:#777;line-height:1.55}
+
+    /* ── App Showcase ─────────────────────────────────────────── */
+    .showcase{background:#fff;padding:100px 0;overflow:hidden}
+    .showcase-phones{display:flex;gap:40px;justify-content:center;align-items:flex-end;margin-top:56px}
+    .showcase-item{text-align:center}
+    .showcase-item .phone-mockup{width:220px;height:460px;border-radius:32px;padding:10px}
+    .showcase-item .phone-mockup .phone-notch{width:80px;height:20px;top:6px}
+    .showcase-item .phone-mockup .phone-screen{border-radius:24px}
+    .showcase-caption{margin-top:20px;font-size:.95rem;font-weight:600;color:#555}
+
+    /* ── How It Works ──────────────────────────────────────────── */
+    .how{background:#FFF8F0;padding:100px 0}
+    .how-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-top:56px;position:relative}
+    .how-steps::before{content:'';position:absolute;top:40px;left:16.66%;right:16.66%;height:2px;background:linear-gradient(90deg,#C2185B,#FFB300);opacity:.3}
+    .how-step{text-align:center;padding:0 24px;position:relative;z-index:1}
+    .step-num{width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#990033,#C2185B);color:#fff;font-size:1.8rem;font-weight:800;display:flex;align-items:center;justify-content:center;margin:0 auto 24px;box-shadow:0 8px 24px rgba(153,0,51,.2)}
+    .step-icon{font-size:2rem;margin-bottom:16px}
+    .step-title{font-size:1.15rem;font-weight:700;margin-bottom:10px;color:#1a1a1a}
+    .step-desc{color:#777;font-size:.95rem;line-height:1.5;max-width:260px;margin:0 auto}
 
     /* ── Calculator ──────────────────────────────────────────── */
-    .calc{background:#FFF8F0}
-    .calc-layout{display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:start}
+    .calc{background:#fff;padding:100px 0}
+    .calc-layout{display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:start;margin-top:56px}
     .calc-sliders{padding-top:12px}
     .slider-group{margin-bottom:32px}
     .slider-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
     .slider-label{font-weight:600;font-size:1rem;color:#444}
-    .slider-value{font-weight:700;color:#C2185B;font-size:1.1rem}
+    .slider-value{font-weight:700;color:#990033;font-size:1.1rem}
     input[type=range]{-webkit-appearance:none;width:100%;height:6px;border-radius:3px;background:linear-gradient(90deg,#C2185B var(--pct,50%),#E0D5CC var(--pct,50%));outline:none;cursor:pointer}
-    input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:#C2185B;border:3px solid #fff;box-shadow:0 2px 10px rgba(0,0,0,.2);cursor:pointer;transition:box-shadow .2s}
-    input[type=range]::-webkit-slider-thumb:hover{box-shadow:0 2px 16px rgba(194,24,91,.4)}
-    input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;background:#C2185B;border:3px solid #fff;box-shadow:0 2px 10px rgba(0,0,0,.2);cursor:pointer}
-    .calc-results{background:#fff;border-radius:24px;padding:40px;box-shadow:0 4px 24px rgba(0,0,0,.04);border:1px solid rgba(0,0,0,.05)}
+    input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:#990033;border:3px solid #fff;box-shadow:0 2px 10px rgba(0,0,0,.2);cursor:pointer;transition:box-shadow .2s}
+    input[type=range]::-webkit-slider-thumb:hover{box-shadow:0 2px 16px rgba(153,0,51,.4)}
+    input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;background:#990033;border:3px solid #fff;box-shadow:0 2px 10px rgba(0,0,0,.2);cursor:pointer}
+    .calc-results{background:#FFF8F0;border-radius:24px;padding:40px;box-shadow:0 4px 24px rgba(0,0,0,.04);border:1px solid rgba(0,0,0,.05)}
     .compare{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:28px}
     .compare-card{padding:28px 20px;border-radius:18px;text-align:center}
     .compare-card.competitor{background:rgba(220,38,38,.05);border:1px solid rgba(220,38,38,.1)}
@@ -86,77 +131,116 @@
     .bc .compare-price{color:#22C55E}
     .compare-period{color:#999;font-size:.85rem}
     .compare-annual{font-weight:600;color:#777;margin-top:10px;font-size:.85rem}
-    .savings{text-align:center;margin-bottom:24px}
+    .savings{text-align:left;margin-top:40px}
     .savings-title{font-size:1.6rem;font-weight:800;color:#22C55E}
     .savings-desc{color:#888;font-size:.9rem;margin-top:8px;line-height:1.5}
-    .savings-link{display:inline-block;color:#C2185B;font-weight:600;margin-top:14px;font-size:.95rem;transition:color .2s}
-    .savings-link:hover{color:#9C1450}
+    .savings-link{display:inline-block;color:#990033;font-weight:600;margin-top:14px;font-size:.95rem;transition:color .2s}
+    .savings-link:hover{color:#660022}
     .btn-gold{display:block;width:100%;text-align:center;background:linear-gradient(135deg,#FFB300,#FFA000);color:#1a1a1a;font-weight:700;padding:16px;border-radius:28px;font-size:1.05rem;border:none;cursor:pointer;transition:all .25s}
     .btn-gold:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(255,179,0,.35)}
 
-    /* ── Receipts ─────────────────────────────────────────────── */
-    .receipts{background:linear-gradient(135deg,#1a1a1a 0%,#2a2a2a 100%);padding:80px 0}
-    .receipts-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
-    .receipt-card{padding:40px 32px;border-radius:24px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.07);text-align:center;transition:all .3s}
-    .receipt-card:hover{background:rgba(255,255,255,.08);transform:translateY(-4px)}
-    .receipt-num{font-size:3rem;font-weight:900;color:#FFB300;margin-bottom:12px;letter-spacing:-.5px}
-    .receipt-desc{color:rgba(255,255,255,.6);font-size:.95rem;line-height:1.5}
-    .tagline-bar{background:linear-gradient(135deg,#C2185B,#A01550);padding:48px 0;text-align:center}
-    .tagline-bar p{font-size:1.6rem;font-weight:700;color:#fff;letter-spacing:-.3px}
+    /* ── Stats ──────────────────────────────────────────────── */
+    .stats{background:linear-gradient(135deg,#1a1a1a 0%,#2a2a2a 100%);padding:80px 0}
+    .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:32px}
+    .stat-item{text-align:center;padding:24px 16px}
+    .stat-num{font-size:2.8rem;font-weight:900;color:#FFB300;margin-bottom:8px;letter-spacing:-.5px}
+    .stat-desc{color:rgba(255,255,255,.55);font-size:.95rem;line-height:1.4}
 
-    /* ── How it works ─────────────────────────────────────────── */
-    .how{background:#FFF8F0}
-    .how-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:48px}
-    .how-step{text-align:center;padding:40px 24px;background:#fff;border-radius:24px;border:1px solid rgba(0,0,0,.04);box-shadow:0 2px 16px rgba(0,0,0,.03);transition:all .3s}
-    .how-step:hover{transform:translateY(-6px);box-shadow:0 12px 36px rgba(0,0,0,.07)}
-    .step-num{width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#C2185B,#E91E63);color:#fff;font-size:1.5rem;font-weight:800;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;box-shadow:0 4px 16px rgba(194,24,91,.25)}
-    .step-icon{font-size:2.2rem;margin-bottom:16px}
-    .step-title{font-size:1.15rem;font-weight:700;margin-bottom:8px;color:#1a1a1a}
-    .step-desc{color:#888;font-size:.95rem;line-height:1.5}
+    /* ── Testimonials placeholder ──────────────────────────── */
+    .testimonials{background:#FFF8F0;padding:80px 0}
+    .testimonial-placeholder{text-align:center;padding:48px;border:2px dashed rgba(153,0,51,.15);border-radius:24px;margin-top:40px}
+    .testimonial-placeholder p{color:#aaa;font-size:1rem;font-style:italic}
 
-    /* ── For clients ──────────────────────────────────────────── */
-    .clients{background:linear-gradient(135deg,#FFF0F3 0%,#FFF8F0 100%)}
-    .clients .container{text-align:center}
-    .clients-sub{color:#666;font-size:1.15rem;line-height:1.6;margin-bottom:40px;max-width:480px;margin-left:auto;margin-right:auto}
-    .btn-download{display:inline-flex;align-items:center;gap:10px;background:#FFB300;color:#1a1a1a;padding:16px 40px;border-radius:28px;font-weight:700;font-size:1.1rem;border:none;cursor:pointer;transition:all .25s;box-shadow:0 4px 16px rgba(255,179,0,.2)}
-    .btn-download:hover{background:#FFA000;transform:translateY(-2px);box-shadow:0 8px 28px rgba(255,179,0,.35)}
-    .btn-download svg{width:22px;height:22px}
-    .alt-downloads{display:flex;justify-content:center;gap:32px;margin-top:20px;font-size:.875rem}
-    .alt-downloads a{color:#999;display:flex;align-items:center;gap:6px;transition:color .2s}
-    .alt-downloads a:hover{color:#C2185B}
+    /* ── Final CTA ─────────────────────────────────────────── */
+    .final-cta{background:linear-gradient(135deg,#660022 0%,#990033 50%,#C2185B 100%);padding:100px 0;text-align:center;position:relative;overflow:hidden}
+    .final-cta::before{content:'';position:absolute;top:-50%;left:-30%;width:160%;height:200%;background:radial-gradient(circle at 30% 50%,rgba(255,179,0,.06) 0%,transparent 50%);pointer-events:none}
+    .final-cta h2{font-family:'Playfair Display',Georgia,serif;font-size:3rem;font-weight:700;color:#fff;margin-bottom:16px;position:relative;z-index:1}
+    .final-cta .final-sub{font-size:1.15rem;color:rgba(255,255,255,.75);margin-bottom:40px;max-width:500px;margin-left:auto;margin-right:auto;line-height:1.6;position:relative;z-index:1}
+    .final-btns{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;position:relative;z-index:1;margin-bottom:24px}
+    .wa-hint{display:inline-flex;align-items:center;gap:8px;color:rgba(255,255,255,.55);font-size:.9rem;position:relative;z-index:1}
+    .wa-hint svg{width:20px;height:20px;fill:rgba(255,255,255,.55)}
+
+    /* ── Contact Form ──────────────────────────────────────── */
+    .contact-form{max-width:480px;margin:0 auto;position:relative;z-index:1}
+    .contact-form h3{font-size:1.1rem;font-weight:600;margin-bottom:16px}
+    .form-row{display:flex;gap:12px;margin-bottom:12px}
+    .form-input{flex:1;padding:14px 18px;border-radius:16px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.1);color:#fff;font-size:.95rem;font-family:inherit;outline:none;transition:border-color .2s}
+    .form-input::placeholder{color:rgba(255,255,255,.4)}
+    .form-input:focus{border-color:rgba(255,179,0,.5);background:rgba(255,255,255,.15)}
+    .form-textarea{width:100%;padding:14px 18px;border-radius:16px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.1);color:#fff;font-size:.95rem;font-family:inherit;outline:none;resize:vertical;min-height:80px;transition:border-color .2s}
+    .form-textarea::placeholder{color:rgba(255,255,255,.4)}
+    .form-textarea:focus{border-color:rgba(255,179,0,.5);background:rgba(255,255,255,.15)}
+    .form-submit{width:100%;padding:14px;border-radius:20px;border:none;background:linear-gradient(135deg,#FFB300,#FFA000);color:#1a1a1a;font-weight:700;font-size:1rem;cursor:pointer;transition:all .25s;font-family:inherit;margin-top:4px}
+    .form-submit:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(255,179,0,.4)}
+    .form-submit:disabled{opacity:.6;cursor:not-allowed;transform:none;box-shadow:none}
+    .form-status{font-size:.85rem;margin-top:8px;min-height:20px}
+    .form-status.success{color:#4ADE80}
+    .form-status.error{color:#FCA5A5}
+
+    /* Light bg variant (for showcase/how sections) */
+    .contact-form-light .form-input,.contact-form-light .form-textarea{background:rgba(0,0,0,.04);border-color:rgba(0,0,0,.1);color:#2D2D2D}
+    .contact-form-light .form-input::placeholder,.contact-form-light .form-textarea::placeholder{color:rgba(0,0,0,.35)}
+    .contact-form-light .form-input:focus,.contact-form-light .form-textarea:focus{border-color:rgba(153,0,51,.3);background:rgba(0,0,0,.02)}
 
     /* ── Footer ───────────────────────────────────────────────── */
     .footer{background:#1a1a1a;padding:48px 0}
-    .footer .container{text-align:center}
-    .footer-brand{font-size:1.6rem;font-weight:800;color:#fff;margin-bottom:6px}
-    .footer-tagline{color:rgba(255,255,255,.45);font-size:.9rem;margin-bottom:24px}
-    .footer-links{display:flex;flex-wrap:wrap;justify-content:center;gap:24px;margin-bottom:24px}
-    .footer-links a{color:rgba(255,255,255,.55);font-size:.875rem;transition:color .2s}
-    .footer-links a:hover{color:#fff}
-    .footer-copy{color:rgba(255,255,255,.25);font-size:.8rem}
+    .footer .container{display:grid;grid-template-columns:1fr auto;align-items:center;gap:24px}
+    .footer-left{}
+    .footer-brand{font-size:1.4rem;font-weight:800;color:#fff;margin-bottom:4px}
+    .footer-tagline{color:rgba(255,255,255,.4);font-size:.85rem}
+    .footer-right{display:flex;gap:24px}
+    .footer-right a{color:rgba(255,255,255,.5);font-size:.875rem;transition:color .2s}
+    .footer-right a:hover{color:#fff}
+    .footer-copy{text-align:center;color:rgba(255,255,255,.2);font-size:.75rem;margin-top:32px;padding-top:24px;border-top:1px solid rgba(255,255,255,.06)}
 
-    /* ── Responsive (desktop-first, scale down) ──────────────── */
+    /* ── Responsive ──────────────────────────────────────────── */
     @media(max-width:1024px){
       .container{padding:0 32px}
       .hero .container{grid-template-columns:1fr;text-align:center;gap:48px;min-height:auto;padding-top:48px;padding-bottom:48px}
-      .hero-text h1{font-size:2.8rem}
       .hero-sub{margin-left:auto;margin-right:auto}
-      .hero-visual-inner{margin:0 auto}
-      .calc-layout{grid-template-columns:1fr;gap:40px;max-width:560px;margin:0 auto}
+      .hero-btns{justify-content:center}
+      .hero-badge{margin-left:auto;margin-right:auto}
+      .hero-visual{margin-top:8px}
+      .value-grid{grid-template-columns:repeat(2,1fr)}
+      .calc-layout{grid-template-columns:1fr;gap:40px;max-width:560px;margin-left:auto;margin-right:auto;margin-top:56px}
+      .stats-grid{grid-template-columns:repeat(2,1fr)}
+      .footer .container{grid-template-columns:1fr;text-align:center}
+      .footer-right{justify-content:center;flex-wrap:wrap}
     }
     @media(max-width:768px){
       .container{padding:0 20px}
       .nav-right .nav-link,.nav-right .nav-cta{display:none}
       .hamburger{display:block}
-      .hero-text h1{font-size:2.1rem}
+      .hero-text h1{font-size:2.2rem}
       .hero-sub{font-size:1rem}
-      .section{padding:64px 0}
+      .phone-mockup{width:220px;height:460px;border-radius:32px;padding:10px}
+      .phone-notch{width:80px;height:20px;top:6px}
+      .phone-screen{border-radius:24px}
+      .value-props,.how,.calc,.showcase{padding:64px 0}
       .section-title{font-size:2rem}
-      .how-steps{grid-template-columns:1fr;gap:24px;max-width:400px;margin:0 auto}
-      .receipts-grid{grid-template-columns:1fr;max-width:400px;margin:0 auto}
-      .tagline-bar p{font-size:1.2rem;padding:0 20px}
-      .receipt-num{font-size:2.4rem}
+      .value-grid{grid-template-columns:1fr;max-width:420px;margin-left:auto;margin-right:auto;margin-top:40px}
+      .how-steps{grid-template-columns:1fr;gap:40px;max-width:340px;margin-left:auto;margin-right:auto}
+      .how-steps::before{display:none}
+      .showcase-phones{flex-direction:row;overflow-x:auto;justify-content:flex-start;padding:0 20px 20px;gap:24px;-webkit-overflow-scrolling:touch;scroll-snap-type:x mandatory}
+      .showcase-item{scroll-snap-align:center;flex-shrink:0}
+      .stats{padding:48px 0}
+      .stats-grid{grid-template-columns:repeat(2,1fr);gap:16px}
+      .stat-num{font-size:2rem}
+      .final-cta{padding:64px 0}
+      .final-cta h2{font-size:2rem}
+      .section-title{font-size:1.8rem}
+      .section-subtitle{font-size:.95rem}
     }
+    @media(max-width:420px){
+      .hero-btns{flex-direction:column;align-items:stretch}
+      .btn-primary,.btn-secondary{justify-content:center;text-align:center}
+      .phone-mockup{width:200px;height:420px}
+      .showcase-item .phone-mockup{width:180px;height:380px}
+    }
+
+    /* ── Section base ────────────────────────────────────────── */
+    .section-title{font-family:'Playfair Display',Georgia,serif;font-size:2.6rem;font-weight:700;text-align:center;margin-bottom:12px;color:#1a1a1a}
+    .section-subtitle{font-size:1.05rem;color:#777;text-align:center;max-width:520px;margin-left:auto;margin-right:auto;line-height:1.55}
 
     /* ── Flutter loading overlay (for /auth /admin) ──────────── */
     #flutter-loading{display:none;position:fixed;inset:0;z-index:9999;align-items:center;justify-content:center;flex-direction:column;background:linear-gradient(135deg,#660033,#990033,#C2185B);font-family:'Inter',sans-serif}
@@ -172,82 +256,188 @@
 <div id="landing">
 
   <!-- ── Nav ──────────────────────────────────────────────────── -->
-  <nav class="nav">
-    <div class="container" style="display:flex;align-items:center;justify-content:space-between;height:64px">
-      <div class="nav-brand">BeautyCita</div>
+  <nav class="nav" id="mainNav">
+    <div class="container">
+      <a href="/" class="nav-brand">BeautyCita</a>
       <div class="nav-right">
-        <a href="/registro" class="nav-cta">REGISTRA TU SALON</a>
-        <a href="/auth" class="nav-link">Iniciar sesion</a>
-        <button class="hamburger" onclick="document.querySelector('.nav-right').classList.toggle('show')" aria-label="Menu">
+        <a href="#calculator" class="nav-link" onclick="smoothScroll(event,'calculator')">Haz la cuenta</a>
+        <a href="https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/apk/beautycita.apk" class="nav-link">Para clientes</a>
+        <a href="/auth/register" class="nav-cta">Registrar mi salon</a>
+        <button class="hamburger" onclick="toggleDrawer(true)" aria-label="Menu">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
         </button>
       </div>
     </div>
   </nav>
 
+  <!-- Mobile drawer -->
+  <div class="mobile-drawer" id="mobileDrawer">
+    <div class="drawer-overlay" onclick="toggleDrawer(false)"></div>
+    <div class="drawer-panel">
+      <button class="drawer-close" onclick="toggleDrawer(false)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+      <a href="#calculator" class="drawer-link" onclick="smoothScroll(event,'calculator');toggleDrawer(false)">Haz la cuenta</a>
+      <a href="#how" class="drawer-link" onclick="smoothScroll(event,'how');toggleDrawer(false)">Como funciona</a>
+      <a href="https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/apk/beautycita.apk" class="drawer-link">Descargar App</a>
+      <a href="/auth" class="drawer-link">Iniciar sesion</a>
+      <a href="/auth/register" class="drawer-cta">Registrar mi salon</a>
+    </div>
+  </div>
+
   <!-- ── Hero ─────────────────────────────────────────────────── -->
   <section class="hero">
-    <div class="hero-bg">
-      <svg viewBox="0 0 1400 800" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
-        <g fill="none" stroke="white" stroke-width="1.5" opacity="0.5">
-          <ellipse cx="200" cy="300" rx="100" ry="55"/><circle cx="200" cy="300" r="28"/><circle cx="200" cy="300" r="12"/>
-          <path d="M100 300 Q150 250 200 245 Q250 250 300 300"/><path d="M100 300 Q150 350 200 355 Q250 350 300 300"/>
-          <path d="M120 280 L100 255M150 265 L138 238M180 256 L174 228M200 254 L200 224M220 256 L226 228M250 265 L262 238M280 280 L300 255"/>
-          <path d="M1000 250 Q1050 210 1100 250 Q1150 210 1200 250" stroke-width="2"/><path d="M1000 250 Q1100 320 1200 250" stroke-width="2"/><path d="M1100 250 L1100 230"/>
-          <circle cx="180" cy="600" r="30"/><circle cx="260" cy="600" r="30"/><path d="M215 600 L340 480" stroke-width="2"/><path d="M225 600 L340 505" stroke-width="2"/>
-          <rect x="1100" y="480" width="50" height="80" rx="10"/><rect x="1110" y="455" width="30" height="30" rx="5"/><line x1="1125" y1="430" x2="1125" y2="455" stroke-width="3"/>
-          <path d="M650 100 Q662 125 650 145 Q638 125 650 100"/><path d="M720 140 Q730 160 720 175 Q710 160 720 140"/><path d="M580 120 Q588 138 580 150 Q572 138 580 120"/>
-          <path d="M750 500 Q770 520 750 540 Q730 520 750 500"/><path d="M800 550 Q815 565 800 580 Q785 565 800 550"/>
-          <rect x="1050" y="600" width="70" height="14" rx="7"/><line x1="1062" y1="614" x2="1062" y2="670"/><line x1="1074" y1="614" x2="1074" y2="670"/><line x1="1086" y1="614" x2="1086" y2="670"/><line x1="1098" y1="614" x2="1098" y2="670"/><line x1="1110" y1="614" x2="1110" y2="670"/>
-          <circle cx="500" cy="650" r="40" stroke-dasharray="8 6"/><circle cx="900" cy="150" r="35" stroke-dasharray="6 8"/>
-        </g>
-      </svg>
-    </div>
-    <div class="container" style="display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center;min-height:calc(100vh - 64px);padding-top:60px;padding-bottom:60px;position:relative;z-index:2">
+    <div class="container">
       <div class="hero-text">
-        <h1>Tus clientas te encuentran.<br>Tu solo haces lo que amas.</h1>
-        <p class="hero-sub">BeautyCita conecta clientas con tu salon. 3% por reserva. Sin mensualidad. Sin letra chica.</p>
-        <a href="/registro" class="btn btn-register">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-          REGISTRA TU SALON &mdash; GRATIS
-        </a>
-        <br>
-        <a href="/auth" class="hero-login">Ya tienes cuenta? Iniciar sesion</a>
+        <h1>Recibe mas clientes <span>sin esfuerzo</span></h1>
+        <p class="hero-sub">BeautyCita conecta a miles de usuarios con tu salon. Registro en 60 segundos por WhatsApp. Sin cuotas de entrada.</p>
+        <div class="hero-btns">
+          <a href="/auth/register" class="btn-primary">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+            Registrar mi salon
+          </a>
+          <a href="#how" class="btn-secondary" onclick="smoothScroll(event,'how')">
+            Ver como funciona
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>
+          </a>
+        </div>
       </div>
       <div class="hero-visual">
-        <div class="hero-visual-inner">
-          <div class="flow-step">
-            <div class="flow-num">1</div>
-            <div class="flow-label">Elige tu servicio</div>
-            <div class="flow-icon">&#9986;</div>
-          </div>
-          <div class="flow-arrow">&#8595;</div>
-          <div class="flow-step">
-            <div class="flow-num">2</div>
-            <div class="flow-label">BeautyCita busca por ti</div>
-            <div class="flow-icon">&#10024;</div>
-          </div>
-          <div class="flow-arrow">&#8595;</div>
-          <div class="flow-step">
-            <div class="flow-num">3</div>
-            <div class="flow-label">Reserva con un toque</div>
-            <div class="flow-icon">&#10004;</div>
-          </div>
-          <div class="scroll-hint">
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>
+        <div class="phone-glow"></div>
+        <div class="phone-mockup">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="phone-screen-placeholder">
+              <div class="psp-icon">&#128135;&#8205;&#9792;&#65039;</div>
+              <div class="psp-text">Screenshot de la app<br>Categoria / resultados</div>
+            </div>
           </div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- ── Calculator ───────────────────────────────────────────── -->
-  <section class="section calc" id="calculator">
+  <!-- ── Value Proposition Grid ───────────────────────────────── -->
+  <section class="value-props">
+    <div class="container">
+      <h2 class="section-title">Por que BeautyCita?</h2>
+      <p class="section-subtitle">Todo lo que necesitas para hacer crecer tu salon. Sin complicaciones.</p>
+      <div class="value-grid">
+        <div class="value-card reveal">
+          <div class="value-icon rose">&#128101;</div>
+          <h3>Clientes que te buscan</h3>
+          <p>Usuarios buscando servicios de belleza cerca de ti. Sin que muevas un dedo.</p>
+        </div>
+        <div class="value-card reveal">
+          <div class="value-icon gold">&#9889;</div>
+          <h3>Registro en 60 segundos</h3>
+          <p>Por WhatsApp. Sin formularios largos. Sin papeleo. Sin costos de entrada.</p>
+        </div>
+        <div class="value-card reveal">
+          <div class="value-icon green">&#128197;</div>
+          <h3>Reservas automaticas</h3>
+          <p>Los clientes reservan directo. Sin llamadas, sin mensajes, sin perder tiempo.</p>
+        </div>
+        <div class="value-card reveal">
+          <div class="value-icon rose">&#129504;</div>
+          <h3>Motor inteligente</h3>
+          <p>Te enviamos clientes que NECESITAN tu servicio, no turistas. Resultados en 200ms.</p>
+        </div>
+        <div class="value-card reveal">
+          <div class="value-icon green">&#128176;</div>
+          <h3>Cero comision inicial</h3>
+          <p>Empieza gratis. Solo pagas cuando realmente ganas. 3% por reserva completada.</p>
+        </div>
+        <div class="value-card reveal">
+          <div class="value-icon gold">&#127978;</div>
+          <h3>Tu negocio completo</h3>
+          <p>Calendario, pagos, resenas, staff, disputas — todo en un solo lugar.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── App Showcase ──────────────────────────────────────────── -->
+  <section class="showcase">
+    <div class="container">
+      <h2 class="section-title">Asi se ve en la app</h2>
+      <p class="section-subtitle">Tus clientas te encuentran, eligen su servicio y reservan en segundos.</p>
+      <div class="showcase-phones">
+        <div class="showcase-item reveal">
+          <div class="phone-mockup">
+            <div class="phone-notch"></div>
+            <div class="phone-screen">
+              <div class="phone-screen-placeholder">
+                <div class="psp-icon">&#9986;</div>
+                <div class="psp-text">Categorias<br>de servicios</div>
+              </div>
+            </div>
+          </div>
+          <div class="showcase-caption">Elige servicio</div>
+        </div>
+        <div class="showcase-item reveal">
+          <div class="phone-mockup">
+            <div class="phone-notch"></div>
+            <div class="phone-screen">
+              <div class="phone-screen-placeholder">
+                <div class="psp-icon">&#127942;</div>
+                <div class="psp-text">Top 3<br>resultados</div>
+              </div>
+            </div>
+          </div>
+          <div class="showcase-caption">Top 3 resultados</div>
+        </div>
+        <div class="showcase-item reveal">
+          <div class="phone-mockup">
+            <div class="phone-notch"></div>
+            <div class="phone-screen">
+              <div class="phone-screen-placeholder">
+                <div class="psp-icon">&#10004;&#65039;</div>
+                <div class="psp-text">Reserva<br>confirmada</div>
+              </div>
+            </div>
+          </div>
+          <div class="showcase-caption">Reserva con un toque</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── How It Works ──────────────────────────────────────────── -->
+  <section class="how" id="how">
+    <div class="container">
+      <h2 class="section-title">Como empezar</h2>
+      <p class="section-subtitle">Tres pasos. Sin complicaciones. Sin costos.</p>
+      <div class="how-steps">
+        <div class="how-step reveal">
+          <div class="step-num">1</div>
+          <div class="step-icon">&#128241;</div>
+          <div class="step-title">Registrate</div>
+          <div class="step-desc">Envia un WhatsApp o registrate en linea. 60 segundos. Sin tarjeta.</div>
+        </div>
+        <div class="how-step reveal">
+          <div class="step-num">2</div>
+          <div class="step-icon">&#128736;</div>
+          <div class="step-title">Configura tu perfil</div>
+          <div class="step-desc">Agrega servicios, horarios y precios. Nosotros te ayudamos con todo.</div>
+        </div>
+        <div class="how-step reveal">
+          <div class="step-num">3</div>
+          <div class="step-icon">&#128640;</div>
+          <div class="step-title">Recibe clientes</div>
+          <div class="step-desc">Los usuarios te encuentran y reservan al instante. Tu solo haces lo que amas.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Calculator ──────────────────────────────────────────── -->
+  <section class="calc" id="calculator">
     <div class="container">
       <h2 class="section-title">Haz la cuenta</h2>
       <p class="section-subtitle">Cuanto te cuesta tu plataforma actual?</p>
       <div class="calc-layout">
-        <div class="calc-sliders">
+        <div class="calc-sliders reveal">
           <div class="slider-group">
             <div class="slider-header">
               <span class="slider-label">Reservas por mes</span>
@@ -262,13 +452,12 @@
             </div>
             <input type="range" id="tickSlider" min="200" max="2000" value="500" step="50">
           </div>
-          <div class="savings" style="text-align:left;margin-top:40px">
+          <div class="savings">
             <div class="savings-title" id="savingsAmt">Ahorro anual: MX$12,000</div>
             <div class="savings-desc" id="savingsDesc">Eso es 24 servicios de MX$500 que trabajas gratis para ellos.</div>
-            <a href="/comisiones" class="savings-link">Ver comparacion detallada &rarr;</a>
           </div>
         </div>
-        <div class="calc-results">
+        <div class="calc-results reveal">
           <div class="compare">
             <div class="compare-card competitor">
               <h3>La competencia</h3>
@@ -283,84 +472,67 @@
               <div class="compare-annual" id="bcYear">MX$14,400 por ano</div>
             </div>
           </div>
-          <button class="btn-gold" onclick="location.href='/registro'">QUEDATE CON TU DINERO</button>
+          <a href="/auth/register" class="btn-gold" style="display:block;text-align:center">QUEDATE CON TU DINERO</a>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- ── Receipts ─────────────────────────────────────────────── -->
-  <section class="receipts">
+  <!-- ── Stats Banner ──────────────────────────────────────────── -->
+  <section class="stats">
     <div class="container">
-      <div class="receipts-grid">
-        <div class="receipt-card">
-          <div class="receipt-num">240,000+</div>
-          <div class="receipt-desc">reservas diarias procesan las grandes plataformas</div>
+      <div class="stats-grid">
+        <div class="stat-item reveal">
+          <div class="stat-num">200ms</div>
+          <div class="stat-desc">Busqueda inteligente</div>
         </div>
-        <div class="receipt-card">
-          <div class="receipt-num">$1.2M+</div>
-          <div class="receipt-desc">USD extraidos diariamente de estilistas</div>
+        <div class="stat-item reveal">
+          <div class="stat-num">30 seg</div>
+          <div class="stat-desc">Para reservar</div>
         </div>
-        <div class="receipt-card">
-          <div class="receipt-num">$192,000</div>
-          <div class="receipt-desc">genera su dinero AL DIA en intereses &mdash; mas de lo que ganas en un ano</div>
-        </div>
-      </div>
-    </div>
-  </section>
-  <section class="tagline-bar">
-    <p>3%. Eso es todo. Nosotros ganamos cuando tu ganas.</p>
-  </section>
-
-  <!-- ── How it works ─────────────────────────────────────────── -->
-  <section class="section how">
-    <div class="container">
-      <h2 class="section-title">Como funciona</h2>
-      <p class="section-subtitle" style="margin-bottom:56px">Tres pasos. Sin complicaciones.</p>
-      <div class="how-steps">
-        <div class="how-step">
-          <div class="step-num">1</div>
-          <div class="step-icon">&#127978;</div>
-          <div class="step-title">Registrate en 60 segundos</div>
-          <div class="step-desc">Sin costo, sin contrato, sin tarjeta</div>
-        </div>
-        <div class="how-step">
-          <div class="step-num">2</div>
-          <div class="step-icon">&#128101;</div>
-          <div class="step-title">Tus clientas te encuentran</div>
-          <div class="step-desc">BeautyCita las conecta con tu salon</div>
-        </div>
-        <div class="how-step">
-          <div class="step-num">3</div>
-          <div class="step-icon">&#128176;</div>
-          <div class="step-title">Tu solo cobras</div>
-          <div class="step-desc">3% por reserva. El resto es tuyo.</div>
+        <div class="stat-item reveal">
+          <div class="stat-num">$0</div>
+          <div class="stat-desc">Costo de entrada</div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- ── For clients ──────────────────────────────────────────── -->
-  <section class="section clients">
+  <!-- ── Testimonials (placeholder) ────────────────────────────── -->
+  <section class="testimonials">
     <div class="container">
-      <h2 class="section-title">Para tus clientas</h2>
-      <p class="clients-sub">Reservan en 30 segundos desde su celular. Sin llamadas, sin esperas.</p>
-      <div style="text-align:center">
-        <a href="https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/apk/beautycita.apk" class="btn-download">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.6 11.48l1.34-2.33c.09-.15.05-.34-.09-.42-.15-.09-.34-.05-.42.09l-1.35 2.34C15.77 10.44 14.42 10 13 10s-2.77.44-4.08 1.16L7.57 8.82c-.09-.15-.27-.18-.42-.09-.14.09-.18.27-.09.42L8.4 11.48C5.54 12.98 3.52 15.71 3.15 19h17.69C20.48 15.71 18.46 12.98 17.6 11.48zM8.87 16.5c-.41 0-.75-.34-.75-.75s.34-.75.75-.75.75.34.75.75-.34.75-.75.75zm6.26 0c-.41 0-.75-.34-.75-.75s.34-.75.75-.75.75.34.75.75-.34.75-.75.75z"/></svg>
-          DESCARGAR APP (ARM64)
+      <h2 class="section-title">Salones que confian en BeautyCita</h2>
+      <div class="testimonial-placeholder reveal">
+        <p>Proximamente — testimonios de salones reales</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Final CTA ─────────────────────────────────────────────── -->
+  <section class="final-cta" id="soporte">
+    <div class="container">
+      <h2>Registra tu salon hoy</h2>
+      <p class="final-sub">Sin costo. Sin contrato. Sin tarjeta de credito. Empieza a recibir clientes hoy mismo.</p>
+      <div class="final-btns">
+        <a href="/auth/register" class="btn-primary">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+          Registrar mi salon
         </a>
-        <div class="alt-downloads">
-          <a href="https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/apk/beautycita.apk">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
-            ARM 32-bit
-          </a>
-          <span style="color:#ddd">|</span>
-          <a href="https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/apk/beautycita.apk">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
-            x86_64
-          </a>
-        </div>
+        <a href="https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/apk/beautycita.apk" class="btn-secondary">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.6 11.48l1.34-2.33c.09-.15.05-.34-.09-.42-.15-.09-.34-.05-.42.09l-1.35 2.34C15.77 10.44 14.42 10 13 10s-2.77.44-4.08 1.16L7.57 8.82c-.09-.15-.27-.18-.42-.09-.14.09-.18.27-.09.42L8.4 11.48C5.54 12.98 3.52 15.71 3.15 19h17.69C20.48 15.71 18.46 12.98 17.6 11.48z"/></svg>
+          Descargar la app
+        </a>
+      </div>
+      <div style="width:100%;max-width:480px;margin:32px auto 0;border-top:1px solid rgba(255,255,255,.15);padding-top:32px;position:relative;z-index:1">
+        <h3 style="color:rgba(255,255,255,.7);font-size:.95rem;font-weight:500;margin-bottom:16px;text-align:center">O dejanos un mensaje</h3>
+        <form class="contact-form" id="contactForm1" onsubmit="return submitContact(event, this)">
+          <div class="form-row">
+            <input class="form-input" type="text" name="name" placeholder="Tu nombre (opcional)" maxlength="50" autocomplete="off">
+          </div>
+          <textarea class="form-textarea" name="message" placeholder="Escribe tu mensaje..." maxlength="500" required></textarea>
+          <button class="form-submit" type="submit">Enviar mensaje</button>
+          <div class="form-status" id="contactStatus1"></div>
+        </form>
       </div>
     </div>
   </section>
@@ -368,15 +540,17 @@
   <!-- ── Footer ───────────────────────────────────────────────── -->
   <footer class="footer">
     <div class="container">
-      <div class="footer-brand">BeautyCita</div>
-      <div class="footer-tagline">Tu agente de belleza inteligente</div>
-      <div class="footer-links">
-        <a href="#">Privacidad</a>
-        <a href="#">Terminos</a>
-        <a href="#">Sobre Nosotros</a>
-        <a href="#">Contacto</a>
-        <a href="#">Ayuda</a>
+      <div class="footer-left">
+        <div class="footer-brand">BeautyCita</div>
+        <div class="footer-tagline">Tu agente de belleza inteligente</div>
       </div>
+      <div class="footer-right">
+        <a href="/reservar">Para clientes</a>
+        <a href="/auth">Para salones</a>
+        <a href="/soporte">Soporte</a>
+      </div>
+    </div>
+    <div class="container">
       <div class="footer-copy">&copy; 2026 BeautyCita. Todos los derechos reservados.</div>
     </div>
   </footer>
@@ -391,6 +565,50 @@
 </div>
 
 <script>
+// ── Mobile drawer ──
+function toggleDrawer(open){
+  var d = document.getElementById('mobileDrawer');
+  if(open){d.classList.add('open');document.body.style.overflow='hidden'}
+  else{d.classList.remove('open');document.body.style.overflow=''}
+}
+
+// ── Smooth scroll ──
+function smoothScroll(e,id){
+  e.preventDefault();
+  var el = document.getElementById(id);
+  if(el) el.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+// ── Sticky nav shadow ──
+(function(){
+  var nav = document.getElementById('mainNav');
+  if(!nav) return;
+  window.addEventListener('scroll',function(){
+    if(window.scrollY > 10) nav.classList.add('scrolled');
+    else nav.classList.remove('scrolled');
+  },{passive:true});
+})();
+
+// ── Scroll reveal animations ──
+(function(){
+  var reveals = document.querySelectorAll('.reveal');
+  if(!reveals.length) return;
+  var observer = new IntersectionObserver(function(entries){
+    entries.forEach(function(entry){
+      if(entry.isIntersecting){
+        // Stagger delay based on sibling index
+        var siblings = entry.target.parentElement.querySelectorAll('.reveal');
+        var idx = Array.prototype.indexOf.call(siblings, entry.target);
+        entry.target.style.transitionDelay = (idx * 0.1) + 's';
+        entry.target.classList.add('visible');
+        observer.unobserve(entry.target);
+      }
+    });
+  },{threshold:0.15});
+  reveals.forEach(function(el){observer.observe(el)});
+})();
+
+// ── Calculator ──
 (function(){
   var res = document.getElementById('resSlider');
   var tick = document.getElementById('tickSlider');
@@ -415,6 +633,58 @@
   tick.addEventListener('input', calc);
   calc();
 })();
+
+// ── Contact form ──
+var SUPABASE_URL = 'https://beautycita.com/supabase';
+var SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzM1Njg5NjAwLCJleHAiOjE4OTM0NTYwMDB9.rz0oLwpK6HMsRI3PStAW3K1gl79d6z1PqqW8lvCtF9Q';
+
+function submitContact(e, form) {
+  e.preventDefault();
+  var btn = form.querySelector('.form-submit');
+  var statusEl = form.nextElementSibling || form.querySelector('.form-status');
+  if (!statusEl) statusEl = form.parentElement.querySelector('.form-status');
+
+  var name = (form.querySelector('[name=name]').value || '').trim();
+  var message = (form.querySelector('[name=message]').value || '').trim();
+  if (!message) return false;
+
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
+  statusEl.className = 'form-status';
+  statusEl.textContent = '';
+
+  fetch(SUPABASE_URL + '/functions/v1/send-contact', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + SUPABASE_ANON,
+      'apikey': SUPABASE_ANON,
+    },
+    body: JSON.stringify({ name: name, message: message }),
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(data){
+    if (data.sent) {
+      statusEl.className = 'form-status success';
+      statusEl.textContent = 'Mensaje enviado. Te responderemos pronto.';
+      form.querySelector('[name=message]').value = '';
+    } else {
+      statusEl.className = 'form-status error';
+      statusEl.textContent = 'No se pudo enviar. Intenta de nuevo.';
+    }
+  })
+  .catch(function(){
+    statusEl.className = 'form-status error';
+    statusEl.textContent = 'Error de conexion. Intenta de nuevo.';
+  })
+  .finally(function(){
+    btn.disabled = false;
+    btn.textContent = 'Enviar mensaje';
+  });
+  return false;
+}
+
+// ── Flutter loader (only for non-root paths) ──
 (function(){
   var path = window.location.pathname;
   if (path !== '/' && path !== '') {
@@ -424,7 +694,6 @@
     s.src = 'flutter_bootstrap.js?v=' + Date.now(); s.async = true;
     document.body.appendChild(s);
 
-    // Timeout: if Flutter hasn't rendered after 10s, show error
     var loadTimer = setTimeout(function(){
       var fl = document.getElementById('flutter-loading');
       if (fl && fl.style.display !== 'none') {

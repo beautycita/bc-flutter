@@ -178,16 +178,17 @@ class _UsersPageState extends ConsumerState<UsersPage> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        user.fullName ?? user.username,
+                        user.username,
                         style: theme.textTheme.bodySmall?.copyWith(
                           fontWeight: FontWeight.w500,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      if (user.fullName != null)
+                      if (user.fullName != null &&
+                          user.fullName!.isNotEmpty)
                         Text(
-                          '@${user.username}',
+                          user.fullName!,
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: colors.onSurface.withValues(alpha: 0.5),
                             fontSize: 11,
@@ -207,6 +208,35 @@ class _UsersPageState extends ConsumerState<UsersPage> {
             sortable: true,
             width: 100,
             cellBuilder: (user) => _RoleChip(role: user.role),
+          ),
+          BCColumn<AdminUser>(
+            id: 'email',
+            label: 'Email',
+            sortable: true,
+            cellBuilder: (user) => Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  child: Text(
+                    user.email ?? '-',
+                    style: theme.textTheme.bodySmall,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (user.email != null) ...[
+                  const SizedBox(width: 4),
+                  Icon(
+                    user.emailVerified
+                        ? Icons.verified
+                        : Icons.warning_amber_rounded,
+                    size: 14,
+                    color:
+                        user.emailVerified ? Colors.green : Colors.orange,
+                  ),
+                ],
+              ],
+            ),
           ),
           BCColumn<AdminUser>(
             id: 'phone',
@@ -233,6 +263,25 @@ class _UsersPageState extends ConsumerState<UsersPage> {
                         user.phoneVerified ? Colors.green : Colors.orange,
                   ),
                 ],
+              ],
+            ),
+          ),
+          BCColumn<AdminUser>(
+            id: 'auth',
+            label: 'Auth',
+            width: 80,
+            cellBuilder: (user) => Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (user.usesGoogle)
+                  const Icon(Icons.g_mobiledata, size: 18,
+                      color: Colors.red),
+                if (user.hasPassword)
+                  Icon(Icons.lock, size: 14,
+                      color: colors.onSurface.withValues(alpha: 0.5)),
+                if (user.authProviders.isEmpty)
+                  Icon(Icons.help_outline, size: 14,
+                      color: colors.onSurface.withValues(alpha: 0.3)),
               ],
             ),
           ),

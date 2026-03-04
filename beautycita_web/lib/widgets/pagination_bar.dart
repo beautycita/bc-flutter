@@ -46,6 +46,54 @@ class PaginationBar extends StatelessWidget {
     final start = totalItems == 0 ? 0 : (currentPage * pageSize) + 1;
     final end = math.min((currentPage + 1) * pageSize, totalItems);
 
+    final isMobile = MediaQuery.sizeOf(context).width < 600;
+
+    if (isMobile) {
+      return Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: BCSpacing.sm,
+          vertical: BCSpacing.xs,
+        ),
+        decoration: BoxDecoration(
+          color: colors.surface,
+          border: Border(
+            top: BorderSide(color: colors.outlineVariant),
+          ),
+        ),
+        child: Row(
+          children: [
+            Text(
+              '$start-$end de $totalItems',
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: colors.onSurface.withValues(alpha: 0.6),
+              ),
+            ),
+            const Spacer(),
+            IconButton(
+              icon: const Icon(Icons.chevron_left, size: 20),
+              onPressed: currentPage > 0
+                  ? () => onPageChanged(currentPage - 1)
+                  : null,
+              visualDensity: VisualDensity.compact,
+            ),
+            Text(
+              '${currentPage + 1}/$totalPages',
+              style: theme.textTheme.labelSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.chevron_right, size: 20),
+              onPressed: currentPage < totalPages - 1
+                  ? () => onPageChanged(currentPage + 1)
+                  : null,
+              visualDensity: VisualDensity.compact,
+            ),
+          ],
+        ),
+      );
+    }
+
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: BCSpacing.md,

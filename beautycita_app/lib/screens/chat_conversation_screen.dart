@@ -80,8 +80,9 @@ class _ChatConversationScreenState
       await ref.read(sendSupportMessageProvider.notifier).send(widget.threadId, text);
     } else if (_isAphrodite) {
       await ref.read(sendMessageProvider.notifier).send(widget.threadId, text);
+    } else if (_resolvedContactType == 'salon') {
+      await ref.read(sendSalonMessageProvider.notifier).send(widget.threadId, text);
     } else {
-      // Direct message insert for salon/user threads
       await _sendDirectMessage(text);
     }
 

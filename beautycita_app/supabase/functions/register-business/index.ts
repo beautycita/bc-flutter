@@ -27,6 +27,8 @@ interface RegisterBusinessRequest {
   lng?: number;
   service_categories?: string[];
   owner_name?: string; // If different from profile name
+  discovered_salon_id?: string; // Link to discovered_salons record
+  photo_url?: string; // Business photo (e.g. from discovered salon)
 }
 
 serve(async (req) => {
@@ -47,7 +49,7 @@ serve(async (req) => {
     }
 
     const body: RegisterBusinessRequest = await req.json();
-    const { name, phone, whatsapp, address, city, state, lat, lng, service_categories, owner_name } = body;
+    const { name, phone, whatsapp, address, city, state, lat, lng, service_categories, owner_name, discovered_salon_id, photo_url } = body;
 
     if (!name || name.trim().length < 2) {
       return json({ error: "Business name is required (minimum 2 characters)" }, 400);
@@ -75,25 +77,51 @@ serve(async (req) => {
       .eq("id", user.id)
       .single();
 
+    // If discovered_salon_id provided, enrich with its data
+    let discoveredSalon: Record<string, unknown> | null = null;
+    if (discovered_salon_id) {
+      const { data: ds } = await supabase
+        .from("discovered_salons")
+        .select("*")
+        .eq("id", discovered_salon_id)
+        .single();
+      if (ds) {
+        discoveredSalon = ds;
+        console.log(`[REGISTER-BIZ] Enriching with discovered salon: ${ds.business_name}`);
+      }
+    }
+
     // Start a transaction-like operation
     // 1. Create the business
+    const bizInsert: Record<string, unknown> = {
+      owner_id: user.id,
+      name: name.trim(),
+      phone: phone?.trim() || null,
+      whatsapp: whatsapp?.trim() || phone?.trim() || null,
+      address: address?.trim() || null,
+      city: city?.trim() || "Guadalajara",
+      state: state?.trim() || "Jalisco",
+      lat: lat || null,
+      lng: lng || null,
+      service_categories: service_categories || [],
+      is_active: true,
+      tier: 1,
+      onboarding_step: "services",
+    };
+
+    // Enrich from discovered salon if available
+    if (discoveredSalon) {
+      if (!bizInsert.address && discoveredSalon.location_address) bizInsert.address = discoveredSalon.location_address;
+      if (bizInsert.city === "Guadalajara" && discoveredSalon.location_city) bizInsert.city = discoveredSalon.location_city;
+      if (!bizInsert.lat && discoveredSalon.lat) bizInsert.lat = discoveredSalon.lat;
+      if (!bizInsert.lng && discoveredSalon.lng) bizInsert.lng = discoveredSalon.lng;
+      if (discoveredSalon.feature_image_url) bizInsert.photo_url = discoveredSalon.feature_image_url;
+    }
+    if (photo_url) bizInsert.photo_url = photo_url;
+
     const { data: business, error: bizError } = await supabase
       .from("businesses")
-      .insert({
-        owner_id: user.id,
-        name: name.trim(),
-        phone: phone?.trim() || null,
-        whatsapp: whatsapp?.trim() || phone?.trim() || null,
-        address: address?.trim() || null,
-        city: city?.trim() || "Guadalajara",
-        state: state?.trim() || "Jalisco",
-        lat: lat || null,
-        lng: lng || null,
-        service_categories: service_categories || [],
-        is_active: true,
-        tier: 1, // Start at tier 1
-        onboarding_step: "services", // Next step after profile is services
-      })
+      .insert(bizInsert)
       .select()
       .single();
 
@@ -170,6 +198,24 @@ serve(async (req) => {
     if (scheduleError) {
       console.error("[REGISTER-BIZ] Failed to create schedule:", scheduleError);
       // Non-critical, don't rollback
+    }
+
+    // 5. Link discovered salon if provided
+    if (discovered_salon_id) {
+      const { error: linkError } = await supabase
+        .from("discovered_salons")
+        .update({
+          status: "registered",
+          registered_business_id: business.id,
+          registered_at: new Date().toISOString(),
+        })
+        .eq("id", discovered_salon_id);
+
+      if (linkError) {
+        console.warn("[REGISTER-BIZ] Failed to link discovered salon:", linkError);
+      } else {
+        console.log(`[REGISTER-BIZ] Linked discovered salon ${discovered_salon_id}`);
+      }
     }
 
     return json({

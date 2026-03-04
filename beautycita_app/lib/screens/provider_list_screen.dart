@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:beautycita/models/provider.dart' as models;
 import 'package:beautycita/providers/provider_provider.dart';
+import 'package:beautycita/providers/chat_provider.dart';
 import 'package:beautycita/config/constants.dart';
-import 'package:beautycita/config/palettes.dart';
+import '../services/toast_service.dart';
 
 class ProviderListScreen extends ConsumerWidget {
   final String category;
@@ -114,7 +114,7 @@ class ProviderListScreen extends ConsumerWidget {
 // Provider Card
 // ---------------------------------------------------------------------------
 
-class _ProviderCard extends StatelessWidget {
+class _ProviderCard extends ConsumerWidget {
   final models.Provider provider;
   final Color categoryColor;
   final String category;
@@ -127,24 +127,32 @@ class _ProviderCard extends StatelessWidget {
     required this.onTap,
   });
 
-  Future<void> _launchPhone(String phone) async {
-    final cleaned = phone.replaceAll(RegExp(r'[^0-9+]'), '');
-    final uri = Uri.parse('tel:$cleaned');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
-    }
-  }
-
-  Future<void> _launchWhatsApp(String number) async {
-    final cleaned = number.replaceAll(RegExp(r'[^0-9]'), '');
-    final uri = Uri.parse('https://wa.me/$cleaned');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
+  Future<void> _openSalonChat(
+      BuildContext context, WidgetRef ref) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+    try {
+      final thread =
+          await ref.read(salonChatThreadProvider(provider.id).future);
+      if (!context.mounted) return;
+      Navigator.of(context).pop();
+      if (thread != null) {
+        context.push('/chat/${thread.id}');
+      } else {
+        ToastService.showError('No se pudo iniciar el chat');
+      }
+    } catch (e) {
+      if (!context.mounted) return;
+      Navigator.of(context).pop();
+      ToastService.showError('Error al conectar con el salon');
     }
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
 
@@ -298,55 +306,43 @@ class _ProviderCard extends StatelessWidget {
                   }).toList(),
                 ),
 
-              // Row 3: Contact actions
-              if (provider.phone != null || provider.whatsapp != null) ...[
-                const SizedBox(height: AppConstants.paddingMD),
-                Divider(
-                  height: 1,
-                  color: Theme.of(context).dividerColor,
-                ),
-                const SizedBox(height: AppConstants.paddingSM),
-                Row(
-                  children: [
-                    // Phone number text
-                    if (provider.phone != null) ...[
-                      Icon(
-                        Icons.phone_outlined,
-                        size: AppConstants.iconSizeSM - 2,
-                        color: colorScheme.onSurface.withValues(alpha: 0.5),
-                      ),
-                      const SizedBox(width: AppConstants.paddingXS),
-                      Expanded(
-                        child: Text(
-                          provider.phone!,
-                          style: textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onSurface.withValues(alpha: 0.5),
-                          ),
+              // Row 3: Contact action — message via BeautyCita
+              const SizedBox(height: AppConstants.paddingMD),
+              Divider(
+                height: 1,
+                color: Theme.of(context).dividerColor,
+              ),
+              const SizedBox(height: AppConstants.paddingSM),
+              Row(
+                children: [
+                  // Phone number (read-only display)
+                  if (provider.phone != null) ...[
+                    Icon(
+                      Icons.phone_outlined,
+                      size: AppConstants.iconSizeSM - 2,
+                      color: colorScheme.onSurface.withValues(alpha: 0.5),
+                    ),
+                    const SizedBox(width: AppConstants.paddingXS),
+                    Expanded(
+                      child: Text(
+                        provider.phone!,
+                        style: textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurface.withValues(alpha: 0.5),
                         ),
                       ),
-                    ] else
-                      const Spacer(),
+                    ),
+                  ] else
+                    const Spacer(),
 
-                    // Action buttons
-                    if (provider.whatsapp != null)
-                      _ContactButton(
-                        icon: Icons.chat_outlined,
-                        color: kWhatsAppGreen,
-                        tooltip: 'WhatsApp',
-                        onTap: () => _launchWhatsApp(provider.whatsapp!),
-                      ),
-                    if (provider.whatsapp != null && provider.phone != null)
-                      const SizedBox(width: AppConstants.paddingSM),
-                    if (provider.phone != null)
-                      _ContactButton(
-                        icon: Icons.phone,
-                        color: categoryColor,
-                        tooltip: 'Llamar',
-                        onTap: () => _launchPhone(provider.phone!),
-                      ),
-                  ],
-                ),
-              ],
+                  // Chat button
+                  _ContactButton(
+                    icon: Icons.chat_rounded,
+                    color: colorScheme.primary,
+                    tooltip: 'Enviar mensaje',
+                    onTap: () => _openSalonChat(context, ref),
+                  ),
+                ],
+              ),
             ],
           ),
         ),

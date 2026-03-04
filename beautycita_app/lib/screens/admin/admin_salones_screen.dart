@@ -35,6 +35,7 @@ class _AdminSalonesScreenState extends ConsumerState<AdminSalonesScreen> {
   final _searchController = TextEditingController();
   Timer? _debounce;
   String _activeQuery = '';
+  bool _showOrphanedOnly = false;
 
   @override
   void dispose() {
@@ -142,6 +143,23 @@ class _AdminSalonesScreenState extends ConsumerState<AdminSalonesScreen> {
                 ),
               ),
               const SizedBox(width: AppConstants.paddingSM),
+              // Orphan filter toggle
+              IconButton(
+                icon: Icon(
+                  _showOrphanedOnly
+                      ? Icons.filter_alt
+                      : Icons.filter_alt_outlined,
+                  color: _showOrphanedOnly
+                      ? Colors.orange
+                      : colors.onSurface.withValues(alpha: 0.5),
+                  size: 22,
+                ),
+                tooltip: _showOrphanedOnly
+                    ? 'Mostrando huerfanos'
+                    : 'Filtrar huerfanos',
+                onPressed: () =>
+                    setState(() => _showOrphanedOnly = !_showOrphanedOnly),
+              ),
               // Export button — only active when there are results
               resultsAsync.whenOrNull(
                 data: (salons) => salons.isNotEmpty
@@ -313,13 +331,40 @@ class _AdminSalonesScreenState extends ConsumerState<AdminSalonesScreen> {
           );
         }
 
+        final filtered = _showOrphanedOnly
+            ? salons.where((s) => s['owner_id'] == null).toList()
+            : salons;
+
+        if (filtered.isEmpty && _showOrphanedOnly) {
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.check_circle_outline,
+                  size: 48,
+                  color: colors.onSurface.withValues(alpha: 0.2),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Ningun salon huerfano en estos resultados',
+                  style: GoogleFonts.nunito(
+                    fontSize: 15,
+                    color: colors.onSurface.withValues(alpha: 0.4),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
         return ListView.builder(
           padding: const EdgeInsets.symmetric(
             horizontal: AppConstants.paddingMD,
             vertical: AppConstants.paddingXS,
           ),
-          itemCount: salons.length,
-          itemBuilder: (context, i) => _SalonResultCard(salon: salons[i]),
+          itemCount: filtered.length,
+          itemBuilder: (context, i) => _SalonResultCard(salon: filtered[i]),
         );
       },
     );
@@ -360,6 +405,7 @@ class _SalonResultCard extends StatelessWidget {
     final isActive = salon['is_active'] as bool? ?? false;
     final rating = (salon['average_rating'] as num?)?.toDouble();
     final reviews = salon['total_reviews'] as int?;
+    final isOrphaned = salon['owner_id'] == null;
 
     final locationLine = [city, state].where((s) => s.isNotEmpty).join(', ');
     final tierColor = _tierColor(tier, colors);
@@ -447,6 +493,27 @@ class _SalonResultCard extends StatelessWidget {
                                       fontSize: 11,
                                       fontWeight: FontWeight.w700,
                                       color: tierColor,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                              if (isOrphaned) ...[
+                                const SizedBox(width: AppConstants.paddingSM),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.orange.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    'Huerfano',
+                                    style: GoogleFonts.nunito(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.orange[800],
                                     ),
                                   ),
                                 ),
