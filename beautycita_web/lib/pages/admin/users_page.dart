@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../providers/admin_users_provider.dart';
+import '../../services/csv_export.dart';
 import '../../widgets/bc_data_table.dart';
 import '../../widgets/bulk_action_bar.dart';
 import '../../widgets/filter_bar.dart';
@@ -361,16 +362,6 @@ class _UsersPageState extends ConsumerState<UsersPage> {
                   },
                   icon: const Icon(Icons.download, size: 18),
                   label: const Text('Exportar'),
-                ),
-                TextButton.icon(
-                  onPressed: () {
-                    // TODO: Bulk suspend
-                  },
-                  icon: Icon(Icons.block, size: 18, color: colors.error),
-                  label: Text(
-                    'Suspender',
-                    style: TextStyle(color: colors.error),
-                  ),
                 ),
               ],
             )

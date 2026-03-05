@@ -256,16 +256,6 @@ class BookingDetailContent extends StatelessWidget {
           const SizedBox(height: BCSpacing.sm),
         ],
 
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton.icon(
-            onPressed: () {
-              // TODO: Reassign booking
-            },
-            icon: const Icon(Icons.swap_horiz, size: 18),
-            label: const Text('Reasignar'),
-          ),
-        ),
       ],
     );
   }
