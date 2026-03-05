@@ -81,7 +81,10 @@ class _UsersPageState extends ConsumerState<UsersPage> {
       selectedItem: _selectedUser,
       onSelect: (user) => setState(() => _selectedUser = user),
       detailTitle: _selectedUser?.username ?? 'Usuario',
-      detailBuilder: (user) => UserDetailContent(user: user),
+      detailBuilder: (user) => UserDetailContent(
+        user: user,
+        onUserUpdated: () => ref.invalidate(adminUsersProvider),
+      ),
       filterBar: FilterBar(
         searchField: TextField(
           controller: _searchController,

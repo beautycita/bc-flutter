@@ -124,9 +124,28 @@ class MainActivity : FlutterFragmentActivity() {
                     }, 1000)
                 }
             } else {
-                // Pre-Android 13: no permission needed
-                Log.d(TAG, "[Screenshot] Pre-Android 13, starting detection")
-                startScreenshotDetection()
+                // Android 10-12: need READ_EXTERNAL_STORAGE
+                val hasReadStorage = ContextCompat.checkSelfPermission(
+                    this, Manifest.permission.READ_EXTERNAL_STORAGE
+                ) == PackageManager.PERMISSION_GRANTED
+
+                if (hasReadStorage) {
+                    Log.d(TAG, "[Screenshot] READ_EXTERNAL_STORAGE granted")
+                    startScreenshotDetection()
+                } else {
+                    Log.d(TAG, "[Screenshot] Requesting READ_EXTERNAL_STORAGE")
+                    Handler(Looper.getMainLooper()).postDelayed({
+                        try {
+                            ActivityCompat.requestPermissions(
+                                this,
+                                arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE),
+                                PERMISSION_REQUEST_CODE
+                            )
+                        } catch (e: Exception) {
+                            Log.e(TAG, "[Screenshot] Permission request failed: ${e.message}")
+                        }
+                    }, 1000)
+                }
             }
         } catch (e: Exception) {
             Log.e(TAG, "[Screenshot] requestMediaPermissionAndStart failed: ${e.message}")

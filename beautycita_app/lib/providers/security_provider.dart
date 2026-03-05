@@ -137,6 +137,7 @@ class SecurityNotifier extends StateNotifier<SecurityState> {
           isLoading: false,
           email: googleUser.email,
           isEmailAdded: true,
+          isEmailConfirmed: true, // Google verifies email by definition
           successMessage: 'Google vinculado exitosamente',
         );
       } on AuthException catch (e) {
@@ -153,6 +154,7 @@ class SecurityNotifier extends StateNotifier<SecurityState> {
           isLoading: false,
           email: googleUser.email,
           isEmailAdded: true,
+          isEmailConfirmed: true, // Google verifies email by definition
           successMessage: 'Sesion recuperada con Google',
         );
       }
