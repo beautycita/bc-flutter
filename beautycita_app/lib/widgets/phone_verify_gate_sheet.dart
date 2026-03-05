@@ -75,10 +75,15 @@ class _PhoneVerifyGateSheetState extends ConsumerState<PhoneVerifyGateSheet> {
       return;
     }
     final notifier = ref.read(profileProvider.notifier);
-    await notifier.updatePhone(_formattedPhone);
+    final phoneUpdated = await notifier.updatePhone(_formattedPhone);
+    if (!mounted) return;
+    if (!phoneUpdated) {
+      setState(() => _errorMessage = 'No se pudo guardar el numero. Intenta de nuevo.');
+      return;
+    }
     final success = await notifier.sendPhoneOtp();
     if (!mounted) return;
-    if (success == true || success == null) {
+    if (success) {
       setState(() => _step = 2);
     } else {
       setState(() => _errorMessage = 'Error al enviar el codigo. Intenta de nuevo.');
@@ -95,7 +100,7 @@ class _PhoneVerifyGateSheetState extends ConsumerState<PhoneVerifyGateSheet> {
     final notifier = ref.read(profileProvider.notifier);
     final success = await notifier.verifyPhoneOtp(otp);
     if (!mounted) return;
-    if (success == true || success == null) {
+    if (success) {
       Navigator.of(context).pop(true);
     } else {
       setState(() {
