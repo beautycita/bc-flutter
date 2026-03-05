@@ -157,11 +157,15 @@ Deno.serve(async (req) => {
     return json({ error: "Method not allowed" }, 405);
   }
 
+  try {
+
   // Auth
   const authHeader = req.headers.get("authorization") || "";
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+
+  console.log("[phone-verify] Request received");
 
   const userClient = createClient(supabaseUrl, anonKey, {
     global: { headers: { Authorization: authHeader } },
@@ -172,11 +176,14 @@ Deno.serve(async (req) => {
   } = await userClient.auth.getUser();
 
   if (authError || !user) {
+    console.log(`[phone-verify] Auth failed: ${authError?.message ?? "no user"}`);
     return json({ error: "Not authenticated" }, 401);
   }
 
+  console.log(`[phone-verify] User ${user.id}, parsing body...`);
   const db = createClient(supabaseUrl, serviceKey);
   const { action, phone, code } = await req.json();
+  console.log(`[phone-verify] Action: ${action}, phone: ${phone ? phone.slice(0, 6) + "***" : "none"}`);
 
   // ─── SEND CODE ──────────────────────────────────────────────
   if (action === "send-code") {
@@ -192,12 +199,14 @@ Deno.serve(async (req) => {
       .eq("phone", phone)
       .gte("created_at", new Date(Date.now() - 15 * 60 * 1000).toISOString());
 
+    console.log(`[phone-verify] Rate limit check: ${count ?? 0} codes in 15min`);
     if ((count || 0) >= 3) {
       return json({ error: "Demasiados intentos. Espera 15 minutos." }, 429);
     }
 
     // Try WhatsApp first — generate OTP upfront so we send the real code in one shot
     const otp = generateOtp();
+    console.log(`[phone-verify] Trying WhatsApp for ${phone.slice(0, 6)}***`);
     let result = await sendWhatsApp(phone, otp);
 
     if (result.sent) {
@@ -231,9 +240,11 @@ Deno.serve(async (req) => {
     }
 
     if (!result.sent) {
+      console.error(`[phone-verify] All channels failed for ${phone.slice(0, 6)}***`);
       return json({ error: "No se pudo enviar el codigo. Intenta mas tarde." }, 500);
     }
 
+    console.log(`[phone-verify] OTP sent via ${result.channel} to ${phone.slice(0, 6)}***`);
     return json({
       sent: true,
       channel: result.channel,
@@ -307,4 +318,9 @@ Deno.serve(async (req) => {
   }
 
   return json({ error: `Unknown action: ${action}` }, 400);
+
+  } catch (e) {
+    console.error(`[phone-verify] Unhandled error: ${e}`);
+    return json({ error: "Internal server error" }, 500);
+  }
 });
