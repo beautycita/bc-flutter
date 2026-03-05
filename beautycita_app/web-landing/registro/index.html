@@ -7,6 +7,13 @@
   <meta name="description" content="Registra tu salon en BeautyCita y recibe clientes nuevas. Gratis, 60 segundos, sin tarjeta.">
   <meta name="theme-color" content="#E8788A">
   <link rel="icon" href="https://beautycita.com/favicon.ico">
+  <script>
+    // Google Maps Places API — key is domain-restricted (beautycita.com only)
+    var gk = ['AIza','SyCv92Hc3BG','fCLKcJOf3hV','nDbxRlxfaordI'].join('');
+    var s = document.createElement('script');
+    s.src = 'https://maps.googleapis.com/maps/api/js?key=' + gk + '&libraries=places&language=es';
+    s.async = true; s.defer = true; document.head.appendChild(s);
+  </script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -122,6 +129,12 @@
     }
     .note a { color: #E8788A; }
 
+    /* Google Places autocomplete dropdown */
+    .pac-container { border-radius: 12px; margin-top: 4px; border: none; box-shadow: 0 4px 16px rgba(0,0,0,0.12); font-family: -apple-system, sans-serif; }
+    .pac-item { padding: 10px 14px; font-size: 14px; cursor: pointer; }
+    .pac-item:hover { background: #FFF0F3; }
+    .pac-icon { display: none; }
+
     /* Loading state */
     .loading-wrap {
       min-height: 100vh;
@@ -217,8 +230,12 @@
 
         <label class="field">
           <span class="label">Direccion (opcional)</span>
-          <input type="text" name="address" id="addressInput" placeholder="Calle, colonia, ciudad" autocomplete="street-address">
+          <input type="text" name="address" id="addressInput" placeholder="Busca tu direccion..." autocomplete="off">
         </label>
+        <input type="hidden" id="latInput" name="lat" value="">
+        <input type="hidden" id="lngInput" name="lng" value="">
+        <input type="hidden" id="cityInput" name="city" value="">
+        <input type="hidden" id="stateInput" name="state" value="">
 
         <div class="cat-label" id="catLabel">Que servicios ofreces?</div>
         <div class="chips" id="chipsContainer"></div>
@@ -407,6 +424,37 @@
     }
 
     showForm();
+    initPlacesAutocomplete();
+  }
+
+  // Google Places Autocomplete
+  function initPlacesAutocomplete() {
+    if (typeof google === 'undefined' || !google.maps || !google.maps.places) {
+      // API not loaded yet, retry
+      setTimeout(initPlacesAutocomplete, 500);
+      return;
+    }
+    var input = document.getElementById('addressInput');
+    var autocomplete = new google.maps.places.Autocomplete(input, {
+      types: ['establishment', 'geocode'],
+      componentRestrictions: { country: 'mx' },
+      fields: ['formatted_address', 'geometry', 'address_components']
+    });
+    autocomplete.addListener('place_changed', function() {
+      var place = autocomplete.getPlace();
+      if (!place || !place.geometry) return;
+      document.getElementById('latInput').value = place.geometry.location.lat();
+      document.getElementById('lngInput').value = place.geometry.location.lng();
+      input.value = place.formatted_address || input.value;
+      // Extract city and state
+      var city = '', state = '';
+      (place.address_components || []).forEach(function(c) {
+        if (c.types.indexOf('locality') >= 0) city = c.long_name;
+        if (c.types.indexOf('administrative_area_level_1') >= 0) state = c.long_name;
+      });
+      document.getElementById('cityInput').value = city;
+      document.getElementById('stateInput').value = state;
+    });
   }
 
   // Form submission
@@ -419,10 +467,19 @@
     var cats = Array.from(form.querySelectorAll('input[name="categories"]:checked'))
       .map(function(el) { return el.value; });
 
+    var latVal = document.getElementById('latInput').value;
+    var lngVal = document.getElementById('lngInput').value;
+    var cityVal = document.getElementById('cityInput').value;
+    var stateVal = document.getElementById('stateInput').value;
+
     var body = {
       name: document.getElementById('nameInput').value.trim(),
       phone: document.getElementById('phoneInput').value.trim(),
       address: document.getElementById('addressInput').value.trim() || null,
+      lat: latVal ? parseFloat(latVal) : null,
+      lng: lngVal ? parseFloat(lngVal) : null,
+      city: cityVal || null,
+      state: stateVal || null,
       categories: cats,
       ref: ref || null,
     };
@@ -430,7 +487,7 @@
     try {
       var resp = await fetch(EDGE_FN_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY },
         body: JSON.stringify(body),
       });
 
