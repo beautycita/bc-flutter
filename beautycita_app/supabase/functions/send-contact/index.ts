@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const WA_API_URL = "http://100.93.1.103:3200";
 const WA_API_TOKEN = "Y1gSKe4QCwX5FRkj8ZZi0ONp3Lld_S6oP00nJ7n2KL0";
-const GROUP_ID = "120363426514543930@g.us";
+const BC_PHONE = "523221429800";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -41,17 +41,17 @@ serve(async (req: Request) => {
       ? name.trim().substring(0, 50)
       : "Visitante";
 
-    const groupMessage = `[beautycita.com]\n${displayName}:\n${cleaned.substring(0, 500)}`;
+    const contactMessage = `*[beautycita.com]*\nMensaje de ${displayName}:\n${cleaned.substring(0, 500)}`;
 
-    const waRes = await fetch(`${WA_API_URL}/api/wa/send-group`, {
+    const waRes = await fetch(`${WA_API_URL}/api/wa/send`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${WA_API_TOKEN}`,
       },
       body: JSON.stringify({
-        groupId: GROUP_ID,
-        message: groupMessage,
+        phone: BC_PHONE,
+        message: contactMessage,
       }),
     });
 
