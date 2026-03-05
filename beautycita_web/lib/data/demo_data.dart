@@ -197,63 +197,103 @@ abstract final class DemoData {
     {'id': 'e0000001-0000-4000-8000-000000000050', 'business_id': businessId, 'service_type': 'limpieza_facial_profunda', 'name': 'Facial Hidratante', 'category': 'Facial', 'subcategory': 'Facial', 'price': 700.0, 'duration_minutes': 60, 'buffer_minutes': 0, 'deposit_required': false, 'deposit_percentage': 0.0, 'description': 'Limpieza profunda con vapor, extraccion, mascarilla y serum de acido hialuronico.', 'is_active': true},
   ];
 
+  // ── Staff → service pool mapping ──────────────────────────────────────
+  // Each staff member has a pool of service indices they typically perform.
+  static const Map<String, List<int>> _staffServicePool = {
+    '261a09a2-8e09-41da-abe6-00ce582a3607': [0, 4, 5],       // Amber: Corte, Corte Caballero, Peinado Evento
+    'd0000001-0000-4000-8000-000000000001': [1, 2, 3],        // Valentina: Balayage, Tinte Raiz, Keratina
+    '98306b67-3d8c-44e3-9010-465e45afeb4d': [11, 12, 13, 14, 15], // Marcos: Maquillaje, Depilacion
+    'fcd1e90a-9811-4ea6-b672-385b2c01c7c6': [3, 23, 24],      // Juan: Keratina, Tratamiento Capilar, Masaje, Facial
+    'd0000001-0000-4000-8000-000000000002': [6, 7, 8, 9, 10], // Daniela: Pestanas, Cejas, Microblading
+    'd0000001-0000-4000-8000-000000000003': [16, 17, 18, 19, 20, 21], // Andrea: Unas
+  };
+
   // ── Appointments ───────────────────────────────────────────────────────
   // Generates appointments relative to "today" for a fresh demo feel.
+  // 3 appointments per staff member per working day (Mon-Sat) for 2 months.
+
+  static List<Map<String, dynamic>>? _cachedAppointments;
+  static int? _cachedDay;
 
   static List<Map<String, dynamic>> get appointments {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
+    final dayKey = today.millisecondsSinceEpoch ~/ 86400000;
 
-    // Past appointments (completed / cancelled / no-show)
-    final past = <Map<String, dynamic>>[
-      _appt('f0000001-0001-4000-8000-000000000001', '261a09a2-8e09-41da-abe6-00ce582a3607', 'Corte y Estilo', 'corte_mujer', 500, today.subtract(const Duration(days: 41)), 45, 'completed'),
-      _appt('f0000001-0001-4000-8000-000000000002', 'd0000001-0000-4000-8000-000000000002', 'Extensiones Clasicas', 'ext_pestanas_clasicas', 900, today.subtract(const Duration(days: 41)), 90, 'completed'),
-      _appt('f0000001-0001-4000-8000-000000000003', 'd0000001-0000-4000-8000-000000000003', 'Unas Acrilicas', 'manicure_acrilico', 650, today.subtract(const Duration(days: 41)), 90, 'completed'),
-      _appt('f0000001-0001-4000-8000-000000000004', 'd0000001-0000-4000-8000-000000000001', 'Balayage', 'balayage', 1800, today.subtract(const Duration(days: 34)), 150, 'completed'),
-      _appt('f0000001-0001-4000-8000-000000000005', '98306b67-3d8c-44e3-9010-465e45afeb4d', 'Maquillaje Social', 'maquillaje_social', 800, today.subtract(const Duration(days: 34)), 60, 'completed'),
-      _appt('f0000001-0001-4000-8000-000000000006', 'd0000001-0000-4000-8000-000000000002', 'Lash Lift + Tinte', 'lifting_pestanas', 650, today.subtract(const Duration(days: 33)), 60, 'completed'),
-      _appt('f0000001-0001-4000-8000-000000000007', 'fcd1e90a-9811-4ea6-b672-385b2c01c7c6', 'Alisado Keratina', 'keratina_alisado', 2500, today.subtract(const Duration(days: 27)), 180, 'completed'),
-      _appt('f0000001-0001-4000-8000-000000000008', '98306b67-3d8c-44e3-9010-465e45afeb4d', 'Dep. Pierna Completa', 'depilacion_cera', 450, today.subtract(const Duration(days: 26)), 45, 'completed'),
-      _appt('f0000001-0001-4000-8000-000000000009', 'd0000001-0000-4000-8000-000000000003', 'Nail Art Premium', 'nail_art', 900, today.subtract(const Duration(days: 26)), 120, 'completed'),
-      _appt('f0000001-0001-4000-8000-000000000010', 'd0000001-0000-4000-8000-000000000002', 'Diseno de Cejas', 'diseno_depilacion_cejas', 350, today.subtract(const Duration(days: 25)), 30, 'completed'),
-      _appt('f0000001-0001-4000-8000-000000000011', 'd0000001-0000-4000-8000-000000000001', 'Tinte Raiz', 'retoque_raiz', 800, today.subtract(const Duration(days: 20)), 90, 'completed'),
-      _appt('f0000001-0001-4000-8000-000000000012', '98306b67-3d8c-44e3-9010-465e45afeb4d', 'Maquillaje Novia', 'maquillaje_novia', 2000, today.subtract(const Duration(days: 19)), 90, 'completed'),
-      _appt('f0000001-0001-4000-8000-000000000013', 'fcd1e90a-9811-4ea6-b672-385b2c01c7c6', 'Facial Hidratante', 'limpieza_facial_profunda', 700, today.subtract(const Duration(days: 19)), 60, 'completed'),
-      _appt('f0000001-0001-4000-8000-000000000014', '261a09a2-8e09-41da-abe6-00ce582a3607', 'Corte y Estilo', 'corte_mujer', 500, today.subtract(const Duration(days: 18)), 45, 'cancelled_customer'),
-      _appt('f0000001-0001-4000-8000-000000000015', 'd0000001-0000-4000-8000-000000000002', 'Extensiones Volumen', 'ext_pestanas_volumen', 1200, today.subtract(const Duration(days: 13)), 120, 'completed'),
-      _appt('f0000001-0001-4000-8000-000000000016', 'd0000001-0000-4000-8000-000000000003', 'Gelish Manos', 'manicure_gel', 400, today.subtract(const Duration(days: 12)), 50, 'completed'),
-      _appt('f0000001-0001-4000-8000-000000000017', '261a09a2-8e09-41da-abe6-00ce582a3607', 'Peinado Evento', 'recogido_evento', 700, today.subtract(const Duration(days: 11)), 60, 'completed'),
-      _appt('f0000001-0001-4000-8000-000000000018', '98306b67-3d8c-44e3-9010-465e45afeb4d', 'Depilacion Brasilena', 'depilacion_cera', 500, today.subtract(const Duration(days: 11)), 30, 'completed'),
-      _appt('f0000001-0001-4000-8000-000000000019', 'd0000001-0000-4000-8000-000000000001', 'Balayage', 'balayage', 1800, today.subtract(const Duration(days: 10)), 150, 'no_show'),
-      _appt('f0000001-0001-4000-8000-000000000020', 'd0000001-0000-4000-8000-000000000001', 'Balayage', 'balayage', 1800, today.subtract(const Duration(days: 6)), 150, 'completed'),
-      _appt('f0000001-0001-4000-8000-000000000021', 'd0000001-0000-4000-8000-000000000002', 'Extensiones Clasicas', 'ext_pestanas_clasicas', 900, today.subtract(const Duration(days: 6)), 90, 'completed'),
-      _appt('f0000001-0001-4000-8000-000000000022', 'fcd1e90a-9811-4ea6-b672-385b2c01c7c6', 'Tratamiento Capilar', 'hidratacion_profunda', 500, today.subtract(const Duration(days: 5)), 30, 'completed'),
-      _appt('f0000001-0001-4000-8000-000000000023', '98306b67-3d8c-44e3-9010-465e45afeb4d', 'Clase Automaquillaje', 'clase_automaquillaje', 600, today.subtract(const Duration(days: 4)), 75, 'completed'),
-      _appt('f0000001-0001-4000-8000-000000000024', 'd0000001-0000-4000-8000-000000000003', 'Pedicure Clasico', 'pedicure_clasico', 350, today.subtract(const Duration(days: 3)), 35, 'completed'),
-      _appt('f0000001-0001-4000-8000-000000000025', 'd0000001-0000-4000-8000-000000000001', 'Tinte Raiz', 'retoque_raiz', 800, today.subtract(const Duration(days: 2)), 90, 'completed'),
-      _appt('f0000001-0001-4000-8000-000000000026', 'd0000001-0000-4000-8000-000000000002', 'Microblading Cejas', 'microblading', 3500, today.subtract(const Duration(days: 0)), 120, 'completed'),
-      _appt('f0000001-0001-4000-8000-000000000027', '261a09a2-8e09-41da-abe6-00ce582a3607', 'Corte y Estilo', 'corte_mujer', 500, today.subtract(const Duration(days: 0)), 45, 'completed'),
-    ];
+    // Cache so repeated access in same session doesn't regenerate
+    if (_cachedAppointments != null && _cachedDay == dayKey) {
+      return _cachedAppointments!;
+    }
 
-    // Future appointments (confirmed)
-    final future = <Map<String, dynamic>>[
-      _appt('f0000001-0002-4000-8000-000000000001', 'd0000001-0000-4000-8000-000000000001', 'Balayage', 'balayage', 1800, today.add(const Duration(days: 0)), 150, 'confirmed', hour: 14),
-      _appt('f0000001-0002-4000-8000-000000000002', 'd0000001-0000-4000-8000-000000000003', 'Uñas Clasico', 'manicure_clasico', 350, today.add(const Duration(days: 0)), 45, 'confirmed', hour: 15),
-      _appt('f0000001-0002-4000-8000-000000000003', '261a09a2-8e09-41da-abe6-00ce582a3607', 'Peinado Evento', 'recogido_evento', 700, today.add(const Duration(days: 2)), 60, 'confirmed'),
-      _appt('f0000001-0002-4000-8000-000000000004', 'd0000001-0000-4000-8000-000000000002', 'Extensiones Clasicas', 'ext_pestanas_clasicas', 900, today.add(const Duration(days: 2)), 90, 'confirmed'),
-      _appt('f0000001-0002-4000-8000-000000000005', '98306b67-3d8c-44e3-9010-465e45afeb4d', 'Depilacion Brasilena', 'depilacion_cera', 500, today.add(const Duration(days: 2)), 30, 'confirmed'),
-      _appt('f0000001-0002-4000-8000-000000000006', 'fcd1e90a-9811-4ea6-b672-385b2c01c7c6', 'Alisado Keratina', 'keratina_alisado', 2500, today.add(const Duration(days: 3)), 180, 'confirmed'),
-      _appt('f0000001-0002-4000-8000-000000000007', 'd0000001-0000-4000-8000-000000000003', 'Nail Art Premium', 'nail_art', 900, today.add(const Duration(days: 3)), 120, 'confirmed'),
-      _appt('f0000001-0002-4000-8000-000000000008', '261a09a2-8e09-41da-abe6-00ce582a3607', 'Corte y Estilo', 'corte_mujer', 500, today.add(const Duration(days: 5)), 45, 'confirmed'),
-      _appt('f0000001-0002-4000-8000-000000000009', 'd0000001-0000-4000-8000-000000000001', 'Tinte Raiz', 'retoque_raiz', 800, today.add(const Duration(days: 6)), 90, 'confirmed'),
-      _appt('f0000001-0002-4000-8000-000000000010', '98306b67-3d8c-44e3-9010-465e45afeb4d', 'Maquillaje Social', 'maquillaje_social', 800, today.add(const Duration(days: 7)), 60, 'confirmed'),
-      _appt('f0000001-0002-4000-8000-000000000011', 'd0000001-0000-4000-8000-000000000002', 'Lash Lift + Tinte', 'lifting_pestanas', 650, today.add(const Duration(days: 8)), 60, 'confirmed'),
-      _appt('f0000001-0002-4000-8000-000000000012', 'fcd1e90a-9811-4ea6-b672-385b2c01c7c6', 'Masaje Linfatico', 'drenaje_linfatico', 1000, today.add(const Duration(days: 10)), 90, 'confirmed'),
-      _appt('f0000001-0002-4000-8000-000000000013', 'd0000001-0000-4000-8000-000000000003', 'Unas Acrilicas', 'manicure_acrilico', 650, today.add(const Duration(days: 11)), 90, 'confirmed'),
-      _appt('f0000001-0002-4000-8000-000000000014', '261a09a2-8e09-41da-abe6-00ce582a3607', 'Balayage', 'balayage', 1800, today.add(const Duration(days: 13)), 150, 'confirmed'),
-    ];
+    final result = <Map<String, dynamic>>[];
+    final staffIds = staff.map((s) => s['id'] as String).toList();
 
-    return [...past, ...future];
+    // Possible start hours for appointments (9:00 to 17:00, spread out)
+    const startHours = [9, 10, 11, 12, 13, 14, 15, 16, 17];
+
+    // Generate past 45 days + future 60 days
+    for (var dayOffset = -45; dayOffset <= 60; dayOffset++) {
+      final date = today.add(Duration(days: dayOffset));
+
+      // Skip Sundays (salon closed)
+      if (date.weekday == DateTime.sunday) continue;
+
+      final isPast = dayOffset < 0;
+      final isToday = dayOffset == 0;
+
+      for (var si = 0; si < staffIds.length; si++) {
+        final staffId = staffIds[si];
+        final pool = _staffServicePool[staffId] ?? [0];
+
+        for (var apptIdx = 0; apptIdx < 3; apptIdx++) {
+          // Deterministic "random" based on day + staff + appt index
+          final seed = (dayOffset + 100) * 1000 + si * 100 + apptIdx;
+          final hash = (seed * 2654435761) & 0xFFFFFFFF;
+
+          // Pick hour: spread 3 appointments across morning/midday/afternoon
+          final hourSlot = apptIdx == 0
+              ? startHours[hash % 3]            // morning: 9,10,11
+              : apptIdx == 1
+                  ? startHours[3 + (hash % 3)]  // midday: 12,13,14
+                  : startHours[6 + (hash % 3)]; // afternoon: 15,16,17
+
+          // Pick service from this staff's pool
+          final svcIdx = pool[hash % pool.length];
+          final svc = services[svcIdx];
+
+          // Determine status
+          String status;
+          if (isPast || (isToday && hourSlot < now.hour)) {
+            // 90% completed, 5% cancelled, 5% no-show
+            final statusRoll = hash % 20;
+            status = statusRoll == 0
+                ? 'no_show'
+                : statusRoll == 1
+                    ? 'cancelled_customer'
+                    : 'completed';
+          } else {
+            status = 'confirmed';
+          }
+
+          final id = 'demo-${dayOffset + 100}-$si-$apptIdx';
+          result.add(_appt(
+            id,
+            staffId,
+            svc['name'] as String,
+            svc['service_type'] as String,
+            (svc['price'] as num).toDouble(),
+            date,
+            svc['duration_minutes'] as int,
+            status,
+            hour: hourSlot,
+          ));
+        }
+      }
+    }
+
+    _cachedAppointments = result;
+    _cachedDay = dayKey;
+    return result;
   }
 
   static Map<String, dynamic> _appt(
