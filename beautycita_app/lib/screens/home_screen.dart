@@ -477,17 +477,21 @@ class _HeroColorPickerState extends ConsumerState<_HeroColorPicker> {
     final liveHue = ref.watch(liveHueProvider);
     final liveSat = ref.watch(liveSatProvider);
 
+    // Watch theme state so gradient updates when _load() completes
+    final themeState = ref.watch(themeProvider);
+
     Color grad1, grad2;
     if (liveHue != null && liveSat != null) {
       (grad1, grad2) = _gradientPair(liveHue, liveSat);
     } else {
-      // At rest: use saved custom hue or fall back to default pink/blue
+      // At rest: use saved custom hue from theme state
       final notifier = ref.read(themeProvider.notifier);
       if (notifier.hasCustomColor) {
         (grad1, grad2) = _gradientPair(notifier.customHue!, notifier.customSat!);
       } else {
-        grad1 = const Color(0xFFFF3399);
-        grad2 = const Color(0xFF9933FF);
+        // Derive from current palette primary color
+        final primaryHsl = HSLColor.fromColor(themeState.palette.primary);
+        (grad1, grad2) = _gradientPair(primaryHsl.hue, primaryHsl.saturation);
       }
     }
 
@@ -565,12 +569,12 @@ class _HeroColorPickerState extends ConsumerState<_HeroColorPicker> {
                 gradient: LinearGradient(
                   colors: [
                     grad1.withValues(alpha: 0.7),
-                    Color.lerp(grad1, grad2, 0.3)!.withValues(alpha: 0.7),
+                    Color.lerp(grad1, grad2, 0.5)!.withValues(alpha: 0.7),
                     grad2.withValues(alpha: 0.7),
                   ],
-                  stops: const [0.0, 0.6, 1.0],
-                  begin: const Alignment(-1.0, -0.15),
-                  end: const Alignment(1.0, 0.15),
+                  stops: const [0.0, 0.5, 1.0],
+                  begin: const Alignment(-0.64, -0.77),
+                  end: const Alignment(0.64, 0.77),
                 ),
               ),
             ),

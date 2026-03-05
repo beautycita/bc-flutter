@@ -1,3 +1,4 @@
+import 'package:beautycita_core/supabase.dart';
 import 'package:beautycita_core/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -7,9 +8,14 @@ import '../../providers/admin_users_provider.dart';
 
 /// Detail panel content for a selected user in the admin users page.
 class UserDetailContent extends StatelessWidget {
-  const UserDetailContent({required this.user, super.key});
+  const UserDetailContent({
+    required this.user,
+    this.onUserUpdated,
+    super.key,
+  });
 
   final AdminUser user;
+  final VoidCallback? onUserUpdated;
 
   @override
   Widget build(BuildContext context) {
@@ -218,63 +224,19 @@ class UserDetailContent extends StatelessWidget {
         const SizedBox(height: BCSpacing.sm),
 
         // Role change
-        Row(
-          children: [
-            Text(
-              'Cambiar rol:',
-              style: theme.textTheme.bodySmall,
-            ),
-            const SizedBox(width: BCSpacing.sm),
-            Expanded(
-              child: DropdownButtonFormField<String>(
-                initialValue: user.role,
-                isDense: true,
-                decoration: InputDecoration(
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: BCSpacing.sm,
-                    vertical: BCSpacing.xs,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius:
-                        BorderRadius.circular(BCSpacing.radiusXs),
-                  ),
-                ),
-                items: const [
-                  DropdownMenuItem(value: 'customer', child: Text('Cliente')),
-                  DropdownMenuItem(
-                      value: 'stylist', child: Text('Estilista')),
-                  DropdownMenuItem(value: 'admin', child: Text('Admin')),
-                ],
-                onChanged: (value) {
-                  // TODO: Update role via Supabase
-                },
-              ),
-            ),
-          ],
+        _RoleChangeRow(
+          currentRole: user.role,
+          userId: user.id,
+          onUpdated: onUserUpdated,
         ),
 
         const SizedBox(height: BCSpacing.md),
 
         // Suspend/activate
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton.icon(
-            onPressed: () {
-              // TODO: Toggle status via Supabase
-            },
-            icon: Icon(
-              user.isActive ? Icons.block : Icons.check_circle_outline,
-              size: 18,
-            ),
-            label: Text(user.isActive ? 'Suspender cuenta' : 'Activar cuenta'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor:
-                  user.isActive ? colors.error : Colors.green,
-              side: BorderSide(
-                color: user.isActive ? colors.error : Colors.green,
-              ),
-            ),
-          ),
+        _StatusToggleButton(
+          userId: user.id,
+          isActive: user.isActive,
+          onUpdated: onUserUpdated,
         ),
       ],
     );
@@ -478,6 +440,211 @@ class _SectionTitle extends StatelessWidget {
       style: Theme.of(context).textTheme.labelLarge?.copyWith(
             fontWeight: FontWeight.w600,
           ),
+    );
+  }
+}
+
+// ── Role change row (stateful for async) ─────────────────────────────────────
+
+class _RoleChangeRow extends StatefulWidget {
+  const _RoleChangeRow({
+    required this.currentRole,
+    required this.userId,
+    this.onUpdated,
+  });
+
+  final String currentRole;
+  final String userId;
+  final VoidCallback? onUpdated;
+
+  @override
+  State<_RoleChangeRow> createState() => _RoleChangeRowState();
+}
+
+class _RoleChangeRowState extends State<_RoleChangeRow> {
+  late String _selectedRole;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedRole = widget.currentRole;
+  }
+
+  @override
+  void didUpdateWidget(_RoleChangeRow old) {
+    super.didUpdateWidget(old);
+    if (old.currentRole != widget.currentRole) {
+      _selectedRole = widget.currentRole;
+    }
+  }
+
+  Future<void> _updateRole(String newRole) async {
+    if (newRole == widget.currentRole || _saving) return;
+    setState(() => _saving = true);
+    try {
+      await BCSupabase.client
+          .from('profiles')
+          .update({'role': newRole})
+          .eq('id', widget.userId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Rol cambiado a ${_roleLabel(newRole)}'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      widget.onUpdated?.call();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _selectedRole = widget.currentRole);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al cambiar rol: $e'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  String _roleLabel(String role) => switch (role) {
+        'customer' => 'Cliente',
+        'stylist' => 'Estilista',
+        'rp' => 'RP',
+        _ => role,
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    // Non-superadmin cannot assign admin/superadmin roles
+    final availableRoles = ['customer', 'stylist', 'rp'];
+
+    return Row(
+      children: [
+        Text('Cambiar rol:', style: theme.textTheme.bodySmall),
+        const SizedBox(width: BCSpacing.sm),
+        Expanded(
+          child: DropdownButtonFormField<String>(
+            initialValue: _selectedRole,
+            isDense: true,
+            decoration: InputDecoration(
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: BCSpacing.sm,
+                vertical: BCSpacing.xs,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(BCSpacing.radiusXs),
+              ),
+            ),
+            items: availableRoles
+                .map((r) => DropdownMenuItem(
+                      value: r,
+                      child: Text(_roleLabel(r)),
+                    ))
+                .toList(),
+            onChanged: _saving
+                ? null
+                : (value) {
+                    if (value != null) {
+                      setState(() => _selectedRole = value);
+                      _updateRole(value);
+                    }
+                  },
+          ),
+        ),
+        if (_saving) ...[
+          const SizedBox(width: BCSpacing.sm),
+          const SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+// ── Status toggle button (stateful for async) ────────────────────────────────
+
+class _StatusToggleButton extends StatefulWidget {
+  const _StatusToggleButton({
+    required this.userId,
+    required this.isActive,
+    this.onUpdated,
+  });
+
+  final String userId;
+  final bool isActive;
+  final VoidCallback? onUpdated;
+
+  @override
+  State<_StatusToggleButton> createState() => _StatusToggleButtonState();
+}
+
+class _StatusToggleButtonState extends State<_StatusToggleButton> {
+  bool _saving = false;
+
+  Future<void> _toggleStatus() async {
+    if (_saving) return;
+    final newStatus = widget.isActive ? 'suspended' : 'active';
+    setState(() => _saving = true);
+    try {
+      await BCSupabase.client
+          .from('profiles')
+          .update({'status': newStatus})
+          .eq('id', widget.userId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(widget.isActive ? 'Cuenta suspendida' : 'Cuenta activada'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      widget.onUpdated?.call();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: _saving ? null : _toggleStatus,
+        icon: _saving
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : Icon(
+                widget.isActive ? Icons.block : Icons.check_circle_outline,
+                size: 18,
+              ),
+        label: Text(widget.isActive ? 'Suspender cuenta' : 'Activar cuenta'),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: widget.isActive ? colors.error : Colors.green,
+          side: BorderSide(
+            color: widget.isActive ? colors.error : Colors.green,
+          ),
+        ),
+      ),
     );
   }
 }
