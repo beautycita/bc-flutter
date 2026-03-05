@@ -1,13 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../providers/auth_provider.dart';
-import '../providers/profile_provider.dart';
 import '../config/constants.dart';
-import '../config/theme_extension.dart';
-import '../services/supabase_client.dart';
 import '../services/toast_service.dart';
 
 class AuthScreen extends ConsumerStatefulWidget {
@@ -26,19 +22,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
   bool _showCelebration = false;
   String? _generatedUsername;
 
-  // Registration flow state
-  int _regStep = 0; // 0=info, 1=otp, 2=biometric
-  final _nameController = TextEditingController();
-  final _phoneController = TextEditingController();
-  final _otpController = TextEditingController();
-  final _otpFocusNode = FocusNode();
-  bool _otpSending = false;
-  bool _otpVerifying = false;
-  bool _phoneVerified = false;
-  String? _regError;
-  String? _otpChannel;
-
-  // Triple-tap detection
+  // Triple-tap detection for hidden email auth
   int _tapCount = 0;
   DateTime _lastTapTime = DateTime(0);
   final _fingerprintKey = GlobalKey();
@@ -60,8 +44,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
       CurvedAnimation(parent: _pulseController, curve: Curves.elasticOut),
     );
 
-    _otpController.addListener(_onOtpChanged);
-
     Future.microtask(
         () => ref.read(authStateProvider.notifier).checkRegistration());
   }
@@ -69,25 +51,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
   @override
   void dispose() {
     _pulseController.dispose();
-    _nameController.dispose();
-    _phoneController.dispose();
-    _otpController.removeListener(_onOtpChanged);
-    _otpController.dispose();
-    _otpFocusNode.dispose();
     super.dispose();
   }
 
-  void _onOtpChanged() {
-    setState(() {});
-    if (_otpController.text.length == 6 && !_otpVerifying) {
-      _otpVerifying = true;
-      Future.microtask(() => _verifyOtp());
-    }
-  }
-
-  String get _formattedPhone => '+52${_phoneController.text.trim()}';
-
   void _handlePointerDown(PointerDownEvent event) {
+    // Ignore taps on the fingerprint button itself
     final fpBox =
         _fingerprintKey.currentContext?.findRenderObject() as RenderBox?;
     if (fpBox != null) {
@@ -302,91 +270,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
     );
   }
 
-  // ── Registration flow: Send OTP ───────────────────────────────────
-  Future<void> _sendOtp() async {
-    final name = _nameController.text.trim();
-    final digits = _phoneController.text.trim();
-    if (name.length < 2) {
-      setState(() => _regError = 'Ingresa tu nombre');
-      return;
-    }
-    if (digits.length != 10) {
-      setState(() => _regError = 'Ingresa 10 digitos');
-      return;
-    }
-
-    setState(() {
-      _otpSending = true;
-      _regError = null;
-    });
-
-    try {
-      // We need a Supabase session first for the phone-verify edge function
-      // But we don't have one yet during registration...
-      // Use the salon-registro endpoint instead for unauthenticated OTP
-      final res = await SupabaseClientService.client.functions.invoke(
-        'salon-registro',
-        body: {'action': 'send_otp', 'phone': _formattedPhone},
-      );
-      final data = res.data as Map<String, dynamic>?;
-      if (data == null || data['sent'] != true) {
-        throw Exception(data?['error'] ?? 'No se pudo enviar el codigo');
-      }
-      _otpChannel = data['channel'] as String?;
-      setState(() {
-        _otpSending = false;
-        _regStep = 1;
-      });
-    } catch (e) {
-      setState(() {
-        _otpSending = false;
-        _regError = e.toString().replaceFirst('Exception: ', '');
-      });
-    }
-  }
-
-  // ── Registration flow: Verify OTP ─────────────────────────────────
-  Future<void> _verifyOtp() async {
-    final code = _otpController.text.trim();
-    if (code.length != 6) {
-      setState(() {
-        _regError = 'Ingresa los 6 digitos';
-        _otpVerifying = false;
-      });
-      return;
-    }
-
-    setState(() => _regError = null);
-
-    try {
-      final res = await SupabaseClientService.client.functions.invoke(
-        'salon-registro',
-        body: {
-          'action': 'verify_otp',
-          'phone': _formattedPhone,
-          'code': code,
-        },
-      );
-      final data = res.data as Map<String, dynamic>?;
-      if (data == null || data['verified'] != true) {
-        throw Exception(data?['error'] ?? 'Codigo incorrecto');
-      }
-
-      setState(() {
-        _phoneVerified = true;
-        _regStep = 2;
-        _otpVerifying = false;
-      });
-    } catch (e) {
-      setState(() {
-        _regError = e.toString().replaceFirst('Exception: ', '');
-        _otpVerifying = false;
-        _otpController.clear();
-      });
-    }
-  }
-
-  // ── Registration flow: Biometric + account creation ───────────────
   void _handleBiometricTap() async {
     final authNotifier = ref.read(authStateProvider.notifier);
     final authState = ref.read(authStateProvider);
@@ -394,42 +277,12 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
     bool success = false;
 
     if (authState.username == null) {
-      // New user: pass collected name + phone
-      success = await authNotifier.register(
-        fullName: _nameController.text.trim(),
-        phone: _phoneVerified ? _formattedPhone : null,
-      );
+      // New user: biometric → anonymous account → auto-generated username
+      success = await authNotifier.register();
 
       if (success && mounted) {
         // Capture Google email as metadata (fire-and-forget, non-blocking)
         authNotifier.captureGoogleEmail();
-
-        // Check for discovered salon match
-        if (_phoneVerified) {
-          final profileNotifier = ref.read(profileProvider.notifier);
-          await profileNotifier.load(); // Reload profile with new data
-          // Trigger discovered salon check
-          final digits = _phoneController.text.trim();
-          if (digits.length == 10) {
-            try {
-              final last10 = digits;
-              final match = await SupabaseClientService.client
-                  .from('discovered_salons')
-                  .select()
-                  .or('phone.ilike.%$last10,whatsapp.ilike.%$last10')
-                  .neq('status', 'registered')
-                  .limit(1)
-                  .maybeSingle();
-
-              if (match != null && mounted) {
-                context.go('/discovered-salon-confirm', extra: match);
-                return;
-              }
-            } catch (e) {
-              debugPrint('Discovered salon check error: $e');
-            }
-          }
-        }
 
         final newUsername = ref.read(authStateProvider).username;
         setState(() {
@@ -444,6 +297,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
         });
       }
     } else {
+      // Returning user: biometric → login
       success = await authNotifier.login();
 
       if (success && mounted) {
@@ -453,12 +307,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
 
     if (!success && mounted) {
       final error = ref.read(authStateProvider).error;
-      _showErrorSnackBar(error ?? AppConstants.errorAuth);
+      ToastService.showError(error ?? AppConstants.errorAuth);
     }
-  }
-
-  void _showErrorSnackBar(String message) {
-    ToastService.showError(message);
   }
 
   @override
@@ -479,73 +329,73 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
         child: Listener(
           onPointerDown: _handlePointerDown,
           child: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFFFFF8F0), Color(0xFFFFF0F5), Color(0xFFFFF8F0)],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFFFFF8F0), Color(0xFFFFF0F5), Color(0xFFFFF8F0)],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+            ),
+            child: SafeArea(
+              child: Stack(
+                children: [
+                  // Decorative circles
+                  Positioned(
+                    top: -40,
+                    left: -50,
+                    child: Container(
+                      width: 180,
+                      height: 180,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: primary.withValues(alpha: 0.04),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 40,
+                    right: -30,
+                    child: Container(
+                      width: 140,
+                      height: 140,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: secondary.withValues(alpha: 0.05),
+                      ),
+                    ),
+                  ),
+
+                  // Content
+                  Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 32),
+                      child: _showCelebration
+                          ? _buildCelebrationContent()
+                          : _buildAuthContent(isFirstTime, authState.isLoading),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-          child: SafeArea(
-          child: Stack(
-            children: [
-              // Decorative circles
-              Positioned(
-                top: -40,
-                left: -50,
-                child: Container(
-                  width: 180,
-                  height: 180,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: primary.withValues(alpha: 0.04),
-                  ),
-                ),
-              ),
-              Positioned(
-                bottom: 40,
-                right: -30,
-                child: Container(
-                  width: 140,
-                  height: 140,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: secondary.withValues(alpha: 0.05),
-                  ),
-                ),
-              ),
-
-              // Content
-              Center(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 32),
-                  child: _showCelebration
-                      ? _buildCelebrationContent()
-                      : isFirstTime
-                          ? _buildRegistrationFlow(authState.isLoading)
-                          : _buildLoginContent(authState.isLoading),
-                ),
-              ),
-            ],
-          ),
-        ),
-        ),
         ),
       ),
     );
   }
 
-  // ── Returning user: just fingerprint ──────────────────────────────
-  Widget _buildLoginContent(bool isLoading) {
+  Widget _buildAuthContent(bool isFirstTime, bool isLoading) {
     final primary = Theme.of(context).colorScheme.primary;
-    final onSurfaceLight = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
+    final onSurfaceLight =
+        Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
     final username = ref.watch(authStateProvider).username;
 
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Text(
-          'Hola de nuevo${username != null ? ', $username' : ''}!',
+          isFirstTime
+              ? 'Bienvenida!'
+              : 'Hola de nuevo${username != null ? ', $username' : ''}!',
           style: GoogleFonts.poppins(
             fontSize: 38,
             fontWeight: FontWeight.w700,
@@ -556,7 +406,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
         ),
         const SizedBox(height: 12),
         Text(
-          'Toca para autenticarte',
+          isFirstTime
+              ? 'Usa tu huella o rostro para crear tu cuenta'
+              : 'Toca para autenticarte',
           style: GoogleFonts.nunito(
             fontSize: 16,
             fontWeight: FontWeight.w500,
@@ -570,374 +422,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
         if (!isLoading)
           Text(
             'Toca la huella para continuar',
-            style: GoogleFonts.nunito(
-              fontSize: 14,
-              fontWeight: FontWeight.w400,
-              color: onSurfaceLight,
-            ),
-            textAlign: TextAlign.center,
-          ),
-      ],
-    );
-  }
-
-  // ── New user: info → OTP → biometric ──────────────────────────────
-  Widget _buildRegistrationFlow(bool isLoading) {
-    final primary = Theme.of(context).colorScheme.primary;
-    final onSurfaceLight = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
-
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 300),
-      child: _regStep == 0
-          ? _buildInfoStep(primary, onSurfaceLight)
-          : _regStep == 1
-              ? _buildOtpStep(primary, onSurfaceLight)
-              : _buildBiometricStep(primary, onSurfaceLight, isLoading),
-    );
-  }
-
-  // ── Step 0: Name + Phone ──────────────────────────────────────────
-  Widget _buildInfoStep(Color primary, Color onSurfaceLight) {
-    final bcTheme = Theme.of(context).extension<BCThemeExtension>()!;
-
-    return Column(
-      key: const ValueKey('info'),
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          'Bienvenida!',
-          style: GoogleFonts.poppins(
-            fontSize: 34,
-            fontWeight: FontWeight.w700,
-            color: primary,
-            height: 1.1,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Cuentanos sobre ti',
-          style: GoogleFonts.nunito(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-            color: onSurfaceLight,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 32),
-
-        // Name field
-        TextField(
-          controller: _nameController,
-          textCapitalization: TextCapitalization.words,
-          style: GoogleFonts.nunito(fontSize: 16),
-          decoration: InputDecoration(
-            labelText: 'Tu nombre',
-            labelStyle: GoogleFonts.nunito(color: onSurfaceLight),
-            prefixIcon: Icon(Icons.person_outline, size: 20, color: primary),
-            filled: true,
-            fillColor: const Color(0xFFF5F0F3),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-              borderSide: BorderSide.none,
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-              borderSide: BorderSide(color: primary, width: 1.5),
-            ),
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          ),
-        ),
-        const SizedBox(height: 16),
-
-        // Phone field
-        TextField(
-          controller: _phoneController,
-          keyboardType: TextInputType.phone,
-          inputFormatters: [
-            FilteringTextInputFormatter.digitsOnly,
-            LengthLimitingTextInputFormatter(10),
-          ],
-          style: GoogleFonts.nunito(fontSize: 16),
-          decoration: InputDecoration(
-            prefixText: '+52 ',
-            prefixStyle: GoogleFonts.nunito(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: primary,
-            ),
-            labelText: 'Tu celular',
-            labelStyle: GoogleFonts.nunito(color: onSurfaceLight),
-            prefixIcon: Icon(Icons.phone_outlined, size: 20, color: primary),
-            filled: true,
-            fillColor: const Color(0xFFF5F0F3),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-              borderSide: BorderSide.none,
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-              borderSide: BorderSide(color: primary, width: 1.5),
-            ),
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          ),
-        ),
-        const SizedBox(height: 8),
-
-        if (_regError != null)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Text(
-              _regError!,
-              style: GoogleFonts.nunito(
-                fontSize: 13,
-                color: Colors.red.shade700,
-                fontWeight: FontWeight.w600,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ),
-
-        const SizedBox(height: 16),
-
-        // Verify button
-        GestureDetector(
-          onTap: _otpSending ? null : _sendOtp,
-          child: Container(
-            height: 52,
-            decoration: BoxDecoration(
-              gradient: !_otpSending
-                  ? bcTheme.goldGradientDirectional()
-                  : const LinearGradient(
-                      colors: [Color(0xFFCCCCCC), Color(0xFFAAAAAA)],
-                    ),
-              borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-              boxShadow: !_otpSending
-                  ? [
-                      BoxShadow(
-                        color: const Color(0xFFB8860B).withValues(alpha: 0.35),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ]
-                  : null,
-            ),
-            alignment: Alignment.center,
-            child: _otpSending
-                ? const SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.5,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                  )
-                : Text(
-                    'Verificar numero',
-                    style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        Text(
-          'Te enviaremos un codigo por WhatsApp o SMS',
-          style: GoogleFonts.nunito(
-            fontSize: 12,
-            color: onSurfaceLight,
-          ),
-          textAlign: TextAlign.center,
-        ),
-      ],
-    );
-  }
-
-  // ── Step 1: OTP Verification ──────────────────────────────────────
-  Widget _buildOtpStep(Color primary, Color onSurfaceLight) {
-    final otp = _otpController.text;
-    final channelText = _otpChannel == 'whatsapp' ? 'WhatsApp' : 'SMS';
-
-    return Column(
-      key: const ValueKey('otp'),
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(Icons.sms_outlined, size: 48, color: primary),
-        const SizedBox(height: 16),
-        Text(
-          'Ingresa el codigo',
-          style: GoogleFonts.poppins(
-            fontSize: 24,
-            fontWeight: FontWeight.w700,
-            color: primary,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Enviamos un codigo de 6 digitos a $_formattedPhone por $channelText',
-          style: GoogleFonts.nunito(
-            fontSize: 14,
-            color: onSurfaceLight,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 32),
-
-        // OTP visual boxes
-        GestureDetector(
-          onTap: () => _otpFocusNode.requestFocus(),
-          child: Stack(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: List.generate(6, (i) {
-                  final hasDigit = i < otp.length;
-                  final isCurrent = i == otp.length && _otpFocusNode.hasFocus;
-                  return Container(
-                    width: 44,
-                    height: 54,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF5F0F3),
-                      borderRadius:
-                          BorderRadius.circular(AppConstants.radiusMD),
-                      border: Border.all(
-                        color: isCurrent
-                            ? primary
-                            : hasDigit
-                                ? primary.withValues(alpha: 0.3)
-                                : Colors.transparent,
-                        width: isCurrent ? 1.5 : 1,
-                      ),
-                    ),
-                    alignment: Alignment.center,
-                    child: hasDigit
-                        ? Text(
-                            otp[i],
-                            style: GoogleFonts.poppins(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w700,
-                              color: primary,
-                            ),
-                          )
-                        : isCurrent
-                            ? Container(width: 2, height: 24, color: primary)
-                            : null,
-                  );
-                }),
-              ),
-              Positioned.fill(
-                child: Opacity(
-                  opacity: 0,
-                  child: TextField(
-                    controller: _otpController,
-                    focusNode: _otpFocusNode,
-                    autofillHints: const [AutofillHints.oneTimeCode],
-                    keyboardType: TextInputType.number,
-                    maxLength: 6,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                      LengthLimitingTextInputFormatter(6),
-                    ],
-                    decoration: const InputDecoration(
-                      counterText: '',
-                      border: InputBorder.none,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        if (_regError != null) ...[
-          const SizedBox(height: 12),
-          Text(
-            _regError!,
-            style: GoogleFonts.nunito(
-              fontSize: 13,
-              color: Colors.red.shade700,
-              fontWeight: FontWeight.w600,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-
-        const SizedBox(height: 24),
-        TextButton(
-          onPressed: _otpSending
-              ? null
-              : () {
-                  _otpController.clear();
-                  _sendOtp();
-                },
-          child: Text(
-            'Reenviar codigo',
-            style: GoogleFonts.nunito(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: primary,
-            ),
-          ),
-        ),
-        TextButton(
-          onPressed: () {
-            setState(() {
-              _regStep = 0;
-              _regError = null;
-              _otpController.clear();
-              _otpVerifying = false;
-            });
-          },
-          child: Text(
-            'Cambiar numero',
-            style: GoogleFonts.nunito(
-              fontSize: 13,
-              color: onSurfaceLight,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  // ── Step 2: Biometric ─────────────────────────────────────────────
-  Widget _buildBiometricStep(
-      Color primary, Color onSurfaceLight, bool isLoading) {
-    return Column(
-      key: const ValueKey('biometric'),
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          'Numero verificado!',
-          style: GoogleFonts.poppins(
-            fontSize: 24,
-            fontWeight: FontWeight.w700,
-            color: primary,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Registra tu huella para entrar rapido',
-          style: GoogleFonts.nunito(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-            color: onSurfaceLight,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 36),
-        _buildFingerprintButton(isLoading),
-        const SizedBox(height: 28),
-        if (!isLoading)
-          Text(
-            'Toca la huella para completar',
             style: GoogleFonts.nunito(
               fontSize: 14,
               fontWeight: FontWeight.w400,
@@ -1037,7 +521,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
           ),
           const SizedBox(height: 32),
           Text(
-            'Bienvenida,',
+            'Tu nombre es',
             style: GoogleFonts.poppins(
               fontSize: 20,
               fontWeight: FontWeight.w500,
@@ -1047,9 +531,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
           ),
           const SizedBox(height: 8),
           Text(
-            _nameController.text.trim().isNotEmpty
-                ? _nameController.text.trim()
-                : _generatedUsername ?? '',
+            _generatedUsername ?? '',
             style: GoogleFonts.poppins(
               fontSize: 34,
               fontWeight: FontWeight.w700,
