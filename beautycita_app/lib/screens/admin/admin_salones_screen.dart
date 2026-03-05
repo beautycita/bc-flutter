@@ -8,7 +8,6 @@ import '../../config/constants.dart';
 import '../../providers/admin_provider.dart';
 import '../../services/export_service.dart';
 import '../../services/toast_service.dart';
-// TODO(task8): AdminSalonDetailScreen will be fully implemented in Task 8
 import 'admin_salon_detail_screen.dart';
 
 const _salonExportColumns = [
