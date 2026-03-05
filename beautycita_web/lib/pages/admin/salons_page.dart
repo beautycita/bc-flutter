@@ -1,3 +1,4 @@
+import 'package:beautycita_core/supabase.dart';
 import 'package:beautycita_core/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -676,18 +677,14 @@ class _DiscoveredTab extends ConsumerWidget {
               onClearSelection: () => onCheckedChanged({}),
               actions: [
                 TextButton.icon(
-                  onPressed: () {
-                    // TODO: Bulk send WA
-                  },
+                  onPressed: () => _sendBulkWaInvites(
+                    context,
+                    ref,
+                    checkedSalons.toList(),
+                    onCheckedChanged,
+                  ),
                   icon: const Icon(Icons.send, size: 18),
                   label: const Text('Enviar WA'),
-                ),
-                TextButton.icon(
-                  onPressed: () {
-                    // TODO: Bulk convert
-                  },
-                  icon: const Icon(Icons.add_business, size: 18),
-                  label: const Text('Convertir'),
                 ),
               ],
             )

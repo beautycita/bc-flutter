@@ -341,17 +341,6 @@ class _BookingsPageState extends ConsumerState<BookingsPage> {
                   icon: const Icon(Icons.download, size: 18),
                   label: const Text('Exportar'),
                 ),
-                TextButton.icon(
-                  onPressed: () {
-                    // TODO: Bulk cancel
-                  },
-                  icon: Icon(Icons.cancel, size: 18,
-                      color: colors.error),
-                  label: Text(
-                    'Cancelar',
-                    style: TextStyle(color: colors.error),
-                  ),
-                ),
               ],
             )
           : null,

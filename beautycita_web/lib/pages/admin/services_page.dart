@@ -288,21 +288,6 @@ class _TreeNodeWidget extends ConsumerWidget {
                       ),
                     ),
                   ),
-                // Reorder handles
-                IconButton(
-                  icon: Icon(Icons.drag_handle,
-                      size: 16,
-                      color: colors.onSurface.withValues(alpha: 0.3)),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(
-                    minWidth: 28,
-                    minHeight: 28,
-                  ),
-                  onPressed: () {
-                    // TODO: Reorder via up/down or drag
-                  },
-                  tooltip: 'Reordenar',
-                ),
               ],
             ),
           ),

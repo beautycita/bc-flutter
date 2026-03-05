@@ -457,17 +457,6 @@ class DiscoveredSalonDetailContent extends StatelessWidget {
         const SizedBox(height: BCSpacing.sm),
         SizedBox(
           width: double.infinity,
-          child: ElevatedButton.icon(
-            onPressed: () {
-              // TODO: Convert to registered salon
-            },
-            icon: const Icon(Icons.add_business, size: 18),
-            label: const Text('Convertir a registrado'),
-          ),
-        ),
-        const SizedBox(height: BCSpacing.sm),
-        SizedBox(
-          width: double.infinity,
           child: OutlinedButton.icon(
             onPressed: () {
               // TODO: Send WhatsApp invitation
