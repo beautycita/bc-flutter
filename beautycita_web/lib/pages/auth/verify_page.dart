@@ -25,6 +25,7 @@ class _VerifyPageState extends ConsumerState<VerifyPage> {
   bool _codeSent = false;
   bool _isLoading = false;
   String? _error;
+  String? _channel; // "whatsapp" or "sms"
   int _resendCountdown = 0;
   Timer? _timer;
 
@@ -69,18 +70,28 @@ class _VerifyPageState extends ConsumerState<VerifyPage> {
         });
         return;
       }
-      await BCSupabase.client.functions.invoke(
+      final response = await BCSupabase.client.functions.invoke(
         'phone-verify',
         body: {
           'action': 'send-code',
           'phone': '+52$phone',
         },
       );
-      setState(() {
-        _codeSent = true;
-        _isLoading = false;
-      });
-      _startResendTimer();
+      final data = response.data as Map<String, dynamic>?;
+      if (data?['sent'] == true) {
+        setState(() {
+          _codeSent = true;
+          _channel = data?['channel'] as String?;
+          _isLoading = false;
+        });
+        _startResendTimer();
+      } else {
+        setState(() {
+          _error = data?['error'] as String? ??
+              'No se pudo enviar el codigo. Intenta de nuevo.';
+          _isLoading = false;
+        });
+      }
     } catch (e) {
       setState(() {
         _error = 'No se pudo enviar el codigo. Intenta de nuevo.';
@@ -122,8 +133,13 @@ class _VerifyPageState extends ConsumerState<VerifyPage> {
         if (!mounted) return;
         context.go(routeForRole(role));
       } else {
+        final remaining = data?['remaining'] as int?;
+        final errMsg = data?['error'] as String?;
         setState(() {
-          _error = 'Codigo incorrecto. Intenta de nuevo.';
+          _error = errMsg ??
+              (remaining != null && remaining <= 0
+                  ? 'Demasiados intentos. Solicita un nuevo codigo.'
+                  : 'Codigo incorrecto. Intenta de nuevo.');
           _isLoading = false;
         });
       }
@@ -165,7 +181,11 @@ class _VerifyPageState extends ConsumerState<VerifyPage> {
               ),
               const SizedBox(height: BCSpacing.sm),
               Text(
-                'Te enviaremos un codigo por SMS.',
+                _codeSent
+                    ? (_channel == 'whatsapp'
+                        ? 'Enviamos tu codigo por WhatsApp.'
+                        : 'Enviamos tu codigo por SMS.')
+                    : 'Te enviaremos un codigo por WhatsApp o SMS.',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                 ),

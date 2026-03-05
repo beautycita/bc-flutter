@@ -16,7 +16,7 @@ const WA_API_URL = Deno.env.get("BEAUTYPI_WA_URL") ?? "";
 const WA_API_TOKEN = Deno.env.get("BEAUTYPI_WA_TOKEN") ?? "";
 
 // TEST MODE: send outreach to wife's number instead of the actual salon
-const LIVE_MODE = false; // flip to true when ready to go live
+const LIVE_MODE = true; // LIVE — messages go to actual salon phones
 const TEST_RECIPIENT = "523221429800";
 
 // Outreach thresholds: send platform message at these interest counts

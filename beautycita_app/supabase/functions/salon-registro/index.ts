@@ -805,7 +805,7 @@ Deno.serve(async (req: Request) => {
         const { data: ds } = await supabase
           .from("discovered_salons")
           .select(
-            "id, business_name, phone, whatsapp, location_address, location_city, feature_image_url, rating_average, rating_count, specialties, lat, lng",
+            "id, business_name, phone, whatsapp, location_address, location_city, feature_image_url, rating_average, rating_count, specialties, latitude, longitude",
           )
           .eq("id", ref)
           .single();
@@ -823,8 +823,8 @@ Deno.serve(async (req: Request) => {
             rating: ds.rating_average ?? null,
             reviewsCount: ds.rating_count ?? null,
             categories: ds.specialties ?? [],
-            lat: ds.lat ?? null,
-            lng: ds.lng ?? null,
+            lat: ds.latitude ?? null,
+            lng: ds.longitude ?? null,
           };
         }
       } catch (err) {

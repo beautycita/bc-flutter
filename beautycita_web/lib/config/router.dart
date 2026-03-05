@@ -22,6 +22,7 @@ import '../pages/admin/salons_page.dart';
 import '../pages/admin/toggles_page.dart';
 import '../pages/admin/users_page.dart';
 import '../pages/business/biz_calendar_page.dart';
+import '../pages/business/biz_calendar_sync_page.dart';
 import '../pages/business/biz_dashboard_page.dart';
 import '../pages/business/biz_disputes_page.dart';
 import '../pages/business/biz_payments_page.dart';
@@ -44,6 +45,7 @@ import '../pages/support/soporte_page.dart';
 import '../shells/admin_shell.dart';
 import '../shells/business_shell.dart';
 import '../shells/client_shell.dart';
+import '../shells/demo_shell.dart';
 
 // ── Route paths ──────────────────────────────────────────────────────────────
 
@@ -87,10 +89,23 @@ abstract final class WebRoutes {
   static const String negocioDisputes = '/negocio/disputes';
   static const String negocioQr = '/negocio/qr';
   static const String negocioReviews = '/negocio/reviews';
+  static const String negocioCalendarSync = '/negocio/calendar-sync';
 
   // Client
   static const String reservar = '/reservar';
   static const String misCitas = '/mis-citas';
+
+  // Demo (read-only business portal preview)
+  static const String demo = '/demo';
+  static const String demoCalendar = '/demo/calendar';
+  static const String demoServices = '/demo/services';
+  static const String demoStaff = '/demo/staff';
+  static const String demoPayments = '/demo/payments';
+  static const String demoSettings = '/demo/settings';
+  static const String demoDisputes = '/demo/disputes';
+  static const String demoQr = '/demo/qr';
+  static const String demoReviews = '/demo/reviews';
+  static const String demoCalendarSync = '/demo/calendar-sync';
 
   // Public
   static const String soporte = '/soporte';
@@ -122,8 +137,11 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) async {
       final path = state.matchedLocation;
 
-      final isPublicRoute =
-          path == '/' || path.startsWith('/auth') || path == '/soporte';
+      final isPublicRoute = path == '/' ||
+          path.startsWith('/auth') ||
+          path == '/soporte' ||
+          path.startsWith('/demo') ||
+          path.startsWith('/reservar');
 
       // If Supabase never initialized (offline, failed, etc.),
       // only allow public routes — redirect protected routes to /auth
@@ -288,6 +306,55 @@ final routerProvider = Provider<GoRouter>((ref) {
         ],
       ),
 
+      // ── Demo routes (DemoShell — read-only, no auth) ────────────────────
+      ShellRoute(
+        builder: (context, state, child) => DemoShell(child: child),
+        routes: [
+          GoRoute(
+            path: WebRoutes.demo,
+            builder: (context, state) => const BizDashboardPage(),
+            routes: [
+              GoRoute(
+                path: 'calendar',
+                builder: (context, state) => const BizCalendarPage(),
+              ),
+              GoRoute(
+                path: 'services',
+                builder: (context, state) => const BizServicesPage(),
+              ),
+              GoRoute(
+                path: 'staff',
+                builder: (context, state) => const BizStaffPage(),
+              ),
+              GoRoute(
+                path: 'payments',
+                builder: (context, state) => const BizPaymentsPage(),
+              ),
+              GoRoute(
+                path: 'settings',
+                builder: (context, state) => const BizSettingsPage(),
+              ),
+              GoRoute(
+                path: 'disputes',
+                builder: (context, state) => const BizDisputesPage(),
+              ),
+              GoRoute(
+                path: 'qr',
+                builder: (context, state) => const BizQrPage(),
+              ),
+              GoRoute(
+                path: 'reviews',
+                builder: (context, state) => const BizReviewsPage(),
+              ),
+              GoRoute(
+                path: 'calendar-sync',
+                builder: (context, state) => const BizCalendarSyncPage(),
+              ),
+            ],
+          ),
+        ],
+      ),
+
       // ── Business routes (BusinessShell) ──────────────────────────────────
       ShellRoute(
         builder: (context, state, child) => BusinessShell(child: child),
@@ -327,6 +394,10 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: 'reviews',
                 builder: (context, state) => const BizReviewsPage(),
+              ),
+              GoRoute(
+                path: 'calendar-sync',
+                builder: (context, state) => const BizCalendarSyncPage(),
               ),
             ],
           ),

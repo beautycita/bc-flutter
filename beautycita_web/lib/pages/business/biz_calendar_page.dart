@@ -5,6 +5,7 @@ import 'package:beautycita_core/supabase.dart';
 
 import '../../config/breakpoints.dart';
 import '../../providers/business_portal_provider.dart';
+import '../../providers/demo_providers.dart';
 
 /// Calendar view mode.
 enum CalendarView { day, week }
@@ -102,6 +103,7 @@ class _CalendarToolbar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
+    final isDemo = ref.watch(isDemoProvider);
 
     String title;
     if (view == CalendarView.day) {
@@ -145,15 +147,17 @@ class _CalendarToolbar extends ConsumerWidget {
             child: const Text('Hoy'),
           ),
           const Spacer(),
-          // Quick-add walk-in button
-          ElevatedButton.icon(
-            onPressed: () => _showWalkInDialog(context, ref,
-                preSelectedStaffId: ref.read(calendarStaffFilterProvider)),
-            icon: const Icon(Icons.add, size: 18),
-            label: const Text('Walk-in'),
-            style: ElevatedButton.styleFrom(visualDensity: VisualDensity.compact),
-          ),
-          const SizedBox(width: 12),
+          // Quick-add walk-in button — hidden in demo
+          if (!isDemo) ...[
+            ElevatedButton.icon(
+              onPressed: () => _showWalkInDialog(context, ref,
+                  preSelectedStaffId: ref.read(calendarStaffFilterProvider)),
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text('Walk-in'),
+              style: ElevatedButton.styleFrom(visualDensity: VisualDensity.compact),
+            ),
+            const SizedBox(width: 12),
+          ],
           SegmentedButton<CalendarView>(
             segments: const [
               ButtonSegment(value: CalendarView.day, label: Text('Dia')),
@@ -1085,6 +1089,7 @@ class _AppointmentDetailState extends ConsumerState<_AppointmentDetail> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
+    final isDemo = ref.watch(isDemoProvider);
     final appt = widget.appt;
 
     final status = appt['status'] as String? ?? '';
@@ -1149,95 +1154,97 @@ class _AppointmentDetailState extends ConsumerState<_AppointmentDetail> {
                   if (startsAt != null) _DetailRow(icon: Icons.calendar_today, label: 'Fecha', value: DateFormat('d MMM yyyy', 'es').format(startsAt)),
                   if (duration > 0) _DetailRow(icon: Icons.timer_outlined, label: 'Duracion', value: '$duration min'),
                   _DetailRow(icon: Icons.payments_outlined, label: 'Precio', value: '\$${price.toStringAsFixed(0)}'),
-                  // Editable notes
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Text('Notas', style: theme.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600)),
-                      const Spacer(),
-                      if (_notesChanged)
-                        TextButton.icon(
-                          onPressed: _savingNotes ? null : _saveNotes,
-                          icon: _savingNotes
-                              ? const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2))
-                              : const Icon(Icons.save_outlined, size: 14),
-                          label: const Text('Guardar'),
-                          style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+                  // Editable notes — hidden in demo
+                  if (!isDemo) ...[
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Text('Notas', style: theme.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600)),
+                        const Spacer(),
+                        if (_notesChanged)
+                          TextButton.icon(
+                            onPressed: _savingNotes ? null : _saveNotes,
+                            icon: _savingNotes
+                                ? const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2))
+                                : const Icon(Icons.save_outlined, size: 14),
+                            label: const Text('Guardar'),
+                            style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    TextField(
+                      controller: _notesCtrl,
+                      maxLines: 3,
+                      style: theme.textTheme.bodySmall,
+                      decoration: InputDecoration(
+                        hintText: 'Agregar notas...',
+                        hintStyle: theme.textTheme.bodySmall?.copyWith(color: colors.onSurface.withValues(alpha: 0.3)),
+                        filled: true,
+                        fillColor: colors.surfaceContainerHighest.withValues(alpha: 0.3),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                        contentPadding: const EdgeInsets.all(10),
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    if (_updating)
+                      const Center(child: CircularProgressIndicator(strokeWidth: 2))
+                    else ...[
+                      // Confirm
+                      if (status == 'pending')
+                        _ActionButton(
+                          label: 'Confirmar',
+                          icon: Icons.check,
+                          color: const Color(0xFF4CAF50),
+                          onPressed: () => _updateStatus('confirmed'),
+                        ),
+                      // Complete
+                      if (status == 'confirmed')
+                        _ActionButton(
+                          label: 'Completar',
+                          icon: Icons.done_all,
+                          color: const Color(0xFF2196F3),
+                          onPressed: () => _updateStatus('completed'),
+                        ),
+                      // No-show (with deposit context)
+                      if (status == 'confirmed')
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: _ActionButton(
+                            label: 'No se presento',
+                            icon: Icons.person_off_outlined,
+                            color: const Color(0xFF795548),
+                            onPressed: () => _confirmNoShow(context, price),
+                            outlined: true,
+                          ),
+                        ),
+                      // Cancel
+                      if (status == 'pending' || status == 'confirmed')
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: _ActionButton(
+                            label: 'Cancelar',
+                            icon: Icons.cancel_outlined,
+                            color: colors.error,
+                            onPressed: () => _confirmCancel(context),
+                            outlined: true,
+                          ),
+                        ),
+                      // Reschedule
+                      if (status == 'pending' || status == 'confirmed')
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: _ActionButton(
+                            label: 'Reagendar',
+                            icon: Icons.schedule,
+                            color: colors.primary,
+                            onPressed: () => _showReschedule(context),
+                            outlined: true,
+                          ),
                         ),
                     ],
-                  ),
-                  const SizedBox(height: 4),
-                  TextField(
-                    controller: _notesCtrl,
-                    maxLines: 3,
-                    style: theme.textTheme.bodySmall,
-                    decoration: InputDecoration(
-                      hintText: 'Agregar notas...',
-                      hintStyle: theme.textTheme.bodySmall?.copyWith(color: colors.onSurface.withValues(alpha: 0.3)),
-                      filled: true,
-                      fillColor: colors.surfaceContainerHighest.withValues(alpha: 0.3),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
-                      contentPadding: const EdgeInsets.all(10),
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  if (_updating)
-                    const Center(child: CircularProgressIndicator(strokeWidth: 2))
-                  else ...[
-                    // Confirm
-                    if (status == 'pending')
-                      _ActionButton(
-                        label: 'Confirmar',
-                        icon: Icons.check,
-                        color: const Color(0xFF4CAF50),
-                        onPressed: () => _updateStatus('confirmed'),
-                      ),
-                    // Complete
-                    if (status == 'confirmed')
-                      _ActionButton(
-                        label: 'Completar',
-                        icon: Icons.done_all,
-                        color: const Color(0xFF2196F3),
-                        onPressed: () => _updateStatus('completed'),
-                      ),
-                    // No-show (with deposit context)
-                    if (status == 'confirmed')
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8),
-                        child: _ActionButton(
-                          label: 'No se presento',
-                          icon: Icons.person_off_outlined,
-                          color: const Color(0xFF795548),
-                          onPressed: () => _confirmNoShow(context, price),
-                          outlined: true,
-                        ),
-                      ),
-                    // Cancel
-                    if (status == 'pending' || status == 'confirmed')
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8),
-                        child: _ActionButton(
-                          label: 'Cancelar',
-                          icon: Icons.cancel_outlined,
-                          color: colors.error,
-                          onPressed: () => _confirmCancel(context),
-                          outlined: true,
-                        ),
-                      ),
-                    // Reschedule
-                    if (status == 'pending' || status == 'confirmed')
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8),
-                        child: _ActionButton(
-                          label: 'Reagendar',
-                          icon: Icons.schedule,
-                          color: colors.primary,
-                          onPressed: () => _showReschedule(context),
-                          outlined: true,
-                        ),
-                      ),
                   ],
                 ],
               ),

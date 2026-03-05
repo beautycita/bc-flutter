@@ -70,7 +70,7 @@ class LandingPage extends StatelessWidget {
           const Spacer(),
           if (isDesktop) ...[
             TextButton(
-              onPressed: () {},
+              onPressed: () => context.go(WebRoutes.demo),
               child: const Text('Para salones'),
             ),
             const SizedBox(width: 8),
@@ -747,7 +747,7 @@ class LandingPage extends StatelessWidget {
             alignment: WrapAlignment.center,
             children: [
               _footerLink(context, 'Clientes', WebRoutes.reservar),
-              _footerLink(context, 'Salones', WebRoutes.negocio),
+              _footerLink(context, 'Salones', WebRoutes.demo),
               _footerLink(context, 'Soporte', WebRoutes.soporte),
             ],
           ),

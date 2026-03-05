@@ -7,6 +7,7 @@ import 'package:beautycita_core/models.dart';
 import '../../config/breakpoints.dart';
 import '../../data/categories.dart';
 import '../../providers/business_portal_provider.dart';
+import '../../providers/demo_providers.dart';
 import '../../widgets/aphrodite_copy_field.dart';
 
 /// Selected service for detail panel.
@@ -89,6 +90,7 @@ class _ServicesList extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
+    final isDemo = ref.watch(isDemoProvider);
 
     // Group by category
     final Map<String, List<Map<String, dynamic>>> byCategory = {};
@@ -125,19 +127,21 @@ class _ServicesList extends ConsumerWidget {
                   label: Text('${services.length}'),
                   visualDensity: VisualDensity.compact),
               const Spacer(),
-              OutlinedButton.icon(
-                onPressed: () => _showBatchAddDialog(context, ref, bizId),
-                icon: const Icon(Icons.playlist_add, size: 18),
-                label: const Text('Agregar varios'),
-              ),
-              const SizedBox(width: 8),
-              ElevatedButton.icon(
-                onPressed: () => ref
-                    .read(selectedServiceProvider.notifier)
-                    .state = {'_new': true, 'business_id': bizId},
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('Agregar'),
-              ),
+              if (!isDemo) ...[
+                OutlinedButton.icon(
+                  onPressed: () => _showBatchAddDialog(context, ref, bizId),
+                  icon: const Icon(Icons.playlist_add, size: 18),
+                  label: const Text('Agregar varios'),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton.icon(
+                  onPressed: () => ref
+                      .read(selectedServiceProvider.notifier)
+                      .state = {'_new': true, 'business_id': bizId},
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('Agregar'),
+                ),
+              ],
             ],
           ),
         ),
@@ -156,13 +160,15 @@ class _ServicesList extends ConsumerWidget {
                           style: theme.textTheme.bodyMedium?.copyWith(
                               color:
                                   colors.onSurface.withValues(alpha: 0.5))),
-                      const SizedBox(height: 16),
-                      ElevatedButton.icon(
-                        onPressed: () =>
-                            _showBatchAddDialog(context, ref, bizId),
-                        icon: const Icon(Icons.playlist_add, size: 18),
-                        label: const Text('Agregar servicios por categoria'),
-                      ),
+                      if (!isDemo) ...[
+                        const SizedBox(height: 16),
+                        ElevatedButton.icon(
+                          onPressed: () =>
+                              _showBatchAddDialog(context, ref, bizId),
+                          icon: const Icon(Icons.playlist_add, size: 18),
+                          label: const Text('Agregar servicios por categoria'),
+                        ),
+                      ],
                     ],
                   ),
                 )
@@ -245,6 +251,7 @@ class _ServiceCardState extends ConsumerState<_ServiceCard> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
+    final isDemo = ref.watch(isDemoProvider);
     final s = widget.service;
     final name = s['name'] as String? ?? '';
     final subcategory = s['subcategory'] as String? ?? '';
@@ -325,7 +332,7 @@ class _ServiceCardState extends ConsumerState<_ServiceCard> {
                 ),
               ),
               GestureDetector(
-                onTap: () => _toggleActive(),
+                onTap: isDemo ? null : () => _toggleActive(),
                 child: Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -543,6 +550,7 @@ class _ServiceDetailPanelState extends ConsumerState<_ServiceDetailPanel> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
+    final isDemo = ref.watch(isDemoProvider);
 
     return Container(
       color: colors.surface,
@@ -607,6 +615,7 @@ class _ServiceDetailPanelState extends ConsumerState<_ServiceDetailPanel> {
                     // ── Name ──
                     TextFormField(
                       controller: _nameCtrl,
+                      readOnly: isDemo,
                       decoration: const InputDecoration(
                         labelText: 'Nombre del servicio',
                         prefixIcon: Icon(Icons.spa_outlined),
@@ -622,6 +631,7 @@ class _ServiceDetailPanelState extends ConsumerState<_ServiceDetailPanel> {
                         Expanded(
                           child: TextFormField(
                             controller: _priceCtrl,
+                            readOnly: isDemo,
                             decoration: const InputDecoration(
                                 labelText: 'Precio', prefixText: '\$ '),
                             keyboardType: TextInputType.number,
@@ -633,6 +643,7 @@ class _ServiceDetailPanelState extends ConsumerState<_ServiceDetailPanel> {
                         Expanded(
                           child: TextFormField(
                             controller: _durationCtrl,
+                            readOnly: isDemo,
                             decoration: const InputDecoration(
                                 labelText: 'Duracion (min)'),
                             keyboardType: TextInputType.number,
@@ -647,6 +658,7 @@ class _ServiceDetailPanelState extends ConsumerState<_ServiceDetailPanel> {
                     // ── Buffer ──
                     TextFormField(
                       controller: _bufferCtrl,
+                      readOnly: isDemo,
                       decoration: const InputDecoration(
                         labelText: 'Buffer entre citas (min)',
                         helperText:
@@ -662,7 +674,7 @@ class _ServiceDetailPanelState extends ConsumerState<_ServiceDetailPanel> {
                       subtitle: const Text(
                           'El cliente debe pagar un porcentaje al reservar'),
                       value: _depositRequired,
-                      onChanged: (v) =>
+                      onChanged: isDemo ? null : (v) =>
                           setState(() => _depositRequired = v),
                       contentPadding: EdgeInsets.zero,
                     ),
@@ -708,36 +720,38 @@ class _ServiceDetailPanelState extends ConsumerState<_ServiceDetailPanel> {
                     SwitchListTile(
                       title: const Text('Activo'),
                       value: _isActive,
-                      onChanged: (v) => setState(() => _isActive = v),
+                      onChanged: isDemo ? null : (v) => setState(() => _isActive = v),
                       contentPadding: EdgeInsets.zero,
                     ),
                     const SizedBox(height: BCSpacing.lg),
 
-                    // ── Save ──
-                    ElevatedButton(
-                      onPressed: _saving ? null : _save,
-                      child: _saving
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2))
-                          : Text(_isNew ? 'Crear' : 'Guardar'),
-                    ),
-                    if (!_isNew) ...[
-                      const SizedBox(height: BCSpacing.md),
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton.icon(
-                          onPressed: _confirmDelete,
-                          icon: Icon(Icons.delete_outline,
-                              size: 18, color: colors.error),
-                          label: Text('Eliminar servicio',
-                              style: TextStyle(color: colors.error)),
-                          style: OutlinedButton.styleFrom(
-                              side: BorderSide(
-                                  color: colors.error.withValues(alpha: 0.3))),
-                        ),
+                    // ── Save / Delete — hidden in demo ──
+                    if (!isDemo) ...[
+                      ElevatedButton(
+                        onPressed: _saving ? null : _save,
+                        child: _saving
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2))
+                            : Text(_isNew ? 'Crear' : 'Guardar'),
                       ),
+                      if (!_isNew) ...[
+                        const SizedBox(height: BCSpacing.md),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: _confirmDelete,
+                            icon: Icon(Icons.delete_outline,
+                                size: 18, color: colors.error),
+                            label: Text('Eliminar servicio',
+                                style: TextStyle(color: colors.error)),
+                            style: OutlinedButton.styleFrom(
+                                side: BorderSide(
+                                    color: colors.error.withValues(alpha: 0.3))),
+                          ),
+                        ),
+                      ],
                     ],
                   ],
                 ),
