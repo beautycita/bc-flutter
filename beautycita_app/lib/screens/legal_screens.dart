@@ -1,17 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../config/constants.dart';
 import '../config/theme_extension.dart';
-import '../widgets/bc_button.dart';
-import '../services/toast_service.dart';
-
-// ---------------------------------------------------------------------------
-// WhatsApp support number (no phone display — chat only)
-// ---------------------------------------------------------------------------
-const _waNumber = '523221215551';
-const _waSupportUrl = 'https://wa.me/$_waNumber?text=Hola%20BeautyCita%2C%20necesito%20ayuda%20con...';
+import '../providers/chat_provider.dart';
 
 // ---------------------------------------------------------------------------
 // Combined Terms & Policy screen with tabs
@@ -48,7 +41,6 @@ class _TermsAndPolicyScreenState extends State<TermsAndPolicyScreen>
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final ext = Theme.of(context).extension<BCThemeExtension>()!;
 
     return Scaffold(
       backgroundColor: colors.surface,
@@ -291,146 +283,15 @@ class _Section {
 }
 
 // ---------------------------------------------------------------------------
-// Fancy contact section — form + WhatsApp live chat
+// Contact section — Eros AI support + human escalation
 // ---------------------------------------------------------------------------
 
-class _ContactSection extends StatefulWidget {
+class _ContactSection extends ConsumerWidget {
   const _ContactSection();
 
   @override
-  State<_ContactSection> createState() => _ContactSectionState();
-}
-
-class _ContactSectionState extends State<_ContactSection> {
-  final _nameCtrl = TextEditingController();
-  final _emailCtrl = TextEditingController();
-  final _messageCtrl = TextEditingController();
-  bool _sending = false;
-  bool _sent = false;
-
-  @override
-  void dispose() {
-    _nameCtrl.dispose();
-    _emailCtrl.dispose();
-    _messageCtrl.dispose();
-    super.dispose();
-  }
-
-  Future<void> _sendMessage() async {
-    final name = _nameCtrl.text.trim();
-    final email = _emailCtrl.text.trim();
-    final message = _messageCtrl.text.trim();
-
-    if (message.isEmpty) {
-      ToastService.showError('Escribe tu mensaje');
-      return;
-    }
-
-    setState(() => _sending = true);
-
-    final parts = <String>[];
-    parts.add('Mensaje desde la app BeautyCita:');
-    if (name.isNotEmpty) parts.add('Nombre: $name');
-    if (email.isNotEmpty) parts.add('Contacto: $email');
-    parts.add('');
-    parts.add(message);
-
-    final text = Uri.encodeComponent(parts.join('\n'));
-    final url = Uri.parse('https://wa.me/$_waNumber?text=$text');
-
-    try {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
-      if (mounted) {
-        setState(() {
-          _sent = true;
-          _sending = false;
-        });
-      }
-    } catch (_) {
-      if (mounted) {
-        setState(() => _sending = false);
-        ToastService.showError('No se pudo abrir WhatsApp');
-      }
-    }
-  }
-
-  void _openLiveChat() {
-    HapticFeedback.lightImpact();
-    final url = Uri.parse(_waSupportUrl);
-    launchUrl(url, mode: LaunchMode.externalApplication);
-  }
-
-  static InputDecoration _styledInput(
-    String label,
-    ColorScheme colors, {
-    Widget? prefixIcon,
-    bool alignLabelWithHint = false,
-  }) {
-    final gray = colors.onSurface.withValues(alpha: 0.12);
-    return InputDecoration(
-      labelText: label,
-      prefixIcon: prefixIcon,
-      alignLabelWithHint: alignLabelWithHint,
-      filled: true,
-      fillColor: Colors.white,
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-        borderSide: BorderSide(color: gray, width: 1),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-        borderSide: BorderSide(color: colors.primary, width: 1.5),
-      ),
-      disabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-        borderSide: BorderSide(color: gray.withValues(alpha: 0.06), width: 1),
-      ),
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).colorScheme;
-
-    if (_sent) {
-      return Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              const Color(0xFF25D366).withValues(alpha: 0.08),
-              const Color(0xFF25D366).withValues(alpha: 0.03),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-          border: Border.all(color: const Color(0xFF25D366).withValues(alpha: 0.2)),
-        ),
-        child: Column(
-          children: [
-            const Icon(Icons.check_circle_rounded, color: Color(0xFF25D366), size: 48),
-            const SizedBox(height: 12),
-            Text(
-              'Mensaje enviado',
-              style: GoogleFonts.poppins(
-                fontSize: 16, fontWeight: FontWeight.w700, color: colors.onSurface,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Te responderemos por WhatsApp lo antes posible.',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.nunito(
-                fontSize: 13, color: colors.onSurface.withValues(alpha: 0.6),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -450,21 +311,26 @@ class _ContactSectionState extends State<_ContactSection> {
         ),
         const SizedBox(height: 20),
 
-        // ── WhatsApp live chat card ──
+        // ── Eros AI support card ──
         GestureDetector(
-          onTap: _openLiveChat,
+          onTap: () async {
+            final thread = await ref.read(erosThreadProvider.future);
+            if (thread != null && context.mounted) {
+              context.push('/chat/${thread.id}');
+            }
+          },
           child: Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                colors: [Color(0xFF075E54), Color(0xFF25D366)],
+                colors: [Color(0xFF1565C0), Color(0xFF42A5F5)],
                 begin: Alignment.centerLeft,
                 end: Alignment.centerRight,
               ),
               borderRadius: BorderRadius.circular(AppConstants.radiusMD),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF25D366).withValues(alpha: 0.3),
+                  color: const Color(0xFF42A5F5).withValues(alpha: 0.3),
                   blurRadius: 16,
                   offset: const Offset(0, 6),
                 ),
@@ -478,7 +344,7 @@ class _ContactSectionState extends State<_ContactSection> {
                     color: Colors.white.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.chat_rounded, color: Colors.white, size: 24),
+                  child: const Text('🏹', style: TextStyle(fontSize: 24)),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -486,13 +352,13 @@ class _ContactSectionState extends State<_ContactSection> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Chat en vivo',
+                        'Chat con Eros',
                         style: GoogleFonts.poppins(
                           fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white,
                         ),
                       ),
                       Text(
-                        'Respuesta inmediata por WhatsApp',
+                        'Soporte inteligente — respuesta instantanea',
                         style: GoogleFonts.nunito(
                           fontSize: 12, color: Colors.white.withValues(alpha: 0.85),
                         ),
@@ -501,7 +367,82 @@ class _ContactSectionState extends State<_ContactSection> {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    'AI',
+                    style: GoogleFonts.poppins(
+                      fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 14),
+
+        // ── Human support card ──
+        GestureDetector(
+          onTap: () async {
+            final thread = await ref.read(supportThreadProvider.future);
+            if (thread != null && context.mounted) {
+              context.push('/chat/${thread.id}');
+            }
+          },
+          child: Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF7B1038), Color(0xFFC2185B)],
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+              ),
+              borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFC2185B).withValues(alpha: 0.3),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.support_agent_rounded, color: Colors.white, size: 24),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Soporte humano',
+                        style: GoogleFonts.poppins(
+                          fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white,
+                        ),
+                      ),
+                      Text(
+                        'Habla con una persona de nuestro equipo',
+                        style: GoogleFonts.nunito(
+                          fontSize: 12, color: Colors.white.withValues(alpha: 0.85),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(20),
@@ -518,7 +459,7 @@ class _ContactSectionState extends State<_ContactSection> {
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        'En linea',
+                        'LIVE',
                         style: GoogleFonts.nunito(
                           fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white,
                         ),
@@ -528,90 +469,6 @@ class _ContactSectionState extends State<_ContactSection> {
                 ),
               ],
             ),
-          ),
-        ),
-
-        const SizedBox(height: 20),
-
-        // ── OR divider ──
-        Row(
-          children: [
-            Expanded(child: Divider(color: colors.onSurface.withValues(alpha: 0.1))),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                'o envia un mensaje',
-                style: GoogleFonts.nunito(
-                  fontSize: 12, color: colors.onSurface.withValues(alpha: 0.35),
-                ),
-              ),
-            ),
-            Expanded(child: Divider(color: colors.onSurface.withValues(alpha: 0.1))),
-          ],
-        ),
-
-        const SizedBox(height: 20),
-
-        // ── Contact form card ──
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-            border: Border.all(
-              color: colors.onSurface.withValues(alpha: 0.08),
-              width: 1,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Column(
-            children: [
-              TextField(
-                controller: _nameCtrl,
-                textInputAction: TextInputAction.next,
-                decoration: _styledInput(
-                  'Nombre (opcional)',
-                  colors,
-                  prefixIcon: const Icon(Icons.person_outline_rounded, size: 20),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _emailCtrl,
-                keyboardType: TextInputType.emailAddress,
-                textInputAction: TextInputAction.next,
-                decoration: _styledInput(
-                  'Correo o telefono (opcional)',
-                  colors,
-                  prefixIcon: const Icon(Icons.alternate_email_rounded, size: 20),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _messageCtrl,
-                maxLines: 4,
-                textInputAction: TextInputAction.newline,
-                decoration: _styledInput(
-                  'Tu mensaje...',
-                  colors,
-                  alignLabelWithHint: true,
-                ),
-              ),
-              const SizedBox(height: 16),
-              BCButton(
-                label: _sending ? 'Enviando...' : 'Enviar mensaje',
-                icon: Icons.send_rounded,
-                onPressed: _sending ? null : _sendMessage,
-                loading: _sending,
-                fullWidth: true,
-              ),
-            ],
           ),
         ),
 
