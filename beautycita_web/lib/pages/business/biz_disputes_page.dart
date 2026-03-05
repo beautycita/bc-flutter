@@ -6,6 +6,7 @@ import 'package:beautycita_core/theme.dart';
 
 import '../../config/breakpoints.dart';
 import '../../providers/business_portal_provider.dart';
+import '../../providers/demo_providers.dart';
 
 /// Selected dispute for detail panel.
 final selectedDisputeProvider =
@@ -454,8 +455,9 @@ class _DisputeDetailPanelState extends ConsumerState<_DisputeDetailPanel> {
         (d['refund_amount'] as num?)?.toDouble();
     final refundStatus = d['refund_status'] as String?;
 
+    final isDemo = ref.watch(isDemoProvider);
     final hasPreviousOffer = salonOffer != null && salonOffer.isNotEmpty;
-    final canRespond = status == 'open' && !hasPreviousOffer;
+    final canRespond = status == 'open' && !hasPreviousOffer && !isDemo;
 
     return Container(
       color: colors.surface,

@@ -8,6 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart' show FileOptions;
 
 import '../../config/breakpoints.dart';
 import '../../providers/business_portal_provider.dart';
+import '../../providers/demo_providers.dart';
 import '../../widgets/aphrodite_copy_field.dart';
 
 /// Selected staff for detail panel.
@@ -95,6 +96,7 @@ class _StaffList extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
+    final isDemo = ref.watch(isDemoProvider);
 
     // Detect if owner has a staff record
     final hasOwnerStaff = staff.any((s) => s['user_id'] == ownerId);
@@ -111,16 +113,17 @@ class _StaffList extends ConsumerWidget {
               const SizedBox(width: 8),
               Chip(label: Text('${staff.length}'), visualDensity: VisualDensity.compact),
               const Spacer(),
-              ElevatedButton.icon(
-                onPressed: () => _showAddStaffDialog(context, ref),
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('Agregar staff'),
-              ),
+              if (!isDemo)
+                ElevatedButton.icon(
+                  onPressed: () => _showAddStaffDialog(context, ref),
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('Agregar staff'),
+                ),
             ],
           ),
         ),
-        // Owner profile card if no staff record exists
-        if (!hasOwnerStaff && ownerId != null)
+        // Owner profile card if no staff record exists — hidden in demo
+        if (!hasOwnerStaff && ownerId != null && !isDemo)
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
             child: _CreateOwnerCard(bizId: bizId, ownerId: ownerId!),
@@ -625,6 +628,7 @@ class _StaffCardState extends ConsumerState<_StaffCard> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
+    final isDemo = ref.watch(isDemoProvider);
     final s = widget.staff;
     final firstName = s['first_name'] as String? ?? '';
     final lastName = s['last_name'] as String? ?? '';
@@ -703,7 +707,7 @@ class _StaffCardState extends ConsumerState<_StaffCard> {
                 ),
               ),
               GestureDetector(
-                onTap: () => _toggleActive(s),
+                onTap: isDemo ? null : () => _toggleActive(s),
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
@@ -766,6 +770,7 @@ class _StaffReadView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
+    final isDemo = ref.watch(isDemoProvider);
     final staffId = staff['id'] as String? ?? '';
     final firstName = staff['first_name'] as String? ?? '';
     final lastName = staff['last_name'] as String? ?? '';
@@ -796,11 +801,12 @@ class _StaffReadView extends ConsumerWidget {
             child: Row(
               children: [
                 Expanded(child: Text(displayName, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600))),
-                IconButton(
-                  icon: const Icon(Icons.edit_outlined, size: 20),
-                  onPressed: () => ref.read(_staffEditModeProvider.notifier).state = true,
-                  tooltip: 'Editar',
-                ),
+                if (!isDemo)
+                  IconButton(
+                    icon: const Icon(Icons.edit_outlined, size: 20),
+                    onPressed: () => ref.read(_staffEditModeProvider.notifier).state = true,
+                    tooltip: 'Editar',
+                  ),
                 IconButton(
                   icon: const Icon(Icons.close, size: 20),
                   onPressed: () => ref.read(selectedStaffProvider.notifier).state = null,
@@ -976,16 +982,17 @@ class _StaffReadView extends ConsumerWidget {
                   ),
                   const SizedBox(height: BCSpacing.xl),
 
-                  // Delete button
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () => _confirmDelete(context, ref),
-                      icon: Icon(Icons.delete_outline, size: 18, color: colors.error),
-                      label: Text('Eliminar staff', style: TextStyle(color: colors.error)),
-                      style: OutlinedButton.styleFrom(side: BorderSide(color: colors.error.withValues(alpha: 0.3))),
+                  // Delete button — hidden in demo
+                  if (!isDemo)
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () => _confirmDelete(context, ref),
+                        icon: Icon(Icons.delete_outline, size: 18, color: colors.error),
+                        label: Text('Eliminar staff', style: TextStyle(color: colors.error)),
+                        style: OutlinedButton.styleFrom(side: BorderSide(color: colors.error.withValues(alpha: 0.3))),
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),
@@ -1237,6 +1244,7 @@ class _StaffEditFormState extends ConsumerState<_StaffEditForm> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
+    final isDemo = ref.watch(isDemoProvider);
     final allServicesAsync = ref.watch(businessServicesProvider);
     final staffId = widget.staff['id'] as String? ?? '';
     final blocksAsync = ref.watch(staffBlocksProvider(staffId));
@@ -1380,11 +1388,12 @@ class _StaffEditFormState extends ConsumerState<_StaffEditForm> {
                     children: [
                       Text('Tiempo libre', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
                       const Spacer(),
-                      TextButton.icon(
-                        onPressed: () => _showAddTimeOff(context, staffId),
-                        icon: const Icon(Icons.add, size: 16),
-                        label: const Text('Agregar'),
-                      ),
+                      if (!isDemo)
+                        TextButton.icon(
+                          onPressed: () => _showAddTimeOff(context, staffId),
+                          icon: const Icon(Icons.add, size: 16),
+                          label: const Text('Agregar'),
+                        ),
                     ],
                   ),
                   blocksAsync.when(
@@ -1418,11 +1427,12 @@ class _StaffEditFormState extends ConsumerState<_StaffEditForm> {
                     children: [
                       Text('Servicios asignados', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
                       const Spacer(),
-                      TextButton.icon(
-                        onPressed: () => _showAssignServicesDialog(context, staffId),
-                        icon: const Icon(Icons.add, size: 16),
-                        label: const Text('Asignar'),
-                      ),
+                      if (!isDemo)
+                        TextButton.icon(
+                          onPressed: () => _showAssignServicesDialog(context, staffId),
+                          icon: const Icon(Icons.add, size: 16),
+                          label: const Text('Asignar'),
+                        ),
                     ],
                   ),
                   allServicesAsync.when(
@@ -1457,16 +1467,17 @@ class _StaffEditFormState extends ConsumerState<_StaffEditForm> {
                   ),
                   const SizedBox(height: BCSpacing.lg),
 
-                  // ── Save ──
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _saving ? null : _save,
-                      child: _saving
-                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                          : const Text('Guardar cambios'),
+                  // ── Save — hidden in demo ──
+                  if (!isDemo)
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _saving ? null : _save,
+                        child: _saving
+                            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                            : const Text('Guardar cambios'),
+                      ),
                     ),
-                  ),
                   const SizedBox(height: 16),
                 ],
               ),

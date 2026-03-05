@@ -11,6 +11,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../config/breakpoints.dart';
 import '../../providers/business_portal_provider.dart';
+import '../../providers/demo_providers.dart';
 
 /// Business QR Walk-in page — displays/downloads the salon's walk-in QR code.
 class BizQrPage extends ConsumerWidget {
@@ -110,6 +111,7 @@ class _QrContentState extends ConsumerState<_QrContent> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
+    final isDemo = ref.watch(isDemoProvider);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -250,43 +252,45 @@ class _QrContentState extends ConsumerState<_QrContent> {
                   ),
                   const SizedBox(height: 24),
 
-                  // Walk-in toggle
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: colors.surface,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: colors.outlineVariant),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(Icons.qr_code_2_outlined,
-                                size: 20, color: colors.primary),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Walk-in',
-                              style: theme.textTheme.titleSmall
-                                  ?.copyWith(fontWeight: FontWeight.w600),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        SwitchListTile(
-                          contentPadding: EdgeInsets.zero,
-                          title: const Text('Aceptar walk-ins'),
-                          subtitle: const Text(
-                            'Los clientes pueden escanear tu QR para reservar cita al momento',
+                  // Walk-in toggle — hidden in demo mode
+                  if (!isDemo) ...[
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: colors.surface,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: colors.outlineVariant),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.qr_code_2_outlined,
+                                  size: 20, color: colors.primary),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Walk-in',
+                                style: theme.textTheme.titleSmall
+                                    ?.copyWith(fontWeight: FontWeight.w600),
+                              ),
+                            ],
                           ),
-                          value: _acceptWalkins,
-                          onChanged: _toggleWalkins,
-                        ),
-                      ],
+                          const SizedBox(height: 12),
+                          SwitchListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: const Text('Aceptar walk-ins'),
+                            subtitle: const Text(
+                              'Los clientes pueden escanear tu QR para reservar cita al momento',
+                            ),
+                            value: _acceptWalkins,
+                            onChanged: _toggleWalkins,
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 20),
+                    const SizedBox(height: 20),
+                  ],
 
                   // Info card
                   Container(

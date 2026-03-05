@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../config/breakpoints.dart';
 import '../../config/router.dart';
 import '../../providers/business_portal_provider.dart';
+import '../../providers/demo_providers.dart';
 import '../../widgets/kpi_card.dart';
 
 /// Business dashboard — stylist/owner daily command center.
@@ -35,6 +36,8 @@ class _DashboardContent extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // ignore: unused_local_variable — imported for future guard use
+    final isDemo = ref.watch(isDemoProvider);
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;

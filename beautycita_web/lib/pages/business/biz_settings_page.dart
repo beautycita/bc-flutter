@@ -8,6 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart' show FileOptions;
 
 import '../../config/breakpoints.dart';
 import '../../providers/business_portal_provider.dart';
+import '../../providers/demo_providers.dart';
 
 /// Business settings page — profile, social, operating hours, policies.
 class BizSettingsPage extends ConsumerWidget {
@@ -207,6 +208,7 @@ class _SettingsContentState extends ConsumerState<_SettingsContent> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDemo = ref.watch(isDemoProvider);
     final dayNames = ['Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado', 'Domingo'];
 
     return LayoutBuilder(
@@ -233,15 +235,15 @@ class _SettingsContentState extends ConsumerState<_SettingsContent> {
                     icon: Icons.store_outlined,
                     child: Column(
                       children: [
-                        TextFormField(controller: _nameCtrl, decoration: const InputDecoration(labelText: 'Nombre del negocio')),
+                        TextFormField(controller: _nameCtrl, readOnly: isDemo, decoration: const InputDecoration(labelText: 'Nombre del negocio')),
                         const SizedBox(height: BCSpacing.md),
-                        TextFormField(controller: _phoneCtrl, decoration: const InputDecoration(labelText: 'Telefono'), keyboardType: TextInputType.phone),
+                        TextFormField(controller: _phoneCtrl, readOnly: isDemo, decoration: const InputDecoration(labelText: 'Telefono'), keyboardType: TextInputType.phone),
                         const SizedBox(height: BCSpacing.md),
-                        TextFormField(controller: _addressCtrl, decoration: const InputDecoration(labelText: 'Direccion')),
+                        TextFormField(controller: _addressCtrl, readOnly: isDemo, decoration: const InputDecoration(labelText: 'Direccion')),
                         const SizedBox(height: BCSpacing.md),
-                        TextFormField(controller: _cityCtrl, decoration: const InputDecoration(labelText: 'Ciudad')),
+                        TextFormField(controller: _cityCtrl, readOnly: isDemo, decoration: const InputDecoration(labelText: 'Ciudad')),
                         const SizedBox(height: BCSpacing.md),
-                        TextFormField(controller: _descCtrl, decoration: const InputDecoration(labelText: 'Descripcion'), maxLines: 3),
+                        TextFormField(controller: _descCtrl, readOnly: isDemo, decoration: const InputDecoration(labelText: 'Descripcion'), maxLines: 3),
                       ],
                     ),
                   ),
@@ -255,6 +257,7 @@ class _SettingsContentState extends ConsumerState<_SettingsContent> {
                       licenseStatus: _licenseStatus,
                       licenseUrl: _licenseUrl,
                       uploading: _uploadingLicense,
+                      isDemo: isDemo,
                       businessId: widget.biz['id'] as String,
                       onUploadStart: () =>
                           setState(() => _uploadingLicense = true),
@@ -280,17 +283,20 @@ class _SettingsContentState extends ConsumerState<_SettingsContent> {
                       children: [
                         TextFormField(
                           controller: _websiteCtrl,
+                          readOnly: isDemo,
                           decoration: const InputDecoration(labelText: 'Sitio web', prefixIcon: Icon(Icons.language, size: 20)),
                           keyboardType: TextInputType.url,
                         ),
                         const SizedBox(height: BCSpacing.md),
                         TextFormField(
                           controller: _instagramCtrl,
+                          readOnly: isDemo,
                           decoration: const InputDecoration(labelText: 'Instagram', prefixText: '@ '),
                         ),
                         const SizedBox(height: BCSpacing.md),
                         TextFormField(
                           controller: _facebookCtrl,
+                          readOnly: isDemo,
                           decoration: const InputDecoration(labelText: 'Facebook URL', prefixIcon: Icon(Icons.facebook, size: 20)),
                           keyboardType: TextInputType.url,
                         ),
@@ -309,6 +315,7 @@ class _SettingsContentState extends ConsumerState<_SettingsContent> {
                           _HoursRow(
                             dayName: dayNames[i],
                             hours: _hours[_dayKeys[i]]!,
+                            readOnly: isDemo,
                             onChanged: (h) => setState(() => _hours[_dayKeys[i]] = h),
                           ),
                           if (i < 6) const SizedBox(height: 4),
@@ -328,13 +335,13 @@ class _SettingsContentState extends ConsumerState<_SettingsContent> {
                           title: const Text('Auto-confirmar citas'),
                           subtitle: const Text('Las citas se confirman automaticamente'),
                           value: _autoConfirm,
-                          onChanged: (v) => setState(() => _autoConfirm = v),
+                          onChanged: isDemo ? null : (v) => setState(() => _autoConfirm = v),
                         ),
                         SwitchListTile(
                           title: const Text('Aceptar walk-ins'),
                           subtitle: const Text('Permitir citas sin reservacion'),
                           value: _acceptWalkins,
-                          onChanged: (v) => setState(() => _acceptWalkins = v),
+                          onChanged: isDemo ? null : (v) => setState(() => _acceptWalkins = v),
                         ),
                         const Divider(),
                         ListTile(
@@ -343,7 +350,7 @@ class _SettingsContentState extends ConsumerState<_SettingsContent> {
                           trailing: DropdownButton<int>(
                             value: _cancelHours,
                             items: [2, 4, 6, 12, 24, 48].map((h) => DropdownMenuItem(value: h, child: Text('$h hrs'))).toList(),
-                            onChanged: (v) {
+                            onChanged: isDemo ? null : (v) {
                               if (v != null) setState(() => _cancelHours = v);
                             },
                           ),
@@ -353,7 +360,7 @@ class _SettingsContentState extends ConsumerState<_SettingsContent> {
                           title: const Text('Deposito requerido'),
                           subtitle: const Text('Cobrar deposito al reservar'),
                           value: _depositRequired,
-                          onChanged: (v) => setState(() => _depositRequired = v),
+                          onChanged: isDemo ? null : (v) => setState(() => _depositRequired = v),
                         ),
                         if (_depositRequired) ...[
                           Padding(
@@ -368,7 +375,7 @@ class _SettingsContentState extends ConsumerState<_SettingsContent> {
                                     max: 100,
                                     divisions: 20,
                                     label: '${_depositPercent.toStringAsFixed(0)}%',
-                                    onChanged: (v) => setState(() => _depositPercent = v),
+                                    onChanged: isDemo ? null : (v) => setState(() => _depositPercent = v),
                                   ),
                                 ),
                               ],
@@ -388,7 +395,7 @@ class _SettingsContentState extends ConsumerState<_SettingsContent> {
                                 title: const Text('Perder deposito'),
                                 value: 'forfeit_deposit',
                                 groupValue: _noShowPolicy,
-                                onChanged: (v) => setState(() => _noShowPolicy = v ?? 'forfeit_deposit'),
+                                onChanged: isDemo ? null : (v) => setState(() => _noShowPolicy = v ?? 'forfeit_deposit'),
                                 dense: true,
                               ),
                               RadioListTile<String>(
@@ -396,7 +403,7 @@ class _SettingsContentState extends ConsumerState<_SettingsContent> {
                                 subtitle: const Text('Se devuelve el deposito al cliente'),
                                 value: 'full_refund',
                                 groupValue: _noShowPolicy,
-                                onChanged: (v) => setState(() => _noShowPolicy = v ?? 'forfeit_deposit'),
+                                onChanged: isDemo ? null : (v) => setState(() => _noShowPolicy = v ?? 'forfeit_deposit'),
                                 dense: true,
                               ),
                               RadioListTile<String>(
@@ -404,7 +411,7 @@ class _SettingsContentState extends ConsumerState<_SettingsContent> {
                                 subtitle: const Text('Se devuelve una parte del deposito'),
                                 value: 'partial_refund',
                                 groupValue: _noShowPolicy,
-                                onChanged: (v) => setState(() => _noShowPolicy = v ?? 'forfeit_deposit'),
+                                onChanged: isDemo ? null : (v) => setState(() => _noShowPolicy = v ?? 'forfeit_deposit'),
                                 dense: true,
                               ),
                             ],
@@ -415,16 +422,17 @@ class _SettingsContentState extends ConsumerState<_SettingsContent> {
                   ),
                   const SizedBox(height: 24),
 
-                  // Save
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _saving ? null : _save,
-                      child: _saving
-                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                          : const Text('Guardar cambios'),
+                  // Save — hidden in demo mode
+                  if (!isDemo)
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _saving ? null : _save,
+                        child: _saving
+                            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                            : const Text('Guardar cambios'),
+                      ),
                     ),
-                  ),
                   const SizedBox(height: 24),
                 ],
               ),
@@ -463,10 +471,11 @@ class _BreakWindow {
 }
 
 class _HoursRow extends StatelessWidget {
-  const _HoursRow({required this.dayName, required this.hours, required this.onChanged});
+  const _HoursRow({required this.dayName, required this.hours, required this.onChanged, this.readOnly = false});
   final String dayName;
   final _DayHours hours;
   final ValueChanged<_DayHours> onChanged;
+  final bool readOnly;
 
   @override
   Widget build(BuildContext context) {
@@ -491,7 +500,7 @@ class _HoursRow extends StatelessWidget {
                 width: 48,
                 child: Switch(
                   value: hours.open,
-                  onChanged: (v) => onChanged(_DayHours(open: v, start: hours.start, end: hours.end, breaks: hours.breaks)),
+                  onChanged: readOnly ? null : (v) => onChanged(_DayHours(open: v, start: hours.start, end: hours.end, breaks: hours.breaks)),
                   materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
               ),
@@ -510,16 +519,17 @@ class _HoursRow extends StatelessWidget {
                   onChanged: (v) => onChanged(_DayHours(open: true, start: hours.start, end: v, breaks: hours.breaks)),
                 ),
                 const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.free_breakfast_outlined, size: 18),
-                  tooltip: 'Agregar descanso',
-                  onPressed: () {
-                    final newBreaks = List<_BreakWindow>.from(hours.breaks)
-                      ..add(_BreakWindow(start: '13:00', end: '14:00'));
-                    onChanged(_DayHours(open: true, start: hours.start, end: hours.end, breaks: newBreaks));
-                  },
-                  visualDensity: VisualDensity.compact,
-                ),
+                if (!readOnly)
+                  IconButton(
+                    icon: const Icon(Icons.free_breakfast_outlined, size: 18),
+                    tooltip: 'Agregar descanso',
+                    onPressed: () {
+                      final newBreaks = List<_BreakWindow>.from(hours.breaks)
+                        ..add(_BreakWindow(start: '13:00', end: '14:00'));
+                      onChanged(_DayHours(open: true, start: hours.start, end: hours.end, breaks: newBreaks));
+                    },
+                    visualDensity: VisualDensity.compact,
+                  ),
               ] else
                 Padding(
                   padding: const EdgeInsets.only(left: 8),
@@ -556,15 +566,16 @@ class _HoursRow extends StatelessWidget {
                         onChanged(_DayHours(open: true, start: hours.start, end: hours.end, breaks: newBreaks));
                       },
                     ),
-                    IconButton(
-                      icon: Icon(Icons.close, size: 16, color: colors.error),
-                      onPressed: () {
-                        final newBreaks = List<_BreakWindow>.from(hours.breaks)..removeAt(bi);
-                        onChanged(_DayHours(open: true, start: hours.start, end: hours.end, breaks: newBreaks));
-                      },
-                      visualDensity: VisualDensity.compact,
-                      tooltip: 'Quitar descanso',
-                    ),
+                    if (!readOnly)
+                      IconButton(
+                        icon: Icon(Icons.close, size: 16, color: colors.error),
+                        onPressed: () {
+                          final newBreaks = List<_BreakWindow>.from(hours.breaks)..removeAt(bi);
+                          onChanged(_DayHours(open: true, start: hours.start, end: hours.end, breaks: newBreaks));
+                        },
+                        visualDensity: VisualDensity.compact,
+                        tooltip: 'Quitar descanso',
+                      ),
                   ],
                 ),
               ),
@@ -645,6 +656,7 @@ class _LicenseUploadContent extends StatelessWidget {
     required this.licenseStatus,
     required this.licenseUrl,
     required this.uploading,
+    required this.isDemo,
     required this.businessId,
     required this.onUploadStart,
     required this.onUploadEnd,
@@ -654,6 +666,7 @@ class _LicenseUploadContent extends StatelessWidget {
   final String licenseStatus;
   final String? licenseUrl;
   final bool uploading;
+  final bool isDemo;
   final String businessId;
   final VoidCallback onUploadStart;
   final ValueChanged<String> onUploadEnd;
@@ -696,23 +709,24 @@ class _LicenseUploadContent extends StatelessWidget {
           const SizedBox(height: BCSpacing.md),
         ],
 
-        // Upload button
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton.icon(
-            onPressed: uploading ? null : () => _pickAndUpload(context),
-            icon: uploading
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.upload_file, size: 18),
-            label: Text(licenseUrl != null
-                ? 'Reemplazar licencia'
-                : 'Subir licencia'),
+        // Upload button — hidden in demo mode
+        if (!isDemo)
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: uploading ? null : () => _pickAndUpload(context),
+              icon: uploading
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.upload_file, size: 18),
+              label: Text(licenseUrl != null
+                  ? 'Reemplazar licencia'
+                  : 'Subir licencia'),
+            ),
           ),
-        ),
       ],
     );
   }

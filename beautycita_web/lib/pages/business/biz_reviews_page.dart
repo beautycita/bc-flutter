@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 
 import '../../config/breakpoints.dart';
 import '../../providers/business_portal_provider.dart';
+// ignore: unused_import — imported for consistency with other business pages
+import '../../providers/demo_providers.dart';
 
 /// Review filter.
 enum _ReviewFilter { all, recent, low }

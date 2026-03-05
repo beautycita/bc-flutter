@@ -25,6 +25,7 @@ class _NavDivider extends _NavItem {
 const _navItems = <_NavItem>[
   _NavItem(label: 'Dashboard', icon: Icons.dashboard_outlined, route: WebRoutes.negocio),
   _NavItem(label: 'Calendario', icon: Icons.calendar_month_outlined, route: WebRoutes.negocioCalendar),
+  _NavItem(label: 'Cal. Externo', icon: Icons.sync_outlined, route: WebRoutes.negocioCalendarSync),
   _NavItem(label: 'Servicios', icon: Icons.spa_outlined, route: WebRoutes.negocioServices),
   _NavItem(label: 'Staff', icon: Icons.people_outlined, route: WebRoutes.negocioStaff),
   _NavDivider(),
@@ -48,6 +49,7 @@ class BusinessSidebar extends StatelessWidget {
     required this.onToggle,
     this.onNavTap,
     this.onSignOut,
+    this.routePrefix,
     super.key,
   });
 
@@ -55,6 +57,10 @@ class BusinessSidebar extends StatelessWidget {
   final VoidCallback onToggle;
   final void Function(String route)? onNavTap;
   final VoidCallback? onSignOut;
+
+  /// When set, route matching uses this prefix instead of `/negocio`.
+  /// Used by the demo shell so sidebar highlights work on `/demo/*` routes.
+  final String? routePrefix;
 
   @override
   Widget build(BuildContext context) {
@@ -68,7 +74,7 @@ class BusinessSidebar extends StatelessWidget {
         children: [
           // -- Logo --
           const SizedBox(height: 20),
-          _Logo(isExpanded: isExpanded),
+          _Logo(isExpanded: isExpanded, isDemo: routePrefix != null),
           const SizedBox(height: 24),
 
           // -- Nav items --
@@ -105,7 +111,11 @@ class BusinessSidebar extends StatelessWidget {
 
           // -- Bottom section: user + collapse toggle --
           const Divider(height: 1),
-          _UserSection(isExpanded: isExpanded, onSignOut: onSignOut),
+          _UserSection(
+            isExpanded: isExpanded,
+            onSignOut: onSignOut,
+            isDemo: routePrefix != null,
+          ),
           _CollapseToggle(isExpanded: isExpanded, onToggle: onToggle),
           const SizedBox(height: 8),
         ],
@@ -114,21 +124,26 @@ class BusinessSidebar extends StatelessWidget {
   }
 
   /// Check if a route is the active route.
-  /// For the business dashboard (/negocio), require exact match.
-  /// For sub-routes, use startsWith.
+  /// When [routePrefix] is set, maps the nav item route from /negocio to the
+  /// demo prefix for comparison.
   bool _isRouteActive(String route, String currentLocation) {
-    if (route == WebRoutes.negocio) {
-      return currentLocation == WebRoutes.negocio;
+    final effectiveRoute = routePrefix != null
+        ? route.replaceFirst('/negocio', routePrefix!)
+        : route;
+    final baseRoute = routePrefix ?? WebRoutes.negocio;
+    if (effectiveRoute == baseRoute) {
+      return currentLocation == baseRoute;
     }
-    return currentLocation.startsWith(route);
+    return currentLocation.startsWith(effectiveRoute);
   }
 }
 
 // -- Logo -------------------------------------------------------------------
 
 class _Logo extends StatelessWidget {
-  const _Logo({required this.isExpanded});
+  const _Logo({required this.isExpanded, this.isDemo = false});
   final bool isExpanded;
+  final bool isDemo;
 
   @override
   Widget build(BuildContext context) {
@@ -181,9 +196,12 @@ class _Logo extends StatelessWidget {
           ),
         ),
         Text(
-          'Negocio',
+          isDemo ? 'Demo' : 'Negocio',
           style: theme.textTheme.bodySmall?.copyWith(
-            color: colors.onSurface.withValues(alpha: 0.5),
+            color: isDemo
+                ? colors.tertiary
+                : colors.onSurface.withValues(alpha: 0.5),
+            fontWeight: isDemo ? FontWeight.w600 : null,
           ),
         ),
       ],
@@ -289,9 +307,14 @@ class _SidebarNavTileState extends State<_SidebarNavTile> {
 // -- User section ------------------------------------------------------------
 
 class _UserSection extends StatefulWidget {
-  const _UserSection({required this.isExpanded, this.onSignOut});
+  const _UserSection({
+    required this.isExpanded,
+    this.onSignOut,
+    this.isDemo = false,
+  });
   final bool isExpanded;
   final VoidCallback? onSignOut;
+  final bool isDemo;
 
   @override
   State<_UserSection> createState() => _UserSectionState();
@@ -337,7 +360,7 @@ class _UserSectionState extends State<_UserSection> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            'Mi Negocio',
+                            widget.isDemo ? 'Salon de Vallarta' : 'Mi Negocio',
                             style: theme.textTheme.bodySmall?.copyWith(
                               fontWeight: FontWeight.w600,
                             ),
@@ -345,7 +368,9 @@ class _UserSectionState extends State<_UserSection> {
                             overflow: TextOverflow.ellipsis,
                           ),
                           Text(
-                            'Cerrar sesion',
+                            widget.isDemo
+                                ? 'Salir del demo'
+                                : 'Cerrar sesion',
                             style: theme.textTheme.labelSmall?.copyWith(
                               color: colors.onSurface.withValues(alpha: 0.5),
                             ),
@@ -362,7 +387,7 @@ class _UserSectionState extends State<_UserSection> {
                 )
               : Center(
                   child: Tooltip(
-                    message: 'Cerrar sesion',
+                    message: widget.isDemo ? 'Salir del demo' : 'Cerrar sesion',
                     child: CircleAvatar(
                       radius: 16,
                       backgroundColor: colors.primary.withValues(alpha: 0.15),

@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/breakpoints.dart';
 import '../../providers/business_portal_provider.dart';
+import '../../providers/demo_providers.dart';
 
 /// Date range filter for payments.
 enum _DateRange { thisWeek, thisMonth, allTime }
@@ -201,6 +202,7 @@ class _StripeBannerState extends ConsumerState<_StripeBanner> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
+    final isDemo = ref.watch(isDemoProvider);
     final stripeId = widget.biz['stripe_account_id'] as String?;
     final chargesEnabled = widget.biz['stripe_charges_enabled'] as bool? ?? false;
     final payoutsEnabled = widget.biz['stripe_payouts_enabled'] as bool? ?? false;
@@ -259,13 +261,15 @@ class _StripeBannerState extends ConsumerState<_StripeBanner> {
                 ],
               ),
             ),
-            const SizedBox(width: 12),
-            ElevatedButton(
-              onPressed: _loading ? null : _startStripeOnboarding,
-              child: _loading
-                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Text('Completar'),
-            ),
+            if (!isDemo) ...[
+              const SizedBox(width: 12),
+              ElevatedButton(
+                onPressed: _loading ? null : _startStripeOnboarding,
+                child: _loading
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Text('Completar'),
+              ),
+            ],
           ],
         ),
       );
@@ -292,13 +296,15 @@ class _StripeBannerState extends ConsumerState<_StripeBanner> {
               ],
             ),
           ),
-          const SizedBox(width: 12),
-          ElevatedButton(
-            onPressed: _loading ? null : _startStripeOnboarding,
-            child: _loading
-                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                : const Text('Configurar Stripe'),
-          ),
+          if (!isDemo) ...[
+            const SizedBox(width: 12),
+            ElevatedButton(
+              onPressed: _loading ? null : _startStripeOnboarding,
+              child: _loading
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Text('Configurar Stripe'),
+            ),
+          ],
         ],
       ),
     );
