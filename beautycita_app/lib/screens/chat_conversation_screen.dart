@@ -52,6 +52,7 @@ class _ChatConversationScreenState
 
   bool get _isSupport => _resolvedContactType == 'support';
   bool get _isAphrodite => _resolvedContactType == 'aphrodite';
+  bool get _isEros => _resolvedContactType == 'support_ai';
 
   Future<void> _sendMessage() async {
     final text = _textController.text.trim();
@@ -76,7 +77,9 @@ class _ChatConversationScreenState
     });
     _scrollToBottom();
 
-    if (_isSupport) {
+    if (_isEros) {
+      await ref.read(sendErosMessageProvider.notifier).send(widget.threadId, text);
+    } else if (_isSupport) {
       await ref.read(sendSupportMessageProvider.notifier).send(widget.threadId, text);
     } else if (_isAphrodite) {
       await ref.read(sendMessageProvider.notifier).send(widget.threadId, text);
@@ -116,6 +119,13 @@ class _ChatConversationScreenState
     }
   }
 
+  Future<void> _escalateToHuman() async {
+    final supportThread = await ref.read(supportThreadProvider.future);
+    if (supportThread != null && mounted) {
+      context.pushReplacement('/chat/${supportThread.id}');
+    }
+  }
+
   void _onQuickAction(String text) {
     _textController.text = text;
     _sendMessage();
@@ -143,6 +153,7 @@ class _ChatConversationScreenState
     }
     final isAphrodite = thread?.isAphrodite ?? false;
     final isSupport = thread?.isSupport ?? false;
+    final isEros = thread?.isEros ?? false;
     final title = isAphrodite ? 'Afrodita' : (thread?.displayName ?? 'Chat');
 
     return Scaffold(
@@ -155,6 +166,19 @@ class _ChatConversationScreenState
         ),
         titleSpacing: 0,
         actions: [
+          if (isEros)
+            TextButton.icon(
+              onPressed: () => _escalateToHuman(),
+              icon: const Icon(Icons.support_agent_rounded, size: 18),
+              label: Text(
+                'Humano',
+                style: GoogleFonts.nunito(fontSize: 12, fontWeight: FontWeight.w700),
+              ),
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFFC2185B),
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+              ),
+            ),
           IconButton(
             icon: Icon(
               Icons.forum_outlined,
@@ -167,7 +191,24 @@ class _ChatConversationScreenState
         ],
         title: Row(
           children: [
-            if (isAphrodite) ...[
+            if (isEros) ...[
+              Container(
+                width: 36,
+                height: 36,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [Color(0xFF1565C0), Color(0xFF42A5F5)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                child: const Center(
+                  child: Text('🏹', style: TextStyle(fontSize: 18)),
+                ),
+              ),
+              const SizedBox(width: 10),
+            ] else if (isAphrodite) ...[
               Container(
                 width: 36,
                 height: 36,
@@ -221,6 +262,14 @@ class _ChatConversationScreenState
                     fontWeight: FontWeight.w600,
                   ),
                 ),
+                if (isEros)
+                  Text(
+                    'Soporte inteligente',
+                    style: GoogleFonts.nunito(
+                      fontSize: 12,
+                      color: const Color(0xFF1565C0).withValues(alpha: 0.7),
+                    ),
+                  ),
                 if (isAphrodite)
                   Text(
                     'Asesora de belleza divina',
@@ -280,6 +329,7 @@ class _ChatConversationScreenState
                       message: msg,
                       isAphroditeThread: isAphrodite,
                       isSupportThread: isSupport,
+                      isErosThread: isEros,
                     );
                   },
                 );
@@ -300,7 +350,7 @@ class _ChatConversationScreenState
             controller: _textController,
             isSending: _isSending,
             isAphrodite: isAphrodite,
-            showCamera: isAphrodite, // no camera for support
+            showCamera: isAphrodite, // camera only for Aphrodite
             onSend: _sendMessage,
             onCamera: () => _handleCamera(),
           ),
@@ -443,11 +493,13 @@ class _MessageBubble extends StatelessWidget {
   final ChatMessage message;
   final bool isAphroditeThread;
   final bool isSupportThread;
+  final bool isErosThread;
 
   const _MessageBubble({
     required this.message,
     required this.isAphroditeThread,
     this.isSupportThread = false,
+    this.isErosThread = false,
   });
 
   @override
@@ -456,16 +508,19 @@ class _MessageBubble extends StatelessWidget {
     final alignment = isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start;
     final colors = Theme.of(context).colorScheme;
 
-    // Support agent messages get maroon bubble
+    // Support/Eros agent messages get colored bubbles
     final bool isSupportAgent = message.isFromSupport;
+    final bool isErosAgent = message.senderType == 'eros';
     final bubbleColor = isUser
         ? colors.primary
-        : isSupportAgent
-            ? const Color(0xFF7B1038)
-            : colors.surface;
+        : isErosAgent
+            ? const Color(0xFF1565C0)
+            : isSupportAgent
+                ? const Color(0xFF7B1038)
+                : colors.surface;
     final textColor = isUser
         ? colors.onPrimary
-        : isSupportAgent
+        : (isErosAgent || isSupportAgent)
             ? Colors.white
             : colors.onSurface;
 
