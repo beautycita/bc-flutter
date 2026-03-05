@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../config/constants.dart';
 import '../../providers/admin_provider.dart';
 import '../../services/export_service.dart';
+import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 import 'pipeline_lead_detail_sheet.dart';
 
@@ -283,9 +284,18 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
   }
 
   Future<void> _bulkUpdateStatus(String newStatus) async {
-    final count = _selectedIds.length;
-    // TODO: batch update via supabase when detail sheet is implemented
-    // For now just invalidate the providers to force a refresh
+    final ids = _selectedIds.toList();
+    final count = ids.length;
+    try {
+      await SupabaseClientService.client
+          .from('discovered_salons')
+          .update({'status': newStatus})
+          .inFilter('id', ids);
+    } catch (e) {
+      if (mounted) ToastService.showError('Error al actualizar: $e');
+      return;
+    }
+
     ref.invalidate(searchDiscoveredSalonsProvider(_searchKey));
     ref.invalidate(pipelineFunnelStatsProvider);
 
@@ -327,7 +337,16 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
 
     if (confirmed != true || !mounted) return;
 
-    // TODO: implement actual delete via supabase delete on discovered_salons
+    try {
+      await SupabaseClientService.client
+          .from('discovered_salons')
+          .delete()
+          .inFilter('id', ids);
+    } catch (e) {
+      if (mounted) ToastService.showError('Error al eliminar: $e');
+      return;
+    }
+
     ref.invalidate(searchDiscoveredSalonsProvider(_searchKey));
     ref.invalidate(pipelineFunnelStatsProvider);
     _exitSelection();

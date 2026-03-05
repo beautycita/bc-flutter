@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import '../config/theme_extension.dart';
@@ -431,60 +430,10 @@ class _ChatConversationScreenState
               ),
             ),
             const SizedBox(height: 10),
-            InkWell(
-              borderRadius: BorderRadius.circular(12),
-              onTap: () {
-                Navigator.pop(ctx);
-                _pickAndSendAttachment();
-              },
-              child: Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.attach_file_rounded, color: Theme.of(context).colorScheme.primary, size: 24),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Adjuntar archivo',
-                            style: GoogleFonts.poppins(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          Text(
-                            'Enviar una foto o imagen',
-                            style: GoogleFonts.nunito(
-                              fontSize: 12,
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Icon(Icons.chevron_right_rounded, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)),
-                  ],
-                ),
-              ),
-            ),
           ],
         ),
       ),
     );
-  }
-
-  Future<void> _pickAndSendAttachment() async {
-    final picker = ImagePicker();
-    final image = await picker.pickImage(source: ImageSource.gallery, maxWidth: 1200);
-    if (image == null) return;
-    // TODO: upload image and send as chat message
-    ToastService.showInfo('Adjuntos disponibles pronto');
   }
 }
 

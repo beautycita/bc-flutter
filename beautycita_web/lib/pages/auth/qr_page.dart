@@ -6,14 +6,15 @@ import 'package:go_router/go_router.dart';
 import 'package:beautycita_core/supabase.dart';
 import 'package:beautycita_core/theme.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' show OtpType;
+import 'package:supabase_flutter/supabase_flutter.dart' show OtpType, RealtimeChannel;
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/router.dart';
 import '../../providers/auth_provider.dart';
 import 'auth_layout.dart';
 
 /// QR auth page — generates a session code, displays a scannable QR code,
-/// and polls for authorization from the mobile app.
+/// listens for Realtime Broadcast from mobile, and polls as fallback.
 class QrPage extends ConsumerStatefulWidget {
   const QrPage({super.key});
 
@@ -31,7 +32,11 @@ class _QrPageState extends ConsumerState<QrPage> {
   String? _error;
   Timer? _pollTimer;
   Timer? _expiryTimer;
+  RealtimeChannel? _broadcastChannel;
   int _expiryCountdown = 300; // 5 minutes
+
+  static const _apkUrl =
+      'https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/apk/beautycita.apk';
 
   @override
   void initState() {
@@ -43,7 +48,15 @@ class _QrPageState extends ConsumerState<QrPage> {
   void dispose() {
     _pollTimer?.cancel();
     _expiryTimer?.cancel();
+    _cleanupBroadcast();
     super.dispose();
+  }
+
+  void _cleanupBroadcast() {
+    if (_broadcastChannel != null) {
+      BCSupabase.client.removeChannel(_broadcastChannel!);
+      _broadcastChannel = null;
+    }
   }
 
   Future<void> _createSession() async {
@@ -91,6 +104,7 @@ class _QrPageState extends ConsumerState<QrPage> {
         _isLoading = false;
       });
 
+      _subscribeBroadcast(sessionId!);
       _startPolling(code);
       _startExpiryTimer();
     } catch (e) {
@@ -99,6 +113,23 @@ class _QrPageState extends ConsumerState<QrPage> {
         _isLoading = false;
       });
     }
+  }
+
+  /// Subscribe to Realtime Broadcast for instant notification from mobile.
+  void _subscribeBroadcast(String sessionId) {
+    _cleanupBroadcast();
+    _broadcastChannel = BCSupabase.client.channel('qr_auth_$sessionId');
+    _broadcastChannel!
+        .onBroadcast(
+          event: 'session_authorized',
+          callback: (payload) {
+            if (!mounted || _isExpired || _isSigningIn) return;
+            _pollTimer?.cancel();
+            _expiryTimer?.cancel();
+            _completeSignIn(sessionId);
+          },
+        )
+        .subscribe();
   }
 
   void _startPolling(String code) {
@@ -235,15 +266,27 @@ class _QrPageState extends ConsumerState<QrPage> {
             style: theme.textTheme.headlineMedium,
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: BCSpacing.sm),
-          Text(
-            'Escanea este codigo con la app de BeautyCita\no ingresa el codigo manualmente',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: colors.onSurface.withValues(alpha: 0.6),
+          const SizedBox(height: BCSpacing.lg),
+
+          // ── Step-by-step instructions
+          Container(
+            padding: const EdgeInsets.all(BCSpacing.md),
+            decoration: BoxDecoration(
+              color: colors.primaryContainer.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(BCSpacing.radiusSm),
             ),
-            textAlign: TextAlign.center,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _StepRow(number: '1', text: 'Abre la app de BeautyCita en tu celular'),
+                const SizedBox(height: BCSpacing.xs),
+                _StepRow(number: '2', text: 'Ve a Ajustes > Vincular con la Web'),
+                const SizedBox(height: BCSpacing.xs),
+                _StepRow(number: '3', text: 'Escanea el QR o ingresa el codigo'),
+              ],
+            ),
           ),
-          const SizedBox(height: BCSpacing.xl),
+          const SizedBox(height: BCSpacing.lg),
 
           // ── Content
           if (_isLoading)
@@ -391,7 +434,21 @@ class _QrPageState extends ConsumerState<QrPage> {
             ),
           ],
 
-          const SizedBox(height: BCSpacing.xl),
+          const SizedBox(height: BCSpacing.lg),
+
+          // ── Download app link
+          TextButton.icon(
+            onPressed: () => launchUrl(Uri.parse(_apkUrl)),
+            icon: Icon(Icons.download_rounded, size: 18, color: colors.primary),
+            label: Text(
+              'No tienes la app? Descargala aqui',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: colors.primary,
+              ),
+            ),
+          ),
+
+          const SizedBox(height: BCSpacing.sm),
 
           // ── Email login link
           TextButton(
@@ -400,6 +457,45 @@ class _QrPageState extends ConsumerState<QrPage> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _StepRow extends StatelessWidget {
+  const _StepRow({required this.number, required this.text});
+  final String number;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Row(
+      children: [
+        Container(
+          width: 24,
+          height: 24,
+          decoration: BoxDecoration(
+            color: colors.primary,
+            shape: BoxShape.circle,
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            number,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        const SizedBox(width: BCSpacing.sm),
+        Expanded(
+          child: Text(
+            text,
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+        ),
+      ],
     );
   }
 }

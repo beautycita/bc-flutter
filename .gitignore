@@ -28,3 +28,7 @@ Thumbs.db
 
 # Old worktrees
 .worktrees/
+
+# Design assets (reference images, not used in code)
+images/
+**/Zone.Identifier
