@@ -1,6 +1,9 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show UserAttributes;
 import 'package:beautycita/services/supabase_client.dart';
 import 'package:beautycita/services/toast_service.dart';
 import '../services/biometric_service.dart';
@@ -156,6 +159,47 @@ class AuthNotifier extends StateNotifier<AuthState> {
       ToastService.showError(msg);
       state = state.copyWith(isLoading: false, error: msg);
       return false;
+    }
+  }
+
+  /// Attempt Google One Tap to capture email as metadata.
+  /// Fire-and-forget — does not block registration or affect auth state.
+  /// Email is stored as `discovered_email` in Supabase user_metadata
+  /// for cross-referencing and re-engagement only (NOT for auth).
+  Future<void> captureGoogleEmail() async {
+    try {
+      if (!SupabaseClientService.isInitialized) return;
+
+      final clientId = dotenv.env['GOOGLE_OAUTH_CLIENT_ID'];
+      if (clientId == null || clientId.isEmpty) return;
+
+      final googleSignIn = GoogleSignIn(
+        serverClientId: clientId,
+        scopes: ['email'],
+      );
+
+      final account = await googleSignIn.signIn();
+      if (account == null) {
+        // User dismissed — that's fine, move on
+        debugPrint('[Auth] Google One Tap dismissed');
+        return;
+      }
+
+      final email = account.email;
+      debugPrint('[Auth] Captured Google email: $email');
+
+      // Store as metadata on the Supabase user (not for auth)
+      await SupabaseClientService.client.auth.updateUser(
+        UserAttributes(data: {'discovered_email': email}),
+      );
+
+      // Disconnect Google session — we only wanted the email
+      await googleSignIn.disconnect();
+
+      debugPrint('[Auth] discovered_email saved to user_metadata');
+    } catch (e) {
+      // Non-fatal: email capture failure must never block registration
+      debugPrint('[Auth] Google email capture failed (non-fatal): $e');
     }
   }
 
