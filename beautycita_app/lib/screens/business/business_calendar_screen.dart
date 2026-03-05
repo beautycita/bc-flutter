@@ -41,9 +41,9 @@ class _BusinessCalendarScreenState
     return DateTimeRange(start: start, end: end);
   }
 
+  /// Rolling 7-day window: yesterday + today (pos 1) + next 5 days
   DateTimeRange get _weekRange {
-    final start = _selectedDate.subtract(
-        Duration(days: _selectedDate.weekday - 1));
+    final start = _selectedDate.subtract(const Duration(days: 1));
     final end = DateTime(start.year, start.month, start.day + 6, 23, 59, 59);
     return DateTimeRange(start: start, end: end);
   }
@@ -1634,13 +1634,14 @@ class _CompactWeekStrip extends StatelessWidget {
     required this.onDayTap,
   });
 
-  static const _dayNames = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+  static const _dayLetters = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final appts = weekApptsAsync.valueOrNull ?? [];
     final now = DateTime.now();
+    // weekRange.start is yesterday (selectedDate - 1)
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
@@ -1694,7 +1695,7 @@ class _CompactWeekStrip extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      _dayNames[i],
+                      _dayLetters[day.weekday - 1],
                       style: GoogleFonts.poppins(
                         fontSize: 10,
                         fontWeight: FontWeight.w600,

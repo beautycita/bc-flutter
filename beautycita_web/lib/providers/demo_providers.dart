@@ -22,6 +22,14 @@ List<Override> get demoProviderOverrides => [
       businessReviewsProvider.overrideWith((ref) async => DemoData.reviews),
       businessDisputesProvider.overrideWith((ref) async => DemoData.disputes),
       businessPaymentsProvider.overrideWith((ref) async => DemoData.payments),
+      businessAppointmentsProvider.overrideWith((ref, range) async {
+        return DemoData.appointments.where((a) {
+          final startsAt = a['starts_at'] as String;
+          return startsAt.compareTo(range.start) >= 0 &&
+              startsAt.compareTo(range.end) <= 0;
+        }).toList();
+      }),
+      businessScheduleBlocksProvider.overrideWith((ref, range) async => []),
     ];
 
 // ── Computed demo stats ─────────────────────────────────────────────────────
