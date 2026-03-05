@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../providers/admin_bookings_provider.dart';
+import '../../services/csv_export.dart';
 import '../../widgets/bc_data_table.dart';
 import '../../widgets/bulk_action_bar.dart';
 import '../../widgets/filter_bar.dart';
@@ -336,7 +337,33 @@ class _BookingsPageState extends ConsumerState<BookingsPage> {
               actions: [
                 TextButton.icon(
                   onPressed: () {
-                    // TODO: Export selected bookings
+                    final bookings = _checkedBookings.toList();
+                    if (bookings.isEmpty) return;
+                    final csv = generateCsv(
+                      headers: [
+                        'id', 'client_name', 'salon_name',
+                        'service_name', 'booking_date', 'status',
+                        'total_price', 'payment_status', 'created_at',
+                      ],
+                      rows: bookings.map((b) => [
+                        b.id,
+                        b.clientName,
+                        b.salonName,
+                        b.service,
+                        b.dateTime.toIso8601String(),
+                        b.status,
+                        b.amount.toStringAsFixed(2),
+                        b.paymentStatus,
+                        b.createdAt.toIso8601String(),
+                      ]).toList(),
+                    );
+                    downloadCsv(csv, 'reservas_${DateTime.now().millisecondsSinceEpoch}.csv');
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('${bookings.length} reservas exportadas'),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
                   },
                   icon: const Icon(Icons.download, size: 18),
                   label: const Text('Exportar'),

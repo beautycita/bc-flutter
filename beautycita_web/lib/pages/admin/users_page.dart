@@ -358,7 +358,33 @@ class _UsersPageState extends ConsumerState<UsersPage> {
               actions: [
                 TextButton.icon(
                   onPressed: () {
-                    // TODO: Export selected users
+                    final users = _checkedUsers.toList();
+                    if (users.isEmpty) return;
+                    final csv = generateCsv(
+                      headers: [
+                        'id', 'username', 'full_name', 'email',
+                        'phone', 'role', 'status', 'created_at',
+                        'last_login_at',
+                      ],
+                      rows: users.map((u) => [
+                        u.id,
+                        u.username,
+                        u.fullName ?? '',
+                        u.email ?? '',
+                        u.phone ?? '',
+                        u.role,
+                        u.status,
+                        u.createdAt.toIso8601String(),
+                        u.lastSignInAt?.toIso8601String() ?? '',
+                      ]).toList(),
+                    );
+                    downloadCsv(csv, 'usuarios_${DateTime.now().millisecondsSinceEpoch}.csv');
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('${users.length} usuarios exportados'),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
                   },
                   icon: const Icon(Icons.download, size: 18),
                   label: const Text('Exportar'),
