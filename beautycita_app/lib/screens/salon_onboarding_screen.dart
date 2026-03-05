@@ -427,52 +427,47 @@ class _SalonOnboardingScreenState
       final rawPhone = _phoneCtrl.text.replaceAll(RegExp(r'[^\d+]'), '');
       final phone = rawPhone.startsWith('+') ? rawPhone : '+52$rawPhone';
 
-      final userId = SupabaseClientService.client.auth.currentUser?.id;
-
       final baseAddress = _pickedAddress ?? _addressCtrl.text.trim();
       final details = _detailsCtrl.text.trim();
       final fullAddress =
           details.isNotEmpty ? '$baseAddress, $details' : baseAddress;
 
-      final businessData = <String, dynamic>{
-        'name': _nameCtrl.text.trim(),
-        'phone': phone,
-        'whatsapp': phone,
-        'address': fullAddress,
-        'lat': _pickedLat,
-        'lng': _pickedLng,
-        'tier': 1,
-        'is_active': true,
-        if (userId != null) 'owner_id': userId,
-      };
+      // Resolve discovered salon ID from either invite ref or phone match
+      final discoveredSalonId = widget.refCode?.isNotEmpty == true
+          ? widget.refCode
+          : _discoveredSalonId;
 
-      if (_photoUrl != null) {
-        businessData['photo_url'] = _photoUrl;
-      }
-
-      // City/state from Places autocomplete (reverse geocoded from address)
       final city = _pickedCity ??
           _discoveredSalonData?['location_city'] ??
           _discoveredSalonData?['city'];
-      if (city != null) businessData['city'] = city;
       final state = _pickedState ??
           _discoveredSalonData?['location_state'] ??
           _discoveredSalonData?['state'];
-      if (state != null) businessData['state'] = state;
 
-      if (_discoveredSalonData != null) {
-        final rating = _discoveredSalonData!['rating_average'] ??
-            _discoveredSalonData!['rating'];
-        if (rating != null) businessData['average_rating'] = rating;
+      // Call register-business edge function — creates business, staff,
+      // schedule (Mon-Sat 9-7), role upgrade, and discovered salon link atomically.
+      final res = await SupabaseClientService.client.functions.invoke(
+        'register-business',
+        body: {
+          'name': _nameCtrl.text.trim(),
+          'phone': phone,
+          'whatsapp': phone,
+          'address': fullAddress,
+          if (city != null) 'city': city,
+          if (state != null) 'state': state,
+          'lat': _pickedLat,
+          'lng': _pickedLng,
+          if (_photoUrl != null) 'photo_url': _photoUrl,
+          if (discoveredSalonId != null) 'discovered_salon_id': discoveredSalonId,
+        },
+      );
+
+      final data = res.data as Map<String, dynamic>;
+      if (data['error'] != null) {
+        throw Exception(data['error'] as String);
       }
 
-      final response = await SupabaseClientService.client
-          .from('businesses')
-          .insert(businessData)
-          .select('id')
-          .single();
-
-      final businessId = response['id'] as String;
+      final businessId = data['business']?['id'] as String? ?? '';
 
       // Save email on user's auth account (best-effort)
       final email = _emailCtrl.text.trim();
@@ -484,31 +479,6 @@ class _SalonOnboardingScreenState
         } catch (_) {
           // Non-critical
         }
-      }
-
-      // Mark discovered salon as registered (invite link)
-      if (widget.refCode != null && widget.refCode!.isNotEmpty) {
-        await SupabaseClientService.client
-            .from('discovered_salons')
-            .update({
-              'status': 'registered',
-              'registered_business_id': businessId,
-              'registered_at': DateTime.now().toUtc().toIso8601String(),
-            })
-            .eq('id', widget.refCode!);
-      }
-
-      // Mark discovered salon as registered (phone match)
-      if (_discoveredSalonId != null &&
-          (widget.refCode == null || widget.refCode!.isEmpty)) {
-        await SupabaseClientService.client
-            .from('discovered_salons')
-            .update({
-              'status': 'registered',
-              'registered_business_id': businessId,
-              'registered_at': DateTime.now().toUtc().toIso8601String(),
-            })
-            .eq('id', _discoveredSalonId!);
       }
 
       setState(() {

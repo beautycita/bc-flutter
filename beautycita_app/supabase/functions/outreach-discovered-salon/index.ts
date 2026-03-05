@@ -257,7 +257,7 @@ serve(async (req: Request) => {
 
         if (salon && canSendOutreach(salon)) {
           // Send outreach via beautypi WhatsApp API
-          const registrationLink = `https://beautycita.com/salon/${discovered_salon_id}`;
+          const registrationLink = `https://beautycita.com/supabase/functions/v1/salon-registro?ref=${discovered_salon_id}`;
           const message = getOutreachMessage(interestCount, salon.business_name, registrationLink);
 
           // Update outreach tracking

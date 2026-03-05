@@ -316,16 +316,13 @@ class _InviteSalonScreenState extends ConsumerState<InviteSalonScreen> {
     // 1. Open WhatsApp with pre-filled message
     final phone = salon.whatsapp ?? salon.phone;
     if (phone != null) {
-      final params = <String, String>{
-        if (salon.name.isNotEmpty) 'name': salon.name,
-        if (phone != null) 'phone': phone,
-        if (salon.address != null) 'address': salon.address!,
-        if (salon.city != null) 'city': salon.city!,
-        if (salon.photoUrl != null) 'avatar': salon.photoUrl!,
-        if (salon.rating != null) 'rating': salon.rating!.toStringAsFixed(1),
-        'ref': salon.id,
-      };
-      final regUrl = Uri.https('beautycita.com', '/registro', params);
+      // Point directly to salon-registro edge function — self-contained HTML
+      // registration page that fetches all salon data server-side from the ref ID.
+      final regUrl = Uri.https(
+        'beautycita.com',
+        '/supabase/functions/v1/salon-registro',
+        {'ref': salon.id},
+      );
       final message = Uri.encodeComponent(
         'Hola! Queria hacer una cita contigo pero no te encontre '
         'en BeautyCita. Deberias estar ahi, te llegan mas clientes '
