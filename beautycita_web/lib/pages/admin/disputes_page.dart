@@ -44,7 +44,13 @@ class _DisputesPageState extends ConsumerState<DisputesPage> {
       detailTitle: selectedDispute != null
           ? 'Disputa #${selectedDispute.id.substring(0, 8)}'
           : 'Detalle',
-      detailBuilder: (dispute) => DisputeDetailContent(dispute: dispute),
+      detailBuilder: (dispute) => DisputeDetailContent(
+        dispute: dispute,
+        onChanged: () {
+          ref.invalidate(disputesProvider);
+          ref.read(selectedDisputeProvider.notifier).state = null;
+        },
+      ),
       filterBar: _DisputeFilterBar(filters: filters, ref: ref),
       table: BCDataTable<Dispute>(
         columns: _buildColumns(context),

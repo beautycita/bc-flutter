@@ -21,6 +21,7 @@ class RegisteredSalon {
   final String stripeStatus; // 'not_started', 'pending', 'complete'
   final bool verified;
   final bool isActive;
+  final bool onHold;
   final String? phone;
   final int tier;
   final DateTime createdAt;
@@ -38,6 +39,7 @@ class RegisteredSalon {
     this.stripeStatus = 'not_started',
     this.verified = false,
     this.isActive = true,
+    this.onHold = false,
     this.phone,
     this.tier = 1,
     required this.createdAt,
@@ -57,6 +59,7 @@ class RegisteredSalon {
       stripeStatus: json['stripe_onboarding_status'] as String? ?? 'not_started',
       verified: json['is_verified'] as bool? ?? false,
       isActive: json['is_active'] as bool? ?? true,
+      onHold: json['on_hold'] as bool? ?? false,
       phone: json['phone'] as String?,
       tier: json['tier'] as int? ?? 1,
       createdAt: DateTime.tryParse(json['created_at'] as String? ?? '') ??
@@ -262,7 +265,7 @@ final registeredSalonsProvider =
   // Build base query with equality filters
   var query = client.from(BCTables.businesses).select(
     'id, name, city, state, average_rating, total_reviews, '
-    'stripe_onboarding_status, is_verified, is_active, phone, tier, '
+    'stripe_onboarding_status, is_verified, is_active, on_hold, phone, tier, '
     'created_at, photo_url, municipal_license_url, municipal_license_status',
   );
   if (filter.city != null) {

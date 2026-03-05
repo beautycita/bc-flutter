@@ -1,3 +1,4 @@
+import 'package:beautycita_core/supabase.dart';
 import 'package:beautycita_core/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -9,8 +10,13 @@ import '../../providers/admin_disputes_provider.dart';
 /// Shows dispute info, linked booking, client/salon info,
 /// resolution workflow, and status timeline.
 class DisputeDetailContent extends StatefulWidget {
-  const DisputeDetailContent({required this.dispute, super.key});
+  const DisputeDetailContent({
+    required this.dispute,
+    this.onChanged,
+    super.key,
+  });
   final Dispute dispute;
+  final VoidCallback? onChanged;
 
   @override
   State<DisputeDetailContent> createState() => _DisputeDetailContentState();
@@ -20,12 +26,123 @@ class _DisputeDetailContentState extends State<DisputeDetailContent> {
   String? _resolutionDecision;
   final _notesController = TextEditingController();
   final _refundAmountController = TextEditingController();
+  bool _isProcessing = false;
 
   @override
   void dispose() {
     _notesController.dispose();
     _refundAmountController.dispose();
     super.dispose();
+  }
+
+  Future<void> _markReviewing() async {
+    setState(() => _isProcessing = true);
+    try {
+      await BCSupabase.client.from(BCTables.disputes).update({
+        'status': 'reviewing',
+        'reviewed_at': DateTime.now().toUtc().toIso8601String(),
+      }).eq('id', widget.dispute.id);
+
+      widget.onChanged?.call();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Disputa marcada en revision')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
+    }
+  }
+
+  Future<void> _resolveDispute() async {
+    if (_resolutionDecision == null) return;
+
+    // Validate partial refund amount
+    double? refundAmount;
+    if (_resolutionDecision == 'refund_partial') {
+      refundAmount = double.tryParse(_refundAmountController.text);
+      if (refundAmount == null || refundAmount <= 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Ingresa un monto de reembolso valido')),
+        );
+        return;
+      }
+    } else if (_resolutionDecision == 'refund_full') {
+      refundAmount = widget.dispute.amount;
+    }
+
+    final isRefund = _resolutionDecision == 'refund_full' ||
+        _resolutionDecision == 'refund_partial';
+    final newStatus =
+        _resolutionDecision == 'reject' ? 'rejected' : 'resolved';
+
+    setState(() => _isProcessing = true);
+    try {
+      // Update the dispute record
+      await BCSupabase.client.from(BCTables.disputes).update({
+        'status': newStatus,
+        'resolution': _resolutionDecision,
+        'resolution_notes': _notesController.text.isNotEmpty
+            ? _notesController.text
+            : null,
+        if (refundAmount != null) 'refund_amount': refundAmount,
+        if (isRefund) 'refund_status': 'pending',
+        'resolved_at': DateTime.now().toUtc().toIso8601String(),
+      }).eq('id', widget.dispute.id);
+
+      // If refund involved, update appointment and call edge function
+      if (isRefund && widget.dispute.bookingRef != null) {
+        await BCSupabase.client
+            .from(BCTables.appointments)
+            .update({'payment_status': 'refund_pending'})
+            .eq('id', widget.dispute.bookingRef!);
+
+        try {
+          await BCSupabase.client.functions.invoke(
+            'process-dispute-refund',
+            body: {'dispute_id': widget.dispute.id},
+          );
+        } catch (refundErr) {
+          debugPrint('Dispute refund processing failed: $refundErr');
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                    'Disputa resuelta, pero el reembolso fallo: $refundErr'),
+                duration: const Duration(seconds: 5),
+              ),
+            );
+          }
+        }
+      }
+
+      widget.onChanged?.call();
+      if (mounted) {
+        final label = switch (_resolutionDecision) {
+          'refund_full' => 'Reembolso total',
+          'refund_partial' => 'Reembolso parcial',
+          'reject' => 'Rechazada',
+          _ => _resolutionDecision!,
+        };
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Disputa resuelta: $label')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al resolver disputa: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
+    }
   }
 
   @override
@@ -190,10 +307,14 @@ class _DisputeDetailContentState extends State<DisputeDetailContent> {
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
-                onPressed: () {
-                  // TODO: Update status to 'reviewing'
-                },
-                icon: const Icon(Icons.visibility),
+                onPressed: _isProcessing ? null : _markReviewing,
+                icon: _isProcessing
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.visibility),
                 label: const Text('Marcar en revision'),
               ),
             ),
@@ -260,12 +381,19 @@ class _DisputeDetailContentState extends State<DisputeDetailContent> {
           SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
-              onPressed: _resolutionDecision != null
-                  ? () {
-                      // TODO: Execute resolution
-                    }
+              onPressed: _resolutionDecision != null && !_isProcessing
+                  ? _resolveDispute
                   : null,
-              icon: const Icon(Icons.gavel),
+              icon: _isProcessing
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.gavel),
               label: const Text('Resolver'),
             ),
           ),

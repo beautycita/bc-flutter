@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:beautycita_core/supabase.dart';
 import 'package:beautycita_core/theme.dart';
 import 'package:flutter/material.dart';
@@ -22,6 +24,8 @@ class _RegisteredSalonDetailContentState
   bool _togglingVerified = false;
   bool _approvingLicense = false;
   bool _rejectingLicense = false;
+  bool _suspendingOrReactivating = false;
+  bool _togglingHold = false;
 
   @override
   Widget build(BuildContext context) {
@@ -68,12 +72,15 @@ class _RegisteredSalonDetailContentState
                   ),
                 ),
               const SizedBox(height: BCSpacing.sm),
-              Row(
-                mainAxisSize: MainAxisSize.min,
+              Wrap(
+                spacing: BCSpacing.sm,
+                runSpacing: BCSpacing.xs,
+                alignment: WrapAlignment.center,
                 children: [
                   _VerifiedBadge(verified: salon.verified),
-                  const SizedBox(width: BCSpacing.sm),
                   _StripeStatusBadge(status: salon.stripeStatus),
+                  if (!salon.isActive) _SuspensionBadge(suspended: true),
+                  if (salon.onHold) _SuspensionBadge(suspended: false),
                 ],
               ),
             ],
@@ -214,8 +221,392 @@ class _RegisteredSalonDetailContentState
             ),
           ),
         ),
+
+        const SizedBox(height: BCSpacing.sm),
+
+        // ── On Hold toggle ──────────────────────────────────────────
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: _togglingHold
+                ? null
+                : () => _toggleHold(context, salon),
+            icon: _togglingHold
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Icon(
+                    salon.onHold
+                        ? Icons.visibility
+                        : Icons.visibility_off,
+                    size: 18,
+                  ),
+            label: Text(
+              salon.onHold
+                  ? 'Quitar pausa (visible en busqueda)'
+                  : 'Pausar salon (ocultar de busqueda)',
+            ),
+            style: OutlinedButton.styleFrom(
+              foregroundColor:
+                  salon.onHold ? Colors.blue : Colors.orange,
+            ),
+          ),
+        ),
+
+        const SizedBox(height: BCSpacing.sm),
+
+        // ── Suspend / Reactivate ────────────────────────────────────
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: _suspendingOrReactivating
+                ? null
+                : () => salon.isActive
+                    ? _suspendSalon(context, salon)
+                    : _reactivateSalon(context, salon),
+            icon: _suspendingOrReactivating
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Icon(
+                    salon.isActive ? Icons.block : Icons.restore,
+                    size: 18,
+                  ),
+            label: Text(
+              salon.isActive ? 'Suspender salon' : 'Reactivar salon',
+            ),
+            style: OutlinedButton.styleFrom(
+              foregroundColor:
+                  salon.isActive ? colors.error : Colors.green,
+              side: BorderSide(
+                color: salon.isActive
+                    ? colors.error.withValues(alpha: 0.5)
+                    : Colors.green.withValues(alpha: 0.5),
+              ),
+            ),
+          ),
+        ),
       ],
     );
+  }
+
+  // ── On Hold toggle ─────────────────────────────────────────────────────────
+
+  Future<void> _toggleHold(
+    BuildContext context,
+    RegisteredSalon salon,
+  ) async {
+    final action = salon.onHold ? 'unhold' : 'hold';
+    final confirmLabel = salon.onHold
+        ? 'Quitar pausa a ${salon.name}?'
+        : 'Pausar ${salon.name}? Desaparecera de la busqueda pero no se notificara a clientes.';
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(salon.onHold ? 'Quitar pausa' : 'Pausar salon'),
+        content: Text(confirmLabel),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(salon.onHold ? 'Quitar pausa' : 'Pausar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _togglingHold = true);
+    try {
+      final response = await BCSupabase.client.functions.invoke(
+        'suspend-salon',
+        body: {'business_id': salon.id, 'action': action},
+      );
+      final data = response.data is String
+          ? jsonDecode(response.data as String)
+          : response.data;
+      if (data['error'] != null) throw Exception(data['error']);
+
+      ref.invalidate(registeredSalonsProvider);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              salon.onHold
+                  ? '${salon.name} visible de nuevo'
+                  : '${salon.name} pausado',
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _togglingHold = false);
+    }
+  }
+
+  // ── Suspend — triple confirmation ──────────────────────────────────────────
+
+  Future<void> _suspendSalon(
+    BuildContext context,
+    RegisteredSalon salon,
+  ) async {
+    // Step 1: Fetch affected booking count
+    int affectedCount = 0;
+    try {
+      final result = await BCSupabase.client
+          .from(BCTables.appointments)
+          .select('id')
+          .eq('business_id', salon.id)
+          .inFilter('status', ['pending', 'confirmed'])
+          .gte('starts_at', DateTime.now().toUtc().toIso8601String());
+      affectedCount = (result as List).length;
+    } catch (_) {
+      // If count query fails, we still show 0 and let admin decide
+    }
+
+    if (!mounted) return;
+
+    // Step 1 dialog: Show impact
+    final step1 = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Suspender salon'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Salon: ${salon.name}'),
+            const SizedBox(height: BCSpacing.sm),
+            Text(
+              affectedCount > 0
+                  ? 'Hay $affectedCount cita(s) pendiente(s)/confirmada(s) a futuro. '
+                    'Cada cliente recibira una notificacion.'
+                  : 'No hay citas futuras afectadas.',
+              style: affectedCount > 0
+                  ? TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                      fontWeight: FontWeight.w600,
+                    )
+                  : null,
+            ),
+            const SizedBox(height: BCSpacing.sm),
+            const Text(
+              'Las citas NO se cancelaran. El cliente decide.',
+              style: TextStyle(fontStyle: FontStyle.italic),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(ctx).colorScheme.error,
+            ),
+            child: const Text('Entiendo, continuar'),
+          ),
+        ],
+      ),
+    );
+
+    if (step1 != true || !mounted) return;
+
+    // Step 2 dialog: Acknowledge impact
+    final step2 = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Confirmar suspension'),
+        content: Text(
+          affectedCount > 0
+              ? 'Se enviaran $affectedCount notificaciones a clientes. '
+                'Esta accion es visible para los usuarios. Continuar?'
+              : 'El salon dejara de aparecer y no podra recibir citas. Continuar?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(ctx).colorScheme.error,
+            ),
+            child: const Text('Si, suspender'),
+          ),
+        ],
+      ),
+    );
+
+    if (step2 != true || !mounted) return;
+
+    // Step 3 dialog: Type salon name to confirm
+    final nameController = TextEditingController();
+    final step3 = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            final matches = nameController.text.trim().toLowerCase() ==
+                salon.name.trim().toLowerCase();
+            return AlertDialog(
+              title: const Text('Ultima confirmacion'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Escribe el nombre del salon para confirmar:',
+                  ),
+                  const SizedBox(height: BCSpacing.sm),
+                  Text(
+                    '"${salon.name}"',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: BCSpacing.sm),
+                  TextField(
+                    controller: nameController,
+                    autofocus: true,
+                    decoration: const InputDecoration(
+                      hintText: 'Nombre del salon',
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                    ),
+                    onChanged: (_) => setDialogState(() {}),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('Cancelar'),
+                ),
+                FilledButton(
+                  onPressed: matches
+                      ? () => Navigator.pop(ctx, true)
+                      : null,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Theme.of(ctx).colorScheme.error,
+                  ),
+                  child: const Text('SUSPENDER'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    nameController.dispose();
+    if (step3 != true || !mounted) return;
+
+    // Execute suspension
+    setState(() => _suspendingOrReactivating = true);
+    try {
+      final response = await BCSupabase.client.functions.invoke(
+        'suspend-salon',
+        body: {'business_id': salon.id, 'action': 'suspend'},
+      );
+      final data = response.data is String
+          ? jsonDecode(response.data as String)
+          : response.data;
+      if (data['error'] != null) throw Exception(data['error']);
+
+      final count = data['affected_bookings'] ?? 0;
+      ref.invalidate(registeredSalonsProvider);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '${salon.name} suspendido. $count cliente(s) notificado(s).',
+            ),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al suspender: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _suspendingOrReactivating = false);
+    }
+  }
+
+  // ── Reactivate ─────────────────────────────────────────────────────────────
+
+  Future<void> _reactivateSalon(
+    BuildContext context,
+    RegisteredSalon salon,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Reactivar salon'),
+        content: Text(
+          'Reactivar ${salon.name}? Volvera a aparecer en busquedas y podra recibir citas.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Reactivar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _suspendingOrReactivating = true);
+    try {
+      final response = await BCSupabase.client.functions.invoke(
+        'suspend-salon',
+        body: {'business_id': salon.id, 'action': 'reactivate'},
+      );
+      final data = response.data is String
+          ? jsonDecode(response.data as String)
+          : response.data;
+      if (data['error'] != null) throw Exception(data['error']);
+
+      ref.invalidate(registeredSalonsProvider);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${salon.name} reactivado')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _suspendingOrReactivating = false);
+    }
   }
 
   Widget _buildLicenseSection(BuildContext context, RegisteredSalon salon) {
@@ -347,16 +738,26 @@ class _RegisteredSalonDetailContentState
 }
 
 /// Detail panel content for a discovered salon.
-class DiscoveredSalonDetailContent extends StatelessWidget {
+class DiscoveredSalonDetailContent extends ConsumerStatefulWidget {
   const DiscoveredSalonDetailContent({required this.salon, super.key});
 
   final DiscoveredSalon salon;
+
+  @override
+  ConsumerState<DiscoveredSalonDetailContent> createState() =>
+      _DiscoveredSalonDetailContentState();
+}
+
+class _DiscoveredSalonDetailContentState
+    extends ConsumerState<DiscoveredSalonDetailContent> {
+  bool _sendingInvite = false;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
     final dateFormat = DateFormat('d MMM yyyy', 'es');
+    final salon = widget.salon;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -458,10 +859,47 @@ class DiscoveredSalonDetailContent extends StatelessWidget {
         SizedBox(
           width: double.infinity,
           child: OutlinedButton.icon(
-            onPressed: () {
-              // TODO: Send WhatsApp invitation
-            },
-            icon: const Icon(Icons.send, size: 18),
+            onPressed: _sendingInvite
+                ? null
+                : () async {
+                    setState(() => _sendingInvite = true);
+                    try {
+                      await BCSupabase.client.functions.invoke(
+                        'outreach-discovered-salon',
+                        body: {
+                          'action': 'invite',
+                          'discovered_salon_id': salon.id,
+                        },
+                      );
+                      ref.invalidate(discoveredSalonsProvider);
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Invitacion enviada a ${salon.name}',
+                            ),
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Error: $e')),
+                        );
+                      }
+                    } finally {
+                      if (mounted) {
+                        setState(() => _sendingInvite = false);
+                      }
+                    }
+                  },
+            icon: _sendingInvite
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.send, size: 18),
             label: const Text('Enviar invitacion WA'),
           ),
         ),
@@ -741,5 +1179,46 @@ class _WaStatusBadge extends StatelessWidget {
     };
 
     return Icon(icon, size: 16, color: color);
+  }
+}
+
+class _SuspensionBadge extends StatelessWidget {
+  const _SuspensionBadge({required this.suspended});
+
+  /// true = suspended (is_active=false), false = on hold
+  final bool suspended;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = suspended ? 'Suspendido' : 'En pausa';
+    final color = suspended ? Colors.red : Colors.orange;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(BCSpacing.radiusFull),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            suspended ? Icons.block : Icons.pause_circle_outline,
+            size: 12,
+            color: color,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
