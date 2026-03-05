@@ -1,3 +1,4 @@
+import 'package:beautycita_core/supabase.dart';
 import 'package:beautycita_core/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -5,13 +6,167 @@ import 'package:intl/intl.dart';
 import '../../providers/admin_bookings_provider.dart';
 
 /// Detail panel content for a selected booking in the admin bookings page.
-class BookingDetailContent extends StatelessWidget {
-  const BookingDetailContent({required this.booking, super.key});
+class BookingDetailContent extends StatefulWidget {
+  const BookingDetailContent({
+    required this.booking,
+    this.onChanged,
+    super.key,
+  });
 
   final AdminBooking booking;
+  final VoidCallback? onChanged;
+
+  @override
+  State<BookingDetailContent> createState() => _BookingDetailContentState();
+}
+
+class _BookingDetailContentState extends State<BookingDetailContent> {
+  bool _isProcessing = false;
+
+  AdminBooking get booking => widget.booking;
+
+  /// Cancel booking with typed confirmation.
+  Future<void> _cancelBooking() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => _ConfirmCancelDialog(),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _isProcessing = true);
+    try {
+      final now = DateTime.now().toUtc().toIso8601String();
+      await BCSupabase.client.from(BCTables.appointments).update({
+        'status': 'cancelled',
+        'cancelled_at': now,
+        'cancelled_by': 'admin',
+        'updated_at': now,
+      }).eq('id', booking.id);
+
+      // If payment was made, trigger refund via edge function
+      if (booking.paymentStatus == 'paid') {
+        try {
+          // Create a dispute-like record or call refund directly
+          // First check if there's an existing dispute for this appointment
+          final disputes = await BCSupabase.client
+              .from(BCTables.disputes)
+              .select('id')
+              .eq('appointment_id', booking.id)
+              .limit(1);
+
+          if ((disputes as List).isNotEmpty) {
+            await BCSupabase.client.functions.invoke(
+              'process-dispute-refund',
+              body: {'dispute_id': disputes[0]['id']},
+            );
+          } else {
+            // Update payment status to refund_pending for manual processing
+            await BCSupabase.client.from(BCTables.appointments).update({
+              'payment_status': 'refund_pending',
+            }).eq('id', booking.id);
+          }
+        } catch (refundErr) {
+          debugPrint('Refund after cancel failed: $refundErr');
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                    'Reserva cancelada, pero el reembolso fallo: $refundErr'),
+                duration: const Duration(seconds: 5),
+              ),
+            );
+          }
+        }
+      }
+
+      widget.onChanged?.call();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Reserva cancelada')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al cancelar: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
+    }
+  }
+
+  /// Refund without cancellation.
+  Future<void> _processRefund() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Procesar reembolso'),
+        content: Text(
+          'Se procesara un reembolso para la reserva #${booking.shortId}. '
+          'La reserva NO sera cancelada. Continuar?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Reembolsar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _isProcessing = true);
+    try {
+      // Check for existing dispute linked to this appointment
+      final disputes = await BCSupabase.client
+          .from(BCTables.disputes)
+          .select('id')
+          .eq('appointment_id', booking.id)
+          .limit(1);
+
+      if ((disputes as List).isNotEmpty) {
+        // Mark dispute for refund and invoke edge function
+        await BCSupabase.client.from(BCTables.disputes).update({
+          'refund_status': 'pending',
+        }).eq('id', disputes[0]['id']);
+
+        await BCSupabase.client.functions.invoke(
+          'process-dispute-refund',
+          body: {'dispute_id': disputes[0]['id']},
+        );
+      } else {
+        // No dispute exists -- mark appointment for refund pending
+        await BCSupabase.client.from(BCTables.appointments).update({
+          'payment_status': 'refund_pending',
+          'updated_at': DateTime.now().toUtc().toIso8601String(),
+        }).eq('id', booking.id);
+      }
+
+      widget.onChanged?.call();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Reembolso procesado')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al reembolsar: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final booking = widget.booking;
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
     final dateFormat = DateFormat('d MMM yyyy, HH:mm', 'es');
@@ -227,11 +382,18 @@ class BookingDetailContent extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
-              onPressed: () {
-                // TODO: Cancel booking
-              },
-              icon: Icon(Icons.cancel_outlined, size: 18,
-                  color: colors.error),
+              onPressed: _isProcessing ? null : _cancelBooking,
+              icon: _isProcessing
+                  ? SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: colors.error,
+                      ),
+                    )
+                  : Icon(Icons.cancel_outlined, size: 18,
+                      color: colors.error),
               label: Text('Cancelar reserva',
                   style: TextStyle(color: colors.error)),
               style: OutlinedButton.styleFrom(
@@ -246,10 +408,14 @@ class BookingDetailContent extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
-              onPressed: () {
-                // TODO: Process refund
-              },
-              icon: const Icon(Icons.undo, size: 18),
+              onPressed: _isProcessing ? null : _processRefund,
+              icon: _isProcessing
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.undo, size: 18),
               label: const Text('Reembolsar'),
             ),
           ),
@@ -529,6 +695,70 @@ class _TimelineEntry extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Confirmation dialog that requires typing "CANCELAR" to proceed.
+class _ConfirmCancelDialog extends StatefulWidget {
+  @override
+  State<_ConfirmCancelDialog> createState() => _ConfirmCancelDialogState();
+}
+
+class _ConfirmCancelDialogState extends State<_ConfirmCancelDialog> {
+  final _controller = TextEditingController();
+  bool _canConfirm = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Cancelar reserva'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Esta accion es irreversible. Si el pago fue realizado, '
+            'se procesara un reembolso automaticamente.',
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Escribe CANCELAR para confirmar:',
+            style: TextStyle(fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _controller,
+            autofocus: true,
+            decoration: const InputDecoration(
+              border: OutlineInputBorder(),
+              hintText: 'CANCELAR',
+            ),
+            onChanged: (v) {
+              setState(() => _canConfirm = v.trim() == 'CANCELAR');
+            },
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text('Volver'),
+        ),
+        FilledButton(
+          onPressed: _canConfirm ? () => Navigator.pop(context, true) : null,
+          style: FilledButton.styleFrom(
+            backgroundColor: Colors.red,
+          ),
+          child: const Text('Cancelar reserva'),
+        ),
+      ],
     );
   }
 }

@@ -117,8 +117,13 @@ class _BookingsPageState extends ConsumerState<BookingsPage> {
       detailTitle: _selectedBooking != null
           ? 'Reserva #${_selectedBooking!.shortId}'
           : 'Reserva',
-      detailBuilder: (booking) =>
-          BookingDetailContent(booking: booking),
+      detailBuilder: (booking) => BookingDetailContent(
+        booking: booking,
+        onChanged: () {
+          ref.invalidate(adminBookingsProvider);
+          setState(() => _selectedBooking = null);
+        },
+      ),
       filterBar: FilterBar(
         searchField: TextField(
           controller: _searchController,

@@ -50,6 +50,7 @@ abstract final class BCTables {
   static const String salonOutreachLog = 'salon_outreach_log';
 
   // ── Notifications ────────────────────────────────────────────────────
+  static const String notifications = 'notifications';
   static const String notificationTemplates = 'notification_templates';
 
   // ── Admin / Config ───────────────────────────────────────────────────

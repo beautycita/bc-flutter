@@ -1,3 +1,4 @@
+import 'package:beautycita_core/supabase.dart';
 import 'package:beautycita_core/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -112,9 +113,13 @@ class _TreePanel extends ConsumerWidget {
                 PopupMenuButton<int>(
                   icon: Icon(Icons.add, color: colors.primary),
                   tooltip: 'Agregar',
-                  onSelected: (level) {
-                    // TODO: Add new category/subcategory/item
-                  },
+                  onSelected: (level) => _showAddDialog(
+                    context,
+                    ref,
+                    level: level,
+                    tree: tree,
+                    selectedId: selectedId,
+                  ),
                   itemBuilder: (context) => [
                     const PopupMenuItem(
                       value: 0,
@@ -178,6 +183,146 @@ class _TreePanel extends ConsumerWidget {
         ],
       ),
     );
+  }
+}
+
+// ── Add Dialog ──────────────────────────────────────────────────────────────
+
+Future<void> _showAddDialog(
+  BuildContext context,
+  WidgetRef ref, {
+  required int level,
+  required ServiceTree tree,
+  required String? selectedId,
+}) async {
+  if (!BCSupabase.isInitialized) return;
+
+  // Determine parent_id based on level and current selection
+  String? parentId;
+  if (level == 0) {
+    // Category — no parent needed
+    parentId = null;
+  } else {
+    // Subcategory or service: figure out parent from selection
+    if (selectedId != null) {
+      final selectedNode = tree.findById(selectedId);
+      if (selectedNode != null) {
+        if (level == 1) {
+          // Subcategory: parent must be a category (level 0)
+          parentId = selectedNode.level == 0
+              ? selectedNode.id
+              : selectedNode.parentId;
+        } else if (level == 2) {
+          // Service: parent must be a subcategory (level 1)
+          if (selectedNode.level == 1) {
+            parentId = selectedNode.id;
+          } else if (selectedNode.level == 2) {
+            parentId = selectedNode.parentId;
+          } else {
+            // Level 0 selected — need to pick subcategory; show error
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                      'Selecciona una subcategoria primero para agregar un servicio'),
+                ),
+              );
+            }
+            return;
+          }
+        }
+      }
+    }
+
+    if (parentId == null && level > 0) {
+      if (context.mounted) {
+        final label = level == 1 ? 'categoria' : 'subcategoria';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Selecciona una $label primero'),
+          ),
+        );
+      }
+      return;
+    }
+  }
+
+  final levelLabel = switch (level) {
+    0 => 'categoria',
+    1 => 'subcategoria',
+    _ => 'servicio',
+  };
+
+  final nameController = TextEditingController();
+  final name = await showDialog<String>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: Text('Nueva $levelLabel'),
+      content: TextField(
+        controller: nameController,
+        autofocus: true,
+        decoration: InputDecoration(
+          hintText: 'Nombre de la $levelLabel',
+          border: const OutlineInputBorder(),
+        ),
+        onSubmitted: (v) => Navigator.of(ctx).pop(v),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(ctx).pop(nameController.text),
+          child: const Text('Crear'),
+        ),
+      ],
+    ),
+  );
+
+  nameController.dispose();
+
+  if (name == null || name.trim().isEmpty) return;
+
+  try {
+    // Get sort_order: max + 1 among siblings
+    final siblings = await BCSupabase.client
+        .from(BCTables.serviceCategoriesTree)
+        .select('sort_order')
+        .eq('level', level);
+    if (parentId != null) {
+      // Filter further by parent after fetching
+    }
+    int nextSort = 0;
+    for (final row in (siblings as List)) {
+      final so = row['sort_order'] as int? ?? 0;
+      if (so >= nextSort) nextSort = so + 1;
+    }
+
+    await BCSupabase.client.from(BCTables.serviceCategoriesTree).insert({
+      'name': name.trim(),
+      'parent_id': parentId,
+      'level': level,
+      'sort_order': nextSort,
+      'is_active': true,
+    });
+
+    ref.invalidate(serviceTreeProvider);
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              '${levelLabel[0].toUpperCase()}${levelLabel.substring(1)} creada'),
+        ),
+      );
+    }
+  } catch (e) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al crear: $e')),
+      );
+    }
   }
 }
 
@@ -358,7 +503,7 @@ class _HoverableRowState extends State<_HoverableRow> {
 
 // ── Editor Panel ─────────────────────────────────────────────────────────────
 
-class _EditorPanel extends StatefulWidget {
+class _EditorPanel extends ConsumerStatefulWidget {
   const _EditorPanel({
     required this.node,
     this.showBackButton = false,
@@ -369,15 +514,16 @@ class _EditorPanel extends StatefulWidget {
   final VoidCallback? onBack;
 
   @override
-  State<_EditorPanel> createState() => _EditorPanelState();
+  ConsumerState<_EditorPanel> createState() => _EditorPanelState();
 }
 
-class _EditorPanelState extends State<_EditorPanel> {
+class _EditorPanelState extends ConsumerState<_EditorPanel> {
   late TextEditingController _nameController;
   late TextEditingController _descController;
   late TextEditingController _minPriceController;
   late TextEditingController _maxPriceController;
   late TextEditingController _durationController;
+  bool _saving = false;
 
   @override
   void initState() {
@@ -416,6 +562,114 @@ class _EditorPanelState extends State<_EditorPanel> {
     _maxPriceController.dispose();
     _durationController.dispose();
     super.dispose();
+  }
+
+  Future<void> _deleteNode() async {
+    if (!BCSupabase.isInitialized) return;
+    final node = widget.node;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Eliminar'),
+        content: Text(
+          'Se eliminara "${node.name}" y todos sus hijos. Continuar?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    try {
+      // Delete children first (cascade), then the node itself.
+      // Supabase foreign key cascade may handle this, but be explicit.
+      await BCSupabase.client
+          .from(BCTables.serviceCategoriesTree)
+          .delete()
+          .eq('id', node.id);
+
+      ref.read(selectedServiceNodeProvider.notifier).state = null;
+      ref.invalidate(serviceTreeProvider);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('"${node.name}" eliminado')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al eliminar: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _saveChanges() async {
+    if (!BCSupabase.isInitialized) return;
+    final node = widget.node;
+    final newName = _nameController.text.trim();
+
+    if (newName.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('El nombre no puede estar vacio')),
+      );
+      return;
+    }
+
+    setState(() => _saving = true);
+
+    try {
+      final updates = <String, dynamic>{
+        'name': newName,
+        'description':
+            _descController.text.trim().isEmpty ? null : _descController.text.trim(),
+      };
+
+      // Only include price/duration for services (level 2)
+      if (node.level == 2) {
+        final minP = double.tryParse(_minPriceController.text.trim());
+        final maxP = double.tryParse(_maxPriceController.text.trim());
+        final dur = int.tryParse(_durationController.text.trim());
+        updates['min_price'] = minP;
+        updates['max_price'] = maxP;
+        updates['default_duration_minutes'] = dur;
+      }
+
+      await BCSupabase.client
+          .from(BCTables.serviceCategoriesTree)
+          .update(updates)
+          .eq('id', node.id);
+
+      ref.invalidate(serviceTreeProvider);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Cambios guardados')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al guardar: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 
   @override
@@ -490,9 +744,7 @@ class _EditorPanelState extends State<_EditorPanel> {
                 IconButton(
                   icon: Icon(Icons.delete_outline, color: colors.error),
                   tooltip: 'Eliminar',
-                  onPressed: () {
-                    // TODO: Confirm and delete
-                  },
+                  onPressed: _deleteNode,
                 ),
               ],
             ),
@@ -609,11 +861,17 @@ class _EditorPanelState extends State<_EditorPanel> {
                   SizedBox(
                     width: double.infinity,
                     child: FilledButton.icon(
-                      onPressed: () {
-                        // TODO: Save changes to Supabase
-                      },
-                      icon: const Icon(Icons.save),
-                      label: const Text('Guardar cambios'),
+                      onPressed: _saving ? null : _saveChanges,
+                      icon: _saving
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Icon(Icons.save),
+                      label: Text(_saving ? 'Guardando...' : 'Guardar cambios'),
                     ),
                   ),
                 ],
