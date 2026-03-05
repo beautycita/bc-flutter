@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -7,11 +8,7 @@ import '../../config/breakpoints.dart';
 import '../../providers/business_portal_provider.dart';
 import '../../providers/demo_providers.dart';
 
-/// Calendar view mode.
-enum CalendarView { day, week }
-
 /// State providers for calendar UI.
-final calendarViewProvider = StateProvider<CalendarView>((ref) => CalendarView.day);
 final calendarDateProvider = StateProvider<DateTime>((ref) => DateTime.now());
 final calendarStaffFilterProvider = StateProvider<String?>((ref) => null);
 final selectedAppointmentProvider = StateProvider<Map<String, dynamic>?>((ref) => null);
@@ -24,7 +21,7 @@ String _staffDisplayName(Map<String, dynamic> staff) {
   return staff['name'] as String? ?? '';
 }
 
-/// Business calendar — multi-staff day/week views with appointment management.
+/// Business calendar — horizontal Gantt-style day view with compact week strip.
 class BizCalendarPage extends ConsumerWidget {
   const BizCalendarPage({super.key});
 
@@ -49,9 +46,14 @@ class _CalendarContent extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final view = ref.watch(calendarViewProvider);
     final date = ref.watch(calendarDateProvider);
     final selected = ref.watch(selectedAppointmentProvider);
+
+    // Rolling 7-day window: yesterday + today (pos 1) + next 5 days
+    final weekStart = date.subtract(const Duration(days: 1));
+    final weekEnd = DateTime(weekStart.year, weekStart.month, weekStart.day + 6, 23, 59, 59);
+    final weekRange = (start: weekStart.toIso8601String(), end: weekEnd.toIso8601String());
+    final weekApptsAsync = ref.watch(businessAppointmentsProvider(weekRange));
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -61,18 +63,26 @@ class _CalendarContent extends ConsumerWidget {
 
         return Column(
           children: [
-            _CalendarToolbar(date: date, view: view, bizId: bizId),
-            if (view == CalendarView.day) ...[
-              _DaySummaryCard(date: date),
-              const _StaffFilterBar(),
-            ],
+            _CalendarToolbar(date: date, bizId: bizId),
+            _DaySummaryCard(date: date),
+            const _StaffFilterBar(),
             Expanded(
               child: Row(
                 children: [
                   Expanded(
-                    child: view == CalendarView.day
-                        ? _MultiStaffDayView(date: date, bizId: bizId)
-                        : _WeekView(date: date),
+                    child: Column(
+                      children: [
+                        Expanded(
+                          child: _HorizontalDayView(date: date, bizId: bizId),
+                        ),
+                        _CompactWeekStrip(
+                          weekStart: weekStart,
+                          selectedDate: date,
+                          weekApptsAsync: weekApptsAsync,
+                          onDayTap: (d) => ref.read(calendarDateProvider.notifier).state = d,
+                        ),
+                      ],
+                    ),
                   ),
                   if (showDetail) ...[
                     VerticalDivider(width: 1, color: Theme.of(context).colorScheme.outlineVariant),
@@ -94,9 +104,8 @@ class _CalendarContent extends ConsumerWidget {
 // ── Toolbar ─────────────────────────────────────────────────────────────────
 
 class _CalendarToolbar extends ConsumerWidget {
-  const _CalendarToolbar({required this.date, required this.view, required this.bizId});
+  const _CalendarToolbar({required this.date, required this.bizId});
   final DateTime date;
-  final CalendarView view;
   final String bizId;
 
   @override
@@ -105,15 +114,8 @@ class _CalendarToolbar extends ConsumerWidget {
     final colors = theme.colorScheme;
     final isDemo = ref.watch(isDemoProvider);
 
-    String title;
-    if (view == CalendarView.day) {
-      final str = DateFormat('EEEE, d MMMM', 'es').format(date);
-      title = str[0].toUpperCase() + str.substring(1);
-    } else {
-      final weekStart = date.subtract(Duration(days: date.weekday - 1));
-      final weekEnd = weekStart.add(const Duration(days: 6));
-      title = '${DateFormat('d MMM', 'es').format(weekStart)} - ${DateFormat('d MMM', 'es').format(weekEnd)}';
-    }
+    final str = DateFormat('EEEE, d MMMM', 'es').format(date);
+    final title = str[0].toUpperCase() + str.substring(1);
 
     return Container(
       height: 56,
@@ -126,16 +128,14 @@ class _CalendarToolbar extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.chevron_left),
             onPressed: () {
-              final delta = view == CalendarView.day ? const Duration(days: 1) : const Duration(days: 7);
-              ref.read(calendarDateProvider.notifier).state = date.subtract(delta);
+              ref.read(calendarDateProvider.notifier).state = date.subtract(const Duration(days: 1));
             },
             tooltip: 'Anterior',
           ),
           IconButton(
             icon: const Icon(Icons.chevron_right),
             onPressed: () {
-              final delta = view == CalendarView.day ? const Duration(days: 1) : const Duration(days: 7);
-              ref.read(calendarDateProvider.notifier).state = date.add(delta);
+              ref.read(calendarDateProvider.notifier).state = date.add(const Duration(days: 1));
             },
             tooltip: 'Siguiente',
           ),
@@ -148,40 +148,25 @@ class _CalendarToolbar extends ConsumerWidget {
           ),
           const Spacer(),
           // Quick-add walk-in button — hidden in demo
-          if (!isDemo) ...[
+          if (!isDemo)
             ElevatedButton.icon(
-              onPressed: () => _showWalkInDialog(context, ref,
-                  preSelectedStaffId: ref.read(calendarStaffFilterProvider)),
+              onPressed: () => _showWalkInDialog(context, ref),
               icon: const Icon(Icons.add, size: 18),
               label: const Text('Walk-in'),
               style: ElevatedButton.styleFrom(visualDensity: VisualDensity.compact),
             ),
-            const SizedBox(width: 12),
-          ],
-          SegmentedButton<CalendarView>(
-            segments: const [
-              ButtonSegment(value: CalendarView.day, label: Text('Dia')),
-              ButtonSegment(value: CalendarView.week, label: Text('Semana')),
-            ],
-            selected: {view},
-            onSelectionChanged: (v) => ref.read(calendarViewProvider.notifier).state = v.first,
-            style: ButtonStyle(
-              visualDensity: VisualDensity.compact,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-          ),
         ],
       ),
     );
   }
 
-  void _showWalkInDialog(BuildContext context, WidgetRef ref, {String? preSelectedStaffId}) {
+  void _showWalkInDialog(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
       builder: (ctx) => _WalkInDialog(
         bizId: bizId,
         date: ref.read(calendarDateProvider),
-        preSelectedStaffId: preSelectedStaffId,
+        preSelectedStaffId: ref.read(calendarStaffFilterProvider),
       ),
     );
   }
@@ -224,7 +209,6 @@ class _WalkInDialogState extends ConsumerState<_WalkInDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Staff picker
             staffAsync.when(
               loading: () => const LinearProgressIndicator(),
               error: (_, __) => const Text('Error cargando staff'),
@@ -242,7 +226,6 @@ class _WalkInDialogState extends ConsumerState<_WalkInDialog> {
               ),
             ),
             const SizedBox(height: 16),
-            // Service picker
             servicesAsync.when(
               loading: () => const LinearProgressIndicator(),
               error: (_, __) => const Text('Error cargando servicios'),
@@ -260,7 +243,6 @@ class _WalkInDialogState extends ConsumerState<_WalkInDialog> {
               ),
             ),
             const SizedBox(height: 16),
-            // Time picker
             ListTile(
               contentPadding: EdgeInsets.zero,
               title: const Text('Hora'),
@@ -377,21 +359,21 @@ class _StaffFilterBar extends ConsumerWidget {
                   onSelected: (_) => ref.read(calendarStaffFilterProvider.notifier).state = null,
                 ),
               ),
-              for (final s in staff)
+              for (var i = 0; i < staff.length; i++)
                 Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: FilterChip(
                     avatar: CircleAvatar(
                       radius: 12,
-                      backgroundColor: colors.primary.withValues(alpha: 0.12),
+                      backgroundColor: _staffColor(i).withValues(alpha: 0.15),
                       child: Text(
-                        _staffDisplayName(s).isNotEmpty ? _staffDisplayName(s)[0].toUpperCase() : '?',
-                        style: TextStyle(fontSize: 10, color: colors.primary, fontWeight: FontWeight.bold),
+                        _staffDisplayName(staff[i]).isNotEmpty ? _staffDisplayName(staff[i])[0].toUpperCase() : '?',
+                        style: TextStyle(fontSize: 10, color: _staffColor(i), fontWeight: FontWeight.bold),
                       ),
                     ),
-                    label: Text(_staffDisplayName(s)),
-                    selected: selectedStaff == s['id'],
-                    onSelected: (_) => ref.read(calendarStaffFilterProvider.notifier).state = s['id'] as String?,
+                    label: Text(_staffDisplayName(staff[i])),
+                    selected: selectedStaff == staff[i]['id'],
+                    onSelected: (_) => ref.read(calendarStaffFilterProvider.notifier).state = staff[i]['id'] as String?,
                   ),
                 ),
             ],
@@ -463,24 +445,101 @@ class _DaySummaryCard extends ConsumerWidget {
   }
 }
 
-// ── Multi-Staff Day View ────────────────────────────────────────────────────
+// ── Staff colors ────────────────────────────────────────────────────────────
 
-class _MultiStaffDayView extends ConsumerWidget {
-  const _MultiStaffDayView({required this.date, required this.bizId});
+const _kStaffColors = [
+  Color(0xFFE53935), // Vivid red
+  Color(0xFF1E88E5), // Bold blue
+  Color(0xFF43A047), // Forest green
+  Color(0xFFFF8F00), // Rich amber
+  Color(0xFF8E24AA), // Deep purple
+  Color(0xFF00ACC1), // Teal cyan
+  Color(0xFFD81B60), // Hot pink
+  Color(0xFF5D4037), // Espresso brown
+];
+
+Color _staffColor(int index) => _kStaffColors[index % _kStaffColors.length];
+
+Color _statusColor(String status) {
+  return switch (status) {
+    'confirmed' => const Color(0xFF4CAF50),
+    'pending' => const Color(0xFFFF9800),
+    'completed' => const Color(0xFF2196F3),
+    'cancelled_customer' || 'cancelled_business' => const Color(0xFFE53935),
+    'no_show' => const Color(0xFF795548),
+    _ => const Color(0xFF9E9E9E),
+  };
+}
+
+// ── Horizontal Gantt Day View ───────────────────────────────────────────────
+
+class _HorizontalDayView extends ConsumerStatefulWidget {
+  const _HorizontalDayView({required this.date, required this.bizId});
   final DateTime date;
   final String bizId;
 
-  static const int _startHour = 7;
-  static const int _endHour = 21;
-  static const double _hourHeight = 64;
-  static const double _timeGutterWidth = 56;
-  static const double _minStaffColumnWidth = 180;
+  @override
+  ConsumerState<_HorizontalDayView> createState() => _HorizontalDayViewState();
+}
+
+class _HorizontalDayViewState extends ConsumerState<_HorizontalDayView> {
+  static const _startHour = 7;
+  static const _endHour = 21;
+  static const _hourWidth = 120.0;
+  static const _laneHeight = 70.0;
+  static const _labelRowHeight = 28.0;
+  static const _staffColumnWidth = 80.0;
+  static const _totalWidth = (_endHour - _startHour) * _hourWidth;
+
+  late ScrollController _scrollController;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToNow());
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(_HorizontalDayView old) {
+    super.didUpdateWidget(old);
+    if (old.date != widget.date) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToNow());
+    }
+  }
+
+  void _scrollToNow() {
+    final now = DateTime.now();
+    final isToday = now.year == widget.date.year &&
+        now.month == widget.date.month &&
+        now.day == widget.date.day;
+
+    double targetOffset;
+    if (isToday && now.hour >= _startHour && now.hour < _endHour) {
+      final minutesSinceStart = (now.hour - _startHour) * 60 + now.minute;
+      targetOffset = (minutesSinceStart / 60.0) * _hourWidth - 60;
+    } else {
+      // Scroll to 9 AM by default
+      targetOffset = (9 - _startHour) * _hourWidth.toDouble();
+    }
+
+    if (_scrollController.hasClients) {
+      final maxScroll = _scrollController.position.maxScrollExtent;
+      _scrollController.jumpTo(targetOffset.clamp(0, maxScroll));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
-    final dateStr = date.toIso8601String().split('T')[0];
+    final dateStr = widget.date.toIso8601String().split('T')[0];
     final range = (start: '${dateStr}T00:00:00', end: '${dateStr}T23:59:59');
     final apptsAsync = ref.watch(businessAppointmentsProvider(range));
     final blocksAsync = ref.watch(businessScheduleBlocksProvider(range));
@@ -512,510 +571,485 @@ class _MultiStaffDayView extends ConsumerWidget {
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (_, __) => const Center(child: Text('Error al cargar citas')),
           data: (appts) {
-            // Group appointments by staff_id
-            final byStaff = <String, List<Map<String, dynamic>>>{};
-            for (final s in staff) {
-              byStaff[s['id'] as String] = [];
-            }
-            for (final a in appts) {
-              final sid = a['staff_id'] as String?;
-              if (sid != null && byStaff.containsKey(sid)) {
-                byStaff[sid]!.add(a);
-              }
-            }
-
-            // Group schedule blocks by staff_id
             final blocks = blocksAsync.valueOrNull ?? [];
-            final blocksByStaff = <String, List<Map<String, dynamic>>>{};
-            for (final s in staff) {
-              blocksByStaff[s['id'] as String] = [];
-            }
-            for (final b in blocks) {
-              final sid = b['staff_id'] as String?;
-              if (sid != null && blocksByStaff.containsKey(sid)) {
-                blocksByStaff[sid]!.add(b);
-              }
+
+            // Build lane data
+            final lanes = <_LaneData>[];
+            for (var i = 0; i < staff.length; i++) {
+              final sid = staff[i]['id'] as String;
+              final globalIndex = allStaff.indexWhere((s) => s['id'] == sid);
+              lanes.add(_LaneData(
+                id: sid,
+                name: _staffDisplayName(staff[i]),
+                colorIndex: globalIndex >= 0 ? globalIndex : i,
+                appts: appts.where((a) => a['staff_id'] == sid).toList(),
+                blocks: blocks.where((b) => b['staff_id'] == sid).toList(),
+              ));
             }
 
-            final totalHeight = (_endHour - _startHour) * _hourHeight;
+            // Now-line
+            final now = DateTime.now();
+            final isToday = now.year == widget.date.year &&
+                now.month == widget.date.month &&
+                now.day == widget.date.day;
+            double? nowLineX;
+            if (isToday && now.hour >= _startHour && now.hour < _endHour) {
+              final minutesSinceStart = (now.hour - _startHour) * 60 + now.minute;
+              nowLineX = (minutesSinceStart / 60.0) * _hourWidth;
+            }
 
-            return Column(
-              children: [
-                // Staff header row (frozen)
-                Container(
-                  height: 48,
-                  decoration: BoxDecoration(
-                    border: Border(bottom: BorderSide(color: colors.outlineVariant)),
-                    color: colors.surfaceContainerHighest.withValues(alpha: 0.3),
+            return SingleChildScrollView(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Fixed staff name column
+                  SizedBox(
+                    width: _staffColumnWidth,
+                    child: Column(
+                      children: [
+                        SizedBox(height: _labelRowHeight),
+                        for (final lane in lanes)
+                          Container(
+                            height: _laneHeight,
+                            alignment: Alignment.centerLeft,
+                            padding: const EdgeInsets.only(left: 8),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                CircleAvatar(
+                                  radius: 12,
+                                  backgroundColor: _staffColor(lane.colorIndex).withValues(alpha: 0.15),
+                                  child: Text(
+                                    lane.name.isNotEmpty ? lane.name[0].toUpperCase() : '?',
+                                    style: TextStyle(fontSize: 10, color: _staffColor(lane.colorIndex), fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  lane.name.split(' ').first,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: _staffColor(lane.colorIndex),
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
-                  child: Row(
-                    children: [
-                      SizedBox(width: _timeGutterWidth),
-                      Expanded(
-                        child: ListView(
-                          scrollDirection: Axis.horizontal,
+                  // Scrollable horizontal timeline
+                  Expanded(
+                    child: SingleChildScrollView(
+                      controller: _scrollController,
+                      scrollDirection: Axis.horizontal,
+                      child: SizedBox(
+                        width: _totalWidth,
+                        child: Column(
                           children: [
-                            for (final s in staff)
-                              SizedBox(
-                                width: staff.length == 1
-                                    ? null
-                                    : _minStaffColumnWidth.clamp(0, double.infinity),
-                                child: staff.length == 1
-                                    ? _StaffColumnHeader(staff: s)
-                                    : _StaffColumnHeader(staff: s),
+                            // Hour labels row
+                            SizedBox(
+                              height: _labelRowHeight,
+                              child: Row(
+                                children: List.generate(
+                                  _endHour - _startHour,
+                                  (i) {
+                                    final hour = _startHour + i;
+                                    return SizedBox(
+                                      width: _hourWidth,
+                                      child: Align(
+                                        alignment: Alignment.bottomLeft,
+                                        child: Padding(
+                                          padding: const EdgeInsets.only(left: 2, bottom: 4),
+                                          child: Text(
+                                            '${hour > 12 ? hour - 12 : hour}${hour >= 12 ? 'PM' : 'AM'}',
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w500,
+                                              color: colors.onSurface.withValues(alpha: 0.4),
+                                              fontFamily: 'monospace',
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ),
+                            // Staff lanes
+                            for (final lane in lanes)
+                              _StaffLane(
+                                lane: lane,
+                                laneHeight: _laneHeight,
+                                hourWidth: _hourWidth,
+                                startHour: _startHour,
+                                endHour: _endHour,
+                                totalWidth: _totalWidth,
+                                nowLineX: nowLineX,
+                                onTapAppt: (appt) => ref.read(selectedAppointmentProvider.notifier).state = appt,
                               ),
                           ],
                         ),
                       ),
-                    ],
-                  ),
-                ),
-                // Scrollable time grid with staff columns
-                Expanded(
-                  child: SingleChildScrollView(
-                    child: SizedBox(
-                      height: totalHeight,
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Time gutter
-                          SizedBox(
-                            width: _timeGutterWidth,
-                            height: totalHeight,
-                            child: Stack(
-                              children: [
-                                for (var h = _startHour; h <= _endHour; h++)
-                                  Positioned(
-                                    top: (h - _startHour) * _hourHeight - 8,
-                                    left: 0,
-                                    right: 8,
-                                    child: Text(
-                                      '${h.toString().padLeft(2, '0')}:00',
-                                      textAlign: TextAlign.right,
-                                      style: theme.textTheme.labelSmall?.copyWith(
-                                        color: colors.onSurface.withValues(alpha: 0.4),
-                                        fontFamily: 'monospace',
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                          // Staff columns
-                          Expanded(
-                            child: Stack(
-                              children: [
-                                // Hour grid lines
-                                for (var h = _startHour; h <= _endHour; h++)
-                                  Positioned(
-                                    top: (h - _startHour) * _hourHeight,
-                                    left: 0,
-                                    right: 0,
-                                    child: Divider(height: 1, color: colors.outlineVariant.withValues(alpha: 0.3)),
-                                  ),
-                                // Half-hour grid lines (lighter)
-                                for (var h = _startHour; h < _endHour; h++)
-                                  Positioned(
-                                    top: (h - _startHour) * _hourHeight + _hourHeight / 2,
-                                    left: 0,
-                                    right: 0,
-                                    child: Divider(height: 1, color: colors.outlineVariant.withValues(alpha: 0.15)),
-                                  ),
-                                // Staff columns with appointments
-                                Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    for (var i = 0; i < staff.length; i++) ...[
-                                      Expanded(
-                                        child: SizedBox(
-                                          height: totalHeight,
-                                          child: Stack(
-                                            children: [
-                                              // Column divider
-                                              if (i > 0)
-                                                Positioned(
-                                                  top: 0,
-                                                  bottom: 0,
-                                                  left: 0,
-                                                  child: VerticalDivider(width: 1, color: colors.outlineVariant.withValues(alpha: 0.3)),
-                                                ),
-                                              // Schedule blocks (time-off, breaks)
-                                              for (final block in blocksByStaff[staff[i]['id'] as String] ?? [])
-                                                _positionedScheduleBlock(context, block),
-                                              // Appointment blocks
-                                              for (final appt in byStaff[staff[i]['id'] as String] ?? [])
-                                                _positionedBlock(context, ref, appt),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                                // Current time indicator
-                                if (_isToday(date)) _currentTimeIndicator(context),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             );
           },
         );
       },
     );
   }
+}
 
-  bool _isToday(DateTime d) {
-    final now = DateTime.now();
-    return d.year == now.year && d.month == now.month && d.day == now.day;
+class _LaneData {
+  final String id;
+  final String name;
+  final int colorIndex;
+  final List<Map<String, dynamic>> appts;
+  final List<Map<String, dynamic>> blocks;
+
+  _LaneData({
+    required this.id,
+    required this.name,
+    required this.colorIndex,
+    required this.appts,
+    required this.blocks,
+  });
+}
+
+// ── Staff Lane (horizontal Gantt row) ───────────────────────────────────────
+
+class _StaffLane extends StatelessWidget {
+  final _LaneData lane;
+  final double laneHeight;
+  final double hourWidth;
+  final int startHour;
+  final int endHour;
+  final double totalWidth;
+  final double? nowLineX;
+  final ValueChanged<Map<String, dynamic>> onTapAppt;
+
+  const _StaffLane({
+    required this.lane,
+    required this.laneHeight,
+    required this.hourWidth,
+    required this.startHour,
+    required this.endHour,
+    required this.totalWidth,
+    required this.nowLineX,
+    required this.onTapAppt,
+  });
+
+  double _timeToX(DateTime dt) {
+    final minutesSinceStart = (dt.hour - startHour) * 60 + dt.minute;
+    return (minutesSinceStart / 60.0) * hourWidth;
   }
 
-  Widget _currentTimeIndicator(BuildContext context) {
-    final now = DateTime.now();
-    final minutes = (now.hour - _startHour) * 60 + now.minute;
-    if (minutes < 0 || minutes > (_endHour - _startHour) * 60) return const SizedBox.shrink();
-    final top = minutes * _hourHeight / 60;
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final staffColor = _staffColor(lane.colorIndex);
 
-    return Positioned(
-      top: top,
-      left: 0,
-      right: 0,
-      child: IgnorePointer(
-        child: Container(
-          height: 2,
-          color: const Color(0xFFE53935),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Transform.translate(
-              offset: const Offset(-4, 0),
-              child: Container(width: 8, height: 8, decoration: const BoxDecoration(color: Color(0xFFE53935), shape: BoxShape.circle)),
-            ),
-          ),
+    return Container(
+      height: laneHeight,
+      width: totalWidth,
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(color: colors.onSurface.withValues(alpha: 0.06)),
         ),
+      ),
+      child: Stack(
+        children: [
+          // Hour grid lines
+          for (var h = 0; h < endHour - startHour; h++)
+            Positioned(
+              left: h * hourWidth,
+              top: 0,
+              bottom: 0,
+              child: Container(width: 1, color: colors.onSurface.withValues(alpha: 0.04)),
+            ),
+
+          // Schedule blocks (lunch/breaks)
+          for (final block in lane.blocks)
+            _buildScheduleBlock(context, block, colors),
+
+          // Appointment blocks
+          for (final appt in lane.appts)
+            _buildApptBlock(context, appt, staffColor),
+
+          // Now-line
+          if (nowLineX != null) ...[
+            Positioned(
+              left: nowLineX!,
+              top: 0,
+              bottom: 0,
+              child: Container(width: 2, color: const Color(0xFFE53935)),
+            ),
+            Positioned(
+              left: nowLineX! - 4,
+              top: 0,
+              child: CustomPaint(
+                size: const Size(10, 6),
+                painter: _NowTrianglePainter(),
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
 
-  Widget _positionedBlock(BuildContext context, WidgetRef ref, Map<String, dynamic> appt) {
-    final startsAt = DateTime.tryParse(appt['starts_at'] as String? ?? '');
-    if (startsAt == null) return const SizedBox.shrink();
-
-    final duration = (appt['duration_minutes'] as num?)?.toInt() ?? 60;
-    final startMinutes = (startsAt.hour - _startHour) * 60 + startsAt.minute;
-    if (startMinutes < 0) return const SizedBox.shrink();
-
-    final top = startMinutes * _hourHeight / 60;
-    final height = (duration * _hourHeight / 60).clamp(24.0, double.infinity);
-
-    final status = appt['status'] as String? ?? '';
-    final color = _statusColor(status);
-    final service = appt['service_name'] as String? ?? 'Cita';
-    final customer = appt['customer_name'] as String? ?? '';
-    final timeStr = DateFormat('HH:mm').format(startsAt);
-
-    return Positioned(
-      top: top,
-      left: 4,
-      right: 4,
-      height: height,
-      child: GestureDetector(
-        onTap: () => ref.read(selectedAppointmentProvider.notifier).state = appt,
-        child: MouseRegion(
-          cursor: SystemMouseCursors.click,
-          child: Container(
-            margin: const EdgeInsets.only(bottom: 1),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(6),
-              border: Border(left: BorderSide(color: color, width: 3)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '$timeStr $service',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: color),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                if (height > 30 && customer.isNotEmpty)
-                  Text(
-                    customer,
-                    style: TextStyle(fontSize: 10, color: color.withValues(alpha: 0.7)),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _positionedScheduleBlock(BuildContext context, Map<String, dynamic> block) {
-    final startsAt = DateTime.tryParse(block['starts_at'] as String? ?? '');
-    final endsAt = DateTime.tryParse(block['ends_at'] as String? ?? '');
+  Widget _buildScheduleBlock(BuildContext context, Map<String, dynamic> block, ColorScheme colors) {
+    final startsAt = DateTime.tryParse(block['starts_at'] as String? ?? '')?.toLocal();
+    final endsAt = DateTime.tryParse(block['ends_at'] as String? ?? '')?.toLocal();
     if (startsAt == null || endsAt == null) return const SizedBox.shrink();
 
-    final startMinutes = (startsAt.hour - _startHour) * 60 + startsAt.minute;
-    final endMinutes = (endsAt.hour - _startHour) * 60 + endsAt.minute;
-    if (startMinutes < 0 && endMinutes < 0) return const SizedBox.shrink();
+    final left = _timeToX(startsAt).clamp(0.0, totalWidth);
+    final right = _timeToX(endsAt).clamp(0.0, totalWidth);
+    final width = (right - left).clamp(20.0, totalWidth);
 
-    final top = (startMinutes.clamp(0, (_endHour - _startHour) * 60)) * _hourHeight / 60;
-    final bottom = (endMinutes.clamp(0, (_endHour - _startHour) * 60)) * _hourHeight / 60;
-    final height = (bottom - top).clamp(8.0, double.infinity);
-
-    final reason = block['reason'] as String? ?? '';
-    final reasonLabel = switch (reason) {
+    final reason = block['reason'] as String? ?? 'blocked';
+    final label = switch (reason) {
       'lunch' => 'Descanso',
       'day_off' => 'Dia libre',
       'vacation' => 'Vacaciones',
       _ => reason.isNotEmpty ? reason : 'Bloqueado',
     };
 
-    final colors = Theme.of(context).colorScheme;
+    return Positioned(
+      left: left,
+      top: 4,
+      height: laneHeight - 8,
+      width: width,
+      child: Container(
+        decoration: BoxDecoration(
+          color: colors.onSurface.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        alignment: Alignment.center,
+        child: width > 40
+            ? Text(
+                label,
+                style: TextStyle(
+                  fontSize: 10,
+                  color: colors.onSurface.withValues(alpha: 0.35),
+                  fontStyle: FontStyle.italic,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              )
+            : null,
+      ),
+    );
+  }
+
+  Widget _buildApptBlock(BuildContext context, Map<String, dynamic> appt, Color staffColor) {
+    final startsAt = DateTime.tryParse(appt['starts_at'] as String? ?? '')?.toLocal();
+    final endsAt = DateTime.tryParse(appt['ends_at'] as String? ?? '')?.toLocal();
+    if (startsAt == null) return const SizedBox.shrink();
+
+    final effectiveEnd = endsAt ?? startsAt.add(const Duration(minutes: 60));
+    final left = _timeToX(startsAt).clamp(0.0, totalWidth);
+    final right = _timeToX(effectiveEnd).clamp(0.0, totalWidth);
+    final width = math.max(right - left, 30.0);
+
+    final service = appt['service_name'] as String? ?? 'Servicio';
+    final status = appt['status'] as String? ?? 'pending';
+    final customer = appt['customer_name'] as String? ?? '';
+    final accent = _statusColor(status);
 
     return Positioned(
-      top: top,
-      left: 2,
-      right: 2,
-      height: height,
-      child: IgnorePointer(
-        child: Container(
-          decoration: BoxDecoration(
-            color: colors.onSurface.withValues(alpha: 0.06),
-            borderRadius: BorderRadius.circular(4),
-            border: Border.all(color: colors.onSurface.withValues(alpha: 0.08)),
-          ),
-          alignment: Alignment.center,
-          child: height > 20
-              ? Text(
-                  reasonLabel,
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: colors.onSurface.withValues(alpha: 0.35),
-                    fontStyle: FontStyle.italic,
+      left: left,
+      top: 4,
+      height: laneHeight - 8,
+      width: width,
+      child: GestureDetector(
+        onTap: () => onTapAppt(appt),
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border(left: BorderSide(color: accent, width: 3)),
+                color: staffColor.withValues(alpha: 0.85),
+              ),
+              padding: const EdgeInsets.only(left: 5, right: 6, top: 3, bottom: 3),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    service,
+                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                )
-              : null,
+                  if (width > 60)
+                    Text(
+                      '${startsAt.hour.toString().padLeft(2, '0')}:${startsAt.minute.toString().padLeft(2, '0')}'
+                      '${endsAt != null ? ' - ${endsAt.hour.toString().padLeft(2, '0')}:${endsAt.minute.toString().padLeft(2, '0')}' : ''}',
+                      style: TextStyle(fontSize: 9, color: Colors.white.withValues(alpha: 0.85)),
+                    ),
+                  if (width > 80 && customer.isNotEmpty)
+                    Text(
+                      customer,
+                      style: TextStyle(fontSize: 9, color: Colors.white.withValues(alpha: 0.7)),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );
   }
-
-  Color _statusColor(String status) {
-    return switch (status) {
-      'confirmed' => const Color(0xFF4CAF50),
-      'pending' => const Color(0xFFFF9800),
-      'completed' => const Color(0xFF2196F3),
-      'cancelled_customer' || 'cancelled_business' => const Color(0xFFE53935),
-      'no_show' => const Color(0xFF795548),
-      _ => const Color(0xFF9E9E9E),
-    };
-  }
 }
 
-class _StaffColumnHeader extends StatelessWidget {
-  const _StaffColumnHeader({required this.staff});
-  final Map<String, dynamic> staff;
+// ── Now-line triangle ───────────────────────────────────────────────────────
+
+class _NowTrianglePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = const Color(0xFFE53935);
+    final path = Path()
+      ..moveTo(size.width / 2, size.height)
+      ..lineTo(0, 0)
+      ..lineTo(size.width, 0)
+      ..close();
+    canvas.drawPath(path, paint);
+  }
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-    final name = _staffDisplayName(staff);
-    final avatar = staff['avatar_url'] as String?;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      alignment: Alignment.center,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          CircleAvatar(
-            radius: 14,
-            backgroundColor: colors.primary.withValues(alpha: 0.12),
-            backgroundImage: avatar != null ? NetworkImage(avatar) : null,
-            child: avatar == null
-                ? Text(name.isNotEmpty ? name[0].toUpperCase() : '?', style: TextStyle(fontSize: 11, color: colors.primary, fontWeight: FontWeight.bold))
-                : null,
-          ),
-          const SizedBox(width: 8),
-          Flexible(
-            child: Text(
-              name,
-              style: theme.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-// ── Week View ───────────────────────────────────────────────────────────────
+// ── Compact Week Strip (bottom) ─────────────────────────────────────────────
 
-class _WeekView extends ConsumerWidget {
-  const _WeekView({required this.date});
-  final DateTime date;
+class _CompactWeekStrip extends ConsumerWidget {
+  const _CompactWeekStrip({
+    required this.weekStart,
+    required this.selectedDate,
+    required this.weekApptsAsync,
+    required this.onDayTap,
+  });
+
+  final DateTime weekStart;
+  final DateTime selectedDate;
+  final AsyncValue<List<Map<String, dynamic>>> weekApptsAsync;
+  final ValueChanged<DateTime> onDayTap;
+
+  static const _dayNames = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-
-    final weekStart = date.subtract(Duration(days: date.weekday - 1));
-    final weekEnd = weekStart.add(const Duration(days: 6, hours: 23, minutes: 59));
-    final range = (start: weekStart.toIso8601String(), end: weekEnd.toIso8601String());
-    final apptsAsync = ref.watch(businessAppointmentsProvider(range));
-    final staffFilter = ref.watch(calendarStaffFilterProvider);
-    final dayNames = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'];
-
-    return apptsAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (_, __) => const Center(child: Text('Error')),
-      data: (appts) {
-        var filtered = appts;
-        if (staffFilter != null) {
-          filtered = appts.where((a) => a['staff_id'] == staffFilter).toList();
-        }
-
-        final byDay = <int, List<Map<String, dynamic>>>{};
-        for (final a in filtered) {
-          final dt = DateTime.tryParse(a['starts_at'] as String? ?? '');
-          if (dt == null) continue;
-          final dow = dt.weekday;
-          byDay.putIfAbsent(dow, () => []).add(a);
-        }
-
-        return Column(
-          children: [
-            Container(
-              height: 40,
-              decoration: BoxDecoration(border: Border(bottom: BorderSide(color: colors.outlineVariant))),
-              child: Row(
-                children: [
-                  for (var i = 0; i < 7; i++)
-                    Expanded(
-                      child: Center(
-                        child: Text(
-                          '${dayNames[i]} ${weekStart.add(Duration(days: i)).day}',
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: _isToday(weekStart.add(Duration(days: i))) ? colors.primary : colors.onSurface.withValues(alpha: 0.6),
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  for (var i = 0; i < 7; i++)
-                    Expanded(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          border: i < 6 ? Border(right: BorderSide(color: colors.outlineVariant.withValues(alpha: 0.3))) : null,
-                          color: _isToday(weekStart.add(Duration(days: i))) ? colors.primary.withValues(alpha: 0.04) : null,
-                        ),
-                        child: SingleChildScrollView(
-                          padding: const EdgeInsets.all(4),
-                          child: Column(
-                            children: [
-                              for (final a in (byDay[i + 1] ?? []))
-                                _WeekApptChip(appt: a, ref: ref),
-                              if ((byDay[i + 1] ?? []).isEmpty)
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 40),
-                                  child: Icon(Icons.remove, size: 16, color: colors.onSurface.withValues(alpha: 0.15)),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  bool _isToday(DateTime d) {
+    final colors = Theme.of(context).colorScheme;
+    final appts = weekApptsAsync.valueOrNull ?? [];
     final now = DateTime.now();
-    return d.year == now.year && d.month == now.month && d.day == now.day;
-  }
-}
 
-class _WeekApptChip extends StatelessWidget {
-  const _WeekApptChip({required this.appt, required this.ref});
-  final Map<String, dynamic> appt;
-  final WidgetRef ref;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        border: Border(top: BorderSide(color: colors.outlineVariant)),
+      ),
+      child: Row(
+        children: List.generate(7, (i) {
+          final day = weekStart.add(Duration(days: i));
+          final dayCount = appts.where((a) {
+            final dt = DateTime.tryParse(a['starts_at'] as String? ?? '');
+            return dt != null && dt.year == day.year && dt.month == day.month && dt.day == day.day;
+          }).length;
 
-  @override
-  Widget build(BuildContext context) {
-    final status = appt['status'] as String? ?? '';
-    final startsAt = DateTime.tryParse(appt['starts_at'] as String? ?? '');
-    final timeStr = startsAt != null ? DateFormat('HH:mm').format(startsAt) : '';
-    final service = appt['service_name'] as String? ?? '';
-    final staffName = appt['staff_name'] as String? ?? '';
+          final isToday = day.year == now.year && day.month == now.month && day.day == now.day;
+          final isSelected = day.year == selectedDate.year &&
+              day.month == selectedDate.month &&
+              day.day == selectedDate.day;
 
-    final color = switch (status) {
-      'confirmed' => const Color(0xFF4CAF50),
-      'pending' => const Color(0xFFFF9800),
-      'completed' => const Color(0xFF2196F3),
-      'cancelled_customer' || 'cancelled_business' => const Color(0xFFE53935),
-      'no_show' => const Color(0xFF795548),
-      _ => const Color(0xFF9E9E9E),
-    };
-
-    return GestureDetector(
-      onTap: () => ref.read(selectedAppointmentProvider.notifier).state = appt,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: Container(
-          width: double.infinity,
-          margin: const EdgeInsets.only(bottom: 4),
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(4),
-            border: Border(left: BorderSide(color: color, width: 2)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(timeStr, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: color, fontFamily: 'monospace')),
-              Text(service, style: const TextStyle(fontSize: 10), maxLines: 1, overflow: TextOverflow.ellipsis),
-              if (staffName.isNotEmpty)
-                Row(
-                  children: [
-                    Icon(Icons.person, size: 10, color: color.withValues(alpha: 0.5)),
-                    const SizedBox(width: 2),
-                    Flexible(
-                      child: Text(staffName, style: TextStyle(fontSize: 9, color: color.withValues(alpha: 0.6)), maxLines: 1, overflow: TextOverflow.ellipsis),
-                    ),
-                  ],
+          return Expanded(
+            child: GestureDetector(
+              onTap: () => onDayTap(day),
+              child: MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 2),
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? colors.primary.withValues(alpha: 0.12)
+                        : isToday
+                            ? colors.primary.withValues(alpha: 0.04)
+                            : Colors.transparent,
+                    borderRadius: BorderRadius.circular(8),
+                    border: isSelected
+                        ? Border.all(color: colors.primary, width: 1.5)
+                        : isToday
+                            ? Border.all(color: colors.primary.withValues(alpha: 0.3))
+                            : null,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _dayNames[day.weekday - 1],
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: isSelected
+                              ? colors.primary
+                              : colors.onSurface.withValues(alpha: 0.4),
+                        ),
+                      ),
+                      const SizedBox(height: 1),
+                      Text(
+                        '${day.day}',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: isSelected
+                              ? colors.primary
+                              : isToday
+                                  ? colors.primary
+                                  : colors.onSurface,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      if (dayCount > 0)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? colors.primary
+                                : colors.primary.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            '$dayCount',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: isSelected ? Colors.white : colors.primary,
+                            ),
+                          ),
+                        )
+                      else
+                        const SizedBox(height: 14),
+                    ],
+                  ),
                 ),
-            ],
-          ),
-        ),
+              ),
+            ),
+          );
+        }),
       ),
     );
   }
@@ -1110,7 +1144,7 @@ class _AppointmentDetailState extends ConsumerState<_AppointmentDetail> {
       _ => status,
     };
 
-    final statusColor = _statusColor(status);
+    final statusClr = _statusColor(status);
 
     return Container(
       color: colors.surface,
@@ -1141,10 +1175,10 @@ class _AppointmentDetailState extends ConsumerState<_AppointmentDetail> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: statusColor.withValues(alpha: 0.12),
+                      color: statusClr.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Text(statusLabel, style: TextStyle(fontSize: 12, color: statusColor, fontWeight: FontWeight.w600)),
+                    child: Text(statusLabel, style: TextStyle(fontSize: 12, color: statusClr, fontWeight: FontWeight.w600)),
                   ),
                   const SizedBox(height: 16),
 
@@ -1154,7 +1188,7 @@ class _AppointmentDetailState extends ConsumerState<_AppointmentDetail> {
                   if (startsAt != null) _DetailRow(icon: Icons.calendar_today, label: 'Fecha', value: DateFormat('d MMM yyyy', 'es').format(startsAt)),
                   if (duration > 0) _DetailRow(icon: Icons.timer_outlined, label: 'Duracion', value: '$duration min'),
                   _DetailRow(icon: Icons.payments_outlined, label: 'Precio', value: '\$${price.toStringAsFixed(0)}'),
-                  // Editable notes — hidden in demo
+
                   if (!isDemo) ...[
                     const SizedBox(height: 12),
                     Row(
@@ -1192,7 +1226,6 @@ class _AppointmentDetailState extends ConsumerState<_AppointmentDetail> {
                     if (_updating)
                       const Center(child: CircularProgressIndicator(strokeWidth: 2))
                     else ...[
-                      // Confirm
                       if (status == 'pending')
                         _ActionButton(
                           label: 'Confirmar',
@@ -1200,7 +1233,6 @@ class _AppointmentDetailState extends ConsumerState<_AppointmentDetail> {
                           color: const Color(0xFF4CAF50),
                           onPressed: () => _updateStatus('confirmed'),
                         ),
-                      // Complete
                       if (status == 'confirmed')
                         _ActionButton(
                           label: 'Completar',
@@ -1208,7 +1240,6 @@ class _AppointmentDetailState extends ConsumerState<_AppointmentDetail> {
                           color: const Color(0xFF2196F3),
                           onPressed: () => _updateStatus('completed'),
                         ),
-                      // No-show (with deposit context)
                       if (status == 'confirmed')
                         Padding(
                           padding: const EdgeInsets.only(top: 8),
@@ -1220,7 +1251,6 @@ class _AppointmentDetailState extends ConsumerState<_AppointmentDetail> {
                             outlined: true,
                           ),
                         ),
-                      // Cancel
                       if (status == 'pending' || status == 'confirmed')
                         Padding(
                           padding: const EdgeInsets.only(top: 8),
@@ -1232,7 +1262,6 @@ class _AppointmentDetailState extends ConsumerState<_AppointmentDetail> {
                             outlined: true,
                           ),
                         ),
-                      // Reschedule
                       if (status == 'pending' || status == 'confirmed')
                         Padding(
                           padding: const EdgeInsets.only(top: 8),
@@ -1299,7 +1328,6 @@ class _AppointmentDetailState extends ConsumerState<_AppointmentDetail> {
   }
 
   void _confirmNoShow(BuildContext context, double price) {
-    // Check if there's a deposit on this appointment
     final depositAmount = (widget.appt['deposit_amount'] as num?)?.toDouble() ?? 0;
     final hasDeposit = depositAmount > 0;
 
@@ -1366,17 +1394,6 @@ class _AppointmentDetailState extends ConsumerState<_AppointmentDetail> {
         },
       ),
     );
-  }
-
-  Color _statusColor(String status) {
-    return switch (status) {
-      'confirmed' => const Color(0xFF4CAF50),
-      'pending' => const Color(0xFFFF9800),
-      'completed' => const Color(0xFF2196F3),
-      'cancelled_customer' || 'cancelled_business' => const Color(0xFFE53935),
-      'no_show' => const Color(0xFF795548),
-      _ => const Color(0xFF9E9E9E),
-    };
   }
 }
 
