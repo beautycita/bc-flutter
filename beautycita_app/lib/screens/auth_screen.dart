@@ -401,6 +401,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
       );
 
       if (success && mounted) {
+        // Capture Google email as metadata (fire-and-forget, non-blocking)
+        authNotifier.captureGoogleEmail();
+
         // Check for discovered salon match
         if (_phoneVerified) {
           final profileNotifier = ref.read(profileProvider.notifier);
