@@ -86,7 +86,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   /// Register a new user with biometric authentication.
   /// [fullName] and [phone] are collected before biometric in the auth screen.
-  Future<bool> register({String? fullName, String? phone}) async {
+  Future<bool> register() async {
     state = state.copyWith(isLoading: true, error: null);
 
     try {
@@ -118,33 +118,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
       // Save to local session (also stores Supabase user ID)
       await _userSession.register(username);
-
-      // Save name + phone to profile if provided
-      if (fullName != null || phone != null) {
-        try {
-          final userId = await _userSession.getSupabaseUserId();
-          if (userId != null) {
-            final updates = <String, dynamic>{};
-            if (fullName != null && fullName.isNotEmpty) {
-              updates['full_name'] = fullName;
-            }
-            if (phone != null && phone.isNotEmpty) {
-              updates['phone'] = phone;
-              updates['phone_verified'] = true;
-              updates['phone_verified_at'] = DateTime.now().toIso8601String();
-            }
-            if (updates.isNotEmpty) {
-              await SupabaseClientService.client
-                  .from('profiles')
-                  .update(updates)
-                  .eq('id', userId);
-            }
-          }
-        } catch (e) {
-          // Non-fatal: profile update failure shouldn't block registration
-          debugPrint('Failed to save profile data during registration: $e');
-        }
-      }
 
       // Update state
       state = state.copyWith(
