@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../providers/admin_salons_provider.dart';
+import '../../services/csv_export.dart';
 import '../../widgets/bc_data_table.dart';
 import '../../widgets/bulk_action_bar.dart';
 import '../../widgets/filter_bar.dart';
@@ -398,7 +399,37 @@ class _RegisteredTab extends ConsumerWidget {
               actions: [
                 TextButton.icon(
                   onPressed: () {
-                    // TODO: Export
+                    final salons = checkedSalons.toList();
+                    if (salons.isEmpty) return;
+                    final csv = generateCsv(
+                      headers: [
+                        'id', 'name', 'phone', 'city', 'state',
+                        'is_active', 'is_verified', 'tier',
+                        'stripe_status', 'rating', 'total_reviews',
+                        'created_at',
+                      ],
+                      rows: salons.map((s) => [
+                        s.id,
+                        s.name,
+                        s.phone ?? '',
+                        s.city ?? '',
+                        s.state ?? '',
+                        s.isActive.toString(),
+                        s.verified.toString(),
+                        s.tier.toString(),
+                        s.stripeStatus,
+                        s.rating.toStringAsFixed(1),
+                        s.totalReviews.toString(),
+                        s.createdAt.toIso8601String(),
+                      ]).toList(),
+                    );
+                    downloadCsv(csv, 'salones_${DateTime.now().millisecondsSinceEpoch}.csv');
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('${salons.length} salones exportados'),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
                   },
                   icon: const Icon(Icons.download, size: 18),
                   label: const Text('Exportar'),
@@ -707,6 +738,98 @@ class _DiscoveredTab extends ConsumerWidget {
               },
             )
           : null,
+    );
+  }
+
+  /// Show a progress dialog and send WA invites to each selected salon.
+  Future<void> _sendBulkWaInvites(
+    BuildContext context,
+    WidgetRef ref,
+    List<DiscoveredSalon> salons,
+    ValueChanged<Set<DiscoveredSalon>> onCheckedChanged,
+  ) async {
+    final total = salons.length;
+    int sent = 0;
+    int failed = 0;
+    bool started = false;
+
+    // Show a modal progress dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogCtx) {
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            // Kick off the sends once on first build
+            if (!started) {
+              started = true;
+              () async {
+                for (final salon in salons) {
+                  try {
+                    await BCSupabase.client.functions.invoke(
+                      'outreach-discovered-salon',
+                      body: {
+                        'action': 'invite',
+                        'discovered_salon_id': salon.id,
+                      },
+                    );
+                    sent++;
+                  } catch (e) {
+                    failed++;
+                  }
+                  if (ctx.mounted) {
+                    setDialogState(() {});
+                  }
+                }
+                // All done — close dialog, show result
+                if (ctx.mounted) {
+                  Navigator.of(dialogCtx).pop();
+                }
+                if (context.mounted) {
+                  ref.invalidate(discoveredSalonsProvider);
+                  onCheckedChanged({});
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        failed == 0
+                            ? '$sent invitaciones enviadas'
+                            : '$sent enviadas, $failed fallidas',
+                      ),
+                      duration: const Duration(seconds: 4),
+                    ),
+                  );
+                }
+              }();
+            }
+
+            final progress = sent + failed;
+            return AlertDialog(
+              title: const Text('Enviando invitaciones WA'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  LinearProgressIndicator(
+                    value: total > 0 ? progress / total : 0,
+                  ),
+                  const SizedBox(height: 12),
+                  Text('Enviando $progress/$total...'),
+                  if (failed > 0)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        '$failed fallidas',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }
