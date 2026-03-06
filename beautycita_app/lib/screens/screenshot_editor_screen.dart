@@ -45,6 +45,8 @@ class Annotation {
   }
 }
 
+enum _DragMode { moveText, moveArrow, rotateArrow, moveShape }
+
 // ─── Editor Screen ───────────────────────────────────────────────
 
 class ScreenshotEditorScreen extends StatefulWidget {
@@ -69,8 +71,9 @@ class _ScreenshotEditorScreenState extends State<ScreenshotEditorScreen>
   // Freehand pen tracking
   List<Offset>? _currentPenPoints;
 
-  // Text dragging (when no tool selected)
-  int? _draggingTextIndex;
+  // Annotation dragging (when no tool selected)
+  int? _draggingIndex;
+  _DragMode? _dragMode;
   Offset _dragStartOffset = Offset.zero;
 
   // For tracking image dimensions in the display
@@ -128,22 +131,66 @@ class _ScreenshotEditorScreenState extends State<ScreenshotEditorScreen>
 
   // ─── Drawing Interaction ─────────────────────────────────────
 
-  int? _hitTestText(Offset pos) {
-    // Walk backwards so topmost text wins
+  static const _hitThreshold = 25.0;
+
+  ({int index, _DragMode mode})? _hitTest(Offset pos) {
     for (int i = _annotations.length - 1; i >= 0; i--) {
       final a = _annotations[i];
-      if (a.tool != AnnotationTool.text) continue;
-      final fontSize = (a.strokeWidth * 6).clamp(14.0, 42.0);
-      final estimatedWidth = a.text!.length * fontSize * 0.6;
-      final rect = Rect.fromLTWH(
-        a.start.dx - 10,
-        a.start.dy - 10,
-        estimatedWidth + 20,
-        fontSize + 20,
-      );
-      if (rect.contains(pos)) return i;
+      switch (a.tool) {
+        case AnnotationTool.text:
+          final fontSize = (a.strokeWidth * 6).clamp(14.0, 42.0);
+          final estimatedWidth = a.text!.length * fontSize * 0.6;
+          final rect = Rect.fromLTWH(
+            a.start.dx - 10, a.start.dy - 10,
+            estimatedWidth + 20, fontSize + 20,
+          );
+          if (rect.contains(pos)) {
+            return (index: i, mode: _DragMode.moveText);
+          }
+        case AnnotationTool.arrow:
+          final dist = _distToSegment(pos, a.start, a.end);
+          if (dist <= _hitThreshold) {
+            // Head half → move, tail half → rotate
+            final distToHead = (pos - a.end).distance;
+            final distToTail = (pos - a.start).distance;
+            final mode = distToHead <= distToTail
+                ? _DragMode.moveArrow
+                : _DragMode.rotateArrow;
+            return (index: i, mode: mode);
+          }
+        case AnnotationTool.circle:
+          final center = Offset(
+            (a.start.dx + a.end.dx) / 2,
+            (a.start.dy + a.end.dy) / 2,
+          );
+          final radius = (a.start - a.end).distance / 2;
+          final distFromCenter = (pos - center).distance;
+          // Hit if near circumference OR inside circle
+          if ((distFromCenter - radius).abs() <= _hitThreshold ||
+              distFromCenter <= radius) {
+            return (index: i, mode: _DragMode.moveShape);
+          }
+        case AnnotationTool.rectangle:
+          final rect = Rect.fromPoints(a.start, a.end)
+              .inflate(_hitThreshold / 2);
+          if (rect.contains(pos)) {
+            return (index: i, mode: _DragMode.moveShape);
+          }
+        case AnnotationTool.pen:
+          break; // Pen strokes not draggable
+      }
     }
     return null;
+  }
+
+  double _distToSegment(Offset p, Offset a, Offset b) {
+    final ab = b - a;
+    final ap = p - a;
+    final lenSq = ab.dx * ab.dx + ab.dy * ab.dy;
+    if (lenSq < 0.001) return (p - a).distance;
+    final t = ((ap.dx * ab.dx + ap.dy * ab.dy) / lenSq).clamp(0.0, 1.0);
+    final closest = a + ab * t;
+    return (p - closest).distance;
   }
 
   void _onPanStart(DragStartDetails details) {
@@ -520,34 +567,65 @@ class _ScreenshotEditorScreenState extends State<ScreenshotEditorScreen>
             onPointerDown: (e) {
               if (_activeTool != null) return;
               final pos = _toImageCoords(e.localPosition);
-              final hitIndex = _hitTestText(pos);
-              if (hitIndex != null) {
+              final hit = _hitTest(pos);
+              if (hit != null) {
                 setState(() {
-                  _draggingTextIndex = hitIndex;
-                  _dragStartOffset = pos - _annotations[hitIndex].start;
+                  _draggingIndex = hit.index;
+                  _dragMode = hit.mode;
+                  if (hit.mode == _DragMode.rotateArrow) {
+                    // No offset — tail follows pointer directly
+                    _dragStartOffset = Offset.zero;
+                  } else {
+                    _dragStartOffset =
+                        pos - _annotations[hit.index].start;
+                  }
                 });
               }
             },
             onPointerMove: (e) {
-              if (_draggingTextIndex == null) return;
+              if (_draggingIndex == null) return;
               final pos = _toImageCoords(e.localPosition);
               setState(() {
-                final a = _annotations[_draggingTextIndex!];
-                _annotations[_draggingTextIndex!] = a.copyWith(
-                  start: pos - _dragStartOffset,
-                  end: pos - _dragStartOffset,
-                );
+                final a = _annotations[_draggingIndex!];
+                switch (_dragMode!) {
+                  case _DragMode.moveText:
+                    _annotations[_draggingIndex!] = a.copyWith(
+                      start: pos - _dragStartOffset,
+                      end: pos - _dragStartOffset,
+                    );
+                  case _DragMode.moveArrow:
+                    final delta =
+                        (pos - _dragStartOffset) - a.start;
+                    _annotations[_draggingIndex!] = a.copyWith(
+                      start: a.start + delta,
+                      end: a.end + delta,
+                    );
+                  case _DragMode.rotateArrow:
+                    // Head stays fixed, tail follows pointer
+                    _annotations[_draggingIndex!] =
+                        a.copyWith(start: pos);
+                  case _DragMode.moveShape:
+                    final delta =
+                        (pos - _dragStartOffset) - a.start;
+                    _annotations[_draggingIndex!] = a.copyWith(
+                      start: a.start + delta,
+                      end: a.end + delta,
+                    );
+                }
               });
             },
             onPointerUp: (e) {
-              if (_draggingTextIndex == null) return;
-              setState(() => _draggingTextIndex = null);
+              if (_draggingIndex == null) return;
+              setState(() {
+                _draggingIndex = null;
+                _dragMode = null;
+              });
               HapticFeedback.selectionClick();
             },
             child: InteractiveViewer(
               transformationController: _transformController,
-              panEnabled: _activeTool == null && _draggingTextIndex == null,
-              scaleEnabled: _draggingTextIndex == null,
+              panEnabled: _activeTool == null && _draggingIndex == null,
+              scaleEnabled: _draggingIndex == null,
               minScale: 1.0,
               maxScale: 5.0,
               child: SizedBox(
@@ -573,6 +651,8 @@ class _ScreenshotEditorScreenState extends State<ScreenshotEditorScreen>
                           painter: _AnnotationPainter(
                             annotations: _annotations,
                             currentDrag: _currentDrag,
+                            draggingIndex: _draggingIndex,
+                            dragMode: _dragMode,
                           ),
                         ),
                       ),
@@ -875,13 +955,34 @@ class _ToolButton extends StatelessWidget {
 class _AnnotationPainter extends CustomPainter {
   final List<Annotation> annotations;
   final Annotation? currentDrag;
+  final int? draggingIndex;
+  final _DragMode? dragMode;
 
-  _AnnotationPainter({required this.annotations, this.currentDrag});
+  _AnnotationPainter({
+    required this.annotations,
+    this.currentDrag,
+    this.draggingIndex,
+    this.dragMode,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
-    for (final a in annotations) {
-      _drawAnnotation(canvas, a);
+    for (int i = 0; i < annotations.length; i++) {
+      _drawAnnotation(canvas, annotations[i]);
+      // Show pivot dot at arrowhead when rotating
+      if (i == draggingIndex &&
+          dragMode == _DragMode.rotateArrow &&
+          annotations[i].tool == AnnotationTool.arrow) {
+        final pivotPaint = Paint()
+          ..color = annotations[i].color.withValues(alpha: 0.7)
+          ..style = PaintingStyle.fill;
+        canvas.drawCircle(annotations[i].end, 6.0, pivotPaint);
+        final ringPaint = Paint()
+          ..color = Colors.white.withValues(alpha: 0.8)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.5;
+        canvas.drawCircle(annotations[i].end, 6.0, ringPaint);
+      }
     }
     if (currentDrag != null) {
       _drawAnnotation(canvas, currentDrag!);
@@ -989,6 +1090,8 @@ class _AnnotationPainter extends CustomPainter {
   @override
   bool shouldRepaint(_AnnotationPainter oldDelegate) {
     return oldDelegate.annotations != annotations ||
-        oldDelegate.currentDrag != currentDrag;
+        oldDelegate.currentDrag != currentDrag ||
+        oldDelegate.draggingIndex != draggingIndex ||
+        oldDelegate.dragMode != dragMode;
   }
 }

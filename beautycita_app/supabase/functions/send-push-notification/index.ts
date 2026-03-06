@@ -115,24 +115,38 @@ async function sendFcmNotification(
 
 async function getBookingContext(bookingId: string): Promise<any> {
   const { data: booking, error } = await supabase
-    .from("bookings")
+    .from("appointments")
     .select(`
       id,
-      start_time,
+      starts_at,
       status,
-      client:profiles!bookings_client_id_fkey(id, full_name, fcm_token),
-      business:businesses!bookings_business_id_fkey(id, name, fcm_token),
-      service:services!bookings_service_id_fkey(name)
+      user_id,
+      business_id,
+      service_name,
+      staff_name
     `)
     .eq("id", bookingId)
     .single();
 
   if (error || !booking) {
-    console.error("[FCM] Booking lookup failed:", error);
+    console.error("[FCM] Appointment lookup failed:", error);
     return null;
   }
 
-  const startTime = new Date(booking.start_time);
+  // Fetch related data separately (appointments uses flat columns, not FK joins)
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("id, full_name, fcm_token")
+    .eq("id", booking.user_id)
+    .single();
+
+  const { data: business } = await supabase
+    .from("businesses")
+    .select("id, name, fcm_token")
+    .eq("id", booking.business_id)
+    .single();
+
+  const startTime = new Date(booking.starts_at);
   const formattedTime = startTime.toLocaleString("es-MX", {
     weekday: "short",
     month: "short",
@@ -143,13 +157,14 @@ async function getBookingContext(bookingId: string): Promise<any> {
 
   return {
     booking_id: booking.id,
-    client_id: booking.client?.id,
-    client_name: booking.client?.full_name || "Cliente",
-    client_fcm_token: booking.client?.fcm_token,
-    business_id: booking.business?.id,
-    business_name: booking.business?.name || "Salón",
-    business_fcm_token: booking.business?.fcm_token,
-    service_name: booking.service?.name || "servicio",
+    client_id: profile?.id,
+    client_name: profile?.full_name || "Cliente",
+    client_fcm_token: profile?.fcm_token,
+    business_id: business?.id,
+    business_name: business?.name || "Salón",
+    business_fcm_token: business?.fcm_token,
+    service_name: booking.service_name || "servicio",
+    staff_name: booking.staff_name || "",
     formatted_time: formattedTime,
     start_time: startTime,
   };

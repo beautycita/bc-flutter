@@ -493,6 +493,15 @@ class _HorizontalDayViewState extends ConsumerState<_HorizontalDayView> {
 
   late ScrollController _scrollController;
 
+  // ── Drag state ──
+  Map<String, dynamic>? _dragAppt;
+  Offset? _dragPos; // position relative to timeline area
+  String? _dragTargetStaffId;
+  DateTime? _dragTargetTime;
+  bool _dragValid = false;
+  bool _isDragging = false;
+  final GlobalKey _timelineKey = GlobalKey();
+
   @override
   void initState() {
     super.initState();
@@ -535,6 +544,102 @@ class _HorizontalDayViewState extends ConsumerState<_HorizontalDayView> {
     }
   }
 
+  /// Convert X offset within timeline to DateTime, snapped to 5-min grid.
+  DateTime _xToTime(double x) {
+    final minutesSinceStart = (x / _hourWidth) * 60;
+    final snapped = (minutesSinceStart / 5).round() * 5;
+    final hour = (_startHour + snapped ~/ 60).clamp(_startHour, _endHour - 1);
+    final minute = (snapped % 60).clamp(0, 55);
+    return DateTime(widget.date.year, widget.date.month, widget.date.day, hour, minute);
+  }
+
+  /// Convert Y offset within timeline to lane index (accounting for label row).
+  int _yToLaneIndex(double y, int laneCount) {
+    final adjusted = y - _labelRowHeight;
+    if (adjusted < 0) return 0;
+    return (adjusted / _laneHeight).floor().clamp(0, laneCount - 1);
+  }
+
+  /// Check if staff can perform this service.
+  bool _canStaffDoService(String staffId, String? serviceId, Map<String, Set<String>> staffServices) {
+    if (serviceId == null) return true; // walk-in with no service
+    if (staffServices.isEmpty) return true; // no data loaded yet, allow
+    final services = staffServices[staffId];
+    if (services == null) return false;
+    return services.contains(serviceId);
+  }
+
+  /// Check for time overlap with existing appointments.
+  bool _hasCollision(String staffId, DateTime newStart, DateTime newEnd, String excludeId, List<Map<String, dynamic>> appts) {
+    for (final a in appts) {
+      if (a['id'] == excludeId) continue;
+      if (a['staff_id'] != staffId) continue;
+      final aStart = DateTime.tryParse(a['starts_at'] as String? ?? '')?.toLocal();
+      final aEnd = DateTime.tryParse(a['ends_at'] as String? ?? '')?.toLocal();
+      if (aStart == null || aEnd == null) continue;
+      if (newStart.isBefore(aEnd) && newEnd.isAfter(aStart)) return true;
+    }
+    return false;
+  }
+
+  /// Execute the reschedule after a valid drop.
+  Future<void> _executeReschedule(Map<String, dynamic> appt, DateTime newStart, String newStaffId, List<Map<String, dynamic>> allStaff) async {
+    final id = appt['id'] as String?;
+    if (id == null) return;
+
+    final duration = (appt['duration_minutes'] as num?)?.toInt() ?? 60;
+    final newEnd = newStart.add(Duration(minutes: duration));
+
+    final updateData = <String, dynamic>{
+      'starts_at': newStart.toIso8601String(),
+      'ends_at': newEnd.toIso8601String(),
+    };
+
+    // If staff changed, update staff fields
+    final oldStaffId = appt['staff_id'] as String?;
+    if (newStaffId != oldStaffId) {
+      updateData['staff_id'] = newStaffId;
+      final staffMember = allStaff.firstWhere(
+        (s) => s['id'] == newStaffId,
+        orElse: () => <String, dynamic>{},
+      );
+      updateData['staff_name'] = _staffDisplayName(staffMember);
+    }
+
+    try {
+      await BCSupabase.client
+          .from(BCTables.appointments)
+          .update(updateData)
+          .eq('id', id);
+
+      ref.invalidate(businessAppointmentsProvider);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Cita reagendada'), duration: Duration(seconds: 2)),
+        );
+      }
+
+      // Fire-and-forget: send reschedule notification
+      _sendRescheduleNotification(id);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error al reagendar: $e')));
+      }
+    }
+  }
+
+  Future<void> _sendRescheduleNotification(String appointmentId) async {
+    try {
+      await BCSupabase.client.functions.invoke(
+        'reschedule-notification',
+        body: {'appointment_id': appointmentId},
+      );
+    } catch (e) {
+      debugPrint('[Reschedule] Notification error: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -545,6 +650,7 @@ class _HorizontalDayViewState extends ConsumerState<_HorizontalDayView> {
     final blocksAsync = ref.watch(businessScheduleBlocksProvider(range));
     final staffAsync = ref.watch(businessStaffProvider);
     final staffFilter = ref.watch(calendarStaffFilterProvider);
+    final staffServicesAsync = ref.watch(allStaffServicesProvider);
 
     return staffAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -566,6 +672,9 @@ class _HorizontalDayViewState extends ConsumerState<_HorizontalDayView> {
             ),
           );
         }
+
+        final isDemo = ref.watch(isDemoProvider);
+        final staffServices = staffServicesAsync.valueOrNull ?? <String, Set<String>>{};
 
         return apptsAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
@@ -608,30 +717,36 @@ class _HorizontalDayViewState extends ConsumerState<_HorizontalDayView> {
                     child: Column(
                       children: [
                         SizedBox(height: _labelRowHeight),
-                        for (final lane in lanes)
+                        for (var li = 0; li < lanes.length; li++)
                           Container(
                             height: _laneHeight,
                             alignment: Alignment.centerLeft,
                             padding: const EdgeInsets.only(left: 8),
+                            decoration: _isDragging && _dragTargetStaffId == lanes[li].id
+                                ? BoxDecoration(
+                                    color: (_dragValid ? const Color(0xFF4CAF50) : const Color(0xFFE53935))
+                                        .withValues(alpha: 0.08),
+                                  )
+                                : null,
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 CircleAvatar(
                                   radius: 12,
-                                  backgroundColor: _staffColor(lane.colorIndex).withValues(alpha: 0.15),
+                                  backgroundColor: _staffColor(lanes[li].colorIndex).withValues(alpha: 0.15),
                                   child: Text(
-                                    lane.name.isNotEmpty ? lane.name[0].toUpperCase() : '?',
-                                    style: TextStyle(fontSize: 10, color: _staffColor(lane.colorIndex), fontWeight: FontWeight.bold),
+                                    lanes[li].name.isNotEmpty ? lanes[li].name[0].toUpperCase() : '?',
+                                    style: TextStyle(fontSize: 10, color: _staffColor(lanes[li].colorIndex), fontWeight: FontWeight.bold),
                                   ),
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
-                                  lane.name.split(' ').first,
+                                  lanes[li].name.split(' ').first,
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w600,
-                                    color: _staffColor(lane.colorIndex),
+                                    color: _staffColor(lanes[li].colorIndex),
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -647,52 +762,153 @@ class _HorizontalDayViewState extends ConsumerState<_HorizontalDayView> {
                     child: SingleChildScrollView(
                       controller: _scrollController,
                       scrollDirection: Axis.horizontal,
+                      physics: _isDragging ? const NeverScrollableScrollPhysics() : null,
                       child: SizedBox(
+                        key: _timelineKey,
                         width: _totalWidth,
-                        child: Column(
+                        child: Stack(
                           children: [
-                            // Hour labels row
-                            SizedBox(
-                              height: _labelRowHeight,
-                              child: Row(
-                                children: List.generate(
-                                  _endHour - _startHour,
-                                  (i) {
-                                    final hour = _startHour + i;
-                                    return SizedBox(
-                                      width: _hourWidth,
-                                      child: Align(
-                                        alignment: Alignment.bottomLeft,
-                                        child: Padding(
-                                          padding: const EdgeInsets.only(left: 2, bottom: 4),
-                                          child: Text(
-                                            '${hour > 12 ? hour - 12 : hour}${hour >= 12 ? 'PM' : 'AM'}',
-                                            style: TextStyle(
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.w500,
-                                              color: colors.onSurface.withValues(alpha: 0.4),
-                                              fontFamily: 'monospace',
+                            Column(
+                              children: [
+                                // Hour labels row
+                                SizedBox(
+                                  height: _labelRowHeight,
+                                  child: Row(
+                                    children: List.generate(
+                                      _endHour - _startHour,
+                                      (i) {
+                                        final hour = _startHour + i;
+                                        return SizedBox(
+                                          width: _hourWidth,
+                                          child: Align(
+                                            alignment: Alignment.bottomLeft,
+                                            child: Padding(
+                                              padding: const EdgeInsets.only(left: 2, bottom: 4),
+                                              child: Text(
+                                                '${hour > 12 ? hour - 12 : hour}${hour >= 12 ? 'PM' : 'AM'}',
+                                                style: TextStyle(
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.w500,
+                                                  color: colors.onSurface.withValues(alpha: 0.4),
+                                                  fontFamily: 'monospace',
+                                                ),
+                                              ),
                                             ),
                                           ),
-                                        ),
-                                      ),
-                                    );
-                                  },
+                                        );
+                                      },
+                                    ),
+                                  ),
                                 ),
-                              ),
+                                // Staff lanes
+                                for (final lane in lanes)
+                                  _StaffLane(
+                                    lane: lane,
+                                    laneHeight: _laneHeight,
+                                    hourWidth: _hourWidth,
+                                    startHour: _startHour,
+                                    endHour: _endHour,
+                                    totalWidth: _totalWidth,
+                                    nowLineX: nowLineX,
+                                    onTapAppt: (appt) => ref.read(selectedAppointmentProvider.notifier).state = appt,
+                                    isDragSource: _isDragging && _dragAppt?['staff_id'] == lane.id,
+                                    dragApptId: _dragAppt?['id'] as String?,
+                                    enableDrag: !isDemo,
+                                    onDragStart: (appt, globalPos) {
+                                      final renderBox = _timelineKey.currentContext?.findRenderObject() as RenderBox?;
+                                      if (renderBox == null) return;
+                                      final localPos = renderBox.globalToLocal(globalPos);
+                                      setState(() {
+                                        _dragAppt = appt;
+                                        _dragPos = localPos;
+                                        _isDragging = true;
+                                        _dragTargetStaffId = lane.id;
+                                        _dragTargetTime = _xToTime(localPos.dx);
+                                        _dragValid = true;
+                                      });
+                                    },
+                                    onDragUpdate: (globalPos) {
+                                      final renderBox = _timelineKey.currentContext?.findRenderObject() as RenderBox?;
+                                      if (renderBox == null || _dragAppt == null) return;
+                                      final localPos = renderBox.globalToLocal(globalPos);
+                                      final laneIdx = _yToLaneIndex(localPos.dy, lanes.length);
+                                      final targetLane = lanes[laneIdx];
+                                      final targetTime = _xToTime(localPos.dx);
+                                      final duration = (_dragAppt!['duration_minutes'] as num?)?.toInt() ?? 60;
+                                      final targetEnd = targetTime.add(Duration(minutes: duration));
+                                      final serviceId = _dragAppt!['service_id'] as String?;
+
+                                      final canDo = _canStaffDoService(targetLane.id, serviceId, staffServices);
+                                      final noCollision = !_hasCollision(targetLane.id, targetTime, targetEnd, _dragAppt!['id'] as String, appts);
+
+                                      setState(() {
+                                        _dragPos = localPos;
+                                        _dragTargetStaffId = targetLane.id;
+                                        _dragTargetTime = targetTime;
+                                        _dragValid = canDo && noCollision;
+                                      });
+                                    },
+                                    onDragEnd: () {
+                                      if (_dragAppt != null && _dragValid && _dragTargetTime != null && _dragTargetStaffId != null) {
+                                        _executeReschedule(_dragAppt!, _dragTargetTime!, _dragTargetStaffId!, allStaff);
+                                      } else if (_dragAppt != null && !_dragValid) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(
+                                            content: Text('No se puede mover aqui'),
+                                            duration: Duration(seconds: 2),
+                                            backgroundColor: Color(0xFFE53935),
+                                          ),
+                                        );
+                                      }
+                                      setState(() {
+                                        _dragAppt = null;
+                                        _dragPos = null;
+                                        _dragTargetStaffId = null;
+                                        _dragTargetTime = null;
+                                        _dragValid = false;
+                                        _isDragging = false;
+                                      });
+                                    },
+                                  ),
+                              ],
                             ),
-                            // Staff lanes
-                            for (final lane in lanes)
-                              _StaffLane(
-                                lane: lane,
-                                laneHeight: _laneHeight,
-                                hourWidth: _hourWidth,
-                                startHour: _startHour,
-                                endHour: _endHour,
-                                totalWidth: _totalWidth,
-                                nowLineX: nowLineX,
-                                onTapAppt: (appt) => ref.read(selectedAppointmentProvider.notifier).state = appt,
-                              ),
+                            // Ghost block during drag
+                            if (_isDragging && _dragPos != null && _dragAppt != null) ...[
+                              () {
+                                final duration = (_dragAppt!['duration_minutes'] as num?)?.toInt() ?? 60;
+                                final laneIdx = _yToLaneIndex(_dragPos!.dy, lanes.length);
+                                final snapTime = _xToTime(_dragPos!.dx);
+                                final snapMinutes = (snapTime.hour - _startHour) * 60 + snapTime.minute;
+                                final snapX = (snapMinutes / 60.0) * _hourWidth;
+                                final ghostWidth = (duration / 60.0) * _hourWidth;
+                                final ghostTop = _labelRowHeight + laneIdx * _laneHeight + 4;
+                                final service = _dragAppt!['service_name'] as String? ?? '';
+                                final borderColor = _dragValid ? const Color(0xFF4CAF50) : const Color(0xFFE53935);
+
+                                return Positioned(
+                                  left: snapX,
+                                  top: ghostTop,
+                                  height: _laneHeight - 8,
+                                  width: ghostWidth.clamp(30.0, _totalWidth - snapX),
+                                  child: IgnorePointer(
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: borderColor.withValues(alpha: 0.2),
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(color: borderColor, width: 2),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      child: Text(
+                                        service,
+                                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: borderColor),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }(),
+                            ],
                           ],
                         ),
                       ),
@@ -735,6 +951,12 @@ class _StaffLane extends StatelessWidget {
   final double totalWidth;
   final double? nowLineX;
   final ValueChanged<Map<String, dynamic>> onTapAppt;
+  final bool isDragSource;
+  final String? dragApptId;
+  final bool enableDrag;
+  final void Function(Map<String, dynamic> appt, Offset globalPos)? onDragStart;
+  final void Function(Offset globalPos)? onDragUpdate;
+  final VoidCallback? onDragEnd;
 
   const _StaffLane({
     required this.lane,
@@ -745,6 +967,12 @@ class _StaffLane extends StatelessWidget {
     required this.totalWidth,
     required this.nowLineX,
     required this.onTapAppt,
+    this.isDragSource = false,
+    this.dragApptId,
+    this.enableDrag = false,
+    this.onDragStart,
+    this.onDragUpdate,
+    this.onDragEnd,
   });
 
   double _timeToX(DateTime dt) {
@@ -864,6 +1092,7 @@ class _StaffLane extends StatelessWidget {
     final status = appt['status'] as String? ?? 'pending';
     final customer = appt['customer_name'] as String? ?? '';
     final accent = _statusColor(status);
+    final isBeingDragged = isDragSource && dragApptId == appt['id'];
 
     return Positioned(
       left: left,
@@ -872,40 +1101,56 @@ class _StaffLane extends StatelessWidget {
       width: width,
       child: GestureDetector(
         onTap: () => onTapAppt(appt),
+        onLongPressStart: enableDrag && onDragStart != null
+            ? (details) => onDragStart!(appt, details.globalPosition)
+            : null,
+        onLongPressMoveUpdate: enableDrag && onDragUpdate != null
+            ? (details) => onDragUpdate!(details.globalPosition)
+            : null,
+        onLongPressEnd: enableDrag && onDragEnd != null
+            ? (_) => onDragEnd!()
+            : null,
+        onLongPressCancel: enableDrag && onDragEnd != null
+            ? () => onDragEnd!()
+            : null,
         child: MouseRegion(
-          cursor: SystemMouseCursors.click,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: Container(
-              decoration: BoxDecoration(
-                border: Border(left: BorderSide(color: accent, width: 3)),
-                color: staffColor.withValues(alpha: 0.85),
-              ),
-              padding: const EdgeInsets.only(left: 5, right: 6, top: 3, bottom: 3),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    service,
-                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  if (width > 60)
+          cursor: enableDrag ? SystemMouseCursors.grab : SystemMouseCursors.click,
+          child: AnimatedOpacity(
+            duration: const Duration(milliseconds: 150),
+            opacity: isBeingDragged ? 0.3 : 1.0,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: Container(
+                decoration: BoxDecoration(
+                  border: Border(left: BorderSide(color: accent, width: 3)),
+                  color: staffColor.withValues(alpha: 0.85),
+                ),
+                padding: const EdgeInsets.only(left: 5, right: 6, top: 3, bottom: 3),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
                     Text(
-                      '${startsAt.hour.toString().padLeft(2, '0')}:${startsAt.minute.toString().padLeft(2, '0')}'
-                      '${endsAt != null ? ' - ${endsAt.hour.toString().padLeft(2, '0')}:${endsAt.minute.toString().padLeft(2, '0')}' : ''}',
-                      style: TextStyle(fontSize: 9, color: Colors.white.withValues(alpha: 0.85)),
-                    ),
-                  if (width > 80 && customer.isNotEmpty)
-                    Text(
-                      customer,
-                      style: TextStyle(fontSize: 9, color: Colors.white.withValues(alpha: 0.7)),
+                      service,
+                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                ],
+                    if (width > 60)
+                      Text(
+                        '${startsAt.hour.toString().padLeft(2, '0')}:${startsAt.minute.toString().padLeft(2, '0')}'
+                        '${endsAt != null ? ' - ${endsAt.hour.toString().padLeft(2, '0')}:${endsAt.minute.toString().padLeft(2, '0')}' : ''}',
+                        style: TextStyle(fontSize: 9, color: Colors.white.withValues(alpha: 0.85)),
+                      ),
+                    if (width > 80 && customer.isNotEmpty)
+                      Text(
+                        customer,
+                        style: TextStyle(fontSize: 9, color: Colors.white.withValues(alpha: 0.7)),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                  ],
+                ),
               ),
             ),
           ),

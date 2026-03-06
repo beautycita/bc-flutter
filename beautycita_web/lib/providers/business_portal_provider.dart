@@ -301,6 +301,42 @@ final staffServicesProvider = FutureProvider.autoDispose
   return List<Map<String, dynamic>>.from(response as List);
 });
 
+/// All staff→service mappings for the business (staffId → set of serviceIds).
+/// Used by drag-and-drop validation to check if a staff can perform a service.
+final allStaffServicesProvider =
+    FutureProvider.autoDispose<Map<String, Set<String>>>((ref) async {
+  final biz = await ref.watch(currentBusinessProvider.future);
+  if (biz == null) return {};
+
+  final bizId = biz['id'] as String;
+
+  // Get staff IDs for this business
+  final staffList = await BCSupabase.client
+      .from(BCTables.staff)
+      .select('id')
+      .eq('business_id', bizId);
+
+  final staffIds = (staffList as List)
+      .map((s) => (s as Map<String, dynamic>)['id'] as String)
+      .toList();
+
+  if (staffIds.isEmpty) return {};
+
+  final response = await BCSupabase.client
+      .from(BCTables.staffServices)
+      .select('staff_id, service_id')
+      .inFilter('staff_id', staffIds);
+
+  final result = <String, Set<String>>{};
+  for (final row in response as List) {
+    final m = row as Map<String, dynamic>;
+    final staffId = m['staff_id'] as String;
+    final serviceId = m['service_id'] as String;
+    result.putIfAbsent(staffId, () => <String>{}).add(serviceId);
+  }
+  return result;
+});
+
 // ── Payments ─────────────────────────────────────────────────────────────────
 
 /// Recent 50 payments for the business (via appointment IDs).

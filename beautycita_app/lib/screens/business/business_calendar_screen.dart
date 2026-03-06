@@ -64,6 +64,7 @@ class _BusinessCalendarScreenState
       (start: weekRange.start.toUtc().toIso8601String(), end: weekRange.end.toUtc().toIso8601String()),
     ));
     final staffAsync = ref.watch(businessStaffProvider);
+    final staffServicesAsync = ref.watch(allStaffServicesProvider);
     final bizAsync = ref.watch(currentBusinessProvider);
     final ownerId = bizAsync.valueOrNull?['owner_id'] as String?;
 
@@ -149,8 +150,9 @@ class _BusinessCalendarScreenState
                   onAction: _handleAction,
                   onBlockTime: () => _showBlockTimeSheet(context),
                   onRefresh: _refresh,
-                  onLongPressLane: (staffId, time) =>
-                      _showQuickNoteSheet(context, staffId, time),
+                  // Long-press on empty lane space is unused — single-tap action
+                  // sheet already offers notes. Lane long-press reserved for future use.
+                  staffServicesMap: staffServicesAsync.valueOrNull ?? const {},
                 ),
               ),
               // Compact week strip at bottom
@@ -262,17 +264,6 @@ class _BusinessCalendarScreenState
     );
   }
 
-  void _showQuickNoteSheet(BuildContext context, String staffId, DateTime time) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (ctx) => _QuickNoteSheet(
-        staffId: staffId,
-        dateTime: time,
-        onSaved: _refresh,
-      ),
-    );
-  }
 
   void _showEditSheet(BuildContext context, Map<String, dynamic> appt) {
     showModalBottomSheet(
@@ -698,7 +689,7 @@ class _HorizontalTimeline extends StatefulWidget {
   final Future<void> Function(Map<String, dynamic>, String) onAction;
   final VoidCallback onBlockTime;
   final VoidCallback onRefresh;
-  final void Function(String staffId, DateTime time)? onLongPressLane;
+  final Map<String, Set<String>> staffServicesMap;
 
   const _HorizontalTimeline({
     super.key,
@@ -711,7 +702,7 @@ class _HorizontalTimeline extends StatefulWidget {
     required this.onAction,
     required this.onBlockTime,
     required this.onRefresh,
-    this.onLongPressLane,
+    this.staffServicesMap = const {},
   });
 
   @override
@@ -728,6 +719,15 @@ class _HorizontalTimelineState extends State<_HorizontalTimeline> {
   static const _totalWidth = (_endHour - _startHour) * _hourWidth;
 
   late ScrollController _scrollController;
+
+  // ── Drag state ──
+  Map<String, dynamic>? _dragAppt;
+  Offset? _dragPos; // position relative to timeline area
+  String? _dragTargetStaffId;
+  DateTime? _dragTargetTime;
+  bool _dragValid = false;
+  bool _isDragging = false;
+  final GlobalKey _timelineAreaKey = GlobalKey();
 
   @override
   void initState() {
@@ -786,6 +786,98 @@ class _HorizontalTimelineState extends State<_HorizontalTimeline> {
     super.didUpdateWidget(old);
     if (old.date != widget.date) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToNow());
+    }
+  }
+
+  /// Convert X offset within timeline to DateTime, snapped to 5-min grid.
+  DateTime _xToTime(double x) {
+    final minutesSinceStart = (x / _hourWidth) * 60;
+    final snapped = (minutesSinceStart / 5).round() * 5;
+    final hour = (_startHour + snapped ~/ 60).clamp(_startHour, _endHour - 1);
+    final minute = (snapped % 60).clamp(0, 55);
+    return DateTime(widget.date.year, widget.date.month, widget.date.day, hour, minute);
+  }
+
+  /// Convert Y offset within timeline to lane index.
+  int _yToLaneIndex(double y, int laneCount) {
+    final adjusted = y - _labelRowHeight;
+    if (adjusted < 0) return 0;
+    return (adjusted / _laneHeight).floor().clamp(0, laneCount - 1);
+  }
+
+  bool _canStaffDoService(String staffId, String? serviceId, Map<String, Set<String>> staffServices) {
+    if (serviceId == null) return true;
+    if (staffServices.isEmpty) return true;
+    final services = staffServices[staffId];
+    if (services == null) return false;
+    return services.contains(serviceId);
+  }
+
+  bool _hasCollision(String staffId, DateTime newStart, DateTime newEnd, String excludeId, List<Map<String, dynamic>> appts) {
+    for (final a in appts) {
+      if (a['id'] == excludeId) continue;
+      if (a['staff_id'] != staffId) continue;
+      final aStart = DateTime.tryParse(a['starts_at'] as String? ?? '')?.toLocal();
+      final aEnd = DateTime.tryParse(a['ends_at'] as String? ?? '')?.toLocal();
+      if (aStart == null || aEnd == null) continue;
+      if (newStart.isBefore(aEnd) && newEnd.isAfter(aStart)) return true;
+    }
+    return false;
+  }
+
+  Future<void> _executeReschedule(Map<String, dynamic> appt, DateTime newStart, String newStaffId, List<Map<String, dynamic>> allStaff) async {
+    final id = appt['id'] as String?;
+    if (id == null) return;
+
+    final duration = (appt['duration_minutes'] as num?)?.toInt() ?? 60;
+    final newEnd = newStart.add(Duration(minutes: duration));
+
+    final updateData = <String, dynamic>{
+      'starts_at': newStart.toIso8601String(),
+      'ends_at': newEnd.toIso8601String(),
+    };
+
+    final oldStaffId = appt['staff_id'] as String?;
+    if (newStaffId != oldStaffId) {
+      updateData['staff_id'] = newStaffId;
+      final staffMember = allStaff.firstWhere(
+        (s) => s['id'] == newStaffId,
+        orElse: () => <String, dynamic>{},
+      );
+      final firstName = staffMember['first_name'] as String? ?? '';
+      final lastName = staffMember['last_name'] as String? ?? '';
+      updateData['staff_name'] = '$firstName $lastName'.trim();
+    }
+
+    try {
+      await SupabaseClientService.client
+          .from('appointments')
+          .update(updateData)
+          .eq('id', id);
+
+      widget.onRefresh();
+
+      if (mounted) {
+        ToastService.showSuccess('Cita reagendada');
+      }
+
+      // Fire-and-forget: send reschedule notification
+      _sendRescheduleNotification(id);
+    } catch (e) {
+      if (mounted) {
+        ToastService.showError('Error al reagendar: $e');
+      }
+    }
+  }
+
+  Future<void> _sendRescheduleNotification(String appointmentId) async {
+    try {
+      await SupabaseClientService.client.functions.invoke(
+        'reschedule-notification',
+        body: {'appointment_id': appointmentId},
+      );
+    } catch (e) {
+      debugPrint('[Reschedule] Notification error: $e');
     }
   }
 
@@ -898,60 +990,145 @@ class _HorizontalTimelineState extends State<_HorizontalTimeline> {
                   child: SingleChildScrollView(
                     controller: _scrollController,
                     scrollDirection: Axis.horizontal,
+                    physics: _isDragging ? const NeverScrollableScrollPhysics() : null,
                     child: SizedBox(
+                      key: _timelineAreaKey,
                       width: _totalWidth,
-                      child: Column(
+                      child: Stack(
                         children: [
-                          // Hour labels
-                          SizedBox(
-                            height: _labelRowHeight,
-                            child: Row(
-                              children: List.generate(
-                                _endHour - _startHour,
-                                (i) {
-                                  final hour = _startHour + i;
-                                  return SizedBox(
-                                    width: _hourWidth,
-                                    child: Text(
-                                      '${hour > 12 ? hour - 12 : hour}${hour >= 12 ? 'PM' : 'AM'}',
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w500,
-                                        color: colors.onSurface.withValues(alpha: 0.4),
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                          ),
-                          // Staff lanes
-                          for (var i = 0; i < effectiveLanes.length; i++)
-                            _StaffLane(
-                              lane: effectiveLanes[i],
-                              laneIndex: laneColorIndices[i],
-                              laneHeight: _laneHeight,
-                              hourWidth: _hourWidth,
-                              startHour: _startHour,
-                              endHour: _endHour,
-                              totalWidth: _totalWidth,
-                              nowLineX: nowLineX,
-                              onAction: widget.onAction,
-                              onRefresh: widget.onRefresh,
-                              onLongPress: widget.onLongPressLane == null
-                                  ? null
-                                  : (staffId, time) {
-                                      // Replace hour/minute on the widget date
-                                      final dt = DateTime(
-                                        widget.date.year,
-                                        widget.date.month,
-                                        widget.date.day,
-                                        time.hour,
-                                        time.minute,
+                          Column(
+                            children: [
+                              // Hour labels
+                              SizedBox(
+                                height: _labelRowHeight,
+                                child: Row(
+                                  children: List.generate(
+                                    _endHour - _startHour,
+                                    (i) {
+                                      final hour = _startHour + i;
+                                      return SizedBox(
+                                        width: _hourWidth,
+                                        child: Text(
+                                          '${hour > 12 ? hour - 12 : hour}${hour >= 12 ? 'PM' : 'AM'}',
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w500,
+                                            color: colors.onSurface.withValues(alpha: 0.4),
+                                          ),
+                                        ),
                                       );
-                                      widget.onLongPressLane!(staffId, dt);
                                     },
-                            ),
+                                  ),
+                                ),
+                              ),
+                              // Staff lanes
+                              for (var i = 0; i < effectiveLanes.length; i++)
+                                _StaffLane(
+                                  lane: effectiveLanes[i],
+                                  laneIndex: laneColorIndices[i],
+                                  laneHeight: _laneHeight,
+                                  hourWidth: _hourWidth,
+                                  startHour: _startHour,
+                                  endHour: _endHour,
+                                  totalWidth: _totalWidth,
+                                  nowLineX: nowLineX,
+                                  onAction: widget.onAction,
+                                  onRefresh: widget.onRefresh,
+                                  isDragSource: _isDragging && _dragAppt?['staff_id'] == effectiveLanes[i].id,
+                                  dragApptId: _dragAppt?['id'] as String?,
+                                  onApptDragStart: (appt, globalPos) {
+                                    final renderBox = _timelineAreaKey.currentContext?.findRenderObject() as RenderBox?;
+                                    if (renderBox == null) return;
+                                    final localPos = renderBox.globalToLocal(globalPos);
+                                    setState(() {
+                                      _dragAppt = appt;
+                                      _dragPos = localPos;
+                                      _isDragging = true;
+                                      _dragTargetStaffId = effectiveLanes[i].id;
+                                      _dragTargetTime = _xToTime(localPos.dx);
+                                      _dragValid = true;
+                                    });
+                                  },
+                                  onApptDragUpdate: (globalPos) {
+                                    final renderBox = _timelineAreaKey.currentContext?.findRenderObject() as RenderBox?;
+                                    if (renderBox == null || _dragAppt == null) return;
+                                    final localPos = renderBox.globalToLocal(globalPos);
+                                    final laneIdx = _yToLaneIndex(localPos.dy, effectiveLanes.length);
+                                    final targetLane = effectiveLanes[laneIdx];
+                                    final targetTime = _xToTime(localPos.dx);
+                                    final duration = (_dragAppt!['duration_minutes'] as num?)?.toInt() ?? 60;
+                                    final targetEnd = targetTime.add(Duration(minutes: duration));
+                                    final serviceId = _dragAppt!['service_id'] as String?;
+
+                                    final canDo = _canStaffDoService(targetLane.id, serviceId, widget.staffServicesMap);
+                                    final noCollision = !_hasCollision(targetLane.id, targetTime, targetEnd, _dragAppt!['id'] as String, appts);
+
+                                    setState(() {
+                                      _dragPos = localPos;
+                                      _dragTargetStaffId = targetLane.id;
+                                      _dragTargetTime = targetTime;
+                                      _dragValid = canDo && noCollision;
+                                    });
+                                  },
+                                  onApptDragEnd: () {
+                                    if (_dragAppt != null && _dragValid && _dragTargetTime != null && _dragTargetStaffId != null) {
+                                      _executeReschedule(_dragAppt!, _dragTargetTime!, _dragTargetStaffId!, staff);
+                                    } else if (_dragAppt != null && !_dragValid) {
+                                      ToastService.showWarning('No se puede mover aqui');
+                                    }
+                                    setState(() {
+                                      _dragAppt = null;
+                                      _dragPos = null;
+                                      _dragTargetStaffId = null;
+                                      _dragTargetTime = null;
+                                      _dragValid = false;
+                                      _isDragging = false;
+                                    });
+                                  },
+                                ),
+                            ],
+                          ),
+                          // Ghost block during drag
+                          if (_isDragging && _dragPos != null && _dragAppt != null) ...[
+                            () {
+                              final duration = (_dragAppt!['duration_minutes'] as num?)?.toInt() ?? 60;
+                              final laneIdx = _yToLaneIndex(_dragPos!.dy, effectiveLanes.length);
+                              final snapTime = _xToTime(_dragPos!.dx);
+                              final snapMinutes = (snapTime.hour - _startHour) * 60 + snapTime.minute;
+                              final snapX = (snapMinutes / 60.0) * _hourWidth;
+                              final ghostWidth = (duration / 60.0) * _hourWidth;
+                              final ghostTop = _labelRowHeight + laneIdx * _laneHeight + 4;
+                              final service = _dragAppt!['service_name'] as String? ?? '';
+                              final borderColor = _dragValid ? const Color(0xFF4CAF50) : const Color(0xFFE53935);
+
+                              return Positioned(
+                                left: snapX,
+                                top: ghostTop,
+                                height: _laneHeight - 8,
+                                width: ghostWidth.clamp(30.0, _totalWidth - snapX),
+                                child: IgnorePointer(
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: borderColor.withValues(alpha: 0.2),
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(color: borderColor, width: 2),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    child: Text(
+                                      service,
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: borderColor,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }(),
+                          ],
                         ],
                       ),
                     ),
@@ -1013,7 +1190,11 @@ class _StaffLane extends StatelessWidget {
   final double? nowLineX;
   final Future<void> Function(Map<String, dynamic>, String) onAction;
   final VoidCallback onRefresh;
-  final void Function(String staffId, DateTime time)? onLongPress;
+  final bool isDragSource;
+  final String? dragApptId;
+  final void Function(Map<String, dynamic> appt, Offset globalPos)? onApptDragStart;
+  final void Function(Offset globalPos)? onApptDragUpdate;
+  final VoidCallback? onApptDragEnd;
 
   const _StaffLane({
     required this.lane,
@@ -1026,7 +1207,11 @@ class _StaffLane extends StatelessWidget {
     required this.nowLineX,
     required this.onAction,
     required this.onRefresh,
-    this.onLongPress,
+    this.isDragSource = false,
+    this.dragApptId,
+    this.onApptDragStart,
+    this.onApptDragUpdate,
+    this.onApptDragEnd,
   });
 
   @override
@@ -1034,21 +1219,7 @@ class _StaffLane extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     final staffColor = _staffColor(laneIndex);
 
-    return GestureDetector(
-      behavior: HitTestBehavior.translucent,
-      onLongPressStart: onLongPress == null
-          ? null
-          : (details) {
-              final localX = details.localPosition.dx;
-              final minutesSinceStart = (localX / hourWidth) * 60;
-              final totalMinutes = minutesSinceStart.round();
-              final hour = (startHour + totalMinutes ~/ 60).clamp(startHour, endHour - 1);
-              final minute = ((totalMinutes % 60) ~/ 5) * 5;
-              final now = DateTime.now();
-              final time = DateTime(now.year, now.month, now.day, hour, minute);
-              onLongPress!(lane.id, time);
-            },
-      child: Container(
+    return Container(
         height: laneHeight,
         width: totalWidth,
         decoration: BoxDecoration(
@@ -1102,8 +1273,7 @@ class _StaffLane extends StatelessWidget {
               ),
           ],
         ),
-      ),
-    );
+      );
   }
 
   double _timeToX(DateTime dt) {
@@ -1284,6 +1454,7 @@ class _StaffLane extends StatelessWidget {
     final status = appt['status'] as String? ?? 'pending';
     final hasNotes = (appt['notes'] as String?)?.isNotEmpty == true;
     final accent = _statusAccent(status);
+    final isBeingDragged = isDragSource && dragApptId == appt['id'];
 
     return Positioned(
       left: left,
@@ -1292,51 +1463,67 @@ class _StaffLane extends StatelessWidget {
       width: width,
       child: GestureDetector(
         onTap: () => _showApptActionSheet(context, appt, onAction),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: Container(
-            decoration: BoxDecoration(
-              border: Border(left: BorderSide(color: accent, width: 3)),
-              color: staffColor.withValues(alpha: 0.9),
-            ),
-            padding:
-                const EdgeInsets.only(left: 5, right: 6, top: 3, bottom: 3),
-            child: Stack(
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      service,
-                      style: GoogleFonts.poppins(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (width > 60)
+        onLongPressStart: onApptDragStart != null
+            ? (details) => onApptDragStart!(appt, details.globalPosition)
+            : null,
+        onLongPressMoveUpdate: onApptDragUpdate != null
+            ? (details) => onApptDragUpdate!(details.globalPosition)
+            : null,
+        onLongPressEnd: onApptDragEnd != null
+            ? (_) => onApptDragEnd!()
+            : null,
+        onLongPressCancel: onApptDragEnd != null
+            ? () => onApptDragEnd!()
+            : null,
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 150),
+          opacity: isBeingDragged ? 0.3 : 1.0,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border(left: BorderSide(color: accent, width: 3)),
+                color: staffColor.withValues(alpha: 0.9),
+              ),
+              padding:
+                  const EdgeInsets.only(left: 5, right: 6, top: 3, bottom: 3),
+              child: Stack(
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
                       Text(
-                        '${startsAt.hour.toString().padLeft(2, '0')}:${startsAt.minute.toString().padLeft(2, '0')}'
-                        '${endsAt != null ? ' - ${endsAt.hour.toString().padLeft(2, '0')}:${endsAt.minute.toString().padLeft(2, '0')}' : ''}',
-                        style: GoogleFonts.nunito(
-                          fontSize: 9,
-                          color: Colors.white.withValues(alpha: 0.85),
+                        service,
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                  ],
-                ),
-                // Notes flag
-                if (hasNotes)
-                  const Positioned(
-                    top: 0,
-                    right: 0,
-                    child: Icon(Icons.sticky_note_2,
-                        size: 12, color: Colors.white70),
+                      if (width > 60)
+                        Text(
+                          '${startsAt.hour.toString().padLeft(2, '0')}:${startsAt.minute.toString().padLeft(2, '0')}'
+                          '${endsAt != null ? ' - ${endsAt.hour.toString().padLeft(2, '0')}:${endsAt.minute.toString().padLeft(2, '0')}' : ''}',
+                          style: GoogleFonts.nunito(
+                            fontSize: 9,
+                            color: Colors.white.withValues(alpha: 0.85),
+                          ),
+                        ),
+                    ],
                   ),
-              ],
+                  // Notes flag
+                  if (hasNotes)
+                    const Positioned(
+                      top: 0,
+                      right: 0,
+                      child: Icon(Icons.sticky_note_2,
+                          size: 12, color: Colors.white70),
+                    ),
+                ],
+              ),
             ),
           ),
         ),
@@ -2979,140 +3166,6 @@ class _EditApptSheetState extends ConsumerState<_EditApptSheet> {
             .update(updates)
             .eq('id', id);
       }
-      widget.onSaved();
-      if (mounted) Navigator.pop(context);
-    } catch (e, stack) {
-      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
-    } finally {
-      if (mounted) setState(() => _saving = false);
-    }
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Quick Note Sheet — long-press to create a note pegged to time/staff
-// ---------------------------------------------------------------------------
-
-class _QuickNoteSheet extends ConsumerStatefulWidget {
-  final String staffId;
-  final DateTime dateTime;
-  final VoidCallback onSaved;
-
-  const _QuickNoteSheet({
-    required this.staffId,
-    required this.dateTime,
-    required this.onSaved,
-  });
-
-  @override
-  ConsumerState<_QuickNoteSheet> createState() => _QuickNoteSheetState();
-}
-
-class _QuickNoteSheetState extends ConsumerState<_QuickNoteSheet> {
-  final _ctrl = TextEditingController();
-  bool _saving = false;
-
-  static const _months = [
-    'Ene','Feb','Mar','Abr','May','Jun',
-    'Jul','Ago','Sep','Oct','Nov','Dic',
-  ];
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final dt = widget.dateTime;
-    final timeLabel =
-        '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-    final dateLabel = '${dt.day} ${_months[dt.month - 1]}';
-
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        20, 20, 20,
-        MediaQuery.of(context).viewInsets.bottom + 20,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.sticky_note_2_rounded,
-                  size: 20, color: colors.primary),
-              const SizedBox(width: 8),
-              Text('Nota Rapida',
-                  style: GoogleFonts.poppins(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: colors.onSurface,
-                  )),
-              const Spacer(),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: colors.onSurface.withValues(alpha: 0.06),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  '$dateLabel  $timeLabel',
-                  style: GoogleFonts.nunito(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: colors.onSurface.withValues(alpha: 0.5),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          _SheetTextField(
-            controller: _ctrl,
-            label: 'Nota',
-            hint: 'Ej: Cliente llama para confirmar, traer producto X...',
-            icon: Icons.edit_note_rounded,
-            maxLines: 3,
-          ),
-          const SizedBox(height: 16),
-          _SheetButton(
-            label: 'Guardar Nota',
-            saving: _saving,
-            onPressed: _saving ? null : _save,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _save() async {
-    final text = _ctrl.text.trim();
-    if (text.isEmpty) {
-      ToastService.showWarning('Escribe algo');
-      return;
-    }
-    setState(() => _saving = true);
-    try {
-      final biz = await ref.read(currentBusinessProvider.future);
-      if (biz == null) throw Exception('No business');
-
-      final startsAt = widget.dateTime;
-      // Note block: 15 min duration, just a visual marker
-      final endsAt = startsAt.add(const Duration(minutes: 15));
-
-      await SupabaseClientService.client.from('staff_schedule_blocks').insert({
-        'business_id': biz['id'],
-        'staff_id': widget.staffId,
-        'starts_at': startsAt.toUtc().toIso8601String(),
-        'ends_at': endsAt.toUtc().toIso8601String(),
-        'reason': 'note',
-        'note': text,
-      });
-
       widget.onSaved();
       if (mounted) Navigator.pop(context);
     } catch (e, stack) {
