@@ -480,6 +480,14 @@ class AdminUser {
     this.phoneVerified = false,
   });
 
+  /// Display name: prefer fullName over legacy user_XXXXX usernames.
+  String get displayName {
+    if (username.startsWith('user_') && username.length > 5) {
+      return fullName ?? username;
+    }
+    return username;
+  }
+
   /// Online if last_seen within last 5 minutes.
   bool get isOnline {
     if (lastSeen == null) return false;
@@ -520,6 +528,35 @@ class AdminUser {
     );
   }
 }
+
+/// Finds or creates a support thread for admin→user live chat.
+final adminSupportThreadProvider =
+    FutureProvider.family<String, String>((ref, targetUserId) async {
+  final client = SupabaseClientService.client;
+
+  // Check for existing support thread for this user
+  final existing = await client
+      .from('chat_threads')
+      .select('id')
+      .eq('user_id', targetUserId)
+      .eq('contact_type', 'support')
+      .maybeSingle();
+
+  if (existing != null) return existing['id'] as String;
+
+  // Create new support thread
+  final inserted = await client
+      .from('chat_threads')
+      .insert({
+        'user_id': targetUserId,
+        'contact_type': 'support',
+        'contact_name': 'Soporte en Vivo',
+      })
+      .select('id')
+      .single();
+
+  return inserted['id'] as String;
+});
 
 /// Fetches auth info for a specific user (admin-only RPC).
 final adminUserAuthInfoProvider =

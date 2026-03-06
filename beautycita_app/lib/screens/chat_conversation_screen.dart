@@ -29,6 +29,21 @@ class _ChatConversationScreenState
   String? _resolvedContactType;
 
   @override
+  void initState() {
+    super.initState();
+    _resetUnread();
+  }
+
+  /// Reset unread count to 0 when user opens the conversation.
+  void _resetUnread() {
+    SupabaseClientService.client
+        .from('chat_threads')
+        .update({'unread_count': 0})
+        .eq('id', widget.threadId)
+        .then((_) {}, onError: (_) {});
+  }
+
+  @override
   void dispose() {
     _textController.dispose();
     _scrollController.dispose();

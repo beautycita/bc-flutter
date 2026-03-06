@@ -5,6 +5,21 @@ import '../models/chat_message.dart';
 import '../services/aphrodite_service.dart';
 import '../services/supabase_client.dart';
 
+/// Total unread count across all non-archived threads for the current user.
+final totalUnreadProvider = StreamProvider<int>((ref) {
+  if (!SupabaseClientService.isInitialized) return Stream.value(0);
+  final userId = SupabaseClientService.currentUserId;
+  if (userId == null) return Stream.value(0);
+
+  return SupabaseClientService.client
+      .from('chat_threads')
+      .stream(primaryKey: ['id'])
+      .eq('user_id', userId)
+      .map((rows) => rows
+          .where((r) => r['archived_at'] == null)
+          .fold<int>(0, (sum, r) => sum + ((r['unread_count'] as int?) ?? 0)));
+});
+
 /// AphroditeService singleton provider.
 final aphroditeServiceProvider = Provider<AphroditeService>((ref) {
   return AphroditeService();
