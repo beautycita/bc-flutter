@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/constants.dart';
@@ -21,16 +22,36 @@ class BusinessCalendarScreen extends ConsumerStatefulWidget {
       _BusinessCalendarScreenState();
 }
 
+enum _CalView { day, month }
+
 class _BusinessCalendarScreenState
     extends ConsumerState<BusinessCalendarScreen> {
   final _timelineKey = GlobalKey<_HorizontalTimelineState>();
   late DateTime _selectedDate;
   String? _staffFilter; // null = all staff
+  _CalView _view = _CalView.day;
 
   @override
   void initState() {
     super.initState();
     _selectedDate = DateTime.now();
+    // Allow landscape on calendar screen
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+  }
+
+  @override
+  void dispose() {
+    // Re-lock to portrait when leaving calendar
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
+    super.dispose();
   }
 
   DateTimeRange get _range {
@@ -38,6 +59,12 @@ class _BusinessCalendarScreenState
         _selectedDate.day);
     final end = DateTime(_selectedDate.year, _selectedDate.month,
         _selectedDate.day, 23, 59, 59);
+    return DateTimeRange(start: start, end: end);
+  }
+
+  DateTimeRange get _monthRange {
+    final start = DateTime(_selectedDate.year, _selectedDate.month, 1);
+    final end = DateTime(_selectedDate.year, _selectedDate.month + 1, 0, 23, 59, 59);
     return DateTimeRange(start: start, end: end);
   }
 
@@ -51,6 +78,7 @@ class _BusinessCalendarScreenState
   @override
   Widget build(BuildContext context) {
     final range = _range;
+    final colors = Theme.of(context).colorScheme;
 
     final apptsAsync = ref.watch(businessAppointmentsProvider(
       (start: range.start.toUtc().toIso8601String(), end: range.end.toUtc().toIso8601String()),
@@ -63,6 +91,11 @@ class _BusinessCalendarScreenState
     final weekApptsAsync = ref.watch(businessAppointmentsProvider(
       (start: weekRange.start.toUtc().toIso8601String(), end: weekRange.end.toUtc().toIso8601String()),
     ));
+    // Month data for month view
+    final monthRange = _monthRange;
+    final monthApptsAsync = ref.watch(businessAppointmentsProvider(
+      (start: monthRange.start.toUtc().toIso8601String(), end: monthRange.end.toUtc().toIso8601String()),
+    ));
     final staffAsync = ref.watch(businessStaffProvider);
     final staffServicesAsync = ref.watch(allStaffServicesProvider);
     final bizAsync = ref.watch(currentBusinessProvider);
@@ -70,104 +103,190 @@ class _BusinessCalendarScreenState
 
     return Column(
       children: [
-        // Summary card
-        _SummaryCard(
-            date: _selectedDate,
-            apptsAsync: apptsAsync,
-            staffAsync: staffAsync,
-            ownerId: ownerId,
-            onPickDate: _pickDate,
-            onAddNew: () {
-              final visibleTime = _timelineKey.currentState?.getVisibleDateTime();
-              _showWalkinSheet(context, visibleTime);
-            },
+        // Summary card (day view only)
+        if (_view == _CalView.day)
+          _SummaryCard(
+              date: _selectedDate,
+              apptsAsync: apptsAsync,
+              staffAsync: staffAsync,
+              ownerId: ownerId,
+              onPickDate: _pickDate,
+              onAddNew: () {
+                final visibleTime = _timelineKey.currentState?.getVisibleDateTime();
+                _showWalkinSheet(context, visibleTime);
+              },
+            ),
+
+        // View toggle + navigation bar
+        Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppConstants.paddingSM,
+            vertical: AppConstants.paddingXS,
           ),
-
-        // Navigation bar
-        _DateNavBar(
-          selectedDate: _selectedDate,
-          onPrev: () => setState(() => _selectedDate = _selectedDate
-              .subtract(const Duration(days: 1))),
-          onNext: () => setState(() => _selectedDate = _selectedDate
-              .add(const Duration(days: 1))),
-          onPickDate: _pickDate,
-        ),
-
-        // Staff filter chips
-        staffAsync.when(
-          data: (staff) {
-            final hasFilters = ownerId != null || staff.isNotEmpty;
-            if (!hasFilters) return const SizedBox.shrink();
-            return SizedBox(
-              height: 40,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(
-                    horizontal: AppConstants.paddingMD),
-                children: [
-                  _FilterChip(
-                    label: 'Todos',
-                    selected: _staffFilter == null,
-                    onTap: () => setState(() => _staffFilter = null),
-                  ),
-                  if (ownerId != null && !_ownerHasStaffRecord(ownerId, staff))
-                    _FilterChip(
-                      label: 'Yo',
-                      selected: _staffFilter == ownerId,
-                      onTap: () =>
-                          setState(() => _staffFilter = ownerId),
-                    ),
-                  for (final s in staff)
-                    _FilterChip(
-                      label: '${s['first_name'] ?? ''}',
-                      selected: _staffFilter == s['id'],
-                      onTap: () => setState(
-                          () => _staffFilter = s['id'] as String),
-                    ),
-                ],
-              ),
-            );
-          },
-          loading: () => const SizedBox.shrink(),
-          error: (e, st) => const SizedBox.shrink(),
-        ),
-
-        const SizedBox(height: 4),
-
-        // Timeline body + compact week strip
-        Expanded(
-          child: Column(
+          child: Row(
             children: [
-              Expanded(
-                child: _HorizontalTimeline(
-                  key: _timelineKey,
-                  date: _selectedDate,
-                  apptsAsync: apptsAsync,
-                  blocksAsync: blocksAsync,
-                  staffAsync: staffAsync,
-                  staffFilter: _staffFilter,
-                  ownerId: ownerId,
-                  onAction: _handleAction,
-                  onBlockTime: () => _showBlockTimeSheet(context),
-                  onRefresh: _refresh,
-                  // Long-press on empty lane space is unused — single-tap action
-                  // sheet already offers notes. Lane long-press reserved for future use.
-                  staffServicesMap: staffServicesAsync.valueOrNull ?? const {},
+              // View toggle
+              Container(
+                decoration: BoxDecoration(
+                  color: colors.surfaceContainerHighest.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _ViewToggle(
+                      label: 'Dia',
+                      icon: Icons.view_day_rounded,
+                      selected: _view == _CalView.day,
+                      onTap: () => setState(() => _view = _CalView.day),
+                    ),
+                    _ViewToggle(
+                      label: 'Mes',
+                      icon: Icons.calendar_month_rounded,
+                      selected: _view == _CalView.month,
+                      onTap: () => setState(() => _view = _CalView.month),
+                    ),
+                  ],
                 ),
               ),
-              // Compact week strip at bottom
-              _CompactWeekStrip(
-                weekRange: weekRange,
-                selectedDate: _selectedDate,
-                weekApptsAsync: weekApptsAsync,
-                onDayTap: (d) => setState(() => _selectedDate = d),
+              const SizedBox(width: 4),
+              // Prev
+              IconButton(
+                icon: const Icon(Icons.chevron_left_rounded),
+                onPressed: () => setState(() {
+                  if (_view == _CalView.day) {
+                    _selectedDate = _selectedDate.subtract(const Duration(days: 1));
+                  } else {
+                    _selectedDate = DateTime(_selectedDate.year, _selectedDate.month - 1, 1);
+                  }
+                }),
+              ),
+              // Date label
+              Expanded(
+                child: GestureDetector(
+                  onTap: _pickDate,
+                  child: Text(
+                    _view == _CalView.day
+                        ? _fmtFullDate(_selectedDate)
+                        : _fmtMonth(_selectedDate),
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.poppins(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: colors.onSurface,
+                    ),
+                  ),
+                ),
+              ),
+              // Next
+              IconButton(
+                icon: const Icon(Icons.chevron_right_rounded),
+                onPressed: () => setState(() {
+                  if (_view == _CalView.day) {
+                    _selectedDate = _selectedDate.add(const Duration(days: 1));
+                  } else {
+                    _selectedDate = DateTime(_selectedDate.year, _selectedDate.month + 1, 1);
+                  }
+                }),
               ),
             ],
           ),
         ),
+
+        // Staff filter chips (day view only)
+        if (_view == _CalView.day)
+          staffAsync.when(
+            data: (staff) {
+              final hasFilters = ownerId != null || staff.isNotEmpty;
+              if (!hasFilters) return const SizedBox.shrink();
+              return SizedBox(
+                height: 40,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: AppConstants.paddingMD),
+                  children: [
+                    _FilterChip(
+                      label: 'Todos',
+                      selected: _staffFilter == null,
+                      onTap: () => setState(() => _staffFilter = null),
+                    ),
+                    if (ownerId != null && !_ownerHasStaffRecord(ownerId, staff))
+                      _FilterChip(
+                        label: 'Yo',
+                        selected: _staffFilter == ownerId,
+                        onTap: () =>
+                            setState(() => _staffFilter = ownerId),
+                      ),
+                    for (final s in staff)
+                      _FilterChip(
+                        label: '${s['first_name'] ?? ''}',
+                        selected: _staffFilter == s['id'],
+                        onTap: () => setState(
+                            () => _staffFilter = s['id'] as String),
+                      ),
+                  ],
+                ),
+              );
+            },
+            loading: () => const SizedBox.shrink(),
+            error: (e, st) => const SizedBox.shrink(),
+          ),
+
+        if (_view == _CalView.day) const SizedBox(height: 4),
+
+        // Body
+        Expanded(
+          child: _view == _CalView.month
+              ? _MonthGrid(
+                  selectedDate: _selectedDate,
+                  monthApptsAsync: monthApptsAsync,
+                  onDayTap: (d) => setState(() {
+                    _selectedDate = d;
+                    _view = _CalView.day;
+                  }),
+                )
+              : Column(
+                  children: [
+                    Expanded(
+                      child: _HorizontalTimeline(
+                        key: _timelineKey,
+                        date: _selectedDate,
+                        apptsAsync: apptsAsync,
+                        blocksAsync: blocksAsync,
+                        staffAsync: staffAsync,
+                        staffFilter: _staffFilter,
+                        ownerId: ownerId,
+                        onAction: _handleAction,
+                        onBlockTime: () => _showBlockTimeSheet(context),
+                        onRefresh: _refresh,
+                        staffServicesMap: staffServicesAsync.valueOrNull ?? const {},
+                      ),
+                    ),
+                    // Compact week strip at bottom
+                    _CompactWeekStrip(
+                      weekRange: weekRange,
+                      selectedDate: _selectedDate,
+                      weekApptsAsync: weekApptsAsync,
+                      onDayTap: (d) => setState(() => _selectedDate = d),
+                    ),
+                  ],
+                ),
+        ),
       ],
     );
   }
+
+  static const _days = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'];
+  static const _months = [
+    'Ene','Feb','Mar','Abr','May','Jun',
+    'Jul','Ago','Sep','Oct','Nov','Dic',
+  ];
+
+  String _fmtFullDate(DateTime d) =>
+      '${_days[d.weekday - 1]}, ${d.day} ${_months[d.month - 1]} ${d.year}';
+
+  String _fmtMonth(DateTime d) => '${_months[d.month - 1]} ${d.year}';
 
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
@@ -361,64 +480,166 @@ class _BusinessCalendarScreenState
 // Date navigation bar
 // ---------------------------------------------------------------------------
 
-class _DateNavBar extends StatelessWidget {
-  final DateTime selectedDate;
-  final VoidCallback onPrev;
-  final VoidCallback onNext;
-  final VoidCallback onPickDate;
+class _ViewToggle extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
 
-  const _DateNavBar({
-    required this.selectedDate,
-    required this.onPrev,
-    required this.onNext,
-    required this.onPickDate,
+  const _ViewToggle({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppConstants.paddingSM,
-        vertical: AppConstants.paddingXS,
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected ? colors.primary : Colors.transparent,
+          borderRadius: BorderRadius.circular(7),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16,
+                color: selected ? Colors.white : colors.onSurface.withValues(alpha: 0.6)),
+            const SizedBox(width: 4),
+            Text(label, style: GoogleFonts.poppins(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: selected ? Colors.white : colors.onSurface.withValues(alpha: 0.6),
+            )),
+          ],
+        ),
       ),
-      child: Row(
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Month grid view
+// ---------------------------------------------------------------------------
+
+class _MonthGrid extends StatelessWidget {
+  final DateTime selectedDate;
+  final AsyncValue<List<Map<String, dynamic>>> monthApptsAsync;
+  final ValueChanged<DateTime> onDayTap;
+
+  const _MonthGrid({
+    required this.selectedDate,
+    required this.monthApptsAsync,
+    required this.onDayTap,
+  });
+
+  static const _dayHeaders = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final appts = monthApptsAsync.valueOrNull ?? [];
+    final today = DateTime.now();
+
+    // Build appointment count per day-of-month
+    final countByDay = <int, int>{};
+    for (final a in appts) {
+      final s = DateTime.tryParse(a['starts_at'] as String? ?? '')?.toLocal();
+      if (s != null) countByDay[s.day] = (countByDay[s.day] ?? 0) + 1;
+    }
+
+    final firstOfMonth = DateTime(selectedDate.year, selectedDate.month, 1);
+    final daysInMonth = DateTime(selectedDate.year, selectedDate.month + 1, 0).day;
+    // Monday = 1, Sunday = 7. We want Monday as first column.
+    final startWeekday = firstOfMonth.weekday; // 1=Mon ... 7=Sun
+    final leadingBlanks = startWeekday - 1;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppConstants.paddingMD),
+      child: Column(
         children: [
-          IconButton(
-            icon: const Icon(Icons.chevron_left_rounded),
-            onPressed: onPrev,
-          ),
-          Expanded(
-            child: GestureDetector(
-              onTap: onPickDate,
-              child: Text(
-                _fmtFull(selectedDate),
-                textAlign: TextAlign.center,
-                style: GoogleFonts.poppins(
-                  fontSize: 15,
+          // Day-of-week headers
+          Row(
+            children: _dayHeaders.map((d) => Expanded(
+              child: Center(
+                child: Text(d, style: GoogleFonts.poppins(
+                  fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: colors.onSurface,
-                ),
+                  color: colors.onSurface.withValues(alpha: 0.4),
+                )),
               ),
-            ),
+            )).toList(),
           ),
-          IconButton(
-            icon: const Icon(Icons.chevron_right_rounded),
-            onPressed: onNext,
+          const SizedBox(height: 4),
+          // Calendar grid
+          Expanded(
+            child: GridView.builder(
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 7,
+                childAspectRatio: 1.0,
+              ),
+              itemCount: leadingBlanks + daysInMonth,
+              itemBuilder: (ctx, idx) {
+                if (idx < leadingBlanks) return const SizedBox.shrink();
+                final day = idx - leadingBlanks + 1;
+                final date = DateTime(selectedDate.year, selectedDate.month, day);
+                final isToday = date.year == today.year &&
+                    date.month == today.month &&
+                    date.day == today.day;
+                final count = countByDay[day] ?? 0;
+
+                return GestureDetector(
+                  onTap: () => onDayTap(date),
+                  child: Container(
+                    margin: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: isToday
+                          ? colors.primary.withValues(alpha: 0.12)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(10),
+                      border: isToday
+                          ? Border.all(color: colors.primary, width: 1.5)
+                          : null,
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text('$day', style: GoogleFonts.poppins(
+                          fontSize: 15,
+                          fontWeight: isToday ? FontWeight.w700 : FontWeight.w500,
+                          color: isToday ? colors.primary : colors.onSurface,
+                        )),
+                        if (count > 0) ...[
+                          const SizedBox(height: 2),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: colors.primary.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text('$count', style: GoogleFonts.poppins(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: colors.primary,
+                            )),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
           ),
         ],
       ),
     );
   }
-
-  static const _days = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'];
-  static const _months = [
-    'Ene','Feb','Mar','Abr','May','Jun',
-    'Jul','Ago','Sep','Oct','Nov','Dic'
-  ];
-
-  String _fmtFull(DateTime d) =>
-      '${_days[d.weekday - 1]}, ${d.day} ${_months[d.month - 1]} ${d.year}';
 }
 
 // ---------------------------------------------------------------------------
@@ -833,8 +1054,8 @@ class _HorizontalTimelineState extends State<_HorizontalTimeline> {
     final newEnd = newStart.add(Duration(minutes: duration));
 
     final updateData = <String, dynamic>{
-      'starts_at': newStart.toIso8601String(),
-      'ends_at': newEnd.toIso8601String(),
+      'starts_at': newStart.toUtc().toIso8601String(),
+      'ends_at': newEnd.toUtc().toIso8601String(),
     };
 
     final oldStaffId = appt['staff_id'] as String?;

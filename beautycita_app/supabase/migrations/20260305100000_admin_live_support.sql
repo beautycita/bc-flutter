@@ -6,7 +6,8 @@
 BEGIN;
 
 -- Admin can INSERT support messages into chat_messages
-CREATE POLICY IF NOT EXISTS "chat_messages_admin_insert_support"
+DROP POLICY IF EXISTS "chat_messages_admin_insert_support" ON public.chat_messages;
+CREATE POLICY "chat_messages_admin_insert_support"
   ON public.chat_messages
   FOR INSERT
   TO authenticated
@@ -16,7 +17,8 @@ CREATE POLICY IF NOT EXISTS "chat_messages_admin_insert_support"
   );
 
 -- Admin can UPDATE chat_threads (last_message_text, last_message_at, etc.)
-CREATE POLICY IF NOT EXISTS "chat_threads_admin_update"
+DROP POLICY IF EXISTS "chat_threads_admin_update" ON public.chat_threads;
+CREATE POLICY "chat_threads_admin_update"
   ON public.chat_threads
   FOR UPDATE
   TO authenticated
@@ -24,7 +26,8 @@ CREATE POLICY IF NOT EXISTS "chat_threads_admin_update"
   WITH CHECK (is_admin());
 
 -- Admin can INSERT support threads
-CREATE POLICY IF NOT EXISTS "chat_threads_admin_insert_support"
+DROP POLICY IF EXISTS "chat_threads_admin_insert_support" ON public.chat_threads;
+CREATE POLICY "chat_threads_admin_insert_support"
   ON public.chat_threads
   FOR INSERT
   TO authenticated
