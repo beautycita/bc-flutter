@@ -168,7 +168,7 @@ class _ChatConversationScreenState
     final isAphrodite = thread?.isAphrodite ?? false;
     final isSupport = thread?.isSupport ?? false;
     final isEros = thread?.isEros ?? false;
-    final title = isAphrodite ? 'Afrodita' : (thread?.displayName ?? 'Chat');
+    final title = isAphrodite ? 'Afrodita' : isSupport ? 'Soporte en Vivo' : (thread?.displayName ?? 'Chat');
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
@@ -294,7 +294,7 @@ class _ChatConversationScreenState
                   ),
                 if (isSupport)
                   Text(
-                    'Ayuda en vivo',
+                    'Soporte en Vivo',
                     style: GoogleFonts.nunito(
                       fontSize: 12,
                       color: const Color(0xFFC2185B).withValues(alpha: 0.7),

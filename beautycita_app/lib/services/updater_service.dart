@@ -26,6 +26,7 @@ class UpdaterService {
   bool get apkUpdateRequired => _apkUpdateRequired;
   String get apkUpdateUrl => _apkUpdateUrl;
   String get apkUpdateVersion => _apkUpdateVersion;
+  int get apkRemoteBuild => _remoteBuildNumber;
 
   // ── Tier 1: Shorebird patches (unchanged) ──
 

@@ -608,7 +608,7 @@ class _ChatBubble extends StatelessWidget {
                       message.senderType == 'aphrodite'
                           ? 'Afrodita'
                           : message.senderType == 'support'
-                              ? 'Soporte'
+                              ? 'Soporte en Vivo'
                               : message.senderType,
                       style: GoogleFonts.poppins(
                         fontSize: 11,
