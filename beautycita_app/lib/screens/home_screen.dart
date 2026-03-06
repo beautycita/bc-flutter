@@ -55,6 +55,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       barrierDismissible: !updater.apkUpdateRequired,
       builder: (ctx) => _ApkUpdateDialog(
         version: updater.apkUpdateVersion,
+        buildNumber: updater.apkRemoteBuild,
         url: updater.apkUpdateUrl,
         required: updater.apkUpdateRequired,
         onDismiss: () {
@@ -237,34 +238,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   );
                                 },
                               ),
-                              // Aphrodite chat — customer role only, with unread badge
+                              // Chat — visible for customers and stylists, with unread badge
                               Consumer(
                                 builder: (context, ref, _) {
-                                  final isCustomer = ref.watch(isCustomerProvider);
+                                  final roleAsync = ref.watch(userRoleProvider);
                                   final unreadAsync = ref.watch(totalUnreadProvider);
                                   final unread = unreadAsync.valueOrNull ?? 0;
-                                  return isCustomer.when(
-                                    data: (yes) => yes
-                                        ? Padding(
-                                            padding: const EdgeInsets.only(
-                                                right: AppConstants.paddingSM),
-                                            child: _HeaderButton(
-                                              icon: Icons.chat_bubble_outline_rounded,
-                                              onTap: () => context.push('/chat'),
-                                              badge: unread > 0 ? unread : null,
-                                            ),
-                                          )
-                                        : const SizedBox.shrink(),
-                                    loading: () => Padding(
-                                      padding: const EdgeInsets.only(
-                                          right: AppConstants.paddingSM),
-                                      child: _HeaderButton(
-                                        icon: Icons.chat_bubble_outline_rounded,
-                                        onTap: () => context.push('/chat'),
-                                        badge: unread > 0 ? unread : null,
-                                      ),
+                                  final role = roleAsync.valueOrNull;
+                                  if (role == 'admin' || role == 'superadmin') return const SizedBox.shrink();
+                                  return Padding(
+                                    padding: const EdgeInsets.only(
+                                        right: AppConstants.paddingSM),
+                                    child: _HeaderButton(
+                                      icon: Icons.chat_bubble_outline_rounded,
+                                      onTap: () => context.push('/chat'),
+                                      badge: unread > 0 ? unread : null,
                                     ),
-                                    error: (_, __) => const SizedBox.shrink(),
                                   );
                                 },
                               ),
@@ -1118,12 +1107,14 @@ class _HomeAdminDrawer extends StatelessWidget {
 
 class _ApkUpdateDialog extends StatelessWidget {
   final String version;
+  final int buildNumber;
   final String url;
   final bool required;
   final VoidCallback onDismiss;
 
   const _ApkUpdateDialog({
     required this.version,
+    required this.buildNumber,
     required this.url,
     required this.required,
     required this.onDismiss,
@@ -1153,8 +1144,8 @@ class _ApkUpdateDialog extends StatelessWidget {
       ),
       content: Text(
         required
-            ? 'La version $version es necesaria para continuar usando BeautyCita.'
-            : 'La version $version esta disponible con mejoras y correcciones.',
+            ? 'La version $version (build $buildNumber) es necesaria para continuar usando BeautyCita.'
+            : 'La version $version (build $buildNumber) esta disponible con mejoras y correcciones.',
         style: GoogleFonts.nunito(fontSize: 15),
       ),
       actions: [

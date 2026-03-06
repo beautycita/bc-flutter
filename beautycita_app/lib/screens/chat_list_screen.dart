@@ -18,10 +18,9 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
   @override
   void initState() {
     super.initState();
-    // Ensure Aphrodite and Eros threads exist
+    // Ensure Aphrodite thread exists
     Future.microtask(() {
       ref.read(aphroditeThreadProvider);
-      ref.read(erosThreadProvider);
     });
   }
 
@@ -84,10 +83,7 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
                   onTap: () => context.push('/chat/${thread.id}'),
                 );
               } else if (thread.isEros) {
-                row = _ErosRow(
-                  thread: thread,
-                  onTap: () => context.push('/chat/${thread.id}'),
-                );
+                return const SizedBox.shrink(); // Eros hidden from chat list
               } else if (thread.isSupport) {
                 row = _SupportRow(
                   thread: thread,
@@ -391,27 +387,11 @@ class _SupportRow extends StatelessWidget {
                   Row(
                     children: [
                       Text(
-                        'Soporte',
+                        'Soporte en Vivo',
                         style: GoogleFonts.poppins(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                           color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFC2185B).withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          'LIVE',
-                          style: GoogleFonts.poppins(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFFC2185B),
-                          ),
                         ),
                       ),
                     ],
