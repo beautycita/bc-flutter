@@ -12,6 +12,7 @@ import '../models/category.dart';
 import '../providers/category_provider.dart';
 import '../providers/business_provider.dart';
 import '../providers/admin_provider.dart';
+import '../providers/chat_provider.dart';
 import '../config/constants.dart';
 import '../config/theme_extension.dart';
 import '../services/gesture_exclusion_service.dart';
@@ -236,10 +237,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   );
                                 },
                               ),
-                              // Aphrodite chat — customer role only
+                              // Aphrodite chat — customer role only, with unread badge
                               Consumer(
                                 builder: (context, ref, _) {
                                   final isCustomer = ref.watch(isCustomerProvider);
+                                  final unreadAsync = ref.watch(totalUnreadProvider);
+                                  final unread = unreadAsync.valueOrNull ?? 0;
                                   return isCustomer.when(
                                     data: (yes) => yes
                                         ? Padding(
@@ -248,6 +251,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                             child: _HeaderButton(
                                               icon: Icons.chat_bubble_outline_rounded,
                                               onTap: () => context.push('/chat'),
+                                              badge: unread > 0 ? unread : null,
                                             ),
                                           )
                                         : const SizedBox.shrink(),
@@ -257,6 +261,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                       child: _HeaderButton(
                                         icon: Icons.chat_bubble_outline_rounded,
                                         onTap: () => context.push('/chat'),
+                                        badge: unread > 0 ? unread : null,
                                       ),
                                     ),
                                     error: (_, __) => const SizedBox.shrink(),
@@ -621,35 +626,66 @@ class _CurvePainter extends CustomPainter {
 class _HeaderButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
+  final int? badge;
 
   const _HeaderButton({
     required this.icon,
     required this.onTap,
+    this.badge,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white.withValues(alpha: 0.15),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: BorderSide(
-          color: Colors.white.withValues(alpha: 0.2),
-        ),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        splashColor: Colors.white.withValues(alpha: 0.2),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Icon(
-            icon,
-            color: Colors.white,
-            size: 22,
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Material(
+          color: Colors.white.withValues(alpha: 0.15),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+            side: BorderSide(
+              color: Colors.white.withValues(alpha: 0.2),
+            ),
+          ),
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(14),
+            splashColor: Colors.white.withValues(alpha: 0.2),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Icon(
+                icon,
+                color: Colors.white,
+                size: 22,
+              ),
+            ),
           ),
         ),
-      ),
+        if (badge != null && badge! > 0)
+          Positioned(
+            right: -4,
+            top: -4,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+              decoration: const BoxDecoration(
+                color: Colors.red,
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: Text(
+                  badge! > 9 ? '9+' : '$badge',
+                  style: GoogleFonts.nunito(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                    height: 1,
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

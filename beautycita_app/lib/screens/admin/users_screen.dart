@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import '../../config/constants.dart';
+import '../../models/chat_message.dart';
 import '../../providers/admin_provider.dart';
+import '../../providers/chat_provider.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 
@@ -297,7 +300,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
                                       radius: 20,
                                       backgroundColor: rc.withValues(alpha: 0.1),
                                       child: Text(
-                                        (user.fullName ?? user.username)
+                                        user.displayName
                                             .substring(0, 1)
                                             .toUpperCase(),
                                         style: GoogleFonts.poppins(
@@ -333,7 +336,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        '@${user.username}',
+                                        '@${user.displayName}',
                                         style: GoogleFonts.poppins(
                                           fontSize: 14,
                                           fontWeight: FontWeight.w600,
@@ -458,7 +461,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
                             backgroundColor:
                                 _roleColor(user.role).withValues(alpha: 0.1),
                             child: Text(
-                              (user.fullName ?? user.username)
+                              user.displayName
                                   .substring(0, 1)
                                   .toUpperCase(),
                               style: GoogleFonts.poppins(
@@ -492,7 +495,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              user.fullName ?? user.username,
+                              user.fullName ?? user.displayName,
                               style: GoogleFonts.poppins(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w700,
@@ -500,7 +503,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
                               ),
                             ),
                             Text(
-                              '@${user.username}',
+                              '@${user.displayName}',
                               style: GoogleFonts.nunito(
                                   fontSize: 14, color: dim),
                             ),
@@ -520,6 +523,37 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
                       ),
                     ],
                   ),
+
+                  // Live support button — only for online non-admin users
+                  if (user.isOnline &&
+                      user.role != 'admin' &&
+                      user.role != 'superadmin') ...[
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.of(ctx).pop(); // close edit sheet
+                          _openLiveSupportChat(user);
+                        },
+                        icon: const Icon(Icons.support_agent_rounded, size: 20),
+                        label: Text(
+                          'Soporte en Vivo',
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF7B1038),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
+                    ),
+                  ],
 
                   const SizedBox(height: 16),
 
@@ -894,6 +928,15 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
     );
   }
 
+  void _openLiveSupportChat(AdminUser user) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => _LiveSupportSheet(user: user),
+      ),
+    );
+  }
+
   Future<void> _saveUser(
     BuildContext ctx,
     AdminUser user,
@@ -1050,6 +1093,417 @@ class _DetailRow extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Live Support Chat — Full-screen modal for admin → user messaging
+// ---------------------------------------------------------------------------
+
+class _LiveSupportSheet extends ConsumerStatefulWidget {
+  final AdminUser user;
+  const _LiveSupportSheet({required this.user});
+
+  @override
+  ConsumerState<_LiveSupportSheet> createState() => _LiveSupportSheetState();
+}
+
+class _LiveSupportSheetState extends ConsumerState<_LiveSupportSheet> {
+  final _textController = TextEditingController();
+  final _scrollController = ScrollController();
+  bool _isSending = false;
+  String? _threadId;
+  bool _loadingThread = true;
+  String? _threadError;
+
+  @override
+  void initState() {
+    super.initState();
+    _resolveThread();
+  }
+
+  Future<void> _resolveThread() async {
+    try {
+      final id = await ref.read(
+        adminSupportThreadProvider(widget.user.id).future,
+      );
+      if (mounted) {
+        setState(() {
+          _threadId = id;
+          _loadingThread = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _threadError = e.toString();
+          _loadingThread = false;
+        });
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _textController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _scrollToBottom() {
+    if (_scrollController.hasClients) {
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (_scrollController.hasClients) {
+          _scrollController.animateTo(
+            _scrollController.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOut,
+          );
+        }
+      });
+    }
+  }
+
+  Future<void> _sendMessage() async {
+    final text = _textController.text.trim();
+    if (text.isEmpty || _isSending || _threadId == null) return;
+    _textController.clear();
+    setState(() => _isSending = true);
+
+    try {
+      final client = SupabaseClientService.client;
+
+      // Insert message as support (sender_id null = anonymous admin)
+      await client.from('chat_messages').insert({
+        'thread_id': _threadId,
+        'sender_type': 'support',
+        'sender_id': null,
+        'content_type': 'text',
+        'text_content': text,
+      });
+
+      // Update thread last message + increment unread
+      await Future.wait([
+        client.from('chat_threads').update({
+          'last_message_text': text,
+          'last_message_at': DateTime.now().toUtc().toIso8601String(),
+        }).eq('id', _threadId!),
+        client.rpc('increment_unread', params: {'p_thread_id': _threadId}),
+      ]);
+
+      // Push notification to user
+      try {
+        await client.functions.invoke('send-push-notification', body: {
+          'user_id': widget.user.id,
+          'notification_type': 'booking_confirmed',
+          'custom_title': 'Soporte en Vivo',
+          'custom_body': text.length > 80 ? '${text.substring(0, 80)}...' : text,
+          'data': {'route': '/chat', 'type': 'support_message'},
+        });
+      } catch (_) {
+        // Push is best-effort — don't fail the send
+      }
+    } catch (e, stack) {
+      ToastService.showErrorWithDetails(
+        ToastService.friendlyError(e), e, stack,
+      );
+    }
+
+    if (mounted) {
+      setState(() => _isSending = false);
+      _scrollToBottom();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF0ECE5),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF7B1038),
+        foregroundColor: Colors.white,
+        title: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.15),
+              ),
+              child: Center(
+                child: Text(
+                  widget.user.displayName.substring(0, 1).toUpperCase(),
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.user.displayName,
+                    style: GoogleFonts.poppins(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Row(
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.greenAccent,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Soporte en Vivo',
+                        style: GoogleFonts.nunito(
+                          fontSize: 12,
+                          color: Colors.white70,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+      body: _loadingThread
+          ? const Center(child: CircularProgressIndicator())
+          : _threadError != null
+              ? Center(
+                  child: Text(
+                    'Error: $_threadError',
+                    style: GoogleFonts.nunito(color: colors.error),
+                  ),
+                )
+              : Column(
+                  children: [
+                    // Messages
+                    Expanded(
+                      child: Consumer(
+                        builder: (context, ref, _) {
+                          final messagesAsync = ref.watch(
+                            chatMessagesProvider(_threadId!),
+                          );
+                          return messagesAsync.when(
+                            data: (messages) {
+                              WidgetsBinding.instance.addPostFrameCallback(
+                                (_) => _scrollToBottom(),
+                              );
+                              if (messages.isEmpty) {
+                                return Center(
+                                  child: Text(
+                                    'Inicia la conversacion',
+                                    style: GoogleFonts.nunito(
+                                      fontSize: 14,
+                                      color: Colors.grey[500],
+                                    ),
+                                  ),
+                                );
+                              }
+                              return ListView.builder(
+                                controller: _scrollController,
+                                physics: const BouncingScrollPhysics(),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 16,
+                                ),
+                                itemCount: messages.length,
+                                itemBuilder: (context, i) {
+                                  final msg = messages[i];
+                                  return _SupportBubble(message: msg);
+                                },
+                              );
+                            },
+                            loading: () => const Center(
+                              child: CircularProgressIndicator(),
+                            ),
+                            error: (e, _) => Center(
+                              child: Text('Error: $e'),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    // Input bar
+                    Container(
+                      padding: EdgeInsets.only(
+                        left: 12,
+                        right: 12,
+                        top: 8,
+                        bottom: MediaQuery.of(context).padding.bottom + 8,
+                      ),
+                      color: Colors.white,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF5F3FF),
+                                borderRadius: BorderRadius.circular(24),
+                              ),
+                              child: TextField(
+                                controller: _textController,
+                                enabled: !_isSending,
+                                maxLines: 4,
+                                minLines: 1,
+                                textCapitalization:
+                                    TextCapitalization.sentences,
+                                style: GoogleFonts.nunito(fontSize: 15),
+                                decoration: InputDecoration(
+                                  hintText: 'Escribe un mensaje...',
+                                  hintStyle: GoogleFonts.nunito(
+                                    fontSize: 15,
+                                    color: Colors.grey[400],
+                                  ),
+                                  border: InputBorder.none,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 10,
+                                  ),
+                                ),
+                                onSubmitted: (_) => _sendMessage(),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          GestureDetector(
+                            onTap: _isSending ? null : _sendMessage,
+                            child: Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: _isSending
+                                    ? Colors.grey[300]
+                                    : const Color(0xFF7B1038),
+                                shape: BoxShape.circle,
+                              ),
+                              child: _isSending
+                                  ? Padding(
+                                      padding: const EdgeInsets.all(12),
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: colors.primary,
+                                      ),
+                                    )
+                                  : const Icon(
+                                      Icons.send_rounded,
+                                      color: Colors.white,
+                                      size: 20,
+                                    ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+    );
+  }
+}
+
+/// Chat bubble for admin live support — user on left, support on right.
+class _SupportBubble extends StatelessWidget {
+  final ChatMessage message;
+  const _SupportBubble({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    final isSupport = message.isFromSupport;
+    final isSystem = message.senderType == 'system';
+
+    if (isSystem) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Center(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.06),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              message.textContent ?? '',
+              style: GoogleFonts.nunito(fontSize: 12, color: Colors.grey[600]),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      );
+    }
+
+    final alignment =
+        isSupport ? CrossAxisAlignment.end : CrossAxisAlignment.start;
+    final bubbleColor = isSupport ? const Color(0xFFDCF8C6) : Colors.white;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Column(
+        crossAxisAlignment: alignment,
+        children: [
+          Container(
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width * 0.72,
+            ),
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
+            decoration: BoxDecoration(
+              color: bubbleColor,
+              borderRadius: BorderRadius.only(
+                topLeft: const Radius.circular(12),
+                topRight: const Radius.circular(12),
+                bottomLeft: Radius.circular(isSupport ? 12 : 2),
+                bottomRight: Radius.circular(isSupport ? 2 : 12),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 2,
+                  offset: const Offset(0, 1),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  message.textContent ?? '',
+                  style: GoogleFonts.nunito(
+                    fontSize: 14,
+                    color: const Color(0xFF303030),
+                    height: 1.35,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  DateFormat.Hm().format(message.createdAt.toLocal()),
+                  style: GoogleFonts.nunito(
+                    fontSize: 10,
+                    color: Colors.grey[500],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
