@@ -1070,12 +1070,13 @@ class _HorizontalTimelineState extends State<_HorizontalTimeline> {
                                       _dragValid = canDo && noCollision;
                                     });
                                   },
-                                  onApptDragEnd: () {
+                                  onApptDragEnd: () async {
                                     if (_dragAppt != null && _dragValid && _dragTargetTime != null && _dragTargetStaffId != null) {
-                                      _executeReschedule(_dragAppt!, _dragTargetTime!, _dragTargetStaffId!, staff);
+                                      await _executeReschedule(_dragAppt!, _dragTargetTime!, _dragTargetStaffId!, staff);
                                     } else if (_dragAppt != null && !_dragValid) {
                                       ToastService.showWarning('No se puede mover aqui');
                                     }
+                                    if (!mounted) return;
                                     setState(() {
                                       _dragAppt = null;
                                       _dragPos = null;
