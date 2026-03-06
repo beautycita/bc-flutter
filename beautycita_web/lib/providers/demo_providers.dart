@@ -30,6 +30,7 @@ List<Override> get demoProviderOverrides => [
         }).toList();
       }),
       businessScheduleBlocksProvider.overrideWith((ref, range) async => []),
+      allStaffServicesProvider.overrideWith((ref) async => _demoStaffServices()),
     ];
 
 // ── Computed demo stats ─────────────────────────────────────────────────────
@@ -112,6 +113,18 @@ WeeklyTrend _demoWeeklyTrend() {
     dailyRevenue: revenue,
     dailyPending: pendingList,
   );
+}
+
+Map<String, Set<String>> _demoStaffServices() {
+  final result = <String, Set<String>>{};
+  for (final a in DemoData.appointments) {
+    final staffId = a['staff_id'] as String?;
+    final serviceId = a['service_id'] as String?;
+    if (staffId != null && serviceId != null) {
+      result.putIfAbsent(staffId, () => <String>{}).add(serviceId);
+    }
+  }
+  return result;
 }
 
 List<Map<String, dynamic>> _demoMonthlyDaily() {
