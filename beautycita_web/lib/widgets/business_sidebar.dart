@@ -28,6 +28,7 @@ const _navItems = <_NavItem>[
   _NavItem(label: 'Cal. Externo', icon: Icons.sync_outlined, route: WebRoutes.negocioCalendarSync),
   _NavItem(label: 'Servicios', icon: Icons.spa_outlined, route: WebRoutes.negocioServices),
   _NavItem(label: 'Staff', icon: Icons.people_outlined, route: WebRoutes.negocioStaff),
+  _NavItem(label: 'Portafolio', icon: Icons.web_outlined, route: WebRoutes.negocioPortfolio),
   _NavDivider(),
   _NavItem(label: 'Pagos', icon: Icons.payments_outlined, route: WebRoutes.negocioPayments),
   _NavItem(label: 'Disputas', icon: Icons.gavel_outlined, route: WebRoutes.negocioDisputes),

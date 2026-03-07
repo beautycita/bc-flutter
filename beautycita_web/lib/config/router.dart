@@ -30,6 +30,7 @@ import '../pages/business/biz_services_page.dart';
 import '../pages/business/biz_qr_page.dart';
 import '../pages/business/biz_reviews_page.dart';
 import '../pages/business/biz_settings_page.dart';
+import '../pages/business/biz_portfolio_page.dart';
 import '../pages/business/biz_staff_page.dart';
 import '../pages/client/mis_citas_page.dart';
 import '../pages/client/reservar_page.dart';
@@ -90,6 +91,7 @@ abstract final class WebRoutes {
   static const String negocioQr = '/negocio/qr';
   static const String negocioReviews = '/negocio/reviews';
   static const String negocioCalendarSync = '/negocio/calendar-sync';
+  static const String negocioPortfolio = '/negocio/portfolio';
 
   // Client
   static const String reservar = '/reservar';
@@ -106,6 +108,7 @@ abstract final class WebRoutes {
   static const String demoQr = '/demo/qr';
   static const String demoReviews = '/demo/reviews';
   static const String demoCalendarSync = '/demo/calendar-sync';
+  static const String demoPortfolio = '/demo/portfolio';
 
   // Public
   static const String soporte = '/soporte';
@@ -350,6 +353,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: 'calendar-sync',
                 builder: (context, state) => const BizCalendarSyncPage(),
               ),
+              GoRoute(
+                path: 'portfolio',
+                builder: (context, state) => const BizPortfolioPage(),
+              ),
             ],
           ),
         ],
@@ -398,6 +405,10 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: 'calendar-sync',
                 builder: (context, state) => const BizCalendarSyncPage(),
+              ),
+              GoRoute(
+                path: 'portfolio',
+                builder: (context, state) => const BizPortfolioPage(),
               ),
             ],
           ),
