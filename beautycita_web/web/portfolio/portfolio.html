@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portafolio | BeautyCita</title>
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Portafolio | BeautyCita">
+  <meta property="og:description" content="Portafolio profesional de belleza">
+  <link rel="stylesheet" href="shared.css">
+  <link rel="icon" href="/favicon.ico">
+  <style>
+    /* PORTFOLIO THEME — Solo-focused, big hero, personal bio prominent */
+    :root {
+      --theme-accent: #c2185b;
+      --theme-bg: #fafafa;
+      --theme-hero-height: 45vh;
+    }
+    .hero {
+      position: relative;
+      height: var(--theme-hero-height);
+      background: linear-gradient(135deg, #1a1a1a 0%, #333 100%);
+      display: flex;
+      align-items: flex-end;
+      padding: 3rem;
+      color: #fff;
+      overflow: hidden;
+    }
+    .hero-photo {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0.4;
+    }
+    .hero-content { position: relative; z-index: 1; max-width: 700px; }
+    .hero h1 { font-size: 2.5rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .hero .tagline { font-size: 1.15rem; opacity: 0.9; }
+    .hero .rating { margin-top: 0.75rem; color: #f9a825; font-size: 1.1rem; }
+
+    .bio-section {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 3rem 1.5rem;
+      font-size: 1.05rem;
+      line-height: 1.8;
+      color: #444;
+    }
+
+    .contact-bar {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      padding: 2rem;
+      background: var(--theme-bg);
+    }
+    .contact-bar a {
+      padding: 0.6rem 1.5rem;
+      background: var(--theme-accent);
+      color: #fff;
+      border-radius: 999px;
+      font-weight: 500;
+      font-size: 0.9rem;
+      transition: opacity 0.2s;
+    }
+    .contact-bar a:hover { opacity: 0.85; text-decoration: none; }
+
+    @media (max-width: 768px) {
+      .hero { height: 35vh; padding: 2rem 1.5rem; }
+      .hero h1 { font-size: 1.8rem; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Loading -->
+  <div class="loading" data-portfolio="loading"><div class="spinner"></div></div>
+
+  <!-- Not available -->
+  <div data-portfolio="not-available" style="display:none;align-items:center;justify-content:center;height:100vh;text-align:center;padding:2rem;color:#666">
+    <div><h2>Este portafolio no est&aacute; disponible</h2><p>El sal&oacute;n a&uacute;n no ha publicado su portafolio.</p><a href="https://beautycita.com">Ir a BeautyCita</a></div>
+  </div>
+
+  <!-- Main content -->
+  <div data-portfolio="content" style="display:none">
+    <!-- Hero -->
+    <div class="hero">
+      <img data-portfolio="salon-photo" class="hero-photo" alt="" src="">
+      <div class="hero-content">
+        <h1 data-portfolio="salon-name"></h1>
+        <div class="tagline" data-portfolio="salon-tagline"></div>
+        <div class="rating">
+          <span data-portfolio="salon-rating"></span>
+          <span data-portfolio="salon-review-count" style="color:#ccc;font-size:0.9rem;margin-left:0.5rem"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contact -->
+    <div class="contact-bar">
+      <a data-portfolio="salon-whatsapp" href="#">WhatsApp</a>
+      <a data-portfolio="salon-instagram" href="#">Instagram</a>
+      <a data-portfolio="salon-facebook" href="#">Facebook</a>
+      <a data-portfolio="salon-website" href="#">Sitio Web</a>
+    </div>
+
+    <!-- Bio -->
+    <div class="bio-section" data-section="section-bio">
+      <div data-portfolio="salon-bio"></div>
+    </div>
+
+    <!-- Photos -->
+    <section class="section" data-section="section-photos">
+      <div class="container">
+        <h2 class="section-title">Nuestro Trabajo</h2>
+        <div class="photo-grid" data-portfolio="photos"></div>
+      </div>
+    </section>
+
+    <!-- Team -->
+    <section class="section" data-section="section-team">
+      <div class="container">
+        <h2 class="section-title">Equipo</h2>
+        <div class="team-grid" data-portfolio="team"></div>
+      </div>
+    </section>
+
+    <!-- Services -->
+    <section class="section" data-section="section-services">
+      <div class="container">
+        <h2 class="section-title">Servicios</h2>
+        <div data-portfolio="services"></div>
+      </div>
+    </section>
+
+    <!-- Reviews -->
+    <section class="section" data-section="section-reviews">
+      <div class="container">
+        <h2 class="section-title">Rese&ntilde;as</h2>
+        <div class="review-grid" data-portfolio="reviews"></div>
+      </div>
+    </section>
+
+    <!-- Hours + Map -->
+    <section class="section" data-section="section-hours">
+      <div class="container" style="display:grid;grid-template-columns:1fr 1fr;gap:2rem">
+        <div>
+          <h2 class="section-title">Horario</h2>
+          <div data-portfolio="salon-hours"></div>
+          <p style="margin-top:1rem;color:#666" data-portfolio="salon-address"></p>
+          <p style="color:#666" data-portfolio="salon-phone"></p>
+        </div>
+        <div data-section="section-map">
+          <h2 class="section-title">Ubicaci&oacute;n</h2>
+          <div data-portfolio="map"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="portfolio-footer">
+      powered by <a href="https://beautycita.com">BeautyCita</a>
+    </footer>
+  </div>
+
+  <script src="shared.js"></script>
+</body>
+</html>

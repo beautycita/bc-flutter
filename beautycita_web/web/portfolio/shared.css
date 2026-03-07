@@ -1,0 +1,107 @@
+/* Portfolio shared CSS — base styles used by all 5 themes */
+/* Theme-specific overrides go in each theme's <style> block */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bc-pink: #c2185b;
+  --bc-pink-light: #f8bbd0;
+  --bc-dark: #1a1a1a;
+  --bc-gray: #666;
+  --bc-light: #f5f5f5;
+  --bc-white: #fff;
+  --bc-border: #e0e0e0;
+  --bc-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  --bc-radius: 12px;
+  --bc-max-width: 1200px;
+  --bc-font: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+html { scroll-behavior: smooth; }
+body { font-family: var(--bc-font); color: var(--bc-dark); background: var(--bc-white); line-height: 1.6; -webkit-font-smoothing: antialiased; }
+
+img { max-width: 100%; height: auto; display: block; }
+a { color: var(--bc-pink); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* Loading state */
+.loading { display: flex; align-items: center; justify-content: center; min-height: 60vh; }
+.loading .spinner { width: 40px; height: 40px; border: 3px solid var(--bc-border); border-top-color: var(--bc-pink); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Section spacing */
+.section { padding: 3rem 1.5rem; }
+.section:nth-child(even) { background: var(--bc-light); }
+.container { max-width: var(--bc-max-width); margin: 0 auto; }
+
+/* Section headings */
+.section-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 1.5rem; color: var(--bc-dark); }
+
+/* Tags */
+.tag { display: inline-block; padding: 0.25rem 0.75rem; background: var(--bc-pink-light); color: var(--bc-pink); border-radius: 999px; font-size: 0.8rem; font-weight: 500; margin: 0.25rem 0.15rem; }
+.tags { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.5rem; }
+
+/* Team cards */
+.team-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; }
+.team-card { background: var(--bc-white); border-radius: var(--bc-radius); box-shadow: var(--bc-shadow); padding: 1.5rem; display: flex; gap: 1rem; align-items: flex-start; }
+.team-avatar { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.team-avatar.placeholder { background: var(--bc-pink-light); color: var(--bc-pink); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: 700; }
+.team-info h3 { font-size: 1.1rem; margin-bottom: 0.25rem; }
+.team-bio { color: var(--bc-gray); font-size: 0.9rem; margin-bottom: 0.5rem; }
+.team-rating { color: #f9a825; font-size: 0.9rem; }
+.team-stats { color: var(--bc-gray); font-size: 0.8rem; margin-top: 0.35rem; }
+
+/* Photo grid */
+.photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+.photo-card { border-radius: var(--bc-radius); overflow: hidden; background: var(--bc-white); box-shadow: var(--bc-shadow); }
+.photo-card img { width: 100%; aspect-ratio: 4/5; object-fit: cover; }
+.photo-caption { padding: 0.75rem 1rem 0.5rem; font-size: 0.9rem; color: var(--bc-gray); }
+.photo-card > .tag { margin: 0 1rem 0.75rem; }
+
+/* Before/after slider */
+.ba-slider { position: relative; overflow: hidden; border-radius: var(--bc-radius) var(--bc-radius) 0 0; }
+.ba-after { width: 100%; aspect-ratio: 4/5; object-fit: cover; display: block; }
+.ba-before-wrap { position: absolute; top: 0; left: 0; height: 100%; width: 50%; overflow: hidden; }
+.ba-before { width: 100%; height: 100%; object-fit: cover; }
+.ba-range { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: ew-resize; z-index: 2; margin: 0; }
+.ba-before-wrap::after { content: ''; position: absolute; top: 0; right: 0; width: 3px; height: 100%; background: var(--bc-white); box-shadow: 0 0 6px rgba(0,0,0,0.3); }
+.ba-labels { position: absolute; bottom: 8px; left: 0; right: 0; display: flex; justify-content: space-between; padding: 0 12px; font-size: 0.75rem; color: var(--bc-white); text-shadow: 0 1px 3px rgba(0,0,0,0.6); pointer-events: none; z-index: 1; }
+
+/* Services */
+.service-category { margin-bottom: 1.5rem; }
+.service-category h3 { font-size: 1.1rem; color: var(--bc-pink); margin-bottom: 0.75rem; text-transform: capitalize; }
+.service-row { display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0; border-bottom: 1px solid var(--bc-border); }
+.service-name { font-weight: 500; }
+.service-details { color: var(--bc-gray); font-size: 0.9rem; text-align: right; white-space: nowrap; }
+
+/* Reviews */
+.review-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; }
+.review-card { background: var(--bc-white); border-radius: var(--bc-radius); box-shadow: var(--bc-shadow); padding: 1.25rem; }
+.review-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+.review-author { font-weight: 600; font-size: 0.95rem; }
+.review-stars { color: #f9a825; }
+.review-text { color: var(--bc-gray); font-size: 0.9rem; margin-bottom: 0.5rem; }
+.review-date { color: #999; font-size: 0.8rem; }
+
+/* Hours */
+.hours-row { display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px solid var(--bc-border); font-size: 0.9rem; }
+.hours-row.closed { color: #999; }
+
+/* Social links */
+.social-links { display: flex; gap: 1rem; flex-wrap: wrap; }
+.social-links a { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.5rem 1rem; background: var(--bc-light); border-radius: 999px; font-size: 0.85rem; color: var(--bc-dark); transition: background 0.2s; }
+.social-links a:hover { background: var(--bc-pink-light); text-decoration: none; }
+
+/* Footer */
+.portfolio-footer { text-align: center; padding: 2rem; color: #999; font-size: 0.75rem; }
+.portfolio-footer a { color: #999; }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .section { padding: 2rem 1rem; }
+  .team-grid, .photo-grid, .review-grid { grid-template-columns: 1fr; }
+  .team-card { flex-direction: column; align-items: center; text-align: center; }
+}
+
+/* Google font load */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');

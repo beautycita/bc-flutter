@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portafolio | BeautyCita</title>
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Portafolio | BeautyCita">
+  <meta property="og:description" content="Portafolio profesional de belleza">
+  <link rel="stylesheet" href="shared.css">
+  <link rel="icon" href="/favicon.ico">
+  <style>
+    /* STOREFRONT THEME — Services/prices lead, catalog feel, clean and businesslike */
+    :root {
+      --theme-accent: #00695c;
+      --theme-accent-light: #b2dfdb;
+    }
+    body { background: #f9fdfb; }
+
+    .top-bar {
+      display: flex; align-items: center; gap: 1.5rem;
+      padding: 1.5rem 2rem; background: #fff;
+      border-bottom: 2px solid var(--theme-accent);
+      max-width: var(--bc-max-width); margin: 0 auto;
+    }
+    .top-bar img { width: 64px; height: 64px; border-radius: var(--bc-radius); object-fit: cover; }
+    .top-bar h1 { font-size: 1.5rem; margin-bottom: 0.15rem; }
+    .top-bar .tagline { color: var(--bc-gray); font-size: 0.9rem; }
+    .top-bar .meta { margin-left: auto; text-align: right; font-size: 0.85rem; color: var(--bc-gray); }
+    .top-bar .rating { color: #f9a825; font-size: 1rem; }
+
+    /* Services are the hero — card-based catalog */
+    .services-catalog {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+      gap: 1.5rem;
+    }
+    .service-category {
+      background: #fff; border-radius: var(--bc-radius);
+      box-shadow: var(--bc-shadow); padding: 1.5rem;
+      border-top: 3px solid var(--theme-accent);
+    }
+    .service-category h3 { color: var(--theme-accent); font-size: 1.15rem; margin-bottom: 1rem; }
+    .service-row { padding: 0.75rem 0; }
+    .service-name { font-weight: 600; }
+    .service-details { color: var(--theme-accent); font-weight: 500; }
+
+    .section-title { color: var(--theme-accent); }
+    .tag { background: var(--theme-accent-light); color: var(--theme-accent); }
+
+    .social-links a { background: var(--theme-accent-light); color: var(--theme-accent); }
+    .social-links a:hover { background: var(--theme-accent); color: #fff; }
+
+    .photo-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+    .photo-card img { aspect-ratio: 1; }
+
+    @media (max-width: 768px) {
+      .top-bar { flex-wrap: wrap; }
+      .top-bar .meta { margin-left: 0; text-align: left; width: 100%; margin-top: 0.5rem; }
+      .services-catalog { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="loading" data-portfolio="loading"><div class="spinner"></div></div>
+  <div data-portfolio="not-available" style="display:none;align-items:center;justify-content:center;height:100vh;text-align:center;padding:2rem;color:#666">
+    <div><h2>Este portafolio no est&aacute; disponible</h2><p>El sal&oacute;n a&uacute;n no ha publicado su portafolio.</p><a href="https://beautycita.com">Ir a BeautyCita</a></div>
+  </div>
+
+  <div data-portfolio="content" style="display:none">
+    <!-- Header -->
+    <div class="top-bar">
+      <img data-portfolio="salon-photo" alt="" src="">
+      <div>
+        <h1 data-portfolio="salon-name"></h1>
+        <div class="tagline" data-portfolio="salon-tagline"></div>
+      </div>
+      <div class="meta">
+        <div class="rating" data-portfolio="salon-rating"></div>
+        <div data-portfolio="salon-review-count"></div>
+        <div data-portfolio="salon-address" style="margin-top:0.25rem"></div>
+      </div>
+    </div>
+
+    <!-- Contact links -->
+    <section class="section" style="padding:1.5rem">
+      <div class="container">
+        <div class="social-links" style="justify-content:center">
+          <a data-portfolio="salon-whatsapp" href="#">WhatsApp</a>
+          <a data-portfolio="salon-instagram" href="#">Instagram</a>
+          <a data-portfolio="salon-facebook" href="#">Facebook</a>
+          <a data-portfolio="salon-website" href="#">Sitio Web</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Services (hero section) -->
+    <section class="section" data-section="section-services">
+      <div class="container">
+        <h2 class="section-title">Cat&aacute;logo de Servicios</h2>
+        <div class="services-catalog" data-portfolio="services"></div>
+      </div>
+    </section>
+
+    <!-- Bio -->
+    <section class="section" data-section="section-bio" style="max-width:800px;margin:0 auto">
+      <p data-portfolio="salon-bio" style="font-size:1rem;color:#555;line-height:1.8"></p>
+    </section>
+
+    <!-- Team -->
+    <section class="section" data-section="section-team">
+      <div class="container">
+        <h2 class="section-title">Equipo</h2>
+        <div class="team-grid" data-portfolio="team"></div>
+      </div>
+    </section>
+
+    <!-- Photos -->
+    <section class="section" data-section="section-photos">
+      <div class="container">
+        <h2 class="section-title">Galeria</h2>
+        <div class="photo-grid" data-portfolio="photos"></div>
+      </div>
+    </section>
+
+    <!-- Reviews -->
+    <section class="section" data-section="section-reviews">
+      <div class="container">
+        <h2 class="section-title">Rese&ntilde;as</h2>
+        <div class="review-grid" data-portfolio="reviews"></div>
+      </div>
+    </section>
+
+    <!-- Hours + Map -->
+    <section class="section" data-section="section-hours">
+      <div class="container" style="display:grid;grid-template-columns:1fr 1fr;gap:2rem">
+        <div>
+          <h2 class="section-title">Horario</h2>
+          <div data-portfolio="salon-hours"></div>
+          <p style="margin-top:1rem;color:#666" data-portfolio="salon-phone"></p>
+        </div>
+        <div data-section="section-map">
+          <h2 class="section-title">Ubicaci&oacute;n</h2>
+          <div data-portfolio="map"></div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="portfolio-footer">
+      powered by <a href="https://beautycita.com">BeautyCita</a>
+    </footer>
+  </div>
+
+  <script src="shared.js"></script>
+</body>
+</html>

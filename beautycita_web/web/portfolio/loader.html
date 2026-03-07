@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portafolio | BeautyCita</title>
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Portafolio | BeautyCita">
+  <meta property="og:description" content="Portafolio profesional de belleza">
+  <link rel="icon" href="/favicon.ico">
+  <style>
+    body { margin: 0; font-family: system-ui, sans-serif; }
+    .loading { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+    .spinner { width: 40px; height: 40px; border: 3px solid #e0e0e0; border-top-color: #c2185b; border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="loading"><div class="spinner"></div></div>
+  <script>
+    (function() {
+      var SUPABASE_URL = 'https://beautycita.com/supabase';
+      var API_URL = SUPABASE_URL + '/functions/v1/portfolio-public';
+      var ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzM1Njg5NjAwLCJleHAiOjE4OTM0NTYwMDB9.rz0oLwpK6HMsRI3PStAW3K1gl79d6z1PqqW8lvCtF9Q';
+
+      var slug = window.location.pathname.split('/s/')[1];
+      if (slug) slug = slug.split('/')[0].split('?')[0];
+
+      if (!slug) {
+        document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;text-align:center;padding:2rem;color:#666"><div><h2>Portafolio no encontrado</h2><a href="https://beautycita.com" style="color:#c2185b">Ir a BeautyCita</a></div></div>';
+        return;
+      }
+
+      // First fetch just to get the theme name, then redirect to the themed page
+      fetch(API_URL + '?slug=' + encodeURIComponent(slug), { headers: { 'apikey': ANON_KEY } })
+        .then(function(r) {
+          if (r.status === 404) throw new Error('not_found');
+          if (!r.ok) throw new Error('error');
+          return r.json();
+        })
+        .then(function(data) {
+          var theme = data.theme || 'portfolio';
+          var validThemes = ['portfolio', 'team-builder', 'storefront', 'gallery', 'local'];
+          if (validThemes.indexOf(theme) === -1) theme = 'portfolio';
+
+          // Replace the loader with the actual theme page
+          window.location.replace('/portfolio/' + theme + '.html' + window.location.search + (window.location.search ? '&' : '?') + 'slug=' + encodeURIComponent(slug));
+        })
+        .catch(function(err) {
+          if (err.message === 'not_found') {
+            document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;text-align:center;padding:2rem;color:#666"><div><h2>Este portafolio no est\u00e1 disponible</h2><p>El sal\u00f3n a\u00fan no ha publicado su portafolio.</p><a href="https://beautycita.com" style="color:#c2185b">Ir a BeautyCita</a></div></div>';
+          } else {
+            document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;text-align:center;padding:2rem;color:#666"><div><h2>Error cargando portafolio</h2><a href="https://beautycita.com" style="color:#c2185b">Ir a BeautyCita</a></div></div>';
+          }
+        });
+    })();
+  </script>
+</body>
+</html>
