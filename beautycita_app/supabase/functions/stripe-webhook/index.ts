@@ -132,7 +132,33 @@ serve(async (req) => {
       // =======================================================================
       case "payment_intent.succeeded": {
         const paymentIntent = event.data.object as Stripe.PaymentIntent;
-        const bookingId = paymentIntent.metadata?.booking_id;
+        const metadata = paymentIntent.metadata ?? {};
+
+        // --- Product order payments (marketplace) ---
+        if (metadata.payment_type === "product") {
+          const { error: orderError } = await supabase.from("orders").insert({
+            buyer_id: metadata.user_id,
+            business_id: metadata.business_id,
+            product_id: metadata.product_id,
+            product_name: metadata.product_name,
+            quantity: parseInt(metadata.quantity ?? "1"),
+            total_amount: paymentIntent.amount / 100,
+            commission_amount: (paymentIntent.application_fee_amount ?? 0) / 100,
+            stripe_payment_intent_id: paymentIntent.id,
+            status: "paid",
+            shipping_address: JSON.parse(metadata.shipping_address ?? "null"),
+          });
+
+          if (orderError) {
+            console.error(`[STRIPE-WEBHOOK] Failed to create order: ${orderError.message}`);
+          } else {
+            console.log(`[STRIPE-WEBHOOK] Product order created for PI ${paymentIntent.id}`);
+          }
+          break;
+        }
+
+        // --- Booking payments ---
+        const bookingId = metadata.booking_id;
 
         if (!bookingId) {
           console.log(`[STRIPE-WEBHOOK] payment_intent.succeeded without booking_id metadata`);
