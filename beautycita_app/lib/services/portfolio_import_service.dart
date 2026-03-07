@@ -1,5 +1,4 @@
 import 'dart:typed_data';
-import 'package:beautycita_core/beautycita_core.dart';
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart' show FileOptions;
 import 'supabase_client.dart';

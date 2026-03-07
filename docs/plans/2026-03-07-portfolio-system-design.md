@@ -8,7 +8,7 @@
 
 ## Overview
 
-A personal website system for salons, served as lightweight static HTML pages hydrated with live data. Each salon gets one portfolio page at a shareable URL (`beautycita.com/s/salon-slug`). The page showcases the salon, its team, their work, services, reviews, and location. White-label — no BeautyCita branding except a tiny "powered by BeautyCita" footer.
+A personal website system for salons, served as lightweight static HTML pages hydrated with live data. Each salon gets one portfolio page at a shareable URL (`beautycita.com/p/salon-slug`). The page showcases the salon, its team, their work, services, reviews, and location. White-label — no BeautyCita branding except a tiny "powered by BeautyCita" footer.
 
 Portfolios start **private by default**. The salon owner builds it up, then toggles public when satisfied. Can be toggled off at any time.
 
@@ -21,7 +21,7 @@ Each theme is a standalone HTML/CSS template. On page load, a lightweight JS fet
 **Why not Flutter web:** Portfolio links get shared on Instagram, WhatsApp, business cards. They need to load instantly, be SEO-indexable, and work on any device without a heavy framework.
 
 **Flow:**
-1. Client clicks `beautycita.com/s/salon-luna`
+1. Client clicks `beautycita.com/p/salon-luna`
 2. Nginx serves the static HTML template for that salon's chosen theme
 3. JS fetches salon data from Supabase (public read, respects `portfolio_public` flag)
 4. Template hydrates with data, page renders
@@ -216,8 +216,8 @@ Rendered in order, sections auto-hide if no data:
 
 ## URL Routing
 
-- Salon page: `beautycita.com/s/salon-luna`
-- Link to specific team member: `beautycita.com/s/salon-luna?staff=jessica` (same page, filtered/scrolled)
+- Salon page: `beautycita.com/p/salon-luna`
+- Link to specific team member: `beautycita.com/p/salon-luna?staff=jessica` (same page, filtered/scrolled)
 - Nginx routes `/s/*` to the portfolio template system
 - Slug uniqueness enforced at DB level
 

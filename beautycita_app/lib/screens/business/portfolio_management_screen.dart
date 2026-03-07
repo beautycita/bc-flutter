@@ -657,7 +657,7 @@ class _PortfolioManagementScreenState
                           ),
                           subtitle: Text(
                             _slugCtrl.text.isNotEmpty
-                                ? 'Visible en beautycita.com/s/${_slugCtrl.text}'
+                                ? 'Visible en beautycita.com/p/${_slugCtrl.text}'
                                 : 'Configura una URL para compartir',
                             style: GoogleFonts.nunito(fontSize: 12),
                           ),
@@ -768,7 +768,7 @@ class _PortfolioManagementScreenState
                                 padding:
                                     const EdgeInsets.only(right: 4),
                                 child: Text(
-                                  'beautycita.com/s/',
+                                  'beautycita.com/p/',
                                   style: GoogleFonts.nunito(
                                     fontSize: 13,
                                     color: colors.onSurface
