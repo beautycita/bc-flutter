@@ -13,6 +13,8 @@ import 'business_qr_screen.dart';
 import 'business_payments_screen.dart';
 import 'business_settings_screen.dart';
 import 'business_staff_analytics_screen.dart';
+import 'orders_screen.dart';
+import 'pos_management_screen.dart';
 
 final businessTabProvider = StateProvider<int>((ref) => 0);
 
@@ -28,6 +30,8 @@ class BusinessShellScreen extends ConsumerWidget {
     _BizTab(icon: Icons.gavel_rounded, label: 'Disputas'),
     _BizTab(icon: Icons.qr_code_rounded, label: 'QR Walk-in'),
     _BizTab(icon: Icons.payments_rounded, label: 'Pagos'),
+    _BizTab(icon: Icons.local_shipping_outlined, label: 'Pedidos'),
+    _BizTab(icon: Icons.storefront_outlined, label: 'Tienda'),
     _BizTab(icon: Icons.settings_rounded, label: 'Ajustes'),
   ];
 
@@ -186,6 +190,8 @@ class _BusinessContent extends ConsumerWidget {
           const BusinessDisputesScreen(),
           const BusinessQrScreen(),
           const BusinessPaymentsScreen(),
+          const OrdersScreen(),
+          const PosManagementScreen(),
           const BusinessSettingsScreen(),
         ],
       ),
