@@ -34,6 +34,8 @@ import 'package:beautycita/screens/legal_screens.dart';
 import 'package:beautycita/screens/business/business_shell_screen.dart';
 import 'package:beautycita/screens/discovered_salon_confirm_screen.dart';
 import 'package:beautycita/screens/post_registration_screen.dart';
+import 'package:beautycita/screens/feed/feed_screen.dart';
+import 'package:beautycita/screens/feed/saved_screen.dart';
 
 
 class AppRoutes {
@@ -73,6 +75,8 @@ class AppRoutes {
   static const String terms = '/legal'; // back-compat
   static const String privacy = '/legal'; // back-compat
   static const String cookies = '/legal'; // back-compat
+  static const String feed = '/feed';
+  static const String feedSaved = '/feed/saved';
 
 
   static final GoRouter router = GoRouter(
@@ -644,6 +648,38 @@ class AppRoutes {
           child: const PostRegistrationScreen(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return FadeTransition(opacity: animation, child: child);
+          },
+        ),
+      ),
+      GoRoute(
+        path: feed,
+        name: 'feed',
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const FeedScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
+                .chain(CurveTween(curve: Curves.easeInOutCubic));
+            return SlideTransition(
+              position: animation.drive(tween),
+              child: child,
+            );
+          },
+        ),
+      ),
+      GoRoute(
+        path: feedSaved,
+        name: 'feed-saved',
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const SavedScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
+                .chain(CurveTween(curve: Curves.easeInOutCubic));
+            return SlideTransition(
+              position: animation.drive(tween),
+              child: child,
+            );
           },
         ),
       ),
