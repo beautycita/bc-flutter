@@ -33,6 +33,7 @@ const _navItems = <_NavItem>[
   _NavItem(label: 'Disputas', icon: Icons.gavel_outlined, route: WebRoutes.negocioDisputes),
   _NavItem(label: 'QR Walk-in', icon: Icons.qr_code_2_outlined, route: WebRoutes.negocioQr),
   _NavItem(label: 'Resenas', icon: Icons.reviews_outlined, route: WebRoutes.negocioReviews),
+  _NavItem(label: 'Tienda', icon: Icons.storefront_outlined, route: WebRoutes.negocioPos),
   _NavDivider(),
   _NavItem(label: 'Configuracion', icon: Icons.settings_outlined, route: WebRoutes.negocioSettings),
 ];
