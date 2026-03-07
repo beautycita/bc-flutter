@@ -6,6 +6,7 @@ import '../../config/constants.dart';
 import '../../providers/business_provider.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
+import 'portfolio_management_screen.dart';
 
 class BusinessSettingsScreen extends ConsumerStatefulWidget {
   const BusinessSettingsScreen({super.key});
@@ -404,6 +405,49 @@ class _BusinessSettingsScreenState
                     activeColor: colors.primary,
                   ),
                 ],
+              ),
+            ),
+
+            // ---------- Portfolio ----------
+            const SizedBox(height: AppConstants.paddingLG),
+            _SectionHeader(label: 'PORTAFOLIO PUBLICO'),
+            const SizedBox(height: AppConstants.paddingSM),
+            InkWell(
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const PortfolioManagementScreen(),
+                ),
+              ),
+              borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+              child: Container(
+                decoration: _cardDecoration(colors),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                      horizontal: AppConstants.paddingMD, vertical: 4),
+                  leading: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: colors.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(Icons.web_rounded,
+                        color: colors.primary, size: 22),
+                  ),
+                  title: Text(
+                    'Administrar Portafolio',
+                    style: GoogleFonts.poppins(
+                        fontSize: 14, fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: Text(
+                    'Fotos, temas, bios del equipo',
+                    style: GoogleFonts.nunito(
+                        fontSize: 12,
+                        color: colors.onSurface.withValues(alpha: 0.5)),
+                  ),
+                  trailing: Icon(Icons.chevron_right_rounded,
+                      color: colors.onSurface.withValues(alpha: 0.35)),
+                ),
               ),
             ),
 
