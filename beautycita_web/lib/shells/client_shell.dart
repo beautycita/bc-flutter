@@ -39,6 +39,11 @@ class ClientShell extends StatelessWidget {
         scrolledUnderElevation: 1,
         actions: [
           _NavButton(
+            label: 'Explorar',
+            route: WebRoutes.explorar,
+            isActive: currentPath == WebRoutes.explorar,
+          ),
+          _NavButton(
             label: 'Reservar',
             route: WebRoutes.reservar,
             isActive: currentPath == WebRoutes.reservar,

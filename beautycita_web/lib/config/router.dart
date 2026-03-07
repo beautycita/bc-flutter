@@ -29,8 +29,10 @@ import '../pages/business/biz_payments_page.dart';
 import '../pages/business/biz_services_page.dart';
 import '../pages/business/biz_qr_page.dart';
 import '../pages/business/biz_reviews_page.dart';
+import '../pages/business/biz_pos_page.dart';
 import '../pages/business/biz_settings_page.dart';
 import '../pages/business/biz_staff_page.dart';
+import '../pages/client/feed_page.dart';
 import '../pages/client/mis_citas_page.dart';
 import '../pages/client/reservar_page.dart';
 import '../pages/auth/callback_page.dart';
@@ -90,8 +92,10 @@ abstract final class WebRoutes {
   static const String negocioQr = '/negocio/qr';
   static const String negocioReviews = '/negocio/reviews';
   static const String negocioCalendarSync = '/negocio/calendar-sync';
+  static const String negocioPos = '/negocio/pos';
 
   // Client
+  static const String explorar = '/explorar';
   static const String reservar = '/reservar';
   static const String misCitas = '/mis-citas';
 
@@ -106,6 +110,7 @@ abstract final class WebRoutes {
   static const String demoQr = '/demo/qr';
   static const String demoReviews = '/demo/reviews';
   static const String demoCalendarSync = '/demo/calendar-sync';
+  static const String demoPos = '/demo/pos';
 
   // Public
   static const String soporte = '/soporte';
@@ -141,6 +146,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           path.startsWith('/auth') ||
           path == '/soporte' ||
           path.startsWith('/demo') ||
+          path.startsWith('/explorar') ||
           path.startsWith('/reservar');
 
       // If Supabase never initialized (offline, failed, etc.),
@@ -350,6 +356,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: 'calendar-sync',
                 builder: (context, state) => const BizCalendarSyncPage(),
               ),
+              GoRoute(
+                path: 'pos',
+                builder: (context, state) => const BizPosPage(),
+              ),
             ],
           ),
         ],
@@ -399,6 +409,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: 'calendar-sync',
                 builder: (context, state) => const BizCalendarSyncPage(),
               ),
+              GoRoute(
+                path: 'pos',
+                builder: (context, state) => const BizPosPage(),
+              ),
             ],
           ),
         ],
@@ -408,6 +422,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       ShellRoute(
         builder: (context, state, child) => ClientShell(child: child),
         routes: [
+          GoRoute(
+            path: WebRoutes.explorar,
+            builder: (context, state) => const FeedPage(),
+          ),
           GoRoute(
             path: WebRoutes.reservar,
             builder: (context, state) => const ReservarPage(),
