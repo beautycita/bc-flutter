@@ -20,6 +20,7 @@ class PortfolioService {
     String? serviceCategory,
     String? caption,
     Map<String, dynamic>? productTags,
+    String? appointmentId,
   }) async {
     final client = SupabaseClientService.client;
     final ts = DateTime.now().millisecondsSinceEpoch;
@@ -64,6 +65,7 @@ class PortfolioService {
       'service_category': serviceCategory,
       'caption': caption,
       'product_tags': productTags,
+      'appointment_id': appointmentId,
       'is_visible': true,
       'sort_order': 0,
     };

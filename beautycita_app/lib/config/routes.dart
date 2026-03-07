@@ -32,6 +32,7 @@ import 'package:beautycita/screens/cash_payment_screen.dart';
 import 'package:beautycita/screens/cita_express_screen.dart';
 import 'package:beautycita/screens/legal_screens.dart';
 import 'package:beautycita/screens/business/business_shell_screen.dart';
+import 'package:beautycita/screens/business/portfolio_camera_screen.dart';
 import 'package:beautycita/screens/discovered_salon_confirm_screen.dart';
 import 'package:beautycita/screens/post_registration_screen.dart';
 
@@ -69,6 +70,7 @@ class AppRoutes {
   static const String citaExpress = '/cita-express/:businessId';
   static const String discoveredSalonConfirm = '/discovered-salon-confirm';
   static const String postRegistration = '/post-registration';
+  static const String portfolioCamera = '/business/portfolio-camera';
   static const String legal = '/legal';
   static const String terms = '/legal'; // back-compat
   static const String privacy = '/legal'; // back-compat
@@ -625,6 +627,28 @@ class AppRoutes {
           return CustomTransitionPage(
             key: state.pageKey,
             child: DiscoveredSalonConfirmScreen(salonData: salonData),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              final tween = Tween(begin: const Offset(0.0, 1.0), end: Offset.zero)
+                  .chain(CurveTween(curve: Curves.easeInOutCubic));
+              return SlideTransition(
+                position: animation.drive(tween),
+                child: child,
+              );
+            },
+          );
+        },
+      ),
+      GoRoute(
+        path: portfolioCamera,
+        name: 'portfolio-camera',
+        pageBuilder: (context, state) {
+          final args = state.extra as PortfolioCameraArgs;
+          return CustomTransitionPage(
+            key: state.pageKey,
+            child: PortfolioCameraScreen(
+              businessId: args.businessId,
+              appointmentId: args.appointmentId,
+            ),
             transitionsBuilder: (context, animation, secondaryAnimation, child) {
               final tween = Tween(begin: const Offset(0.0, 1.0), end: Offset.zero)
                   .chain(CurveTween(curve: Curves.easeInOutCubic));
