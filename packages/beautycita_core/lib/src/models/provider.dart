@@ -18,6 +18,11 @@ class Provider {
   final String? facebookUrl;
   final String? instagramHandle;
   final bool isVerified;
+  final String? portfolioSlug;
+  final bool portfolioPublic;
+  final String? portfolioTheme;
+  final String? portfolioBio;
+  final String? portfolioTagline;
 
   const Provider({
     required this.id,
@@ -39,6 +44,11 @@ class Provider {
     this.facebookUrl,
     this.instagramHandle,
     this.isVerified = false,
+    this.portfolioSlug,
+    this.portfolioPublic = false,
+    this.portfolioTheme = 'portfolio',
+    this.portfolioBio,
+    this.portfolioTagline,
   });
 
   factory Provider.fromJson(Map<String, dynamic> json) {
@@ -65,6 +75,11 @@ class Provider {
       facebookUrl: json['facebook_url'] as String?,
       instagramHandle: json['instagram_handle'] as String?,
       isVerified: json['is_verified'] as bool? ?? false,
+      portfolioSlug: json['portfolio_slug'] as String?,
+      portfolioPublic: json['portfolio_public'] as bool? ?? false,
+      portfolioTheme: json['portfolio_theme'] as String? ?? 'portfolio',
+      portfolioBio: json['portfolio_bio'] as String?,
+      portfolioTagline: json['portfolio_tagline'] as String?,
     );
   }
 
@@ -89,6 +104,11 @@ class Provider {
       'facebook_url': facebookUrl,
       'instagram_handle': instagramHandle,
       'is_verified': isVerified,
+      'portfolio_slug': portfolioSlug,
+      'portfolio_public': portfolioPublic,
+      'portfolio_theme': portfolioTheme,
+      'portfolio_bio': portfolioBio,
+      'portfolio_tagline': portfolioTagline,
     };
   }
 }
