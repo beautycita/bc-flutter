@@ -57,6 +57,10 @@ abstract final class BCTables {
   static const String appConfig = 'app_config';
   static const String auditLog = 'audit_log';
 
+  // ── POS / Marketplace ────────────────────────────────────────────
+  static const String products = 'products';
+  static const String productShowcases = 'product_showcases';
+
   // ── Bitcoin / Payments ───────────────────────────────────────────────
   static const String btcAddresses = 'btc_addresses';
   static const String btcDeposits = 'btc_deposits';
