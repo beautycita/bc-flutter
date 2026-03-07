@@ -23,7 +23,7 @@
       var API_URL = SUPABASE_URL + '/functions/v1/portfolio-public';
       var ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzM1Njg5NjAwLCJleHAiOjE4OTM0NTYwMDB9.rz0oLwpK6HMsRI3PStAW3K1gl79d6z1PqqW8lvCtF9Q';
 
-      var slug = window.location.pathname.split('/s/')[1];
+      var slug = window.location.pathname.split('/p/')[1];
       if (slug) slug = slug.split('/')[0].split('?')[0];
 
       if (!slug) {

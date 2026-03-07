@@ -8,9 +8,9 @@
   var API_URL = SUPABASE_URL + '/functions/v1/portfolio-public';
   var ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzM1Njg5NjAwLCJleHAiOjE4OTM0NTYwMDB9.rz0oLwpK6HMsRI3PStAW3K1gl79d6z1PqqW8lvCtF9Q';
 
-  // Extract slug from URL: /s/salon-slug or /portfolio/preview?slug=x
+  // Extract slug from URL: /p/salon-slug or /portfolio/preview?slug=x
   var path = window.location.pathname;
-  var slug = path.split('/s/')[1];
+  var slug = path.split('/p/')[1];
   if (slug) slug = slug.split('/')[0].split('?')[0];
   if (!slug) slug = new URLSearchParams(window.location.search).get('slug');
 
