@@ -218,6 +218,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
+                              // Explore feed button — visible to all users
+                              _HeaderButton(
+                                icon: Icons.explore_outlined,
+                                onTap: () => context.push('/feed'),
+                              ),
+                              const SizedBox(width: AppConstants.paddingSM),
                               // Mi Negocio button — only visible for business owners
                               Consumer(
                                 builder: (context, ref, _) {
