@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/constants.dart';
 import '../../providers/business_provider.dart';
+import '../../providers/feature_toggle_provider.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 
@@ -322,15 +323,18 @@ class _BusinessSettingsScreenState
                     onChanged: (v) => setState(() => _acceptWalkins = v),
                     activeTrackColor: colors.primary,
                   ),
-                  const Divider(height: 1),
-                  SwitchListTile(
-                    title: Text('Requiere deposito',
-                        style: GoogleFonts.poppins(
-                            fontSize: 14, fontWeight: FontWeight.w500)),
-                    value: _depositRequired,
-                    onChanged: (v) => setState(() => _depositRequired = v),
-                    activeTrackColor: colors.primary,
-                  ),
+                  // Deposit toggle — gated by enable_deposit_required feature toggle
+                  if (ref.watch(featureTogglesProvider).isEnabled('enable_deposit_required')) ...[
+                    const Divider(height: 1),
+                    SwitchListTile(
+                      title: Text('Requiere deposito',
+                          style: GoogleFonts.poppins(
+                              fontSize: 14, fontWeight: FontWeight.w500)),
+                      value: _depositRequired,
+                      onChanged: (v) => setState(() => _depositRequired = v),
+                      activeTrackColor: colors.primary,
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -344,68 +348,72 @@ class _BusinessSettingsScreenState
                     decoration: _styledInput('Cancelacion (horas)'),
                   ),
                 ),
-                const SizedBox(width: AppConstants.paddingSM),
-                Expanded(
-                  child: TextField(
-                    controller: _depositPctCtrl,
-                    keyboardType: TextInputType.number,
-                    enabled: _depositRequired,
-                    decoration: _styledInput('Deposito (%)'),
+                if (ref.watch(featureTogglesProvider).isEnabled('enable_deposit_required')) ...[
+                  const SizedBox(width: AppConstants.paddingSM),
+                  Expanded(
+                    child: TextField(
+                      controller: _depositPctCtrl,
+                      keyboardType: TextInputType.number,
+                      enabled: _depositRequired,
+                      decoration: _styledInput('Deposito (%)'),
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
 
-            // No-show policy
-            const SizedBox(height: AppConstants.paddingMD),
-            _SectionHeader(label: 'POLITICA DE NO-SHOW'),
-            const SizedBox(height: AppConstants.paddingSM),
-            Container(
-              decoration: _cardDecoration(colors),
-              clipBehavior: Clip.antiAlias,
-              child: Column(
-                children: [
-                  RadioListTile<String>(
-                    title: Text('Retener deposito',
-                        style: GoogleFonts.poppins(
-                            fontSize: 14, fontWeight: FontWeight.w500)),
-                    subtitle: Text('Cliente pierde el deposito',
-                        style: GoogleFonts.nunito(fontSize: 12)),
-                    value: 'forfeit_deposit',
-                    groupValue: _noShowPolicy,
-                    onChanged: (v) =>
-                        setState(() => _noShowPolicy = v ?? 'forfeit_deposit'),
-                    activeColor: colors.primary,
-                  ),
-                  const Divider(height: 1),
-                  RadioListTile<String>(
-                    title: Text('Reembolso total',
-                        style: GoogleFonts.poppins(
-                            fontSize: 14, fontWeight: FontWeight.w500)),
-                    subtitle: Text('Devolver todo al cliente',
-                        style: GoogleFonts.nunito(fontSize: 12)),
-                    value: 'full_refund',
-                    groupValue: _noShowPolicy,
-                    onChanged: (v) =>
-                        setState(() => _noShowPolicy = v ?? 'forfeit_deposit'),
-                    activeColor: colors.primary,
-                  ),
-                  const Divider(height: 1),
-                  RadioListTile<String>(
-                    title: Text('Reembolso parcial',
-                        style: GoogleFonts.poppins(
-                            fontSize: 14, fontWeight: FontWeight.w500)),
-                    subtitle: Text('50% deposito retenido',
-                        style: GoogleFonts.nunito(fontSize: 12)),
-                    value: 'partial_refund',
-                    groupValue: _noShowPolicy,
-                    onChanged: (v) =>
-                        setState(() => _noShowPolicy = v ?? 'forfeit_deposit'),
+            // No-show policy — only shown when deposit feature is enabled
+            if (ref.watch(featureTogglesProvider).isEnabled('enable_deposit_required')) ...[
+              const SizedBox(height: AppConstants.paddingMD),
+              _SectionHeader(label: 'POLITICA DE NO-SHOW'),
+              const SizedBox(height: AppConstants.paddingSM),
+              Container(
+                decoration: _cardDecoration(colors),
+                clipBehavior: Clip.antiAlias,
+                child: Column(
+                  children: [
+                    RadioListTile<String>(
+                      title: Text('Retener deposito',
+                          style: GoogleFonts.poppins(
+                              fontSize: 14, fontWeight: FontWeight.w500)),
+                      subtitle: Text('Cliente pierde el deposito',
+                          style: GoogleFonts.nunito(fontSize: 12)),
+                      value: 'forfeit_deposit',
+                      groupValue: _noShowPolicy,
+                      onChanged: (v) =>
+                          setState(() => _noShowPolicy = v ?? 'forfeit_deposit'),
+                      activeColor: colors.primary,
+                    ),
+                    const Divider(height: 1),
+                    RadioListTile<String>(
+                      title: Text('Reembolso total',
+                          style: GoogleFonts.poppins(
+                              fontSize: 14, fontWeight: FontWeight.w500)),
+                      subtitle: Text('Devolver todo al cliente',
+                          style: GoogleFonts.nunito(fontSize: 12)),
+                      value: 'full_refund',
+                      groupValue: _noShowPolicy,
+                      onChanged: (v) =>
+                          setState(() => _noShowPolicy = v ?? 'forfeit_deposit'),
+                      activeColor: colors.primary,
+                    ),
+                    const Divider(height: 1),
+                    RadioListTile<String>(
+                      title: Text('Reembolso parcial',
+                          style: GoogleFonts.poppins(
+                              fontSize: 14, fontWeight: FontWeight.w500)),
+                      subtitle: Text('50% deposito retenido',
+                          style: GoogleFonts.nunito(fontSize: 12)),
+                      value: 'partial_refund',
+                      groupValue: _noShowPolicy,
+                      onChanged: (v) =>
+                          setState(() => _noShowPolicy = v ?? 'forfeit_deposit'),
                     activeColor: colors.primary,
                   ),
                 ],
               ),
             ),
+            ], // end enable_deposit_required gate
 
             const SizedBox(height: AppConstants.paddingXL),
             ElevatedButton(

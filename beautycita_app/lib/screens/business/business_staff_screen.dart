@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show FileOptions;
 import '../../config/constants.dart';
 import '../../providers/business_provider.dart';
+import '../../providers/feature_toggle_provider.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 import '../../widgets/aphrodite_copy_field.dart';
@@ -652,9 +653,10 @@ class _AddStaffSheetState extends ConsumerState<_AddStaffSheet> {
                 },
               ),
 
+              // Portfolio images — gated by enable_portfolio toggle
+              if (ref.watch(featureTogglesProvider).isEnabled('enable_portfolio')) ...[
               const SizedBox(height: AppConstants.paddingMD),
 
-              // Portfolio images
               Text(
                 'PORTAFOLIO',
                 style: GoogleFonts.poppins(
@@ -750,6 +752,7 @@ class _AddStaffSheetState extends ConsumerState<_AddStaffSheet> {
                   ],
                 ),
               ),
+              ], // end enable_portfolio gate
 
               const SizedBox(height: AppConstants.paddingLG),
               ElevatedButton(
