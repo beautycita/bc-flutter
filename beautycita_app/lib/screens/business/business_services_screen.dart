@@ -5,6 +5,7 @@ import 'package:beautycita_core/models.dart';
 import '../../config/constants.dart';
 import '../../data/categories.dart';
 import '../../providers/business_provider.dart';
+import '../../providers/feature_toggle_provider.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 import '../../widgets/aphrodite_copy_field.dart';
@@ -674,9 +675,10 @@ class _ServiceFormSheetState extends ConsumerState<_ServiceFormSheet> {
                 'duration': '${_durationCtrl.text.trim()} min',
               },
             ),
+            // Deposit section — gated by enable_deposit_required toggle
+            if (ref.watch(featureTogglesProvider).isEnabled('enable_deposit_required')) ...[
             const SizedBox(height: AppConstants.paddingMD),
 
-            // Deposit section
             Container(
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -730,6 +732,7 @@ class _ServiceFormSheetState extends ConsumerState<_ServiceFormSheet> {
                 ],
               ),
             ),
+            ], // end enable_deposit_required gate
 
             const SizedBox(height: AppConstants.paddingLG),
             ElevatedButton(

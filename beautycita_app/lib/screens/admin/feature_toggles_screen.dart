@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/constants.dart';
 import '../../providers/admin_provider.dart';
+import '../../providers/feature_toggle_provider.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 
@@ -42,6 +43,8 @@ class _FeatureTogglesScreenState
         targetId: key,
         details: {'new_value': value.toString()},
       );
+      // Invalidate the consumer-side provider so the app reflects the change immediately
+      ref.invalidate(featureTogglesProvider);
       ToastService.showSuccess('$key: ${value ? "activado" : "desactivado"}');
     } catch (e, stack) {
       setState(() => _localValues[key] = prev);
