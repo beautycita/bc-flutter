@@ -17,7 +17,7 @@ INSERT INTO public.app_config (key, value, data_type, group_name, description_es
   ('enable_salon_chat',       'true',  'bool', 'social',       'Chat entre clientes y estilistas'),
   ('enable_referrals',        'true',  'bool', 'social',       'Sistema de referidos e invitaciones a salones'),
   -- Experimental
-  ('enable_virtual_studio',   'false', 'bool', 'experimental', 'Estudio virtual AR para probar estilos'),
+  ('enable_virtual_studio',   'true',  'bool', 'experimental', 'Estudio virtual AR para probar estilos'),
   ('enable_ai_recommendations','false','bool', 'experimental', 'Recomendaciones inteligentes con IA'),
   ('enable_voice_booking',    'false', 'bool', 'experimental', 'Reserva por voz (asistente)'),
   -- Platform

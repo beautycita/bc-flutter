@@ -19,7 +19,7 @@ const _defaults = <String, bool>{
   'enable_salon_chat': true,
   'enable_referrals': true,
   // Experimental
-  'enable_virtual_studio': false,
+  'enable_virtual_studio': true,
   'enable_ai_recommendations': false,
   'enable_voice_booking': false,
   // Platform
