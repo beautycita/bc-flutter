@@ -24,6 +24,7 @@ class _FeatureTogglesScreenState
     'social': 'Social',
     'experimental': 'Experimental',
     'platform': 'Plataforma',
+    'marketplace': 'Marketplace',
   };
 
   Future<void> _toggle(String key, bool value) async {

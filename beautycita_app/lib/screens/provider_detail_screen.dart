@@ -8,6 +8,7 @@ import 'package:beautycita/providers/chat_provider.dart';
 import 'package:beautycita/config/constants.dart';
 import '../config/theme_extension.dart';
 import '../services/toast_service.dart';
+import '../providers/feature_toggle_provider.dart';
 
 class ProviderDetailScreen extends ConsumerWidget {
   final String providerId;
@@ -98,7 +99,8 @@ class ProviderDetailScreen extends ConsumerWidget {
                       const SizedBox(height: AppConstants.paddingMD),
 
                       // Name, rating, verified badge
-                      _buildHeader(context, provider),
+                      _buildHeader(context, provider,
+                          reviewsEnabled: ref.watch(featureTogglesProvider).isEnabled('enable_reviews')),
 
                       const SizedBox(height: AppConstants.paddingLG),
 
@@ -106,8 +108,9 @@ class ProviderDetailScreen extends ConsumerWidget {
                       if (provider.address != null)
                         _buildAddressSection(context, provider),
 
-                      // Contact — message via BeautyCita chat
-                      _buildContactSection(context, ref, provider),
+                      // Contact — gated by enable_salon_chat toggle
+                      if (ref.watch(featureTogglesProvider).isEnabled('enable_salon_chat'))
+                        _buildContactSection(context, ref, provider),
 
                       // Social media links
                       if (provider.instagramHandle != null ||
@@ -224,7 +227,8 @@ class ProviderDetailScreen extends ConsumerWidget {
   // ---------------------------------------------------------------------------
   // Header: name, rating, verified
   // ---------------------------------------------------------------------------
-  Widget _buildHeader(BuildContext context, models.Provider provider) {
+  Widget _buildHeader(BuildContext context, models.Provider provider,
+      {bool reviewsEnabled = true}) {
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
 
@@ -280,7 +284,8 @@ class ProviderDetailScreen extends ConsumerWidget {
 
         const SizedBox(height: AppConstants.paddingSM),
 
-        // Rating and review count
+        // Rating and review count — gated by enable_reviews
+        if (reviewsEnabled)
         Row(
           children: [
             ..._buildStarIcons(context, provider.rating ?? 0),

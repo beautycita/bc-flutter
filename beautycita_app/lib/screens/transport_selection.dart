@@ -9,6 +9,7 @@ import '../widgets/cinematic_question_text.dart';
 import '../providers/booking_flow_provider.dart';
 import '../providers/profile_provider.dart';
 import '../providers/user_preferences_provider.dart';
+import '../providers/feature_toggle_provider.dart';
 import '../services/location_service.dart';
 
 class TransportSelection extends ConsumerStatefulWidget {
@@ -195,17 +196,20 @@ class _TransportSelectionState extends ConsumerState<TransportSelection> {
                       isRecommended: defaultTransport == 'car',
                       onTap: () => _selectTransport('car'),
                     ),
-                    const SizedBox(height: 14),
-                    _TransportCard(
-                      icon: Icons.local_taxi_rounded,
-                      iconColor: palette.secondary,
-                      iconBgColor: palette.secondary.withValues(alpha: 0.1),
-                      borderColor: palette.secondary,
-                      label: 'Uber',
-                      subtitle: 'Que me lleven',
-                      isRecommended: defaultTransport == 'uber',
-                      onTap: () => _selectTransport('uber'),
-                    ),
+                    // Uber — gated by enable_uber_integration toggle
+                    if (ref.watch(featureTogglesProvider).isEnabled('enable_uber_integration')) ...[
+                      const SizedBox(height: 14),
+                      _TransportCard(
+                        icon: Icons.local_taxi_rounded,
+                        iconColor: palette.secondary,
+                        iconBgColor: palette.secondary.withValues(alpha: 0.1),
+                        borderColor: palette.secondary,
+                        label: 'Uber',
+                        subtitle: 'Que me lleven',
+                        isRecommended: defaultTransport == 'uber',
+                        onTap: () => _selectTransport('uber'),
+                      ),
+                    ],
                     const SizedBox(height: 14),
                     _TransportCard(
                       icon: Icons.directions_bus_rounded,

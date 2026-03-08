@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:beautycita/services/supabase_client.dart';
 import 'package:beautycita/services/toast_service.dart';
 import 'package:beautycita/services/places_service.dart';
+import 'package:beautycita/services/username_validator.dart';
 
 class ProfileState {
   final String? avatarUrl;
@@ -428,6 +429,14 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
 
   Future<bool> updateUsername(String username) async {
     if (!_ensureReady('updateUsername')) return false;
+
+    // Server-side guard: reject reserved/profane usernames even if client missed it
+    final validationError = UsernameValidator.validate(username);
+    if (validationError != null) {
+      ToastService.showError(validationError);
+      return false;
+    }
+
     final userId = SupabaseClientService.currentUserId!;
 
     state = state.copyWith(isLoading: true, error: null);

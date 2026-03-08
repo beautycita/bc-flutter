@@ -15,7 +15,9 @@ import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:beautycita/services/lightx_service.dart';
 import 'package:beautycita/services/media_service.dart';
+import 'package:beautycita/providers/security_provider.dart';
 import 'package:beautycita/services/username_generator.dart';
+import 'package:beautycita/services/username_validator.dart';
 import 'package:beautycita/widgets/settings_widgets.dart';
 import 'package:beautycita/providers/admin_provider.dart';
 import 'package:beautycita/providers/business_provider.dart';
@@ -417,19 +419,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     _usernameDebounce?.cancel();
     final trimmed = value.trim();
 
-    // Inline validation
-    if (trimmed.length < 3) {
+    // Validate format, reserved words, and profanity
+    final error = UsernameValidator.validate(trimmed);
+    if (error != null) {
       setState(() {
-        _usernameError = trimmed.isEmpty ? null : 'Minimo 3 caracteres';
-        _usernameAvailable = false;
-        _checkingUsername = false;
-      });
-      return;
-    }
-
-    if (!RegExp(r'^[a-zA-Z0-9]+$').hasMatch(trimmed)) {
-      setState(() {
-        _usernameError = 'Solo letras y numeros';
+        _usernameError = error;
         _usernameAvailable = false;
         _checkingUsername = false;
       });
@@ -457,7 +451,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   Future<void> _saveUsername() async {
     final username = _usernameController.text.trim();
-    if (username.length < 3 || !_usernameAvailable) return;
+    if (UsernameValidator.validate(username) != null || !_usernameAvailable) return;
 
     final success =
         await ref.read(profileProvider.notifier).updateUsername(username);
@@ -982,6 +976,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final appOpens = ref.watch(appOpenCountProvider).valueOrNull ?? 0;
     if (appOpens < 10) return const SizedBox.shrink();
 
+    final phoneVerified = ref.watch(profileProvider).hasVerifiedPhone;
+    final emailVerified = ref.watch(securityProvider).isEmailConfirmed;
+    final canRegister = phoneVerified && emailVerified;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -991,7 +989,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         SettingsTile(
           icon: Icons.store_rounded,
           label: 'Registra tu salon',
-          onTap: () => context.push('/registro'),
+          onTap: canRegister
+              ? () => context.push('/registro')
+              : () => ToastService.showWarning(
+                  'Para registrar tu salon necesitas verificar tu numero de telefono '
+                  'y confirmar tu email. Ve a Ajustes > Seguridad para completar la verificacion.',
+                ),
         ),
       ],
     );

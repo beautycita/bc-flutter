@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/constants.dart';
 import '../../providers/business_provider.dart';
+import '../../providers/feature_toggle_provider.dart';
 import 'business_calendar_screen.dart';
 import 'business_services_screen.dart';
 import 'business_staff_screen.dart';
@@ -21,7 +22,8 @@ final businessTabProvider = StateProvider<int>((ref) => 0);
 class BusinessShellScreen extends ConsumerWidget {
   const BusinessShellScreen({super.key});
 
-  static const _tabs = <_BizTab>[
+  /// Core tabs (always visible).
+  static const _coreTabs = <_BizTab>[
     _BizTab(icon: Icons.dashboard_rounded, label: 'Inicio'),
     _BizTab(icon: Icons.calendar_month_rounded, label: 'Calendario'),
     _BizTab(icon: Icons.analytics_rounded, label: 'Rendimiento'),
@@ -30,10 +32,16 @@ class BusinessShellScreen extends ConsumerWidget {
     _BizTab(icon: Icons.gavel_rounded, label: 'Disputas'),
     _BizTab(icon: Icons.qr_code_rounded, label: 'QR Walk-in'),
     _BizTab(icon: Icons.payments_rounded, label: 'Pagos'),
+  ];
+
+  /// POS-gated tabs (only when enable_pos is on).
+  static const _posTabs = <_BizTab>[
     _BizTab(icon: Icons.local_shipping_outlined, label: 'Pedidos'),
     _BizTab(icon: Icons.storefront_outlined, label: 'Tienda'),
-    _BizTab(icon: Icons.settings_rounded, label: 'Ajustes'),
   ];
+
+  /// Settings tab (always last).
+  static const _settingsTab = _BizTab(icon: Icons.settings_rounded, label: 'Ajustes');
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -138,9 +146,33 @@ class _BusinessContent extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedTab = ref.watch(businessTabProvider);
+    final toggles = ref.watch(featureTogglesProvider);
+    final posEnabled = toggles.isEnabled('enable_pos');
     final colors = Theme.of(context).colorScheme;
-    final safeTab =
-        selectedTab.clamp(0, BusinessShellScreen._tabs.length - 1);
+
+    // Build dynamic tab + children lists based on feature toggles
+    final tabs = <_BizTab>[
+      ...BusinessShellScreen._coreTabs,
+      if (posEnabled) ...BusinessShellScreen._posTabs,
+      BusinessShellScreen._settingsTab,
+    ];
+    final children = <Widget>[
+      _DashboardTab(),
+      const BusinessCalendarScreen(),
+      const BusinessStaffAnalyticsScreen(),
+      const BusinessServicesScreen(),
+      const BusinessStaffScreen(),
+      const BusinessDisputesScreen(),
+      const BusinessQrScreen(),
+      const BusinessPaymentsScreen(),
+      if (posEnabled) ...[
+        const OrdersScreen(),
+        const PosManagementScreen(),
+      ],
+      const BusinessSettingsScreen(),
+    ];
+
+    final safeTab = selectedTab.clamp(0, tabs.length - 1);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F3FF),
@@ -172,7 +204,7 @@ class _BusinessContent extends ConsumerWidget {
         ],
       ),
       drawer: _BusinessDrawer(
-        tabs: BusinessShellScreen._tabs,
+        tabs: tabs,
         selectedIndex: safeTab,
         onSelect: (index) {
           ref.read(businessTabProvider.notifier).state = index;
@@ -181,19 +213,7 @@ class _BusinessContent extends ConsumerWidget {
       ),
       body: IndexedStack(
         index: safeTab,
-        children: [
-          _DashboardTab(),
-          const BusinessCalendarScreen(),
-          const BusinessStaffAnalyticsScreen(),
-          const BusinessServicesScreen(),
-          const BusinessStaffScreen(),
-          const BusinessDisputesScreen(),
-          const BusinessQrScreen(),
-          const BusinessPaymentsScreen(),
-          const OrdersScreen(),
-          const PosManagementScreen(),
-          const BusinessSettingsScreen(),
-        ],
+        children: children,
       ),
     );
   }

@@ -2,8 +2,8 @@ class AppConstants {
   // App Identity
   static const String appName = 'BeautyCita';
   static const String tagline = 'Tu agente de belleza inteligente';
-  static const String version = '1.0.0';
-  static const int buildNumber = 50005;
+  static const String version = '1.0.1';
+  static const int buildNumber = 50007;
   static const String versionCheckUrl =
       'https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/apk/version.json';
   static const String tableErrorReports = 'user_error_reports';
