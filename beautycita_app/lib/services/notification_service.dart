@@ -28,6 +28,11 @@ class NotificationService {
   StreamSubscription<RemoteMessage>? _foregroundSub;
   StreamSubscription<String>? _tokenRefreshSub;
 
+  /// Custom vibration pattern: attention pulse + pause + confirm pulse
+  /// Values in milliseconds: [wait, vibrate, pause, vibrate]
+  static final Int64List _vibrationPattern =
+      Int64List.fromList([0, 150, 100, 200]);
+
   /// Android notification channel for booking alerts
   static const AndroidNotificationChannel _bookingChannel =
       AndroidNotificationChannel(
@@ -37,11 +42,29 @@ class NotificationService {
     importance: Importance.high,
     playSound: true,
     enableVibration: true,
+    sound: RawResourceAndroidNotificationSound('beautycita_notify'),
   );
 
   /// Initialize Firebase and notification permissions
   Future<void> initialize() async {
     if (_initialized) return;
+
+    // Check enable_push_notifications toggle before initializing FCM
+    try {
+      if (SupabaseClientService.isInitialized) {
+        final row = await SupabaseClientService.client
+            .from('app_config')
+            .select('value')
+            .eq('key', 'enable_push_notifications')
+            .maybeSingle();
+        if (row != null && row['value'] == 'false') {
+          debugPrint('[Notifications] Push disabled by feature toggle');
+          return;
+        }
+      }
+    } catch (e) {
+      debugPrint('[Notifications] Toggle check failed, proceeding: $e');
+    }
 
     try {
       // Initialize Firebase
@@ -143,6 +166,9 @@ class NotificationService {
             importance: Importance.high,
             priority: Priority.high,
             icon: '@mipmap/ic_launcher',
+            sound: const RawResourceAndroidNotificationSound(
+                'beautycita_notify'),
+            vibrationPattern: _vibrationPattern,
           ),
           iOS: const DarwinNotificationDetails(
             presentAlert: true,

@@ -8,6 +8,8 @@ import 'package:beautycita/providers/auth_provider.dart';
 import 'package:beautycita/providers/profile_provider.dart';
 import 'package:beautycita/providers/admin_provider.dart';
 import 'package:beautycita/providers/business_provider.dart';
+import 'package:beautycita/providers/security_provider.dart';
+import 'package:beautycita/services/toast_service.dart';
 import 'package:beautycita/widgets/settings_widgets.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -283,7 +285,18 @@ class SettingsScreen extends ConsumerWidget {
         SettingsTile(
           icon: Icons.refresh_rounded,
           label: 'Intentar de nuevo',
-          onTap: () => context.push('/registro'),
+          onTap: () {
+            final pV = ref.read(profileProvider).hasVerifiedPhone;
+            final eV = ref.read(securityProvider).isEmailConfirmed;
+            if (pV && eV) {
+              context.push('/registro');
+            } else {
+              ToastService.showWarning(
+                'Para registrar tu salon necesitas verificar tu numero de telefono '
+                'y confirmar tu email. Ve a Ajustes > Seguridad para completar la verificacion.',
+              );
+            }
+          },
         ),
       ]);
     }
@@ -300,12 +313,21 @@ class SettingsScreen extends ConsumerWidget {
       return const SizedBox.shrink();
     }
 
-    // Customer with <10 opens: show registra tu salon
+    // Customer with <10 opens: show registra tu salon (requires phone + email verified)
+    final phoneVerified = ref.watch(profileProvider).hasVerifiedPhone;
+    final emailVerified = ref.watch(securityProvider).isEmailConfirmed;
+    final canRegister = phoneVerified && emailVerified;
+
     return _profSection(context, [
       SettingsTile(
         icon: Icons.store_rounded,
         label: 'Registra tu salon',
-        onTap: () => context.push('/registro'),
+        onTap: canRegister
+            ? () => context.push('/registro')
+            : () => ToastService.showWarning(
+                'Para registrar tu salon necesitas verificar tu numero de telefono '
+                'y confirmar tu email. Ve a Ajustes > Seguridad para completar la verificacion.',
+              ),
       ),
     ]);
   }

@@ -7,6 +7,7 @@ import 'package:beautycita/providers/provider_provider.dart';
 import 'package:beautycita/providers/booking_provider.dart';
 import 'package:beautycita/providers/payment_methods_provider.dart';
 import 'package:beautycita/services/toast_service.dart';
+import 'package:beautycita/providers/feature_toggle_provider.dart';
 
 class BookingScreen extends ConsumerStatefulWidget {
   final String providerId;
@@ -503,41 +504,52 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
 
   Widget _buildPaymentMethods(TextTheme textTheme) {
     final pm = ref.watch(paymentMethodsProvider);
+    final toggles = ref.watch(featureTogglesProvider);
     final defaultCard = pm.cards.isNotEmpty ? pm.cards.first : null;
+
+    final stripeEnabled = toggles.isEnabled('enable_stripe_payments');
+    final cashEnabled = toggles.isEnabled('enable_cash_payments');
+    final btcEnabled = toggles.isEnabled('enable_btc_payments');
 
     return Column(
       children: [
-        // Card option (default)
-        _PaymentOptionTile(
-          icon: Icons.credit_card_rounded,
-          iconColor: const Color(0xFF1A73E8),
-          label: defaultCard != null
-              ? '${defaultCard.displayBrand} ****${defaultCard.last4}'
-              : 'Tarjeta de credito/debito',
-          subtitle: defaultCard != null ? 'Predeterminado' : 'Agregar tarjeta al pagar',
-          selected: _selectedPaymentMethod == 'card',
-          onTap: () => setState(() => _selectedPaymentMethod = 'card'),
-        ),
-        const SizedBox(height: 8),
-        // OXXO
-        _PaymentOptionTile(
-          icon: Icons.store_rounded,
-          iconColor: const Color(0xFFCC0000),
-          label: 'Pago en efectivo',
-          subtitle: 'OXXO, 7-Eleven',
-          selected: _selectedPaymentMethod == 'oxxo',
-          onTap: () => setState(() => _selectedPaymentMethod = 'oxxo'),
-        ),
-        const SizedBox(height: 8),
+        // Card option (Stripe)
+        if (stripeEnabled) ...[
+          _PaymentOptionTile(
+            icon: Icons.credit_card_rounded,
+            iconColor: const Color(0xFF1A73E8),
+            label: defaultCard != null
+                ? '${defaultCard.displayBrand} ****${defaultCard.last4}'
+                : 'Tarjeta de credito/debito',
+            subtitle: defaultCard != null ? 'Predeterminado' : 'Agregar tarjeta al pagar',
+            selected: _selectedPaymentMethod == 'card',
+            onTap: () => setState(() => _selectedPaymentMethod = 'card'),
+          ),
+        ],
+        // OXXO / Cash
+        if (cashEnabled) ...[
+          if (stripeEnabled) const SizedBox(height: 8),
+          _PaymentOptionTile(
+            icon: Icons.store_rounded,
+            iconColor: const Color(0xFFCC0000),
+            label: 'Pago en efectivo',
+            subtitle: 'OXXO, 7-Eleven',
+            selected: _selectedPaymentMethod == 'oxxo',
+            onTap: () => setState(() => _selectedPaymentMethod = 'oxxo'),
+          ),
+        ],
         // Bitcoin
-        _PaymentOptionTile(
-          icon: Icons.currency_bitcoin_rounded,
-          iconColor: const Color(0xFFF7931A),
-          label: 'Bitcoin',
-          subtitle: 'Pago con criptomoneda',
-          selected: _selectedPaymentMethod == 'bitcoin',
-          onTap: () => setState(() => _selectedPaymentMethod = 'bitcoin'),
-        ),
+        if (btcEnabled) ...[
+          if (stripeEnabled || cashEnabled) const SizedBox(height: 8),
+          _PaymentOptionTile(
+            icon: Icons.currency_bitcoin_rounded,
+            iconColor: const Color(0xFFF7931A),
+            label: 'Bitcoin',
+            subtitle: 'Pago con criptomoneda',
+            selected: _selectedPaymentMethod == 'bitcoin',
+            onTap: () => setState(() => _selectedPaymentMethod = 'bitcoin'),
+          ),
+        ],
       ],
     );
   }

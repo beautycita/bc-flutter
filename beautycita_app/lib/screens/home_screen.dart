@@ -25,6 +25,7 @@ import '../widgets/video_map_background.dart';
 import 'subcategory_sheet.dart';
 import 'business/business_shell_screen.dart' show businessTabProvider;
 import 'admin/admin_shell_screen.dart' show adminTabProvider;
+import '../providers/feature_toggle_provider.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -149,6 +150,46 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       );
     }
 
+    // Maintenance mode gate — non-admin users see a maintenance screen
+    final toggles = ref.watch(featureTogglesProvider);
+    final isAdminRole = ref.watch(isAdminProvider).valueOrNull ?? false;
+    if (toggles.isEnabled('enable_maintenance_mode') && !isAdminRole) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFF5F3FF),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(AppConstants.paddingXL),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.construction_rounded,
+                    size: 64,
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5)),
+                const SizedBox(height: AppConstants.paddingLG),
+                Text(
+                  'En mantenimiento',
+                  style: GoogleFonts.poppins(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF212121),
+                  ),
+                ),
+                const SizedBox(height: AppConstants.paddingSM),
+                Text(
+                  'Estamos mejorando la app. Vuelve en unos minutos.',
+                  style: GoogleFonts.nunito(
+                    fontSize: 15,
+                    color: const Color(0xFF757575),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     // Edge-swipe drawers: business (left) for service providers, admin (right) for admins
     final isBizOwner = ref.watch(isBusinessOwnerProvider);
     final isAdmin = ref.watch(isAdminProvider);
@@ -218,12 +259,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
-                              // Explore feed button — visible to all users
-                              _HeaderButton(
-                                icon: Icons.explore_outlined,
-                                onTap: () => context.push('/feed'),
+                              // Explore feed button — gated by enable_feed toggle
+                              Consumer(
+                                builder: (context, ref, _) {
+                                  final toggles = ref.watch(featureTogglesProvider);
+                                  if (!toggles.isEnabled('enable_feed')) return const SizedBox.shrink();
+                                  return Padding(
+                                    padding: const EdgeInsets.only(right: AppConstants.paddingSM),
+                                    child: _HeaderButton(
+                                      icon: Icons.explore_outlined,
+                                      onTap: () => context.push('/feed'),
+                                    ),
+                                  );
+                                },
                               ),
-                              const SizedBox(width: AppConstants.paddingSM),
                               // Mi Negocio button — only visible for business owners
                               Consumer(
                                 builder: (context, ref, _) {
@@ -244,9 +293,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   );
                                 },
                               ),
-                              // Chat — visible for customers and stylists, with unread badge
+                              // Chat — gated by enable_salon_chat toggle
                               Consumer(
                                 builder: (context, ref, _) {
+                                  final toggles = ref.watch(featureTogglesProvider);
+                                  if (!toggles.isEnabled('enable_salon_chat')) return const SizedBox.shrink();
                                   final roleAsync = ref.watch(userRoleProvider);
                                   final unreadAsync = ref.watch(totalUnreadProvider);
                                   final unread = unreadAsync.valueOrNull ?? 0;

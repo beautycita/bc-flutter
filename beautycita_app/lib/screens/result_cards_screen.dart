@@ -14,6 +14,7 @@ import '../providers/security_provider.dart';
 import '../services/supabase_client.dart';
 import '../services/toast_service.dart';
 import '../widgets/cinematic_question_text.dart';
+import '../providers/feature_toggle_provider.dart';
 import 'invite_salon_screen.dart' show DiscoveredSalon, nearbySalonsProvider, waGreen, waLightGreen, waCardTint;
 import 'time_override_sheet.dart';
 
@@ -953,13 +954,17 @@ class _NoResultsWithNearbySalonsState
                 ),
               ),
 
-            // Salon cards
-            ...salons.map((salon) => _NearbySalonCard(
-              salon: salon,
-              invited: _invitedIds.contains(salon.id),
-              onTap: () => context.push('/discovered-salon', extra: salon),
-              onInvite: () => _handleInvite(salon),
-            )),
+            // Salon cards — invite gated by enable_referrals
+            ...salons.map((salon) {
+              final referralsOn = ref.watch(featureTogglesProvider).isEnabled('enable_referrals');
+              return _NearbySalonCard(
+                salon: salon,
+                invited: _invitedIds.contains(salon.id),
+                onTap: () => context.push('/discovered-salon', extra: salon),
+                onInvite: referralsOn ? () => _handleInvite(salon) : () {},
+                hideInvite: !referralsOn,
+              );
+            }),
 
             if (salons.isEmpty)
               Padding(
@@ -1028,12 +1033,14 @@ class _NearbySalonCard extends StatefulWidget {
   final bool invited;
   final VoidCallback onTap;
   final VoidCallback onInvite;
+  final bool hideInvite;
 
   const _NearbySalonCard({
     required this.salon,
     required this.invited,
     required this.onTap,
     required this.onInvite,
+    this.hideInvite = false,
   });
 
   @override
@@ -1182,8 +1189,8 @@ class _NearbySalonCardState extends State<_NearbySalonCard>
                 ),
               ),
 
-              // Breathing invite button - subtle animation
-              AnimatedBuilder(
+              // Breathing invite button - subtle animation (hidden when referrals disabled)
+              if (!widget.hideInvite) AnimatedBuilder(
                 animation: _breathingAnimation,
                 builder: (context, child) {
                   return Transform.scale(
