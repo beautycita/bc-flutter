@@ -1,11 +1,14 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:latlong2/latlong.dart' as ll;
 
 import '../../config/constants.dart';
 import '../../providers/admin_provider.dart';
+import '../../providers/rp_provider.dart';
 import '../../services/export_service.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
@@ -111,6 +114,47 @@ String _sourceLabel(String source) {
 }
 
 // ---------------------------------------------------------------------------
+// RP status helpers
+// ---------------------------------------------------------------------------
+
+const _allRpStatuses = [
+  'unassigned',
+  'assigned',
+  'visited',
+  'onboarding_complete',
+];
+
+Color _rpStatusColor(String? rpStatus) {
+  switch (rpStatus) {
+    case 'unassigned':
+      return Colors.grey;
+    case 'assigned':
+      return Colors.blue;
+    case 'visited':
+      return Colors.orange;
+    case 'onboarding_complete':
+      return Colors.green;
+    default:
+      return Colors.grey;
+  }
+}
+
+String _rpStatusLabel(String rpStatus) {
+  switch (rpStatus) {
+    case 'unassigned':
+      return 'Sin asignar';
+    case 'assigned':
+      return 'Asignado';
+    case 'visited':
+      return 'Visitado';
+    case 'onboarding_complete':
+      return 'Onboarding completo';
+    default:
+      return rpStatus;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Screen
 // ---------------------------------------------------------------------------
 
@@ -131,9 +175,16 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
   bool? _hasWhatsapp;
   bool? _hasInterest;
   String? _sourceFilter;
+  String? _rpStatusFilter;
+  String? _assignedRpId;
+  double? _pinLat;
+  double? _pinLng;
+  double _radiusKm = 25;
   Set<String> _selectedIds = {};
   bool _selectionMode = false;
   bool _metricsExpanded = false;
+
+  bool get _hasGeoFilter => _pinLat != null && _pinLng != null;
 
   /// Stable string key for the family provider (Map has reference equality,
   /// which creates a new provider on every rebuild). This encodes all filters
@@ -147,6 +198,9 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
     if (_hasWhatsapp == true) parts.add('wa:1');
     if (_hasInterest == true) parts.add('int:1');
     if (_sourceFilter != null) parts.add('src:$_sourceFilter');
+    if (_rpStatusFilter != null) parts.add('rps:$_rpStatusFilter');
+    if (_assignedRpId != null) parts.add('rp:$_assignedRpId');
+    if (_hasGeoFilter) parts.add('geo:$_pinLat,$_pinLng,$_radiusKm');
     return parts.join('|');
   }
 
@@ -157,6 +211,11 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
         if (_hasWhatsapp == true) 'has_whatsapp': true,
         if (_hasInterest == true) 'has_interest': true,
         if (_sourceFilter != null) 'source_filter': _sourceFilter,
+        if (_rpStatusFilter != null) 'p_rp_status_filter': _rpStatusFilter,
+        if (_assignedRpId != null) 'p_assigned_rp_id': _assignedRpId,
+        if (_pinLat != null) 'p_pin_lat': _pinLat,
+        if (_pinLng != null) 'p_pin_lng': _pinLng,
+        if (_hasGeoFilter) 'p_radius_km': _radiusKm,
       };
 
   @override
@@ -195,6 +254,110 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
         _selectedIds.add(id);
       }
     });
+  }
+
+  void _clearGeoFilter() {
+    setState(() {
+      _pinLat = null;
+      _pinLng = null;
+    });
+  }
+
+  void _showPinDropDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => _PinDropDialog(
+        initialLat: _pinLat,
+        initialLng: _pinLng,
+        initialRadius: _radiusKm,
+        onConfirm: (lat, lng, radius) {
+          setState(() {
+            _pinLat = lat;
+            _pinLng = lng;
+            _radiusKm = radius;
+          });
+        },
+      ),
+    );
+  }
+
+  void _showBulkAssignDialog() {
+    final rpUsersAsync = ref.read(rpUsersProvider);
+    rpUsersAsync.whenData((rpUsers) {
+      if (rpUsers.isEmpty) {
+        ToastService.showInfo('No hay usuarios RP registrados');
+        return;
+      }
+      showDialog(
+        context: context,
+        builder: (ctx) => _RpPickerDialog(
+          rpUsers: rpUsers,
+          salonCount: _selectedIds.length,
+          onConfirm: (rpUserId, rpName) async {
+            Navigator.pop(ctx);
+            try {
+              await adminAssignSalonsToRp(
+                salonIds: _selectedIds.toList(),
+                rpUserId: rpUserId,
+              );
+              ref.invalidate(searchDiscoveredSalonsProvider(_searchKey));
+              if (mounted) {
+                _exitSelection();
+                ToastService.showSuccess(
+                  '${_selectedIds.length} salones asignados a $rpName',
+                );
+              }
+            } catch (e) {
+              if (mounted) ToastService.showError('Error al asignar: $e');
+            }
+          },
+        ),
+      );
+    });
+  }
+
+  Future<void> _bulkUnassign() async {
+    final count = _selectedIds.length;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(
+          'Desasignar $count salones?',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+        ),
+        content: Text(
+          'Se removera la asignacion RP de $count salones.',
+          style: GoogleFonts.nunito(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Cancelar', style: GoogleFonts.nunito()),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange[700],
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('Desasignar', style: GoogleFonts.nunito()),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    try {
+      await adminUnassignSalons(salonIds: _selectedIds.toList());
+      ref.invalidate(searchDiscoveredSalonsProvider(_searchKey));
+      if (mounted) {
+        _exitSelection();
+        ToastService.showSuccess('$count salones desasignados');
+      }
+    } catch (e) {
+      if (mounted) ToastService.showError('Error al desasignar: $e');
+    }
   }
 
   void _showExportSheet(List<Map<String, dynamic>> leads) {
@@ -445,6 +608,43 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
                     ),
                   ),
                   const SizedBox(width: AppConstants.paddingSM),
+                  // Pin drop button
+                  Stack(
+                    children: [
+                      IconButton(
+                        icon: Icon(
+                          Icons.location_on,
+                          color: _hasGeoFilter
+                              ? colors.primary
+                              : colors.onSurface.withValues(alpha: 0.5),
+                          size: 22,
+                        ),
+                        tooltip: 'Busqueda por zona',
+                        onPressed: _showPinDropDialog,
+                      ),
+                      if (_hasGeoFilter)
+                        Positioned(
+                          top: 6,
+                          right: 6,
+                          child: GestureDetector(
+                            onTap: _clearGeoFilter,
+                            child: Container(
+                              width: 14,
+                              height: 14,
+                              decoration: BoxDecoration(
+                                color: colors.error,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.close,
+                                size: 10,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                   // Export button
                   leadsAsync.whenOrNull(
                         data: (leads) => leads.isNotEmpty
@@ -477,6 +677,9 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
               hasWhatsapp: _hasWhatsapp,
               hasInterest: _hasInterest,
               sourceFilter: _sourceFilter,
+              rpStatusFilter: _rpStatusFilter,
+              assignedRpId: _assignedRpId,
+              rpUsersAsync: ref.watch(rpUsersProvider),
               onStatusToggle: (s) {
                 setState(() {
                   if (_statusFilters.contains(s)) {
@@ -499,6 +702,16 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
               onSourceSelect: (src) {
                 setState(() {
                   _sourceFilter = _sourceFilter == src ? null : src;
+                });
+              },
+              onRpStatusSelect: (rps) {
+                setState(() {
+                  _rpStatusFilter = _rpStatusFilter == rps ? null : rps;
+                });
+              },
+              onAssignedRpSelect: (rpId) {
+                setState(() {
+                  _assignedRpId = _assignedRpId == rpId ? null : rpId;
                 });
               },
             ),
@@ -528,6 +741,8 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
                 ToastService.showInfo('Proximamente');
               },
               onStatus: _showStatusPickerDialog,
+              onAssignRp: _showBulkAssignDialog,
+              onUnassign: _bulkUnassign,
               onExport: () {
                 leadsAsync.whenData((leads) {
                   final selected = leads
@@ -945,20 +1160,30 @@ class _FilterChipsRow extends StatelessWidget {
   final bool? hasWhatsapp;
   final bool? hasInterest;
   final String? sourceFilter;
+  final String? rpStatusFilter;
+  final String? assignedRpId;
+  final AsyncValue<List<Map<String, dynamic>>> rpUsersAsync;
   final void Function(String) onStatusToggle;
   final VoidCallback onWhatsappToggle;
   final VoidCallback onInterestToggle;
   final void Function(String) onSourceSelect;
+  final void Function(String) onRpStatusSelect;
+  final void Function(String) onAssignedRpSelect;
 
   const _FilterChipsRow({
     required this.statusFilters,
     required this.hasWhatsapp,
     required this.hasInterest,
     required this.sourceFilter,
+    required this.rpStatusFilter,
+    required this.assignedRpId,
+    required this.rpUsersAsync,
     required this.onStatusToggle,
     required this.onWhatsappToggle,
     required this.onInterestToggle,
     required this.onSourceSelect,
+    required this.onRpStatusSelect,
+    required this.onAssignedRpSelect,
   });
 
   @override
@@ -1107,6 +1332,89 @@ class _FilterChipsRow extends StatelessWidget {
                 ),
               );
             }),
+
+            const SizedBox(width: AppConstants.paddingSM),
+
+            // RP Status chips
+            ..._allRpStatuses.map((rps) {
+              final selected = rpStatusFilter == rps;
+              final color = _rpStatusColor(rps);
+              return Padding(
+                padding: const EdgeInsets.only(right: AppConstants.paddingXS),
+                child: FilterChip(
+                  label: Text(
+                    _rpStatusLabel(rps),
+                    style: GoogleFonts.nunito(
+                      fontSize: 12,
+                      color: selected ? Colors.white : colors.onSurface,
+                    ),
+                  ),
+                  selected: selected,
+                  onSelected: (_) => onRpStatusSelect(rps),
+                  selectedColor: color,
+                  checkmarkColor: Colors.white,
+                  backgroundColor:
+                      colors.surfaceContainerHighest.withValues(alpha: 0.5),
+                  side: BorderSide(
+                    color: selected ? color : colors.onSurface.withValues(alpha: 0.15),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  visualDensity: VisualDensity.compact,
+                  showCheckmark: false,
+                  avatar: Icon(
+                    Icons.person_outline,
+                    size: 14,
+                    color: selected ? Colors.white : color,
+                  ),
+                ),
+              );
+            }),
+
+            const SizedBox(width: AppConstants.paddingSM),
+
+            // RP user filter chips
+            ...rpUsersAsync.when(
+              loading: () => [const SizedBox.shrink()],
+              error: (_, __) => [const SizedBox.shrink()],
+              data: (rpUsers) => rpUsers.map((rp) {
+                final rpId = rp['id'] as String;
+                final rpName = rp['full_name'] as String? ??
+                    rp['username'] as String? ??
+                    'RP';
+                final selected = assignedRpId == rpId;
+                return Padding(
+                  padding: const EdgeInsets.only(right: AppConstants.paddingXS),
+                  child: FilterChip(
+                    label: Text(
+                      rpName,
+                      style: GoogleFonts.nunito(
+                        fontSize: 12,
+                        color: selected ? Colors.white : colors.onSurface,
+                      ),
+                    ),
+                    selected: selected,
+                    onSelected: (_) => onAssignedRpSelect(rpId),
+                    selectedColor: Colors.indigo,
+                    checkmarkColor: Colors.white,
+                    backgroundColor:
+                        colors.surfaceContainerHighest.withValues(alpha: 0.5),
+                    side: BorderSide(
+                      color: selected
+                          ? Colors.indigo
+                          : colors.onSurface.withValues(alpha: 0.15),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    visualDensity: VisualDensity.compact,
+                    showCheckmark: false,
+                    avatar: const Icon(
+                      Icons.badge_outlined,
+                      size: 14,
+                      color: Colors.indigo,
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
           ],
         ),
       ),
@@ -1122,6 +1430,8 @@ class _BulkActionBar extends StatelessWidget {
   final int count;
   final VoidCallback onOutreach;
   final VoidCallback onStatus;
+  final VoidCallback onAssignRp;
+  final VoidCallback onUnassign;
   final VoidCallback onExport;
   final VoidCallback onDelete;
   final VoidCallback onClose;
@@ -1130,6 +1440,8 @@ class _BulkActionBar extends StatelessWidget {
     required this.count,
     required this.onOutreach,
     required this.onStatus,
+    required this.onAssignRp,
+    required this.onUnassign,
     required this.onExport,
     required this.onDelete,
     required this.onClose,
@@ -1186,6 +1498,22 @@ class _BulkActionBar extends StatelessWidget {
               label: 'Estado',
               color: Colors.orange,
               onTap: onStatus,
+            ),
+            const SizedBox(width: AppConstants.paddingSM),
+            // Assign RP
+            _ActionBtn(
+              icon: Icons.person_add_outlined,
+              label: 'Asignar RP',
+              color: Colors.indigo,
+              onTap: onAssignRp,
+            ),
+            const SizedBox(width: AppConstants.paddingSM),
+            // Unassign
+            _ActionBtn(
+              icon: Icons.person_remove_outlined,
+              label: 'Desasignar',
+              color: Colors.deepOrange,
+              onTap: onUnassign,
             ),
             const SizedBox(width: AppConstants.paddingSM),
             // Export
@@ -1294,6 +1622,8 @@ class _LeadCard extends StatelessWidget {
     final state = lead['location_state'] as String? ?? '';
     final source = lead['source'] as String?;
     final status = lead['status'] as String?;
+    final rpStatus = lead['rp_status'] as String?;
+    final rpName = lead['rp_full_name'] as String?;
     final phone = lead['phone'] as String? ?? '';
     final waVerified = lead['whatsapp_verified'] as bool? ?? false;
     final interestCount = lead['interest_count'] as int? ?? 0;
@@ -1392,6 +1722,14 @@ class _LeadCard extends StatelessWidget {
                                 label: _statusLabel(status),
                                 color: statusColor,
                               ),
+                            // RP assignment badge
+                            if (rpName != null && rpStatus != null) ...[
+                              const SizedBox(width: 4),
+                              _SmallBadge(
+                                label: rpName,
+                                color: _rpStatusColor(rpStatus),
+                              ),
+                            ],
                           ],
                         ),
 
@@ -1713,6 +2051,313 @@ class _ExportOption extends StatelessWidget {
       ),
       trailing: const Icon(Icons.chevron_right, size: 18, color: Colors.grey),
       onTap: onTap,
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Pin Drop Dialog
+// ---------------------------------------------------------------------------
+
+class _PinDropDialog extends StatefulWidget {
+  final double? initialLat;
+  final double? initialLng;
+  final double initialRadius;
+  final void Function(double lat, double lng, double radiusKm) onConfirm;
+
+  const _PinDropDialog({
+    this.initialLat,
+    this.initialLng,
+    required this.initialRadius,
+    required this.onConfirm,
+  });
+
+  @override
+  State<_PinDropDialog> createState() => _PinDropDialogState();
+}
+
+class _PinDropDialogState extends State<_PinDropDialog> {
+  ll.LatLng? _pin;
+  double _radius = 25;
+
+  static const _radiusOptions = [5.0, 10.0, 25.0, 50.0];
+
+  @override
+  void initState() {
+    super.initState();
+    _radius = widget.initialRadius;
+    if (widget.initialLat != null && widget.initialLng != null) {
+      _pin = ll.LatLng(widget.initialLat!, widget.initialLng!);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final initialCenter = _pin ?? const ll.LatLng(20.6, -103.3);
+    final initialZoom = _pin != null ? 10.0 : 5.0;
+
+    return AlertDialog(
+      contentPadding: const EdgeInsets.all(AppConstants.paddingSM),
+      title: Text(
+        'Buscar por zona',
+        style: GoogleFonts.poppins(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      content: SizedBox(
+        width: MediaQuery.sizeOf(context).width * 0.85,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Map
+            SizedBox(
+              height: 300,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(AppConstants.radiusSM),
+                child: FlutterMap(
+                  options: MapOptions(
+                    initialCenter: initialCenter,
+                    initialZoom: initialZoom,
+                    onTap: (tapPos, latLng) {
+                      setState(() => _pin = latLng);
+                    },
+                  ),
+                  children: [
+                    TileLayer(
+                      urlTemplate:
+                          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                      userAgentPackageName: 'com.beautycita.app',
+                    ),
+                    if (_pin != null)
+                      MarkerLayer(
+                        markers: [
+                          Marker(
+                            point: _pin!,
+                            width: 30,
+                            height: 30,
+                            child: const Icon(
+                              Icons.location_on,
+                              color: Colors.red,
+                              size: 30,
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: AppConstants.paddingSM),
+
+            // Radius selector
+            Row(
+              children: [
+                Text(
+                  'Radio:',
+                  style: GoogleFonts.nunito(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: colors.onSurface.withValues(alpha: 0.7),
+                  ),
+                ),
+                const SizedBox(width: AppConstants.paddingSM),
+                ..._radiusOptions.map((r) {
+                  final selected = _radius == r;
+                  return Padding(
+                    padding:
+                        const EdgeInsets.only(right: AppConstants.paddingXS),
+                    child: ChoiceChip(
+                      label: Text(
+                        '${r.toInt()} km',
+                        style: GoogleFonts.nunito(
+                          fontSize: 12,
+                          color: selected ? Colors.white : colors.onSurface,
+                        ),
+                      ),
+                      selected: selected,
+                      onSelected: (_) => setState(() => _radius = r),
+                      selectedColor: colors.primary,
+                      backgroundColor: colors.surfaceContainerHighest
+                          .withValues(alpha: 0.5),
+                      visualDensity: VisualDensity.compact,
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                    ),
+                  );
+                }),
+              ],
+            ),
+
+            if (_pin == null) ...[
+              const SizedBox(height: AppConstants.paddingSM),
+              Text(
+                'Toca el mapa para colocar el pin',
+                style: GoogleFonts.nunito(
+                  fontSize: 12,
+                  fontStyle: FontStyle.italic,
+                  color: colors.onSurface.withValues(alpha: 0.4),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text('Cancelar', style: GoogleFonts.nunito()),
+        ),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: colors.primary,
+            foregroundColor: colors.onPrimary,
+          ),
+          onPressed: _pin == null
+              ? null
+              : () {
+                  Navigator.pop(context);
+                  widget.onConfirm(_pin!.latitude, _pin!.longitude, _radius);
+                },
+          child: Text('Confirmar', style: GoogleFonts.nunito()),
+        ),
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// RP Picker Dialog (for bulk assign)
+// ---------------------------------------------------------------------------
+
+class _RpPickerDialog extends StatefulWidget {
+  final List<Map<String, dynamic>> rpUsers;
+  final int salonCount;
+  final void Function(String rpUserId, String rpName) onConfirm;
+
+  const _RpPickerDialog({
+    required this.rpUsers,
+    required this.salonCount,
+    required this.onConfirm,
+  });
+
+  @override
+  State<_RpPickerDialog> createState() => _RpPickerDialogState();
+}
+
+class _RpPickerDialogState extends State<_RpPickerDialog> {
+  String? _selectedId;
+  String? _selectedName;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return AlertDialog(
+      title: Text(
+        'Asignar RP',
+        style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+      ),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Selecciona un RP para ${widget.salonCount} salones:',
+              style: GoogleFonts.nunito(
+                fontSize: 13,
+                color: colors.onSurface.withValues(alpha: 0.6),
+              ),
+            ),
+            const SizedBox(height: AppConstants.paddingSM),
+            ...widget.rpUsers.map((rp) {
+              final rpId = rp['id'] as String;
+              final rpName = rp['full_name'] as String? ??
+                  rp['username'] as String? ??
+                  'RP';
+              final isSelected = _selectedId == rpId;
+              return InkWell(
+                onTap: () => setState(() {
+                  _selectedId = rpId;
+                  _selectedName = rpName;
+                }),
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 16,
+                        backgroundColor: isSelected
+                            ? colors.primary
+                            : Colors.indigo.withValues(alpha: 0.15),
+                        child: Text(
+                          rpName.isNotEmpty ? rpName[0].toUpperCase() : '?',
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: isSelected ? Colors.white : Colors.indigo,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          rpName,
+                          style: GoogleFonts.nunito(
+                            fontSize: 14,
+                            fontWeight: isSelected
+                                ? FontWeight.w700
+                                : FontWeight.normal,
+                          ),
+                        ),
+                      ),
+                      if (isSelected)
+                        const Icon(Icons.check, size: 18, color: Colors.green),
+                    ],
+                  ),
+                ),
+              );
+            }),
+            if (_selectedName != null) ...[
+              const SizedBox(height: AppConstants.paddingSM),
+              Container(
+                padding: const EdgeInsets.all(AppConstants.paddingSM),
+                decoration: BoxDecoration(
+                  color: Colors.indigo.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(AppConstants.radiusXS),
+                ),
+                child: Text(
+                  'Asignar ${widget.salonCount} salones a $_selectedName?',
+                  style: GoogleFonts.nunito(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.indigo,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text('Cancelar', style: GoogleFonts.nunito()),
+        ),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.indigo,
+            foregroundColor: Colors.white,
+          ),
+          onPressed: _selectedId == null
+              ? null
+              : () => widget.onConfirm(_selectedId!, _selectedName!),
+          child: Text('Asignar', style: GoogleFonts.nunito()),
+        ),
+      ],
     );
   }
 }
