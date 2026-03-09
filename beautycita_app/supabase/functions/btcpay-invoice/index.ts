@@ -7,10 +7,12 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { calculateWithholding, type TaxWithholding } from "../_shared/tax_mx.ts";
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": "https://beautycita.com",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
 const BTCPAY_URL = Deno.env.get("BTCPAY_URL") ?? "https://beautycita.com/btcpay";
@@ -50,6 +52,16 @@ serve(async (req) => {
       return json({ error: "Unauthorized" }, 401);
     }
 
+    // Feature toggle check
+    const { data: toggleData } = await supabase
+      .from("app_config")
+      .select("value")
+      .eq("key", "enable_btc_payments")
+      .single();
+    if (toggleData?.value !== "true") {
+      return json({ error: "This feature is currently disabled" }, 403);
+    }
+
     const body: InvoiceRequest = await req.json();
     const { service_id, staff_id, scheduled_at, payment_type = "full" } = body;
 
@@ -71,7 +83,9 @@ serve(async (req) => {
         businesses!inner (
           id,
           name,
-          onboarding_complete
+          onboarding_complete,
+          rfc,
+          tax_residency
         )
       `)
       .eq("id", service_id)
@@ -86,6 +100,8 @@ serve(async (req) => {
       id: string;
       name: string;
       onboarding_complete: boolean;
+      rfc: string | null;
+      tax_residency: string;
     };
 
     // Verify business is fully onboarded
@@ -110,8 +126,58 @@ serve(async (req) => {
       chargeAmount = servicePrice;
     }
 
-    // Platform fee (3% of the charge amount)
-    const platformFee = Math.round(chargeAmount * PLATFORM_FEE_PERCENT * 100) / 100;
+    // Check if tax withholding is enabled
+    const { data: taxFlag } = await supabase
+      .from("app_config")
+      .select("value")
+      .eq("key", "tax_withholding_enabled")
+      .single();
+    const taxWithholdingEnabled = taxFlag?.value === "true";
+
+    // Calculate withholdings (or just platform fee)
+    let taxInfo: TaxWithholding | null = null;
+    let platformFee: number;
+
+    if (taxWithholdingEnabled) {
+      taxInfo = calculateWithholding(
+        chargeAmount,
+        PLATFORM_FEE_PERCENT,
+        business.rfc,
+        business.tax_residency ?? "MX",
+      );
+      platformFee = taxInfo.platformFee;
+    } else {
+      platformFee = Math.round(chargeAmount * PLATFORM_FEE_PERCENT * 100) / 100;
+    }
+
+    // Build invoice metadata
+    const invoiceMetadata: Record<string, string> = {
+      orderId: `bc-${Date.now()}`,
+      service_id,
+      service_name: service.name,
+      business_id: business.id,
+      business_name: business.name,
+      staff_id: staff_id ?? "",
+      scheduled_at,
+      user_id: user.id,
+      payment_type,
+      platform_fee: platformFee.toString(),
+      deposit_amount: depositAmount.toString(),
+      full_price: servicePrice.toString(),
+    };
+
+    if (taxInfo) {
+      invoiceMetadata.tax_withholding = "true";
+      invoiceMetadata.tax_base = taxInfo.taxBase.toString();
+      invoiceMetadata.iva_portion = taxInfo.ivaPortion.toString();
+      invoiceMetadata.isr_rate = taxInfo.isrRate.toString();
+      invoiceMetadata.iva_rate = taxInfo.ivaRate.toString();
+      invoiceMetadata.isr_withheld = taxInfo.isrWithheld.toString();
+      invoiceMetadata.iva_withheld = taxInfo.ivaWithheld.toString();
+      invoiceMetadata.provider_net = taxInfo.providerNet.toString();
+      invoiceMetadata.provider_rfc = business.rfc ?? "";
+      invoiceMetadata.provider_tax_residency = business.tax_residency ?? "MX";
+    }
 
     // Create BTCPay invoice
     const invoiceResponse = await fetch(
@@ -125,20 +191,7 @@ serve(async (req) => {
         body: JSON.stringify({
           amount: chargeAmount,
           currency: "MXN",
-          metadata: {
-            orderId: `bc-${Date.now()}`,
-            service_id,
-            service_name: service.name,
-            business_id: business.id,
-            business_name: business.name,
-            staff_id: staff_id ?? "",
-            scheduled_at,
-            user_id: user.id,
-            payment_type,
-            platform_fee: platformFee.toString(),
-            deposit_amount: depositAmount.toString(),
-            full_price: servicePrice.toString(),
-          },
+          metadata: invoiceMetadata,
           checkout: {
             speedPolicy: "MediumSpeed",
             expirationMinutes: 30,
@@ -164,11 +217,16 @@ serve(async (req) => {
     }
 
     const invoice = await invoiceResponse.json();
+    const providerReceives = taxInfo ? taxInfo.providerNet : chargeAmount - platformFee;
 
     console.log(`[BTCPAY] Created invoice ${invoice.id}`);
     console.log(`  Amount: $${chargeAmount} MXN`);
     console.log(`  Platform fee: $${platformFee} MXN`);
-    console.log(`  Provider receives: $${chargeAmount - platformFee} MXN (after conversion)`);
+    if (taxInfo) {
+      console.log(`  ISR withheld: $${taxInfo.isrWithheld} MXN (${taxInfo.isrRate * 100}%)`);
+      console.log(`  IVA withheld: $${taxInfo.ivaWithheld} MXN (${taxInfo.ivaRate * 100}%)`);
+    }
+    console.log(`  Provider receives: $${providerReceives} MXN (after conversion)`);
 
     return json({
       invoice_id: invoice.id,
@@ -176,9 +234,19 @@ serve(async (req) => {
       amount: chargeAmount,
       deposit_amount: depositAmount,
       platform_fee: platformFee,
-      provider_receives: chargeAmount - platformFee,
+      provider_receives: providerReceives,
       currency: "MXN",
       expires_at: invoice.expirationTime,
+      ...(taxInfo ? {
+        tax_withholding: {
+          tax_base: taxInfo.taxBase,
+          iva_portion: taxInfo.ivaPortion,
+          isr_rate: taxInfo.isrRate,
+          iva_rate: taxInfo.ivaRate,
+          isr_withheld: taxInfo.isrWithheld,
+          iva_withheld: taxInfo.ivaWithheld,
+        },
+      } : {}),
       service: {
         id: service.id,
         name: service.name,
@@ -194,8 +262,8 @@ serve(async (req) => {
     });
 
   } catch (err) {
-    console.error("[BTCPAY] Error:", (err as Error).message);
-    return json({ error: (err as Error).message }, 500);
+    console.error("[BTCPAY] Error:", err);
+    return json({ error: "An internal error occurred" }, 500);
   }
 });
 

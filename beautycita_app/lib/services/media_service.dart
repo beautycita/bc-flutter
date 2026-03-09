@@ -230,27 +230,8 @@ class MediaService {
     debugPrint('MediaService.uploadMedia: fileName=$fileName');
 
     try {
-      // Log storage URL for debugging
-      debugPrint('MediaService.uploadMedia: bucket=user-media, path=$fileName');
-
-      // First, test raw HTTP to storage endpoint to see exact response
-      final testUrl = 'https://beautycita.com/supabase/storage/v1/bucket';
-      final accessToken = client.auth.currentSession?.accessToken ?? '';
-      debugPrint('MediaService.uploadMedia: testing raw HTTP to $testUrl');
-      assert(() { debugPrint('MediaService.uploadMedia: accessToken present=${accessToken.isNotEmpty}'); return true; }());
-      try {
-        final testResponse = await http.get(Uri.parse(testUrl));
-        debugPrint('MediaService.uploadMedia: test status=${testResponse.statusCode}');
-        final bodyPreview = testResponse.body.length > 200
-            ? testResponse.body.substring(0, 200)
-            : testResponse.body;
-        debugPrint('MediaService.uploadMedia: test body=$bodyPreview...');
-      } catch (e) {
-        debugPrint('MediaService.uploadMedia: test error=$e');
-      }
-
       // Upload to storage bucket
-      debugPrint('MediaService.uploadMedia: uploading to storage...');
+      debugPrint('MediaService.uploadMedia: bucket=user-media, path=$fileName');
       await client.storage.from('user-media').uploadBinary(
             fileName,
             bytes,

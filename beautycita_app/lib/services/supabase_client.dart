@@ -1,13 +1,23 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:meta/meta.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SupabaseClientService {
   static bool _initialized = false;
 
-  static bool get isInitialized => _initialized;
+  /// Test seam: override with a mock SupabaseClient in tests.
+  @visibleForTesting
+  static SupabaseClient? testClient;
+
+  /// Test seam: override with a fake user ID in tests.
+  @visibleForTesting
+  static String? testUserId;
+
+  static bool get isInitialized => testClient != null || _initialized;
 
   static SupabaseClient get client {
+    if (testClient != null) return testClient!;
     if (!_initialized) {
       throw StateError('Supabase not initialized. Call initialize() first.');
     }
@@ -34,8 +44,8 @@ class SupabaseClientService {
   }
 
   static String? get currentUserId =>
-      _initialized ? Supabase.instance.client.auth.currentUser?.id : null;
+      testUserId ?? (_initialized ? Supabase.instance.client.auth.currentUser?.id : null);
 
   static bool get isAuthenticated =>
-      _initialized && Supabase.instance.client.auth.currentUser != null;
+      testUserId != null || (_initialized && Supabase.instance.client.auth.currentUser != null);
 }

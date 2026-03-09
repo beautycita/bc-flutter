@@ -3,7 +3,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' show UserAttributes;
+import 'package:supabase_flutter/supabase_flutter.dart' show AuthException, OAuthProvider, UserAttributes;
 import 'package:beautycita/services/supabase_client.dart';
 import 'package:beautycita/services/toast_service.dart';
 import '../services/biometric_service.dart';
@@ -111,7 +111,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       }
 
       // Generate username
-      final username = UsernameGenerator.generateUsernameWithSuffix();
+      final username = UsernameGenerator.generateUsername();
 
       // Create anonymous Supabase session
       await _userSession.ensureSupabaseSession();
@@ -135,44 +135,55 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  /// Attempt Google One Tap to capture email as metadata.
-  /// Fire-and-forget — does not block registration or affect auth state.
-  /// Email is stored as `discovered_email` in Supabase user_metadata
-  /// for cross-referencing and re-engagement only (NOT for auth).
-  Future<void> captureGoogleEmail() async {
+  /// Google One Tap — link Google identity + store discovered_email.
+  /// Returns true if user selected an account and linked, false if dismissed.
+  /// Same outcome as "Vincular Google" in Settings > Security.
+  Future<bool> captureGoogleEmail() async {
     try {
-      if (!SupabaseClientService.isInitialized) return;
+      if (!SupabaseClientService.isInitialized) return false;
 
       final clientId = dotenv.env['GOOGLE_OAUTH_CLIENT_ID'];
-      if (clientId == null || clientId.isEmpty) return;
+      if (clientId == null || clientId.isEmpty) return false;
 
       final googleSignIn = GoogleSignIn(
         serverClientId: clientId,
-        scopes: ['email'],
       );
 
       final account = await googleSignIn.signIn();
       if (account == null) {
-        // User dismissed — that's fine, move on
         debugPrint('[Auth] Google One Tap dismissed');
-        return;
+        return false;
       }
 
       final email = account.email;
-      debugPrint('[Auth] Captured Google email: $email');
+      final googleAuth = await account.authentication;
+      final idToken = googleAuth.idToken;
 
-      // Store as metadata on the Supabase user (not for auth)
+      // Store email as discovered_email metadata (always, even if link fails)
       await SupabaseClientService.client.auth.updateUser(
         UserAttributes(data: {'discovered_email': email}),
       );
 
-      // Disconnect Google session — we only wanted the email
-      await googleSignIn.disconnect();
+      // Link Google identity to this account (same as Settings > Security)
+      if (idToken != null) {
+        try {
+          await SupabaseClientService.client.auth.linkIdentityWithIdToken(
+            provider: OAuthProvider.google,
+            idToken: idToken,
+            accessToken: googleAuth.accessToken,
+          );
+          debugPrint('[Auth] Google identity linked + email stored: $email');
+        } on AuthException catch (e) {
+          // Identity may already be linked to another user — still have the email
+          debugPrint('[Auth] linkIdentity failed (email still stored): ${e.message}');
+        }
+      }
 
-      debugPrint('[Auth] discovered_email saved to user_metadata');
+      await googleSignIn.disconnect();
+      return true;
     } catch (e) {
-      // Non-fatal: email capture failure must never block registration
-      debugPrint('[Auth] Google email capture failed (non-fatal): $e');
+      debugPrint('[Auth] Google capture failed (non-fatal): $e');
+      return false;
     }
   }
 
@@ -342,7 +353,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  /// Update the username in local session and state
+  /// Update the username in local session, state, and Supabase profiles
   Future<void> updateUsername(String username) async {
     final prefs = await _userSession.getUsername(); // verify session exists
     if (prefs == null) return;
@@ -350,6 +361,18 @@ class AuthNotifier extends StateNotifier<AuthState> {
     final sp = await SharedPreferences.getInstance();
     await sp.setString('username', username);
     state = state.copyWith(username: username);
+    // Sync to Supabase profiles table
+    if (SupabaseClientService.isInitialized && SupabaseClientService.isAuthenticated) {
+      final supaId = SupabaseClientService.client.auth.currentUser?.id;
+      if (supaId != null) {
+        try {
+          await SupabaseClientService.client
+              .from('profiles')
+              .update({'username': username})
+              .eq('id', supaId);
+        } catch (_) {}
+      }
+    }
   }
 
   /// Logout and clear session

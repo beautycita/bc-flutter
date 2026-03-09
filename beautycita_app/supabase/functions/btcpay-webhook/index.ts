@@ -31,6 +31,18 @@ interface BTCPayWebhookEvent {
     scheduled_at?: string;
     payment_type?: string;
     platform_fee?: string;
+    // Tax withholding fields (present when tax_withholding_enabled)
+    tax_withholding?: string;
+    tax_base?: string;
+    iva_portion?: string;
+    isr_rate?: string;
+    iva_rate?: string;
+    isr_withheld?: string;
+    iva_withheld?: string;
+    provider_net?: string;
+    provider_rfc?: string;
+    provider_tax_residency?: string;
+    full_price?: string;
   };
   // For InvoiceSettled events
   payment?: {
@@ -102,8 +114,8 @@ serve(async (req) => {
     });
 
   } catch (err) {
-    console.error("[BTCPAY-WEBHOOK] Error:", (err as Error).message);
-    return new Response(JSON.stringify({ error: (err as Error).message }), {
+    console.error("[BTCPAY-WEBHOOK] Error:", err);
+    return new Response(JSON.stringify({ error: "An internal error occurred" }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });
@@ -129,6 +141,17 @@ async function handleInvoiceSettled(
     .eq("btcpay_invoice_id", event.invoiceId)
     .single();
 
+  // Tax withholding fields for appointment update
+  const hasTaxWithholding = metadata.tax_withholding === "true";
+  const taxFields = hasTaxWithholding ? {
+    isr_withheld: parseFloat(metadata.isr_withheld ?? "0"),
+    iva_withheld: parseFloat(metadata.iva_withheld ?? "0"),
+    tax_base: parseFloat(metadata.tax_base ?? "0"),
+    provider_net: parseFloat(metadata.provider_net ?? "0"),
+  } : {};
+
+  let appointmentId: string | null = null;
+
   if (existingAppointment) {
     // Update existing appointment
     const { error } = await supabase
@@ -137,12 +160,14 @@ async function handleInvoiceSettled(
         payment_status: "paid",
         payment_method: "bitcoin",
         paid_at: new Date().toISOString(),
+        ...taxFields,
       })
       .eq("id", existingAppointment.id);
 
     if (error) {
       console.error("[BTCPAY-WEBHOOK] Failed to update appointment:", error.message);
     } else {
+      appointmentId = existingAppointment.id;
       console.log(`[BTCPAY-WEBHOOK] Updated appointment ${existingAppointment.id} to paid`);
     }
   } else {
@@ -161,6 +186,7 @@ async function handleInvoiceSettled(
         btcpay_invoice_id: event.invoiceId,
         paid_at: new Date().toISOString(),
         platform_fee: metadata.platform_fee ? parseFloat(metadata.platform_fee) : null,
+        ...taxFields,
       })
       .select()
       .single();
@@ -168,7 +194,37 @@ async function handleInvoiceSettled(
     if (error) {
       console.error("[BTCPAY-WEBHOOK] Failed to create appointment:", error.message);
     } else {
+      appointmentId = newAppointment?.id ?? null;
       console.log(`[BTCPAY-WEBHOOK] Created appointment ${newAppointment?.id} as paid`);
+    }
+  }
+
+  // Record tax withholding in ledger
+  if (hasTaxWithholding && metadata.business_id) {
+    const now = new Date();
+    const { error: taxError } = await supabase.from("tax_withholdings").insert({
+      appointment_id: appointmentId,
+      business_id: metadata.business_id,
+      payment_intent_id: event.invoiceId,
+      payment_type: "btcpay",
+      gross_amount: parseFloat(metadata.full_price ?? "0"),
+      tax_base: parseFloat(metadata.tax_base ?? "0"),
+      iva_portion: parseFloat(metadata.iva_portion ?? "0"),
+      platform_fee: parseFloat(metadata.platform_fee ?? "0"),
+      isr_rate: parseFloat(metadata.isr_rate ?? "0"),
+      iva_rate: parseFloat(metadata.iva_rate ?? "0"),
+      isr_withheld: parseFloat(metadata.isr_withheld ?? "0"),
+      iva_withheld: parseFloat(metadata.iva_withheld ?? "0"),
+      provider_net: parseFloat(metadata.provider_net ?? "0"),
+      provider_rfc: metadata.provider_rfc || null,
+      provider_tax_residency: metadata.provider_tax_residency ?? "MX",
+      period_year: now.getFullYear(),
+      period_month: now.getMonth() + 1,
+    });
+    if (taxError) {
+      console.error("[BTCPAY-WEBHOOK] Failed to record tax withholding:", taxError.message);
+    } else {
+      console.log(`[BTCPAY-WEBHOOK] Tax withholding recorded for invoice ${event.invoiceId}`);
     }
   }
 }

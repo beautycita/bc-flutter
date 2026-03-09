@@ -167,14 +167,25 @@ serve(async (req) => {
 
         console.log(`[STRIPE-WEBHOOK] Payment succeeded for booking ${bookingId}`);
 
-        // Update booking payment status
+        // Check for tax withholding metadata
+        const hasTaxWithholding = paymentIntent.metadata?.tax_withholding === "true";
+        const taxFields = hasTaxWithholding ? {
+          isr_withheld: parseFloat(paymentIntent.metadata.isr_withheld ?? "0"),
+          iva_withheld: parseFloat(paymentIntent.metadata.iva_withheld ?? "0"),
+          tax_base: parseFloat(paymentIntent.metadata.tax_base ?? "0"),
+          provider_net: parseFloat(paymentIntent.metadata.provider_net ?? "0"),
+        } : {};
+
+        // Update booking: mark as paid and confirmed
         const { error: updateError } = await supabase
           .from("appointments")
           .update({
+            status: "confirmed",
             payment_status: "paid",
             payment_intent_id: paymentIntent.id,
             paid_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
+            ...taxFields,
           })
           .eq("id", bookingId);
 
@@ -190,6 +201,31 @@ serve(async (req) => {
             status: "succeeded",
             created_at: new Date().toISOString(),
           });
+
+          // Record tax withholding in ledger
+          if (hasTaxWithholding) {
+            const now = new Date();
+            await supabase.from("tax_withholdings").insert({
+              appointment_id: bookingId,
+              business_id: paymentIntent.metadata.business_id,
+              payment_intent_id: paymentIntent.id,
+              payment_type: "stripe",
+              gross_amount: parseFloat(paymentIntent.metadata.full_price ?? "0"),
+              tax_base: parseFloat(paymentIntent.metadata.tax_base ?? "0"),
+              iva_portion: parseFloat(paymentIntent.metadata.iva_portion ?? "0"),
+              platform_fee: parseFloat(paymentIntent.metadata.platform_fee_amount ?? "0"),
+              isr_rate: parseFloat(paymentIntent.metadata.isr_rate ?? "0"),
+              iva_rate: parseFloat(paymentIntent.metadata.iva_rate ?? "0"),
+              isr_withheld: parseFloat(paymentIntent.metadata.isr_withheld ?? "0"),
+              iva_withheld: parseFloat(paymentIntent.metadata.iva_withheld ?? "0"),
+              provider_net: parseFloat(paymentIntent.metadata.provider_net ?? "0"),
+              provider_rfc: paymentIntent.metadata.provider_rfc || null,
+              provider_tax_residency: paymentIntent.metadata.provider_tax_residency ?? "MX",
+              period_year: now.getFullYear(),
+              period_month: now.getMonth() + 1,
+            });
+            console.log(`[STRIPE-WEBHOOK] Tax withholding recorded for booking ${bookingId}`);
+          }
 
           // Send emails (non-blocking — don't fail the webhook)
           await sendBookingEmails(supabase, bookingId, paymentIntent);
@@ -208,6 +244,7 @@ serve(async (req) => {
         await supabase
           .from("appointments")
           .update({
+            status: "cancelled_customer",
             payment_status: "failed",
             updated_at: new Date().toISOString(),
           })
@@ -293,8 +330,8 @@ serve(async (req) => {
     });
 
   } catch (err) {
-    console.error("[STRIPE-WEBHOOK] Error:", (err as Error).message);
-    return new Response(JSON.stringify({ error: (err as Error).message }), {
+    console.error("[STRIPE-WEBHOOK] Error:", err);
+    return new Response(JSON.stringify({ error: "An internal error occurred" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

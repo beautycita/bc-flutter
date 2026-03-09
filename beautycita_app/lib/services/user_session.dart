@@ -50,11 +50,19 @@ class UserSession {
     await prefs.setString(_keyRegisteredAt, now);
     await prefs.setString(_keyLastLoginAt, now);
 
-    // Store Supabase user ID if authenticated
+    // Store Supabase user ID and sync username to profiles table
     if (SupabaseClientService.isInitialized && SupabaseClientService.isAuthenticated) {
       final supaId = SupabaseClientService.client.auth.currentUser?.id;
       if (supaId != null) {
         await _setSecureSupabaseUserId(supaId);
+        try {
+          await SupabaseClientService.client
+              .from('profiles')
+              .update({'username': username})
+              .eq('id', supaId);
+        } catch (e) {
+          debugPrint('[UserSession] Failed to sync username to profiles: $e');
+        }
       }
     }
   }
@@ -167,7 +175,9 @@ class UserSession {
               .from('profiles')
               .update({'registration_source': 'apk'})
               .eq('id', userId);
-        } catch (_) {}
+        } catch (e) {
+          debugPrint('[UserSession] Failed to tag registration_source: $e');
+        }
       }
       return SupabaseClientService.isAuthenticated;
     } catch (e) {

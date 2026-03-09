@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/providers/security_provider.dart';
 import 'package:beautycita/services/toast_service.dart';
+import 'package:beautycita/services/updater_service.dart';
 import 'package:beautycita/widgets/settings_widgets.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class SecurityScreen extends ConsumerStatefulWidget {
   const SecurityScreen({super.key});
@@ -149,6 +151,16 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
           const SectionHeader(label: 'Acerca de'),
           const SizedBox(height: AppConstants.paddingXS),
 
+          // Update button (only if newer build available)
+          if (UpdaterService.instance.apkUpdateAvailable)
+            SettingsTile(
+              icon: Icons.system_update_rounded,
+              iconColor: Colors.blue.shade600,
+              label: 'Actualizar a ${UpdaterService.instance.apkUpdateVersion}',
+              trailing: Icon(Icons.download_rounded, color: Colors.blue.shade600, size: 20),
+              onTap: () => _launchUpdate(),
+            ),
+
           SettingsTile(
             icon: Icons.info_outline_rounded,
             label: 'Version',
@@ -164,6 +176,13 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
         ],
       ),
     );
+  }
+
+  void _launchUpdate() {
+    final url = UpdaterService.instance.apkUpdateUrl;
+    if (url.isNotEmpty) {
+      launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    }
   }
 
   /// Google users can always add a password (email verified by Google).

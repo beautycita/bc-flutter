@@ -401,53 +401,6 @@ class _ChatConversationScreenState
                 ),
               ),
             ),
-            // Virtual Studio — gated by enable_virtual_studio toggle
-            if (ref.read(featureTogglesProvider).isEnabled('enable_virtual_studio')) ...[
-              const SizedBox(height: 16),
-              InkWell(
-                borderRadius: BorderRadius.circular(12),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  context.push('/studio');
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    gradient: Theme.of(context).extension<BCThemeExtension>()!.primaryGradient,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.auto_awesome, color: Colors.white, size: 24),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Estudio Virtual',
-                              style: GoogleFonts.poppins(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
-                              ),
-                            ),
-                            Text(
-                              'Prueba un nuevo look con IA',
-                              style: GoogleFonts.nunito(
-                                fontSize: 12,
-                                color: Colors.white70,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const Icon(Icons.chevron_right_rounded, color: Colors.white70),
-                    ],
-                  ),
-                ),
-              ),
-            ],
             const SizedBox(height: 10),
           ],
         ),

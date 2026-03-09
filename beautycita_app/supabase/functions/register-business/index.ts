@@ -237,8 +237,8 @@ serve(async (req) => {
     });
 
   } catch (err) {
-    console.error("[REGISTER-BIZ] Error:", (err as Error).message);
-    return json({ error: (err as Error).message }, 500);
+    console.error("[REGISTER-BIZ] Error:", err);
+    return json({ error: "An internal error occurred" }, 500);
   }
 });
 

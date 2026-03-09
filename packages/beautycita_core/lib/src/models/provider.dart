@@ -18,6 +18,9 @@ class Provider {
   final String? facebookUrl;
   final String? instagramHandle;
   final bool isVerified;
+  final String? rfc;
+  final String? taxRegime;
+  final String taxResidency;
 
   const Provider({
     required this.id,
@@ -39,6 +42,9 @@ class Provider {
     this.facebookUrl,
     this.instagramHandle,
     this.isVerified = false,
+    this.rfc,
+    this.taxRegime,
+    this.taxResidency = 'MX',
   });
 
   factory Provider.fromJson(Map<String, dynamic> json) {
@@ -65,6 +71,9 @@ class Provider {
       facebookUrl: json['facebook_url'] as String?,
       instagramHandle: json['instagram_handle'] as String?,
       isVerified: json['is_verified'] as bool? ?? false,
+      rfc: json['rfc'] as String?,
+      taxRegime: json['tax_regime'] as String?,
+      taxResidency: json['tax_residency'] as String? ?? 'MX',
     );
   }
 
@@ -89,6 +98,9 @@ class Provider {
       'facebook_url': facebookUrl,
       'instagram_handle': instagramHandle,
       'is_verified': isVerified,
+      'rfc': rfc,
+      'tax_regime': taxRegime,
+      'tax_residency': taxResidency,
     };
   }
 }

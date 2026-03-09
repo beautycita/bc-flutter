@@ -287,14 +287,17 @@ class _TopBar extends StatelessWidget {
             ),
           ),
           const Spacer(),
-          // Placeholder action icons
           IconButton(
             icon: Icon(
               Icons.notifications_outlined,
               color: colors.onSurface.withValues(alpha: 0.6),
               size: 22,
             ),
-            onPressed: () {},
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Proximamente')),
+              );
+            },
             tooltip: 'Notificaciones',
           ),
         ],

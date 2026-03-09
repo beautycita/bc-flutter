@@ -113,8 +113,8 @@ class ToastService {
   static void _removeCurrentEntry() {
     try {
       _currentEntry?.remove();
-    } catch (_) {
-      // Entry may already be removed
+    } catch (e) {
+      debugPrint('[ToastService] Overlay entry removal failed: $e');
     }
     _currentEntry = null;
   }

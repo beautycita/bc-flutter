@@ -281,20 +281,16 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
       success = await authNotifier.register();
 
       if (success && mounted) {
-        // Capture Google email as metadata (fire-and-forget, non-blocking)
-        authNotifier.captureGoogleEmail();
+        // Google One Tap — capture email as discovered_email metadata.
+        // If they pick an account we acknowledge it; if they dismiss we move on.
+        final linked = await authNotifier.captureGoogleEmail();
+        if (mounted && linked) {
+          ToastService.showSuccess('Google vinculado');
+        }
 
-        final newUsername = ref.read(authStateProvider).username;
-        setState(() {
-          _generatedUsername = newUsername;
-          _showCelebration = true;
-        });
-
-        Future.delayed(const Duration(seconds: 2), () {
-          if (mounted) {
-            context.go('/home');
-          }
-        });
+        if (mounted) {
+          context.go('/home');
+        }
       }
     } else {
       // Returning user: biometric → login

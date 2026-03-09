@@ -66,8 +66,8 @@ class SecurityNotifier extends StateNotifier<SecurityState> {
       // Refresh session to get latest user data (email confirmation status, etc.)
       try {
         await SupabaseClientService.client.auth.refreshSession();
-      } catch (_) {
-        // Non-fatal: use cached user if refresh fails
+      } catch (e) {
+        debugPrint('[Security] Session refresh failed (non-fatal): $e');
       }
 
       final user = SupabaseClientService.client.auth.currentUser;

@@ -139,6 +139,16 @@ Deno.serve(async (req: Request) => {
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
+    // Feature toggle check
+    const { data: toggleData } = await supabase
+      .from("app_config")
+      .select("value")
+      .eq("key", "enable_pos")
+      .single();
+    if (toggleData?.value !== "true") {
+      return json({ error: "This feature is currently disabled" }, 403);
+    }
+
     // -----------------------------------------------------------------
     // 1. Fetch all paid orders with business info
     // -----------------------------------------------------------------
@@ -321,7 +331,7 @@ Deno.serve(async (req: Request) => {
     console.log("[ORDER-FOLLOWUP] Summary:", JSON.stringify(summary));
     return json(summary);
   } catch (err) {
-    console.error("[ORDER-FOLLOWUP] Fatal error:", (err as Error).message);
-    return json({ error: (err as Error).message }, 500);
+    console.error("[ORDER-FOLLOWUP] Fatal error:", err);
+    return json({ error: "An internal error occurred" }, 500);
   }
 });

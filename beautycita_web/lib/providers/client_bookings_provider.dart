@@ -105,7 +105,7 @@ class ClientBookingsNotifier extends StateNotifier<ClientBookingsState> {
             'id, user_id, business_id, service_id, service_name, service_type, '
             'starts_at, ends_at, status, price, payment_status, notes, '
             'created_at, transport_mode, deposit_amount, updated_at, '
-            'businesses!appointments_business_id_fkey(name)',
+            'businesses!appointments_business_id_fkey(name, phone)',
           )
           .eq('user_id', userId)
           .order('starts_at', ascending: false);

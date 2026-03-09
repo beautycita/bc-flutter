@@ -82,17 +82,37 @@ function qualityMultiplier(hasBeforeAfter: boolean, hasProductTags: boolean): nu
   return 1.0;
 }
 
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371; // Earth radius in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function localBoost(distKm: number | null): number {
+  if (distKm === null) return 1.0;    // no location — neutral
+  if (distKm <= 5) return 1.4;         // within 5km — strong boost
+  if (distKm <= 15) return 1.2;        // within 15km — moderate boost
+  if (distKm <= 50) return 1.1;        // within 50km — slight boost
+  return 1.0;                           // global — neutral
+}
+
 function scoreItem(
   item: FeedItem,
   saveCount: number,
   viewCount: number,
+  distKm: number | null,
 ): number {
   const freshness = freshnessBoot(item.created_at);
   const quality = qualityMultiplier(
     item.before_url !== null && item.after_url !== null && item.type === "photo",
     item.product_tags.length > 0,
   );
-  return freshness * (1 + saveCount * 0.1 + viewCount * 0.01) * quality;
+  const proximity = localBoost(distKm);
+  return freshness * (1 + saveCount * 0.1 + viewCount * 0.01) * quality * proximity;
 }
 
 // ---------------------------------------------------------------------------
@@ -119,11 +139,23 @@ Deno.serve(async (req: Request) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
     );
 
+    // Feature toggle check
+    const { data: toggleData } = await supabase
+      .from("app_config")
+      .select("value")
+      .eq("key", "enable_feed")
+      .single();
+    if (toggleData?.value !== "true") {
+      return json({ error: "This feature is currently disabled" }, 403);
+    }
+
     // --- Parse query params ---
     const url = new URL(req.url);
     const page = Math.max(0, parseInt(url.searchParams.get("page") ?? "0", 10) || 0);
     const limit = Math.min(50, Math.max(1, parseInt(url.searchParams.get("limit") ?? "20", 10) || 20));
     const category = url.searchParams.get("category") ?? null;
+    const userLat = parseFloat(url.searchParams.get("lat") ?? "") || null;
+    const userLng = parseFloat(url.searchParams.get("lng") ?? "") || null;
 
     // --- Optional auth: resolve user for is_saved ---
     let userId: string | null = null;
@@ -139,7 +171,7 @@ Deno.serve(async (req: Request) => {
     // --- Parallel queries: portfolio_photos + product_showcases ---
     let photosQuery = supabase
       .from("portfolio_photos")
-      .select("id, business_id, staff_id, before_url, after_url, caption, service_category, product_tags, created_at, businesses!inner(id, name, photo_url, slug), staff(id, first_name)")
+      .select("id, business_id, staff_id, before_url, after_url, caption, service_category, product_tags, created_at, businesses!inner(id, name, photo_url, slug, lat, lng), staff(id, first_name)")
       .eq("is_visible", true);
 
     if (category) {
@@ -148,7 +180,7 @@ Deno.serve(async (req: Request) => {
 
     const showcasesQuery = supabase
       .from("product_showcases")
-      .select("id, business_id, product_id, caption, created_at, businesses!inner(id, name, photo_url, slug), products!inner(id, name, brand, price, photo_url, category, in_stock)");
+      .select("id, business_id, product_id, caption, created_at, businesses!inner(id, name, photo_url, slug, lat, lng), products!inner(id, name, brand, price, photo_url, category, in_stock)");
 
     const [photosResult, showcasesResult] = await Promise.all([
       photosQuery,
@@ -335,11 +367,27 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // --- Score and sort ---
+    // --- Build business location map for local boost ---
+    const bizLocMap = new Map<string, { lat: number; lng: number }>();
+    for (const p of photos) {
+      const biz = p.businesses as any;
+      if (biz?.lat && biz?.lng) bizLocMap.set(p.business_id, { lat: biz.lat, lng: biz.lng });
+    }
+    for (const s of showcases) {
+      const biz = s.businesses as any;
+      if (biz?.lat && biz?.lng) bizLocMap.set(s.business_id, { lat: biz.lat, lng: biz.lng });
+    }
+
+    // --- Score and sort (global-first with local boost) ---
     const scored = feedItems.map((item) => {
       const sc = saveCounts.get(item.id) ?? 0;
       const vc = viewCounts.get(item.id) ?? 0;
-      item._score = scoreItem(item, sc, vc);
+      let distKm: number | null = null;
+      if (userLat && userLng) {
+        const loc = bizLocMap.get(item.business_id);
+        if (loc) distKm = haversineKm(userLat, userLng, loc.lat, loc.lng);
+      }
+      item._score = scoreItem(item, sc, vc, distKm);
       return item;
     });
 
@@ -360,6 +408,6 @@ Deno.serve(async (req: Request) => {
     });
   } catch (err) {
     console.error("feed-public error:", err);
-    return json({ error: (err as Error).message }, 500);
+    return json({ error: "An internal error occurred" }, 500);
   }
 });

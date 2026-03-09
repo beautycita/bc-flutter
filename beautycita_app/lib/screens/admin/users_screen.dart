@@ -620,13 +620,6 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
                         iconColor: dimIcon,
                         valueColor: dim,
                       ),
-                    _DetailRow(
-                      icon: Icons.local_taxi_rounded,
-                      label: 'Uber',
-                      value: user.uberLinked ? 'Vinculado' : 'No vinculado',
-                      iconColor: dimIcon,
-                      valueColor: user.uberLinked ? Colors.green : dim,
-                    ),
                   ]),
 
                   const SizedBox(height: 12),
@@ -1201,8 +1194,8 @@ class _LiveSupportSheetState extends ConsumerState<_LiveSupportSheet> {
           'custom_body': text.length > 80 ? '${text.substring(0, 80)}...' : text,
           'data': {'route': '/chat', 'type': 'support_message'},
         });
-      } catch (_) {
-        // Push is best-effort — don't fail the send
+      } catch (e) {
+        debugPrint('[Users] Push notification failed (best-effort): $e');
       }
     } catch (e, stack) {
       ToastService.showErrorWithDetails(
