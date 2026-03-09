@@ -138,8 +138,9 @@ class _FeedScreenState extends ConsumerState<FeedScreen>
       ),
       body: TabBarView(
         controller: _tabController,
+        physics: const NeverScrollableScrollPhysics(),
         children: [
-          // Tab 1: Video (WebView with Instagram Reels beauty content)
+          // Tab 1: Video (WebView with YouTube Shorts beauty content)
           const _VideoFeedTab(),
 
           // Tab 2: Fotos (native portfolio feed)
@@ -211,9 +212,19 @@ class _VideoFeedTabState extends State<_VideoFeedTab>
     super.build(context);
     final palette = Theme.of(context).colorScheme;
 
+    // Shift WebView up by 50px to hide YouTube header/logo
+    const double topClip = 50;
+
     return Stack(
+      clipBehavior: Clip.hardEdge,
       children: [
-        WebViewWidget(controller: _controller),
+        Positioned(
+          top: -topClip,
+          left: 0,
+          right: 0,
+          bottom: -topClip,
+          child: WebViewWidget(controller: _controller),
+        ),
         if (_isLoading)
           Container(
             color: Theme.of(context).scaffoldBackgroundColor,
