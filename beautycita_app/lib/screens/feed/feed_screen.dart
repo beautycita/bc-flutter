@@ -168,14 +168,6 @@ class _VideoFeedTabState extends State<_VideoFeedTab>
   late final WebViewController _controller;
   bool _isLoading = true;
 
-  // Beauty reels URLs — rotated to keep content fresh
-  static const _reelsUrls = [
-    'https://www.instagram.com/reels/topics/beauty/',
-    'https://www.instagram.com/explore/tags/hairtransformation/',
-    'https://www.instagram.com/explore/tags/nailart/',
-    'https://www.instagram.com/explore/tags/makeuptutorial/',
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -187,11 +179,17 @@ class _VideoFeedTabState extends State<_VideoFeedTab>
             if (mounted) setState(() => _isLoading = false);
           },
           onNavigationRequest: (request) {
-            // Allow Instagram navigation, block external links
-            if (request.url.contains('instagram.com') ||
-                request.url.contains('facebook.com') ||
-                request.url.contains('fbcdn.net') ||
-                request.url.contains('cdninstagram.com')) {
+            final url = request.url;
+            // Allow Facebook, YouTube, TikTok and their CDNs
+            if (url.contains('facebook.com') ||
+                url.contains('fbcdn.net') ||
+                url.contains('fb.com') ||
+                url.contains('fbsbx.com') ||
+                url.contains('youtube.com') ||
+                url.contains('ytimg.com') ||
+                url.contains('googlevideo.com') ||
+                url.contains('tiktok.com') ||
+                url.contains('tiktokcdn.com')) {
               return NavigationDecision.navigate;
             }
             return NavigationDecision.prevent;
@@ -202,7 +200,7 @@ class _VideoFeedTabState extends State<_VideoFeedTab>
         'Mozilla/5.0 (Linux; Android 14; SM-S911U) AppleWebKit/537.36 '
         '(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
       )
-      ..loadRequest(Uri.parse(_reelsUrls[0]));
+      ..loadRequest(Uri.parse('https://www.youtube.com/hashtag/hairtransformation/shorts'));
   }
 
   @override
