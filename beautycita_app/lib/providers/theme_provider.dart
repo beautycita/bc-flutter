@@ -227,8 +227,10 @@ class ThemeNotifier extends StateNotifier<ThemeState> {
   /// Secondary and accent colors shift proportionally to maintain harmony.
   BCPalette _applyColorOverride(BCPalette base, double hue, double sat) {
     final clampedSat = sat.clamp(0.1, 1.0);
-    final primary = HSVColor.fromAHSV(1.0, hue.clamp(0, 360), clampedSat, 0.5).toColor();
-    final gradEnd = HSVColor.fromAHSV(1.0, (hue + 15) % 360, (clampedSat * 0.8).clamp(0.1, 1.0), 0.65).toColor();
+    // Use HSL at lightness 0.45 — same formula as home screen _gradientPair()
+    // so buttons/text match the header gradient from first frame.
+    final primary = HSLColor.fromAHSL(1.0, hue.clamp(0, 360), clampedSat.clamp(0.5, 1.0), 0.45).toColor();
+    final gradEnd = HSLColor.fromAHSL(1.0, (hue + 15) % 360, (clampedSat * 0.8).clamp(0.4, 0.9), 0.40).toColor();
 
     // Shift secondary color by the same hue delta to maintain harmony
     final hueDelta = hue - _basePrimaryHue;

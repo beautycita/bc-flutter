@@ -21,6 +21,8 @@ import 'feature_toggles_screen.dart';
 import 'reviews_screen.dart';
 import 'admin_chat_screen.dart';
 import 'admin_tax_reports_screen.dart';
+import 'admin_finance_dashboard_screen.dart';
+import 'admin_operations_dashboard_screen.dart';
 
 /// Index of the currently selected admin tab.
 final adminTabProvider = StateProvider<int>((ref) => 0);
@@ -41,6 +43,8 @@ class AdminShellScreen extends ConsumerWidget {
     _AdminTab(icon: Icons.rocket_launch_rounded, label: 'Pipeline', section: 'Gestion'),
     _AdminTab(icon: Icons.chat_rounded, label: 'Chat', section: 'Gestion'),
     _AdminTab(icon: Icons.receipt_long, label: 'Retenciones SAT', section: 'Finanzas'),
+    _AdminTab(icon: Icons.account_balance, label: 'Finanzas CEO', section: 'Finanzas'),
+    _AdminTab(icon: Icons.monitor_heart, label: 'Operaciones', section: 'Finanzas'),
   ];
 
   /// Tabs visible ONLY to superadmin — system config.
@@ -235,6 +239,10 @@ class _AdminContent extends ConsumerWidget {
         return const NotificationTemplatesScreen();
       case 'Feature Toggles':
         return const FeatureTogglesScreen();
+      case 'Finanzas CEO':
+        return const AdminFinanceDashboardScreen();
+      case 'Operaciones':
+        return const AdminOperationsDashboardScreen();
       default:
         return _PlaceholderTab(
           icon: tab.icon,
