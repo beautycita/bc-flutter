@@ -698,9 +698,9 @@
 
   <h3>3.5 Bandera de Activacion (Feature Flag)</h3>
   <div class="formula">
-    tax_withholding_enabled = <span class="highlight">true</span> <span class="comment">// activado por defecto desde 9 de marzo de 2026</span>
+    tax_withholding_enabled = <span class="highlight">true</span> <span class="comment">// activado en produccion desde 9 de marzo de 2026</span>
   </div>
-  <p>El sistema de retenciones esta <strong>activo por defecto</strong>. Los pagos procesados a traves de la plataforma automaticamente calculan y aplican las retenciones. Se puede desactivar temporalmente desde el panel de superadmin si se requiere.</p>
+  <p>El sistema de retenciones esta <strong>activo en produccion</strong>. Los pagos procesados a traves de la plataforma automaticamente calculan y aplican las retenciones. Se puede desactivar temporalmente desde el panel de superadmin si se requiere. La infraestructura (tablas de ledger, reportes SAT, API de acceso) esta completamente desplegada.</p>
 
   <h3>3.6 PAC Seleccionado &mdash; SW Sapien <span class="badge badge-partial">Pendiente integracion</span></h3>
   <p><strong>Decision (marzo 2026):</strong> Se selecciono <strong>SW Sapien</strong> como PAC definitivo por:</p>
@@ -847,17 +847,74 @@
   </div>
 
   <!-- 4.5 -->
-  <h3>4.5 Procesadores de Pago Futuros</h3>
+  <h3>4.5 Transferencia Bancaria SPEI via Conekta <span class="badge badge-partial">Planeado</span></h3>
+
+  <div class="flow">
+    <div class="flow-steps">
+      <div class="flow-step active">Cliente elige pagar por SPEI</div>
+      <span class="flow-arrow">&rarr;</span>
+      <div class="flow-step">Conekta genera CLABE de referencia</div>
+      <span class="flow-arrow">&rarr;</span>
+      <div class="flow-step">Cliente transfiere desde su banco</div>
+      <span class="flow-arrow">&rarr;</span>
+      <div class="flow-step gap">Conekta deposita en cuenta BeautyCita</div>
+      <span class="flow-arrow">&rarr;</span>
+      <div class="flow-step gap">Dispersion al proveedor</div>
+    </div>
+  </div>
+
+  <div class="callout callout-info">
+    <span class="callout-label">Ventaja de costos</span>
+    <p><strong>Conekta cobra 1% por transaccion SPEI</strong> vs. Stripe que cobra ~3.6% + $3 MXN. Para pagos por transferencia bancaria, el ahorro es de ~2.6 puntos porcentuales por transaccion. La estrategia: rutear pagos SPEI por Conekta, mantener tarjetas y OXXO en Stripe.</p>
+  </div>
+
+  <p><strong>Modelo operativo:</strong> Conekta no tiene modelo de marketplace (splits automaticos como Stripe Connect). BeautyCita recibiria el monto completo y gestionaria la dispersion al proveedor &mdash; similar al flujo OXXO actual.</p>
+
+  <div class="question-box">
+    <ol>
+      <li>Al usar Conekta como procesador secundario (solo SPEI), <strong>cambian las obligaciones de retencion?</strong> O la obligacion aplica por igual independientemente del procesador?</li>
+      <li>La dispersion al proveedor desde fondos recibidos via Conekta seria por SPEI desde la cuenta de BeautyCita. <strong>Se requiere CFDI por la dispersion?</strong></li>
+      <li>Al manejar dos procesadores (Stripe para tarjetas/OXXO, Conekta para SPEI), <strong>se requiere separacion contable</strong> o basta con que el ledger de retenciones identifique el procesador de origen?</li>
+    </ol>
+  </div>
+
+  <!-- 4.6 -->
+  <h3>4.6 Procesadores de Pago &mdash; Arquitectura Multi-Procesador</h3>
 
   <div class="sidebar-note">
     <strong>Arquitectura flexible</strong>
     El motor de calculo de retenciones es independiente del procesador de pago. Recibe un monto bruto y devuelve el desglose. Nuevos procesadores se agregan sin modificar la logica fiscal.
   </div>
 
-  <p>Se contempla la integracion futura de otros procesadores (Conekta, etc.). La logica de dispersion (payout) al proveedor es la pieza que varia por procesador.</p>
+  <table style="width:100%; border-collapse:collapse; margin-top:8px;">
+    <tr style="background:#f0f0f0;">
+      <th style="text-align:left; padding:6px; border:1px solid #ddd;">Procesador</th>
+      <th style="text-align:left; padding:6px; border:1px solid #ddd;">Metodos</th>
+      <th style="text-align:right; padding:6px; border:1px solid #ddd;">Comision</th>
+      <th style="text-align:left; padding:6px; border:1px solid #ddd;">Dispersion</th>
+    </tr>
+    <tr>
+      <td style="padding:6px; border:1px solid #ddd;"><strong>Stripe Connect</strong> (actual)</td>
+      <td style="padding:6px; border:1px solid #ddd;">Tarjeta, OXXO</td>
+      <td style="text-align:right; padding:6px; border:1px solid #ddd;">3.6% + $3 MXN</td>
+      <td style="padding:6px; border:1px solid #ddd;">Automatica (Connect)</td>
+    </tr>
+    <tr>
+      <td style="padding:6px; border:1px solid #ddd;"><strong>Conekta</strong> (planeado)</td>
+      <td style="padding:6px; border:1px solid #ddd;">SPEI</td>
+      <td style="text-align:right; padding:6px; border:1px solid #ddd;">1%</td>
+      <td style="padding:6px; border:1px solid #ddd;">Manual (SPEI desde cuenta BC)</td>
+    </tr>
+    <tr>
+      <td style="padding:6px; border:1px solid #ddd;"><strong>BTCPay</strong> (actual)</td>
+      <td style="padding:6px; border:1px solid #ddd;">Bitcoin</td>
+      <td style="text-align:right; padding:6px; border:1px solid #ddd;">0% (auto-hospedado)</td>
+      <td style="padding:6px; border:1px solid #ddd;">Manual (MXN fiat)</td>
+    </tr>
+  </table>
 
   <div class="question-box">
-    <p>Existe alguna obligacion o ventaja de usar un procesador de pagos especifico para la dispersion a proveedores en Mexico? Algun requisito del SAT sobre los medios de dispersion?</p>
+    <p>Con multiples procesadores de pago, <strong>existe alguna obligacion adicional ante el SAT</strong> por diversificacion de canales de cobro? O basta con que el ledger unico de retenciones registre todos los flujos?</p>
   </div>
 </div>
 
@@ -1161,12 +1218,13 @@
       <li><strong>Ajuste mensual:</strong> <span class="badge badge-critical">Nuevo</span> Es obligatorio verificar el cumplimiento fiscal del proveedor y deducir faltantes del siguiente mes? O la obligacion de la plataforma se limita a retener el porcentaje fijo? (Ver Seccion 7B)</li>
       <li><strong>CSD para SW Sapien:</strong> <span class="badge badge-critical">Nuevo</span> Cual es el proceso y tiempo estimado para obtener el Certificado de Sello Digital una vez constituida la sociedad?</li>
       <li><strong>Retenciones sobre productos:</strong> <span class="badge badge-critical">Nuevo</span> La comision de BeautyCita sobre venta de productos es 10% (no 3%). Las retenciones ISR/IVA aplican sobre el monto bruto de la venta de productos de la misma manera que servicios?</li>
+      <li><strong>Procesador secundario SPEI:</strong> <span class="badge badge-critical">Nuevo</span> Al rutear pagos SPEI por Conekta (1%) y tarjetas/OXXO por Stripe (3.6%), cambian las obligaciones de retencion o reporteo? Se requiere separacion contable por procesador?</li>
     </ol>
   </div>
 
   <div class="priority-section priority-media">
     <h3 style="color: var(--warning);">Prioridad Media &mdash; Afectan operacion</h3>
-    <ol start="6">
+    <ol start="7">
       <li><strong>Cuentas bancarias:</strong> Se requiere cuenta separada para fondos retenidos? Estructura recomendada?</li>
       <li><strong>Intereses:</strong> Los intereses sobre fondos retenidos se reportan como ingreso ordinario de la empresa?</li>
       <li><strong>Reembolsos:</strong> Procedimiento para revertir retenciones en cancelaciones?</li>
@@ -1178,7 +1236,7 @@
 
   <div class="priority-section priority-baja">
     <h3 style="color: var(--info);">Prioridad Baja &mdash; Planeacion futura</h3>
-    <ol start="11">
+    <ol start="13">
       <li><strong>Inscripcion RFC:</strong> Existe servicio web del SAT para inscripciones masivas de proveedores?</li>
       <li><strong>Extranjeros:</strong> Tratamiento fiscal de estilistas extranjeros que trabajan temporalmente en Mexico?</li>
     </ol>
