@@ -111,10 +111,6 @@ class _BusinessCalendarScreenState
               staffAsync: staffAsync,
               ownerId: ownerId,
               onPickDate: _pickDate,
-              onAddNew: () {
-                final visibleTime = _timelineKey.currentState?.getVisibleDateTime();
-                _showWalkinSheet(context, visibleTime);
-              },
             ),
 
         // View toggle + navigation bar
@@ -259,6 +255,10 @@ class _BusinessCalendarScreenState
                         ownerId: ownerId,
                         onAction: _handleAction,
                         onBlockTime: () => _showBlockTimeSheet(context),
+                        onAddNew: () {
+                          final visibleTime = _timelineKey.currentState?.getVisibleDateTime();
+                          _showWalkinSheet(context, visibleTime);
+                        },
                         onRefresh: _refresh,
                         staffServicesMap: staffServicesAsync.valueOrNull ?? const {},
                       ),
@@ -578,7 +578,7 @@ class _MonthGrid extends StatelessWidget {
           // Calendar grid
           Expanded(
             child: GridView.builder(
-              physics: const NeverScrollableScrollPhysics(),
+              physics: const ClampingScrollPhysics(),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 7,
                 childAspectRatio: 1.0,
@@ -688,7 +688,6 @@ class _SummaryCard extends StatelessWidget {
   final AsyncValue<List<Map<String, dynamic>>> staffAsync;
   final String? ownerId;
   final VoidCallback onPickDate;
-  final VoidCallback onAddNew;
 
   const _SummaryCard({
     required this.date,
@@ -696,7 +695,6 @@ class _SummaryCard extends StatelessWidget {
     required this.staffAsync,
     required this.ownerId,
     required this.onPickDate,
-    required this.onAddNew,
   });
 
   static const _months = [
@@ -731,12 +729,17 @@ class _SummaryCard extends StatelessWidget {
       }).length;
     }
 
+    final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
+
     return Container(
-      margin: const EdgeInsets.fromLTRB(
-        AppConstants.paddingMD, AppConstants.paddingSM,
+      margin: EdgeInsets.fromLTRB(
+        AppConstants.paddingMD, isLandscape ? 4 : AppConstants.paddingSM,
         AppConstants.paddingMD, 0,
       ),
-      padding: const EdgeInsets.all(AppConstants.paddingMD),
+      padding: EdgeInsets.symmetric(
+        horizontal: AppConstants.paddingMD,
+        vertical: isLandscape ? 6 : AppConstants.paddingMD,
+      ),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
@@ -748,76 +751,58 @@ class _SummaryCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Total Citas',
-                        style: GoogleFonts.poppins(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                          color: colors.onSurface.withValues(alpha: 0.5),
-                        )),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.baseline,
-                      textBaseline: TextBaseline.alphabetic,
-                      children: [
-                        Text('${appts.length}',
-                            style: GoogleFonts.poppins(
-                              fontSize: 28,
-                              fontWeight: FontWeight.w700,
-                              color: const Color(0xFF212121),
-                            )),
-                        const SizedBox(width: 8),
-                        GestureDetector(
-                          onTap: onPickDate,
-                          child: Text(
-                            'Hoy, ${date.day} ${_months[date.month - 1]} \u25BC',
-                            style: GoogleFonts.nunito(
-                              fontSize: 13,
-                              color: colors.onSurface.withValues(alpha: 0.5),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              TextButton.icon(
-                onPressed: onAddNew,
-                icon: const Icon(Icons.add_rounded, size: 18),
-                label: Text('Agregar',
-                    style: GoogleFonts.poppins(
+          // Count
+          Text('${appts.length}',
+              style: GoogleFonts.poppins(
+                fontSize: isLandscape ? 20 : 28,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF212121),
+              )),
+          const SizedBox(width: 6),
+          // Date label
+          Expanded(
+            child: GestureDetector(
+              onTap: onPickDate,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(isLandscape ? 'Citas' : 'Total Citas',
+                      style: GoogleFonts.poppins(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: colors.onSurface.withValues(alpha: 0.5),
+                      )),
+                  Text(
+                    '${date.day} ${_months[date.month - 1]} \u25BC',
+                    style: GoogleFonts.nunito(
                       fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    )),
-                style: TextButton.styleFrom(
-                  foregroundColor: colors.primary,
-                ),
-              ),
-            ],
-          ),
-          if (allStaff.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 12,
-              runSpacing: 4,
-              children: [
-                for (var i = 0; i < allStaff.length; i++)
-                  _StaffChip(
-                    name: allStaff[i].name,
-                    count: allStaff[i].count,
-                    color: _staffColor(i),
+                      color: colors.onSurface.withValues(alpha: 0.5),
+                    ),
                   ),
-              ],
+                ],
+              ),
             ),
-          ],
+          ),
+          // Staff chips (portrait only)
+          if (!isLandscape && allStaff.isNotEmpty)
+            Expanded(
+              child: Wrap(
+                spacing: 12,
+                runSpacing: 4,
+                alignment: WrapAlignment.end,
+                children: [
+                  for (var i = 0; i < allStaff.length; i++)
+                    _StaffChip(
+                      name: allStaff[i].name,
+                      count: allStaff[i].count,
+                      color: _staffColor(i),
+                    ),
+                ],
+              ),
+            ),
         ],
       ),
     );
@@ -909,6 +894,7 @@ class _HorizontalTimeline extends StatefulWidget {
   final String? ownerId;
   final Future<void> Function(Map<String, dynamic>, String) onAction;
   final VoidCallback onBlockTime;
+  final VoidCallback onAddNew;
   final VoidCallback onRefresh;
   final Map<String, Set<String>> staffServicesMap;
 
@@ -922,6 +908,7 @@ class _HorizontalTimeline extends StatefulWidget {
     this.ownerId,
     required this.onAction,
     required this.onBlockTime,
+    required this.onAddNew,
     required this.onRefresh,
     this.staffServicesMap = const {},
   });
@@ -1374,14 +1361,51 @@ class _HorizontalTimelineState extends State<_HorizontalTimeline> {
             ),
           ),
         ),
-        // FAB for blocking time
+        // Action FABs
         Positioned(
           right: AppConstants.paddingMD,
           bottom: AppConstants.paddingMD,
-          child: FloatingActionButton.small(
-            heroTag: 'blockTime',
-            onPressed: widget.onBlockTime,
-            child: const Icon(Icons.block_rounded, size: 20),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Add appointment
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  FloatingActionButton.small(
+                    heroTag: 'addAppt',
+                    onPressed: widget.onAddNew,
+                    child: const Icon(Icons.add_rounded, size: 20),
+                  ),
+                  const SizedBox(height: 2),
+                  Text('Cita',
+                      style: GoogleFonts.nunito(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w600,
+                        color: colors.onSurface.withValues(alpha: 0.5),
+                      )),
+                ],
+              ),
+              const SizedBox(width: 12),
+              // Block time
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  FloatingActionButton.small(
+                    heroTag: 'blockTime',
+                    onPressed: widget.onBlockTime,
+                    child: const Icon(Icons.block_rounded, size: 20),
+                  ),
+                  const SizedBox(height: 2),
+                  Text('Tiempo',
+                      style: GoogleFonts.nunito(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w600,
+                        color: colors.onSurface.withValues(alpha: 0.5),
+                      )),
+                ],
+              ),
+            ],
           ),
         ),
       ],
@@ -2770,7 +2794,9 @@ class _WalkinSheetState extends ConsumerState<_WalkinSheet> {
           _popularOtherNames = sorted.take(8).map((e) => e.key).toList();
         });
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[Calendar] Failed to load popular service names: $e');
+    }
   }
 
   @override

@@ -314,97 +314,16 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
   }
 
   /// Card / OXXO path — Stripe PaymentSheet.
+  ///
+  /// IMPORTANT: Booking is created BEFORE payment to prevent the race condition
+  /// where a user is charged but no appointment exists (e.g. app crash after
+  /// payment but before booking creation). The webhook updates the booking
+  /// to 'paid' + 'confirmed' on payment success.
   Future<void> _confirmStripe(ResultCard result, {required bool oxxoOnly}) async {
-    String? paymentIntentId;
     final serviceId = result.service.id;
 
-    if (serviceId.isNotEmpty && result.service.price > 0) {
-      debugPrint('[PAYMENT] Creating PaymentIntent (${oxxoOnly ? "oxxo" : "card"}) for service $serviceId');
-
-      final piResponse = await SupabaseClientService.client.functions.invoke(
-        'create-payment-intent',
-        body: {
-          'service_id': serviceId,
-          'scheduled_at': result.slot.startTime.toUtc().toIso8601String(),
-          'payment_type': 'full',
-          'payment_method': oxxoOnly ? 'oxxo' : 'card',
-        },
-      );
-
-      if (piResponse.status != 200) {
-        final error = piResponse.data is Map
-            ? piResponse.data['error'] ?? 'Payment error'
-            : 'Payment error';
-        throw Exception(error);
-      }
-
-      final piData = piResponse.data as Map<String, dynamic>;
-      final clientSecret = piData['client_secret'] as String;
-      paymentIntentId = piData['payment_intent_id'] as String;
-      final customerId = piData['customer_id'] as String?;
-      final ephemeralKey = piData['ephemeral_key'] as String?;
-
-      debugPrint('[PAYMENT] PaymentIntent created: $paymentIntentId');
-
-      await Stripe.instance.initPaymentSheet(
-        paymentSheetParameters: SetupPaymentSheetParameters(
-          paymentIntentClientSecret: clientSecret,
-          customerId: customerId,
-          customerEphemeralKeySecret: ephemeralKey,
-          merchantDisplayName: 'BeautyCita',
-          returnURL: 'beautycita://stripe-redirect',
-          allowsDelayedPaymentMethods: true,
-          billingDetailsCollectionConfiguration: const BillingDetailsCollectionConfiguration(
-            name: CollectionMode.automatic,
-            email: CollectionMode.never,
-            phone: CollectionMode.never,
-            address: AddressCollectionMode.never,
-          ),
-          style: ThemeMode.light,
-          appearance: const PaymentSheetAppearance(
-            colors: PaymentSheetAppearanceColors(
-              primary: Color(0xFF660033),
-              background: Color(0xFFF9F9F9),
-              componentBackground: Color(0xFFFFFFFF),
-              componentBorder: Color(0xFFBDBDBD),
-              componentDivider: Color(0xFFE0E0E0),
-              primaryText: Color(0xFF000000),
-              secondaryText: Color(0xFF212121),
-              componentText: Color(0xFF000000),
-              placeholderText: Color(0xFF757575),
-              icon: Color(0xFF660033),
-              error: Color(0xFFD32F2F),
-            ),
-            shapes: PaymentSheetShape(
-              borderRadius: 12,
-              borderWidth: 1.0,
-            ),
-            primaryButton: PaymentSheetPrimaryButtonAppearance(
-              colors: PaymentSheetPrimaryButtonTheme(
-                light: PaymentSheetPrimaryButtonThemeColors(
-                  background: Color(0xFF660033),
-                  text: Color(0xFFFFFFFF),
-                  border: Color(0xFF660033),
-                ),
-                dark: PaymentSheetPrimaryButtonThemeColors(
-                  background: Color(0xFF660033),
-                  text: Color(0xFFFFFFFF),
-                  border: Color(0xFF660033),
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
-
-      await Stripe.instance.presentPaymentSheet();
-      debugPrint('[PAYMENT] Payment sheet completed');
-    }
-
-    // For OXXO: booking is pending until they pay at the store
-    // For card: payment is instant
-    final isPaid = !oxxoOnly;
-
+    // Step 1: Create booking first with pending status.
+    // If payment fails or user cancels, we clean it up below.
     final booking = await _bookingRepo.createBooking(
       providerId: result.business.id,
       providerServiceId: result.service.id,
@@ -413,11 +332,131 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
       scheduledAt: result.slot.startTime,
       durationMinutes: result.service.durationMinutes,
       price: result.service.price,
-      paymentIntentId: paymentIntentId,
-      paymentStatus: paymentIntentId != null ? (isPaid ? 'paid' : 'pending') : null,
+      paymentStatus: 'pending',
       paymentMethod: state.paymentMethod,
       transportMode: state.transportMode,
     );
+
+    debugPrint('[PAYMENT] Booking created: ${booking.id} (pending payment)');
+
+    try {
+      if (serviceId.isNotEmpty && result.service.price > 0) {
+        debugPrint('[PAYMENT] Creating PaymentIntent (${oxxoOnly ? "oxxo" : "card"}) for service $serviceId');
+
+        // Step 2: Create PaymentIntent with booking_id in metadata.
+        // The webhook uses this to update the booking on payment success.
+        final piResponse = await SupabaseClientService.client.functions.invoke(
+          'create-payment-intent',
+          body: {
+            'service_id': serviceId,
+            'booking_id': booking.id,
+            'scheduled_at': result.slot.startTime.toUtc().toIso8601String(),
+            'payment_type': 'full',
+            'payment_method': oxxoOnly ? 'oxxo' : 'card',
+          },
+        );
+
+        if (piResponse.status != 200) {
+          final error = piResponse.data is Map
+              ? piResponse.data['error'] ?? 'Payment error'
+              : 'Payment error';
+          throw Exception(error);
+        }
+
+        final piData = piResponse.data as Map<String, dynamic>;
+        final clientSecret = piData['client_secret'] as String;
+        final paymentIntentId = piData['payment_intent_id'] as String;
+        final customerId = piData['customer_id'] as String?;
+        final ephemeralKey = piData['ephemeral_key'] as String?;
+
+        debugPrint('[PAYMENT] PaymentIntent created: $paymentIntentId');
+
+        // Link the PaymentIntent to the booking so we can track it
+        await SupabaseClientService.client
+            .from('appointments')
+            .update({'payment_intent_id': paymentIntentId})
+            .eq('id', booking.id);
+
+        // Step 3: Present payment sheet to user
+        await Stripe.instance.initPaymentSheet(
+          paymentSheetParameters: SetupPaymentSheetParameters(
+            paymentIntentClientSecret: clientSecret,
+            customerId: customerId,
+            customerEphemeralKeySecret: ephemeralKey,
+            merchantDisplayName: 'BeautyCita',
+            returnURL: 'beautycita://stripe-redirect',
+            allowsDelayedPaymentMethods: true,
+            billingDetailsCollectionConfiguration: const BillingDetailsCollectionConfiguration(
+              name: CollectionMode.automatic,
+              email: CollectionMode.never,
+              phone: CollectionMode.never,
+              address: AddressCollectionMode.never,
+            ),
+            style: ThemeMode.light,
+            appearance: const PaymentSheetAppearance(
+              colors: PaymentSheetAppearanceColors(
+                primary: Color(0xFF660033),
+                background: Color(0xFFF9F9F9),
+                componentBackground: Color(0xFFFFFFFF),
+                componentBorder: Color(0xFFBDBDBD),
+                componentDivider: Color(0xFFE0E0E0),
+                primaryText: Color(0xFF000000),
+                secondaryText: Color(0xFF212121),
+                componentText: Color(0xFF000000),
+                placeholderText: Color(0xFF757575),
+                icon: Color(0xFF660033),
+                error: Color(0xFFD32F2F),
+              ),
+              shapes: PaymentSheetShape(
+                borderRadius: 12,
+                borderWidth: 1.0,
+              ),
+              primaryButton: PaymentSheetPrimaryButtonAppearance(
+                colors: PaymentSheetPrimaryButtonTheme(
+                  light: PaymentSheetPrimaryButtonThemeColors(
+                    background: Color(0xFF660033),
+                    text: Color(0xFFFFFFFF),
+                    border: Color(0xFF660033),
+                  ),
+                  dark: PaymentSheetPrimaryButtonThemeColors(
+                    background: Color(0xFF660033),
+                    text: Color(0xFFFFFFFF),
+                    border: Color(0xFF660033),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+
+        await Stripe.instance.presentPaymentSheet();
+        debugPrint('[PAYMENT] Payment sheet completed');
+
+        // For card: payment is instant, webhook will confirm.
+        // For OXXO: payment is pending until customer pays at store.
+        if (!oxxoOnly) {
+          // Card payment succeeded — webhook will also update, but set locally
+          // for immediate UI feedback.
+          await SupabaseClientService.client
+              .from('appointments')
+              .update({
+                'status': 'confirmed',
+                'payment_status': 'paid',
+              })
+              .eq('id', booking.id);
+        }
+      }
+    } on StripeException catch (e) {
+      // User cancelled or payment failed — cancel the booking
+      debugPrint('[PAYMENT] Stripe error, cancelling booking ${booking.id}');
+      await _bookingRepo.cancelBooking(booking.id);
+      rethrow;
+    } catch (e) {
+      // Any other error — cancel the booking
+      debugPrint('[PAYMENT] Error, cancelling booking ${booking.id}');
+      await _bookingRepo.cancelBooking(booking.id);
+      rethrow;
+    }
 
     // Fire booking confirmation + push (fire and forget)
     _sendBookingNotifications(booking.id);

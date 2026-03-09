@@ -11,8 +11,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Stripe from "https://esm.sh/stripe@14.21.0?target=deno";
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": "https://beautycita.com",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY") ?? "";
@@ -57,6 +58,16 @@ serve(async (req) => {
 
     if (authError || !user) {
       return json({ error: "Unauthorized" }, 401);
+    }
+
+    // Feature toggle check
+    const { data: toggleData } = await supabase
+      .from("app_config")
+      .select("value")
+      .eq("key", "enable_pos")
+      .single();
+    if (toggleData?.value !== "true") {
+      return json({ error: "This feature is currently disabled" }, 403);
     }
 
     const body: ProductPaymentRequest = await req.json();
@@ -219,8 +230,8 @@ serve(async (req) => {
     });
 
   } catch (err) {
-    console.error("[PRODUCT-PAYMENT] Error:", (err as Error).message);
-    return json({ error: (err as Error).message }, 500);
+    console.error("[PRODUCT-PAYMENT] Error:", err);
+    return json({ error: "An internal error occurred" }, 500);
   }
 });
 

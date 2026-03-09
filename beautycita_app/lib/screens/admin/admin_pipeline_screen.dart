@@ -468,56 +468,6 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
     }
   }
 
-  Future<void> _bulkDelete() async {
-    final ids = _selectedIds.toList();
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(
-          'Eliminar ${ids.length} leads',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-        ),
-        content: Text(
-          'Esta accion no se puede deshacer.',
-          style: GoogleFonts.nunito(),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Cancelar', style: GoogleFonts.nunito()),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red[700],
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text('Eliminar', style: GoogleFonts.nunito()),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true || !mounted) return;
-
-    try {
-      await SupabaseClientService.client
-          .from('discovered_salons')
-          .delete()
-          .inFilter('id', ids);
-    } catch (e) {
-      if (mounted) ToastService.showError('Error al eliminar: $e');
-      return;
-    }
-
-    ref.invalidate(searchDiscoveredSalonsProvider(_searchKey));
-    ref.invalidate(pipelineFunnelStatsProvider);
-    _exitSelection();
-
-    if (mounted) {
-      ToastService.showSuccess('${ids.length} leads eliminados');
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -751,7 +701,6 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
                   _showExportSheet(selected.isEmpty ? leads : selected);
                 });
               },
-              onDelete: _bulkDelete,
               onClose: _exitSelection,
             ),
           ),
@@ -1433,7 +1382,6 @@ class _BulkActionBar extends StatelessWidget {
   final VoidCallback onAssignRp;
   final VoidCallback onUnassign;
   final VoidCallback onExport;
-  final VoidCallback onDelete;
   final VoidCallback onClose;
 
   const _BulkActionBar({
@@ -1443,7 +1391,6 @@ class _BulkActionBar extends StatelessWidget {
     required this.onAssignRp,
     required this.onUnassign,
     required this.onExport,
-    required this.onDelete,
     required this.onClose,
   });
 
@@ -1476,60 +1423,61 @@ class _BulkActionBar extends StatelessWidget {
         child: Row(
           children: [
             Text(
-              '$count seleccionados',
+              '$count',
               style: GoogleFonts.poppins(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
                 color: colors.onSurface,
               ),
             ),
-            const Spacer(),
-            // Outreach
-            _ActionBtn(
-              icon: Icons.send_outlined,
-              label: 'Outreach',
-              color: Colors.blue,
-              onTap: onOutreach,
-            ),
             const SizedBox(width: AppConstants.paddingSM),
-            // Status
-            _ActionBtn(
-              icon: Icons.edit_outlined,
-              label: 'Estado',
-              color: Colors.orange,
-              onTap: onStatus,
-            ),
-            const SizedBox(width: AppConstants.paddingSM),
-            // Assign RP
-            _ActionBtn(
-              icon: Icons.person_add_outlined,
-              label: 'Asignar RP',
-              color: Colors.indigo,
-              onTap: onAssignRp,
-            ),
-            const SizedBox(width: AppConstants.paddingSM),
-            // Unassign
-            _ActionBtn(
-              icon: Icons.person_remove_outlined,
-              label: 'Desasignar',
-              color: Colors.deepOrange,
-              onTap: onUnassign,
-            ),
-            const SizedBox(width: AppConstants.paddingSM),
-            // Export
-            _ActionBtn(
-              icon: Icons.file_download_outlined,
-              label: 'Exportar',
-              color: Colors.green,
-              onTap: onExport,
-            ),
-            const SizedBox(width: AppConstants.paddingSM),
-            // Delete
-            _ActionBtn(
-              icon: Icons.delete_outline,
-              label: 'Eliminar',
-              color: Colors.red,
-              onTap: onDelete,
+            Expanded(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    // Assign RP (most important action)
+                    _ActionBtn(
+                      icon: Icons.person_add_outlined,
+                      label: 'Asignar RP',
+                      color: Colors.indigo,
+                      onTap: onAssignRp,
+                    ),
+                    const SizedBox(width: AppConstants.paddingSM),
+                    // Unassign
+                    _ActionBtn(
+                      icon: Icons.person_remove_outlined,
+                      label: 'Desasignar',
+                      color: Colors.deepOrange,
+                      onTap: onUnassign,
+                    ),
+                    const SizedBox(width: AppConstants.paddingSM),
+                    // Status
+                    _ActionBtn(
+                      icon: Icons.edit_outlined,
+                      label: 'Estado',
+                      color: Colors.orange,
+                      onTap: onStatus,
+                    ),
+                    const SizedBox(width: AppConstants.paddingSM),
+                    // Outreach
+                    _ActionBtn(
+                      icon: Icons.send_outlined,
+                      label: 'Outreach',
+                      color: Colors.blue,
+                      onTap: onOutreach,
+                    ),
+                    const SizedBox(width: AppConstants.paddingSM),
+                    // Export
+                    _ActionBtn(
+                      icon: Icons.file_download_outlined,
+                      label: 'Exportar',
+                      color: Colors.green,
+                      onTap: onExport,
+                    ),
+                  ],
+                ),
+              ),
             ),
             const SizedBox(width: AppConstants.paddingSM),
             // Close

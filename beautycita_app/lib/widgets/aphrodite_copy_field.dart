@@ -75,8 +75,8 @@ class _AphroditeCopyFieldState extends State<AphroditeCopyField>
       if (e.statusCode == 429) {
         ToastService.showWarning(e.message);
       }
-    } catch (_) {
-      // Silent fail — field stays editable
+    } catch (e) {
+      debugPrint('[AphroditeCopyField] Generation failed: $e');
     } finally {
       if (mounted) {
         _spinCtrl.stop();

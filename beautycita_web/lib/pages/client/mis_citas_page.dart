@@ -488,12 +488,17 @@ class _BookingCardState extends State<_BookingCard> {
   }
 
   void _contactSalon(Booking b) {
-    // Open WhatsApp with the salon (placeholder — real phone would come from business data)
     final message = Uri.encodeComponent(
       'Hola, tengo una cita de ${b.serviceName} agendada. '
       'Quisiera confirmar los detalles.',
     );
-    launchUrl(Uri.parse('https://wa.me/?text=$message'));
+    final phone = b.businessPhone?.replaceAll(RegExp(r'[^\d]'), '');
+    if (phone != null && phone.isNotEmpty) {
+      launchUrl(Uri.parse('https://wa.me/$phone?text=$message'));
+    } else {
+      // Fallback: open WhatsApp with message only (no specific recipient)
+      launchUrl(Uri.parse('https://wa.me/?text=$message'));
+    }
   }
 }
 

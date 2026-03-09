@@ -111,8 +111,8 @@ serve(async (req) => {
         return json({ error: "Unknown action" }, 400);
     }
   } catch (err) {
-    console.error("[SUSPEND-SALON] Error:", (err as Error).message);
-    return json({ error: (err as Error).message }, 500);
+    console.error("[SUSPEND-SALON] Error:", err);
+    return json({ error: "An internal error occurred" }, 500);
   }
 });
 

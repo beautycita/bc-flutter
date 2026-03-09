@@ -202,7 +202,9 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
           salonAddress: biz['address'] as String?,
         );
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[BookingDetail] Failed to open Uber to salon: $e');
+    }
   }
 
   Future<void> _openUberFromSalon(Booking booking) async {
@@ -224,7 +226,9 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
               biz['name'] as String? ?? booking.providerName ?? 'Salon',
         );
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[BookingDetail] Failed to open Uber from salon: $e');
+    }
   }
 
   Future<void> _editNotes(Booking booking) async {

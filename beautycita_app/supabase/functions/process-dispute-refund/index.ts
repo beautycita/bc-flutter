@@ -279,8 +279,8 @@ serve(async (req) => {
     });
 
   } catch (err) {
-    console.error("[DISPUTE-REFUND] Error:", (err as Error).message);
-    return json({ error: (err as Error).message }, 500);
+    console.error("[DISPUTE-REFUND] Error:", err);
+    return json({ error: "An internal error occurred" }, 500);
   }
 });
 

@@ -841,8 +841,8 @@ serve(async (req) => {
 
     return json({ success: true, template, to });
   } catch (err) {
-    console.error("[EMAIL] Error:", (err as Error).message);
-    return json({ error: (err as Error).message }, 500);
+    console.error("[EMAIL] Error:", err);
+    return json({ error: "An internal error occurred" }, 500);
   }
 });
 

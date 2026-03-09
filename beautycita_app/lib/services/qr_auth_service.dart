@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:beautycita/services/supabase_client.dart';
 
 /// Result of a QR auth operation
@@ -53,8 +54,8 @@ class QrAuthService {
           );
           await Future.delayed(const Duration(milliseconds: 500));
           await SupabaseClientService.client.removeChannel(channel);
-        } catch (_) {
-          // Broadcast is best-effort; DB update is the source of truth
+        } catch (e) {
+          debugPrint('[QrAuth] Broadcast failed (best-effort): $e');
         }
         return const QrAuthSuccess();
       }

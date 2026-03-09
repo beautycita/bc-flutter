@@ -51,6 +51,16 @@ serve(async (req) => {
       return json({ error: "Unauthorized" }, 401);
     }
 
+    // Feature toggle check
+    const { data: toggleData } = await supabase
+      .from("app_config")
+      .select("value")
+      .eq("key", "enable_push_notifications")
+      .single();
+    if (toggleData?.value !== "true") {
+      return json({ error: "This feature is currently disabled" }, 403);
+    }
+
     const body: NoShowRequest = await req.json();
     const { appointment_id, marked_by = "business" } = body;
 
@@ -299,8 +309,8 @@ serve(async (req) => {
     });
 
   } catch (err) {
-    console.error("[NO-SHOW] Error:", (err as Error).message);
-    return json({ error: (err as Error).message }, 500);
+    console.error("[NO-SHOW] Error:", err);
+    return json({ error: "An internal error occurred" }, 500);
   }
 });
 

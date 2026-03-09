@@ -27,11 +27,13 @@ class _BusinessSettingsScreenState
   final _fbCtrl = TextEditingController();
   final _cancelHoursCtrl = TextEditingController();
   final _depositPctCtrl = TextEditingController();
+  final _rfcCtrl = TextEditingController();
 
   bool _autoConfirm = false;
   bool _acceptWalkins = false;
   bool _depositRequired = false;
   String _noShowPolicy = 'forfeit_deposit';
+  String _taxResidency = 'MX';
   bool _initialized = false;
   bool _saving = false;
 
@@ -82,6 +84,7 @@ class _BusinessSettingsScreenState
     _fbCtrl.dispose();
     _cancelHoursCtrl.dispose();
     _depositPctCtrl.dispose();
+    _rfcCtrl.dispose();
     super.dispose();
   }
 
@@ -103,6 +106,8 @@ class _BusinessSettingsScreenState
     _acceptWalkins = biz['accept_walkins'] as bool? ?? false;
     _depositRequired = biz['deposit_required'] as bool? ?? false;
     _noShowPolicy = biz['no_show_policy'] as String? ?? 'forfeit_deposit';
+    _rfcCtrl.text = biz['rfc'] as String? ?? '';
+    _taxResidency = biz['tax_residency'] as String? ?? 'MX';
 
     // Parse hours JSON
     final hoursRaw = biz['hours'];
@@ -285,6 +290,58 @@ class _BusinessSettingsScreenState
               controller: _fbCtrl,
               decoration: _styledInput('Facebook URL',
                   prefixIcon: const Icon(Icons.facebook_rounded, size: 20)),
+            ),
+
+            // ---------- Datos Fiscales (Tax) ----------
+            const SizedBox(height: AppConstants.paddingLG),
+            _SectionHeader(label: 'DATOS FISCALES'),
+            const SizedBox(height: AppConstants.paddingSM),
+            TextField(
+              controller: _rfcCtrl,
+              textCapitalization: TextCapitalization.characters,
+              decoration: _styledInput(
+                'RFC (opcional)',
+                prefixIcon: const Icon(Icons.receipt_long_rounded, size: 20),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Text(
+                'Con RFC: retencion ISR 2.5%. Sin RFC: 20%.',
+                style: GoogleFonts.nunito(
+                  fontSize: 11,
+                  color: colors.onSurface.withValues(alpha: 0.5),
+                ),
+              ),
+            ),
+            const SizedBox(height: AppConstants.paddingSM),
+            Container(
+              decoration: _cardDecoration(colors),
+              clipBehavior: Clip.antiAlias,
+              child: Column(
+                children: [
+                  RadioListTile<String>(
+                    title: Text('Residente fiscal mexicano',
+                        style: GoogleFonts.poppins(
+                            fontSize: 14, fontWeight: FontWeight.w500)),
+                    value: 'MX',
+                    groupValue: _taxResidency,
+                    onChanged: (v) => setState(() => _taxResidency = v ?? 'MX'),
+                    activeColor: colors.primary,
+                  ),
+                  const Divider(height: 1),
+                  RadioListTile<String>(
+                    title: Text('Extranjero',
+                        style: GoogleFonts.poppins(
+                            fontSize: 14, fontWeight: FontWeight.w500)),
+                    value: 'foreign',
+                    groupValue: _taxResidency,
+                    onChanged: (v) => setState(() => _taxResidency = v ?? 'MX'),
+                    activeColor: colors.primary,
+                  ),
+                ],
+              ),
             ),
 
             // ---------- Operating hours ----------
@@ -593,6 +650,8 @@ class _BusinessSettingsScreenState
             : 0,
         'no_show_policy': _noShowPolicy,
         'hours': _buildHoursJson(),
+        'rfc': _rfcCtrl.text.trim().isEmpty ? null : _rfcCtrl.text.trim(),
+        'tax_residency': _taxResidency,
       }).eq('id', bizId);
 
       ref.invalidate(currentBusinessProvider);

@@ -83,19 +83,19 @@ class _TermsAndPolicyScreenState extends State<TermsAndPolicyScreen>
           _LegalTab(
             icon: Icons.description_outlined,
             subtitle: 'Reglas de uso de la plataforma',
-            lastUpdated: '22 de febrero de 2026',
+            lastUpdated: '6 de marzo de 2026',
             sections: _termsSections,
           ),
           _LegalTab(
             icon: Icons.privacy_tip_outlined,
             subtitle: 'Como protegemos tus datos',
-            lastUpdated: '22 de febrero de 2026',
+            lastUpdated: '6 de marzo de 2026',
             sections: _privacySections,
           ),
           _LegalTab(
             icon: Icons.storage_outlined,
             subtitle: 'Que guardamos en tu dispositivo',
-            lastUpdated: '22 de febrero de 2026',
+            lastUpdated: '6 de marzo de 2026',
             sections: _storageSections,
           ),
         ],
@@ -527,6 +527,23 @@ const _termsSections = [
         'Pagos en efectivo se coordinan directamente con el salon.',
   ),
   _Section(
+    heading: '4a. Retenciones fiscales',
+    body:
+        'Como plataforma digital de intermediacion, BeautyCita esta obligada por '
+        'ley mexicana (LISR Art. 113-A, LIVA Art. 18-J) a retener Impuesto '
+        'Sobre la Renta (ISR) e Impuesto al Valor Agregado (IVA) de los pagos '
+        'a proveedores de servicios.\n\n'
+        'Tasas de retencion:\n'
+        '- Con RFC registrado: ISR 2.5% + IVA 8% del monto bruto.\n'
+        '- Sin RFC: ISR 20% + IVA 16% del monto bruto.\n\n'
+        'Las retenciones se deducen automaticamente del pago al proveedor. '
+        'El cliente paga el precio publicado sin cambio. El proveedor recibe '
+        'el monto neto despues de la comision de plataforma y las retenciones.\n\n'
+        'BeautyCita entera las retenciones al SAT (Servicio de Administracion '
+        'Tributaria) mediante declaraciones informativas mensuales y pone a '
+        'disposicion de los proveedores un desglose de retenciones en su panel.',
+  ),
+  _Section(
     heading: '5. Transporte',
     body:
         'La integracion con Uber es opcional. Al vincular tu cuenta, autorizas a '
@@ -602,6 +619,9 @@ const _privacySections = [
         'Reservas: historial, preferencias de busqueda y resenas.\n\n'
         'Pagos: ultimos 4 digitos de tarjeta (via Stripe), direcciones Bitcoin '
         '(via BTCPay). Nunca almacenamos numeros completos.\n\n'
+        'Datos fiscales de proveedores: RFC (Registro Federal de Contribuyentes) '
+        'y regimen fiscal, proporcionados voluntariamente para determinar tasas '
+        'de retencion de impuestos.\n\n'
         'Medios: fotos que subas o generes con herramientas de IA.\n\n'
         'Tecnicos: token de notificaciones push y plataforma de registro.',
   ),
@@ -617,7 +637,10 @@ const _privacySections = [
         'Usamos tu informacion para gestionar tu cuenta, buscar salones, '
         'procesar reservas y pagos, enviar notificaciones de citas, '
         'coordinar transporte, procesar imagenes del estudio virtual '
-        'y cumplir obligaciones legales.',
+        'y cumplir obligaciones legales.\n\n'
+        'Obligaciones fiscales: calculamos y registramos retenciones de ISR e '
+        'IVA por cada transaccion con proveedores. El RFC del proveedor se usa '
+        'exclusivamente para determinar la tasa de retencion aplicable.',
   ),
   _Section(
     heading: '5. Terceros',
@@ -625,6 +648,12 @@ const _privacySections = [
         'Compartimos datos solo con: Stripe (pagos), BTCPay (Bitcoin, auto-hospedado), '
         'Firebase (notificaciones), Google Places (direcciones), Uber (transporte) '
         'y LightX (procesamiento de imagenes).\n\n'
+        'SAT (Servicio de Administracion Tributaria): Por obligacion legal, '
+        'compartimos datos de transacciones y retenciones fiscales con el SAT '
+        'mediante declaraciones informativas mensuales. El SAT tambien tiene '
+        'acceso en tiempo real a registros de transacciones de la plataforma '
+        'conforme a la legislacion vigente. Los datos compartidos incluyen: '
+        'montos de transacciones, retenciones de ISR e IVA, y RFC de proveedores.\n\n'
         'No vendemos ni comercializamos tus datos.',
   ),
   _Section(

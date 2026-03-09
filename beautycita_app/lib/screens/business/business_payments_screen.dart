@@ -245,7 +245,9 @@ class _BusinessPaymentsScreenState
     } catch (e, stack) {
       try {
         navigator.pop();
-      } catch (_) {}
+      } catch (e2) {
+        debugPrint('[Payments] navigator.pop() failed: $e2');
+      }
       ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
     }
   }

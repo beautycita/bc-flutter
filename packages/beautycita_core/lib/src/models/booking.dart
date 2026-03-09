@@ -13,6 +13,7 @@ class Booking {
   final String? notes;
   final DateTime createdAt;
   final String? providerName;
+  final String? businessPhone;
   final String? transportMode;
   final String? paymentStatus;
   final double? depositAmount;
@@ -33,6 +34,7 @@ class Booking {
     this.notes,
     required this.createdAt,
     this.providerName,
+    this.businessPhone,
     this.transportMode,
     this.paymentStatus,
     this.depositAmount,
@@ -40,12 +42,15 @@ class Booking {
   });
 
   factory Booking.fromJson(Map<String, dynamic> json) {
-    // Handle joined business name from nested object or flat field
+    // Handle joined business name + phone from nested object or flat field
     String? providerName;
+    String? businessPhone;
     if (json['businesses'] != null && json['businesses'] is Map) {
       providerName = json['businesses']['name'] as String?;
+      businessPhone = json['businesses']['phone'] as String?;
     } else {
       providerName = json['provider_name'] as String?;
+      businessPhone = json['business_phone'] as String?;
     }
 
     final startsAt = DateTime.parse(json['starts_at'] as String);
@@ -71,6 +76,7 @@ class Booking {
       notes: json['notes'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
       providerName: providerName,
+      businessPhone: businessPhone,
       transportMode: json['transport_mode'] as String?,
       paymentStatus: json['payment_status'] as String?,
       depositAmount: (json['deposit_amount'] as num?)?.toDouble(),
@@ -122,6 +128,7 @@ class Booking {
       notes: notes ?? this.notes,
       createdAt: createdAt,
       providerName: providerName,
+      businessPhone: businessPhone,
       transportMode: transportMode ?? this.transportMode,
       paymentStatus: paymentStatus ?? this.paymentStatus,
       depositAmount: depositAmount,

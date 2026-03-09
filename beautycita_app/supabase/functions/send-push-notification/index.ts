@@ -371,6 +371,19 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Feature toggle check
+    const { data: toggleData } = await supabase
+      .from("app_config")
+      .select("value")
+      .eq("key", "enable_push_notifications")
+      .single();
+    if (toggleData?.value !== "true") {
+      return new Response(JSON.stringify({ error: "This feature is currently disabled" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const body: PushRequest = await req.json();
     const {
       booking_id,

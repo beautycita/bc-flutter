@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../config/constants.dart';
 import '../main.dart' show supabaseReady;
 import '../providers/auth_provider.dart';
@@ -65,6 +66,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     // Wait for Supabase to finish initializing (runs in background since main)
     await supabaseReady.future;
 
+    // Load version from compiled package metadata (pubspec.yaml is the source of truth)
+    final info = await PackageInfo.fromPlatform();
+    AppConstants.version = info.version;
+    AppConstants.buildNumber = int.tryParse(info.buildNumber) ?? 0;
+
     // OTA update check (silent, non-blocking — downloads patch in background)
     UpdaterService.instance.checkAndUpdate();
     // APK version check (result checked after home screen loads)
@@ -72,7 +78,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
     try {
       await ref.read(authStateProvider.notifier).checkRegistration();
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[SplashScreen] checkRegistration failed: $e');
+    }
 
     await Future.delayed(AppConstants.splashDuration);
 

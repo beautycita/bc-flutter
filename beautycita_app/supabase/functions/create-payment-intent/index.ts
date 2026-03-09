@@ -10,10 +10,12 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Stripe from "https://esm.sh/stripe@14.21.0?target=deno";
+import { calculateWithholding, type TaxWithholding } from "../_shared/tax_mx.ts";
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": "https://beautycita.com",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY") ?? "";
@@ -30,6 +32,7 @@ const stripe = new Stripe(STRIPE_SECRET_KEY, {
 
 interface PaymentIntentRequest {
   service_id: string;
+  booking_id?: string; // Pre-created booking ID for webhook reconciliation
   staff_id?: string;
   scheduled_at: string; // ISO timestamp
   payment_type?: "full" | "deposit_only"; // default: full
@@ -53,8 +56,18 @@ serve(async (req) => {
       return json({ error: "Unauthorized" }, 401);
     }
 
+    // Feature toggle check
+    const { data: toggleData } = await supabase
+      .from("app_config")
+      .select("value")
+      .eq("key", "enable_stripe_payments")
+      .single();
+    if (toggleData?.value !== "true") {
+      return json({ error: "This feature is currently disabled" }, 403);
+    }
+
     const body: PaymentIntentRequest = await req.json();
-    const { service_id, staff_id, scheduled_at, payment_type = "full", payment_method = "card" } = body;
+    const { service_id, booking_id, staff_id, scheduled_at, payment_type = "full", payment_method = "card" } = body;
 
     if (!service_id || !scheduled_at) {
       return json({ error: "service_id and scheduled_at are required" }, 400);
@@ -75,7 +88,9 @@ serve(async (req) => {
           id,
           name,
           stripe_account_id,
-          onboarding_complete
+          onboarding_complete,
+          rfc,
+          tax_residency
         )
       `)
       .eq("id", service_id)
@@ -91,6 +106,8 @@ serve(async (req) => {
       name: string;
       stripe_account_id: string | null;
       onboarding_complete: boolean;
+      rfc: string | null;
+      tax_residency: string;
     };
 
     // Verify business is fully onboarded
@@ -124,11 +141,36 @@ serve(async (req) => {
       chargeAmount = servicePrice;
     }
 
-    // Platform fee (3% of the charge amount)
-    const platformFee = Math.round(chargeAmount * PLATFORM_FEE_PERCENT * 100); // in centavos
-
     // Amount in centavos for Stripe
     const amountCentavos = Math.round(chargeAmount * 100);
+
+    // Check if tax withholding is enabled
+    const { data: taxFlag } = await supabase
+      .from("app_config")
+      .select("value")
+      .eq("key", "tax_withholding_enabled")
+      .single();
+    const taxWithholdingEnabled = taxFlag?.value === "true";
+
+    // Calculate withholdings (or just platform fee)
+    let applicationFeeAmount: number; // in centavos
+    let taxInfo: TaxWithholding | null = null;
+
+    if (taxWithholdingEnabled) {
+      taxInfo = calculateWithholding(
+        chargeAmount,
+        PLATFORM_FEE_PERCENT,
+        business.rfc,
+        business.tax_residency ?? "MX",
+      );
+      // application_fee_amount absorbs platform fee + ISR + IVA
+      applicationFeeAmount = Math.round(
+        (taxInfo.platformFee + taxInfo.isrWithheld + taxInfo.ivaWithheld) * 100
+      );
+    } else {
+      const platformFee = Math.round(chargeAmount * PLATFORM_FEE_PERCENT * 100);
+      applicationFeeAmount = platformFee;
+    }
 
     // Get or create Stripe customer
     let stripeCustomerId: string | undefined;
@@ -178,36 +220,61 @@ serve(async (req) => {
       ? { payment_method_types: ["oxxo"] as string[] }
       : { automatic_payment_methods: { enabled: true } };
 
+    // Build metadata — include tax info when withholding is enabled
+    const metadata: Record<string, string> = {
+      service_id,
+      booking_id: booking_id ?? "",
+      service_name: service.name,
+      business_id: business.id,
+      business_name: business.name,
+      staff_id: staff_id ?? "",
+      scheduled_at,
+      user_id: user.id,
+      payment_type,
+      payment_method,
+      deposit_amount: depositAmount.toString(),
+      full_price: servicePrice.toString(),
+    };
+
+    if (taxInfo) {
+      metadata.tax_withholding = "true";
+      metadata.tax_base = taxInfo.taxBase.toString();
+      metadata.iva_portion = taxInfo.ivaPortion.toString();
+      metadata.platform_fee_amount = taxInfo.platformFee.toString();
+      metadata.isr_rate = taxInfo.isrRate.toString();
+      metadata.iva_rate = taxInfo.ivaRate.toString();
+      metadata.isr_withheld = taxInfo.isrWithheld.toString();
+      metadata.iva_withheld = taxInfo.ivaWithheld.toString();
+      metadata.provider_net = taxInfo.providerNet.toString();
+      metadata.provider_rfc = business.rfc ?? "";
+      metadata.provider_tax_residency = business.tax_residency ?? "MX";
+    }
+
     // Create PaymentIntent with Connect destination charge
     const paymentIntent = await stripe.paymentIntents.create({
       amount: amountCentavos,
       currency: "mxn",
       customer: stripeCustomerId,
       ...paymentMethodConfig,
-      // Transfer to connected account, minus platform fee
+      // Transfer to connected account, minus application fee
       transfer_data: {
         destination: business.stripe_account_id,
       },
-      application_fee_amount: platformFee,
-      metadata: {
-        service_id,
-        service_name: service.name,
-        business_id: business.id,
-        business_name: business.name,
-        staff_id: staff_id ?? "",
-        scheduled_at,
-        user_id: user.id,
-        payment_type,
-        payment_method,
-        deposit_amount: depositAmount.toString(),
-        full_price: servicePrice.toString(),
-      },
+      application_fee_amount: applicationFeeAmount,
+      metadata,
     });
+
+    const platformFeeMXN = taxInfo ? taxInfo.platformFee : applicationFeeAmount / 100;
+    const providerReceives = taxInfo ? taxInfo.providerNet : (amountCentavos - applicationFeeAmount) / 100;
 
     console.log(`[PAYMENT] Created PaymentIntent ${paymentIntent.id}`);
     console.log(`  Amount: $${chargeAmount} MXN (${amountCentavos} centavos)`);
-    console.log(`  Platform fee: $${platformFee / 100} MXN`);
-    console.log(`  To provider: $${(amountCentavos - platformFee) / 100} MXN`);
+    console.log(`  Platform fee: $${platformFeeMXN} MXN`);
+    if (taxInfo) {
+      console.log(`  ISR withheld: $${taxInfo.isrWithheld} MXN (${taxInfo.isrRate * 100}%)`);
+      console.log(`  IVA withheld: $${taxInfo.ivaWithheld} MXN (${taxInfo.ivaRate * 100}%)`);
+    }
+    console.log(`  Provider receives: $${providerReceives} MXN`);
 
     return json({
       client_secret: paymentIntent.client_secret,
@@ -216,10 +283,20 @@ serve(async (req) => {
       ephemeral_key: ephemeralKey.secret,
       amount: chargeAmount,
       deposit_amount: depositAmount,
-      platform_fee: platformFee / 100,
-      provider_receives: (amountCentavos - platformFee) / 100,
+      platform_fee: platformFeeMXN,
+      provider_receives: providerReceives,
       currency: "mxn",
       payment_method,
+      ...(taxInfo ? {
+        tax_withholding: {
+          tax_base: taxInfo.taxBase,
+          iva_portion: taxInfo.ivaPortion,
+          isr_rate: taxInfo.isrRate,
+          iva_rate: taxInfo.ivaRate,
+          isr_withheld: taxInfo.isrWithheld,
+          iva_withheld: taxInfo.ivaWithheld,
+        },
+      } : {}),
       service: {
         id: service.id,
         name: service.name,
@@ -235,8 +312,8 @@ serve(async (req) => {
     });
 
   } catch (err) {
-    console.error("[PAYMENT] Error:", (err as Error).message);
-    return json({ error: (err as Error).message }, 500);
+    console.error("[PAYMENT] Error:", err);
+    return json({ error: "An internal error occurred" }, 500);
   }
 });
 

@@ -962,7 +962,9 @@ class _DisputeDetailSheetState extends ConsumerState<_DisputeDetailSheet> {
                 .eq('id', apptId)
                 .maybeSingle();
             price = (apptRow?['price'] as num?)?.toDouble() ?? 0;
-          } catch (_) {}
+          } catch (e) {
+            debugPrint('[Disputes] Failed to fetch appointment price: $e');
+          }
         }
         updateData['status'] = 'resolved';
         updateData['resolution'] = 'favor_client';

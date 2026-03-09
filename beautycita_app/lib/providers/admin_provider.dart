@@ -335,7 +335,7 @@ final adminFullActivityProvider =
 final adminUsersProvider = FutureProvider<List<AdminUser>>((ref) async {
   final response = await SupabaseClientService.client
       .from('profiles')
-      .select('id, username, full_name, phone, role, status, created_at, last_seen, avatar_url, birthday, gender, home_address, uber_linked, updated_at, registration_source, phone_verified')
+      .select('id, username, full_name, phone, role, status, created_at, last_seen, avatar_url, birthday, gender, home_address, updated_at, registration_source, phone_verified')
       .order('created_at', ascending: false);
 
   return (response as List)
@@ -457,7 +457,6 @@ class AdminUser {
   final String? birthday;
   final String? gender;
   final String? homeAddress;
-  final bool uberLinked;
   final String? registrationSource;
   final bool phoneVerified;
 
@@ -475,7 +474,6 @@ class AdminUser {
     this.birthday,
     this.gender,
     this.homeAddress,
-    this.uberLinked = false,
     this.registrationSource,
     this.phoneVerified = false,
   });
@@ -522,7 +520,6 @@ class AdminUser {
       birthday: json['birthday'] as String?,
       gender: json['gender'] as String?,
       homeAddress: json['home_address'] as String?,
-      uberLinked: json['uber_linked'] as bool? ?? false,
       registrationSource: json['registration_source'] as String?,
       phoneVerified: json['phone_verified'] as bool? ?? false,
     );
@@ -897,14 +894,32 @@ final searchSalonsProvider = FutureProvider.family<List<Map<String, dynamic>>, S
   return (response as List).cast<Map<String, dynamic>>();
 });
 
-/// Fetches full business details with owner profile joined.
+/// Fetches full business details with owner profile fetched separately.
+/// (businesses.owner_id → auth.users, not profiles, so PostgREST can't join directly.)
 final adminSalonDetailProvider = FutureProvider.family<Map<String, dynamic>?, String>((ref, businessId) async {
-  final response = await SupabaseClientService.client
+  final client = SupabaseClientService.client;
+  final biz = await client
       .from('businesses')
-      .select('*, profiles!businesses_owner_id_fkey(id, display_name, phone, email)')
+      .select()
       .eq('id', businessId)
       .maybeSingle();
-  return response;
+  if (biz == null) return null;
+
+  final ownerId = biz['owner_id'] as String?;
+  if (ownerId != null) {
+    final profile = await client
+        .from('profiles')
+        .select('id, full_name, phone')
+        .eq('id', ownerId)
+        .maybeSingle();
+    if (profile != null) {
+      // Fetch email from auth.users via admin RPC or just skip it
+      // For now, expose full_name as display_name for the detail screen
+      profile['display_name'] = profile['full_name'];
+    }
+    biz['profiles'] = profile;
+  }
+  return biz;
 });
 
 /// Recent appointments for a salon (last 10).

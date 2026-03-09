@@ -661,8 +661,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           toolType: 'headshot',
           stylePrompt: stylePrompt,
         );
-      } catch (_) {
-        // Non-critical — avatar is already saved
+      } catch (e) {
+        debugPrint('[Profile] saveLightXResult failed (non-critical): $e');
       }
 
       ToastService.showSuccess('Avatar IA creado');

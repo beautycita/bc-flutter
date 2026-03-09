@@ -2,8 +2,10 @@ class AppConstants {
   // App Identity
   static const String appName = 'BeautyCita';
   static const String tagline = 'Tu agente de belleza inteligente';
-  static const String version = '1.0.1';
-  static const int buildNumber = 50007;
+  /// Runtime version info — initialized from package_info_plus in splash.
+  /// Single source of truth is pubspec.yaml. Never hardcode these.
+  static String version = '0.0.0';
+  static int buildNumber = 0;
   static const String versionCheckUrl =
       'https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/apk/version.json';
   static const String tableErrorReports = 'user_error_reports';
@@ -108,13 +110,6 @@ class AppConstants {
   static const String biometricStorageKey = 'beautycita_biometric_token';
   static const String biometricReasonES = 'Accede a BeautyCita con tu huella o rostro';
   static const String biometricReasonEN = 'Access BeautyCita with your fingerprint or face';
-
-  // Supabase Tables (for reference)
-  static const String tableUsers = 'users';
-  static const String tableServices = 'services';
-  static const String tableBookings = 'bookings';
-  static const String tableProviders = 'providers';
-  static const String tableCategories = 'categories';
 
   // Storage Buckets
   static const String bucketAvatars = 'avatars';

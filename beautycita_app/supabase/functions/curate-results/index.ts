@@ -164,6 +164,16 @@ serve(async (req) => {
       }
     }
 
+    // Feature toggle check
+    const { data: toggleData } = await supabase
+      .from("app_config")
+      .select("value")
+      .eq("key", "enable_instant_booking")
+      .single();
+    if (toggleData?.value !== "true") {
+      return json({ error: "This feature is currently disabled" }, 403);
+    }
+
     const body: CurateRequest = await req.json();
     const {
       service_type,
@@ -271,7 +281,7 @@ serve(async (req) => {
     });
   } catch (err) {
     console.error("curate-results error:", err);
-    return json({ error: (err as Error).message }, 500);
+    return json({ error: "An internal error occurred" }, 500);
   }
 });
 
