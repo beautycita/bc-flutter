@@ -76,7 +76,7 @@ class UpdaterService {
       final remoteBuild = data['build'] as int? ?? 0;
       final remoteVersion = data['version'] as String? ?? '';
       final url = data['url'] as String? ?? '';
-      final required = data['required'] as bool? ?? false;
+      final required = data['required'] as bool? ?? true;
 
       final localBase = AppConstants.baseBuildNumber;
       if (remoteBuild <= localBase) {
