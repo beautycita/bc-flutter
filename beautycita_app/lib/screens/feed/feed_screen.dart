@@ -175,6 +175,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen>
 }
 
 // ── Video Feed Tab (WebView) ──────────────────────────────────────────────────
+// Pre-creates one WebView per category so switching is instant.
 
 class _VideoFeedTab extends StatefulWidget {
   const _VideoFeedTab();
@@ -185,55 +186,49 @@ class _VideoFeedTab extends StatefulWidget {
 
 class _VideoFeedTabState extends State<_VideoFeedTab>
     with AutomaticKeepAliveClientMixin {
-  late final WebViewController _controller;
-  bool _isLoading = true;
-  String? _selectedCategory;
+  static const _kUserAgent =
+      'Mozilla/5.0 (Linux; Android 14; SM-S911U) AppleWebKit/537.36 '
+      '(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36';
+
+  // One controller per category, keyed by category value (null = "Todo").
+  final Map<String?, WebViewController> _controllers = {};
+  final Map<String?, bool> _loadingState = {};
+  int _selectedIndex = 0;
 
   @override
   void initState() {
     super.initState();
-    _controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onPageFinished: (_) {
-            if (mounted) setState(() => _isLoading = false);
-          },
-          onNavigationRequest: (request) {
-            final url = request.url;
-            if (url.contains('youtube.com') ||
-                url.contains('ytimg.com') ||
-                url.contains('googlevideo.com') ||
-                url.contains('google.com')) {
-              return NavigationDecision.navigate;
-            }
-            return NavigationDecision.prevent;
-          },
-        ),
-      )
-      ..setUserAgent(
-        'Mozilla/5.0 (Linux; Android 14; SM-S911U) AppleWebKit/537.36 '
-        '(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
-      )
-      ..loadRequest(_urlForCategory(null));
+    // Create all WebViews upfront — they load in parallel.
+    for (final (_, value) in _kCategories) {
+      _loadingState[value] = true;
+      final controller = WebViewController()
+        ..setJavaScriptMode(JavaScriptMode.unrestricted)
+        ..setNavigationDelegate(
+          NavigationDelegate(
+            onPageFinished: (_) {
+              if (mounted) setState(() => _loadingState[value] = false);
+            },
+            onNavigationRequest: (request) {
+              final url = request.url;
+              if (url.contains('youtube.com') ||
+                  url.contains('ytimg.com') ||
+                  url.contains('googlevideo.com') ||
+                  url.contains('google.com')) {
+                return NavigationDecision.navigate;
+              }
+              return NavigationDecision.prevent;
+            },
+          ),
+        )
+        ..setUserAgent(_kUserAgent)
+        ..loadRequest(_urlForCategory(value));
+      _controllers[value] = controller;
+    }
   }
 
   static Uri _urlForCategory(String? category) {
     final hashtag = _kVideoHashtags[category] ?? 'beautytransformation';
     return Uri.parse('https://www.youtube.com/hashtag/$hashtag/shorts');
-  }
-
-  void _selectCategory(String? category) {
-    if (category == _selectedCategory) return;
-    setState(() {
-      _selectedCategory = category;
-      _isLoading = true;
-    });
-    // Hide current page content before navigating to avoid white flash
-    _controller
-        .runJavaScript("document.body.style.visibility='hidden';")
-        .catchError((_) {})
-        .then((_) => _controller.loadRequest(_urlForCategory(category)));
   }
 
   @override
@@ -262,8 +257,8 @@ class _VideoFeedTabState extends State<_VideoFeedTab>
             separatorBuilder: (_, __) =>
                 const SizedBox(width: AppConstants.paddingXS),
             itemBuilder: (context, index) {
-              final (label, value) = _kCategories[index];
-              final isSelected = _selectedCategory == value;
+              final (label, _) = _kCategories[index];
+              final isSelected = _selectedIndex == index;
               return ChoiceChip(
                 label: Text(
                   label,
@@ -276,7 +271,7 @@ class _VideoFeedTabState extends State<_VideoFeedTab>
                   ),
                 ),
                 selected: isSelected,
-                onSelected: (_) => _selectCategory(value),
+                onSelected: (_) => setState(() => _selectedIndex = index),
                 selectedColor: palette.primary,
                 backgroundColor: palette.surfaceContainerHighest,
                 side: BorderSide.none,
@@ -291,36 +286,47 @@ class _VideoFeedTabState extends State<_VideoFeedTab>
 
         const SizedBox(height: AppConstants.paddingSM),
 
-        // ── WebView ─────────────────────────────────────────────────
+        // ── Stacked WebViews — one per category, instant switch ────
         Expanded(
-          child: Stack(
-            clipBehavior: Clip.hardEdge,
+          child: IndexedStack(
+            index: _selectedIndex,
             children: [
-              Positioned(
-                top: -topClip,
-                left: 0,
-                right: 0,
-                bottom: -topClip,
-                child: WebViewWidget(controller: _controller),
-              ),
-              if (_isLoading)
-                Container(
-                  color: Theme.of(context).scaffoldBackgroundColor,
-                  child: Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        CircularProgressIndicator(color: palette.primary),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Cargando videos...',
-                          style: GoogleFonts.nunito(
-                            color: palette.onSurface.withValues(alpha: 0.5),
+              for (final (_, value) in _kCategories)
+                Stack(
+                  clipBehavior: Clip.hardEdge,
+                  children: [
+                    Positioned(
+                      top: -topClip,
+                      left: 0,
+                      right: 0,
+                      bottom: -topClip,
+                      child: WebViewWidget(
+                        controller: _controllers[value]!,
+                      ),
+                    ),
+                    if (_loadingState[value] == true)
+                      Container(
+                        color: Theme.of(context).scaffoldBackgroundColor,
+                        child: Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              CircularProgressIndicator(
+                                color: palette.primary,
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Cargando videos...',
+                                style: GoogleFonts.nunito(
+                                  color: palette.onSurface
+                                      .withValues(alpha: 0.5),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
-                    ),
-                  ),
+                      ),
+                  ],
                 ),
             ],
           ),
