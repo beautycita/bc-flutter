@@ -31,8 +31,8 @@ android {
 
     defaultConfig {
         applicationId = "com.beautycita"
-        minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        minSdk = 24
+        targetSdk = 34
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
