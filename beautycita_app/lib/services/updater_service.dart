@@ -78,8 +78,9 @@ class UpdaterService {
       final url = data['url'] as String? ?? '';
       final required = data['required'] as bool? ?? false;
 
-      if (remoteBuild <= AppConstants.buildNumber) {
-        debugPrint('[Updater] APK is current (local=${AppConstants.buildNumber}, remote=$remoteBuild)');
+      final localBase = AppConstants.baseBuildNumber;
+      if (remoteBuild <= localBase) {
+        debugPrint('[Updater] APK is current (local=$localBase [raw=${AppConstants.buildNumber}], remote=$remoteBuild)');
         return;
       }
 

@@ -6,6 +6,22 @@ class AppConstants {
   /// Single source of truth is pubspec.yaml. Never hardcode these.
   static String version = '0.0.0';
   static int buildNumber = 0;
+
+  /// Base build number stripped of ABI offset added by --split-per-abi.
+  /// Split APKs add: armeabi +1000, arm64 +2000, x86_64 +4000.
+  /// version.json stores the base (pubspec) build number, so we strip the
+  /// ABI offset before comparing. The offset occupies the thousands digit
+  /// (1-4), so we zero it out: 52010 → 50010, 51010 → 50010, 54010 → 50010.
+  static int get baseBuildNumber {
+    if (buildNumber <= 0) return 0;
+    final abiOffset = (buildNumber ~/ 1000) % 10;
+    // Only strip if it looks like an ABI offset (1,2,3,4)
+    if (abiOffset >= 1 && abiOffset <= 4) {
+      return buildNumber - abiOffset * 1000;
+    }
+    return buildNumber;
+  }
+
   static const String versionCheckUrl =
       'https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/apk/version.json';
   static const String tableErrorReports = 'user_error_reports';
