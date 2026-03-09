@@ -1,0 +1,1224 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Consulta Fiscal: Retenciones ISR/IVA — BeautyCita</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Merriweather:ital,wght@0,400;0,700;1,400&display=swap');
+
+  :root {
+    --brand: #7c3aed;
+    --brand-light: #ede9fe;
+    --brand-dark: #5b21b6;
+    --danger: #dc2626;
+    --danger-bg: #fef2f2;
+    --danger-border: #fecaca;
+    --warning: #d97706;
+    --warning-bg: #fffbeb;
+    --warning-border: #fde68a;
+    --success: #059669;
+    --success-bg: #ecfdf5;
+    --success-border: #a7f3d0;
+    --info: #2563eb;
+    --info-bg: #eff6ff;
+    --info-border: #bfdbfe;
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-300: #d1d5db;
+    --gray-500: #6b7280;
+    --gray-600: #4b5563;
+    --gray-700: #374151;
+    --gray-800: #1f2937;
+    --gray-900: #111827;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 15px;
+    line-height: 1.7;
+    color: var(--gray-800);
+    background: var(--gray-50);
+  }
+
+  /* ---- Cover Page ---- */
+  .cover {
+    background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 100%);
+    color: white;
+    padding: 80px 60px;
+    min-height: 50vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .cover::after {
+    content: '';
+    position: absolute;
+    top: -50%; right: -30%;
+    width: 80%; height: 200%;
+    background: radial-gradient(ellipse, rgba(255,255,255,0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .cover h1 {
+    font-family: 'Merriweather', serif;
+    font-size: 2.4em;
+    font-weight: 700;
+    line-height: 1.3;
+    margin-bottom: 20px;
+    position: relative;
+    z-index: 1;
+  }
+  .cover .subtitle {
+    font-size: 1.15em;
+    font-weight: 300;
+    opacity: 0.9;
+    margin-bottom: 40px;
+    position: relative;
+    z-index: 1;
+  }
+  .cover-meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 40px;
+    font-size: 0.92em;
+    opacity: 0.85;
+    position: relative;
+    z-index: 1;
+  }
+  .cover-meta dt { font-weight: 600; text-transform: uppercase; font-size: 0.75em; letter-spacing: 0.08em; opacity: 0.7; }
+  .cover-meta dd { margin-bottom: 8px; }
+
+  /* ---- Main Content ---- */
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 60px;
+    background: white;
+    box-shadow: 0 0 60px rgba(0,0,0,0.06);
+  }
+
+  /* ---- Table of Contents ---- */
+  .toc {
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: 12px;
+    padding: 30px 36px;
+    margin: 40px 0;
+    page-break-after: always;
+  }
+  .toc h2 {
+    font-size: 1.1em;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--gray-500);
+    margin-bottom: 16px;
+    font-weight: 700;
+  }
+  .toc ol {
+    counter-reset: toc;
+    list-style: none;
+    padding: 0;
+  }
+  .toc > ol > li {
+    counter-increment: toc;
+    padding: 6px 0;
+    border-bottom: 1px dotted var(--gray-200);
+  }
+  .toc > ol > li:last-child { border-bottom: none; }
+  .toc > ol > li::before {
+    content: counter(toc) ".";
+    font-weight: 700;
+    color: var(--brand);
+    margin-right: 10px;
+    min-width: 24px;
+    display: inline-block;
+  }
+  .toc a {
+    color: var(--gray-700);
+    text-decoration: none;
+    font-weight: 500;
+  }
+  .toc a:hover { color: var(--brand); }
+
+  /* ---- Sections ---- */
+  .section {
+    margin-top: 50px;
+    padding-top: 30px;
+    border-top: 3px solid var(--brand-light);
+    page-break-before: auto;
+  }
+  .section:first-of-type { border-top: none; margin-top: 30px; }
+
+  h2.section-title {
+    font-family: 'Merriweather', serif;
+    font-size: 1.6em;
+    color: var(--brand-dark);
+    margin-bottom: 6px;
+    line-height: 1.3;
+  }
+  .section-number {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.6em;
+    font-weight: 800;
+    color: var(--brand);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  h3 {
+    font-size: 1.15em;
+    font-weight: 700;
+    color: var(--gray-800);
+    margin: 30px 0 12px;
+    padding-bottom: 6px;
+    border-bottom: 2px solid var(--gray-100);
+  }
+
+  h4 {
+    font-size: 1.0em;
+    font-weight: 600;
+    color: var(--gray-700);
+    margin: 20px 0 8px;
+  }
+
+  p { margin-bottom: 14px; }
+
+  /* ---- Callout Boxes ---- */
+  .callout {
+    border-radius: 10px;
+    padding: 18px 22px;
+    margin: 20px 0;
+    border-left: 4px solid;
+    font-size: 0.94em;
+  }
+  .callout-danger { background: var(--danger-bg); border-color: var(--danger); }
+  .callout-danger .callout-label { color: var(--danger); }
+  .callout-warning { background: var(--warning-bg); border-color: var(--warning); }
+  .callout-warning .callout-label { color: var(--warning); }
+  .callout-success { background: var(--success-bg); border-color: var(--success); }
+  .callout-success .callout-label { color: var(--success); }
+  .callout-info { background: var(--info-bg); border-color: var(--info); }
+  .callout-info .callout-label { color: var(--info); }
+  .callout-label {
+    font-weight: 700;
+    font-size: 0.8em;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 6px;
+    display: block;
+  }
+
+  /* ---- Question Boxes ---- */
+  .question-box {
+    background: white;
+    border: 2px solid var(--brand);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin: 20px 0;
+    position: relative;
+  }
+  .question-box::before {
+    content: 'PREGUNTA PARA EL ASESOR';
+    position: absolute;
+    top: -11px; left: 16px;
+    background: var(--brand);
+    color: white;
+    font-size: 0.7em;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    padding: 2px 12px;
+    border-radius: 4px;
+  }
+  .question-box ol, .question-box ul {
+    margin: 8px 0 0 20px;
+  }
+  .question-box li {
+    margin-bottom: 8px;
+  }
+  .question-box p:first-child { margin-top: 8px; }
+
+  /* ---- Sidebar Notes ---- */
+  .sidebar-note {
+    float: right;
+    width: 220px;
+    margin: 0 -30px 16px 24px;
+    padding: 14px 16px;
+    background: var(--gray-50);
+    border-left: 3px solid var(--brand-light);
+    font-size: 0.82em;
+    color: var(--gray-600);
+    line-height: 1.5;
+    border-radius: 0 8px 8px 0;
+  }
+  .sidebar-note strong {
+    display: block;
+    color: var(--brand-dark);
+    font-size: 0.85em;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+  }
+
+  /* ---- Tables ---- */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0 24px;
+    font-size: 0.92em;
+  }
+  thead th {
+    background: var(--gray-800);
+    color: white;
+    font-weight: 600;
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 0.88em;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  thead th:first-child { border-radius: 8px 0 0 0; }
+  thead th:last-child { border-radius: 0 8px 0 0; }
+  td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--gray-200);
+  }
+  tr:nth-child(even) td { background: var(--gray-50); }
+  tr:hover td { background: var(--brand-light); }
+  td strong { color: var(--brand-dark); }
+
+  /* ---- Code/Formula Blocks ---- */
+  .formula {
+    background: var(--gray-900);
+    color: #e5e7eb;
+    padding: 18px 22px;
+    border-radius: 10px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 0.88em;
+    line-height: 1.8;
+    margin: 16px 0 20px;
+    overflow-x: auto;
+  }
+  .formula .comment { color: #6b7280; }
+  .formula .highlight { color: #a78bfa; font-weight: 600; }
+  .formula .value { color: #34d399; }
+
+  /* ---- Flow Diagrams ---- */
+  .flow {
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: 10px;
+    padding: 20px;
+    margin: 16px 0 20px;
+    text-align: center;
+  }
+  .flow-steps {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .flow-step {
+    background: white;
+    border: 2px solid var(--gray-300);
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 0.85em;
+    font-weight: 500;
+    max-width: 180px;
+    text-align: center;
+  }
+  .flow-step.active {
+    border-color: var(--brand);
+    background: var(--brand-light);
+    color: var(--brand-dark);
+  }
+  .flow-step.gap {
+    border-color: var(--danger);
+    background: var(--danger-bg);
+    color: var(--danger);
+    border-style: dashed;
+  }
+  .flow-arrow {
+    font-size: 1.4em;
+    color: var(--gray-400);
+    font-weight: 700;
+  }
+
+  /* ---- Blockquotes (legal text) ---- */
+  blockquote {
+    background: var(--gray-50);
+    border-left: 4px solid var(--gray-300);
+    padding: 16px 20px;
+    margin: 16px 0;
+    font-family: 'Merriweather', serif;
+    font-size: 0.9em;
+    font-style: italic;
+    color: var(--gray-600);
+    line-height: 1.8;
+    border-radius: 0 8px 8px 0;
+  }
+
+  /* ---- Lists ---- */
+  ul, ol { margin: 8px 0 16px 24px; }
+  li { margin-bottom: 6px; }
+
+  /* ---- Status Badges ---- */
+  .badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 20px;
+    font-size: 0.75em;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    vertical-align: middle;
+  }
+  .badge-done { background: var(--success-bg); color: var(--success); border: 1px solid var(--success-border); }
+  .badge-partial { background: var(--warning-bg); color: var(--warning); border: 1px solid var(--warning-border); }
+  .badge-missing { background: var(--danger-bg); color: var(--danger); border: 1px solid var(--danger-border); }
+  .badge-critical { background: var(--danger); color: white; }
+
+  /* ---- Priority Labels ---- */
+  .priority-section {
+    margin: 30px 0;
+    padding: 24px;
+    border-radius: 12px;
+  }
+  .priority-alta { background: var(--danger-bg); border: 1px solid var(--danger-border); }
+  .priority-media { background: var(--warning-bg); border: 1px solid var(--warning-border); }
+  .priority-baja { background: var(--info-bg); border: 1px solid var(--info-border); }
+  .priority-section h3 { border-bottom: none; margin-top: 0; }
+
+  /* ---- Divider ---- */
+  hr {
+    border: none;
+    height: 1px;
+    background: var(--gray-200);
+    margin: 40px 0;
+  }
+
+  /* ---- Footer ---- */
+  .footer {
+    margin-top: 60px;
+    padding: 24px 0;
+    border-top: 2px solid var(--gray-200);
+    font-size: 0.82em;
+    color: var(--gray-500);
+    font-style: italic;
+    text-align: center;
+  }
+
+  /* ---- Print Styles ---- */
+  @media print {
+    body { background: white; font-size: 12pt; }
+    .container { box-shadow: none; padding: 20px 40px; }
+    .cover { min-height: 90vh; page-break-after: always; }
+    .section { page-break-before: auto; }
+    .sidebar-note { float: none; width: 100%; margin: 12px 0; }
+    .toc { page-break-after: always; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ COVER PAGE ============ -->
+<div class="cover">
+  <h1>Consulta Fiscal:<br>Retenciones ISR/IVA para BeautyCita como Plataforma Digital de Intermediacion</h1>
+  <p class="subtitle">Documento tecnico-fiscal para revision y validacion por asesor contable</p>
+  <dl class="cover-meta">
+    <dt>Fecha</dt>
+    <dd>6 de marzo de 2026 (actualizado 9 de marzo de 2026)</dd>
+    <dt>Empresa</dt>
+    <dd>BeautyCita (en proceso de constitucion)</dd>
+    <dt>Preparado por</dt>
+    <dd>Equipo tecnico de BeautyCita</dd>
+    <dt>Dirigido a</dt>
+    <dd>Asesor fiscal / Contador publico</dd>
+  </dl>
+</div>
+
+<div class="container">
+
+<!-- ============ TABLE OF CONTENTS ============ -->
+<nav class="toc">
+  <h2>Contenido</h2>
+  <ol>
+    <li><a href="#s1">Descripcion de la Plataforma</a></li>
+    <li><a href="#s2">Marco Legal Aplicable &mdash; Ejercicio Fiscal 2026</a></li>
+    <li><a href="#s3">Configuracion Tecnica Actual (Propuesta)</a></li>
+    <li><a href="#s4">Flujos de Pago &mdash; Analisis de Brechas</a></li>
+    <li><a href="#s5">Obligaciones Pendientes de Automatizar</a></li>
+    <li><a href="#s6">Estructura de Cuentas y Manejo de Fondos Retenidos</a></li>
+    <li><a href="#s7">Tratamiento de Reembolsos y Cancelaciones</a></li>
+    <li><a href="#s7b">Ajuste Mensual de Retenciones &mdash; Deduccion por Faltante</a> <span class="badge badge-critical">Nuevo</span></li>
+    <li><a href="#s8">Regimen Fiscal del Proveedor &mdash; Consideraciones</a></li>
+    <li><a href="#s9">Resumen de Preguntas para el Asesor (por prioridad)</a></li>
+    <li><a href="#s10">Documentos y Referencias</a></li>
+  </ol>
+</nav>
+
+<!-- ============ SECTION 1 ============ -->
+<div class="section" id="s1">
+  <h2 class="section-title"><span class="section-number">Seccion 1</span>Descripcion de la Plataforma</h2>
+
+  <p>BeautyCita es una <strong>plataforma digital de intermediacion</strong> que conecta a consumidores finales con proveedores de servicios de belleza (salones, esteticas, estilistas independientes) en territorio mexicano.</p>
+
+  <p>La plataforma:</p>
+  <ul>
+    <li><strong>Facilita la reserva</strong> de servicios de belleza (cortes de cabello, manicure, extensiones de pestanas, maquillaje, etc.)</li>
+    <li><strong>Procesa pagos</strong> en nombre de los proveedores, cobrando una comision del <strong>3%</strong> sobre reservas de servicios y <strong>10%</strong> sobre ventas de productos (marketplace/POS)</li>
+    <li><strong>Opera multiples metodos de pago:</strong> tarjeta de credito/debito (via Stripe), pago en efectivo en tienda de conveniencia (via OXXO/Stripe), Bitcoin (via BTCPay Server), y pago en efectivo directo en el salon</li>
+    <li><strong>Se encuentra en proceso de constitucion legal</strong> ante notario (iniciado enero 2026)</li>
+  </ul>
+</div>
+
+<!-- ============ SECTION 2 ============ -->
+<div class="section" id="s2">
+  <h2 class="section-title"><span class="section-number">Seccion 2</span>Marco Legal Aplicable &mdash; Ejercicio Fiscal 2026</h2>
+
+  <!-- 2.1 -->
+  <h3>2.1 Ley del Impuesto Sobre la Renta (LISR)</h3>
+
+  <h4>Articulo 113-A &mdash; Sujetos Obligados y Tasas de Retencion de ISR</h4>
+
+  <div class="sidebar-note">
+    <strong>Nota tecnica</strong>
+    Antes de la reforma 2026, la tasa de ISR para "prestacion de servicios" era del 1%. La nueva tasa del 2.5% entro en vigor el 1 de enero de 2026.
+  </div>
+
+  <p>El articulo 113-A de la LISR, Seccion III, Capitulo II, Titulo IV, establece la obligacion de retencion para plataformas digitales de intermediacion. Texto vigente:</p>
+
+  <blockquote>
+    &ldquo;Estan obligados al pago del impuesto establecido en esta Seccion, los contribuyentes personas fisicas con actividades empresariales que enajenen bienes o presten servicios a traves de Internet, mediante plataformas tecnologicas, aplicaciones informaticas y similares...&rdquo;
+  </blockquote>
+
+  <p><strong>Tasas de retencion de ISR vigentes para 2026 (personas fisicas):</strong></p>
+
+  <table>
+    <thead>
+      <tr><th>Tipo de servicio</th><th>Tasa ISR</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Transporte terrestre de pasajeros y entrega de bienes</td><td>2.1%</td></tr>
+      <tr><td>Hospedaje</td><td>4.0%</td></tr>
+      <tr><td>Enajenacion de bienes y prestacion de servicios (otros)</td><td><strong>2.5%</strong></td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout callout-danger">
+    <span class="callout-label">Nota critica para BeautyCita</span>
+    Los servicios de belleza caen bajo la categoria de &ldquo;prestacion de servicios&rdquo; &mdash; la tasa aplicable de ISR es <strong>2.5%</strong> sobre el ingreso bruto. Para proveedores que <strong>NO proporcionen RFC vigente</strong>, la tasa se incrementa a <strong>20%</strong>.
+  </div>
+
+  <h4>Reforma 2026 &mdash; Extension a Personas Morales</h4>
+
+  <p>A partir del 1 de enero de 2026, conforme a la Ley de Ingresos de la Federacion 2026 (publicada en el DOF el 7 de noviembre de 2025):</p>
+
+  <blockquote>
+    Las plataformas digitales deberan efectuar una retencion del <strong>2.5% de ISR</strong> a todas aquellas <strong>personas morales</strong> que realizan la venta de bienes o la prestacion de servicios a traves de estas. En caso de que la persona moral no proporcione su informacion fiscal (RFC) correcta y/o actualizada, se les aplicara la tasa de retencion del <strong>20%</strong>.
+  </blockquote>
+
+  <div class="callout callout-info">
+    <span class="callout-label">Implicacion</span>
+    Esto significa que <strong>tanto personas fisicas como morales</strong> (salones constituidos como empresa) estan sujetos a retencion a partir de 2026.
+  </div>
+
+  <h4>Articulo 113-C &mdash; Obligaciones de la Plataforma</h4>
+
+  <p>El articulo 113-C de la LISR establece las siguientes obligaciones:</p>
+  <ol>
+    <li><strong>Retener y enterar el ISR</strong> correspondiente a las personas que obtienen ingresos a traves de la plataforma</li>
+    <li><strong>Proporcionar comprobantes fiscales</strong> (CFDI de retenciones) a los proveedores sujetos a retencion, <strong>dentro de los cinco dias siguientes al mes</strong> en que se efectuo la retencion</li>
+    <li><strong>Reportar mensualmente al SAT</strong> la informacion de identificacion de los proveedores, montos cobrados y retenciones efectuadas</li>
+    <li><strong>Inscribir en el RFC</strong> a los proveedores que no tengan registro, a traves de los medios que disponga el SAT</li>
+  </ol>
+
+  <blockquote>
+    &ldquo;...proporcionar comprobantes fiscales a las personas fisicas a las que se les hubiera efectuado la retencion del impuesto, en los que conste el monto del pago y el impuesto retenido, a mas tardar dentro de los cinco dias siguientes al mes en que se efectue la retencion, el cual debera estar acompanado de la informacion que senale el Servicio de Administracion Tributaria mediante reglas de caracter general.&rdquo;
+  </blockquote>
+
+  <!-- 2.2 -->
+  <h3>2.2 Ley del Impuesto al Valor Agregado (LIVA)</h3>
+
+  <h4>Articulo 18-J &mdash; Retencion de IVA por Plataformas Digitales</h4>
+
+  <p>El articulo 18-J de la LIVA, reformado para el ejercicio 2026, establece:</p>
+
+  <table>
+    <thead>
+      <tr><th>Escenario</th><th>Tasa de retencion IVA</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Proveedor con RFC valido (residente mexicano)</td><td><strong>8%</strong> (50% del IVA del 16%)</td></tr>
+      <tr><td>Proveedor SIN RFC</td><td><strong>16%</strong> (100% del IVA)</td></tr>
+      <tr><td>Residente en el extranjero sin establecimiento permanente en Mexico</td><td><strong>16%</strong> (100% del IVA)</td></tr>
+      <tr><td>Proveedor que deposita en cuentas bancarias en el extranjero</td><td><strong>16%</strong> (100% del IVA)</td></tr>
+    </tbody>
+  </table>
+
+  <blockquote>
+    &ldquo;Se reformo el articulo 18-J de la LIVA para establecer nuevos supuestos en los que las plataformas digitales de intermediacion deberan retener el 100% del IVA: (i) cuando residentes en el extranjero, sin establecimiento en Mexico, enajenen bienes, presten servicios o concedan el uso o goce temporal de bienes en territorio nacional; y (ii) cuando los oferentes depositen los montos de las operaciones realizadas en cuentas bancarias o de deposito ubicadas en el extranjero.&rdquo;
+  </blockquote>
+
+  <p><strong>Obligaciones adicionales del Articulo 18-J:</strong></p>
+  <ul>
+    <li><strong>Retener y enterar el IVA</strong> en los casos previstos</li>
+    <li><strong>Emitir CFDI de retenciones</strong> a cada proveedor</li>
+    <li><strong>Enviar informacion mensual al SAT</strong> sobre todas las operaciones</li>
+    <li>En caso de <strong>incumplimiento reiterado</strong>, el SAT puede proceder al <strong>bloqueo temporal</strong> del servicio de la plataforma en territorio nacional</li>
+  </ul>
+
+  <!-- 2.3 -->
+  <h3>2.3 Codigo Fiscal de la Federacion (CFF) &mdash; Articulo 30-B (Nuevo)</h3>
+
+  <h4>Acceso en Linea y Tiempo Real del SAT &mdash; Vigente desde 1 de abril de 2026</h4>
+
+  <blockquote>
+    &ldquo;Los contribuyentes que presten servicios digitales deberan permitir a las autoridades fiscales, de forma permanente, el acceso en linea y en tiempo real, exclusivamente a la informacion que permita verificar el correcto cumplimiento de las obligaciones fiscales, que obre en sus sistemas o registros, en los terminos que establezca el Servicio de Administracion Tributaria mediante reglas de caracter general.&rdquo;
+  </blockquote>
+
+  <div class="callout callout-warning">
+    <span class="callout-label">Fecha limite: 1 de abril de 2026</span>
+    BeautyCita debe proporcionar al SAT acceso permanente, en linea y en tiempo real a la informacion de las operaciones realizadas en territorio mexicano. Las especificaciones tecnicas las establece el SAT en coordinacion con la Agencia de Transformacion Digital y Telecomunicaciones. El incumplimiento resultara en el <strong>bloqueo temporal del servicio</strong>.
+  </div>
+</div>
+
+<!-- ============ SECTION 3 ============ -->
+<div class="section" id="s3">
+  <h2 class="section-title"><span class="section-number">Seccion 3</span>Configuracion Tecnica Actual (Propuesta)</h2>
+
+  <div class="callout callout-info">
+    <span class="callout-label">Requiere validacion</span>
+    La siguiente infraestructura tecnica se ha construido anticipadamente. <strong>Se requiere validacion del asesor fiscal</strong> para confirmar que los calculos, tasas y procedimientos son correctos antes de activar el sistema.
+  </div>
+
+  <h3>3.1 Motor de Calculo de Retenciones</h3>
+
+  <p><strong>Entrada:</strong> Monto bruto cobrado al cliente (precio IVA-incluido, como es costumbre en Mexico).</p>
+
+  <p><strong>Formulas:</strong></p>
+  <div class="formula">
+    <span class="comment">// Desglose del monto IVA-incluido</span><br>
+    <span class="highlight">Base gravable</span> = monto_bruto / 1.16<br>
+    <span class="highlight">Porcion IVA</span> = monto_bruto - base_gravable<br>
+    <span class="highlight">Comision plataforma</span> = monto_bruto &times; 3% <span class="comment">(servicios) o 10% (productos)</span>
+  </div>
+
+  <p><strong>Tasas aplicadas segun estatus del proveedor:</strong></p>
+  <table>
+    <thead>
+      <tr><th>Condicion del proveedor</th><th>ISR retenido</th><th>IVA retenido</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Con RFC valido (&ge;12 caracteres) y residente mexicano</td>
+        <td><strong>2.5%</strong> del monto bruto</td>
+        <td><strong>8%</strong> de la porcion IVA</td>
+      </tr>
+      <tr>
+        <td>Sin RFC o RFC invalido</td>
+        <td><strong>20%</strong> del monto bruto</td>
+        <td><strong>16%</strong> de la porcion IVA</td>
+      </tr>
+      <tr>
+        <td>Residente extranjero</td>
+        <td><strong>20%</strong> del monto bruto</td>
+        <td><strong>16%</strong> de la porcion IVA</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h4>Ejemplo: Proveedor CON RFC &mdash; Servicio de $1,000 MXN</h4>
+  <div class="formula">
+    Monto bruto: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="value">$1,000.00 MXN</span><br>
+    Base gravable: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="value">$&nbsp;&nbsp;862.07 MXN</span> <span class="comment">($1,000 / 1.16)</span><br>
+    Porcion IVA: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="value">$&nbsp;&nbsp;137.93 MXN</span><br>
+    Comision (3%): &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="value">$&nbsp;&nbsp;&nbsp;30.00 MXN</span><br>
+    ISR retenido (2.5%): <span class="value">$&nbsp;&nbsp;&nbsp;25.00 MXN</span><br>
+    IVA retenido (8%): &nbsp; <span class="value">$&nbsp;&nbsp;&nbsp;11.03 MXN</span><br>
+    <span class="highlight">Neto proveedor: &nbsp;&nbsp;&nbsp;&nbsp; $&nbsp;&nbsp;933.97 MXN</span>
+  </div>
+
+  <h4>Ejemplo: Proveedor SIN RFC &mdash; Servicio de $1,000 MXN</h4>
+  <div class="formula">
+    Monto bruto: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="value">$1,000.00 MXN</span><br>
+    Base gravable: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="value">$&nbsp;&nbsp;862.07 MXN</span><br>
+    Porcion IVA: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="value">$&nbsp;&nbsp;137.93 MXN</span><br>
+    Comision (3%): &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="value">$&nbsp;&nbsp;&nbsp;30.00 MXN</span><br>
+    ISR retenido (20%):&nbsp; <span class="value">$&nbsp;&nbsp;200.00 MXN</span><br>
+    IVA retenido (16%):&nbsp; <span class="value">$&nbsp;&nbsp;&nbsp;22.07 MXN</span><br>
+    <span class="highlight">Neto proveedor: &nbsp;&nbsp;&nbsp;&nbsp; $&nbsp;&nbsp;747.93 MXN</span>
+  </div>
+
+  <h3>3.2 Registro Contable (Ledger de Retenciones)</h3>
+
+  <div class="sidebar-note">
+    <strong>Inmutabilidad</strong>
+    Si un proveedor cambia su RFC o regimen fiscal despues de una transaccion, el registro historico refleja las condiciones al momento del pago original.
+  </div>
+
+  <p>Cada transaccion que involucre una retencion genera un registro inmutable con los siguientes datos:</p>
+  <ul>
+    <li>Identificador de la cita/reserva</li>
+    <li>Identificador del negocio/proveedor</li>
+    <li>Identificador del pago (Stripe PaymentIntent o BTCPay Invoice)</li>
+    <li>Tipo de pago (<code>stripe</code>, <code>btcpay</code>)</li>
+    <li>Monto bruto, base gravable, porcion IVA, comision plataforma</li>
+    <li><strong>Snapshot de las tasas aplicadas al momento de la transaccion</strong></li>
+    <li>Montos retenidos (ISR, IVA) y monto neto al proveedor</li>
+    <li><strong>Snapshot del RFC del proveedor y su regimen fiscal</strong></li>
+    <li>Periodo fiscal (ano, mes) y fecha de creacion</li>
+  </ul>
+
+  <h3>3.3 Reportes Mensuales para SAT</h3>
+  <p>Sistema de generacion de reportes mensuales que:</p>
+  <ol>
+    <li>Agrega todas las retenciones del periodo (ano/mes)</li>
+    <li>Genera un desglose por proveedor con totales de ISR, IVA, bruto y neto</li>
+    <li>Calcula las fechas limite: <strong>declaracion informativa</strong> (dia 10 del mes siguiente), <strong>entero de retenciones</strong> (dia 17 del mes siguiente)</li>
+    <li>Almacena el reporte para consulta y envio</li>
+  </ol>
+
+  <h3>3.4 API de Acceso en Tiempo Real para SAT (Art. 30-B CFF)</h3>
+  <p>Endpoint de solo lectura con:</p>
+  <ul>
+    <li><strong>GET /transactions</strong> &mdash; Consulta de registros de retenciones con filtros por fecha, proveedor y RFC</li>
+    <li><strong>GET /providers</strong> &mdash; Consulta del estatus fiscal de proveedores registrados</li>
+    <li><strong>GET /summary</strong> &mdash; Resumen mensual de retenciones</li>
+    <li>Autenticacion por clave API independiente, rate limiting (100/min), registro de auditoria con retencion de 5 anos</li>
+  </ul>
+
+  <h3>3.5 Bandera de Activacion (Feature Flag)</h3>
+  <div class="formula">
+    tax_withholding_enabled = <span class="highlight">true</span> <span class="comment">// activado por defecto desde 9 de marzo de 2026</span>
+  </div>
+  <p>El sistema de retenciones esta <strong>activo por defecto</strong>. Los pagos procesados a traves de la plataforma automaticamente calculan y aplican las retenciones. Se puede desactivar temporalmente desde el panel de superadmin si se requiere.</p>
+
+  <h3>3.6 PAC Seleccionado &mdash; SW Sapien <span class="badge badge-partial">Pendiente integracion</span></h3>
+  <p><strong>Decision (marzo 2026):</strong> Se selecciono <strong>SW Sapien</strong> como PAC definitivo por:</p>
+  <ul>
+    <li>API directa sin intermediarios (~$0.25 MXN por timbre)</li>
+    <li>Alineado con la filosofia de auto-hospedaje de la plataforma</li>
+    <li><strong>Estado:</strong> Pendiente de integracion. Requiere CSD (Certificado de Sello Digital) de la entidad constituida.</li>
+  </ul>
+  <div class="question-box">
+    <p>Para iniciar la integracion con SW Sapien, necesitamos el CSD de la empresa. <strong>Cual es el proceso y tiempo estimado para obtenerlo</strong> una vez constituida la sociedad?</p>
+  </div>
+</div>
+
+<!-- ============ SECTION 4 ============ -->
+<div class="section" id="s4">
+  <h2 class="section-title"><span class="section-number">Seccion 4</span>Flujos de Pago &mdash; Analisis de Brechas</h2>
+
+  <!-- 4.1 -->
+  <h3>4.1 Tarjeta de Credito/Debito (Stripe Connect) <span class="badge badge-done">Implementado</span></h3>
+
+  <div class="flow">
+    <div class="flow-steps">
+      <div class="flow-step active">Cliente paga con tarjeta</div>
+      <span class="flow-arrow">&rarr;</span>
+      <div class="flow-step active">Stripe cobra monto total</div>
+      <span class="flow-arrow">&rarr;</span>
+      <div class="flow-step active">Retiene comision + ISR + IVA</div>
+      <span class="flow-arrow">&rarr;</span>
+      <div class="flow-step active">Transfiere neto al proveedor</div>
+    </div>
+  </div>
+
+  <p><strong>Estado:</strong> Implementado y funcional. El mecanismo de <code>application_fee_amount</code> de Stripe permite separar automaticamente la comision y las retenciones del monto transferido al proveedor.</p>
+
+  <div class="question-box">
+    <p>Stripe opera como procesador de pagos con licencia en Mexico. Cuando BeautyCita retiene ISR/IVA a traves del <code>application_fee_amount</code> de Stripe:</p>
+    <ol>
+      <li>Es suficiente que los fondos esten en la cuenta Stripe, o deben transferirse a una cuenta bancaria mexicana segregada?</li>
+      <li>El hecho de que Stripe sea el intermediario de pago tiene alguna implicacion en la cadena de retencion?</li>
+    </ol>
+  </div>
+
+  <!-- 4.2 -->
+  <h3>4.2 OXXO (via Stripe) <span class="badge badge-partial">Parcialmente implementado</span></h3>
+
+  <div class="flow">
+    <div class="flow-steps">
+      <div class="flow-step active">Cliente genera referencia OXXO</div>
+      <span class="flow-arrow">&rarr;</span>
+      <div class="flow-step active">Paga en efectivo en OXXO</div>
+      <span class="flow-arrow">&rarr;</span>
+      <div class="flow-step active">Stripe deposita en cuenta BeautyCita</div>
+      <span class="flow-arrow">&rarr;</span>
+      <div class="flow-step gap">??? Dispersion al proveedor</div>
+    </div>
+  </div>
+
+  <div class="callout callout-warning">
+    <span class="callout-label">Brecha identificada</span>
+    A diferencia de tarjeta donde Stripe Connect transfiere directamente al proveedor, en pagos OXXO el dinero llega completo a BeautyCita. <strong>No existe mecanismo automatico de transferencia al proveedor.</strong>
+  </div>
+
+  <div class="question-box">
+    <p>Para dispersiones manuales o automatizadas a proveedores (transferencia bancaria, SPEI):</p>
+    <ol>
+      <li>Se requiere emitir CFDI por la dispersion?</li>
+      <li>La retencion se calcula sobre el monto bruto cobrado al cliente, o sobre el monto efectivamente dispersado?</li>
+    </ol>
+  </div>
+
+  <!-- 4.3 -->
+  <h3>4.3 Bitcoin <span class="badge badge-critical">Requiere analisis fiscal profundo</span></h3>
+
+  <div class="flow">
+    <div class="flow-steps">
+      <div class="flow-step active">Cliente paga en Bitcoin</div>
+      <span class="flow-arrow">&rarr;</span>
+      <div class="flow-step active">BTC llega a wallet BeautyCita</div>
+      <span class="flow-arrow">&rarr;</span>
+      <div class="flow-step gap">BeautyCita conserva el BTC</div>
+      <span class="flow-arrow">&rarr;</span>
+      <div class="flow-step gap">Paga al proveedor en MXN (fiat)</div>
+    </div>
+  </div>
+
+  <div class="callout callout-danger">
+    <span class="callout-label">Operacion compuesta &mdash; No es intermediacion pura</span>
+    En este flujo, BeautyCita no actua puramente como intermediario. Existe:
+    <ol style="margin-top:8px">
+      <li>El cliente paga el servicio en Bitcoin</li>
+      <li>BeautyCita recibe Bitcoin &mdash; adquiere un activo virtual (Ley Fintech, Art. 30)</li>
+      <li>BeautyCita paga al proveedor en pesos de sus propios fondos</li>
+      <li>BeautyCita retiene el Bitcoin con intencion de conservarlo</li>
+    </ol>
+  </div>
+
+  <p><strong>Implicaciones fiscales potenciales:</strong></p>
+  <ul>
+    <li><strong>Actividad vulnerable (LFPIORPI):</strong> operaciones con activos virtuales por montos &ge; 645 UMAs (~$54,496 MXN) requieren registro en el portal de prevencion de lavado de dinero del SAT</li>
+    <li><strong>Diferencial cambiario:</strong> ganancia o perdida entre valor de BTC recibido y pesos pagados</li>
+    <li><strong>IVA sobre comisiones:</strong> el IVA no aplica a la venta de criptomonedas, pero SI aplica a las comisiones de la plataforma</li>
+    <li><strong>Actividad economica registrada:</strong> se puede requerir registro de operacion con activos virtuales ante el SAT</li>
+  </ul>
+
+  <div class="question-box">
+    <p><strong>Preguntas criticas:</strong></p>
+    <ol>
+      <li>Cuando BeautyCita recibe Bitcoin del cliente y paga pesos al proveedor, <strong>cual es la naturaleza juridica de esta operacion?</strong> Es intermediacion pura? O compraventa implicita de activo virtual?</li>
+      <li><strong>Se requiere registrar a BeautyCita como operador de actividades vulnerables ante la UIF?</strong> El umbral de 645 UMAs se alcanzaria rapidamente.</li>
+      <li>La retencion de ISR/IVA aplica de la misma manera cuando el medio de pago es Bitcoin? Si el proveedor recibe pesos, no Bitcoin, <strong>cual es la base de la retencion?</strong></li>
+      <li>El diferencial entre el valor del BTC recibido y los pesos pagados, <strong>como se registra contablemente?</strong> Ingreso financiero? Ganancia cambiaria?</li>
+      <li>Se necesita una <strong>actividad economica adicional ante el SAT</strong> (operacion con activos virtuales)?</li>
+      <li>Existe algun <strong>impedimento legal</strong> para que una plataforma de intermediacion conserve pagos en Bitcoin y disperse en pesos?</li>
+    </ol>
+  </div>
+
+  <!-- 4.4 -->
+  <h3>4.4 Efectivo en Salon <span class="badge badge-missing">Requiere definicion</span></h3>
+
+  <div class="flow">
+    <div class="flow-steps">
+      <div class="flow-step active">Cliente reserva via BeautyCita</div>
+      <span class="flow-arrow">&rarr;</span>
+      <div class="flow-step">Paga directamente al salon en efectivo</div>
+      <span class="flow-arrow">&rarr;</span>
+      <div class="flow-step gap">BeautyCita no toca el dinero</div>
+      <span class="flow-arrow">&rarr;</span>
+      <div class="flow-step gap">??? Retenciones?</div>
+    </div>
+  </div>
+
+  <div class="question-box">
+    <ol>
+      <li>Si BeautyCita solo facilito la reserva pero no proceso el pago, <strong>tiene obligacion de retener ISR/IVA?</strong> El articulo 113-A habla de ingresos percibidos &ldquo;a traves de&rdquo; la plataforma.</li>
+      <li>En caso afirmativo, <strong>como se ejecuta?</strong>
+        <ul>
+          <li>(a) Cobrar la retencion al salon como cargo mensual</li>
+          <li>(b) Requerir que todos los pagos pasen por la plataforma</li>
+          <li>(c) No aplicar retencion a reservas con pago en efectivo</li>
+        </ul>
+      </li>
+      <li>Es recomendable <strong>eliminar la opcion de pago en efectivo</strong> para simplificar el cumplimiento fiscal?</li>
+    </ol>
+  </div>
+
+  <!-- 4.5 -->
+  <h3>4.5 Procesadores de Pago Futuros</h3>
+
+  <div class="sidebar-note">
+    <strong>Arquitectura flexible</strong>
+    El motor de calculo de retenciones es independiente del procesador de pago. Recibe un monto bruto y devuelve el desglose. Nuevos procesadores se agregan sin modificar la logica fiscal.
+  </div>
+
+  <p>Se contempla la integracion futura de otros procesadores (Conekta, etc.). La logica de dispersion (payout) al proveedor es la pieza que varia por procesador.</p>
+
+  <div class="question-box">
+    <p>Existe alguna obligacion o ventaja de usar un procesador de pagos especifico para la dispersion a proveedores en Mexico? Algun requisito del SAT sobre los medios de dispersion?</p>
+  </div>
+</div>
+
+<!-- ============ SECTION 5 ============ -->
+<div class="section" id="s5">
+  <h2 class="section-title"><span class="section-number">Seccion 5</span>Obligaciones Pendientes de Automatizar</h2>
+
+  <h3>5.1 Emision de CFDI de Retenciones <span class="badge badge-missing">No implementado</span></h3>
+  <p><strong>Obligacion legal:</strong> Art. 113-C LISR &mdash; comprobantes fiscales dentro de los 5 dias siguientes al mes.</p>
+  <p>Se requiere: integrar con un PAC via API directa, conectar la emision con el ledger de retenciones, y automatizar la emision mensual.</p>
+
+  <div class="callout callout-info">
+    <span class="callout-label">PAC seleccionado: SW Sapien</span>
+    <p>Tras evaluar las opciones disponibles, se propone <strong>SW Sapien</strong> (<a href="https://sw.com.mx">sw.com.mx</a>) como PAC para la integracion directa por API. Razones:</p>
+    <ul>
+      <li><strong>Integracion directa por API REST:</strong> Sin intermediarios. BeautyCita se conecta directamente al PAC para timbrar CFDIs, manteniendo control total del flujo de facturacion.</li>
+      <li><strong>Costo por timbre:</strong> ~$0.20&ndash;$0.30 MXN por timbre en volumen alto, vs. $0.60 MXN por timbre usando intermediarios como Facturapi. A 50,000 CFDIs mensuales, esto representa un ahorro de $15,000&ndash;$20,000 MXN/mes.</li>
+      <li><strong>Rendimiento:</strong> Tiempo de respuesta de 70&ndash;100ms por timbrado. SLA de 99.95% de disponibilidad.</li>
+      <li><strong>Seguridad:</strong> Certificacion ISO 27001. Infraestructura propia.</li>
+      <li><strong>Soporte:</strong> 24/7, con oficinas en Zapopan, Jalisco (cercania geografica).</li>
+      <li><strong>Filosofia de auto-hospedaje:</strong> Se evita dependencia de capas intermedias (Facturapi, Gigstack) que agregan costo, latencia y un punto de falla adicional. Con la API directa de SW Sapien, el sistema de BeautyCita controla todo el pipeline: generacion del XML &rarr; sellado con CSD &rarr; timbrado via PAC &rarr; almacenamiento y entrega.</li>
+    </ul>
+    <p><strong>Proyeccion de costos mensuales (50,000 CFDIs):</strong></p>
+    <table style="width:100%; border-collapse:collapse; margin-top:8px;">
+      <tr style="background:#f0f0f0;">
+        <th style="text-align:left; padding:6px; border:1px solid #ddd;">Opcion</th>
+        <th style="text-align:right; padding:6px; border:1px solid #ddd;">Costo/timbre</th>
+        <th style="text-align:right; padding:6px; border:1px solid #ddd;">Costo mensual</th>
+      </tr>
+      <tr>
+        <td style="padding:6px; border:1px solid #ddd;">SW Sapien (API directa)</td>
+        <td style="text-align:right; padding:6px; border:1px solid #ddd;">~$0.25 MXN</td>
+        <td style="text-align:right; padding:6px; border:1px solid #ddd;">~$12,500 MXN</td>
+      </tr>
+      <tr>
+        <td style="padding:6px; border:1px solid #ddd;">Facturapi (intermediario)</td>
+        <td style="text-align:right; padding:6px; border:1px solid #ddd;">$0.60 MXN</td>
+        <td style="text-align:right; padding:6px; border:1px solid #ddd;">$30,000 MXN</td>
+      </tr>
+      <tr>
+        <td style="padding:6px; border:1px solid #ddd;">Finkok (API directa)</td>
+        <td style="text-align:right; padding:6px; border:1px solid #ddd;">~$0.30 MXN</td>
+        <td style="text-align:right; padding:6px; border:1px solid #ddd;">~$15,000 MXN</td>
+      </tr>
+    </table>
+    <p style="margin-top:8px;"><strong>Nota:</strong> SW Sapien tambien ofrece licenciamiento <em>white-label</em> para empresas que deseen ofrecer servicios de facturacion a terceros, lo cual podria ser relevante si BeautyCita ofrece facturacion como servicio adicional a los salones.</p>
+  </div>
+
+  <div class="question-box">
+    <ol>
+      <li>Confirma que SW Sapien es un PAC adecuado para nuestro volumen y caso de uso (CFDI de retenciones por plataforma digital).</li>
+      <li>Cual es el complemento de CFDI correcto para retenciones de plataformas digitales? (Complemento de Servicios de Plataformas Tecnologicas?)</li>
+      <li>Se requiere el sello digital (e.firma/CSD) de la entidad para emitir CFDIs por API? Cual es el proceso para obtenerlo?</li>
+    </ol>
+  </div>
+
+  <h3>5.2 Declaracion Informativa Mensual al SAT <span class="badge badge-missing">No implementado</span></h3>
+  <p><strong>Obligacion legal:</strong> Art. 113-C LISR, fraccion III &mdash; informar al SAT sobre proveedores, montos y retenciones.</p>
+  <p>Los datos se generan y almacenan, pero no se tiene el mecanismo de envio.</p>
+
+  <div class="question-box">
+    <ol>
+      <li>Cual es el formato exacto que el SAT requiere para la declaracion informativa?</li>
+      <li>Existe un API del SAT para envio automatizado, o se requiere carga manual en el portal?</li>
+      <li>Que informacion especifica de cada proveedor debe incluirse? (RFC, CURP, nombre, domicilio fiscal?)</li>
+    </ol>
+  </div>
+
+  <h3>5.3 Entero (Pago) de Retenciones al SAT <span class="badge badge-missing">No implementado</span></h3>
+  <p><strong>Obligacion legal:</strong> Las retenciones deben enterarse a mas tardar el dia 17 del mes siguiente.</p>
+
+  <div class="question-box">
+    <ol>
+      <li>El pago se hace via declaracion y pago referenciado en el portal del SAT?</li>
+      <li>Se puede automatizar este pago?</li>
+      <li>Se requiere una cuenta bancaria especifica para el entero de retenciones?</li>
+    </ol>
+  </div>
+
+  <h3>5.4 Inscripcion de Proveedores en el RFC <span class="badge badge-missing">No implementado</span></h3>
+  <p><strong>Obligacion legal:</strong> Art. 113-C LISR &mdash; inscribir en el RFC a proveedores sin registro.</p>
+
+  <div class="question-box">
+    <ol>
+      <li>Existe un servicio web del SAT para inscripciones masivas?</li>
+      <li>Si un salon no quiere proporcionar su RFC, ademas de aplicar la tasa del 20%, tiene BeautyCita alguna otra obligacion?</li>
+    </ol>
+  </div>
+
+  <h3>5.5 Acceso en Tiempo Real del SAT (Art. 30-B CFF) <span class="badge badge-done">API construida</span></h3>
+  <p><strong>Fecha limite:</strong> 1 de abril de 2026.</p>
+
+  <div class="question-box">
+    <ol>
+      <li>Ya se publicaron las reglas de caracter general con las especificaciones tecnicas?</li>
+      <li>Se ha establecido el procedimiento para que el SAT solicite el acceso?</li>
+      <li>La API que construimos es suficiente, o el SAT requiere un formato/protocolo especifico?</li>
+    </ol>
+  </div>
+</div>
+
+<!-- ============ SECTION 6 ============ -->
+<div class="section" id="s6">
+  <h2 class="section-title"><span class="section-number">Seccion 6</span>Estructura de Cuentas y Manejo de Fondos Retenidos</h2>
+
+  <h3>6.1 Segregacion de Fondos</h3>
+
+  <div class="question-box">
+    <ol>
+      <li><strong>Se requiere legalmente una cuenta bancaria separada para los fondos retenidos?</strong> O pueden permanecer en la cuenta operativa con registro contable adecuado?</li>
+      <li><strong>Cual es la estructura de cuentas recomendada?</strong>
+        <ul>
+          <li>(a) Cuenta operativa unica con separacion contable</li>
+          <li>(b) Cuenta operativa + cuenta de retenciones separada</li>
+          <li>(c) Cuenta operativa + cuenta de retenciones + cuenta de dispersiones</li>
+        </ul>
+      </li>
+      <li><strong>Los intereses generados por los fondos retenidos:</strong>
+        <ul>
+          <li>Se reportan como ingresos por intereses de la empresa?</li>
+          <li>Tienen tratamiento fiscal especial por tratarse de fondos en custodia?</li>
+          <li>Cual es la tasa de retencion bancaria sobre estos intereses (Art. 54 LISR)?</li>
+        </ul>
+      </li>
+    </ol>
+  </div>
+
+  <h3>6.2 Volumen Proyectado</h3>
+
+  <table>
+    <thead>
+      <tr><th>Escenario</th><th>Transacciones/mes</th><th>Bruto mensual</th><th>Retenciones mensuales (est.)</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Lanzamiento (6 meses)</td><td>500</td><td>$250,000 MXN</td><td>$18,000 MXN</td></tr>
+      <tr><td>Crecimiento (1 ano)</td><td>5,000</td><td>$2,500,000 MXN</td><td>$180,000 MXN</td></tr>
+      <tr><td>Escala media (2 anos)</td><td>50,000</td><td>$25,000,000 MXN</td><td>$1,800,000 MXN</td></tr>
+      <tr><td>Escala alta (3+ anos)</td><td>500,000+</td><td>$250,000,000+ MXN</td><td>$18,000,000+ MXN</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout callout-info">
+    <span class="callout-label">Nota sobre intereses</span>
+    A escala alta, los fondos retenidos que permanecen en cuenta por hasta 46 dias pueden generar intereses significativos (potencialmente decenas de millones de pesos al ano). Se requiere planificacion fiscal especifica para el manejo de estos ingresos.
+  </div>
+</div>
+
+<!-- ============ SECTION 7 ============ -->
+<div class="section" id="s7">
+  <h2 class="section-title"><span class="section-number">Seccion 7</span>Tratamiento de Reembolsos y Cancelaciones</h2>
+
+  <div class="question-box">
+    <ol>
+      <li><strong>Si una cita se cancela y se reembolsa al cliente, como se revierten las retenciones ya registradas?</strong>
+        <ul>
+          <li>Se emite un CFDI de retenciones con nota de credito?</li>
+          <li>Se descuentan del reporte del mes corriente?</li>
+          <li>Cual es el procedimiento si la cancelacion ocurre en un mes fiscal diferente?</li>
+        </ul>
+      </li>
+      <li>Si se reembolsa parcialmente (por ejemplo, mal servicio), <strong>como se ajusta la retencion?</strong></li>
+      <li>Existe un <strong>plazo maximo</strong> para revertir retenciones?</li>
+    </ol>
+  </div>
+</div>
+
+<!-- ============ SECTION 7B (NEW) ============ -->
+<div class="section" id="s7b">
+  <h2 class="section-title"><span class="section-number">Seccion 7B &mdash; Nueva</span>Ajuste Mensual de Retenciones &mdash; Deduccion Automatica por Faltante</h2>
+
+  <div class="callout callout-danger">
+    <span class="callout-label">Pregunta critica &mdash; Agregada 9 de marzo de 2026</span>
+    Esta seccion surge de la observacion directa del funcionamiento de plataformas de renta vacacional en Mexico. El patron observado puede ser obligatorio para BeautyCita. <strong>Necesitamos la respuesta del asesor antes de construir.</strong>
+  </div>
+
+  <h3>Contexto</h3>
+  <p>En plataformas digitales de renta vacacional (por ejemplo, Airbnb/VRBO operando en Mexico), se observa el siguiente patron:</p>
+
+  <div class="flow">
+    <div class="flow-steps">
+      <div class="flow-step active">Mes 1: Plataforma retiene ISR/IVA</div>
+      <span class="flow-arrow">&rarr;</span>
+      <div class="flow-step">Proveedor no emite factura</div>
+      <span class="flow-arrow">&rarr;</span>
+      <div class="flow-step gap">Mes 2: Plataforma verifica cumplimiento</div>
+      <span class="flow-arrow">&rarr;</span>
+      <div class="flow-step gap">Deduce faltante del ingreso del Mes 2</div>
+    </div>
+  </div>
+
+  <p>El mecanismo funciona asi:</p>
+  <ol>
+    <li><strong>Mes 1:</strong> La plataforma retiene ISR/IVA sobre los ingresos del proveedor (sin emision de factura por parte del proveedor)</li>
+    <li><strong>Mes 2:</strong> La plataforma verifica si el proveedor cumplio con su obligacion fiscal del Mes 1 (pago provisional, emision de facturas, etc.). Si detecta que el proveedor <strong>NO pago la diferencia</strong> entre lo retenido y su obligacion real, <strong>deduce automaticamente el faltante de los ingresos del Mes 2</strong></li>
+  </ol>
+
+  <p>Este mecanismo parece ser un &ldquo;ajuste mensual&rdquo; donde la plataforma actua como <strong>garante del cumplimiento fiscal del proveedor</strong>, no solo como retenedor del porcentaje fijo.</p>
+
+  <div class="question-box">
+    <p><strong>Preguntas criticas:</strong></p>
+    <ol>
+      <li><strong>Este mecanismo de ajuste mensual es una obligacion legal para las plataformas digitales, o es una politica voluntaria</strong> de las plataformas de renta vacacional? Es decir, el articulo 113-A/113-C de la LISR obliga a la plataforma a verificar el cumplimiento del proveedor y ajustar, o simplemente obliga a retener el porcentaje fijo?</li>
+      <li><strong>Si es obligatorio, como funciona el calculo?</strong> La plataforma verifica contra el SAT si el proveedor presento su declaracion provisional? O simplemente aplica una tasa mayor si el proveedor no ha proporcionado comprobante de cumplimiento?</li>
+      <li><strong>Para BeautyCita, necesitamos implementar este mecanismo?</strong> Si un salon no presento su declaracion del mes anterior, debemos:
+        <ul>
+          <li>(a) Incrementar la tasa de retencion del siguiente mes</li>
+          <li>(b) Deducir un monto fijo calculado sobre el faltante estimado</li>
+          <li>(c) Solo notificar al salon sin tomar accion</li>
+          <li>(d) Nada &mdash; nuestra obligacion se limita a retener el porcentaje establecido por ley</li>
+        </ul>
+      </li>
+      <li><strong>Si implementamos el ajuste mensual, como se documenta?</strong> Se emite un CFDI adicional? Se incluye en el reporte mensual al SAT? Como se registra contablemente?</li>
+      <li><strong>Existe riesgo para BeautyCita</strong> si un proveedor no cumple con sus obligaciones fiscales y nosotros solo retenemos el porcentaje fijo sin ajustar? Es decir, el SAT puede responsabilizar a la plataforma por impuestos no cubiertos del proveedor?</li>
+    </ol>
+  </div>
+
+  <h3>Implicacion Tecnica</h3>
+  <p>Si el ajuste mensual es obligatorio, necesitamos construir:</p>
+  <ul>
+    <li>Un sistema de <strong>seguimiento de cumplimiento fiscal</strong> por proveedor por mes</li>
+    <li>Logica de <strong>calculo de faltante</strong> (obligacion real vs. monto retenido)</li>
+    <li>Mecanismo de <strong>deduccion automatica</strong> en el siguiente ciclo de pago</li>
+    <li><strong>Notificaciones al proveedor</strong> explicando la deduccion adicional</li>
+    <li>Registro contable del ajuste en el ledger de retenciones</li>
+  </ul>
+
+  <div class="callout callout-warning">
+    <span class="callout-label">Bloqueante para construccion</span>
+    Este mecanismo anade complejidad significativa al sistema. <strong>Necesitamos la respuesta del asesor antes de construir.</strong> Si la respuesta es (d) &mdash; nuestra obligacion se limita al porcentaje fijo &mdash; no se construye nada adicional.
+  </div>
+</div>
+
+<!-- ============ SECTION 8 ============ -->
+<div class="section" id="s8">
+  <h2 class="section-title"><span class="section-number">Seccion 8</span>Regimen Fiscal del Proveedor &mdash; Consideraciones</h2>
+
+  <h3>8.1 Personas Fisicas</h3>
+  <ul>
+    <li><strong>RESICO (Regimen Simplificado de Confianza):</strong> Muchos estilistas independientes pueden estar en RESICO. La retencion funciona como pago provisional.</li>
+    <li><strong>Actividad empresarial:</strong> Salones mas grandes en regimen general.</li>
+    <li><strong>Sin RFC:</strong> Aplica tasa maxima (ISR 20%, IVA 16%).</li>
+  </ul>
+
+  <h3>8.2 Personas Morales</h3>
+  <p>A partir de 2026, tambien sujetas a retencion (2.5% ISR con RFC, 20% sin RFC).</p>
+
+  <div class="callout callout-warning">
+    <span class="callout-label">Requiere confirmacion</span>
+    Algunas fuentes indican una tasa de ISR del <strong>4%</strong> para personas morales en &ldquo;otros servicios&rdquo;, mientras otras senalan <strong>2.5%</strong>. Favor de confirmar la tasa correcta para servicios de belleza prestados por personas morales.
+  </div>
+
+  <h3>8.3 Residentes en el Extranjero</h3>
+  <p>ISR: 20% del monto bruto. IVA: 16% (100%).</p>
+
+  <div class="question-box">
+    <p>Si un estilista extranjero trabaja temporalmente en un salon en Mexico y cobra a traves de la plataforma, aplica la tasa de extranjero o la de residente?</p>
+  </div>
+
+  <h3>8.4 Credito de Plataforma en Lugar de Reembolso Monetario</h3>
+
+  <p><strong>Escenario propuesto:</strong> Cuando un cliente cancela una cita y tiene derecho a reembolso, BeautyCita desea ofrecer la opcion de recibir el monto como <strong>credito de plataforma</strong> (utilizable en cualquier salon de la red) en lugar de devolucion a su tarjeta/cuenta bancaria. Para incentivar esta opcion, el credito incluiria un bono (por ejemplo, reembolso de $450 MXN se convierte en credito de $475 MXN).</p>
+
+  <p><strong>Caracteristicas del credito propuesto:</strong></p>
+  <ul>
+    <li>No es un monedero electronico &mdash; el cliente <strong>no puede cargar dinero</strong> a la plataforma</li>
+    <li>Solo se genera a partir de cancelaciones/reembolsos de transacciones especificas</li>
+    <li>El cliente <strong>siempre tiene la opcion</strong> de recibir el reembolso completo a su metodo de pago original</li>
+    <li>El credito tiene <strong>fecha de caducidad</strong> (6-12 meses)</li>
+    <li>Es un credito/vale promocional, no dinero electronico</li>
+  </ul>
+
+  <div class="callout callout-warning">
+    <span class="callout-label">Implicaciones regulatorias</span>
+    <p>Es fundamental confirmar que este esquema de credito NO activa obligaciones bajo la <strong>Ley para Regular las Instituciones de Tecnologia Financiera (Ley Fintech)</strong> ni requiere autorizacion de la <strong>CNBV</strong>. Plataformas como Amazon, Uber y aerolineas manejan esquemas similares de credito por cancelacion sin clasificarse como instituciones financieras, pero la situacion regulatoria en Mexico debe confirmarse para nuestro caso especifico.</p>
+  </div>
+
+  <div class="question-box">
+    <ol>
+      <li>Ofrecer credito de plataforma (no recargable, solo de reembolsos, con caducidad) activa alguna obligacion bajo la <strong>Ley Fintech</strong> o requiere registro/autorizacion ante la <strong>CNBV</strong>?</li>
+      <li>Como se tratan fiscalmente los <strong>creditos no redimidos</strong> (que caducan)? Se reportan como ingreso de la empresa?</li>
+      <li>El bono adicional (dar $475 de credito por un reembolso de $450) tiene alguna implicacion fiscal especifica? Se considera ingreso gravable para el cliente?</li>
+      <li>Si el credito se usa en un salon <strong>diferente</strong> al de la cita original, hay alguna complicacion en el manejo de las retenciones?</li>
+    </ol>
+  </div>
+</div>
+
+<!-- ============ SECTION 9 ============ -->
+<div class="section" id="s9">
+  <h2 class="section-title"><span class="section-number">Seccion 9</span>Resumen de Preguntas para el Asesor</h2>
+
+  <p>Todas las preguntas del documento consolidadas por prioridad:</p>
+
+  <div class="priority-section priority-alta">
+    <h3 style="color: var(--danger);">Prioridad Alta &mdash; Bloquean la arquitectura</h3>
+    <ol>
+      <li><strong>Bitcoin:</strong> Cuando BeautyCita recibe Bitcoin y paga pesos al proveedor, cual es la naturaleza juridica de esta operacion? Se requiere registro como actividad vulnerable ante la UIF?</li>
+      <li><strong>Efectivo:</strong> Si BeautyCita solo facilita la reserva pero el pago es en efectivo en el salon, hay obligacion de retener ISR/IVA?</li>
+      <li><strong>Tasas:</strong> Para personas morales en servicios de belleza, la tasa de ISR es 2.5% o 4%? Confirmar IVA retenido 8% con RFC y 16% sin RFC para ambos (PF y PM).</li>
+      <li><strong>CFDI de retenciones:</strong> Se propone SW Sapien como PAC con integracion directa por API (~$0.25/timbre). Confirmar que es adecuado para CFDI de retenciones de plataformas digitales. Cual complemento de CFDI aplica?</li>
+      <li><strong>Declaracion informativa:</strong> Existe API del SAT para envio automatizado, o es carga manual en portal? Formato requerido?</li>
+      <li><strong>Ajuste mensual:</strong> <span class="badge badge-critical">Nuevo</span> Es obligatorio verificar el cumplimiento fiscal del proveedor y deducir faltantes del siguiente mes? O la obligacion de la plataforma se limita a retener el porcentaje fijo? (Ver Seccion 7B)</li>
+      <li><strong>CSD para SW Sapien:</strong> <span class="badge badge-critical">Nuevo</span> Cual es el proceso y tiempo estimado para obtener el Certificado de Sello Digital una vez constituida la sociedad?</li>
+      <li><strong>Retenciones sobre productos:</strong> <span class="badge badge-critical">Nuevo</span> La comision de BeautyCita sobre venta de productos es 10% (no 3%). Las retenciones ISR/IVA aplican sobre el monto bruto de la venta de productos de la misma manera que servicios?</li>
+    </ol>
+  </div>
+
+  <div class="priority-section priority-media">
+    <h3 style="color: var(--warning);">Prioridad Media &mdash; Afectan operacion</h3>
+    <ol start="6">
+      <li><strong>Cuentas bancarias:</strong> Se requiere cuenta separada para fondos retenidos? Estructura recomendada?</li>
+      <li><strong>Intereses:</strong> Los intereses sobre fondos retenidos se reportan como ingreso ordinario de la empresa?</li>
+      <li><strong>Reembolsos:</strong> Procedimiento para revertir retenciones en cancelaciones?</li>
+      <li><strong>Credito de plataforma:</strong> Ofrecer credito no recargable (solo de reembolsos, con caducidad) en lugar de devolucion monetaria &mdash; activa obligaciones Ley Fintech/CNBV? Como se tratan creditos no redimidos fiscalmente?</li>
+      <li><strong>OXXO/dispersiones:</strong> Para pagos donde BeautyCita recibe el monto completo, que mecanismo de dispersion a proveedores recomienda?</li>
+      <li><strong>Articulo 30-B:</strong> Ya existen las especificaciones tecnicas del SAT para acceso en tiempo real?</li>
+    </ol>
+  </div>
+
+  <div class="priority-section priority-baja">
+    <h3 style="color: var(--info);">Prioridad Baja &mdash; Planeacion futura</h3>
+    <ol start="11">
+      <li><strong>Inscripcion RFC:</strong> Existe servicio web del SAT para inscripciones masivas de proveedores?</li>
+      <li><strong>Extranjeros:</strong> Tratamiento fiscal de estilistas extranjeros que trabajan temporalmente en Mexico?</li>
+    </ol>
+  </div>
+</div>
+
+<!-- ============ SECTION 10 ============ -->
+<div class="section" id="s10">
+  <h2 class="section-title"><span class="section-number">Seccion 10</span>Documentos y Referencias</h2>
+
+  <h3>Legislacion vigente consultada</h3>
+  <ul>
+    <li>Ley del Impuesto Sobre la Renta (LISR), articulos 113-A, 113-B, 113-C, 113-D &mdash; Seccion III, Capitulo II, Titulo IV</li>
+    <li>Ley del Impuesto al Valor Agregado (LIVA), articulos 18-B, 18-J, 18-H BIS a 18-H QUINTUS</li>
+    <li>Codigo Fiscal de la Federacion (CFF), articulo 30-B (nuevo, vigente abril 2026)</li>
+    <li>Ley de Ingresos de la Federacion 2026 (DOF 7 de noviembre de 2025)</li>
+    <li>Ley para Regular las Instituciones de Tecnologia Financiera (Ley Fintech), articulo 30</li>
+    <li>Ley Federal para la Prevencion e Identificacion de Operaciones con Recursos de Procedencia Ilicita (LFPIORPI)</li>
+  </ul>
+
+  <h3>Fuentes de referencia</h3>
+  <ul>
+    <li><a href="https://www.sat.gob.mx/minisitio/PlataformasTecnologicas/PersonasFisicas/personasfisicas_inicio.html">SAT &mdash; Minisitio Plataformas Tecnologicas</a></li>
+    <li><a href="https://mexico.justia.com/federales/leyes/ley-del-impuesto-sobre-la-renta/titulo-iv/capitulo-ii/seccion-iii/">Justia Mexico &mdash; Texto vigente LISR Art. 113-A a 113-D</a></li>
+    <li><a href="https://idconline.mx/fiscal-contable/2025/10/10/retenciones-a-personas-morales-por-plataformas-digitales-2026">IDC Online &mdash; Retenciones a personas morales por plataformas digitales 2026</a></li>
+    <li><a href="https://www.hklaw.com/en/insights/publications/2025/11/reforma-fiscal-para-2026-en-mexico">Holland &amp; Knight &mdash; Reforma fiscal para 2026 en Mexico</a></li>
+    <li><a href="https://www.ey.com/es_mx/technical/tax/boletines-fiscales/propuestas-isr-e-iva-sector-plataformas-digitales">EY Mexico &mdash; Paquete economico 2026, ISR e IVA plataformas digitales</a></li>
+    <li><a href="https://contadoresmismolenguaje.mx/inicio/blog/retencion-iva-isr-plataformas">Contadores Mismo Lenguaje &mdash; Retenciones plataformas digitales 2026</a></li>
+    <li><a href="https://grupofiscalcastroycia.com.mx/regimen-de-plataformas-digitales/">Grupo Fiscal Castro &mdash; Regimen de plataformas digitales 2026</a></li>
+    <li><a href="https://www.diputados.gob.mx/LeyesBiblio/pdf/LIF_2026.pdf">Camara de Diputados &mdash; Ley de Ingresos de la Federacion 2026 (PDF)</a></li>
+  </ul>
+</div>
+
+<!-- ============ FOOTER ============ -->
+<div class="footer">
+  Este documento fue preparado por el equipo tecnico de BeautyCita para facilitar la consulta fiscal con su asesor.<br>
+  No constituye asesoramiento fiscal o legal. Todas las tasas, calculos y procedimientos descritos requieren validacion por un profesional fiscal certificado.
+</div>
+
+</div><!-- /container -->
+
+</body>
+</html>

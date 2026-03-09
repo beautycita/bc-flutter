@@ -10,7 +10,9 @@ import '../pages/admin/bookings_page.dart';
 import '../pages/admin/config_page.dart';
 import '../pages/admin/dashboard_page.dart';
 import '../pages/admin/disputes_page.dart';
+import '../pages/admin/finance_dashboard_page.dart';
 import '../pages/admin/finance_page.dart';
+import '../pages/admin/operations_dashboard_page.dart';
 import '../pages/admin/services_page.dart';
 import '../pages/admin/engine_categories_page.dart';
 import '../pages/admin/engine_page.dart';
@@ -78,6 +80,8 @@ abstract final class WebRoutes {
   static const String adminEngineCategories = '/admin/engine/categories';
   static const String adminEngineTime = '/admin/engine/time';
   static const String adminOutreach = '/admin/outreach';
+  static const String adminFinanceDashboard = '/admin/finance-dashboard';
+  static const String adminOperations = '/admin/operations';
   static const String adminConfig = '/admin/config';
   static const String adminToggles = '/admin/toggles';
 
@@ -298,6 +302,16 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: 'outreach',
                 builder: (context, state) => const OutreachPage(),
+              ),
+              GoRoute(
+                path: 'finance-dashboard',
+                builder: (context, state) =>
+                    const FinanceDashboardPage(),
+              ),
+              GoRoute(
+                path: 'operations',
+                builder: (context, state) =>
+                    const OperationsDashboardPage(),
               ),
               GoRoute(
                 path: 'config',

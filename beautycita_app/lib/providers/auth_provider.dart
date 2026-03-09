@@ -370,7 +370,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
               .from('profiles')
               .update({'username': username})
               .eq('id', supaId);
-        } catch (_) {}
+        } catch (e) {
+          debugPrint('[Auth] Failed to sync username to profiles: $e');
+        }
       }
     }
   }

@@ -139,7 +139,9 @@ class _SettingsContentState extends ConsumerState<_SettingsContent> {
           breaks: breaks,
         );
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[BizSettings] Failed to parse business hours: $e');
+    }
   }
 
   @override

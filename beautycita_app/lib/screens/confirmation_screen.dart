@@ -271,7 +271,7 @@ class _SummaryCard extends StatelessWidget {
     final palette = Theme.of(context).colorScheme;
     final ext = Theme.of(context).extension<BCThemeExtension>()!;
     final formatter = DateFormat("EEEE d 'de' MMMM, HH:mm", 'es');
-    final dateStr = formatter.format(result.slot.startTime);
+    final dateStr = formatter.format(result.slot!.startTime);
     final capitalizedDate = dateStr[0].toUpperCase() + dateStr.substring(1);
 
     return Container(
@@ -336,7 +336,7 @@ class _SummaryCard extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    '${result.service.name} — ${result.staff.name}',
+                    '${result.service.name} — ${result.staff?.name ?? ''}',
                     style: GoogleFonts.poppins(
                       fontSize: 15,
                       fontWeight: FontWeight.w500,
@@ -397,7 +397,7 @@ class _PriceBreakdown extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = Theme.of(context).colorScheme;
     final ext = Theme.of(context).extension<BCThemeExtension>()!;
-    final servicePrice = result.service.price;
+    final servicePrice = result.service.price ?? 0;
     final currency = result.service.currency;
 
     return Container(

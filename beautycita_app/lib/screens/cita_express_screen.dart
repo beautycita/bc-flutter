@@ -570,7 +570,7 @@ class _ResultCardWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final slot = result.slot;
+    final slot = result.slot!;
     final timeFormat = DateFormat('h:mm a', 'es');
     final dateFormat = DateFormat('EEE d MMM', 'es');
     final startTime = slot.startTime.toLocal();
@@ -602,10 +602,10 @@ class _ResultCardWidget extends StatelessWidget {
                 CircleAvatar(
                   radius: 22,
                   backgroundColor: colors.primary.withValues(alpha: 0.08),
-                  backgroundImage: result.staff.avatarUrl != null
-                      ? NetworkImage(result.staff.avatarUrl!)
+                  backgroundImage: result.staff?.avatarUrl != null
+                      ? NetworkImage(result.staff!.avatarUrl!)
                       : null,
-                  child: result.staff.avatarUrl == null
+                  child: result.staff?.avatarUrl == null
                       ? Icon(Icons.person, color: colors.primary, size: 22)
                       : null,
                 ),
@@ -615,7 +615,7 @@ class _ResultCardWidget extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        result.staff.name,
+                        result.staff?.name ?? '',
                         style: GoogleFonts.poppins(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
@@ -647,7 +647,7 @@ class _ResultCardWidget extends StatelessWidget {
                           size: 14, color: colors.primary),
                       const SizedBox(width: 2),
                       Text(
-                        result.staff.rating.toStringAsFixed(1),
+                        (result.staff?.rating ?? 0).toStringAsFixed(1),
                         style: GoogleFonts.poppins(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -699,7 +699,7 @@ class _ResultCardWidget extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      '\$${result.service.price.toStringAsFixed(0)} MXN',
+                      '\$${result.service.price?.toStringAsFixed(0) ?? '—'} MXN',
                       style: GoogleFonts.poppins(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
@@ -1140,7 +1140,7 @@ class _ConfirmView extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final result = state.selectedResult!;
-    final slot = result.slot;
+    final slot = result.slot!;
     final startTime = slot.startTime.toLocal();
     final timeFormat = DateFormat('h:mm a', 'es');
     final dateFormat = DateFormat('EEEE d MMMM', 'es');
@@ -1208,7 +1208,7 @@ class _ConfirmView extends StatelessWidget {
               _SummaryRow(
                 icon: Icons.person_rounded,
                 label: 'Estilista',
-                value: result.staff.name,
+                value: result.staff?.name ?? '',
                 color: colors,
               ),
               const SizedBox(height: AppConstants.paddingMD),
@@ -1266,7 +1266,7 @@ class _ConfirmView extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    '\$${result.service.price.toStringAsFixed(0)} MXN',
+                    '\$${result.service.price?.toStringAsFixed(0) ?? '—'} MXN',
                     style: GoogleFonts.poppins(
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
@@ -1443,7 +1443,7 @@ class _BookedView extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                '${result.staff.name} en ${result.business.name}',
+                '${result.staff?.name ?? ''} en ${result.business.name}',
                 style: GoogleFonts.nunito(
                   fontSize: 14,
                   color: colors.onSurface.withValues(alpha: 0.6),
@@ -1453,7 +1453,7 @@ class _BookedView extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 DateFormat('EEEE d MMMM, h:mm a', 'es')
-                    .format(result.slot.startTime.toLocal()),
+                    .format(result.slot!.startTime.toLocal()),
                 style: GoogleFonts.nunito(
                   fontSize: 14,
                   color: colors.onSurface.withValues(alpha: 0.6),

@@ -92,11 +92,22 @@ class ThemeNotifier extends StateNotifier<ThemeState> {
     }
 
     final savedId = prefs.getString(_prefKey);
-    if (savedId != null && allPalettes.containsKey(savedId)) {
-      _applyPalette(allPalettes[savedId]!);
-    } else {
-      _rebuild(state.palette);
+    final palette = (savedId != null && allPalettes.containsKey(savedId))
+        ? allPalettes[savedId]!
+        : state.palette;
+
+    // If no custom color was saved, derive from palette primary so the whole
+    // theme matches the home-screen header gradient from the very first frame.
+    // Without this, the header gradient is bright (computed at lightness 0.45)
+    // but buttons/text use the raw dark palette.primary — they look mismatched
+    // until the user touches the hero color changer.
+    if (_customHue == null || _customSat == null) {
+      final hsl = HSLColor.fromColor(palette.primary);
+      _customHue = hsl.hue;
+      _customSat = hsl.saturation;
     }
+
+    _applyPalette(palette);
   }
 
   Future<void> setTheme(String themeId) async {
