@@ -533,17 +533,11 @@ class _HeroColorPickerState extends ConsumerState<_HeroColorPicker> {
 
     Color grad1, grad2;
     if (liveHue != null && liveSat != null) {
+      // During picker drag, show live preview
       (grad1, grad2) = _gradientPair(liveHue, liveSat);
     } else {
-      // At rest: use saved custom hue from theme state
-      final notifier = ref.read(themeProvider.notifier);
-      if (notifier.hasCustomColor) {
-        (grad1, grad2) = _gradientPair(notifier.customHue!, notifier.customSat!);
-      } else {
-        // Derive from current palette primary color
-        final primaryHsl = HSLColor.fromColor(themeState.palette.primary);
-        (grad1, grad2) = _gradientPair(primaryHsl.hue, primaryHsl.saturation);
-      }
+      // Locked home gradient: magenta → indigo (BC's chosen look)
+      (grad1, grad2) = _gradientPair(310.0, 0.80);
     }
 
     return Listener(
