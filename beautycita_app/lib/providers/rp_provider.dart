@@ -131,7 +131,7 @@ Future<void> adminUnassignSalons({
         .from('rp_assignments')
         .update({'unassigned_at': DateTime.now().toUtc().toIso8601String()})
         .eq('salon_id', salonId)
-        .is_('unassigned_at', null);
+        .isFilter('unassigned_at', null);
 
     await client.from('discovered_salons').update({
       'assigned_rp_id': null,
@@ -146,7 +146,7 @@ Future<String?> getActiveAssignmentId(String salonId) async {
       .from('rp_assignments')
       .select('id')
       .eq('salon_id', salonId)
-      .is_('unassigned_at', null)
+      .isFilter('unassigned_at', null)
       .maybeSingle();
 
   return response?['id'] as String?;
