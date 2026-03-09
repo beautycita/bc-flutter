@@ -174,6 +174,36 @@ class SettingsScreen extends ConsumerWidget {
             },
           ),
 
+          // ── RP panel (only for rp role) ──
+          ref.watch(isRpProvider).when(
+            data: (isRp) => isRp
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: AppConstants.paddingLG),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 4, bottom: 8),
+                        child: Text(
+                          'RELACIONES PUBLICAS',
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1.2,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                      ),
+                      SettingsTile(
+                        icon: Icons.business_center,
+                        label: 'Panel RP',
+                        onTap: () => context.push(AppRoutes.rp),
+                      ),
+                    ],
+                  )
+                : const SizedBox.shrink(),
+            loading: () => const SizedBox.shrink(),
+            error: (e, _) => const SizedBox.shrink(),
+          ),
+
           // ── Salon / Business section ──
           _buildProfessionalsSection(context, ref),
 
