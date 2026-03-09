@@ -46,10 +46,17 @@ class _FeedScreenState extends ConsumerState<FeedScreen>
   bool _loadingMore = false;
   late TabController _tabController;
 
+  int _tabIndex = 0;
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) {
+        setState(() => _tabIndex = _tabController.index);
+      }
+    });
     _scrollController.addListener(_onScroll);
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadInitial());
   }
@@ -149,9 +156,8 @@ class _FeedScreenState extends ConsumerState<FeedScreen>
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        physics: const NeverScrollableScrollPhysics(),
+      body: IndexedStack(
+        index: _tabIndex,
         children: [
           // Tab 1: Video (WebView with YouTube Shorts beauty content)
           const _VideoFeedTab(),
