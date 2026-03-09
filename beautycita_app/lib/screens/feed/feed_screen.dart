@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/providers/feed_provider.dart';
 import 'package:beautycita/screens/feed/feed_card.dart';
@@ -26,20 +27,23 @@ class FeedScreen extends ConsumerStatefulWidget {
   ConsumerState<FeedScreen> createState() => _FeedScreenState();
 }
 
-class _FeedScreenState extends ConsumerState<FeedScreen> {
+class _FeedScreenState extends ConsumerState<FeedScreen>
+    with SingleTickerProviderStateMixin {
   final _scrollController = ScrollController();
   bool _loadingMore = false;
+  late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     _scrollController.addListener(_onScroll);
-    // Load first page after the first frame so providers are ready.
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadInitial());
   }
 
   @override
   void dispose() {
+    _tabController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
@@ -76,7 +80,6 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
     ref
         .read(feedPaginationProvider.notifier)
         .loadInitial(category: category);
-    // Scroll back to top on category change.
     if (_scrollController.hasClients) {
       _scrollController.animateTo(
         0,
@@ -89,8 +92,6 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
   @override
   Widget build(BuildContext context) {
     final palette = Theme.of(context).colorScheme;
-    final pagination = ref.watch(feedPaginationProvider);
-    final selectedCategory = ref.watch(feedCategoryProvider);
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -115,85 +116,228 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
           ),
           const SizedBox(width: AppConstants.paddingXS),
         ],
-      ),
-      body: Column(
-        children: [
-          // ── Category filter chips ─────────────────────────────────────
-          SizedBox(
-            height: 44,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppConstants.screenPaddingHorizontal,
-              ),
-              itemCount: _kCategories.length,
-              separatorBuilder: (_, __) =>
-                  const SizedBox(width: AppConstants.paddingXS),
-              itemBuilder: (context, index) {
-                final (label, value) = _kCategories[index];
-                final isSelected = selectedCategory == value;
-                return ChoiceChip(
-                  label: Text(
-                    label,
-                    style: GoogleFonts.poppins(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: isSelected
-                          ? palette.onPrimary
-                          : palette.onSurface.withValues(alpha: 0.7),
-                    ),
-                  ),
-                  selected: isSelected,
-                  onSelected: (_) => _selectCategory(value),
-                  selectedColor: palette.primary,
-                  backgroundColor: palette.surfaceContainerHighest,
-                  side: BorderSide.none,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppConstants.paddingSM,
-                  ),
-                  showCheckmark: false,
-                );
-              },
-            ),
+        bottom: TabBar(
+          controller: _tabController,
+          labelStyle: GoogleFonts.poppins(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
           ),
+          unselectedLabelStyle: GoogleFonts.poppins(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+          labelColor: palette.primary,
+          unselectedLabelColor: palette.onSurface.withValues(alpha: 0.5),
+          indicatorColor: palette.primary,
+          indicatorWeight: 3,
+          tabs: const [
+            Tab(icon: Icon(Icons.play_circle_outline_rounded), text: 'Video'),
+            Tab(icon: Icon(Icons.photo_library_outlined), text: 'Fotos'),
+          ],
+        ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          // Tab 1: Video (WebView with Instagram Reels beauty content)
+          const _VideoFeedTab(),
 
-          const SizedBox(height: AppConstants.paddingSM),
-
-          // ── Feed list ─────────────────────────────────────────────────
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: _onRefresh,
-              color: palette.primary,
-              child: _buildBody(context, pagination),
-            ),
+          // Tab 2: Fotos (native portfolio feed)
+          _PhotosFeedTab(
+            scrollController: _scrollController,
+            onRefresh: _onRefresh,
+            onSelectCategory: _selectCategory,
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildBody(BuildContext context, FeedPaginationNotifier pagination) {
+// ── Video Feed Tab (WebView) ──────────────────────────────────────────────────
+
+class _VideoFeedTab extends StatefulWidget {
+  const _VideoFeedTab();
+
+  @override
+  State<_VideoFeedTab> createState() => _VideoFeedTabState();
+}
+
+class _VideoFeedTabState extends State<_VideoFeedTab>
+    with AutomaticKeepAliveClientMixin {
+  late final WebViewController _controller;
+  bool _isLoading = true;
+
+  // Beauty reels URLs — rotated to keep content fresh
+  static const _reelsUrls = [
+    'https://www.instagram.com/reels/topics/beauty/',
+    'https://www.instagram.com/explore/tags/hairtransformation/',
+    'https://www.instagram.com/explore/tags/nailart/',
+    'https://www.instagram.com/explore/tags/makeuptutorial/',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onPageFinished: (_) {
+            if (mounted) setState(() => _isLoading = false);
+          },
+          onNavigationRequest: (request) {
+            // Allow Instagram navigation, block external links
+            if (request.url.contains('instagram.com') ||
+                request.url.contains('facebook.com') ||
+                request.url.contains('fbcdn.net') ||
+                request.url.contains('cdninstagram.com')) {
+              return NavigationDecision.navigate;
+            }
+            return NavigationDecision.prevent;
+          },
+        ),
+      )
+      ..setUserAgent(
+        'Mozilla/5.0 (Linux; Android 14; SM-S911U) AppleWebKit/537.36 '
+        '(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
+      )
+      ..loadRequest(Uri.parse(_reelsUrls[0]));
+  }
+
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
     final palette = Theme.of(context).colorScheme;
+
+    return Stack(
+      children: [
+        WebViewWidget(controller: _controller),
+        if (_isLoading)
+          Container(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(color: palette.primary),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Cargando videos...',
+                    style: GoogleFonts.nunito(
+                      color: palette.onSurface.withValues(alpha: 0.5),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+// ── Photos Feed Tab (existing native feed) ────────────────────────────────────
+
+class _PhotosFeedTab extends ConsumerWidget {
+  final ScrollController scrollController;
+  final Future<void> Function() onRefresh;
+  final void Function(String?) onSelectCategory;
+
+  const _PhotosFeedTab({
+    required this.scrollController,
+    required this.onRefresh,
+    required this.onSelectCategory,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final palette = Theme.of(context).colorScheme;
+    final pagination = ref.watch(feedPaginationProvider);
+    final selectedCategory = ref.watch(feedCategoryProvider);
+
+    return Column(
+      children: [
+        const SizedBox(height: AppConstants.paddingSM),
+
+        // ── Category filter chips ───────────────────────────────────────
+        SizedBox(
+          height: 44,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppConstants.screenPaddingHorizontal,
+            ),
+            itemCount: _kCategories.length,
+            separatorBuilder: (_, __) =>
+                const SizedBox(width: AppConstants.paddingXS),
+            itemBuilder: (context, index) {
+              final (label, value) = _kCategories[index];
+              final isSelected = selectedCategory == value;
+              return ChoiceChip(
+                label: Text(
+                  label,
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: isSelected
+                        ? palette.onPrimary
+                        : palette.onSurface.withValues(alpha: 0.7),
+                  ),
+                ),
+                selected: isSelected,
+                onSelected: (_) => onSelectCategory(value),
+                selectedColor: palette.primary,
+                backgroundColor: palette.surfaceContainerHighest,
+                side: BorderSide.none,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppConstants.paddingSM,
+                ),
+                showCheckmark: false,
+              );
+            },
+          ),
+        ),
+
+        const SizedBox(height: AppConstants.paddingSM),
+
+        // ── Feed list ─────────────────────────────────────────────────
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: onRefresh,
+            color: palette.primary,
+            child: _buildBody(context, pagination, palette),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBody(
+    BuildContext context,
+    FeedPaginationNotifier pagination,
+    ColorScheme palette,
+  ) {
     final items = pagination.items;
 
-    // Empty + not loading = show placeholder
     if (items.isEmpty && !pagination.loading) {
-      return _EmptyFeedState(onRefresh: _onRefresh);
+      return _EmptyFeedState(onRefresh: onRefresh);
     }
 
-    // First load spinner
     if (items.isEmpty && pagination.loading) {
       return const Center(child: CircularProgressIndicator());
     }
 
     return ListView.builder(
-      controller: _scrollController,
+      controller: scrollController,
       physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.only(bottom: AppConstants.paddingXL),
       itemCount: items.length + (pagination.hasMore ? 1 : 0),
       itemBuilder: (context, index) {
         if (index == items.length) {
-          // Footer loader
           return Padding(
             padding: const EdgeInsets.symmetric(
               vertical: AppConstants.paddingLG,
@@ -223,7 +367,6 @@ class _EmptyFeedState extends StatelessWidget {
     final palette = Theme.of(context).colorScheme;
 
     return ListView(
-      // Wrap in ListView so RefreshIndicator works on empty state too.
       children: [
         SizedBox(
           height: MediaQuery.of(context).size.height * 0.5,
