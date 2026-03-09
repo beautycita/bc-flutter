@@ -229,7 +229,11 @@ class _VideoFeedTabState extends State<_VideoFeedTab>
       _selectedCategory = category;
       _isLoading = true;
     });
-    _controller.loadRequest(_urlForCategory(category));
+    // Hide current page content before navigating to avoid white flash
+    _controller
+        .runJavaScript("document.body.style.visibility='hidden';")
+        .catchError((_) {})
+        .then((_) => _controller.loadRequest(_urlForCategory(category)));
   }
 
   @override
