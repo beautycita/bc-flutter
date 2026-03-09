@@ -1718,7 +1718,7 @@ class _ResultCardWidgetState extends State<_ResultCardWidget> {
                                 ),
                               ),
                               const SizedBox(width: BCSpacing.sm),
-                              _buildRating(result.staff, theme),
+                              if (result.staff != null) _buildRating(result.staff!, theme),
                             ],
                           ),
                           const SizedBox(height: BCSpacing.xs),
@@ -1726,7 +1726,7 @@ class _ResultCardWidgetState extends State<_ResultCardWidget> {
                           // Stylist
                           _buildInfoRow(
                             Icons.person_outline,
-                            _buildStylistText(result.staff),
+                            _buildStylistText(result.staff!),
                             theme,
                           ),
                           const SizedBox(height: BCSpacing.xs),
@@ -1742,7 +1742,7 @@ class _ResultCardWidgetState extends State<_ResultCardWidget> {
                           // Slot + duration
                           _buildInfoRow(
                             Icons.calendar_today_outlined,
-                            '${_formatSlotDate(result.slot.startsAt)} \u00b7 ${result.service.durationMinutes} min',
+                            '${_formatSlotDate(result.slot!.startsAt)} \u00b7 ${result.service.durationMinutes} min',
                             theme,
                           ),
                           const SizedBox(height: BCSpacing.xs),
@@ -1758,7 +1758,7 @@ class _ResultCardWidgetState extends State<_ResultCardWidget> {
                           // Price
                           Text(
                             _formatPrice(
-                              result.service.price,
+                              result.service.price ?? 0,
                               result.service.currency,
                             ),
                             style: theme.textTheme.titleLarge?.copyWith(
@@ -2380,11 +2380,11 @@ class _PaymentStepState extends ConsumerState<_PaymentStep> {
       final user = BCSupabase.client.auth.currentUser!;
 
       final intentResult = await createWebPaymentIntent(
-        serviceId: result.service.id,
+        serviceId: result.service.id ?? '',
         businessId: result.business.id,
-        staffId: result.staff.id,
-        scheduledAt: result.slot.startsAt,
-        amountCents: (result.service.price * 100).round(),
+        staffId: result.staff!.id,
+        scheduledAt: result.slot!.startsAt,
+        amountCents: ((result.service.price ?? 0) * 100).round(),
         userId: user.id,
       );
 
@@ -2468,14 +2468,14 @@ class _PaymentStepState extends ConsumerState<_PaymentStep> {
       final appointmentId = await createAppointment(
         userId: user.id,
         businessId: result.business.id,
-        staffId: result.staff.id,
-        serviceId: result.service.id,
+        staffId: result.staff!.id,
+        serviceId: result.service.id ?? '',
         serviceName: result.service.name,
         serviceType:
-            flowState.selectedService?.serviceType ?? result.service.id,
-        startsAt: result.slot.startsAt,
-        endsAt: result.slot.endsAt,
-        price: result.service.price,
+            flowState.selectedService?.serviceType ?? result.service.id ?? '',
+        startsAt: result.slot!.startsAt,
+        endsAt: result.slot!.endsAt,
+        price: result.service.price ?? 0,
         paymentIntentId: _paymentIntentId ?? '',
       );
 
@@ -2591,14 +2591,14 @@ class _PaymentStepState extends ConsumerState<_PaymentStep> {
             // Stylist
             _summaryRow(
               icon: Icons.person_outline,
-              label: result.staff.name,
+              label: result.staff?.name ?? '',
               theme: theme,
             ),
 
             // Date/Time
             _summaryRow(
               icon: Icons.calendar_today_outlined,
-              label: _formatSlotDate(result.slot.startsAt),
+              label: _formatSlotDate(result.slot!.startsAt),
               theme: theme,
             ),
 
@@ -2622,7 +2622,7 @@ class _PaymentStepState extends ConsumerState<_PaymentStep> {
                   ),
                 ),
                 Text(
-                  _formatPrice(result.service.price, result.service.currency),
+                  _formatPrice(result.service.price ?? 0, result.service.currency),
                   style: theme.textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w700,
                     color: theme.colorScheme.primary,
@@ -2779,7 +2779,7 @@ class _PaymentStepState extends ConsumerState<_PaymentStep> {
                           ),
                         )
                       : Text(
-                          'Confirmar y Pagar \u2014 ${_formatPrice(result.service.price, result.service.currency)}',
+                          'Confirmar y Pagar \u2014 ${_formatPrice(result.service.price ?? 0, result.service.currency)}',
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
@@ -3537,11 +3537,11 @@ class _ConfirmationView extends ConsumerWidget {
     BookingFlowState flowState,
     ResultCard result,
   ) {
-    final slot = result.slot;
+    final slot = result.slot!;
     final startTime = slot.startTime;
     final formattedDate = DateFormat('EEEE d MMMM, yyyy', 'es').format(startTime);
     final formattedTime = DateFormat('h:mm a').format(startTime);
-    final price = result.service.price;
+    final price = result.service.price ?? 0;
     final currency = result.service.currency.toUpperCase();
 
     String transportLabel;
@@ -3761,7 +3761,7 @@ class _SummarySidebar extends StatelessWidget {
                   builder: (context) {
                     if (!hasResult) return const SizedBox.shrink();
                     final result = flowState.selectedResult!;
-                    final startTime = result.slot.startTime;
+                    final startTime = result.slot!.startTime;
                     final dayFormat = DateFormat('EEE d MMM', 'es');
                     final timeFormat = DateFormat('h:mm a', 'es');
 
@@ -3797,7 +3797,7 @@ class _SummarySidebar extends StatelessWidget {
                             color: theme.colorScheme.onSurface
                                 .withValues(alpha: 0.6),
                           ),
-                          label: result.staff.name,
+                          label: result.staff?.name ?? '',
                         ),
                         const SizedBox(height: BCSpacing.xs),
 
@@ -3809,8 +3809,8 @@ class _SummarySidebar extends StatelessWidget {
                             color: Colors.amber.shade700,
                           ),
                           label:
-                              '${result.staff.rating.toStringAsFixed(1)} '
-                              '(${result.staff.totalReviews})',
+                              '${(result.staff?.rating ?? 0).toStringAsFixed(1)} '
+                              '(${result.staff?.totalReviews ?? 0})',
                         ),
                         const SizedBox(height: BCSpacing.xs),
 
@@ -3856,7 +3856,7 @@ class _SummarySidebar extends StatelessWidget {
                             ),
                             const SizedBox(width: BCSpacing.sm),
                             Text(
-                              '\$${result.service.price.toStringAsFixed(0)} '
+                              '\$${(result.service.price ?? 0).toStringAsFixed(0)} '
                               '${result.service.currency}',
                               style:
                                   theme.textTheme.headlineSmall?.copyWith(
@@ -4013,7 +4013,7 @@ class _StickyBottomBar extends StatelessWidget {
                         ),
                       ),
                       child: Text(
-                        'Pagar \$${flowState.selectedResult!.service.price.toStringAsFixed(0)}',
+                        'Pagar \$${(flowState.selectedResult!.service.price ?? 0).toStringAsFixed(0)}',
                         style: theme.textTheme.labelLarge?.copyWith(
                           fontWeight: FontWeight.w700,
                           color: theme.colorScheme.onPrimary,
@@ -4057,7 +4057,7 @@ class _StickyBottomBar extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
-                  '\$${result.service.price.toStringAsFixed(0)} '
+                  '\$${(result.service.price ?? 0).toStringAsFixed(0)} '
                   '${result.service.currency}',
                   style: theme.textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w700,
