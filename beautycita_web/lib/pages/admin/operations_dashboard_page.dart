@@ -2,6 +2,7 @@ import 'package:beautycita_core/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher_string.dart';
 
 import '../../config/breakpoints.dart';
 import '../../providers/admin_operations_provider.dart';
@@ -228,17 +229,15 @@ class _SystemHealthColumn extends StatelessWidget {
 
         const SizedBox(height: 24),
 
-        // Grafana link
-        _ExternalLinkButton(
-          icon: Icons.open_in_new,
-          label: 'Abrir Grafana',
+        // Grafana dashboards link
+        OutlinedButton.icon(
+          icon: const Icon(Icons.open_in_new, size: 18),
+          label: const Text('Abrir Grafana'),
+          style: OutlinedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          ),
           onPressed: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Grafana: Configure el enlace en ajustes'),
-                duration: Duration(seconds: 2),
-              ),
-            );
+            launchUrlString('https://beautycita.com/grafana/');
           },
         ),
       ],
@@ -322,68 +321,6 @@ class _StatusIndicator extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _ExternalLinkButton extends StatefulWidget {
-  const _ExternalLinkButton({
-    required this.icon,
-    required this.label,
-    required this.onPressed,
-  });
-  final IconData icon;
-  final String label;
-  final VoidCallback onPressed;
-
-  @override
-  State<_ExternalLinkButton> createState() => _ExternalLinkButtonState();
-}
-
-class _ExternalLinkButtonState extends State<_ExternalLinkButton> {
-  bool _hovering = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovering = true),
-      onExit: (_) => setState(() => _hovering = false),
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: widget.onPressed,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: _hovering
-                ? colors.primary.withValues(alpha: 0.08)
-                : colors.surfaceContainerHighest.withValues(alpha: 0.5),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: _hovering
-                  ? colors.primary.withValues(alpha: 0.3)
-                  : colors.outlineVariant,
-            ),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(widget.icon, size: 18, color: colors.primary),
-              const SizedBox(width: 8),
-              Text(
-                widget.label,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: colors.primary,
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
