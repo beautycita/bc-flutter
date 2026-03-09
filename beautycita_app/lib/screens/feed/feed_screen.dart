@@ -20,6 +20,19 @@ const _kCategories = <(String, String?)>[
   ('Novias', 'novias'),
 ];
 
+// YouTube Shorts hashtag per category (null = default/all).
+const _kVideoHashtags = <String?, String>{
+  null: 'beautytransformation',
+  'cabello': 'hairtransformation',
+  'unas': 'nailart',
+  'pestanas': 'lashextensions',
+  'cejas': 'browsonfleek',
+  'maquillaje': 'makeuptutorial',
+  'facial': 'skincare',
+  'corporal': 'bodysculpting',
+  'novias': 'bridalmakeup',
+};
+
 class FeedScreen extends ConsumerStatefulWidget {
   const FeedScreen({super.key});
 
@@ -168,6 +181,7 @@ class _VideoFeedTabState extends State<_VideoFeedTab>
     with AutomaticKeepAliveClientMixin {
   late final WebViewController _controller;
   bool _isLoading = true;
+  String? _selectedCategory;
 
   @override
   void initState() {
@@ -181,16 +195,10 @@ class _VideoFeedTabState extends State<_VideoFeedTab>
           },
           onNavigationRequest: (request) {
             final url = request.url;
-            // Allow Facebook, YouTube, TikTok and their CDNs
-            if (url.contains('facebook.com') ||
-                url.contains('fbcdn.net') ||
-                url.contains('fb.com') ||
-                url.contains('fbsbx.com') ||
-                url.contains('youtube.com') ||
+            if (url.contains('youtube.com') ||
                 url.contains('ytimg.com') ||
                 url.contains('googlevideo.com') ||
-                url.contains('tiktok.com') ||
-                url.contains('tiktokcdn.com')) {
+                url.contains('google.com')) {
               return NavigationDecision.navigate;
             }
             return NavigationDecision.prevent;
@@ -201,7 +209,21 @@ class _VideoFeedTabState extends State<_VideoFeedTab>
         'Mozilla/5.0 (Linux; Android 14; SM-S911U) AppleWebKit/537.36 '
         '(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
       )
-      ..loadRequest(Uri.parse('https://www.youtube.com/hashtag/hairtransformation/shorts'));
+      ..loadRequest(_urlForCategory(null));
+  }
+
+  static Uri _urlForCategory(String? category) {
+    final hashtag = _kVideoHashtags[category] ?? 'beautytransformation';
+    return Uri.parse('https://www.youtube.com/hashtag/$hashtag/shorts');
+  }
+
+  void _selectCategory(String? category) {
+    if (category == _selectedCategory) return;
+    setState(() {
+      _selectedCategory = category;
+      _isLoading = true;
+    });
+    _controller.loadRequest(_urlForCategory(category));
   }
 
   @override
@@ -212,38 +234,87 @@ class _VideoFeedTabState extends State<_VideoFeedTab>
     super.build(context);
     final palette = Theme.of(context).colorScheme;
 
-    // Shift WebView up by 50px to hide YouTube header/logo
     const double topClip = 50;
 
-    return Stack(
-      clipBehavior: Clip.hardEdge,
+    return Column(
       children: [
-        Positioned(
-          top: -topClip,
-          left: 0,
-          right: 0,
-          bottom: -topClip,
-          child: WebViewWidget(controller: _controller),
+        const SizedBox(height: AppConstants.paddingSM),
+
+        // ── Category chips ──────────────────────────────────────────
+        SizedBox(
+          height: 44,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppConstants.screenPaddingHorizontal,
+            ),
+            itemCount: _kCategories.length,
+            separatorBuilder: (_, __) =>
+                const SizedBox(width: AppConstants.paddingXS),
+            itemBuilder: (context, index) {
+              final (label, value) = _kCategories[index];
+              final isSelected = _selectedCategory == value;
+              return ChoiceChip(
+                label: Text(
+                  label,
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: isSelected
+                        ? palette.onPrimary
+                        : palette.onSurface.withValues(alpha: 0.7),
+                  ),
+                ),
+                selected: isSelected,
+                onSelected: (_) => _selectCategory(value),
+                selectedColor: palette.primary,
+                backgroundColor: palette.surfaceContainerHighest,
+                side: BorderSide.none,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppConstants.paddingSM,
+                ),
+                showCheckmark: false,
+              );
+            },
+          ),
         ),
-        if (_isLoading)
-          Container(
-            color: Theme.of(context).scaffoldBackgroundColor,
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CircularProgressIndicator(color: palette.primary),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Cargando videos...',
-                    style: GoogleFonts.nunito(
-                      color: palette.onSurface.withValues(alpha: 0.5),
+
+        const SizedBox(height: AppConstants.paddingSM),
+
+        // ── WebView ─────────────────────────────────────────────────
+        Expanded(
+          child: Stack(
+            clipBehavior: Clip.hardEdge,
+            children: [
+              Positioned(
+                top: -topClip,
+                left: 0,
+                right: 0,
+                bottom: -topClip,
+                child: WebViewWidget(controller: _controller),
+              ),
+              if (_isLoading)
+                Container(
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircularProgressIndicator(color: palette.primary),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Cargando videos...',
+                          style: GoogleFonts.nunito(
+                            color: palette.onSurface.withValues(alpha: 0.5),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              ),
-            ),
+                ),
+            ],
           ),
+        ),
       ],
     );
   }
