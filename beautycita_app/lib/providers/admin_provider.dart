@@ -956,6 +956,11 @@ final searchDiscoveredSalonsProvider = FutureProvider.family<List<Map<String, dy
     if (params['has_whatsapp'] != null) 'has_whatsapp': params['has_whatsapp'],
     if (params['has_interest'] != null) 'has_interest': params['has_interest'],
     if (params['source_filter'] != null) 'source_filter': params['source_filter'],
+    if (params['p_assigned_rp_id'] != null) 'p_assigned_rp_id': params['p_assigned_rp_id'],
+    if (params['p_rp_status_filter'] != null) 'p_rp_status_filter': params['p_rp_status_filter'],
+    if (params['p_pin_lat'] != null) 'p_pin_lat': params['p_pin_lat'],
+    if (params['p_pin_lng'] != null) 'p_pin_lng': params['p_pin_lng'],
+    if (params['p_radius_km'] != null) 'p_radius_km': params['p_radius_km'],
     'result_limit': params['result_limit'] ?? 50,
     'result_offset': params['result_offset'] ?? 0,
   });
