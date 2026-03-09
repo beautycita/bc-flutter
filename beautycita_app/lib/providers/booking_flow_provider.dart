@@ -237,6 +237,16 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
     await _fetchResults();
   }
 
+  /// User selected a transport mode on the transport selection screen.
+  Future<void> selectTransport(String mode, LatLng location) async {
+    state = state.copyWith(
+      step: BookingFlowStep.loading,
+      transportMode: mode,
+      userLocation: location,
+    );
+    await _fetchResults();
+  }
+
   /// User tapped "Otro horario?" — re-fetch with override window.
   Future<void> overrideTime(OverrideWindow window) async {
     state = state.copyWith(
@@ -320,18 +330,18 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
   /// payment but before booking creation). The webhook updates the booking
   /// to 'paid' + 'confirmed' on payment success.
   Future<void> _confirmStripe(ResultCard result, {required bool oxxoOnly}) async {
-    final serviceId = result.service.id;
+    final serviceId = result.service.id ?? '';
 
     // Step 1: Create booking first with pending status.
     // If payment fails or user cancels, we clean it up below.
     final booking = await _bookingRepo.createBooking(
       providerId: result.business.id,
-      providerServiceId: result.service.id,
+      providerServiceId: result.service.id ?? '',
       serviceName: result.service.name,
       category: state.serviceType ?? '',
-      scheduledAt: result.slot.startTime,
+      scheduledAt: result.slot!.startTime,
       durationMinutes: result.service.durationMinutes,
-      price: result.service.price,
+      price: result.service.price ?? 0,
       paymentStatus: 'pending',
       paymentMethod: state.paymentMethod,
       transportMode: state.transportMode,
@@ -340,7 +350,7 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
     debugPrint('[PAYMENT] Booking created: ${booking.id} (pending payment)');
 
     try {
-      if (serviceId.isNotEmpty && result.service.price > 0) {
+      if (serviceId.isNotEmpty && (result.service.price ?? 0) > 0) {
         debugPrint('[PAYMENT] Creating PaymentIntent (${oxxoOnly ? "oxxo" : "card"}) for service $serviceId');
 
         // Step 2: Create PaymentIntent with booking_id in metadata.
@@ -350,7 +360,7 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
           body: {
             'service_id': serviceId,
             'booking_id': booking.id,
-            'scheduled_at': result.slot.startTime.toUtc().toIso8601String(),
+            'scheduled_at': result.slot!.startTime.toUtc().toIso8601String(),
             'payment_type': 'full',
             'payment_method': oxxoOnly ? 'oxxo' : 'card',
           },
@@ -470,17 +480,17 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
 
   /// Bitcoin path — BTCPay invoice + external browser checkout.
   Future<void> _confirmBitcoin(ResultCard result) async {
-    final serviceId = result.service.id;
+    final serviceId = result.service.id ?? '';
 
     // Create booking first as pending
     final booking = await _bookingRepo.createBooking(
       providerId: result.business.id,
-      providerServiceId: result.service.id,
+      providerServiceId: result.service.id ?? '',
       serviceName: result.service.name,
       category: state.serviceType ?? '',
-      scheduledAt: result.slot.startTime,
+      scheduledAt: result.slot!.startTime,
       durationMinutes: result.service.durationMinutes,
-      price: result.service.price,
+      price: result.service.price ?? 0,
       paymentStatus: 'pending',
       paymentMethod: 'bitcoin',
       transportMode: state.transportMode,
@@ -489,7 +499,7 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
     // Create BTCPay invoice
     final invoice = await BTCPayService.createInvoice(
       serviceId: serviceId,
-      scheduledAt: result.slot.startTime.toUtc().toIso8601String(),
+      scheduledAt: result.slot!.startTime.toUtc().toIso8601String(),
     );
 
     debugPrint('[PAYMENT] BTCPay invoice created: ${invoice.invoiceId}');

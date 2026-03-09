@@ -1013,7 +1013,9 @@ class _DisputeDetailSheetState extends ConsumerState<_DisputeDetailSheet> {
               ? 'El salon acepto un reembolso total. Tu disputa fue resuelta.'
               : 'El salon respondio a tu disputa. Revisa la oferta.',
           'channel': 'in_app',
-        }).then((_) {}).catchError((_) {});
+        }).then((_) {}).catchError((e) {
+          debugPrint('[Disputes] Failed to send dispute notification: $e');
+        });
       }
 
       widget.onChanged();

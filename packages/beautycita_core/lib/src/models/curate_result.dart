@@ -111,38 +111,48 @@ class BookingWindowInfo {
 class ResultCard {
   final int rank;
   final double score;
+  final bool isDiscovered;
   final BusinessInfo business;
-  final StaffInfo staff;
+  final StaffInfo? staff;
   final ServiceInfo service;
-  final SlotInfo slot;
+  final SlotInfo? slot;
   final TransportInfo transport;
   final ReviewSnippet? reviewSnippet;
   final List<String> badges;
   final double areaAvgPrice;
-  final ScoringBreakdown scoringBreakdown;
+  final ScoringBreakdown? scoringBreakdown;
 
   const ResultCard({
     required this.rank,
     required this.score,
+    this.isDiscovered = false,
     required this.business,
-    required this.staff,
+    this.staff,
     required this.service,
-    required this.slot,
+    this.slot,
     required this.transport,
     this.reviewSnippet,
     required this.badges,
     required this.areaAvgPrice,
-    required this.scoringBreakdown,
+    this.scoringBreakdown,
   });
+
+  /// Whether this is a bookable result (registered business with staff/slot)
+  bool get isBookable => !isDiscovered && staff != null && slot != null;
 
   factory ResultCard.fromJson(Map<String, dynamic> json) {
     return ResultCard(
       rank: json['rank'] as int,
       score: (json['score'] as num).toDouble(),
+      isDiscovered: json['is_discovered'] == true,
       business: BusinessInfo.fromJson(json['business'] as Map<String, dynamic>),
-      staff: StaffInfo.fromJson(json['staff'] as Map<String, dynamic>),
+      staff: json['staff'] != null
+          ? StaffInfo.fromJson(json['staff'] as Map<String, dynamic>)
+          : null,
       service: ServiceInfo.fromJson(json['service'] as Map<String, dynamic>),
-      slot: SlotInfo.fromJson(json['slot'] as Map<String, dynamic>),
+      slot: json['slot'] != null
+          ? SlotInfo.fromJson(json['slot'] as Map<String, dynamic>)
+          : null,
       transport:
           TransportInfo.fromJson(json['transport'] as Map<String, dynamic>),
       reviewSnippet: json['review_snippet'] != null
@@ -151,9 +161,10 @@ class ResultCard {
           : null,
       badges: (json['badges'] as List<dynamic>).cast<String>(),
       areaAvgPrice: (json['area_avg_price'] as num).toDouble(),
-      scoringBreakdown: ScoringBreakdown.fromJson(
-        json['scoring_breakdown'] as Map<String, dynamic>,
-      ),
+      scoringBreakdown: json['scoring_breakdown'] != null
+          ? ScoringBreakdown.fromJson(
+              json['scoring_breakdown'] as Map<String, dynamic>)
+          : null,
     );
   }
 }
@@ -166,6 +177,12 @@ class BusinessInfo {
   final double lat;
   final double lng;
   final String? whatsapp;
+  final double? rating;
+  final int? totalReviews;
+  final String? website;
+  final String? instagram;
+  final String? workingHours;
+  final String? googleCategory;
 
   const BusinessInfo({
     required this.id,
@@ -175,6 +192,12 @@ class BusinessInfo {
     required this.lat,
     required this.lng,
     this.whatsapp,
+    this.rating,
+    this.totalReviews,
+    this.website,
+    this.instagram,
+    this.workingHours,
+    this.googleCategory,
   });
 
   factory BusinessInfo.fromJson(Map<String, dynamic> json) {
@@ -186,6 +209,12 @@ class BusinessInfo {
       lat: (json['lat'] as num).toDouble(),
       lng: (json['lng'] as num).toDouble(),
       whatsapp: json['whatsapp'] as String?,
+      rating: (json['rating'] as num?)?.toDouble(),
+      totalReviews: json['total_reviews'] as int?,
+      website: json['website'] as String?,
+      instagram: json['instagram'] as String?,
+      workingHours: json['working_hours'] as String?,
+      googleCategory: json['google_category'] as String?,
     );
   }
 }
@@ -220,25 +249,25 @@ class StaffInfo {
 }
 
 class ServiceInfo {
-  final String id;
+  final String? id;
   final String name;
-  final double price;
+  final double? price;
   final int durationMinutes;
   final String currency;
 
   const ServiceInfo({
-    required this.id,
+    this.id,
     required this.name,
-    required this.price,
+    this.price,
     required this.durationMinutes,
     required this.currency,
   });
 
   factory ServiceInfo.fromJson(Map<String, dynamic> json) {
     return ServiceInfo(
-      id: json['id'] as String,
+      id: json['id'] as String?,
       name: json['name'] as String,
-      price: (json['price'] as num).toDouble(),
+      price: (json['price'] as num?)?.toDouble(),
       durationMinutes: json['duration_minutes'] as int,
       currency: json['currency'] as String,
     );

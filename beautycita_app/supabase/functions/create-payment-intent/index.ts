@@ -11,6 +11,7 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Stripe from "https://esm.sh/stripe@14.21.0?target=deno";
 import { calculateWithholding, type TaxWithholding } from "../_shared/tax_mx.ts";
+import { requireFeature } from "../_shared/check-toggle.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "https://beautycita.com",
@@ -43,6 +44,10 @@ serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
+
+  // Server-side toggle enforcement
+  const blocked = await requireFeature("enable_stripe_payments");
+  if (blocked) return blocked;
 
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);

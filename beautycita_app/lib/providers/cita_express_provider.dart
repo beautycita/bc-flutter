@@ -238,14 +238,14 @@ class CitaExpressNotifier extends StateNotifier<CitaExpressState> {
     try {
       final booking = await _bookingRepo.createBooking(
         providerId: result.business.id,
-        providerServiceId: result.service.id,
+        providerServiceId: result.service.id ?? '',
         serviceName: result.service.name,
         category: state.selectedServiceType ?? '',
-        scheduledAt: result.slot.startTime,
+        scheduledAt: result.slot!.startTime,
         durationMinutes: result.service.durationMinutes,
-        price: result.service.price,
+        price: result.service.price ?? 0,
         paymentMethod: state.paymentMethod,
-        staffId: result.staff.id,
+        staffId: result.staff?.id,
       );
 
       state = state.copyWith(
@@ -492,7 +492,7 @@ class CitaExpressNotifier extends StateNotifier<CitaExpressState> {
       }
 
       // Sort by slot time (soonest first)
-      results.sort((a, b) => a.slot.startTime.compareTo(b.slot.startTime));
+      results.sort((a, b) => (a.slot?.startTime ?? DateTime(2099)).compareTo(b.slot?.startTime ?? DateTime(2099)));
 
       final step = range == 'today'
           ? CitaExpressStep.results

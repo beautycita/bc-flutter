@@ -13,6 +13,7 @@
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { requireFeature } from "../_shared/check-toggle.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -345,6 +346,10 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
+
+  // Server-side toggle enforcement
+  const blocked = await requireFeature("enable_push_notifications");
+  if (blocked) return blocked;
 
   // ── Auth: require valid JWT or service-role key (for internal calls) ──
   const authHeader = req.headers.get("authorization") ?? "";

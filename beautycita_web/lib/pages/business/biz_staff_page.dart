@@ -551,7 +551,8 @@ class _AddStaffDialogState extends ConsumerState<_AddStaffDialog> {
         fileOptions: const FileOptions(cacheControl: '3600', upsert: true),
       );
       return BCSupabase.client.storage.from('staff-media').getPublicUrl(path);
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[BizStaff] Failed to upload staff photo: $e');
       return null;
     }
   }

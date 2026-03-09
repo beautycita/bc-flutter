@@ -8,6 +8,7 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { requireFeature } from "../_shared/check-toggle.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -146,6 +147,10 @@ serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  // Server-side toggle enforcement
+  const blocked = await requireFeature("enable_time_inference");
+  if (blocked) return blocked;
+
   try {
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
@@ -247,7 +252,68 @@ serve(async (req) => {
       }
     }
 
-    if (candidates.length === 0) {
+    // ==================================================================
+    // STEP 3b — Discovered Salon Fallback (when < 3 registered)
+    // ==================================================================
+    let discoveredResults: unknown[] = [];
+    const registeredCount = candidates.length;
+
+    if (registeredCount < 3 && !business_id) {
+      const needed = 3 - registeredCount;
+      const discoveredRadius = baseRadius * (Number(profile.radius_max_multiplier) || 3);
+      const discovered = await queryDiscoveredCandidates(
+        supabase,
+        profile.category,
+        location,
+        discoveredRadius,
+      );
+
+      // Build discovered result cards (no staff/slots — contact via WhatsApp)
+      discoveredResults = discovered.slice(0, needed).map((d, i) => ({
+        rank: registeredCount + i + 1,
+        score: 0,
+        is_discovered: true,
+        business: {
+          id: d.salon_id,
+          name: d.business_name,
+          photo_url: d.feature_image_url,
+          address: d.location_address,
+          lat: d.latitude,
+          lng: d.longitude,
+          whatsapp: d.whatsapp || d.phone,
+          rating: d.rating_average ? Number(d.rating_average) : null,
+          total_reviews: d.rating_count ?? 0,
+          website: d.website,
+          instagram: d.instagram_url,
+          working_hours: d.working_hours,
+          google_category: d.categories,
+        },
+        staff: null,
+        service: {
+          id: null,
+          name: profile.display_name_es ?? service_type,
+          price: null,
+          duration_minutes: Number(profile.typical_duration_min) || 60,
+          currency: "MXN",
+        },
+        slot: null,
+        transport: fallbackTransport(d.distance_m, transport_mode),
+        review_snippet: {
+          text: d.rating_average
+            ? `${d.rating_average} estrellas en Google (${d.rating_count ?? 0} reseñas)`
+            : "Salón descubierto — contacta para más info",
+          author_name: null,
+          days_ago: null,
+          rating: d.rating_average ? Number(d.rating_average) : null,
+          quality_score: null,
+        },
+        badges: ["discovered", "contact_whatsapp"],
+        area_avg_price: 0,
+        scoring_breakdown: null,
+      }));
+    }
+
+    if (candidates.length === 0 && discoveredResults.length === 0) {
       return json({
         booking_window: windowSummary(window),
         results: [],
@@ -255,29 +321,35 @@ serve(async (req) => {
     }
 
     // ==================================================================
-    // STEP 4 — Score & Rank (50-150ms)
+    // STEP 4 — Score & Rank (50-150ms) — registered candidates only
     // ==================================================================
-    const scored = await scoreCandidates(
-      candidates,
-      profile,
-      window,
-      transport_mode,
-      location,
-    );
+    let registeredResults: unknown[] = [];
+    if (candidates.length > 0) {
+      const scored = await scoreCandidates(
+        candidates,
+        profile,
+        window,
+        transport_mode,
+        location,
+      );
 
-    // ==================================================================
-    // STEP 5 — Pick Top 3
-    // ==================================================================
-    const top3 = pickTop3(scored);
+      // ==================================================================
+      // STEP 5 — Pick Top 3
+      // ==================================================================
+      const top3 = pickTop3(scored);
 
-    // ==================================================================
-    // STEP 6 — Build Response (<5ms)
-    // ==================================================================
-    const results = await buildResponse(supabase, top3, profile, service_type);
+      // ==================================================================
+      // STEP 6 — Build Response (<5ms)
+      // ==================================================================
+      registeredResults = await buildResponse(supabase, top3, profile, service_type);
+    }
+
+    // Merge: registered first, then discovered to fill up to 3
+    const allResults = [...registeredResults, ...discoveredResults].slice(0, 3);
 
     return json({
       booking_window: windowSummary(window),
-      results,
+      results: allResults,
     });
   } catch (err) {
     console.error("curate-results error:", err);
@@ -598,6 +670,48 @@ async function queryCandidates(
     return [];
   }
   return (data ?? []) as Candidate[];
+}
+
+// =========================================================================
+// STEP 3b — Discovered Salon Fallback
+// =========================================================================
+
+interface DiscoveredSalon {
+  salon_id: string;
+  business_name: string;
+  feature_image_url: string | null;
+  location_address: string | null;
+  latitude: number;
+  longitude: number;
+  phone: string | null;
+  whatsapp: string | null;
+  rating_average: number | null;
+  rating_count: number | null;
+  categories: string | null;
+  working_hours: string | null;
+  website: string | null;
+  instagram_url: string | null;
+  distance_m: number;
+}
+
+async function queryDiscoveredCandidates(
+  sb: SupabaseClient,
+  category: string,
+  loc: { lat: number; lng: number },
+  radiusM: number,
+): Promise<DiscoveredSalon[]> {
+  const { data, error } = await sb.rpc("curate_discovered_candidates", {
+    p_category: category,
+    p_lat: loc.lat,
+    p_lng: loc.lng,
+    p_radius_meters: Math.round(radiusM),
+  });
+
+  if (error) {
+    console.error("curate_discovered_candidates RPC error:", error.message);
+    return [];
+  }
+  return (data ?? []) as DiscoveredSalon[];
 }
 
 // =========================================================================

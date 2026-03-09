@@ -397,12 +397,22 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildBusinessHeader(result),
-            const SizedBox(height: 8),
-            _buildStaffInfo(result),
-            const SizedBox(height: 12),
-            _buildTimeSlot(result),
-            const SizedBox(height: 12),
-            _buildPriceInfo(result),
+            if (result.staff != null) ...[
+              const SizedBox(height: 8),
+              _buildStaffInfo(result),
+            ],
+            if (result.slot != null) ...[
+              const SizedBox(height: 12),
+              _buildTimeSlot(result),
+            ],
+            if (!result.isDiscovered) ...[
+              const SizedBox(height: 12),
+              _buildPriceInfo(result),
+            ],
+            if (result.isDiscovered && result.business.workingHours != null) ...[
+              const SizedBox(height: 10),
+              _buildDiscoveredInfo(result),
+            ],
             if (result.reviewSnippet != null) ...[
               const SizedBox(height: 10),
               _buildReviewSnippet(result),
@@ -421,7 +431,11 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
 
   Widget _buildBusinessHeader(ResultCard result) {
     final palette = Theme.of(context).colorScheme;
-    final avatarUrl = result.staff.avatarUrl ?? result.business.photoUrl;
+    final avatarUrl = result.staff?.avatarUrl ?? result.business.photoUrl;
+
+    // Rating: use staff rating for registered, Google rating for discovered
+    final displayRating = result.staff?.rating ?? result.business.rating;
+    final displayReviews = result.staff?.totalReviews ?? result.business.totalReviews ?? 0;
 
     return Row(
       children: [
@@ -455,21 +469,32 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
-              Row(
-                children: [
-                  Icon(Icons.star,
-                      color: palette.secondary, size: 16),
-                  const SizedBox(width: 3),
-                  Text(
-                    '${result.staff.rating.toStringAsFixed(1)} (${result.staff.totalReviews})',
-                    style: GoogleFonts.poppins(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: palette.onSurface.withValues(alpha: 0.5),
+              if (displayRating != null)
+                Row(
+                  children: [
+                    Icon(Icons.star,
+                        color: palette.secondary, size: 16),
+                    const SizedBox(width: 3),
+                    Text(
+                      '${displayRating.toStringAsFixed(1)} ($displayReviews)',
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: palette.onSurface.withValues(alpha: 0.5),
+                      ),
                     ),
-                  ),
-                ],
-              ),
+                    if (result.isDiscovered) ...[
+                      const SizedBox(width: 4),
+                      Text(
+                        'Google',
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          color: palette.onSurface.withValues(alpha: 0.3),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
             ],
           ),
         ),
@@ -479,11 +504,12 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
 
   Widget _buildStaffInfo(ResultCard result) {
     final palette = Theme.of(context).colorScheme;
-    String staffText = result.staff.name;
+    final staff = result.staff;
+    if (staff == null) return const SizedBox.shrink();
 
-    if (result.staff.experienceYears != null &&
-        result.staff.experienceYears! > 0) {
-      staffText += ' · ${result.staff.experienceYears} anos de experiencia';
+    String staffText = staff.name;
+    if (staff.experienceYears != null && staff.experienceYears! > 0) {
+      staffText += ' · ${staff.experienceYears} anos de experiencia';
     }
 
     return Text(
@@ -495,10 +521,58 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
     );
   }
 
+  Widget _buildDiscoveredInfo(ResultCard result) {
+    final palette = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (result.business.workingHours != null)
+          Row(
+            children: [
+              Icon(Icons.schedule, size: 14, color: palette.onSurface.withValues(alpha: 0.4)),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  result.business.workingHours!,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: palette.onSurface.withValues(alpha: 0.5),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        if (result.business.address != null) ...[
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              Icon(Icons.location_on, size: 14, color: palette.onSurface.withValues(alpha: 0.4)),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  result.business.address!,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: palette.onSurface.withValues(alpha: 0.5),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+
   Widget _buildTimeSlot(ResultCard result) {
     final palette = Theme.of(context).colorScheme;
+    if (result.slot == null) return const SizedBox.shrink();
     final formatter = DateFormat('EEEE HH:mm', 'es');
-    final formattedTime = formatter.format(result.slot.startTime);
+    final formattedTime = formatter.format(result.slot!.startTime);
     final capitalizedTime =
         formattedTime[0].toUpperCase() + formattedTime.substring(1);
 
@@ -540,7 +614,7 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
     return Row(
       children: [
         Text(
-          '\$${result.service.price.toStringAsFixed(0)} ${result.service.currency}',
+          '\$${result.service.price?.toStringAsFixed(0) ?? '—'} ${result.service.currency}',
           style: GoogleFonts.poppins(
             fontSize: 20,
             fontWeight: FontWeight.w700,
@@ -641,6 +715,60 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
   Widget _buildActionButtons(ResultCard result) {
     final ext = Theme.of(context).extension<BCThemeExtension>()!;
 
+    // Discovered salons: WhatsApp contact button
+    if (result.isDiscovered) {
+      return GestureDetector(
+        onTap: () async {
+          final phone = result.business.whatsapp;
+          if (phone == null || phone.isEmpty) {
+            ToastService.showInfo('Sin número de contacto');
+            return;
+          }
+          final cleanPhone = phone.replaceAll(RegExp(r'[^\d+]'), '');
+          final serviceName = result.service.name;
+          final message = Uri.encodeComponent(
+            'Hola! Vi su salón en BeautyCita y me interesa agendar una cita de $serviceName. ¿Tienen disponibilidad?',
+          );
+          final url = Uri.parse('https://wa.me/$cleanPhone?text=$message');
+          if (await canLaunchUrl(url)) {
+            await launchUrl(url, mode: LaunchMode.externalApplication);
+          }
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          decoration: BoxDecoration(
+            color: const Color(0xFF25D366),
+            borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF25D366).withValues(alpha: 0.4),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          alignment: Alignment.center,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.chat, color: Colors.white, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'CONTACTAR POR WHATSAPP',
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                  letterSpacing: 1.2,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Registered businesses: RESERVAR button
     return GestureDetector(
       onTap: _isBooking
           ? null
