@@ -4,7 +4,7 @@
 
 **Goal:** Production-polish all screens, fix theme to brand gradient with hollow CTA buttons, wire disconnected features, sweep technical debt, ship v1.0.5.
 
-**Architecture:** 7 tasks across mobile app theme, 2 screens, 1 static HTML page, 1 new edge function, 3 edge function consistency fixes, 1 migration, and a full analyzer sweep. All Dart-only (no native changes), so Shorebird patch for deploy.
+**Architecture:** 8 tasks across mobile app theme, 2 screens, 1 static HTML page, 2 new edge functions, 3 edge function consistency fixes, 2 migrations, a full analyzer sweep, and an anon user cleanup cron. All Dart-only (no native changes), so Shorebird patch for deploy.
 
 **Tech Stack:** Flutter 3.38.9, Dart, Supabase edge functions (Deno/TS), static HTML/CSS, UptimeRobot API, nginx.
 
@@ -695,7 +695,148 @@ git commit -m "fix: resolve all Flutter analyzer warnings (0 issues)"
 
 ---
 
-## Task 7: Build & Deploy v1.0.5
+## Task 7: Auto-Cleanup Anonymous Users
+
+**Files:**
+- Create: `beautycita_app/supabase/functions/cleanup-anon-users/index.ts`
+- Create: `beautycita_app/supabase/migrations/20260310100001_cleanup_anon_users.sql`
+
+**Context:** Anonymous users (no email, no phone) accumulate in the database from abandoned registrations. BC wants them auto-purged when: (a) there are 50+ anon users, OR (b) periodically every 24-48 hours. Only delete users who are NOT currently online (check `last_seen` > 1 hour ago). This keeps the users table clean and the admin panel usable.
+
+**Step 1: Create SQL function for cleanup**
+
+Create `beautycita_app/supabase/migrations/20260310100001_cleanup_anon_users.sql`:
+
+```sql
+-- Function to delete anonymous users (no email, no phone, not online)
+-- Called by edge function on schedule or threshold trigger
+CREATE OR REPLACE FUNCTION cleanup_anon_users()
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  anon_count int;
+  deleted_count int;
+  deleted_ids uuid[];
+BEGIN
+  -- Count current anon users
+  SELECT count(*) INTO anon_count
+  FROM auth.users u
+  JOIN profiles p ON p.id = u.id
+  WHERE u.email IS NULL
+    AND (p.phone IS NULL OR p.phone = '')
+    AND (u.phone IS NULL OR u.phone = '');
+
+  -- Only proceed if 50+ anon users exist
+  IF anon_count < 50 THEN
+    RETURN jsonb_build_object('skipped', true, 'anon_count', anon_count, 'reason', 'below threshold');
+  END IF;
+
+  -- Collect IDs of anon users who are offline (last_seen > 1 hour ago or null)
+  SELECT array_agg(p.id) INTO deleted_ids
+  FROM profiles p
+  JOIN auth.users u ON u.id = p.id
+  WHERE u.email IS NULL
+    AND (p.phone IS NULL OR p.phone = '')
+    AND (u.phone IS NULL OR u.phone = '')
+    AND (p.last_seen IS NULL OR p.last_seen < now() - interval '1 hour')
+    AND p.role = 'customer';  -- never delete business/admin accounts
+
+  IF deleted_ids IS NULL OR array_length(deleted_ids, 1) IS NULL THEN
+    RETURN jsonb_build_object('skipped', true, 'anon_count', anon_count, 'reason', 'all anon users currently online');
+  END IF;
+
+  deleted_count := array_length(deleted_ids, 1);
+
+  -- Delete from profiles first (FK cascade will handle related tables)
+  DELETE FROM profiles WHERE id = ANY(deleted_ids);
+
+  -- Delete from auth.users
+  DELETE FROM auth.users WHERE id = ANY(deleted_ids);
+
+  -- Log to audit
+  INSERT INTO audit_log (action, entity_type, details)
+  VALUES ('cleanup_anon_users', 'user', jsonb_build_object(
+    'deleted_count', deleted_count,
+    'anon_count_before', anon_count,
+    'timestamp', now()
+  ));
+
+  RETURN jsonb_build_object('deleted', deleted_count, 'anon_count_before', anon_count);
+END;
+$$;
+```
+
+**Step 2: Create edge function**
+
+Create `beautycita_app/supabase/functions/cleanup-anon-users/index.ts`:
+
+```typescript
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+serve(async (req: Request) => {
+  // Only allow POST (from cron) or internal calls
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 204 });
+  }
+
+  try {
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    const { data, error } = await supabase.rpc("cleanup_anon_users");
+
+    if (error) {
+      console.error("[cleanup-anon-users] RPC error:", error);
+      return new Response(
+        JSON.stringify({ error: "Cleanup failed" }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log("[cleanup-anon-users] Result:", JSON.stringify(data));
+    return new Response(
+      JSON.stringify(data),
+      { status: 200, headers: { "Content-Type": "application/json" } }
+    );
+  } catch (e) {
+    console.error("[cleanup-anon-users] Error:", e);
+    return new Response(
+      JSON.stringify({ error: "Internal error" }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
+  }
+});
+```
+
+**Step 3: Set up server cron**
+
+```bash
+ssh www-bc "crontab -l"
+# Add this line (runs every 24 hours at 4 AM):
+# 0 4 * * * curl -s -X POST http://localhost:8000/functions/v1/cleanup-anon-users -H "Authorization: Bearer $(cat /var/www/beautycita.com/bc-flutter/supabase-docker/.env | grep SERVICE_ROLE_KEY | cut -d= -f2)" >> /var/log/cleanup-anon.log 2>&1
+```
+
+**Step 4: Run migration on production**
+
+```bash
+ssh www-bc "docker exec supabase-db psql -U postgres -d postgres" < beautycita_app/supabase/migrations/20260310100001_cleanup_anon_users.sql
+```
+
+**Step 5: Commit**
+
+```bash
+git add beautycita_app/supabase/migrations/20260310100001_cleanup_anon_users.sql beautycita_app/supabase/functions/cleanup-anon-users/index.ts
+git commit -m "feat: auto-cleanup anonymous users (50+ threshold, 24h cron)"
+```
+
+---
+
+## Task 8: Build & Deploy v1.0.5
 
 **Files:**
 - Modify: `beautycita_app/pubspec.yaml:4` (version bump)
