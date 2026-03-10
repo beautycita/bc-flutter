@@ -932,7 +932,7 @@ class _HorizontalDayViewState extends ConsumerState<_HorizontalDayView> {
                                     onTapAppt: (appt) => ref.read(selectedAppointmentProvider.notifier).state = appt,
                                     isDragSource: _isDragging && _dragAppt?['staff_id'] == lane.id,
                                     dragApptId: _dragAppt?['id'] as String?,
-                                    enableDrag: !isDemo || demoPhoneVerified,
+                                    enableDrag: true,
                                     onDragStart: (appt, globalPos) {
                                       // Demo: show verification gate if phone not verified
                                       if (isDemo && !demoPhoneVerified) {
