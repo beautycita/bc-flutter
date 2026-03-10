@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/constants.dart';
 import '../config/theme_extension.dart';
 import '../services/toast_service.dart';
@@ -51,14 +52,43 @@ class _ReportProblemScreenState extends ConsumerState<ReportProblemScreen> {
 
     setState(() => _submitting = true);
 
-    // Artificial brief delay for UX feedback
-    await Future.delayed(AppConstants.shortAnimation);
+    try {
+      final client = Supabase.instance.client;
+      final description = _descriptionController.text.trim();
+      final involved = _involvedController.text.trim();
+      final date = _dateController.text.trim();
 
-    setState(() => _submitting = false);
+      await client.from('contact_submissions').insert({
+        'user_id': client.auth.currentUser?.id,
+        'category': _selectedCategory,
+        'description': description,
+        if (involved.isNotEmpty) 'involved_user': involved,
+        if (date.isNotEmpty) 'incident_date': date,
+        'metadata': {
+          'app_version': AppConstants.version,
+          'platform': Theme.of(context).platform.name,
+        },
+      });
 
-    ToastService.showSuccess('Reporte enviado. Lo revisaremos pronto.');
+      // Best-effort admin push notification
+      try {
+        await client.functions.invoke('send-push-notification', body: {
+          'user_id': 'admin',
+          'title': 'Nuevo reporte',
+          'body':
+              '[$_selectedCategory] ${description.length > 50 ? description.substring(0, 50) : description}...',
+        });
+      } catch (_) {}
 
-    if (mounted) Navigator.of(context).pop();
+      if (!mounted) return;
+      ToastService.showSuccess('Reporte enviado. Lo revisaremos pronto.');
+      Navigator.of(context).pop();
+    } catch (e) {
+      if (!mounted) return;
+      ToastService.showError('Error al enviar el reporte. Intenta de nuevo.');
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
   }
 
   @override
