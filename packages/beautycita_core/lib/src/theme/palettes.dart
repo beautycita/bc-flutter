@@ -35,16 +35,16 @@ const kWhatsAppDarkGreen = Color(0xFF075E54);
 
 // ─── Palettes ──────────────────────────────────────────────────────────────
 
-/// 1. Rose & Gold — FROZEN palette values. Do not change hex codes.
+/// 1. Rose & Gold — default palette, brand gradient (pink→purple→blue).
 const roseGoldPalette = BCPalette(
   id: 'rose_gold',
   nameEs: 'Rosa y Oro',
   nameEn: 'Rose & Gold',
   brightness: Brightness.light,
-  primary: Color(0xFF660033),
+  primary: Color(0xFFEC4899),
   onPrimary: Color(0xFFFFFFFF),
-  secondary: Color(0xFFFFB300),
-  onSecondary: Color(0xFF212121),
+  secondary: Color(0xFF9333EA),
+  onSecondary: Color(0xFFFFFFFF),
   surface: Color(0xFFFFF8F0),
   onSurface: Color(0xFF212121),
   scaffoldBackground: Color(0xFFFFFFFF),
@@ -56,17 +56,17 @@ const roseGoldPalette = BCPalette(
   textPrimary: Color(0xFF212121),
   textSecondary: Color(0xFF757575),
   textHint: Color(0xFF9E9E9E),
-  shimmerColor: Color(0xFFFFB300),
+  shimmerColor: Color(0xFF9333EA),
   success: Color(0xFF4CAF50),
   warning: Color(0xFFFFA000),
   info: Color(0xFF2196F3),
   primaryGradient: LinearGradient(
-    colors: [Color(0xFF660033), Color(0xFF990033)],
+    colors: [Color(0xFFEC4899), Color(0xFF9333EA), Color(0xFF3B82F6)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   ),
   accentGradient: LinearGradient(
-    colors: [Color(0xFFFFB300), Color(0xFFFFC107)],
+    colors: [Color(0xFFEC4899), Color(0xFF7E22CE)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   ),
@@ -82,8 +82,8 @@ const roseGoldPalette = BCPalette(
     Color(0xFFFFA726), // specialized
     Color(0xFF37474F), // barberia
   ],
-  cinematicPrimary: Color(0xFF660033),
-  cinematicAccent: Color(0xFFFFB300),
+  cinematicPrimary: Color(0xFFEC4899),
+  cinematicAccent: Color(0xFF9333EA),
   statusBarColor: Color(0x00000000),
   statusBarIconBrightness: Brightness.dark,
   navigationBarColor: Color(0xFFFFFFFF),
