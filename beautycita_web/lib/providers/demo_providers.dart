@@ -5,10 +5,25 @@ library;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'business_portal_provider.dart';
 import '../data/demo_data.dart';
+import 'package:beautycita_core/beautycita_core.dart';
 
 /// True when running inside the demo portal. Pages check this to hide write
 /// operations (add/edit/delete buttons, forms, etc.).
 final isDemoProvider = StateProvider<bool>((ref) => false);
+
+/// Whether the current user has a verified phone number.
+/// In demo mode, this gates interactive features like drag-and-drop reschedule.
+final demoPhoneVerifiedProvider = FutureProvider<bool>((ref) async {
+  final user = BCSupabase.client.auth.currentUser;
+  if (user == null) return false;
+  final res = await BCSupabase.client
+      .from('profiles')
+      .select('phone')
+      .eq('id', user.id)
+      .maybeSingle();
+  final phone = res?['phone'] as String?;
+  return phone != null && phone.isNotEmpty;
+});
 
 /// All provider overrides needed for demo mode.
 List<Override> get demoProviderOverrides => [
