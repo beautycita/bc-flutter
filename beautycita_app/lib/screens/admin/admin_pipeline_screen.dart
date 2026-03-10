@@ -1324,7 +1324,7 @@ class _FilterChipsRow extends StatelessWidget {
             // RP user filter chips
             ...rpUsersAsync.when(
               loading: () => [const SizedBox.shrink()],
-              error: (_, __) => [const SizedBox.shrink()],
+              error: (_, _) => [const SizedBox.shrink()],
               data: (rpUsers) => rpUsers.map((rp) {
                 final rpId = rp['id'] as String;
                 final rpName = rp['full_name'] as String? ??

@@ -45,7 +45,7 @@ class _ReviewsScreenState extends ConsumerState<ReviewsScreen> {
         reviewsAsync.when(
           data: (reviews) => _buildStatsBar(reviews),
           loading: () => const SizedBox.shrink(),
-          error: (_, __) => const SizedBox.shrink(),
+          error: (_, _) => const SizedBox.shrink(),
         ),
 
         // Search + filter

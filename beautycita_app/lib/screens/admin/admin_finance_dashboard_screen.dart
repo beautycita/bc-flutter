@@ -121,7 +121,7 @@ class AdminFinanceDashboardScreen extends ConsumerWidget {
               ],
             ),
             loading: () => const SizedBox.shrink(),
-            error: (_, __) => const SizedBox.shrink(),
+            error: (_, _) => const SizedBox.shrink(),
           ),
 
           const SizedBox(height: AppConstants.paddingLG),

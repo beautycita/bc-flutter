@@ -376,7 +376,7 @@ class _SalonCard extends StatelessWidget {
                       width: 50,
                       height: 50,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _defaultAvatar(),
+                      errorBuilder: (_, _, _) => _defaultAvatar(),
                     )
                   : _defaultAvatar(),
             ),

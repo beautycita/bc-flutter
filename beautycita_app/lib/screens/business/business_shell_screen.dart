@@ -253,7 +253,7 @@ class _DashboardTab extends ConsumerWidget {
               int monthTotal = 0;
               double monthRevenue = 0;
               for (final d in monthlyData) {
-                monthTotal += d.count as int;
+                monthTotal += d.count;
                 monthRevenue += d.revenue;
               }
               // Last 7 days for sparkline
@@ -770,8 +770,7 @@ class _BizTab {
 
 class _GoldShimmerText extends StatefulWidget {
   final String text;
-  final TextStyle? style;
-  const _GoldShimmerText({required this.text, this.style});
+  const _GoldShimmerText({required this.text});
 
   @override
   State<_GoldShimmerText> createState() => _GoldShimmerTextState();
@@ -827,7 +826,7 @@ class _GoldShimmerTextState extends State<_GoldShimmerText>
           },
           child: Text(
             widget.text,
-            style: (widget.style ?? const TextStyle()).copyWith(
+            style: const TextStyle().copyWith(
               color: Colors.white,
             ),
           ),

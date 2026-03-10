@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:ui';
 import 'package:flutter/services.dart';
 
 /// Manages Android system gesture exclusion rects so that edge swipes

@@ -1,4 +1,4 @@
-/// Factory functions for creating test model instances with sensible defaults.
+// Factory functions for creating test model instances with sensible defaults.
 
 Map<String, dynamic> bookingJson({
   String id = 'booking-1',
@@ -33,8 +33,8 @@ Map<String, dynamic> bookingJson({
     'price': price,
     'notes': notes,
     'created_at': createdAt,
-    if (providerName != null) 'provider_name': providerName,
-    if (businesses != null) 'businesses': businesses,
+    'provider_name': ?providerName,
+    'businesses': ?businesses,
     'transport_mode': transportMode,
     'payment_status': paymentStatus,
     'deposit_amount': depositAmount,

@@ -5,7 +5,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../config/constants.dart';
 import '../../providers/admin_provider.dart';
-import '../../providers/chat_provider.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 
@@ -82,7 +81,7 @@ class _ApplicationCard extends ConsumerWidget {
           '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
       return '$date  $time';
     } catch (_) {
-      return iso ?? '-';
+      return iso;
     }
   }
 
@@ -248,7 +247,7 @@ class _ApplicationCard extends ConsumerWidget {
                       borderRadius: BorderRadius.circular(8),
                       child: Image.network(photoUrl,
                           width: 56, height: 56, fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => _placeholderIcon()),
+                          errorBuilder: (_, _, _) => _placeholderIcon()),
                     )
                   else
                     _placeholderIcon(),

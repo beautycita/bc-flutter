@@ -692,11 +692,11 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
                 _timelineConnector(),
                 _timelineCard(
                   stepNumber: '3',
-                  title: clientAccepted!
+                  title: clientAccepted
                       ? 'Cliente acepto la oferta'
                       : 'Cliente rechazo la oferta',
-                  color: clientAccepted! ? Colors.green : Colors.red,
-                  icon: clientAccepted!
+                  color: clientAccepted ? Colors.green : Colors.red,
+                  icon: clientAccepted
                       ? Icons.check_circle_rounded
                       : Icons.cancel_rounded,
                   children: [
@@ -704,19 +704,19 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
-                        color: (clientAccepted! ? Colors.green : Colors.red)
+                        color: (clientAccepted ? Colors.green : Colors.red)
                             .withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        clientAccepted!
+                        clientAccepted
                             ? 'Oferta aceptada — disputa resuelta'
                             : 'Oferta rechazada — escalada a admin',
                         style: GoogleFonts.poppins(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                           color:
-                              clientAccepted! ? Colors.green : Colors.red,
+                              clientAccepted ? Colors.green : Colors.red,
                         ),
                       ),
                     ),

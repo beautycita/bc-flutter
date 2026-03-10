@@ -175,7 +175,7 @@ class _OptionCard extends StatelessWidget {
                   width: 64,
                   height: 64,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => _placeholder(context),
+                  errorBuilder: (_, _, _) => _placeholder(context),
                 ),
               ),
               const SizedBox(height: AppConstants.paddingSM),

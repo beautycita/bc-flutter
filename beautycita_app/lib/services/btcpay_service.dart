@@ -232,7 +232,7 @@ class BTCPayService {
         body: {
           'service_id': serviceId,
           'scheduled_at': scheduledAt,
-          if (staffId != null) 'staff_id': staffId,
+          'staff_id': ?staffId,
           'payment_type': paymentType,
         },
       );

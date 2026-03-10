@@ -212,8 +212,8 @@ class _PosAgreementSheetState extends State<_PosAgreementSheet> {
                         backgroundColor: colorScheme.primary,
                         foregroundColor: colorScheme.onPrimary,
                         disabledBackgroundColor:
-                            colorScheme.primary.withOpacity(
-                          AppConstants.opacityDisabled,
+                            colorScheme.primary.withValues(
+                          alpha: AppConstants.opacityDisabled,
                         ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(

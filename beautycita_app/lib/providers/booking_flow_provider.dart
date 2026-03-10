@@ -456,7 +456,7 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
               .eq('id', booking.id);
         }
       }
-    } on StripeException catch (e) {
+    } on StripeException {
       // User cancelled or payment failed — cancel the booking
       debugPrint('[PAYMENT] Stripe error, cancelling booking ${booking.id}');
       await _bookingRepo.cancelBooking(booking.id);

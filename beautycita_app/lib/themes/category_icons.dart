@@ -287,7 +287,6 @@ class _OceanNoirIcon extends StatelessWidget {
   final double size;
 
   static const _cyanBorder = Color(0xFF00E5FF);
-  static const _darkBg = Color(0xFF0D2137);
 
   @override
   Widget build(BuildContext context) {

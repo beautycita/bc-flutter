@@ -189,7 +189,6 @@ class _BeautyCitaAppState extends ConsumerState<BeautyCitaApp> {
 
     switch (uri.host) {
       case 'uber-callback':
-        final code = uri.queryParameters['code'];
         // Uber OAuth no longer used — deep link approach instead.
         debugPrint('[DeepLink] Uber callback (ignored — using deep links now)');
         break;

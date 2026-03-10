@@ -27,7 +27,7 @@ class _TimeRulesScreenState extends ConsumerState<TimeRulesScreen> {
   }
 
   String _hourRange(int start, int end) {
-    return '${start}:00 - ${end}:00';
+    return '$start:00 - $end:00';
   }
 
   @override
@@ -480,7 +480,7 @@ class _RuleEditorState extends State<_RuleEditor> {
                       fontSize: 14, color: colors.onSurface)),
               Switch(
                 value: _isActive,
-                activeColor: colors.primary,
+                activeThumbColor: colors.primary,
                 onChanged: (v) => setState(() => _isActive = v),
               ),
             ],

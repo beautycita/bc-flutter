@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 /// Extended theme tokens that don't fit in standard ThemeData.
-/// Access via: Theme.of(context).extension<BCThemeExtension>()!
+/// Access via: `Theme.of(context).extension<BCThemeExtension>()!`
 class BCThemeExtension extends ThemeExtension<BCThemeExtension> {
   final LinearGradient primaryGradient;
   final LinearGradient accentGradient;

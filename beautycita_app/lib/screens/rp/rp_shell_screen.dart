@@ -59,19 +59,6 @@ class _RPShellScreenState extends ConsumerState<RPShellScreen> {
     }
   }
 
-  static String _statusLabel(String? status) {
-    switch (status) {
-      case 'onboarding_complete':
-        return 'Onboarding Completo';
-      case 'visited':
-        return 'Visitado';
-      case 'assigned':
-        return 'Sin Visitar';
-      default:
-        return status ?? 'Desconocido';
-    }
-  }
-
   // ── Haversine distance in km ──
   static double _haversineKm(double lat1, double lng1, double lat2, double lng2) {
     const r = 6371.0;
@@ -1035,7 +1022,7 @@ class _RPShellScreenState extends ConsumerState<RPShellScreen> {
 
                         ToastService.showSuccess('Visita registrada.');
                         if (ctx.mounted) Navigator.pop(ctx);
-                        if (context.mounted) Navigator.pop(context);
+                        if (mounted) Navigator.pop(context);
                       } catch (e) {
                         ToastService.showError('Error: $e');
                         setDialogState(() => submitting = false);

@@ -22,27 +22,12 @@ class _AdminChatScreenState extends ConsumerState<AdminChatScreen> {
   String? _activeThreadId;
   final _textController = TextEditingController();
   final _scrollController = ScrollController();
-  bool _isSending = false;
 
   @override
   void dispose() {
     _textController.dispose();
     _scrollController.dispose();
     super.dispose();
-  }
-
-  void _scrollToBottom() {
-    if (_scrollController.hasClients) {
-      Future.delayed(const Duration(milliseconds: 100), () {
-        if (_scrollController.hasClients) {
-          _scrollController.animateTo(
-            _scrollController.position.maxScrollExtent,
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeOut,
-          );
-        }
-      });
-    }
   }
 
   @override
@@ -152,7 +137,7 @@ class _ThreadList extends StatelessWidget {
               return ListView.separated(
                 padding: const EdgeInsets.only(top: 4),
                 itemCount: threads.length,
-                separatorBuilder: (_, __) => const Divider(
+                separatorBuilder: (_, _) => const Divider(
                   height: 1,
                   indent: 72,
                   endIndent: 16,
@@ -452,7 +437,7 @@ class _ConversationPaneState extends ConsumerState<_ConversationPane> {
                 image: const AssetImage('assets/images/chat_bg_pattern.png'),
                 repeat: ImageRepeat.repeat,
                 opacity: 0.04,
-                onError: (_, __) {},
+                onError: (_, _) {},
               ),
             ),
             child: messagesAsync.when(

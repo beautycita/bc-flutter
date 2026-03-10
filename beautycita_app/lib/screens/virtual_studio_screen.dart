@@ -573,7 +573,7 @@ class _ToolViewState extends ConsumerState<_ToolView>
                         child: Image.network(
                           _resultUrl!,
                           fit: BoxFit.contain,
-                          errorBuilder: (_, __, ___) => Container(
+                          errorBuilder: (_, _, _) => Container(
                             color: surface,
                             child: const Center(
                               child: Icon(Icons.broken_image, size: 48),
@@ -1049,7 +1049,7 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
                                 sample.previewUrl,
                                 fit: BoxFit.cover,
                                 width: double.infinity,
-                                errorBuilder: (_, __, ___) => const Center(
+                                errorBuilder: (_, _, _) => const Center(
                                   child: Icon(Icons.broken_image, size: 24),
                                 ),
                               ),
@@ -1186,7 +1186,7 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
                         child: Image.network(
                           _resultUrl!,
                           fit: BoxFit.contain,
-                          errorBuilder: (_, __, ___) => Container(
+                          errorBuilder: (_, _, _) => Container(
                             color: surface,
                             child: const Center(child: Icon(Icons.broken_image, size: 48)),
                           ),

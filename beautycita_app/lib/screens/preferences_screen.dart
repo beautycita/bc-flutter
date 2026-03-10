@@ -100,7 +100,7 @@ class PreferencesScreen extends ConsumerWidget {
             label: 'Todas las notificaciones',
             trailing: Switch(
               value: prefsState.notificationsEnabled,
-              activeColor: cs.primary,
+              activeThumbColor: cs.primary,
               onChanged: (_) {
                 ref.read(userPrefsProvider.notifier).toggleNotifications();
               },
@@ -464,7 +464,7 @@ class _NotifChildTile extends StatelessWidget {
                 child: FittedBox(
                   child: Switch(
                     value: value,
-                    activeColor: Theme.of(context).colorScheme.primary,
+                    activeThumbColor: Theme.of(context).colorScheme.primary,
                     onChanged: onChanged,
                   ),
                 ),

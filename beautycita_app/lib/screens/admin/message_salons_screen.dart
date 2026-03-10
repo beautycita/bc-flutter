@@ -175,7 +175,7 @@ class _MessageSalonsScreenState extends ConsumerState<MessageSalonsScreen> {
                   return ConstrainedBox(
                     constraints: const BoxConstraints(minWidth: 200, maxWidth: 280),
                     child: DropdownButtonFormField<String?>(
-                      value: _selectedCity,
+                      initialValue: _selectedCity,
                       isExpanded: true,
                       decoration: InputDecoration(
                         labelText: 'Ciudad',
@@ -195,7 +195,7 @@ class _MessageSalonsScreenState extends ConsumerState<MessageSalonsScreen> {
                   );
                 },
                 loading: () => const SizedBox(width: 200, height: 40, child: LinearProgressIndicator()),
-                error: (_, __) => const SizedBox.shrink(),
+                error: (_, _) => const SizedBox.shrink(),
               ),
               FilterChip(
                 label: Text('WA verificado', style: GoogleFonts.nunito(fontSize: 12)),
@@ -247,8 +247,6 @@ class _MessageSalonsScreenState extends ConsumerState<MessageSalonsScreen> {
   void _showMessageDialog(Map<String, dynamic> salon) {
     final name = salon['business_name'] ?? 'Salon';
     final phone = salon['whatsapp'] ?? salon['phone'] ?? '';
-    final interestCount = salon['interest_count'] ?? 0;
-    final salonId = salon['id'] as String;
 
     // Pre-fill with launch announcement template
     const template = '✨ ¡Bienvenidos a BeautyCita.com! ✨\n\n'
@@ -326,7 +324,7 @@ class _MessageSalonsScreenState extends ConsumerState<MessageSalonsScreen> {
     setState(() => _sending = true);
 
     try {
-      final response = await SupabaseClientService.client.functions.invoke(
+      await SupabaseClientService.client.functions.invoke(
         'outreach-discovered-salon',
         body: {
           'action': 'cold_outreach',
@@ -381,7 +379,7 @@ class _MessageSalonsScreenState extends ConsumerState<MessageSalonsScreen> {
                       ClipRRect(
                         borderRadius: BorderRadius.circular(8),
                         child: Image.network(imageUrl, width: 56, height: 56, fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Container(width: 56, height: 56, color: Colors.grey[200],
+                          errorBuilder: (_, _, _) => Container(width: 56, height: 56, color: Colors.grey[200],
                             child: const Icon(Icons.store, color: Colors.grey))),
                       )
                     else
@@ -481,7 +479,7 @@ class _MessageSalonsScreenState extends ConsumerState<MessageSalonsScreen> {
                       final currentVal = cityCtrl.text.trim();
                       final validValues = items.where((i) => i.enabled != false).map((i) => i.value).toSet();
                       return DropdownButtonFormField<String>(
-                        value: validValues.contains(currentVal) ? currentVal : null,
+                        initialValue: validValues.contains(currentVal) ? currentVal : null,
                         decoration: InputDecoration(
                           labelText: 'Ciudad',
                           labelStyle: GoogleFonts.nunito(fontSize: 13),
@@ -498,7 +496,7 @@ class _MessageSalonsScreenState extends ConsumerState<MessageSalonsScreen> {
                       );
                     },
                     loading: () => const LinearProgressIndicator(),
-                    error: (_, __) => _EditField(label: 'Ciudad', controller: cityCtrl),
+                    error: (_, _) => _EditField(label: 'Ciudad', controller: cityCtrl),
                   );
                 }),
                 if (lastOutreach != null) ...[
@@ -538,9 +536,6 @@ class _MessageSalonsScreenState extends ConsumerState<MessageSalonsScreen> {
                         label: 'Mapa',
                         color: hasCoords ? Colors.blue[700]! : Colors.grey[400]!,
                         onTap: hasCoords ? () {
-                          // Mapbox street view style URL
-                          final url = Uri.parse(
-                            'https://www.google.com/maps/@$lat,$lng,3a,75y,90t/data=!3m6!1e1!3m4!1s!2e0!7i16384!8i8192');
                           final fallback = Uri.parse(
                             'https://www.google.com/maps/search/?api=1&query=$lat,$lng');
                           launchUrl(fallback, mode: LaunchMode.externalApplication);
@@ -718,7 +713,7 @@ class _SalonCard extends StatelessWidget {
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
                     child: Image.network(imageUrl, width: 48, height: 48, fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _buildPlaceholder(waVerified)),
+                      errorBuilder: (_, _, _) => _buildPlaceholder(waVerified)),
                   )
                 else
                   _buildPlaceholder(waVerified),

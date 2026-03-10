@@ -47,7 +47,7 @@ class QrAuthService {
         // Notify the web via Realtime Broadcast
         try {
           final channel = SupabaseClientService.client.channel('qr_auth_$sessionId');
-          await channel.subscribe();
+          channel.subscribe();
           await channel.sendBroadcastMessage(
             event: 'session_authorized',
             payload: {'session_id': sessionId},

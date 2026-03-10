@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -287,7 +285,7 @@ class _BCImagePickerBodyState extends State<_BCImagePickerBody> {
                             child: Image.network(
                               item.thumbnailUrl ?? item.url,
                               fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => Container(
+                              errorBuilder: (_, _, _) => Container(
                                 color: surface,
                                 child: Icon(
                                   Icons.broken_image,
@@ -415,6 +413,7 @@ class _BCImagePickerBodyState extends State<_BCImagePickerBody> {
       if (file != null && mounted) {
         final bytes = await file.readAsBytes();
         HapticFeedback.lightImpact();
+        if (!mounted) return;
         Navigator.of(context).pop(BCImagePickerResult(
           bytes: bytes,
           source: BCImageSource.camera,

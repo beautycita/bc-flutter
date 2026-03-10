@@ -458,7 +458,7 @@ class _ScreenshotEditorScreenState extends State<ScreenshotEditorScreen>
       onPopInvokedWithResult: (didPop, _) async {
         if (didPop) return;
         final shouldPop = await _onWillPop();
-        if (shouldPop && mounted) Navigator.of(context).pop();
+        if (shouldPop && context.mounted) Navigator.of(context).pop();
       },
       child: Scaffold(
         backgroundColor: Colors.black,

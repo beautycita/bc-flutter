@@ -484,7 +484,7 @@ class _ServiceFormSheetState extends ConsumerState<_ServiceFormSheet> {
             const SizedBox(height: AppConstants.paddingSM),
             // ── Category dropdown ───────────────────────────────────
             DropdownButtonFormField<String>(
-              value: _isOtro
+              initialValue: _isOtro
                   ? '__otro__'
                   : _selectedCategory?.id,
               decoration: _styledInput('Categoria *'),

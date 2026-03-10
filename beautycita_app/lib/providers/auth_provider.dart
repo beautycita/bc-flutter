@@ -43,7 +43,6 @@ class AuthState {
 class AuthNotifier extends StateNotifier<AuthState> {
   final BiometricService _biometricService;
   final UserSession _userSession;
-  final UsernameGenerator _usernameGenerator;
 
   DateTime? _lastLoginAttempt;
   int _loginAttempts = 0;
@@ -51,10 +50,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
   AuthNotifier({
     required BiometricService biometricService,
     required UserSession userSession,
-    required UsernameGenerator usernameGenerator,
+    UsernameGenerator? usernameGenerator,
   })  : _biometricService = biometricService,
         _userSession = userSession,
-        _usernameGenerator = usernameGenerator,
         super(const AuthState());
 
   /// Check if user is already registered

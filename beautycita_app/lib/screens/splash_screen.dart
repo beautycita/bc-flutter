@@ -16,8 +16,9 @@ class SplashScreen extends ConsumerStatefulWidget {
 }
 
 class _SplashScreenState extends ConsumerState<SplashScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late AnimationController _animationController;
+  late AnimationController _shimmerController;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
   late Animation<Offset> _slideAnimation;
@@ -54,6 +55,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
         curve: const Interval(0.2, 0.8, curve: Curves.easeOut),
       ),
     );
+
+    _shimmerController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 8),
+    )..repeat();
 
     _animationController.forward();
 
@@ -97,6 +103,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   @override
   void dispose() {
     _animationController.dispose();
+    _shimmerController.dispose();
     super.dispose();
   }
 
@@ -105,7 +112,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     final screenWidth = MediaQuery.of(context).size.width;
     final primary = Theme.of(context).colorScheme.primary;
     final secondary = Theme.of(context).colorScheme.secondary;
-    final onSurfaceLight = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
 
     return Scaffold(
       body: Container(
@@ -165,56 +171,102 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Brand icon
+                      // Brand icon — full squircle
                       Container(
-                        width: 88,
-                        height: 88,
+                        width: 100,
+                        height: 100,
                         decoration: BoxDecoration(
-                          shape: BoxShape.circle,
+                          borderRadius: BorderRadius.circular(24),
                           boxShadow: [
                             BoxShadow(
-                              color: primary.withValues(alpha: 0.3),
-                              blurRadius: 24,
-                              offset: const Offset(0, 8),
+                              color: const Color(0xFF9333ea).withValues(alpha: 0.35),
+                              blurRadius: 32,
+                              offset: const Offset(0, 10),
+                            ),
+                            BoxShadow(
+                              color: const Color(0xFFec4899).withValues(alpha: 0.15),
+                              blurRadius: 48,
+                              offset: const Offset(0, 4),
+                              spreadRadius: 4,
                             ),
                           ],
                         ),
-                        child: ClipOval(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(24),
                           child: Image.asset(
                             'assets/images/app_icon.png',
-                            width: 88,
-                            height: 88,
+                            width: 100,
+                            height: 100,
                             fit: BoxFit.cover,
                           ),
                         ),
                       ),
                       const SizedBox(height: 28),
 
-                      // Brand name
-                      Text(
-                        AppConstants.appName,
-                        style: GoogleFonts.poppins(
-                          fontSize: 44,
-                          fontWeight: FontWeight.w700,
-                          color: primary,
-                          letterSpacing: -1.5,
-                          height: 1.1,
+                      // Brand name — Playfair Display + flowing gradient shimmer + shadow
+                      AnimatedBuilder(
+                        animation: _shimmerController,
+                        builder: (context, child) {
+                          final offset = -2.0 * _shimmerController.value;
+                          return ShaderMask(
+                            blendMode: BlendMode.srcIn,
+                            shaderCallback: (bounds) {
+                              return LinearGradient(
+                                begin: Alignment(offset, 0),
+                                end: Alignment(offset + 2.0, 0),
+                                colors: const [
+                                  Color(0xFFec4899),
+                                  Color(0xFF9333ea),
+                                  Color(0xFF3b82f6),
+                                  Color(0xFFec4899),
+                                ],
+                                stops: const [0.0, 0.33, 0.66, 1.0],
+                                tileMode: TileMode.repeated,
+                              ).createShader(bounds);
+                            },
+                            child: child!,
+                          );
+                        },
+                        child: Text(
+                          AppConstants.appName,
+                          style: GoogleFonts.playfairDisplay(
+                            fontSize: 44,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                            letterSpacing: -1.0,
+                            height: 1.1,
+                            shadows: [
+                              Shadow(
+                                color: const Color(0xFF9333ea).withValues(alpha: 0.3),
+                                blurRadius: 16,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 10),
 
-                      // Tagline
+                      // Tagline — tall thin serif, barely visible + subtle shadow
                       SlideTransition(
                         position: _slideAnimation,
                         child: FadeTransition(
                           opacity: _fadeAnimation,
                           child: Text(
                             AppConstants.tagline,
-                            style: GoogleFonts.nunito(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w500,
-                              color: onSurfaceLight,
-                              letterSpacing: 0.3,
+                            style: GoogleFonts.cormorantGaramond(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w300,
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.25),
+                              letterSpacing: 1.5,
+                              height: 1.3,
+                              shadows: [
+                                Shadow(
+                                  color: Colors.black.withValues(alpha: 0.06),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
                             ),
                             textAlign: TextAlign.center,
                           ),

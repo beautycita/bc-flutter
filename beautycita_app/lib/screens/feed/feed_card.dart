@@ -260,7 +260,7 @@ class _MainImage extends StatelessWidget {
                 ),
               );
             },
-            errorBuilder: (_, __, ___) => Container(
+            errorBuilder: (_, _, _) => Container(
               color: palette.surfaceContainerHighest,
               child: Icon(
                 Icons.broken_image_outlined,

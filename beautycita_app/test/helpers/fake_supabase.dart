@@ -1,11 +1,11 @@
-/// Lightweight fake for Supabase's chained PostgREST API.
-///
-/// Usage:
-///   final fake = FakePostgrestBuilder({'business_id': 'biz-1'});
-///   // When code does: client.from('favorites').select('business_id').eq('user_id', id)
-///   // The fake returns the preconfigured rows.
-///
-/// Add chainable methods as tests need them.
+// Lightweight fake for Supabase's chained PostgREST API.
+//
+// Usage:
+//   final fake = FakePostgrestBuilder({'business_id': 'biz-1'});
+//   // When code does: client.from('favorites').select('business_id').eq('user_id', id)
+//   // The fake returns the preconfigured rows.
+//
+// Add chainable methods as tests need them.
 
 class FakePostgrestBuilder {
   final List<Map<String, dynamic>> _rows;

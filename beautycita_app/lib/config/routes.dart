@@ -20,7 +20,6 @@ import 'package:beautycita/screens/booking_detail_screen.dart';
 import 'package:beautycita/screens/qr_scan_screen.dart';
 import 'package:beautycita/screens/device_manager_screen.dart';
 import 'package:beautycita/screens/discovered_salon_detail_screen.dart';
-import 'package:beautycita/screens/invite_salon_screen.dart' show DiscoveredSalon;
 import 'package:beautycita/screens/virtual_studio_screen.dart';
 import 'package:beautycita/screens/media_manager_screen.dart';
 import 'package:beautycita/screens/preferences_screen.dart';

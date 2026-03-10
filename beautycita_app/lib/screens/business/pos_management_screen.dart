@@ -657,7 +657,7 @@ class _ProductCard extends StatelessWidget {
                     Switch(
                       value: product.inStock,
                       onChanged: onToggleStock,
-                      activeColor: colors.primary,
+                      activeThumbColor: colors.primary,
                       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
                     Text(
@@ -707,7 +707,7 @@ class _ProductThumbnail extends StatelessWidget {
           : Image.network(
               photoUrl,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Icon(
+              errorBuilder: (_, _, _) => Icon(
                 Icons.broken_image_outlined,
                 size: 28,
                 color: colors.onSurface.withValues(alpha: 0.3),
@@ -920,7 +920,7 @@ class _ProductFormSheetState extends ConsumerState<_ProductFormSheet> {
                   ),
                   const SizedBox(height: 6),
                   DropdownButtonFormField<String>(
-                    value: _category,
+                    initialValue: _category,
                     decoration: InputDecoration(
                       border: OutlineInputBorder(
                         borderRadius:
@@ -1021,7 +1021,7 @@ class _ProductFormSheetState extends ConsumerState<_ProductFormSheet> {
                     Switch(
                       value: _inStock,
                       onChanged: (v) => setState(() => _inStock = v),
-                      activeColor: colors.primary,
+                      activeThumbColor: colors.primary,
                     ),
                   ],
                 ),
