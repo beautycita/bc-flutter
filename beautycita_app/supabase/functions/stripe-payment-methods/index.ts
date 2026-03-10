@@ -3,6 +3,7 @@
 // Actions: setup-intent, list, detach
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { requireFeature } from "../_shared/check-toggle.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -121,6 +122,9 @@ Deno.serve(async (req: Request) => {
   if (req.method !== "POST") {
     return json({ error: "Method not allowed" }, 405);
   }
+
+  const blocked = await requireFeature("enable_stripe_payments");
+  if (blocked) return blocked;
 
   if (!STRIPE_SECRET_KEY) {
     return json({ error: "Stripe not configured" }, 500);

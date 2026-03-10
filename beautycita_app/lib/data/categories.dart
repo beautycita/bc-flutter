@@ -111,26 +111,46 @@ const List<ServiceCategory> allCategories = [
         id: 'nail_art',
         categoryId: 'nails',
         nameEs: 'Nail Art',
+        items: [
+          ServiceItem(id: 'nail_art_diseno', subcategoryId: 'nail_art', nameEs: 'Diseño Personalizado', serviceType: 'nail_art_diseno'),
+          ServiceItem(id: 'nail_art_3d', subcategoryId: 'nail_art', nameEs: '3D / Relieve', serviceType: 'nail_art_3d'),
+          ServiceItem(id: 'nail_art_stamping', subcategoryId: 'nail_art', nameEs: 'Stamping', serviceType: 'nail_art_stamping'),
+        ],
       ),
       ServiceSubcategory(
         id: 'cambio_esmalte',
         categoryId: 'nails',
         nameEs: 'Cambio de Esmalte',
+        items: [
+          ServiceItem(id: 'cambio_esmalte_manos', subcategoryId: 'cambio_esmalte', nameEs: 'Manos', serviceType: 'cambio_esmalte_manos'),
+          ServiceItem(id: 'cambio_esmalte_pies', subcategoryId: 'cambio_esmalte', nameEs: 'Pies', serviceType: 'cambio_esmalte_pies'),
+        ],
       ),
       ServiceSubcategory(
         id: 'reparacion',
         categoryId: 'nails',
         nameEs: 'Reparación',
+        items: [
+          ServiceItem(id: 'reparacion_una', subcategoryId: 'reparacion', nameEs: 'Reparación de Uña', serviceType: 'reparacion_una'),
+        ],
       ),
       ServiceSubcategory(
         id: 'relleno',
         categoryId: 'nails',
         nameEs: 'Relleno',
+        items: [
+          ServiceItem(id: 'relleno_acrilico', subcategoryId: 'relleno', nameEs: 'Acrílico', serviceType: 'relleno_acrilico'),
+          ServiceItem(id: 'relleno_gel', subcategoryId: 'relleno', nameEs: 'Gel', serviceType: 'relleno_gel'),
+        ],
       ),
       ServiceSubcategory(
         id: 'retiro',
         categoryId: 'nails',
         nameEs: 'Retiro',
+        items: [
+          ServiceItem(id: 'retiro_acrilico', subcategoryId: 'retiro', nameEs: 'Acrílico', serviceType: 'retiro_acrilico'),
+          ServiceItem(id: 'retiro_gel', subcategoryId: 'retiro', nameEs: 'Gel', serviceType: 'retiro_gel'),
+        ],
       ),
     ],
   ),
@@ -433,6 +453,10 @@ const List<ServiceCategory> allCategories = [
         id: 'combo',
         categoryId: 'lashes_brows',
         nameEs: 'Combo',
+        items: [
+          ServiceItem(id: 'combo_pestanas_cejas', subcategoryId: 'combo', nameEs: 'Pestañas + Cejas', serviceType: 'combo_pestanas_cejas'),
+          ServiceItem(id: 'combo_lifting_tinte', subcategoryId: 'combo', nameEs: 'Lifting + Tinte', serviceType: 'combo_lifting_tinte'),
+        ],
       ),
     ],
   ),
@@ -448,36 +472,58 @@ const List<ServiceCategory> allCategories = [
         id: 'maquillaje_social',
         categoryId: 'makeup',
         nameEs: 'Social',
+        items: [
+          ServiceItem(id: 'maquillaje_social_item', subcategoryId: 'maquillaje_social', nameEs: 'Maquillaje Social', serviceType: 'maquillaje_social'),
+        ],
       ),
       ServiceSubcategory(
         id: 'maquillaje_evento',
         categoryId: 'makeup',
         nameEs: 'Evento',
+        items: [
+          ServiceItem(id: 'maquillaje_evento_item', subcategoryId: 'maquillaje_evento', nameEs: 'Maquillaje de Evento', serviceType: 'maquillaje_evento'),
+        ],
       ),
       ServiceSubcategory(
         id: 'maquillaje_novia',
         categoryId: 'makeup',
         nameEs: 'Novia',
+        items: [
+          ServiceItem(id: 'maquillaje_novia_item', subcategoryId: 'maquillaje_novia', nameEs: 'Maquillaje de Novia', serviceType: 'maquillaje_novia'),
+          ServiceItem(id: 'maquillaje_novia_prueba', subcategoryId: 'maquillaje_novia', nameEs: 'Prueba de Novia', serviceType: 'maquillaje_novia_prueba'),
+        ],
       ),
       ServiceSubcategory(
         id: 'maquillaje_xv',
         categoryId: 'makeup',
         nameEs: 'XV Años',
+        items: [
+          ServiceItem(id: 'maquillaje_xv_item', subcategoryId: 'maquillaje_xv', nameEs: 'Maquillaje XV Años', serviceType: 'maquillaje_xv'),
+        ],
       ),
       ServiceSubcategory(
         id: 'maquillaje_editorial',
         categoryId: 'makeup',
         nameEs: 'Editorial',
+        items: [
+          ServiceItem(id: 'maquillaje_editorial_item', subcategoryId: 'maquillaje_editorial', nameEs: 'Maquillaje Editorial', serviceType: 'maquillaje_editorial'),
+        ],
       ),
       ServiceSubcategory(
         id: 'maquillaje_clase',
         categoryId: 'makeup',
         nameEs: 'Clase',
+        items: [
+          ServiceItem(id: 'maquillaje_clase_item', subcategoryId: 'maquillaje_clase', nameEs: 'Clase de Maquillaje', serviceType: 'maquillaje_clase'),
+        ],
       ),
       ServiceSubcategory(
         id: 'maquillaje_prueba',
         categoryId: 'makeup',
         nameEs: 'Prueba',
+        items: [
+          ServiceItem(id: 'maquillaje_prueba_item', subcategoryId: 'maquillaje_prueba', nameEs: 'Prueba de Maquillaje', serviceType: 'maquillaje_prueba'),
+        ],
       ),
     ],
   ),
@@ -518,41 +564,66 @@ const List<ServiceCategory> allCategories = [
         id: 'facial_antiedad',
         categoryId: 'facial',
         nameEs: 'Anti-Edad',
+        items: [
+          ServiceItem(id: 'facial_antiedad_item', subcategoryId: 'facial_antiedad', nameEs: 'Tratamiento Anti-Edad', serviceType: 'facial_antiedad'),
+        ],
       ),
       ServiceSubcategory(
         id: 'facial_antiacne',
         categoryId: 'facial',
         nameEs: 'Anti-Acné',
+        items: [
+          ServiceItem(id: 'facial_antiacne_item', subcategoryId: 'facial_antiacne', nameEs: 'Tratamiento Anti-Acné', serviceType: 'facial_antiacne'),
+        ],
       ),
       ServiceSubcategory(
         id: 'facial_microdermoabrasion',
         categoryId: 'facial',
         nameEs: 'Microdermoabrasión',
+        items: [
+          ServiceItem(id: 'facial_microdermoabrasion_item', subcategoryId: 'facial_microdermoabrasion', nameEs: 'Microdermoabrasión', serviceType: 'facial_microdermoabrasion'),
+        ],
       ),
       ServiceSubcategory(
         id: 'facial_dermapen',
         categoryId: 'facial',
         nameEs: 'Dermapen',
+        items: [
+          ServiceItem(id: 'facial_dermapen_item', subcategoryId: 'facial_dermapen', nameEs: 'Dermapen / Microneedling', serviceType: 'facial_dermapen'),
+        ],
       ),
       ServiceSubcategory(
         id: 'facial_peeling',
         categoryId: 'facial',
         nameEs: 'Peeling',
+        items: [
+          ServiceItem(id: 'facial_peeling_quimico', subcategoryId: 'facial_peeling', nameEs: 'Químico', serviceType: 'peeling_quimico'),
+          ServiceItem(id: 'facial_peeling_enzimatico', subcategoryId: 'facial_peeling', nameEs: 'Enzimático', serviceType: 'peeling_enzimatico'),
+        ],
       ),
       ServiceSubcategory(
         id: 'facial_radiofrecuencia',
         categoryId: 'facial',
         nameEs: 'Radiofrecuencia',
+        items: [
+          ServiceItem(id: 'facial_radiofrecuencia_item', subcategoryId: 'facial_radiofrecuencia', nameEs: 'Radiofrecuencia Facial', serviceType: 'radiofrecuencia_facial'),
+        ],
       ),
       ServiceSubcategory(
         id: 'facial_led',
         categoryId: 'facial',
         nameEs: 'LED',
+        items: [
+          ServiceItem(id: 'facial_led_item', subcategoryId: 'facial_led', nameEs: 'Terapia LED', serviceType: 'terapia_led_facial'),
+        ],
       ),
       ServiceSubcategory(
         id: 'facial_mascarilla',
         categoryId: 'facial',
         nameEs: 'Mascarilla',
+        items: [
+          ServiceItem(id: 'facial_mascarilla_item', subcategoryId: 'facial_mascarilla', nameEs: 'Mascarilla Facial', serviceType: 'mascarilla_facial'),
+        ],
       ),
     ],
   ),
@@ -708,21 +779,33 @@ const List<ServiceCategory> allCategories = [
         id: 'micropigmentacion_labios',
         categoryId: 'specialized',
         nameEs: 'Micropigmentación Labios',
+        items: [
+          ServiceItem(id: 'micropigmentacion_labios_item', subcategoryId: 'micropigmentacion_labios', nameEs: 'Micropigmentación Labios', serviceType: 'micropigmentacion_labios'),
+        ],
       ),
       ServiceSubcategory(
         id: 'remocion_tatuajes',
         categoryId: 'specialized',
         nameEs: 'Remoción Tatuajes',
+        items: [
+          ServiceItem(id: 'remocion_tatuajes_item', subcategoryId: 'remocion_tatuajes', nameEs: 'Remoción de Tatuajes', serviceType: 'remocion_tatuajes'),
+        ],
       ),
       ServiceSubcategory(
         id: 'blanqueamiento_dental',
         categoryId: 'specialized',
         nameEs: 'Blanqueamiento Dental',
+        items: [
+          ServiceItem(id: 'blanqueamiento_dental_item', subcategoryId: 'blanqueamiento_dental', nameEs: 'Blanqueamiento Dental', serviceType: 'blanqueamiento_dental'),
+        ],
       ),
       ServiceSubcategory(
         id: 'consulta_virtual',
         categoryId: 'specialized',
         nameEs: 'Consulta Virtual',
+        items: [
+          ServiceItem(id: 'consulta_virtual_item', subcategoryId: 'consulta_virtual', nameEs: 'Consulta Virtual', serviceType: 'consulta_virtual'),
+        ],
       ),
     ],
   ),
@@ -738,6 +821,10 @@ const List<ServiceCategory> allCategories = [
         id: 'barberia_corte_hombre',
         categoryId: 'barberia',
         nameEs: 'Corte Hombre',
+        items: [
+          ServiceItem(id: 'barberia_corte_clasico', subcategoryId: 'barberia_corte_hombre', nameEs: 'Clásico', serviceType: 'barberia_corte_hombre'),
+          ServiceItem(id: 'barberia_corte_moderno', subcategoryId: 'barberia_corte_hombre', nameEs: 'Moderno', serviceType: 'barberia_corte_moderno'),
+        ],
       ),
       ServiceSubcategory(
         id: 'barberia_corte_barba',
@@ -795,6 +882,9 @@ const List<ServiceCategory> allCategories = [
         id: 'barberia_fade',
         categoryId: 'barberia',
         nameEs: 'Fade/Degradado',
+        items: [
+          ServiceItem(id: 'barberia_fade_item', subcategoryId: 'barberia_fade', nameEs: 'Fade / Degradado', serviceType: 'barberia_fade'),
+        ],
       ),
     ],
   ),

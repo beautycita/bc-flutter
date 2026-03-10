@@ -272,7 +272,7 @@ Deno.serve(async (req: Request) => {
         if (order.stripe_payment_intent_id) {
           await stripe.refunds.create({
             payment_intent: order.stripe_payment_intent_id,
-          });
+          }, { idempotencyKey: `order-refund-${order.id}` });
           console.log(`[ORDER-FOLLOWUP] Refunded PI ${order.stripe_payment_intent_id} for order ${shortId}`);
         } else {
           console.warn(`[ORDER-FOLLOWUP] Order ${shortId} has no stripe_payment_intent_id, skipping Stripe refund`);

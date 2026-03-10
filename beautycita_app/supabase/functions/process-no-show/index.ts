@@ -13,7 +13,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Stripe from "https://esm.sh/stripe@14.21.0?target=deno";
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": "https://beautycita.com",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
@@ -172,7 +172,7 @@ serve(async (req) => {
             deposit_amount: depositAmount.toString(),
             platform_fee: platformFee.toString(),
           },
-        });
+        }, { idempotencyKey: `noshow-refund-${appointment_id}` });
 
         console.log(`[NO-SHOW] Stripe refund created: ${stripeRefund.id}`);
       } catch (stripeErr) {

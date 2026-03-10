@@ -670,7 +670,7 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
                 const SizedBox(width: 8),
                 Row(
                   children: List.generate(
-                    snippet.rating ?? 0,
+                    snippet.rating?.round() ?? 0,
                     (index) => Icon(
                       Icons.star,
                       size: 12,

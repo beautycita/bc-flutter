@@ -10,6 +10,7 @@ import {
   verifyTotpCode,
   buildOtpAuthUri,
 } from "../_shared/totp.ts";
+import { requireFeature } from "../_shared/check-toggle.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -332,6 +333,9 @@ Deno.serve(async (req: Request) => {
   console.log(`[btc-wallet] START ${req.method}`);
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
+
+  const blocked = await requireFeature("enable_btc_payments");
+  if (blocked) return blocked;
 
   const authHeader = req.headers.get("authorization") ?? "";
   console.log(`[btc-wallet] +${Date.now()-t0}ms getUser...`);

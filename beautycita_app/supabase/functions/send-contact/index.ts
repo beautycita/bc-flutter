@@ -1,13 +1,22 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const WA_API_URL = "http://100.93.1.103:3200";
-const WA_API_TOKEN = "Y1gSKe4QCwX5FRkj8ZZi0ONp3Lld_S6oP00nJ7n2KL0";
+const WA_API_URL = Deno.env.get("BEAUTYPI_WA_URL") ?? "";
+const WA_API_TOKEN = Deno.env.get("BEAUTYPI_WA_TOKEN") ?? "";
 const BC_PHONE = "523221429800";
 
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
+const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+
+// In-memory rate limit: max 5 messages per IP per 10 minutes
+const rateLimitMap = new Map<string, number[]>();
+const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
+const RATE_LIMIT_MAX = 5;
+
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": "https://beautycita.com",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Allow-Headers": "authorization, content-type, apikey",
 };
 
 serve(async (req: Request) => {
@@ -23,6 +32,34 @@ serve(async (req: Request) => {
   }
 
   try {
+    // Auth check: require authenticated user
+    const authHeader = req.headers.get("authorization") ?? "";
+    const token = authHeader.replace("Bearer ", "");
+    const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      global: { headers: { Authorization: `Bearer ${token}` } },
+    });
+    const { data: { user }, error: authError } = await userClient.auth.getUser();
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Rate limit by user ID
+    const now = Date.now();
+    const userKey = user.id;
+    const timestamps = rateLimitMap.get(userKey) ?? [];
+    const recent = timestamps.filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
+    if (recent.length >= RATE_LIMIT_MAX) {
+      return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
+        status: 429,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    recent.push(now);
+    rateLimitMap.set(userKey, recent);
+
     const { name, message } = await req.json();
 
     if (!message || typeof message !== "string" || message.trim().length === 0) {

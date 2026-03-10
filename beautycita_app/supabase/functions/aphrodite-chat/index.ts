@@ -9,6 +9,7 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { requireFeature } from "../_shared/check-toggle.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -380,6 +381,9 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const blocked = await requireFeature("enable_chat");
+  if (blocked) return blocked;
+
   try {
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -614,7 +618,7 @@ Solo el texto, nada mas.`;
     const message = err instanceof Error ? err.message : "Internal error";
     console.error("aphrodite-chat error:", message);
     return new Response(
-      JSON.stringify({ error: message }),
+      JSON.stringify({ error: "An internal error occurred" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }

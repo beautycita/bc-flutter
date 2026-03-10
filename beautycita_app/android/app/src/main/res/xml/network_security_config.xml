@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Certificate pinning for BeautyCita critical endpoints.
+  Each domain has a leaf pin + intermediate CA backup pin.
+  Pins expire 2027-03-10 — must be re-evaluated before then.
+  Pin format: SHA-256 of the Subject Public Key Info (SPKI).
+-->
+<network-security-config>
+    <!-- beautycita.com — Supabase, edge functions, API -->
+    <domain-config>
+        <domain includeSubdomains="true">beautycita.com</domain>
+        <pin-set expiration="2027-03-10">
+            <!-- Leaf cert -->
+            <pin digest="SHA-256">xXxF16q+o3k8x5pH6bGYkkOEVF5H+yQxA2htkLVphqw=</pin>
+            <!-- Let's Encrypt intermediate (backup) -->
+            <pin digest="SHA-256">iFvwVyJSxnQdyaUvUERIf+8qk7gRze3612JMwoO3zdU=</pin>
+        </pin-set>
+    </domain-config>
+
+    <!-- api.stripe.com — payment processing -->
+    <domain-config>
+        <domain includeSubdomains="true">stripe.com</domain>
+        <pin-set expiration="2027-03-10">
+            <!-- Leaf cert -->
+            <pin digest="SHA-256">PNgAFbJpD2wBCz+M26zkugvU0IgB64vHLEi+Aqw42gM=</pin>
+            <!-- DigiCert intermediate (backup) -->
+            <pin digest="SHA-256">Ld64SpoeXjpLjc+/7Wahk6p5+KVyzVSUptciuWsyxeY=</pin>
+        </pin-set>
+    </domain-config>
+</network-security-config>

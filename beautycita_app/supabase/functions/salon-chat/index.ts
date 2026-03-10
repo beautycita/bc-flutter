@@ -14,6 +14,7 @@
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { requireFeature } from "../_shared/check-toggle.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -38,6 +39,9 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") {
     return json({ error: "Method not allowed" }, 405);
   }
+
+  const blocked = await requireFeature("enable_chat");
+  if (blocked) return blocked;
 
   const authHeader = req.headers.get("authorization") || "";
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -102,7 +106,8 @@ Deno.serve(async (req) => {
       .single();
 
     if (createErr) {
-      return json({ error: createErr.message }, 500);
+      console.error("[SALON-CHAT] Failed to create thread:", createErr);
+      return json({ error: "An internal error occurred" }, 500);
     }
 
     // Create WA bridge for routing replies back
@@ -182,7 +187,8 @@ Deno.serve(async (req) => {
       .single();
 
     if (msgErr) {
-      return json({ error: msgErr.message }, 500);
+      console.error("[SALON-CHAT] Failed to send message:", msgErr);
+      return json({ error: "An internal error occurred" }, 500);
     }
 
     // Update thread
