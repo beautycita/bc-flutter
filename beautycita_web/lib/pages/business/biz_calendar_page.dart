@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:ui' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:beautycita_core/supabase.dart';
-
 
 import '../../config/breakpoints.dart';
 import '../../data/demo_data.dart';
@@ -1219,20 +1219,12 @@ class _StaffLane extends StatelessWidget {
       top: 4,
       height: laneHeight - 8,
       width: width,
-      child: GestureDetector(
+      child: _DragOrTapDetector(
         onTap: () => onTapAppt(appt),
-        onPanStart: enableDrag && onDragStart != null
-            ? (details) => onDragStart!(appt, details.globalPosition)
-            : null,
-        onPanUpdate: enableDrag && onDragUpdate != null
-            ? (details) => onDragUpdate!(details.globalPosition)
-            : null,
-        onPanEnd: enableDrag && onDragEnd != null
-            ? (_) => onDragEnd!()
-            : null,
-        onPanCancel: enableDrag && onDragEnd != null
-            ? () => onDragEnd!()
-            : null,
+        enableDrag: enableDrag,
+        onDragStart: onDragStart != null ? (globalPos) => onDragStart!(appt, globalPos) : null,
+        onDragUpdate: onDragUpdate,
+        onDragEnd: onDragEnd,
         child: MouseRegion(
           cursor: enableDrag ? SystemMouseCursors.grab : SystemMouseCursors.click,
           child: AnimatedOpacity(
@@ -1928,6 +1920,90 @@ class _DetailRow extends StatelessWidget {
           Expanded(child: Text(value, style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w500))),
         ],
       ),
+    );
+  }
+}
+
+// ── Drag-or-tap: mouse uses pan (instant), touch uses long press (avoids scroll conflict) ──
+
+class _DragOrTapDetector extends StatefulWidget {
+  const _DragOrTapDetector({
+    required this.child,
+    required this.onTap,
+    required this.enableDrag,
+    this.onDragStart,
+    this.onDragUpdate,
+    this.onDragEnd,
+  });
+
+  final Widget child;
+  final VoidCallback onTap;
+  final bool enableDrag;
+  final void Function(Offset globalPos)? onDragStart;
+  final void Function(Offset globalPos)? onDragUpdate;
+  final VoidCallback? onDragEnd;
+
+  @override
+  State<_DragOrTapDetector> createState() => _DragOrTapDetectorState();
+}
+
+class _DragOrTapDetectorState extends State<_DragOrTapDetector> {
+  /// Whether the device has a touch screen. Detected on first pointer event.
+  /// Starts null (unknown), then locks after first interaction.
+  static bool? _isTouchDevice;
+
+  @override
+  Widget build(BuildContext context) {
+    // If we already know the device type, build the right gesture immediately.
+    if (_isTouchDevice == true) return _buildTouch();
+    if (_isTouchDevice == false) return _buildMouse();
+
+    // First interaction: detect device type via Listener, then rebuild.
+    return Listener(
+      behavior: HitTestBehavior.translucent,
+      onPointerDown: (event) {
+        _isTouchDevice = event.kind == PointerDeviceKind.touch;
+        setState(() {}); // Rebuild with correct gesture detector
+      },
+      child: _buildMouse(), // Default to mouse until detected
+    );
+  }
+
+  Widget _buildMouse() {
+    return GestureDetector(
+      onTap: widget.onTap,
+      onPanStart: widget.enableDrag && widget.onDragStart != null
+          ? (details) => widget.onDragStart!(details.globalPosition)
+          : null,
+      onPanUpdate: widget.enableDrag && widget.onDragUpdate != null
+          ? (details) => widget.onDragUpdate!(details.globalPosition)
+          : null,
+      onPanEnd: widget.enableDrag && widget.onDragEnd != null
+          ? (_) => widget.onDragEnd!()
+          : null,
+      onPanCancel: widget.enableDrag && widget.onDragEnd != null
+          ? () => widget.onDragEnd!()
+          : null,
+      child: widget.child,
+    );
+  }
+
+  Widget _buildTouch() {
+    return GestureDetector(
+      onTap: widget.onTap,
+      onLongPressStart: widget.enableDrag && widget.onDragStart != null
+          ? (details) => widget.onDragStart!(details.globalPosition)
+          : null,
+      onLongPressMoveUpdate: widget.enableDrag && widget.onDragUpdate != null
+          ? (details) => widget.onDragUpdate!(details.globalPosition)
+          : null,
+      onLongPressEnd: widget.enableDrag && widget.onDragEnd != null
+          ? (_) => widget.onDragEnd!()
+          : null,
+      onLongPressCancel: widget.enableDrag && widget.onDragEnd != null
+          ? () => widget.onDragEnd!()
+          : null,
+      child: widget.child,
     );
   }
 }
