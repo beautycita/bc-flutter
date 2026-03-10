@@ -9,6 +9,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Stripe from "https://esm.sh/stripe@14.21.0?target=deno";
+import { requireFeature } from "../_shared/check-toggle.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -137,17 +138,11 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-
     // Feature toggle check
-    const { data: toggleData } = await supabase
-      .from("app_config")
-      .select("value")
-      .eq("key", "enable_pos")
-      .single();
-    if (toggleData?.value !== "true") {
-      return json({ error: "This feature is currently disabled" }, 403);
-    }
+    const blocked = await requireFeature("enable_pos");
+    if (blocked) return blocked;
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // -----------------------------------------------------------------
     // 1. Fetch all paid orders with business info

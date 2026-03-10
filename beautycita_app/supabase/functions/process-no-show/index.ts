@@ -11,6 +11,7 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Stripe from "https://esm.sh/stripe@14.21.0?target=deno";
+import { requireFeature } from "../_shared/check-toggle.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "https://beautycita.com",
@@ -40,6 +41,10 @@ serve(async (req) => {
   }
 
   try {
+    // Feature toggle check
+    const blocked = await requireFeature("enable_push_notifications");
+    if (blocked) return blocked;
+
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // Auth check - only business owners or admins can mark no-shows
@@ -49,16 +54,6 @@ serve(async (req) => {
 
     if (authError || !user) {
       return json({ error: "Unauthorized" }, 401);
-    }
-
-    // Feature toggle check
-    const { data: toggleData } = await supabase
-      .from("app_config")
-      .select("value")
-      .eq("key", "enable_push_notifications")
-      .single();
-    if (toggleData?.value !== "true") {
-      return json({ error: "This feature is currently disabled" }, 403);
     }
 
     const body: NoShowRequest = await req.json();
