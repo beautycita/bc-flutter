@@ -178,7 +178,7 @@ class ProviderDetailScreen extends ConsumerWidget {
             ? Image.network(
                 provider.photoUrl!,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) =>
+                errorBuilder: (_, _, _) =>
                     _buildGradientPlaceholder(context, provider.name),
               )
             : _buildGradientPlaceholder(context, provider.name),
@@ -773,7 +773,7 @@ class _ServiceCard extends StatelessWidget {
       }
       return '${hours}h ${remaining}min';
     }
-    return '${minutes} min';
+    return '$minutes min';
   }
 
   @override

@@ -52,9 +52,9 @@ class ProviderListScreen extends ConsumerWidget {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  effectiveColor.withOpacity(0.0),
-                  effectiveColor.withOpacity(0.3),
-                  effectiveColor.withOpacity(0.0),
+                  effectiveColor.withValues(alpha: 0.0),
+                  effectiveColor.withValues(alpha: 0.3),
+                  effectiveColor.withValues(alpha: 0.0),
                 ],
               ),
             ),
@@ -158,7 +158,7 @@ class _ProviderCard extends ConsumerWidget {
 
     return Card(
       elevation: AppConstants.elevationLow,
-      shadowColor: categoryColor.withOpacity(0.15),
+      shadowColor: categoryColor.withValues(alpha: 0.15),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
       ),
@@ -166,8 +166,8 @@ class _ProviderCard extends ConsumerWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-        splashColor: categoryColor.withOpacity(0.08),
-        highlightColor: categoryColor.withOpacity(0.04),
+        splashColor: categoryColor.withValues(alpha: 0.08),
+        highlightColor: categoryColor.withValues(alpha: 0.04),
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(AppConstants.radiusMD),
@@ -279,13 +279,13 @@ class _ProviderCard extends ConsumerWidget {
                       ),
                       decoration: BoxDecoration(
                         color: isCurrentCategory
-                            ? categoryColor.withOpacity(0.15)
+                            ? categoryColor.withValues(alpha: 0.15)
                             : colorScheme.surface,
                         borderRadius:
                             BorderRadius.circular(AppConstants.radiusSM),
                         border: Border.all(
                           color: isCurrentCategory
-                              ? categoryColor.withOpacity(0.4)
+                              ? categoryColor.withValues(alpha: 0.4)
                               : Theme.of(context).dividerColor,
                           width: 1,
                         ),
@@ -381,14 +381,14 @@ class _ProviderAvatar extends StatelessWidget {
       height: AppConstants.avatarSizeLG,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(AppConstants.radiusSM),
-        color: categoryColor.withOpacity(0.1),
+        color: categoryColor.withValues(alpha: 0.1),
       ),
       clipBehavior: Clip.antiAlias,
       child: photoUrl != null && photoUrl!.isNotEmpty
           ? Image.network(
               photoUrl!,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => _AvatarFallback(
+              errorBuilder: (_, _, _) => _AvatarFallback(
                 initials: _initials,
                 color: categoryColor,
               ),
@@ -521,7 +521,7 @@ class _ContactButton extends StatelessWidget {
     return Tooltip(
       message: tooltip,
       child: Material(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(AppConstants.radiusSM),
         child: InkWell(
           onTap: onTap,
@@ -571,13 +571,13 @@ class _EmptyState extends StatelessWidget {
               width: AppConstants.avatarSizeXL,
               height: AppConstants.avatarSizeXL,
               decoration: BoxDecoration(
-                color: categoryColor.withOpacity(0.1),
+                color: categoryColor.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.store_outlined,
                 size: AppConstants.iconSizeXL,
-                color: categoryColor.withOpacity(0.5),
+                color: categoryColor.withValues(alpha: 0.5),
               ),
             ),
             const SizedBox(height: AppConstants.paddingLG),
@@ -634,13 +634,13 @@ class _ErrorState extends StatelessWidget {
               width: AppConstants.avatarSizeXL,
               height: AppConstants.avatarSizeXL,
               decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.1),
+                color: Colors.red.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.wifi_off_rounded,
                 size: AppConstants.iconSizeXL,
-                color: Colors.red.withOpacity(0.5),
+                color: Colors.red.withValues(alpha: 0.5),
               ),
             ),
             const SizedBox(height: AppConstants.paddingLG),

@@ -55,8 +55,6 @@ class _SalonManagementScreenState
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-
     return Column(
       children: [
         // Chip-based tab selector

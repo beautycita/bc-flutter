@@ -267,7 +267,7 @@ class _CategoryTreeScreenState extends ConsumerState<CategoryTreeScreen> {
                         style: GoogleFonts.nunito(fontSize: 14)),
                     Switch(
                       value: isActive,
-                      activeColor: colors.primary,
+                      activeThumbColor: colors.primary,
                       onChanged: (v) =>
                           setDialogState(() => isActive = v),
                     ),

@@ -46,9 +46,9 @@ class BookingRepository {
       'notes': notes,
       'status': paymentStatus == 'paid' ? 'confirmed' : 'pending',
       'payment_status': dbPaymentStatus,
-      if (staffId != null) 'staff_id': staffId,
-      if (paymentIntentId != null) 'payment_intent_id': paymentIntentId,
-      if (transportMode != null) 'transport_mode': transportMode,
+      'staff_id': ?staffId,
+      'payment_intent_id': ?paymentIntentId,
+      'transport_mode': ?transportMode,
     };
 
     final response = await SupabaseClientService.client

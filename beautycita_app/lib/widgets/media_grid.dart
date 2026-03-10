@@ -175,7 +175,7 @@ class _Thumbnail extends StatelessWidget {
             child: Image.network(
               item.thumbnailUrl ?? item.url,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(
+              errorBuilder: (_, _, _) => Container(
                 color: BeautyCitaTheme.surfaceCream,
                 child: const Icon(Icons.broken_image, size: 32),
               ),
@@ -300,7 +300,7 @@ class ChatMediaSection extends StatelessWidget {
                       child: Image.network(
                         item.thumbnailUrl ?? item.url,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
+                        errorBuilder: (_, _, _) => Container(
                           color: BeautyCitaTheme.surfaceCream,
                           child: const Icon(Icons.broken_image),
                         ),

@@ -19,7 +19,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
   late Animation<double> _pulseAnimation;
   late Animation<double> _celebrationAnimation;
 
-  bool _showCelebration = false;
+  final bool _showCelebration = false;
   String? _generatedUsername;
 
   // Triple-tap detection for hidden email auth
@@ -95,7 +95,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
           builder: (ctx, setSheetState) {
             Future<void> submit() async {
               if (emailCtl.text.trim().isEmpty ||
-                  passCtl.text.trim().isEmpty) return;
+                  passCtl.text.trim().isEmpty) {
+                return;
+              }
               setSheetState(() {
                 loading = true;
                 errorText = null;
@@ -106,9 +108,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                       emailCtl.text.trim(), passCtl.text.trim())
                   : await notifier.signInWithEmail(
                       emailCtl.text.trim(), passCtl.text.trim());
-              if (ok && mounted) {
+              if (ok && ctx.mounted) {
                 Navigator.of(ctx).pop();
-                context.go('/home');
+                if (mounted) context.go('/home');
               } else {
                 setSheetState(() {
                   loading = false;

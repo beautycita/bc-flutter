@@ -66,8 +66,8 @@ Future<void> rpLogVisit({
     'rp_user_id': userId,
     'verbal_contact': verbalContact,
     'onboarding_complete': onboardingComplete,
-    if (interestLevel != null) 'interest_level': interestLevel,
-    if (notes != null) 'notes': notes,
+    'interest_level': ?interestLevel,
+    'notes': ?notes,
   });
 
   // Update salon rp_status

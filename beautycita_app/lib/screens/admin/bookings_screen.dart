@@ -181,7 +181,7 @@ class BookingsScreen extends ConsumerWidget {
                           controller: scrollCtrl,
                           padding: const EdgeInsets.all(16),
                           itemCount: bookings.length,
-                          separatorBuilder: (_, __) =>
+                          separatorBuilder: (_, _) =>
                               const SizedBox(height: 8),
                           itemBuilder: (context, i) =>
                               _BookingTile(booking: bookings[i]),

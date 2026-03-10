@@ -74,7 +74,7 @@ class ProductDetailSheet extends StatelessWidget {
                       child: Image.network(
                         product.photoUrl,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
+                        errorBuilder: (_, _, _) => Container(
                           color: palette.surfaceContainerHighest,
                           child: Icon(
                             Icons.image_outlined,

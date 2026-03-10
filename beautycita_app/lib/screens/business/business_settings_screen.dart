@@ -319,28 +319,26 @@ class _BusinessSettingsScreenState
             Container(
               decoration: _cardDecoration(colors),
               clipBehavior: Clip.antiAlias,
-              child: Column(
-                children: [
-                  RadioListTile<String>(
-                    title: Text('Residente fiscal mexicano',
-                        style: GoogleFonts.poppins(
-                            fontSize: 14, fontWeight: FontWeight.w500)),
-                    value: 'MX',
-                    groupValue: _taxResidency,
-                    onChanged: (v) => setState(() => _taxResidency = v ?? 'MX'),
-                    activeColor: colors.primary,
-                  ),
-                  const Divider(height: 1),
-                  RadioListTile<String>(
-                    title: Text('Extranjero',
-                        style: GoogleFonts.poppins(
-                            fontSize: 14, fontWeight: FontWeight.w500)),
-                    value: 'foreign',
-                    groupValue: _taxResidency,
-                    onChanged: (v) => setState(() => _taxResidency = v ?? 'MX'),
-                    activeColor: colors.primary,
-                  ),
-                ],
+              child: RadioGroup<String>(
+                groupValue: _taxResidency,
+                onChanged: (v) => setState(() => _taxResidency = v ?? 'MX'),
+                child: Column(
+                  children: [
+                    RadioListTile<String>(
+                      title: Text('Residente fiscal mexicano',
+                          style: GoogleFonts.poppins(
+                              fontSize: 14, fontWeight: FontWeight.w500)),
+                      value: 'MX',
+                    ),
+                    const Divider(height: 1),
+                    RadioListTile<String>(
+                      title: Text('Extranjero',
+                          style: GoogleFonts.poppins(
+                              fontSize: 14, fontWeight: FontWeight.w500)),
+                      value: 'foreign',
+                    ),
+                  ],
+                ),
               ),
             ),
 
@@ -427,48 +425,40 @@ class _BusinessSettingsScreenState
               Container(
                 decoration: _cardDecoration(colors),
                 clipBehavior: Clip.antiAlias,
-                child: Column(
-                  children: [
-                    RadioListTile<String>(
-                      title: Text('Retener deposito',
-                          style: GoogleFonts.poppins(
-                              fontSize: 14, fontWeight: FontWeight.w500)),
-                      subtitle: Text('Cliente pierde el deposito',
-                          style: GoogleFonts.nunito(fontSize: 12)),
-                      value: 'forfeit_deposit',
-                      groupValue: _noShowPolicy,
-                      onChanged: (v) =>
-                          setState(() => _noShowPolicy = v ?? 'forfeit_deposit'),
-                      activeColor: colors.primary,
-                    ),
-                    const Divider(height: 1),
-                    RadioListTile<String>(
-                      title: Text('Reembolso total',
-                          style: GoogleFonts.poppins(
-                              fontSize: 14, fontWeight: FontWeight.w500)),
-                      subtitle: Text('Devolver todo al cliente',
-                          style: GoogleFonts.nunito(fontSize: 12)),
-                      value: 'full_refund',
-                      groupValue: _noShowPolicy,
-                      onChanged: (v) =>
-                          setState(() => _noShowPolicy = v ?? 'forfeit_deposit'),
-                      activeColor: colors.primary,
-                    ),
-                    const Divider(height: 1),
-                    RadioListTile<String>(
-                      title: Text('Reembolso parcial',
-                          style: GoogleFonts.poppins(
-                              fontSize: 14, fontWeight: FontWeight.w500)),
-                      subtitle: Text('50% deposito retenido',
-                          style: GoogleFonts.nunito(fontSize: 12)),
-                      value: 'partial_refund',
-                      groupValue: _noShowPolicy,
-                      onChanged: (v) =>
-                          setState(() => _noShowPolicy = v ?? 'forfeit_deposit'),
-                    activeColor: colors.primary,
+                child: RadioGroup<String>(
+                  groupValue: _noShowPolicy,
+                  onChanged: (v) => setState(() => _noShowPolicy = v ?? 'forfeit_deposit'),
+                  child: Column(
+                    children: [
+                      RadioListTile<String>(
+                        title: Text('Retener deposito',
+                            style: GoogleFonts.poppins(
+                                fontSize: 14, fontWeight: FontWeight.w500)),
+                        subtitle: Text('Cliente pierde el deposito',
+                            style: GoogleFonts.nunito(fontSize: 12)),
+                        value: 'forfeit_deposit',
+                      ),
+                      const Divider(height: 1),
+                      RadioListTile<String>(
+                        title: Text('Reembolso total',
+                            style: GoogleFonts.poppins(
+                                fontSize: 14, fontWeight: FontWeight.w500)),
+                        subtitle: Text('Devolver todo al cliente',
+                            style: GoogleFonts.nunito(fontSize: 12)),
+                        value: 'full_refund',
+                      ),
+                      const Divider(height: 1),
+                      RadioListTile<String>(
+                        title: Text('Reembolso parcial',
+                            style: GoogleFonts.poppins(
+                                fontSize: 14, fontWeight: FontWeight.w500)),
+                        subtitle: Text('50% deposito retenido',
+                            style: GoogleFonts.nunito(fontSize: 12)),
+                        value: 'partial_refund',
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
             ),
             ], // end enable_deposit_required gate
 

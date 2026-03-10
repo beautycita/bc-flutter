@@ -161,7 +161,7 @@ class _PhoneVerifyGateSheetState extends ConsumerState<PhoneVerifyGateSheet> {
         width: 40,
         height: 4,
         decoration: BoxDecoration(
-          color: theme.colorScheme.onSurface.withOpacity(0.2),
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(2),
         ),
       ),
@@ -334,7 +334,7 @@ class _PhoneVerifyGateSheetState extends ConsumerState<PhoneVerifyGateSheet> {
                       color: isCurrent
                           ? const Color(0xFF5A0A2D)
                           : hasDigit
-                              ? const Color(0xFF5A0A2D).withOpacity(0.3)
+                              ? const Color(0xFF5A0A2D).withValues(alpha: 0.3)
                               : Colors.transparent,
                       width: isCurrent ? 1.5 : 1,
                     ),
@@ -406,7 +406,7 @@ class _PhoneVerifyGateSheetState extends ConsumerState<PhoneVerifyGateSheet> {
           boxShadow: onTap != null
               ? [
                   BoxShadow(
-                    color: const Color(0xFFB8860B).withOpacity(0.35),
+                    color: const Color(0xFFB8860B).withValues(alpha: 0.35),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),

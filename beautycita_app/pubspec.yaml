@@ -53,6 +53,7 @@ dependencies:
     path: ../packages/beautycita_core
   package_info_plus: ^9.0.0
   webview_flutter: ^4.13.1
+  vector_math: any
 
 dev_dependencies:
   flutter_test:

@@ -114,7 +114,7 @@ class _MediaViewerState extends State<MediaViewer> {
                       ),
                     );
                   },
-                  errorBuilder: (_, __, ___) => const Icon(
+                  errorBuilder: (_, _, _) => const Icon(
                     Icons.broken_image,
                     color: Colors.white38,
                     size: 64,

@@ -196,7 +196,7 @@ class _SubcategoryPillState extends State<_SubcategoryPill> {
       _showItemsSheet(context);
     } else {
       Navigator.of(context).pop();
-      final colorValue = widget.categoryColor.value;
+      final colorValue = widget.categoryColor.toARGB32();
       context.push(
           '/providers?category=${Uri.encodeComponent(widget.subcategory.categoryId)}&subcategory=${Uri.encodeComponent(widget.subcategory.nameEs)}&color=$colorValue');
     }

@@ -32,7 +32,6 @@ class _DiscoveredSalonDetailScreenState extends ConsumerState<DiscoveredSalonDet
     with SingleTickerProviderStateMixin {
   late AnimationController _breathingController;
   late Animation<double> _breathingAnimation;
-  late Animation<double> _glowAnimation;
 
   @override
   void initState() {
@@ -42,12 +41,6 @@ class _DiscoveredSalonDetailScreenState extends ConsumerState<DiscoveredSalonDet
       duration: const Duration(milliseconds: 1800),
     );
     _breathingAnimation = Tween<double>(begin: 1.0, end: 1.02).animate(
-      CurvedAnimation(
-        parent: _breathingController,
-        curve: Curves.easeInOut,
-      ),
-    );
-    _glowAnimation = Tween<double>(begin: 0.3, end: 0.6).animate(
       CurvedAnimation(
         parent: _breathingController,
         curve: Curves.easeInOut,
@@ -129,7 +122,7 @@ class _DiscoveredSalonDetailScreenState extends ConsumerState<DiscoveredSalonDet
                                     width: 104,
                                     height: 104,
                                     fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => _defaultAvatar(),
+                                    errorBuilder: (_, _, _) => _defaultAvatar(),
                                   )
                                 : _defaultAvatar(),
                           ),
@@ -451,7 +444,7 @@ class _DiscoveredSalonDetailScreenState extends ConsumerState<DiscoveredSalonDet
     if (phone != null) {
       final params = <String, String>{
         if (widget.salon.name.isNotEmpty) 'name': widget.salon.name,
-        if (phone != null) 'phone': phone,
+        'phone': phone,
         if (widget.salon.address != null) 'address': widget.salon.address!,
         if (widget.salon.city != null) 'city': widget.salon.city!,
         if (widget.salon.photoUrl != null) 'avatar': widget.salon.photoUrl!,

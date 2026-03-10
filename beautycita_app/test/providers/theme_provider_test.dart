@@ -99,7 +99,7 @@ void main() {
         await runZonedGuarded(() async {
           notifier.setTheme(otherPalette.id);
           await Future<void>.delayed(const Duration(milliseconds: 200));
-        }, (_, __) {});
+        }, (_, _) {});
 
         expect(notifier.state.themeId, otherPalette.id);
       });

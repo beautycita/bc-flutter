@@ -385,7 +385,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
         scrollDirection: Axis.horizontal,
         physics: const BouncingScrollPhysics(),
         itemCount: _availableDates.length,
-        separatorBuilder: (_, __) =>
+        separatorBuilder: (_, _) =>
             const SizedBox(width: AppConstants.paddingSM),
         itemBuilder: (context, index) {
           final date = _availableDates[index];

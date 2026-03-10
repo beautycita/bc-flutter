@@ -15,7 +15,7 @@ class ScreenshotSenderService {
         'send-screenshot',
         body: {
           'image': base64Image,
-          if (caption != null) 'caption': caption,
+          'caption': ?caption,
         },
       ).timeout(const Duration(seconds: 30));
 

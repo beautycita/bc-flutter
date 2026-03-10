@@ -2186,144 +2186,6 @@ class _CompactWeekStrip extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Week overview (legacy, kept for reference)
-// ---------------------------------------------------------------------------
-
-class _WeekView extends StatelessWidget {
-  final DateTimeRange range;
-  final AsyncValue<List<Map<String, dynamic>>> apptsAsync;
-  final ValueChanged<DateTime> onDayTap;
-
-  const _WeekView({
-    required this.range,
-    required this.apptsAsync,
-    required this.onDayTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final appts = apptsAsync.valueOrNull ?? [];
-    final now = DateTime.now();
-
-    return Padding(
-      padding: const EdgeInsets.all(AppConstants.paddingMD),
-      child: Row(
-        children: List.generate(7, (i) {
-          final day = range.start.add(Duration(days: i));
-          final dayAppts = appts.where((a) {
-            final dt = DateTime.tryParse(a['starts_at'] as String? ?? '');
-            return dt != null &&
-                dt.year == day.year &&
-                dt.month == day.month &&
-                dt.day == day.day;
-          }).toList();
-
-          final isToday = day.year == now.year &&
-              day.month == now.month &&
-              day.day == now.day;
-
-          return Expanded(
-            child: GestureDetector(
-              onTap: () => onDayTap(day),
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 2),
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: isToday
-                      ? colors.primary.withValues(alpha: 0.1)
-                      : colors.surface,
-                  borderRadius: BorderRadius.circular(10),
-                  border: isToday
-                      ? Border.all(color: colors.primary, width: 2)
-                      : Border.all(
-                          color: colors.onSurface.withValues(alpha: 0.08)),
-                ),
-                child: Column(
-                  children: [
-                    Text(
-                      _dayName(day.weekday),
-                      style: GoogleFonts.poppins(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: isToday
-                            ? colors.primary
-                            : colors.onSurface.withValues(alpha: 0.5),
-                      ),
-                    ),
-                    Text(
-                      '${day.day}',
-                      style: GoogleFonts.poppins(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: isToday ? colors.primary : colors.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: dayAppts.isEmpty
-                            ? colors.onSurface.withValues(alpha: 0.05)
-                            : colors.primary.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        '${dayAppts.length}',
-                        style: GoogleFonts.poppins(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: dayAppts.isEmpty
-                              ? colors.onSurface.withValues(alpha: 0.3)
-                              : colors.primary,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    // Status dots
-                    Expanded(
-                      child: ListView(
-                        physics: const NeverScrollableScrollPhysics(),
-                        children: dayAppts.take(5).map((a) {
-                          final status = a['status'] as String? ?? 'pending';
-                          return Container(
-                            height: 6,
-                            margin: const EdgeInsets.only(bottom: 2),
-                            decoration: BoxDecoration(
-                              color: _dotColor(status),
-                              borderRadius: BorderRadius.circular(3),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        }),
-      ),
-    );
-  }
-
-  String _dayName(int weekday) {
-    const names = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
-    return names[weekday - 1];
-  }
-
-  Color _dotColor(String status) {
-    switch (status) {
-      case 'pending': return const Color(0xFFF48FB1);   // Pastel pink
-      case 'confirmed': return const Color(0xFFCE93D8); // Pastel purple
-      case 'completed': return const Color(0xFFA5D6A7); // Pastel green
-      default: return const Color(0xFFE0E0E0);
-    }
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Block time bottom sheet
 // ---------------------------------------------------------------------------
 
@@ -2360,9 +2222,7 @@ class _BlockTimeSheetState extends ConsumerState<_BlockTimeSheet> {
   ];
 
   bool get _isFullDay => _reason == 'vacation' || _reason == 'day_off';
-  bool get _isDateRange => _reason == 'vacation' || _reason == 'other';
   bool get _showTimes => _reason == 'lunch' || _reason == 'other';
-  bool get _isSingleDate => _reason == 'day_off' || _reason == 'lunch';
 
   String _fmtDate(DateTime d) => '${d.day} ${_months[d.month - 1]} ${d.year}';
 
@@ -3571,7 +3431,7 @@ class _SheetDropdown<T> extends StatelessWidget {
         ],
       ),
       child: DropdownButtonFormField<T>(
-        value: value,
+        initialValue: value,
         decoration: InputDecoration(
           labelText: label,
           labelStyle: GoogleFonts.nunito(
@@ -3607,17 +3467,12 @@ class _SheetTextField extends StatelessWidget {
   final String? hint;
   final IconData icon;
   final int maxLines;
-  final TextInputType? keyboardType;
-  final TextCapitalization textCapitalization;
-
   const _SheetTextField({
     required this.controller,
     required this.label,
     this.hint,
     required this.icon,
     this.maxLines = 1,
-    this.keyboardType,
-    this.textCapitalization = TextCapitalization.sentences,
   });
 
   @override
@@ -3639,8 +3494,7 @@ class _SheetTextField extends StatelessWidget {
       child: TextField(
         controller: controller,
         maxLines: maxLines,
-        keyboardType: keyboardType,
-        textCapitalization: textCapitalization,
+        textCapitalization: TextCapitalization.sentences,
         style: GoogleFonts.nunito(fontSize: 14, color: const Color(0xFF212121)),
         decoration: InputDecoration(
           labelText: label,

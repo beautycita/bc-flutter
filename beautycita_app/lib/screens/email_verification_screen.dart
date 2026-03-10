@@ -153,7 +153,7 @@ class _EmailVerificationScreenState
                   textAlign: TextAlign.center,
                   style: GoogleFonts.nunito(
                     fontSize: 14,
-                    color: theme.colorScheme.onSurface.withOpacity(0.55),
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
                     fontWeight: FontWeight.w400,
                   ),
                 ),
@@ -198,17 +198,17 @@ class _EmailVerificationScreenState
                     hintText: 'tu@email.com',
                     hintStyle: GoogleFonts.nunito(
                       fontSize: 15,
-                      color: theme.colorScheme.onSurface.withOpacity(0.35),
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.35),
                     ),
                     errorText: _emailError,
                     prefixIcon: Icon(
                       Icons.mail_outline_rounded,
                       size: 20,
-                      color: theme.colorScheme.onSurface.withOpacity(0.45),
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.45),
                     ),
                     filled: true,
                     fillColor: theme.colorScheme.surfaceContainerHighest
-                        .withOpacity(0.5),
+                        .withValues(alpha: 0.5),
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: AppConstants.paddingMD,
                       vertical: AppConstants.paddingMD,
@@ -218,7 +218,7 @@ class _EmailVerificationScreenState
                           BorderRadius.circular(AppConstants.radiusMD),
                       borderSide: BorderSide(
                         color:
-                            theme.colorScheme.onSurface.withOpacity(0.12),
+                            theme.colorScheme.onSurface.withValues(alpha: 0.12),
                         width: 1,
                       ),
                     ),
@@ -227,7 +227,7 @@ class _EmailVerificationScreenState
                           BorderRadius.circular(AppConstants.radiusMD),
                       borderSide: BorderSide(
                         color:
-                            theme.colorScheme.onSurface.withOpacity(0.12),
+                            theme.colorScheme.onSurface.withValues(alpha: 0.12),
                         width: 1,
                       ),
                     ),
@@ -283,10 +283,10 @@ class _EmailVerificationScreenState
                       style: GoogleFonts.nunito(
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
-                        color: theme.colorScheme.onSurface.withOpacity(0.4),
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
                         decoration: TextDecoration.underline,
                         decorationColor:
-                            theme.colorScheme.onSurface.withOpacity(0.3),
+                            theme.colorScheme.onSurface.withValues(alpha: 0.3),
                       ),
                     ),
                   ),
@@ -346,8 +346,6 @@ class _GoogleButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return SizedBox(
       width: double.infinity,
       height: 52,
@@ -481,7 +479,7 @@ class _DividerRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final dividerColor = theme.colorScheme.onSurface.withOpacity(0.15);
+    final dividerColor = theme.colorScheme.onSurface.withValues(alpha: 0.15);
 
     return Row(
       children: [
@@ -495,7 +493,7 @@ class _DividerRow extends StatelessWidget {
             style: GoogleFonts.nunito(
               fontSize: 12,
               fontWeight: FontWeight.w500,
-              color: theme.colorScheme.onSurface.withOpacity(0.4),
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
             ),
           ),
         ),
@@ -532,14 +530,14 @@ class _GoldGradientButton extends StatelessWidget {
             decoration: BoxDecoration(
               gradient: onTap != null ? gradient : null,
               color: onTap == null
-                  ? Theme.of(context).colorScheme.onSurface.withOpacity(0.12)
+                  ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.12)
                   : null,
               borderRadius:
                   BorderRadius.circular(AppConstants.radiusMD),
               boxShadow: onTap != null
                   ? [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.18),
+                        color: Colors.black.withValues(alpha: 0.18),
                         blurRadius: 8,
                         offset: const Offset(0, 3),
                       ),

@@ -248,7 +248,7 @@ class _CinematicContent extends StatelessWidget {
 
           final matrix = Matrix4.identity()
             ..setEntry(3, 2, 0.001)
-            ..translate(0.0, 0.0, zOffset)
+            ..translateByDouble(0.0, 0.0, zOffset, 1.0)
             ..rotateX(xRotation)
             ..rotateY(yRotation);
 

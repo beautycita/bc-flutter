@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -217,7 +216,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               )
             : null,
         loading: () => null,
-        error: (_, __) => null,
+        error: (_, _) => null,
       ),
       drawerEdgeDragWidth: 24, // narrow edge zone
       drawerEnableOpenDragGesture: isBizOwner.valueOrNull == true,
@@ -233,7 +232,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               )
             : null,
         loading: () => null,
-        error: (_, __) => null,
+        error: (_, _) => null,
       ),
       endDrawerEnableOpenDragGesture: isAdmin.valueOrNull == true,
       body: Column(
@@ -321,16 +320,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             ],
                           ),
                           const Spacer(),
-                          // Brand text (subtle)
-                          Text(
-                            AppConstants.appName,
-                            style: GoogleFonts.poppins(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white.withValues(alpha: 0.8),
-                              letterSpacing: -0.5,
-                              height: 1.1,
-                            ),
+                          // Brand text — Playfair Display with flowing gradient shimmer
+                          _BrandShimmerText(
+                            text: AppConstants.appName,
                           ),
                           const SizedBox(height: AppConstants.paddingSM),
                           // Cinematic question text
@@ -529,7 +521,7 @@ class _HeroColorPickerState extends ConsumerState<_HeroColorPicker> {
     final liveSat = ref.watch(liveSatProvider);
 
     // Watch theme state so gradient updates when _load() completes
-    final themeState = ref.watch(themeProvider);
+    ref.watch(themeProvider);
 
     Color grad1, grad2;
     if (liveHue != null && liveSat != null) {
@@ -576,8 +568,11 @@ class _HeroColorPickerState extends ConsumerState<_HeroColorPicker> {
           return;
         }
         if (!_active) return;
-        if (e.pointer == _huePointer) _updateHue(e.localPosition);
-        else if (e.pointer == _satPointer) _updateSat(e.localPosition);
+        if (e.pointer == _huePointer) {
+          _updateHue(e.localPosition);
+        } else if (e.pointer == _satPointer) {
+          _updateSat(e.localPosition);
+        }
       },
       onPointerUp: (e) {
         if (!_active && e.pointer == _candidatePointer) {
@@ -598,8 +593,11 @@ class _HeroColorPickerState extends ConsumerState<_HeroColorPicker> {
           _candidatePointer = null;
           _candidateStart = null;
         }
-        if (e.pointer == _huePointer) _finish();
-        else if (e.pointer == _satPointer) _satPointer = null;
+        if (e.pointer == _huePointer) {
+          _finish();
+        } else if (e.pointer == _satPointer) {
+          _satPointer = null;
+        }
       },
       child: SizedBox(
         height: widget.height,
@@ -726,6 +724,75 @@ class _HeaderButton extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+// Brand text with flowing gradient shimmer — replicates the legacy website's
+// animate-gradient-flow effect: pink→purple→blue→pink sweeping across text.
+class _BrandShimmerText extends StatefulWidget {
+  final String text;
+  const _BrandShimmerText({required this.text});
+
+  @override
+  State<_BrandShimmerText> createState() => _BrandShimmerTextState();
+}
+
+class _BrandShimmerTextState extends State<_BrandShimmerText>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      duration: const Duration(seconds: 8),
+      vsync: this,
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _ctrl,
+      builder: (context, child) {
+        // Shift the gradient from 0% → -200% horizontally (background-size: 200%)
+        final offset = -2.0 * _ctrl.value;
+        return ShaderMask(
+          blendMode: BlendMode.srcIn,
+          shaderCallback: (bounds) {
+            return LinearGradient(
+              begin: Alignment(offset, 0),
+              end: Alignment(offset + 2.0, 0),
+              colors: const [
+                Color(0xFFec4899), // pink-500
+                Color(0xFF9333ea), // purple-500
+                Color(0xFF3b82f6), // blue-500
+                Color(0xFFec4899), // pink-500 (repeat for seamless loop)
+              ],
+              stops: const [0.0, 0.33, 0.66, 1.0],
+              tileMode: TileMode.repeated,
+            ).createShader(bounds);
+          },
+          child: child!,
+        );
+      },
+      child: Text(
+        widget.text,
+        style: GoogleFonts.playfairDisplay(
+          fontSize: 24,
+          fontWeight: FontWeight.w700,
+          color: Colors.white, // ShaderMask replaces this
+          letterSpacing: -0.5,
+          height: 1.1,
+        ),
+      ),
     );
   }
 }

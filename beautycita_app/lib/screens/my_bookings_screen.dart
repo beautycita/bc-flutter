@@ -1042,7 +1042,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
                       vertical: AppConstants.paddingMD,
                     ),
                     itemCount: filtered.length,
-                    separatorBuilder: (_, __) =>
+                    separatorBuilder: (_, _) =>
                         const SizedBox(height: AppConstants.paddingSM),
                     itemBuilder: (context, index) {
                       return _buildBookingCard(
@@ -1394,7 +1394,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
                       )
                     : hasResolvedDispute
                         ? TextButton.icon(
-                            onPressed: () => _showDisputeResult(dispute!),
+                            onPressed: () => _showDisputeResult(dispute),
                             icon: Icon(
                               Icons.info_outline_rounded,
                               size: AppConstants.iconSizeSM,

@@ -102,11 +102,11 @@ void main() {
       expect(card.rank, 1);
       expect(card.score, 0.92);
       expect(card.business.name, 'Salon Rosa');
-      expect(card.staff.name, 'Maria 1');
+      expect(card.staff!.name, 'Maria 1');
       expect(card.service.price, 350.0);
       expect(card.service.durationMinutes, 60);
       expect(card.service.currency, 'MXN');
-      expect(card.slot.startsAt, '2026-03-10T14:00:00Z');
+      expect(card.slot!.startsAt, '2026-03-10T14:00:00Z');
       expect(card.transport.mode, 'car');
       expect(card.transport.durationMin, 15);
       expect(card.badges, ['top_rated']);

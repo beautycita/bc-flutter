@@ -313,7 +313,7 @@ class DashboardScreen extends ConsumerWidget {
                           controller: scrollController,
                           padding: const EdgeInsets.all(AppConstants.paddingMD),
                           itemCount: items.length,
-                          separatorBuilder: (_, __) =>
+                          separatorBuilder: (_, _) =>
                               const SizedBox(height: 8),
                           itemBuilder: (context, i) =>
                               _FullActivityTile(item: items[i]),

@@ -221,7 +221,7 @@ class _OrderList extends StatelessWidget {
       child: ListView.separated(
         padding: const EdgeInsets.all(AppConstants.paddingMD),
         itemCount: orders.length,
-        separatorBuilder: (_, __) =>
+        separatorBuilder: (_, _) =>
             const SizedBox(height: AppConstants.paddingSM),
         itemBuilder: (context, index) {
           final order = orders[index];

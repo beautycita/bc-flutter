@@ -800,7 +800,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     }
                     Navigator.pop(ctx);
                     final success = await ref.read(profileProvider.notifier).updatePhone(phone);
-                    if (success && mounted) {
+                    if (success && context.mounted) {
                       _showOtpSheet(context);
                     }
                   },
@@ -823,14 +823,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   void _showOtpSheet(BuildContext context) async {
     final sent = await ref.read(profileProvider.notifier).sendPhoneOtp();
-    if (!sent || !mounted) {
+    if (!sent || !context.mounted) {
       if (!sent) {
         ToastService.showError('No se pudo enviar el codigo');
       }
       return;
     }
 
-    if (!mounted) return;
+    if (!context.mounted) return;
     final otpController = TextEditingController();
 
     showModalBottomSheet(

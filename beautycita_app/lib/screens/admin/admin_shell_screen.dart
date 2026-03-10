@@ -114,7 +114,7 @@ class AdminShellScreen extends ConsumerWidget {
         backgroundColor: Color(0xFFF5F3FF),
         body: Center(child: CircularProgressIndicator()),
       ),
-      error: (_, __) => Scaffold(
+      error: (_, _) => Scaffold(
         backgroundColor: const Color(0xFFF5F3FF),
         body: Center(
           child: Text(
@@ -141,7 +141,7 @@ class _AdminContent extends ConsumerWidget {
       ...isSuperAdmin.when(
         data: (isSA) => isSA ? AdminShellScreen._superAdminTabs : <_AdminTab>[],
         loading: () => <_AdminTab>[],
-        error: (_, __) => <_AdminTab>[],
+        error: (_, _) => <_AdminTab>[],
       ),
     ];
 
@@ -452,8 +452,7 @@ class _AdminTab {
 
 class _GoldShimmerText extends StatefulWidget {
   final String text;
-  final TextStyle? style;
-  const _GoldShimmerText({required this.text, this.style});
+  const _GoldShimmerText({required this.text});
 
   @override
   State<_GoldShimmerText> createState() => _GoldShimmerTextState();
@@ -509,7 +508,7 @@ class _GoldShimmerTextState extends State<_GoldShimmerText>
           },
           child: Text(
             widget.text,
-            style: (widget.style ?? const TextStyle()).copyWith(
+            style: const TextStyle().copyWith(
               color: Colors.white,
             ),
           ),

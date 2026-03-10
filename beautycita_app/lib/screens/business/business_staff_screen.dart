@@ -1711,8 +1711,6 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
           builder: (ctx, setSheetState) {
             final showDateRange = reason == 'vacation' || reason == 'other';
             final showSingleDate = reason == 'day_off';
-            final showTimePickers = reason == 'lunch' || reason == 'other';
-
             return Padding(
               padding: EdgeInsets.fromLTRB(
                 AppConstants.paddingLG,
@@ -1730,7 +1728,7 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
                             fontSize: 16, fontWeight: FontWeight.w600)),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<String>(
-                      value: reason,
+                      initialValue: reason,
                       decoration:
                           const InputDecoration(labelText: 'Razon'),
                       items: const [

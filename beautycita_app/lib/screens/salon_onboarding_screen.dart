@@ -8,8 +8,6 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:latlong2/latlong.dart' show LatLng;
 import 'package:url_launcher/url_launcher.dart';
-import '../config/constants.dart';
-import '../config/theme.dart';
 import '../providers/booking_flow_provider.dart' show placesServiceProvider;
 import '../providers/security_provider.dart';
 import '../services/places_service.dart';
@@ -455,12 +453,12 @@ class _SalonOnboardingScreenState
           'phone': phone,
           'whatsapp': phone,
           'address': fullAddress,
-          if (city != null) 'city': city,
-          if (state != null) 'state': state,
+          'city': ?city,
+          'state': ?state,
           'lat': _pickedLat,
           'lng': _pickedLng,
-          if (_photoUrl != null) 'photo_url': _photoUrl,
-          if (discoveredSalonId != null) 'discovered_salon_id': discoveredSalonId,
+          'photo_url': ?_photoUrl,
+          'discovered_salon_id': ?discoveredSalonId,
           if (_rfcCtrl.text.trim().isNotEmpty) 'rfc': _rfcCtrl.text.trim(),
         },
       );
@@ -937,7 +935,7 @@ class _HeroHeader extends StatelessWidget {
                     radius: 40,
                     backgroundColor: Colors.white.withValues(alpha: 0.2),
                     backgroundImage: NetworkImage(photoUrl!),
-                    onBackgroundImageError: (_, __) {},
+                    onBackgroundImageError: (_, _) {},
                   ),
                 )
               else

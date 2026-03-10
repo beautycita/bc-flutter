@@ -130,7 +130,7 @@ class _DiscoveredSalonConfirmScreenState
                         width: 100,
                         height: 100,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => _defaultAvatar(),
+                        errorBuilder: (_, _, _) => _defaultAvatar(),
                       )
                     : _defaultAvatar(),
               ),

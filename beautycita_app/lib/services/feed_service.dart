@@ -25,7 +25,7 @@ class FeedService {
     final params = <String, String>{
       'page': page.toString(),
       'limit': limit.toString(),
-      if (category != null) 'category': category,
+      'category': ?category,
     };
 
     final uri = Uri.parse('$supabaseUrl/functions/v1/feed-public')

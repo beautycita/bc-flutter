@@ -9,7 +9,6 @@ import '../models/chat_message.dart';
 import '../providers/chat_provider.dart';
 import '../services/supabase_client.dart';
 import 'package:beautycita/services/toast_service.dart';
-import 'package:beautycita/providers/feature_toggle_provider.dart';
 
 class ChatConversationScreen extends ConsumerStatefulWidget {
   final String threadId;
@@ -479,7 +478,7 @@ class _MessageBubble extends StatelessWidget {
                       fit: BoxFit.cover,
                       width: double.infinity,
                       height: 200,
-                      errorBuilder: (_, __, ___) => Container(
+                      errorBuilder: (_, _, _) => Container(
                         height: 200,
                         color: Theme.of(context).colorScheme.surface,
                         child: const Center(
@@ -550,7 +549,7 @@ class _MessageBubble extends StatelessWidget {
                 child: Image.network(
                   message.mediaUrl!,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
+                  errorBuilder: (_, _, _) => Container(
                     height: 150,
                     color: Theme.of(context).colorScheme.surface,
                     child: const Center(

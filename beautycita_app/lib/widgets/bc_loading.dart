@@ -40,7 +40,7 @@ class _BCShimmerState extends State<BCShimmer>
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _controller,
-      builder: (_, __) => Container(
+      builder: (_, _) => Container(
         width: widget.width,
         height: widget.height,
         decoration: BoxDecoration(
@@ -105,7 +105,7 @@ class _BCLoadingDotsState extends State<BCLoadingDots>
         children: List.generate(3, (i) {
           return AnimatedBuilder(
             animation: _controllers[i],
-            builder: (_, __) => Container(
+            builder: (_, _) => Container(
               margin: const EdgeInsets.symmetric(horizontal: 4),
               width: 10,
               height: 10,

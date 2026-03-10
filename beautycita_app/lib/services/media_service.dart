@@ -254,7 +254,7 @@ class MediaService {
         'source': 'upload',
         'url': publicUrl,
         'metadata': {
-          if (description != null) 'description': description,
+          'description': ?description,
         },
         'section': section,
       };

@@ -254,7 +254,7 @@ class _VideoFeedTabState extends State<_VideoFeedTab>
               horizontal: AppConstants.screenPaddingHorizontal,
             ),
             itemCount: _kCategories.length,
-            separatorBuilder: (_, __) =>
+            separatorBuilder: (_, _) =>
                 const SizedBox(width: AppConstants.paddingXS),
             itemBuilder: (context, index) {
               final (label, _) = _kCategories[index];
@@ -368,7 +368,7 @@ class _PhotosFeedTab extends ConsumerWidget {
               horizontal: AppConstants.screenPaddingHorizontal,
             ),
             itemCount: _kCategories.length,
-            separatorBuilder: (_, __) =>
+            separatorBuilder: (_, _) =>
                 const SizedBox(width: AppConstants.paddingXS),
             itemBuilder: (context, index) {
               final (label, value) = _kCategories[index];
