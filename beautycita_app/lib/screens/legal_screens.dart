@@ -83,19 +83,19 @@ class _TermsAndPolicyScreenState extends State<TermsAndPolicyScreen>
           _LegalTab(
             icon: Icons.description_outlined,
             subtitle: 'Reglas de uso de la plataforma',
-            lastUpdated: '6 de marzo de 2026',
+            lastUpdated: '10 de marzo de 2026',
             sections: _termsSections,
           ),
           _LegalTab(
             icon: Icons.privacy_tip_outlined,
-            subtitle: 'Como protegemos tus datos',
-            lastUpdated: '6 de marzo de 2026',
+            subtitle: 'Aviso de Privacidad Integral (LFPDPPP)',
+            lastUpdated: '10 de marzo de 2026',
             sections: _privacySections,
           ),
           _LegalTab(
             icon: Icons.storage_outlined,
             subtitle: 'Que guardamos en tu dispositivo',
-            lastUpdated: '6 de marzo de 2026',
+            lastUpdated: '10 de marzo de 2026',
             sections: _storageSections,
           ),
         ],
@@ -599,90 +599,322 @@ const _termsSections = [
 ];
 
 const _privacySections = [
+  // ── Intro ──
   _Section(
     body:
-        'BeautyCita se compromete a proteger tu privacidad. Este aviso describe '
-        'como recopilamos, usamos y protegemos tu informacion.',
+        'AVISO DE PRIVACIDAD INTEGRAL\n\n'
+        'En cumplimiento de la Ley Federal de Proteccion de Datos Personales en '
+        'Posesion de los Particulares (LFPDPPP), su Reglamento, y los '
+        'Lineamientos del Aviso de Privacidad publicados en el Diario Oficial '
+        'de la Federacion, ponemos a su disposicion el presente Aviso de '
+        'Privacidad Integral.',
   ),
+
+  // ── 1. Responsable ──
   _Section(
-    heading: '1. Responsable',
+    heading: '1. Identidad y domicilio del responsable',
     body:
-        'BeautyCita, con domicilio en Puerto Vallarta, Jalisco, Mexico, es responsable '
-        'del tratamiento de tus datos personales.',
+        'Responsable: BeautyCita S.A. de C.V.\n'
+        'Domicilio: Plaza Caracol local 27, Puerto Vallarta, Jalisco, '
+        'C.P. 48330, Mexico.\n'
+        'Correo del departamento de datos personales: legal@beautycita.com\n'
+        'Telefono: +52 (720) 677-7800\n\n'
+        'BeautyCita opera como plataforma digital de intermediacion de '
+        'servicios de belleza conforme a los articulos 113-A LISR y 18-J LIVA.',
   ),
+
+  // ── 2. Datos personales recabados ──
   _Section(
-    heading: '2. Datos que recopilamos',
+    heading: '2. Datos personales que recabamos',
     body:
-        'Cuenta: nombre de usuario (auto-generado), nombre, correo, telefono, genero '
-        'y fecha de nacimiento — todos opcionales.\n\n'
-        'Ubicacion: GPS (con tu permiso) para buscar salones cercanos.\n\n'
-        'Reservas: historial, preferencias de busqueda y resenas.\n\n'
-        'Pagos: ultimos 4 digitos de tarjeta (via Stripe), direcciones Bitcoin '
-        '(via BTCPay). Nunca almacenamos numeros completos.\n\n'
-        'Datos fiscales de proveedores: RFC (Registro Federal de Contribuyentes) '
-        'y regimen fiscal, proporcionados voluntariamente para determinar tasas '
-        'de retencion de impuestos.\n\n'
-        'Medios: fotos que subas o generes con herramientas de IA.\n\n'
-        'Tecnicos: token de notificaciones push y plataforma de registro.',
+        'A) Datos de identificacion: nombre de usuario (generado automaticamente), '
+        'nombre y apellidos (opcional), correo electronico, numero telefonico, '
+        'genero y fecha de nacimiento.\n\n'
+        'B) Datos de contacto: correo electronico, numero de telefono.\n\n'
+        'C) Datos de ubicacion: coordenadas GPS (solo con su consentimiento '
+        'explicito a traves del permiso de ubicacion de su dispositivo).\n\n'
+        'D) Datos de transacciones: historial de reservas, preferencias de '
+        'busqueda, resenas, montos pagados, metodo de pago utilizado, y '
+        'ultimos 4 digitos de tarjeta bancaria (nunca el numero completo).\n\n'
+        'E) Datos fiscales de proveedores de servicios: RFC (Registro Federal '
+        'de Contribuyentes) y regimen fiscal, proporcionados voluntariamente '
+        'para el calculo de retenciones de impuestos.\n\n'
+        'F) Datos de imagen: fotografias que usted suba o genere mediante '
+        'nuestras herramientas de inteligencia artificial (estudio virtual).\n\n'
+        'G) Datos tecnicos: token de notificaciones push, identificador de '
+        'dispositivo, sistema operativo y version de la aplicacion.\n\n'
+        'H) Datos de navegacion y uso: pantallas visitadas, acciones realizadas '
+        'dentro de la app, y registros de errores para mejora del servicio.',
   ),
+
+  // ── 3. Datos sensibles ──
   _Section(
-    heading: '3. Autenticacion biometrica',
+    heading: '3. Datos sensibles',
     body:
-        'Tu huella o rostro se procesan exclusivamente en tu dispositivo. '
-        'BeautyCita nunca recibe ni almacena datos biometricos.',
+        'AUTENTICACION BIOMETRICA: La app utiliza la huella digital o '
+        'reconocimiento facial de su dispositivo exclusivamente para '
+        'autenticacion local. Estos datos biometricos son procesados '
+        'unicamente por el hardware de su dispositivo (Secure Enclave / TEE). '
+        'BeautyCita NUNCA recibe, transmite ni almacena datos biometricos '
+        'en sus servidores. No se requiere consentimiento expreso adicional '
+        'ya que el tratamiento es realizado integramente por su dispositivo.\n\n'
+        'FOTOGRAFIAS FACIALES: Las fotos procesadas por el estudio virtual '
+        'pueden contener rasgos fisicos. Estas imagenes se transmiten a '
+        'servidores seguros de LightX (procesamiento de IA) exclusivamente '
+        'para generar la transformacion solicitada y no se utilizan para '
+        'entrenar modelos de inteligencia artificial. Usted puede eliminar '
+        'estas imagenes en cualquier momento desde la app.',
   ),
+
+  // ── 4. Finalidades primarias ──
   _Section(
-    heading: '4. Uso de tus datos',
+    heading: '4. Finalidades del tratamiento',
     body:
-        'Usamos tu informacion para gestionar tu cuenta, buscar salones, '
-        'procesar reservas y pagos, enviar notificaciones de citas, '
-        'coordinar transporte, procesar imagenes del estudio virtual '
-        'y cumplir obligaciones legales.\n\n'
-        'Obligaciones fiscales: calculamos y registramos retenciones de ISR e '
-        'IVA por cada transaccion con proveedores. El RFC del proveedor se usa '
-        'exclusivamente para determinar la tasa de retencion aplicable.',
+        'FINALIDADES PRIMARIAS (necesarias para la relacion juridica):\n'
+        '• Crear y gestionar su cuenta de usuario.\n'
+        '• Buscar salones y profesionales de belleza cercanos a su ubicacion.\n'
+        '• Procesar reservas de servicios de belleza.\n'
+        '• Procesar pagos con tarjeta (via Stripe) y Bitcoin (via BTCPay).\n'
+        '• Calcular y retener ISR e IVA conforme a los articulos 113-A LISR '
+        'y 18-J LIVA (aplica a proveedores de servicios).\n'
+        '• Enviar notificaciones de confirmacion, recordatorio y seguimiento '
+        'de citas.\n'
+        '• Coordinar transporte hacia el salon (integracion con Uber).\n'
+        '• Procesar imagenes en el estudio virtual de prueba.\n'
+        '• Mediar y resolver disputas entre clientes y salones.\n'
+        '• Cumplir obligaciones legales y fiscales ante el SAT.\n\n'
+        'FINALIDADES SECUNDARIAS (no necesarias pero beneficiosas):\n'
+        '• Enviar recomendaciones personalizadas de salones y servicios.\n'
+        '• Mostrar contenido relevante en el feed de inspiracion.\n'
+        '• Realizar analisis estadisticos anonimos para mejorar el servicio.\n'
+        '• Enviar comunicaciones promocionales sobre funciones nuevas.\n\n'
+        'Si usted no desea que sus datos sean tratados para las finalidades '
+        'secundarias, puede enviar su negativa a legal@beautycita.com con '
+        'el asunto "Negativa finalidades secundarias". La negativa no '
+        'afectara su uso de la plataforma.',
   ),
+
+  // ── 5. Fundamento legal ──
   _Section(
-    heading: '5. Terceros',
+    heading: '5. Base legal del tratamiento',
     body:
-        'Compartimos datos solo con: Stripe (pagos), BTCPay (Bitcoin, auto-hospedado), '
-        'Firebase (notificaciones), Google Places (direcciones), Uber (transporte) '
-        'y LightX (procesamiento de imagenes).\n\n'
-        'SAT (Servicio de Administracion Tributaria): Por obligacion legal, '
-        'compartimos datos de transacciones y retenciones fiscales con el SAT '
-        'mediante declaraciones informativas mensuales. El SAT tambien tiene '
-        'acceso en tiempo real a registros de transacciones de la plataforma '
-        'conforme a la legislacion vigente. Los datos compartidos incluyen: '
-        'montos de transacciones, retenciones de ISR e IVA, y RFC de proveedores.\n\n'
-        'No vendemos ni comercializamos tus datos.',
+        'Tratamos sus datos con fundamento en:\n'
+        '• Consentimiento (Art. 8 LFPDPPP): al registrarse y aceptar este aviso.\n'
+        '• Relacion contractual (Art. 12 Reglamento): necesario para prestar '
+        'el servicio de intermediacion de reservas.\n'
+        '• Obligacion legal (Art. 10, fraccion IV LFPDPPP): retenciones '
+        'fiscales al SAT, declaraciones informativas, y cumplimiento de '
+        'requerimientos de autoridades competentes.\n'
+        '• Interes legitimo (Art. 12 Reglamento): prevencion de fraude, '
+        'seguridad de la plataforma, y mejora del servicio.',
   ),
+
+  // ── 6. Transferencias ──
   _Section(
-    heading: '6. Seguridad',
+    heading: '6. Transferencias de datos personales',
     body:
-        'Encriptacion HTTPS/TLS, control de acceso por roles (RLS), autenticacion '
-        'JWT, pagos delegados a servicios certificados PCI-DSS. Conservamos datos '
-        'mientras tu cuenta este activa; al solicitar eliminacion, los borramos '
-        'en 30 dias.',
+        'Sus datos pueden ser transferidos a los siguientes terceros:\n\n'
+        'A) PROVEEDORES DE SERVICIOS DE BELLEZA: nombre, telefono y '
+        'detalles de la reserva, para que puedan atender su cita.\n\n'
+        'B) STRIPE, INC. (EE.UU.): datos de pago para procesamiento de '
+        'transacciones con tarjeta. Stripe es certificado PCI-DSS Nivel 1. '
+        'Transferencia internacional amparada por clausulas contractuales '
+        'que garantizan nivel adecuado de proteccion (Art. 36 LFPDPPP).\n\n'
+        'C) GOOGLE LLC (EE.UU.): token de dispositivo para notificaciones '
+        'push (Firebase Cloud Messaging), y datos de ubicacion para '
+        'busqueda de direcciones (Google Places). Transferencia internacional '
+        'con clausulas contractuales.\n\n'
+        'D) OPENAI, INC. (EE.UU.): texto de conversaciones con nuestro '
+        'asistente de IA (Eros) para generar respuestas de soporte. No se '
+        'envian datos de pago ni datos fiscales. Transferencia internacional '
+        'con clausulas contractuales.\n\n'
+        'E) LIGHTX (INDIA): fotografias del estudio virtual para '
+        'procesamiento de IA. No se envian datos de identificacion personal. '
+        'Transferencia internacional con clausulas contractuales.\n\n'
+        'F) UBER TECHNOLOGIES (EE.UU.): nombre y ubicacion cuando usted '
+        'elige la opcion de transporte. Solo con su autorizacion explicita. '
+        'Transferencia internacional con clausulas contractuales.\n\n'
+        'G) SAT — SERVICIO DE ADMINISTRACION TRIBUTARIA (MEXICO): montos '
+        'de transacciones, retenciones de ISR e IVA, y RFC de proveedores. '
+        'Transferencia obligatoria por ley (Art. 37 LFPDPPP). El SAT tiene '
+        'acceso en tiempo real a registros de transacciones conforme a la '
+        'legislacion fiscal vigente.\n\n'
+        'H) BTCPAY SERVER (AUTO-HOSPEDADO): pagos en Bitcoin procesados en '
+        'nuestro propio servidor. No hay transferencia a terceros.\n\n'
+        'BeautyCita NO vende, comercializa ni renta sus datos personales '
+        'a terceros bajo ninguna circunstancia.',
   ),
+
+  // ── 7. ARCO ──
   _Section(
-    heading: '7. Tus derechos (ARCO)',
+    heading: '7. Derechos ARCO',
     body:
-        'Conforme a la LFPDPPP tienes derecho a acceder, rectificar, cancelar u '
-        'oponerte al tratamiento de tus datos. Envia solicitud a '
-        'soporte@beautycita.com con asunto "Derechos ARCO". '
-        'Respondemos en maximo 20 dias habiles.',
+        'Conforme a los articulos 28 al 35 de la LFPDPPP, usted tiene '
+        'derecho a:\n\n'
+        'A) ACCESO: conocer que datos personales tenemos y como los tratamos.\n'
+        'R) RECTIFICACION: corregir datos inexactos o incompletos.\n'
+        'C) CANCELACION: solicitar la eliminacion de sus datos.\n'
+        'O) OPOSICION: oponerse al tratamiento para finalidades especificas.\n\n'
+        'PROCEDIMIENTO:\n'
+        '1. Envie solicitud a legal@beautycita.com con asunto "Derechos ARCO".\n'
+        '2. Incluya: nombre completo, nombre de usuario en BeautyCita, '
+        'descripcion clara del derecho que desea ejercer, y correo '
+        'electronico para notificaciones.\n'
+        '3. Si solicita rectificacion, adjunte documentacion de soporte.\n'
+        '4. Recibiremos su solicitud y responderemos sobre su procedencia '
+        'en un plazo maximo de 20 dias habiles contados desde la recepcion.\n'
+        '5. Si la solicitud es procedente, la haremos efectiva dentro de '
+        'los 15 dias habiles siguientes a la respuesta.\n'
+        '6. Los plazos pueden ampliarse una sola vez por un periodo igual, '
+        'previa notificacion justificada.\n\n'
+        'Alternativamente, puede ejercer su derecho de cancelacion '
+        'directamente desde Ajustes > Eliminar cuenta dentro de la app.',
   ),
+
+  // ── 8. Revocacion de consentimiento ──
   _Section(
-    heading: '8. Menores',
+    heading: '8. Revocacion del consentimiento',
     body:
-        'La app no esta dirigida a menores de 16 anos. Si descubrimos datos '
-        'de un menor, los eliminaremos de inmediato.',
+        'Usted puede revocar su consentimiento para el tratamiento de sus '
+        'datos en cualquier momento, sin efectos retroactivos, enviando '
+        'solicitud a legal@beautycita.com con asunto "Revocacion de '
+        'consentimiento".\n\n'
+        'La revocacion del consentimiento para finalidades primarias '
+        'implicara la imposibilidad de seguir prestando el servicio, por '
+        'lo que su cuenta sera cancelada.\n\n'
+        'La revocacion para finalidades secundarias no afecta su acceso '
+        'al servicio.\n\n'
+        'Responderemos en un plazo maximo de 20 dias habiles.',
   ),
+
+  // ── 9. Limitacion de uso ──
   _Section(
-    heading: '9. Cambios',
+    heading: '9. Opciones para limitar el uso o divulgacion',
     body:
-        'Podemos actualizar este aviso. Te notificaremos de cambios significativos '
-        'dentro de la app.',
+        'Ademas de los derechos ARCO, usted puede:\n\n'
+        '• Desactivar notificaciones push desde la configuracion de su '
+        'dispositivo o desde Ajustes dentro de la app.\n'
+        '• Revocar el permiso de ubicacion en cualquier momento desde la '
+        'configuracion de su dispositivo.\n'
+        '• Solicitar la exclusion de comunicaciones promocionales enviando '
+        'correo a legal@beautycita.com con asunto "No promociones".\n'
+        '• Eliminar fotografias del estudio virtual desde la seccion '
+        'correspondiente dentro de la app.',
+  ),
+
+  // ── 10. Seguridad ──
+  _Section(
+    heading: '10. Medidas de seguridad',
+    body:
+        'Implementamos medidas de seguridad administrativas, tecnicas y '
+        'fisicas para proteger sus datos:\n\n'
+        '• Cifrado TLS/HTTPS en todas las comunicaciones.\n'
+        '• Control de acceso por roles (Row Level Security) a nivel de '
+        'base de datos.\n'
+        '• Autenticacion JWT con tokens de sesion.\n'
+        '• Certificate pinning para conexiones a beautycita.com y stripe.com.\n'
+        '• Pagos delegados a procesadores certificados PCI-DSS Nivel 1.\n'
+        '• Respaldos diarios cifrados con almacenamiento redundante.\n'
+        '• Firewall (UFW), Fail2ban, y monitoreo continuo del servidor.\n'
+        '• Ofuscacion de codigo R8 en la aplicacion movil.\n'
+        '• Datos biometricos procesados exclusivamente en hardware seguro '
+        'del dispositivo (nunca transmitidos).\n\n'
+        'En caso de vulneracion de seguridad que afecte significativamente '
+        'sus derechos patrimoniales o morales, le notificaremos de forma '
+        'inmediata por los medios disponibles (notificacion en la app y '
+        'correo electronico) para que pueda tomar las medidas necesarias '
+        'para la defensa de sus intereses, conforme al articulo 20 de la '
+        'LFPDPPP.',
+  ),
+
+  // ── 11. Periodos de retencion ──
+  _Section(
+    heading: '11. Periodos de retencion',
+    body:
+        'Conservamos sus datos personales durante los siguientes periodos:\n\n'
+        '• Datos de cuenta: mientras su cuenta este activa. Tras solicitar '
+        'eliminacion, los datos se borran en un plazo de 30 dias.\n'
+        '• Historial de reservas: 5 anos desde la ultima transaccion '
+        '(obligacion fiscal, Art. 30 Codigo Fiscal de la Federacion).\n'
+        '• Datos fiscales de proveedores: 5 anos (obligacion fiscal).\n'
+        '• Registros de retenciones: 5 anos (obligacion fiscal).\n'
+        '• Fotografias del estudio virtual: hasta que usted las elimine '
+        'o cierre su cuenta.\n'
+        '• Datos tecnicos y de uso: 12 meses para analisis y mejora, '
+        'despues se anonimizan.\n'
+        '• Registros de soporte (chats): 2 anos.\n\n'
+        'Al cumplirse los periodos de retencion, los datos se eliminan '
+        'de forma segura o se anonimizan irreversiblemente.',
+  ),
+
+  // ── 12. Decisiones automatizadas ──
+  _Section(
+    heading: '12. Decisiones automatizadas',
+    body:
+        'BeautyCita utiliza algoritmos de inteligencia artificial para:\n\n'
+        '• Seleccionar y ordenar los tres mejores salones para su servicio '
+        'solicitado (motor de recomendacion).\n'
+        '• Inferir el horario preferido de su cita basandose en el dia, '
+        'hora actual, tipo de servicio e historial.\n'
+        '• Generar transformaciones de imagen en el estudio virtual.\n'
+        '• Proveer soporte automatizado via el asistente Eros.\n\n'
+        'Ninguna de estas decisiones produce efectos juridicos adversos '
+        'ni le afecta significativamente. Usted siempre confirma '
+        'manualmente la reserva antes de que se procese.\n\n'
+        'Puede solicitar informacion sobre la logica de estas decisiones '
+        'enviando correo a legal@beautycita.com.',
+  ),
+
+  // ── 13. Menores ──
+  _Section(
+    heading: '13. Menores de edad',
+    body:
+        'BeautyCita no esta dirigida a menores de 16 anos y no recopilamos '
+        'intencionalmente datos de menores. Si detectamos que un menor de '
+        '16 anos ha proporcionado datos personales, los eliminaremos de '
+        'inmediato y cancelaremos la cuenta correspondiente.\n\n'
+        'Los mayores de 16 y menores de 18 deben contar con el '
+        'consentimiento de su padre, madre o tutor.',
+  ),
+
+  // ── 14. Quejas ante el INAI ──
+  _Section(
+    heading: '14. Derecho a presentar queja ante el INAI',
+    body:
+        'Si usted considera que su derecho a la proteccion de datos '
+        'personales ha sido vulnerado, tiene derecho a acudir al '
+        'Instituto Nacional de Transparencia, Acceso a la Informacion '
+        'y Proteccion de Datos Personales (INAI) para hacer valer sus '
+        'derechos.\n\n'
+        'Sitio web: www.inai.org.mx\n'
+        'Telefono ATENEA: 800-835-4324',
+  ),
+
+  // ── 15. Cambios al aviso ──
+  _Section(
+    heading: '15. Modificaciones al aviso de privacidad',
+    body:
+        'Nos reservamos el derecho de modificar este aviso de privacidad '
+        'en cualquier momento. Cualquier cambio sustancial sera notificado '
+        'mediante notificacion push dentro de la aplicacion y se publicara '
+        'la version actualizada en esta seccion con la nueva fecha de '
+        'actualizacion.\n\n'
+        'El uso continuado de BeautyCita despues de la notificacion de '
+        'cambios constituye aceptacion del aviso actualizado.',
+  ),
+
+  // ── 16. Consentimiento ──
+  _Section(
+    heading: '16. Consentimiento',
+    body:
+        'Al registrarse en BeautyCita y aceptar el presente Aviso de '
+        'Privacidad, usted otorga su consentimiento para el tratamiento '
+        'de sus datos personales conforme a los terminos aqui descritos.\n\n'
+        'Para datos sensibles (fotografias con rasgos fisicos), su '
+        'consentimiento expreso se obtiene al momento de utilizar la '
+        'funcion de estudio virtual, mediante confirmacion explicita '
+        'en pantalla antes del procesamiento.\n\n'
+        'Fecha de ultima actualizacion: 10 de marzo de 2026.',
   ),
 ];
 
