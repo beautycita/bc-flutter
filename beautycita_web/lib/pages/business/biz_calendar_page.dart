@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:beautycita_core/supabase.dart';
-import 'package:go_router/go_router.dart';
+
 
 import '../../config/breakpoints.dart';
 import '../../data/demo_data.dart';
@@ -731,28 +733,12 @@ class _HorizontalDayViewState extends ConsumerState<_HorizontalDayView> {
   void _showPhoneVerificationGate(BuildContext context) {
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Verifica tu WhatsApp'),
-        content: const Text(
-          'Para experimentar la reprogramacion en vivo, necesitamos verificar '
-          'tu numero de WhatsApp.\n\n'
-          'Recibiras los mismos mensajes que recibirian tu estilista y tu cliente.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Ahora no'),
-          ),
-          FilledButton(
-            onPressed: () {
-              Navigator.of(ctx).pop();
-              // Navigate to phone verification
-              GoRouter.of(context).go('/auth/verify');
-            },
-            child: const Text('Verificar'),
-          ),
-        ],
+      barrierDismissible: true,
+      builder: (ctx) => _DemoPhoneVerifyDialog(
+        onVerified: () {
+          // Refresh the phone verified provider so drag unlocks
+          ref.invalidate(demoPhoneVerifiedProvider);
+        },
       ),
     );
   }
@@ -2001,6 +1987,278 @@ class _PulsingTooltipState extends State<_PulsingTooltip>
           ),
         ),
       ),
+    );
+  }
+}
+
+// ── Inline phone verification dialog for demo mode ──────────────────────────
+
+class _DemoPhoneVerifyDialog extends StatefulWidget {
+  const _DemoPhoneVerifyDialog({required this.onVerified});
+  final VoidCallback onVerified;
+
+  @override
+  State<_DemoPhoneVerifyDialog> createState() => _DemoPhoneVerifyDialogState();
+}
+
+class _DemoPhoneVerifyDialogState extends State<_DemoPhoneVerifyDialog> {
+  final _phoneController = TextEditingController();
+  final _otpController = TextEditingController();
+  bool _codeSent = false;
+  bool _isLoading = false;
+  String? _error;
+  String? _channel;
+  int _resendCountdown = 0;
+  Timer? _timer;
+
+  @override
+  void dispose() {
+    _phoneController.dispose();
+    _otpController.dispose();
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _startResendTimer() {
+    _resendCountdown = 60;
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted) {
+        t.cancel();
+        return;
+      }
+      setState(() {
+        _resendCountdown--;
+        if (_resendCountdown <= 0) t.cancel();
+      });
+    });
+  }
+
+  /// Ensure we have an authenticated session (anonymous if needed).
+  Future<bool> _ensureAuth() async {
+    final user = BCSupabase.client.auth.currentUser;
+    if (user != null) return true;
+    try {
+      final res = await BCSupabase.client.auth.signInAnonymously();
+      return res.user != null;
+    } catch (e) {
+      debugPrint('[DemoVerify] Anonymous sign-in failed: $e');
+      return false;
+    }
+  }
+
+  Future<void> _sendCode() async {
+    final phone = _phoneController.text.trim();
+    if (phone.isEmpty || phone.length < 10) {
+      setState(() => _error = 'Ingresa un numero valido de 10 digitos.');
+      return;
+    }
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    // Ensure authenticated
+    if (!await _ensureAuth()) {
+      setState(() {
+        _error = 'No se pudo iniciar sesion. Intenta de nuevo.';
+        _isLoading = false;
+      });
+      return;
+    }
+
+    try {
+      final response = await BCSupabase.client.functions.invoke(
+        'phone-verify',
+        body: {
+          'action': 'send-code',
+          'phone': '+52$phone',
+        },
+      );
+      final data = response.data as Map<String, dynamic>?;
+      if (data?['sent'] == true) {
+        setState(() {
+          _codeSent = true;
+          _channel = data?['channel'] as String?;
+          _isLoading = false;
+        });
+        _startResendTimer();
+      } else {
+        setState(() {
+          _error = data?['error'] as String? ??
+              'No se pudo enviar el codigo. Intenta de nuevo.';
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _error = 'No se pudo enviar el codigo. Intenta de nuevo.';
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _verifyCode() async {
+    final code = _otpController.text.trim();
+    if (code.length != 6) {
+      setState(() => _error = 'Ingresa el codigo de 6 digitos.');
+      return;
+    }
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+    try {
+      final response = await BCSupabase.client.functions.invoke(
+        'phone-verify',
+        body: {
+          'action': 'verify-code',
+          'phone': '+52${_phoneController.text.trim()}',
+          'code': code,
+        },
+      );
+      final data = response.data as Map<String, dynamic>?;
+      if (data?['verified'] == true) {
+        if (!mounted) return;
+        widget.onVerified();
+        Navigator.of(context).pop();
+      } else {
+        setState(() {
+          _error = data?['error'] as String? ?? 'Codigo incorrecto.';
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _error = 'Error al verificar. Intenta de nuevo.';
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: const Text('Verifica tu WhatsApp'),
+      content: SizedBox(
+        width: 340,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              _codeSent
+                  ? (_channel == 'whatsapp'
+                      ? 'Enviamos tu codigo por WhatsApp.'
+                      : 'Enviamos tu codigo por SMS.')
+                  : 'Para experimentar la reprogramacion en vivo, '
+                      'necesitamos verificar tu numero.\n\n'
+                      'Recibiras los mismos mensajes que recibirian '
+                      'tu estilista y tu cliente.',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Phone input
+            TextFormField(
+              controller: _phoneController,
+              keyboardType: TextInputType.phone,
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(10),
+              ],
+              enabled: !_codeSent && !_isLoading,
+              decoration: const InputDecoration(
+                labelText: 'Numero de telefono',
+                prefixIcon: Icon(Icons.phone_outlined),
+                prefixText: '+52 ',
+                hintText: '3221234567',
+                isDense: true,
+              ),
+              onFieldSubmitted: _codeSent ? null : (_) => _sendCode(),
+            ),
+            const SizedBox(height: 12),
+
+            if (!_codeSent)
+              FilledButton(
+                onPressed: _isLoading ? null : _sendCode,
+                child: _isLoading
+                    ? const SizedBox(
+                        height: 18,
+                        width: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Text('Enviar codigo'),
+              ),
+
+            if (_codeSent) ...[
+              TextFormField(
+                controller: _otpController,
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(6),
+                ],
+                textAlign: TextAlign.center,
+                style: theme.textTheme.headlineSmall?.copyWith(letterSpacing: 12),
+                decoration: const InputDecoration(
+                  labelText: 'Codigo de 6 digitos',
+                  prefixIcon: Icon(Icons.pin_outlined),
+                  isDense: true,
+                ),
+                onFieldSubmitted: (_) => _verifyCode(),
+              ),
+              const SizedBox(height: 12),
+              FilledButton(
+                onPressed: _isLoading ? null : _verifyCode,
+                child: _isLoading
+                    ? const SizedBox(
+                        height: 18,
+                        width: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Text('Verificar'),
+              ),
+              const SizedBox(height: 8),
+              if (_resendCountdown > 0)
+                Text(
+                  'Reenviar en $_resendCountdown s',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                  ),
+                  textAlign: TextAlign.center,
+                )
+              else
+                TextButton(
+                  onPressed: _isLoading ? null : _sendCode,
+                  child: const Text('Reenviar codigo'),
+                ),
+            ],
+
+            if (_error != null) ...[
+              const SizedBox(height: 12),
+              Text(
+                _error!,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.error,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Ahora no'),
+        ),
+      ],
     );
   }
 }
