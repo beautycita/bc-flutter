@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:beautycita_core/supabase.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../config/breakpoints.dart';
+import '../../data/demo_data.dart';
 import '../../providers/business_portal_provider.dart';
 import '../../providers/demo_providers.dart';
 
@@ -501,6 +503,7 @@ class _HorizontalDayViewState extends ConsumerState<_HorizontalDayView> {
   bool _dragValid = false;
   bool _isDragging = false;
   final GlobalKey _timelineKey = GlobalKey();
+  bool _hasCompletedDemoDrag = false;
 
   @override
   void initState() {
@@ -584,6 +587,13 @@ class _HorizontalDayViewState extends ConsumerState<_HorizontalDayView> {
 
   /// Execute the reschedule after a valid drop.
   Future<void> _executeReschedule(Map<String, dynamic> appt, DateTime newStart, String newStaffId, List<Map<String, dynamic>> allStaff) async {
+    // Demo mode: skip DB write, send WhatsApp demo messages, revert after 60s
+    final isDemo = ref.read(isDemoProvider);
+    if (isDemo) {
+      await _executeDemoReschedule(appt, newStart, newStaffId, allStaff);
+      return;
+    }
+
     final id = appt['id'] as String?;
     if (id == null) return;
 
@@ -640,6 +650,113 @@ class _HorizontalDayViewState extends ConsumerState<_HorizontalDayView> {
     }
   }
 
+  Future<void> _executeDemoReschedule(Map<String, dynamic> appt, DateTime newStart, String newStaffId, List<Map<String, dynamic>> allStaff) async {
+    final id = appt['id'] as String;
+    final duration = (appt['duration_minutes'] as num?)?.toInt() ?? 60;
+    final newEnd = newStart.add(Duration(minutes: duration));
+
+    // Save original values for revert
+    final oldStartsAt = appt['starts_at'] as String;
+    final oldEndsAt = appt['ends_at'] as String;
+    final oldStaffId = appt['staff_id'] as String;
+
+    // Find the staff member
+    final newStaffMember = allStaff.firstWhere(
+      (s) => s['id'] == newStaffId,
+      orElse: () => <String, dynamic>{},
+    );
+    final newStaffFirst = newStaffMember['first_name'] as String? ?? '';
+    final newStaffLast = newStaffMember['last_name'] as String? ?? '';
+
+    // Locally update appointment in DemoData (in-memory only)
+    final appts = DemoData.appointments;
+    final idx = appts.indexWhere((a) => a['id'] == id);
+    if (idx != -1) {
+      appts[idx] = {
+        ...appts[idx],
+        'starts_at': newStart.toIso8601String(),
+        'ends_at': newEnd.toIso8601String(),
+        'staff_id': newStaffId,
+        'staff': {'first_name': newStaffFirst, 'last_name': newStaffLast},
+      };
+    }
+
+    // Refresh calendar UI
+    ref.invalidate(businessAppointmentsProvider);
+
+    // Dismiss pulsing tooltip
+    if (mounted) setState(() => _hasCompletedDemoDrag = true);
+
+    // Call demo-reschedule edge function (fire-and-forget for WhatsApp messages)
+    try {
+      await BCSupabase.client.functions.invoke('demo-reschedule', body: {
+        'service_name': appt['service_name'] ?? 'Servicio',
+        'client_name': appt['customer_name'] ?? 'Cliente',
+        'staff_name': '$newStaffFirst $newStaffLast'.trim(),
+        'salon_name': 'Salon de Vallarta',
+        'new_start': newStart.toIso8601String(),
+        'salon_phone': '+52 322 142 9800',
+      });
+    } catch (e) {
+      debugPrint('[DemoReschedule] Edge function error: $e');
+    }
+
+    // Show success feedback
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Mensajes enviados a tu WhatsApp'),
+          backgroundColor: Color(0xFF9333ea),
+          behavior: SnackBarBehavior.floating,
+          duration: Duration(seconds: 4),
+        ),
+      );
+    }
+
+    // Revert after 60 seconds
+    Future.delayed(const Duration(seconds: 60), () {
+      if (!mounted) return;
+      final revertIdx = DemoData.appointments.indexWhere((a) => a['id'] == id);
+      if (revertIdx == -1) return;
+      DemoData.appointments[revertIdx] = {
+        ...DemoData.appointments[revertIdx],
+        'starts_at': oldStartsAt,
+        'ends_at': oldEndsAt,
+        'staff_id': oldStaffId,
+      };
+      ref.invalidate(businessAppointmentsProvider);
+    });
+  }
+
+  void _showPhoneVerificationGate(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Verifica tu WhatsApp'),
+        content: const Text(
+          'Para experimentar la reprogramacion en vivo, necesitamos verificar '
+          'tu numero de WhatsApp.\n\n'
+          'Recibiras los mismos mensajes que recibirian tu estilista y tu cliente.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Ahora no'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              // Navigate to phone verification
+              GoRouter.of(context).go('/auth/verify');
+            },
+            child: const Text('Verificar'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -674,6 +791,8 @@ class _HorizontalDayViewState extends ConsumerState<_HorizontalDayView> {
         }
 
         final isDemo = ref.watch(isDemoProvider);
+        final phoneVerifiedAsync = ref.watch(demoPhoneVerifiedProvider);
+        final demoPhoneVerified = isDemo && (phoneVerifiedAsync.valueOrNull ?? false);
         final staffServices = staffServicesAsync.valueOrNull ?? <String, Set<String>>{};
 
         return apptsAsync.when(
@@ -813,8 +932,13 @@ class _HorizontalDayViewState extends ConsumerState<_HorizontalDayView> {
                                     onTapAppt: (appt) => ref.read(selectedAppointmentProvider.notifier).state = appt,
                                     isDragSource: _isDragging && _dragAppt?['staff_id'] == lane.id,
                                     dragApptId: _dragAppt?['id'] as String?,
-                                    enableDrag: !isDemo,
+                                    enableDrag: !isDemo || demoPhoneVerified,
                                     onDragStart: (appt, globalPos) {
+                                      // Demo: show verification gate if phone not verified
+                                      if (isDemo && !demoPhoneVerified) {
+                                        _showPhoneVerificationGate(context);
+                                        return;
+                                      }
                                       final renderBox = _timelineKey.currentContext?.findRenderObject() as RenderBox?;
                                       if (renderBox == null) return;
                                       final localPos = renderBox.globalToLocal(globalPos);
@@ -909,6 +1033,16 @@ class _HorizontalDayViewState extends ConsumerState<_HorizontalDayView> {
                                 );
                               }(),
                             ],
+                            // Demo pulsing tooltip
+                            if (isDemo && demoPhoneVerified && !_hasCompletedDemoDrag)
+                              Positioned(
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                child: Center(
+                                  child: _PulsingTooltip(text: 'Arrastra una cita para reprogramar'),
+                                ),
+                              ),
                           ],
                         ),
                       ),
@@ -1807,6 +1941,65 @@ class _DetailRow extends StatelessWidget {
           ),
           Expanded(child: Text(value, style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w500))),
         ],
+      ),
+    );
+  }
+}
+
+class _PulsingTooltip extends StatefulWidget {
+  const _PulsingTooltip({required this.text});
+  final String text;
+
+  @override
+  State<_PulsingTooltip> createState() => _PulsingTooltipState();
+}
+
+class _PulsingTooltipState extends State<_PulsingTooltip>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: Tween<double>(begin: 0.6, end: 1.0).animate(_ctrl),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFFec4899), Color(0xFF9333ea), Color(0xFF3b82f6)],
+          ),
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF9333ea).withValues(alpha: 0.3),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Text(
+          widget.text,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ),
     );
   }
