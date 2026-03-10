@@ -37,6 +37,12 @@ import 'package:beautycita/screens/post_registration_screen.dart';
 import 'package:beautycita/screens/feed/feed_screen.dart';
 import 'package:beautycita/screens/feed/saved_screen.dart';
 import 'package:beautycita/screens/rp/rp_shell_screen.dart';
+import 'package:beautycita/screens/about_screen.dart';
+import 'package:beautycita/screens/contact_screen.dart';
+import 'package:beautycita/screens/help_screen.dart';
+import 'package:beautycita/screens/press_screen.dart';
+import 'package:beautycita/screens/system_status_screen.dart';
+import 'package:beautycita/screens/report_problem_screen.dart';
 
 
 class AppRoutes {
@@ -79,6 +85,12 @@ class AppRoutes {
   static const String feed = '/feed';
   static const String feedSaved = '/feed/saved';
   static const String rp = '/rp';
+  static const String about = '/about';
+  static const String contact = '/contact';
+  static const String help = '/help';
+  static const String press = '/press';
+  static const String systemStatus = '/system-status';
+  static const String reportProblem = '/report-problem';
 
 
   static final GoRouter router = GoRouter(
@@ -698,6 +710,85 @@ class AppRoutes {
               position: animation.drive(tween),
               child: child,
             );
+          },
+        ),
+      ),
+      // ── Informational screens (built, not yet linked in navigation) ──
+      GoRoute(
+        path: about,
+        name: 'about',
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const AboutScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
+                .chain(CurveTween(curve: Curves.easeInOutCubic));
+            return SlideTransition(position: animation.drive(tween), child: child);
+          },
+        ),
+      ),
+      GoRoute(
+        path: contact,
+        name: 'contact',
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const ContactScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
+                .chain(CurveTween(curve: Curves.easeInOutCubic));
+            return SlideTransition(position: animation.drive(tween), child: child);
+          },
+        ),
+      ),
+      GoRoute(
+        path: help,
+        name: 'help',
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const HelpScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
+                .chain(CurveTween(curve: Curves.easeInOutCubic));
+            return SlideTransition(position: animation.drive(tween), child: child);
+          },
+        ),
+      ),
+      GoRoute(
+        path: press,
+        name: 'press',
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const PressScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
+                .chain(CurveTween(curve: Curves.easeInOutCubic));
+            return SlideTransition(position: animation.drive(tween), child: child);
+          },
+        ),
+      ),
+      GoRoute(
+        path: systemStatus,
+        name: 'system-status',
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const SystemStatusScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
+                .chain(CurveTween(curve: Curves.easeInOutCubic));
+            return SlideTransition(position: animation.drive(tween), child: child);
+          },
+        ),
+      ),
+      GoRoute(
+        path: reportProblem,
+        name: 'report-problem',
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const ReportProblemScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            final tween = Tween(begin: const Offset(0.0, 1.0), end: Offset.zero)
+                .chain(CurveTween(curve: Curves.easeInOutCubic));
+            return SlideTransition(position: animation.drive(tween), child: child);
           },
         ),
       ),

@@ -252,68 +252,10 @@ serve(async (req) => {
       }
     }
 
-    // ==================================================================
-    // STEP 3b — Discovered Salon Fallback (when < 3 registered)
-    // ==================================================================
-    let discoveredResults: unknown[] = [];
-    const registeredCount = candidates.length;
-
-    if (registeredCount < 3 && !business_id) {
-      const needed = 3 - registeredCount;
-      const discoveredRadius = baseRadius * (Number(profile.radius_max_multiplier) || 3);
-      const discovered = await queryDiscoveredCandidates(
-        supabase,
-        profile.category,
-        location,
-        discoveredRadius,
-      );
-
-      // Build discovered result cards (no staff/slots — contact via WhatsApp)
-      discoveredResults = discovered.slice(0, needed).map((d, i) => ({
-        rank: registeredCount + i + 1,
-        score: 0,
-        is_discovered: true,
-        business: {
-          id: d.salon_id,
-          name: d.business_name,
-          photo_url: d.feature_image_url,
-          address: d.location_address,
-          lat: d.latitude,
-          lng: d.longitude,
-          whatsapp: d.whatsapp || d.phone,
-          rating: d.rating_average ? Number(d.rating_average) : null,
-          total_reviews: d.rating_count ?? 0,
-          website: d.website,
-          instagram: d.instagram_url,
-          working_hours: d.working_hours,
-          google_category: d.categories,
-        },
-        staff: null,
-        service: {
-          id: null,
-          name: profile.display_name_es ?? service_type,
-          price: null,
-          duration_minutes: Number(profile.typical_duration_min) || 60,
-          currency: "MXN",
-        },
-        slot: null,
-        transport: fallbackTransport(d.distance_m, transport_mode),
-        review_snippet: {
-          text: d.rating_average
-            ? `${d.rating_average} estrellas en Google (${d.rating_count ?? 0} reseñas)`
-            : "Salón descubierto — contacta para más info",
-          author_name: null,
-          days_ago: null,
-          rating: d.rating_average ? Number(d.rating_average) : null,
-          quality_score: null,
-        },
-        badges: ["discovered", "contact_whatsapp"],
-        area_avg_price: 0,
-        scoring_breakdown: null,
-      }));
-    }
-
-    if (candidates.length === 0 && discoveredResults.length === 0) {
+    // No registered candidates → return empty results.
+    // Client handles this by showing the WhatsApp invite screen
+    // with nearby discovered salons (separate flow via outreach-discovered-salon).
+    if (candidates.length === 0) {
       return json({
         booking_window: windowSummary(window),
         results: [],
@@ -344,12 +286,9 @@ serve(async (req) => {
       registeredResults = await buildResponse(supabase, top3, profile, service_type);
     }
 
-    // Merge: registered first, then discovered to fill up to 3
-    const allResults = [...registeredResults, ...discoveredResults].slice(0, 3);
-
     return json({
       booking_window: windowSummary(window),
-      results: allResults,
+      results: registeredResults,
     });
   } catch (err) {
     console.error("curate-results error:", err);
