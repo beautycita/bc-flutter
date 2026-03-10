@@ -1,10 +1,62 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/constants.dart';
 import '../config/theme_extension.dart';
 
-class SystemStatusScreen extends StatelessWidget {
+// ─────────────────────────────────────────────────────────────
+// System Status Screen — live monitoring via system-health edge function
+// ─────────────────────────────────────────────────────────────
+
+class SystemStatusScreen extends ConsumerStatefulWidget {
   const SystemStatusScreen({super.key});
+
+  @override
+  ConsumerState<SystemStatusScreen> createState() => _SystemStatusScreenState();
+}
+
+class _SystemStatusScreenState extends ConsumerState<SystemStatusScreen> {
+  bool _loading = true;
+  bool _error = false;
+  String _overall = 'unknown';
+  Map<String, dynamic> _services = {};
+  String? _checkedAt;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchHealth();
+  }
+
+  Future<void> _fetchHealth() async {
+    if (!mounted) return;
+    setState(() {
+      _loading = true;
+      _error = false;
+    });
+
+    try {
+      final response = await Supabase.instance.client.functions
+          .invoke('system-health');
+      final data = response.data as Map<String, dynamic>;
+
+      if (!mounted) return;
+      setState(() {
+        _overall = (data['overall'] as String?) ?? 'unknown';
+        _services =
+            (data['services'] as Map<String, dynamic>?) ?? {};
+        _checkedAt = data['checked_at'] as String?;
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _error = true;
+        _loading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -20,143 +72,185 @@ class SystemStatusScreen extends StatelessWidget {
         ),
         centerTitle: false,
       ),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppConstants.screenPaddingHorizontal,
-          vertical: AppConstants.paddingMD,
+      body: RefreshIndicator(
+        onRefresh: _fetchHealth,
+        color: colorScheme.primary,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppConstants.screenPaddingHorizontal,
+            vertical: AppConstants.paddingMD,
+          ),
+          children: [
+            // ── Hero Status Card ──
+            if (_loading)
+              _ShimmerCard(ext: ext, height: 140)
+            else if (_error)
+              _ErrorCard(
+                colorScheme: colorScheme,
+                onRetry: _fetchHealth,
+              )
+            else
+              _HeroCard(overall: _overall, ext: ext),
+
+            const SizedBox(height: AppConstants.paddingLG),
+
+            // ── Services Section Header ──
+            if (!_error) ...[
+              Padding(
+                padding: const EdgeInsets.only(
+                    left: 2, bottom: AppConstants.paddingSM),
+                child: Text(
+                  'SERVICIOS',
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.4,
+                    color: colorScheme.primary,
+                  ),
+                ),
+              ),
+
+              // ── Service Cards ──
+              if (_loading)
+                ...List.generate(
+                  5,
+                  (_) => Padding(
+                    padding:
+                        const EdgeInsets.only(bottom: AppConstants.paddingSM),
+                    child: _ShimmerCard(ext: ext, height: 72),
+                  ),
+                )
+              else
+                ..._services.entries.map(
+                  (entry) => Padding(
+                    padding:
+                        const EdgeInsets.only(bottom: AppConstants.paddingSM),
+                    child: _ServiceCard(
+                      name: entry.key,
+                      status: _parseStatus(entry.value),
+                      uptime: _parseUptime(entry.value),
+                      ext: ext,
+                    ),
+                  ),
+                ),
+            ],
+
+            const SizedBox(height: AppConstants.paddingLG),
+
+            // ── Last checked timestamp ──
+            if (_checkedAt != null && !_loading && !_error)
+              Center(
+                child: Text(
+                  'Ultima verificacion: ${_formatTimestamp(_checkedAt!)}',
+                  style: GoogleFonts.nunito(
+                    fontSize: 12,
+                    color: colorScheme.onSurface.withValues(alpha: 0.45),
+                  ),
+                ),
+              ),
+
+            const SizedBox(height: AppConstants.paddingSM),
+
+            // ── Footer ──
+            Center(
+              child: Text(
+                'Para reportar un problema, contacta\nsoporte@beautycita.com',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.nunito(
+                  fontSize: 13,
+                  color: colorScheme.onSurface.withValues(alpha: 0.45),
+                  height: 1.6,
+                ),
+              ),
+            ),
+
+            const SizedBox(height: AppConstants.paddingLG),
+          ],
         ),
-        children: [
-          // ── Hero Section ──
-          _HeroCard(ext: ext),
-
-          const SizedBox(height: AppConstants.paddingMD),
-
-          // ── Overall Status Banner ──
-          _OverallStatusBanner(colorScheme: colorScheme),
-
-          const SizedBox(height: AppConstants.paddingLG),
-
-          // ── Services Section Header ──
-          Padding(
-            padding: const EdgeInsets.only(left: 2, bottom: AppConstants.paddingSM),
-            child: Text(
-              'SERVICIOS',
-              style: GoogleFonts.poppins(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.4,
-                color: colorScheme.primary,
-              ),
-            ),
-          ),
-
-          // ── Service Cards ──
-          ..._services(ext).map(
-            (s) => Padding(
-              padding: const EdgeInsets.only(bottom: AppConstants.paddingSM),
-              child: _ServiceCard(service: s, ext: ext),
-            ),
-          ),
-
-          const SizedBox(height: AppConstants.paddingLG),
-
-          // ── Incident History Section ──
-          Padding(
-            padding: const EdgeInsets.only(left: 2, bottom: AppConstants.paddingSM),
-            child: Text(
-              'HISTORIAL DE INCIDENTES',
-              style: GoogleFonts.poppins(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.4,
-                color: colorScheme.primary,
-              ),
-            ),
-          ),
-
-          _IncidentHistoryCard(colorScheme: colorScheme),
-
-          const SizedBox(height: AppConstants.paddingXL),
-
-          // ── Footer ──
-          Center(
-            child: Text(
-              'Para reportar un problema, contacta\nsoporte@beautycita.com',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.nunito(
-                fontSize: 13,
-                color: colorScheme.onSurface.withValues(alpha: 0.45),
-                height: 1.6,
-              ),
-            ),
-          ),
-
-          const SizedBox(height: AppConstants.paddingLG),
-        ],
       ),
     );
   }
 
-  List<_ServiceData> _services(BCThemeExtension ext) => [
-        _ServiceData(
-          icon: Icons.apps_rounded,
-          name: 'Plataforma Principal',
-          description: 'Aplicacion movil y servicios centrales',
-        ),
-        _ServiceData(
-          icon: Icons.api_rounded,
-          name: 'Servicios API',
-          description: 'Endpoints REST y funciones edge',
-        ),
-        _ServiceData(
-          icon: Icons.calendar_month_rounded,
-          name: 'Sistema de Reservas',
-          description: 'Motor de reservas y disponibilidad',
-        ),
-        _ServiceData(
-          icon: Icons.payment_rounded,
-          name: 'Procesamiento de Pagos',
-          description: 'Stripe, BTCPay y pagos en efectivo',
-        ),
-        _ServiceData(
-          icon: Icons.chat_rounded,
-          name: 'Sistema de Mensajeria',
-          description: 'Chat con salones y soporte',
-        ),
-        _ServiceData(
-          icon: Icons.notifications_rounded,
-          name: 'Notificaciones',
-          description: 'Push, recordatorios y alertas',
-        ),
-        _ServiceData(
-          icon: Icons.auto_awesome_rounded,
-          name: 'Recomendaciones IA',
-          description: 'Motor inteligente de recomendaciones',
-        ),
-        _ServiceData(
-          icon: Icons.cloud_rounded,
-          name: 'Almacenamiento de Medios',
-          description: 'Imagenes, fotos y archivos (Cloudflare R2)',
-        ),
-        _ServiceData(
-          icon: Icons.security_rounded,
-          name: 'Seguridad y Autenticacion',
-          description: 'Login biometrico y sesiones',
-        ),
-      ];
+  String _parseStatus(dynamic value) {
+    if (value is Map<String, dynamic>) {
+      return (value['status'] as String?) ?? 'unknown';
+    }
+    return 'unknown';
+  }
+
+  String _parseUptime(dynamic value) {
+    if (value is Map<String, dynamic>) {
+      return (value['uptime'] as String?) ?? '';
+    }
+    return '';
+  }
+
+  String _formatTimestamp(String iso) {
+    try {
+      final dt = DateTime.parse(iso).toLocal();
+      final h = dt.hour.toString().padLeft(2, '0');
+      final m = dt.minute.toString().padLeft(2, '0');
+      final d = dt.day.toString().padLeft(2, '0');
+      final mo = dt.month.toString().padLeft(2, '0');
+      return '$d/$mo/${dt.year} $h:$m';
+    } catch (_) {
+      return iso;
+    }
+  }
 }
 
 // ─────────────────────────────────────────────────────────────
-// Hero Card
+// Hero Card — overall status
 // ─────────────────────────────────────────────────────────────
 
 class _HeroCard extends StatelessWidget {
-  const _HeroCard({required this.ext});
+  const _HeroCard({required this.overall, required this.ext});
 
+  final String overall;
   final BCThemeExtension ext;
 
   @override
   Widget build(BuildContext context) {
+    final (gradient, icon, dotColor, label) = switch (overall) {
+      'operational' => (
+          const LinearGradient(
+            colors: [Color(0xFF16A34A), Color(0xFF22C55E)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          Icons.check_circle_rounded,
+          const Color(0xFF4ADE80),
+          'Todos los sistemas operativos',
+        ),
+      'degraded' => (
+          const LinearGradient(
+            colors: [Color(0xFFD97706), Color(0xFFF59E0B)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          Icons.warning_rounded,
+          const Color(0xFFFCD34D),
+          'Algunos servicios con problemas',
+        ),
+      'down' => (
+          const LinearGradient(
+            colors: [Color(0xFFDC2626), Color(0xFFF87171)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          Icons.error_rounded,
+          const Color(0xFFFCA5A5),
+          'Problemas detectados',
+        ),
+      _ => (
+          ext.primaryGradient,
+          Icons.help_outline_rounded,
+          Colors.white70,
+          'Estado desconocido',
+        ),
+    };
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(
@@ -164,13 +258,12 @@ class _HeroCard extends StatelessWidget {
         vertical: AppConstants.paddingXL,
       ),
       decoration: BoxDecoration(
-        gradient: ext.primaryGradient,
+        gradient: gradient,
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Icon
           Container(
             width: 56,
             height: 56,
@@ -178,27 +271,24 @@ class _HeroCard extends StatelessWidget {
               color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(AppConstants.radiusSM),
             ),
-            child: const Icon(
-              Icons.monitor_heart_rounded,
+            child: Icon(
+              icon,
               color: Colors.white,
               size: AppConstants.iconSizeLG,
             ),
           ),
-
           const SizedBox(height: AppConstants.paddingMD),
-
-          // Status row
           Row(
             children: [
               Container(
                 width: 10,
                 height: 10,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF4ADE80),
+                  color: dotColor,
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF4ADE80).withValues(alpha: 0.5),
+                      color: dotColor.withValues(alpha: 0.5),
                       blurRadius: 6,
                       spreadRadius: 1,
                     ),
@@ -206,12 +296,14 @@ class _HeroCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: AppConstants.paddingSM),
-              Text(
-                'Todos los sistemas operativos',
-                style: GoogleFonts.poppins(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
+              Expanded(
+                child: Text(
+                  label,
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ],
@@ -223,70 +315,59 @@ class _HeroCard extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Overall Status Banner
+// Error Card with retry
 // ─────────────────────────────────────────────────────────────
 
-class _OverallStatusBanner extends StatelessWidget {
-  const _OverallStatusBanner({required this.colorScheme});
+class _ErrorCard extends StatelessWidget {
+  const _ErrorCard({required this.colorScheme, required this.onRetry});
 
   final ColorScheme colorScheme;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(AppConstants.paddingMD),
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppConstants.paddingLG),
       decoration: BoxDecoration(
-        color: const Color(0xFFF0FDF4),
-        border: Border.all(color: const Color(0xFFBBF7D0), width: 1),
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+        border: Border.all(
+          color: colorScheme.error.withValues(alpha: 0.3),
+          width: 1,
+        ),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Column(
         children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: const Color(0xFF22C55E).withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(AppConstants.radiusSM),
-            ),
-            child: const Icon(
-              Icons.check_circle_rounded,
-              color: Color(0xFF16A34A),
-              size: AppConstants.iconSizeMD,
+          Icon(
+            Icons.cloud_off_rounded,
+            size: AppConstants.iconSizeXL,
+            color: colorScheme.error.withValues(alpha: 0.6),
+          ),
+          const SizedBox(height: AppConstants.paddingMD),
+          Text(
+            'No se pudo verificar el estado',
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: colorScheme.onSurface,
             ),
           ),
-          const SizedBox(width: AppConstants.paddingMD),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Todos los servicios funcionan correctamente',
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF15803D),
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'Disponibilidad promedio: 99.98%',
-                  style: GoogleFonts.nunito(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF16A34A),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Actualizado hace unos momentos',
-                  style: GoogleFonts.nunito(
-                    fontSize: 12,
-                    color: const Color(0xFF4ADE80).withValues(alpha: 0.8),
-                  ),
-                ),
-              ],
+          const SizedBox(height: AppConstants.paddingSM),
+          Text(
+            'Verifica tu conexion e intenta de nuevo',
+            style: GoogleFonts.nunito(
+              fontSize: 14,
+              color: colorScheme.onSurface.withValues(alpha: 0.5),
+            ),
+          ),
+          const SizedBox(height: AppConstants.paddingMD),
+          FilledButton.icon(
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh_rounded, size: 18),
+            label: Text(
+              'Reintentar',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
             ),
           ),
         ],
@@ -296,34 +377,61 @@ class _OverallStatusBanner extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Service Data Model
-// ─────────────────────────────────────────────────────────────
-
-class _ServiceData {
-  const _ServiceData({
-    required this.icon,
-    required this.name,
-    required this.description,
-  });
-
-  final IconData icon;
-  final String name;
-  final String description;
-}
-
-// ─────────────────────────────────────────────────────────────
-// Service Card
+// Service Card — individual service row
 // ─────────────────────────────────────────────────────────────
 
 class _ServiceCard extends StatelessWidget {
-  const _ServiceCard({required this.service, required this.ext});
+  const _ServiceCard({
+    required this.name,
+    required this.status,
+    required this.uptime,
+    required this.ext,
+  });
 
-  final _ServiceData service;
+  final String name;
+  final String status;
+  final String uptime;
   final BCThemeExtension ext;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+
+    final (badgeColor, badgeBg, badgeBorder, badgeLabel, dotColor, statusIcon) =
+        switch (status) {
+      'operational' => (
+          const Color(0xFF16A34A),
+          const Color(0xFFF0FDF4),
+          const Color(0xFFBBF7D0),
+          'Operativo',
+          const Color(0xFF22C55E),
+          Icons.check_circle_outline_rounded,
+        ),
+      'degraded' => (
+          const Color(0xFFD97706),
+          const Color(0xFFFFFBEB),
+          const Color(0xFFFDE68A),
+          'Degradado',
+          const Color(0xFFF59E0B),
+          Icons.warning_amber_rounded,
+        ),
+      'down' => (
+          const Color(0xFFDC2626),
+          const Color(0xFFFEF2F2),
+          const Color(0xFFFECACA),
+          'Fuera de linea',
+          const Color(0xFFEF4444),
+          Icons.cancel_outlined,
+        ),
+      _ => (
+          const Color(0xFF6B7280),
+          const Color(0xFFF9FAFB),
+          const Color(0xFFE5E7EB),
+          'Desconocido',
+          const Color(0xFF9CA3AF),
+          Icons.help_outline_rounded,
+        ),
+    };
 
     return Container(
       padding: const EdgeInsets.symmetric(
@@ -333,10 +441,7 @@ class _ServiceCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: colorScheme.surface,
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-        border: Border.all(
-          color: ext.cardBorderColor,
-          width: 1,
-        ),
+        border: Border.all(color: ext.cardBorderColor, width: 1),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -347,64 +452,51 @@ class _ServiceCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Icon with gradient accent background
-          ShaderMask(
-            shaderCallback: (bounds) => ext.primaryGradient.createShader(bounds),
-            blendMode: BlendMode.srcIn,
-            child: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: colorScheme.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(AppConstants.radiusSM),
-              ),
-              child: Icon(
-                service.icon,
-                size: AppConstants.iconSizeMD,
-                color: colorScheme.primary,
-              ),
-            ),
-          ),
-
+          // Status icon
+          Icon(statusIcon, color: dotColor, size: AppConstants.iconSizeMD),
           const SizedBox(width: AppConstants.paddingMD),
 
-          // Name + description
+          // Name + uptime
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  service.name,
+                  name,
                   style: GoogleFonts.poppins(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: colorScheme.onSurface,
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  service.description,
-                  style: GoogleFonts.nunito(
-                    fontSize: 12,
-                    color: colorScheme.onSurface.withValues(alpha: 0.5),
-                    height: 1.3,
+                if (uptime.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    uptime.contains('ms')
+                        ? 'Respuesta: $uptime'
+                        : 'Disponibilidad 30d: $uptime%',
+                    style: GoogleFonts.nunito(
+                      fontSize: 12,
+                      color: colorScheme.onSurface.withValues(alpha: 0.5),
+                      height: 1.3,
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
           ),
 
           const SizedBox(width: AppConstants.paddingSM),
 
-          // Green status badge
+          // Status badge chip
           Container(
             padding: const EdgeInsets.symmetric(
               horizontal: AppConstants.paddingSM,
               vertical: 4,
             ),
             decoration: BoxDecoration(
-              color: const Color(0xFFF0FDF4),
-              border: Border.all(color: const Color(0xFFBBF7D0), width: 1),
+              color: badgeBg,
+              border: Border.all(color: badgeBorder, width: 1),
               borderRadius: BorderRadius.circular(AppConstants.radiusFull),
             ),
             child: Row(
@@ -413,18 +505,18 @@ class _ServiceCard extends StatelessWidget {
                 Container(
                   width: 6,
                   height: 6,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF22C55E),
+                  decoration: BoxDecoration(
+                    color: dotColor,
                     shape: BoxShape.circle,
                   ),
                 ),
                 const SizedBox(width: 5),
                 Text(
-                  'Operativo',
+                  badgeLabel,
                   style: GoogleFonts.nunito(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFF16A34A),
+                    color: badgeColor,
                   ),
                 ),
               ],
@@ -437,76 +529,67 @@ class _ServiceCard extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Incident History Card
+// Shimmer Loading Card
 // ─────────────────────────────────────────────────────────────
 
-class _IncidentHistoryCard extends StatelessWidget {
-  const _IncidentHistoryCard({required this.colorScheme});
+class _ShimmerCard extends StatefulWidget {
+  const _ShimmerCard({required this.ext, required this.height});
 
-  final ColorScheme colorScheme;
+  final BCThemeExtension ext;
+  final double height;
+
+  @override
+  State<_ShimmerCard> createState() => _ShimmerCardState();
+}
+
+class _ShimmerCardState extends State<_ShimmerCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: AppConstants.shimmerAnimation,
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppConstants.paddingMD),
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-        border: Border.all(
-          color: colorScheme.outline.withValues(alpha: 0.15),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: const Color(0xFFF0FDF4),
-              borderRadius: BorderRadius.circular(AppConstants.radiusSM),
-            ),
-            child: const Icon(
-              Icons.verified_rounded,
-              color: Color(0xFF22C55E),
-              size: AppConstants.iconSizeMD,
-            ),
-          ),
-          const SizedBox(width: AppConstants.paddingMD),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Sin incidentes recientes',
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: colorScheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Los ultimos 90 dias han sido sin interrupciones',
-                  style: GoogleFonts.nunito(
-                    fontSize: 13,
-                    color: colorScheme.onSurface.withValues(alpha: 0.5),
-                    height: 1.4,
-                  ),
-                ),
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Container(
+          height: widget.height,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+            gradient: LinearGradient(
+              begin: Alignment(-1.0 + 2.0 * _controller.value, 0),
+              end: Alignment(1.0 + 2.0 * _controller.value, 0),
+              colors: [
+                widget.ext.shimmerColor.withValues(alpha: 0.3),
+                widget.ext.shimmerColor.withValues(alpha: 0.6),
+                widget.ext.shimmerColor.withValues(alpha: 0.3),
               ],
+              stops: const [0.0, 0.5, 1.0],
+            ),
+            border: Border.all(
+              color: colorScheme.outline.withValues(alpha: 0.1),
+              width: 1,
             ),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
