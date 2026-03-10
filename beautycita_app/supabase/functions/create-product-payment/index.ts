@@ -104,8 +104,8 @@ serve(async (req) => {
       return json({ error: "Product not found" }, 404);
     }
 
-    // Verify product is in stock
-    if (product.status !== "in_stock") {
+    // Verify product is in stock (in_stock is a boolean column)
+    if (!product.in_stock) {
       return json({ error: "Product is not available" }, 400);
     }
 

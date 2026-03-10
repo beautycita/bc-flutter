@@ -4,6 +4,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { exchangeUberTokens, refreshUberTokens, getUberApiBase, getUberLoginBase } from "../_shared/uber_jwt.ts";
+import { requireFeature } from "../_shared/check-toggle.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -36,6 +37,9 @@ Deno.serve(async (req: Request) => {
   if (req.method !== "POST") {
     return json({ error: "Method not allowed" }, 405);
   }
+
+  const blocked = await requireFeature("enable_uber_integration");
+  if (blocked) return blocked;
 
   // Authenticate the calling user
   const authHeader = req.headers.get("authorization") ?? "";
@@ -235,6 +239,6 @@ Deno.serve(async (req: Request) => {
     return json({ error: `Unknown action: ${action}` }, 400);
   } catch (err) {
     console.error("link-uber error:", err);
-    return json({ error: String(err) }, 500);
+    return json({ error: "An internal error occurred" }, 500);
   }
 });

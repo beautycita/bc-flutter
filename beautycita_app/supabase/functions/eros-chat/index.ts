@@ -7,6 +7,7 @@
 // =============================================================================
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { requireFeature } from "../_shared/check-toggle.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -250,6 +251,9 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") {
     return json({ error: "Method not allowed" }, 405);
   }
+
+  const blocked = await requireFeature("enable_chat");
+  if (blocked) return blocked;
 
   try {
     const supabase = createClient(

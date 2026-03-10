@@ -142,6 +142,6 @@ Deno.serve(async (req: Request) => {
     }
   } catch (err) {
     console.error("places-proxy error:", err);
-    return json({ error: String(err) }, 500);
+    return json({ error: "An internal error occurred" }, 500);
   }
 });

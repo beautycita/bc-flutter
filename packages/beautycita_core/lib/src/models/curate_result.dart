@@ -330,7 +330,7 @@ class ReviewSnippet {
   final String text;
   final String? authorName;
   final int? daysAgo;
-  final int? rating;
+  final double? rating;
   final double? qualityScore;
 
   const ReviewSnippet({
@@ -349,7 +349,7 @@ class ReviewSnippet {
       text: json['text'] as String,
       authorName: json['author_name'] as String?,
       daysAgo: json['days_ago'] as int?,
-      rating: json['rating'] as int?,
+      rating: (json['rating'] as num?)?.toDouble(),
       qualityScore: (json['quality_score'] as num?)?.toDouble(),
     );
   }

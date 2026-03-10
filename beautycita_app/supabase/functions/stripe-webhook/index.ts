@@ -10,6 +10,7 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Stripe from "https://esm.sh/stripe@14.21.0?target=deno";
+import { requireFeature } from "../_shared/check-toggle.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -52,6 +53,9 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    const blocked = await requireFeature("enable_stripe_payments");
+    if (blocked) return blocked;
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
@@ -136,23 +140,34 @@ serve(async (req) => {
 
         // --- Product order payments (marketplace) ---
         if (metadata.payment_type === "product") {
-          const { error: orderError } = await supabase.from("orders").insert({
-            buyer_id: metadata.user_id,
-            business_id: metadata.business_id,
-            product_id: metadata.product_id,
-            product_name: metadata.product_name,
-            quantity: parseInt(metadata.quantity ?? "1"),
-            total_amount: paymentIntent.amount / 100,
-            commission_amount: (paymentIntent.application_fee_amount ?? 0) / 100,
-            stripe_payment_intent_id: paymentIntent.id,
-            status: "paid",
-            shipping_address: JSON.parse(metadata.shipping_address ?? "null"),
-          });
+          // Idempotency: skip if order already exists for this payment intent
+          const { data: existingOrder } = await supabase
+            .from("orders")
+            .select("id")
+            .eq("stripe_payment_intent_id", paymentIntent.id)
+            .maybeSingle();
 
-          if (orderError) {
-            console.error(`[STRIPE-WEBHOOK] Failed to create order: ${orderError.message}`);
+          if (existingOrder) {
+            console.log(`[STRIPE-WEBHOOK] Order already exists for PI ${paymentIntent.id}, skipping`);
           } else {
-            console.log(`[STRIPE-WEBHOOK] Product order created for PI ${paymentIntent.id}`);
+            const { error: orderError } = await supabase.from("orders").insert({
+              buyer_id: metadata.user_id,
+              business_id: metadata.business_id,
+              product_id: metadata.product_id,
+              product_name: metadata.product_name,
+              quantity: parseInt(metadata.quantity ?? "1"),
+              total_amount: paymentIntent.amount / 100,
+              commission_amount: (paymentIntent.application_fee_amount ?? 0) / 100,
+              stripe_payment_intent_id: paymentIntent.id,
+              status: "paid",
+              shipping_address: JSON.parse(metadata.shipping_address ?? "null"),
+            });
+
+            if (orderError) {
+              console.error(`[STRIPE-WEBHOOK] Failed to create order: ${orderError.message}`);
+            } else {
+              console.log(`[STRIPE-WEBHOOK] Product order created for PI ${paymentIntent.id}`);
+            }
           }
           break;
         }
@@ -192,39 +207,61 @@ serve(async (req) => {
         if (updateError) {
           console.error(`[STRIPE-WEBHOOK] Failed to update booking payment: ${updateError.message}`);
         } else {
-          // Create payment record
-          await supabase.from("payments").insert({
-            appointment_id: bookingId,
-            stripe_payment_intent_id: paymentIntent.id,
-            amount: paymentIntent.amount,
-            currency: paymentIntent.currency,
-            status: "succeeded",
-            created_at: new Date().toISOString(),
-          });
+          // Idempotency: skip payment record if one already exists for this PI + status
+          const { data: existingPayment } = await supabase
+            .from("payments")
+            .select("id")
+            .eq("stripe_payment_intent_id", paymentIntent.id)
+            .eq("status", "succeeded")
+            .maybeSingle();
+
+          if (existingPayment) {
+            console.log(`[STRIPE-WEBHOOK] Payment record already exists for PI ${paymentIntent.id}, skipping`);
+          } else {
+            await supabase.from("payments").insert({
+              appointment_id: bookingId,
+              stripe_payment_intent_id: paymentIntent.id,
+              amount: paymentIntent.amount,
+              currency: paymentIntent.currency,
+              status: "succeeded",
+              created_at: new Date().toISOString(),
+            });
+          }
 
           // Record tax withholding in ledger
           if (hasTaxWithholding) {
-            const now = new Date();
-            await supabase.from("tax_withholdings").insert({
-              appointment_id: bookingId,
-              business_id: paymentIntent.metadata.business_id,
-              payment_intent_id: paymentIntent.id,
-              payment_type: "stripe",
-              gross_amount: parseFloat(paymentIntent.metadata.full_price ?? "0"),
-              tax_base: parseFloat(paymentIntent.metadata.tax_base ?? "0"),
-              iva_portion: parseFloat(paymentIntent.metadata.iva_portion ?? "0"),
-              platform_fee: parseFloat(paymentIntent.metadata.platform_fee_amount ?? "0"),
-              isr_rate: parseFloat(paymentIntent.metadata.isr_rate ?? "0"),
-              iva_rate: parseFloat(paymentIntent.metadata.iva_rate ?? "0"),
-              isr_withheld: parseFloat(paymentIntent.metadata.isr_withheld ?? "0"),
-              iva_withheld: parseFloat(paymentIntent.metadata.iva_withheld ?? "0"),
-              provider_net: parseFloat(paymentIntent.metadata.provider_net ?? "0"),
-              provider_rfc: paymentIntent.metadata.provider_rfc || null,
-              provider_tax_residency: paymentIntent.metadata.provider_tax_residency ?? "MX",
-              period_year: now.getFullYear(),
-              period_month: now.getMonth() + 1,
-            });
-            console.log(`[STRIPE-WEBHOOK] Tax withholding recorded for booking ${bookingId}`);
+            // Idempotency: skip if tax withholding already recorded for this appointment
+            const { data: existingTax } = await supabase
+              .from("tax_withholdings")
+              .select("id")
+              .eq("appointment_id", bookingId)
+              .maybeSingle();
+
+            if (existingTax) {
+              console.log(`[STRIPE-WEBHOOK] Tax withholding already exists for booking ${bookingId}, skipping`);
+            } else {
+              const now = new Date();
+              await supabase.from("tax_withholdings").insert({
+                appointment_id: bookingId,
+                business_id: paymentIntent.metadata.business_id,
+                payment_intent_id: paymentIntent.id,
+                payment_type: "stripe",
+                gross_amount: parseFloat(paymentIntent.metadata.full_price ?? "0"),
+                tax_base: parseFloat(paymentIntent.metadata.tax_base ?? "0"),
+                iva_portion: parseFloat(paymentIntent.metadata.iva_portion ?? "0"),
+                platform_fee: parseFloat(paymentIntent.metadata.platform_fee_amount ?? "0"),
+                isr_rate: parseFloat(paymentIntent.metadata.isr_rate ?? "0"),
+                iva_rate: parseFloat(paymentIntent.metadata.iva_rate ?? "0"),
+                isr_withheld: parseFloat(paymentIntent.metadata.isr_withheld ?? "0"),
+                iva_withheld: parseFloat(paymentIntent.metadata.iva_withheld ?? "0"),
+                provider_net: parseFloat(paymentIntent.metadata.provider_net ?? "0"),
+                provider_rfc: paymentIntent.metadata.provider_rfc || null,
+                provider_tax_residency: paymentIntent.metadata.provider_tax_residency ?? "MX",
+                period_year: now.getFullYear(),
+                period_month: now.getMonth() + 1,
+              });
+              console.log(`[STRIPE-WEBHOOK] Tax withholding recorded for booking ${bookingId}`);
+            }
           }
 
           // Send emails (non-blocking — don't fail the webhook)
@@ -308,14 +345,26 @@ serve(async (req) => {
             })
             .eq("id", booking.id);
 
-          await supabase.from("payments").insert({
-            appointment_id: booking.id,
-            stripe_payment_intent_id: paymentIntentId,
-            amount: -charge.amount_refunded,
-            currency: charge.currency,
-            status: "refunded",
-            created_at: new Date().toISOString(),
-          });
+          // Idempotency: skip refund payment record if one already exists
+          const { data: existingRefund } = await supabase
+            .from("payments")
+            .select("id")
+            .eq("stripe_payment_intent_id", paymentIntentId)
+            .eq("status", "refunded")
+            .maybeSingle();
+
+          if (existingRefund) {
+            console.log(`[STRIPE-WEBHOOK] Refund record already exists for PI ${paymentIntentId}, skipping`);
+          } else {
+            await supabase.from("payments").insert({
+              appointment_id: booking.id,
+              stripe_payment_intent_id: paymentIntentId,
+              amount: -charge.amount_refunded,
+              currency: charge.currency,
+              status: "refunded",
+              created_at: new Date().toISOString(),
+            });
+          }
         }
         break;
       }

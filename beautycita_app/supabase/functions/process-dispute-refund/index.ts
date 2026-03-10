@@ -15,9 +15,10 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Stripe from "https://esm.sh/stripe@14.21.0?target=deno";
+import { requireFeature } from "../_shared/check-toggle.ts";
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": "https://beautycita.com",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
@@ -38,6 +39,9 @@ serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
+
+  const blocked = await requireFeature("enable_disputes");
+  if (blocked) return blocked;
 
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -174,7 +178,7 @@ serve(async (req) => {
           appointment_id: appointment.id,
           resolution: dispute.resolution ?? "dispute_refund",
         },
-      });
+      }, { idempotencyKey: `dispute-refund-${dispute_id}` });
 
       console.log(`[DISPUTE-REFUND] Stripe refund created: ${stripeRefund.id}`);
     } catch (stripeErr) {

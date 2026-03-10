@@ -73,6 +73,15 @@ serve(async (req: Request) => {
 
     // ───────── LIST: nearby discovered salons ─────────
     if (action === "list") {
+      // Require authenticated user
+      const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        global: { headers: { Authorization: `Bearer ${token}` } },
+      });
+      const { data: { user }, error: authError } = await userClient.auth.getUser();
+      if (authError || !user) {
+        return jsonResponse({ error: "Unauthorized" }, 401);
+      }
+
       const { lat, lng, radius_km = 50, limit = 20, service_query } = params;
       if (!lat || !lng) {
         return jsonResponse({ error: "lat and lng required" }, 400);
@@ -138,7 +147,10 @@ serve(async (req: Request) => {
       // Apply limit
       results = results.slice(0, limit);
 
-      return jsonResponse({ salons: results, count: results.length });
+      // Strip PII before sending to client
+      const sanitized = results.map(({ phone, whatsapp, email, phone_raw, ...safe }: any) => safe);
+
+      return jsonResponse({ salons: sanitized, count: sanitized.length });
     }
 
     // ───────── INVITE: record interest + evaluate outreach ─────────
@@ -523,13 +535,14 @@ serve(async (req: Request) => {
         return jsonResponse({ sent, salon_name: salon.business_name });
       } catch (e) {
         console.error(`[COLD_OUTREACH] WA send failed: ${e}`);
-        return jsonResponse({ error: `WA send failed: ${e}` }, 500);
+        return jsonResponse({ error: "Failed to send message" }, 500);
       }
     }
 
     return jsonResponse({ error: `Unknown action: ${action}` }, 400);
   } catch (err) {
-    return jsonResponse({ error: String(err) }, 500);
+    console.error("[outreach-discovered-salon] Error:", err);
+    return jsonResponse({ error: "An internal error occurred" }, 500);
   }
 });
 
