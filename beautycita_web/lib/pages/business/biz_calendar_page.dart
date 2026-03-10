@@ -1235,16 +1235,16 @@ class _StaffLane extends StatelessWidget {
       width: width,
       child: GestureDetector(
         onTap: () => onTapAppt(appt),
-        onLongPressStart: enableDrag && onDragStart != null
+        onPanStart: enableDrag && onDragStart != null
             ? (details) => onDragStart!(appt, details.globalPosition)
             : null,
-        onLongPressMoveUpdate: enableDrag && onDragUpdate != null
+        onPanUpdate: enableDrag && onDragUpdate != null
             ? (details) => onDragUpdate!(details.globalPosition)
             : null,
-        onLongPressEnd: enableDrag && onDragEnd != null
+        onPanEnd: enableDrag && onDragEnd != null
             ? (_) => onDragEnd!()
             : null,
-        onLongPressCancel: enableDrag && onDragEnd != null
+        onPanCancel: enableDrag && onDragEnd != null
             ? () => onDragEnd!()
             : null,
         child: MouseRegion(
