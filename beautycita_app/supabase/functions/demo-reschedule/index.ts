@@ -129,6 +129,8 @@ serve(async (req: Request) => {
       `_Este mensaje se envia automaticamente cuando un gerente mueve una cita en el calendario._`,
     ].join("\n");
 
+    const ac1 = new AbortController();
+    const t1 = setTimeout(() => ac1.abort(), 5000);
     await fetch(`${WA_API_URL}/api/wa/send`, {
       method: "POST",
       headers: {
@@ -136,7 +138,9 @@ serve(async (req: Request) => {
         Authorization: `Bearer ${WA_API_TOKEN}`,
       },
       body: JSON.stringify({ phone, message: stylistMsg }),
+      signal: ac1.signal,
     });
+    clearTimeout(t1);
 
     console.log(`[demo-reschedule] Stylist msg sent to ${phone.slice(-4)}`);
 
@@ -159,6 +163,8 @@ serve(async (req: Request) => {
       `_Este mensaje se envia automaticamente para que tu cliente siempre este informado._`,
     ].join("\n");
 
+    const ac2 = new AbortController();
+    const t2 = setTimeout(() => ac2.abort(), 5000);
     await fetch(`${WA_API_URL}/api/wa/send`, {
       method: "POST",
       headers: {
@@ -166,7 +172,9 @@ serve(async (req: Request) => {
         Authorization: `Bearer ${WA_API_TOKEN}`,
       },
       body: JSON.stringify({ phone, message: clientMsg }),
+      signal: ac2.signal,
     });
+    clearTimeout(t2);
 
     console.log(`[demo-reschedule] Client msg sent to ${phone.slice(-4)}`);
 

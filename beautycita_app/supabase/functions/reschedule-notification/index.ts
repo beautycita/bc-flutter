@@ -43,7 +43,10 @@ function formatDateEs(isoDate: string): { date: string; time: string } {
 }
 
 async function sendWhatsApp(phone: string, message: string): Promise<boolean> {
+  if (!BEAUTYPI_WA_URL) return false;
   try {
+    const ac = new AbortController();
+    const t = setTimeout(() => ac.abort(), 5000);
     const res = await fetch(`${BEAUTYPI_WA_URL}/api/wa/send`, {
       method: "POST",
       headers: {
@@ -51,7 +54,9 @@ async function sendWhatsApp(phone: string, message: string): Promise<boolean> {
         Authorization: `Bearer ${BEAUTYPI_WA_TOKEN}`,
       },
       body: JSON.stringify({ phone, message }),
+      signal: ac.signal,
     });
+    clearTimeout(t);
     if (!res.ok) {
       console.error(`[RESCHEDULE] WA send failed for ${phone}: ${res.status}`);
       return false;
@@ -100,7 +105,7 @@ Deno.serve(async (req) => {
       return json({ error: "appointment_id is required" }, 400);
     }
 
-    // 1. Fetch appointment with business join
+    // 1. Fetch appointment with business + staff join
     const { data: appt, error: apptErr } = await supabase
       .from("appointments")
       .select(
@@ -108,8 +113,10 @@ Deno.serve(async (req) => {
         id,
         user_id,
         business_id,
+        staff_id,
         service_name,
         staff_name,
+        customer_name,
         starts_at,
         ends_at,
         businesses!appointments_business_id_fkey (
@@ -201,9 +208,36 @@ Deno.serve(async (req) => {
         results.push = "skipped";
       }
     } else {
-      // Walk-in appointment (no user_id) — skip notifications
+      // Walk-in appointment (no user_id) — skip customer notifications
       results.whatsapp = "skipped";
       results.push = "skipped";
+    }
+
+    // 5. Notify stylist via WhatsApp
+    if (appt.staff_id) {
+      const { data: staffMember } = await supabase
+        .from("staff")
+        .select("phone")
+        .eq("id", appt.staff_id)
+        .single();
+
+      const staffPhone = staffMember?.phone ?? null;
+      if (staffPhone) {
+        const customerName = (appt as any).customer_name || "un cliente";
+        const staffMsg =
+          `*BeautyCita - Cita Reagendada*\n` +
+          `La cita de ${serviceName} con ${customerName} ha sido movida.\n` +
+          `Nueva fecha: ${date}, ${time}\n` +
+          `Salon: ${salonName}`;
+
+        const staffWaSent = await sendWhatsApp(staffPhone, staffMsg);
+        results.staff_whatsapp = staffWaSent ? "sent" : "failed";
+        console.log(`[RESCHEDULE] Staff WA ${staffWaSent ? "sent" : "failed"} to ${staffPhone}`);
+      } else {
+        results.staff_whatsapp = "no_phone";
+      }
+    } else {
+      results.staff_whatsapp = "no_staff";
     }
 
     console.log(
