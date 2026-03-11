@@ -435,7 +435,7 @@
   <p class="subtitle">Documento tecnico-fiscal para revision y validacion por asesor contable</p>
   <dl class="cover-meta">
     <dt>Fecha</dt>
-    <dd>6 de marzo de 2026 (actualizado 9 de marzo de 2026)</dd>
+    <dd>6 de marzo de 2026 (actualizado 11 de marzo de 2026)</dd>
     <dt>Empresa</dt>
     <dd>BeautyCita (en proceso de constitucion)</dd>
     <dt>Preparado por</dt>
@@ -451,7 +451,7 @@
 <nav class="toc">
   <h2>Contenido</h2>
   <ol>
-    <li><a href="#s1">Descripcion de la Plataforma</a></li>
+    <li><a href="#s1">Descripcion de la Plataforma</a> (incluye posicionamiento estrategico de retenciones)</li>
     <li><a href="#s2">Marco Legal Aplicable &mdash; Ejercicio Fiscal 2026</a></li>
     <li><a href="#s3">Configuracion Tecnica Actual (Propuesta)</a></li>
     <li><a href="#s4">Flujos de Pago &mdash; Analisis de Brechas</a></li>
@@ -477,7 +477,56 @@
     <li><strong>Procesa pagos</strong> en nombre de los proveedores, cobrando una comision del <strong>3%</strong> sobre reservas de servicios y <strong>10%</strong> sobre ventas de productos (marketplace/POS)</li>
     <li><strong>Opera multiples metodos de pago:</strong> tarjeta de credito/debito (via Stripe), pago en efectivo en tienda de conveniencia (via OXXO/Stripe), Bitcoin (via BTCPay Server), y pago en efectivo directo en el salon</li>
     <li><strong>Se encuentra en proceso de constitucion legal</strong> ante notario (iniciado enero 2026)</li>
+    <li><strong>Ya opera en produccion</strong> con usuarios reales y transacciones procesadas via Stripe Connect</li>
   </ul>
+
+  <div class="callout callout-warning">
+    <span class="callout-label">Pregunta fundamental &mdash; Momento de inicio de obligaciones</span>
+    <p>La sociedad aun no esta constituida. Sin embargo, la plataforma ya procesa transacciones reales. <strong>Desde cuando aplican las obligaciones de retencion?</strong></p>
+    <ol>
+      <li>Desde la constitucion de la S.A. de C.V.?</li>
+      <li>Desde la primera transaccion procesada (ya ocurrio)?</li>
+      <li>Desde que se alcance cierto umbral de ingresos?</li>
+      <li>Aplica retroactivamente a transacciones anteriores a la constitucion?</li>
+    </ol>
+    <p>Igualmente, el Art. 30-B del CFF exige acceso del SAT en tiempo real a partir del <strong>1 de abril de 2026</strong>. Si la sociedad no esta constituida para esa fecha, hay consecuencia? O el reloj empieza al inscribirse en el RFC?</p>
+  </div>
+
+  <div class="callout callout-danger">
+    <span class="callout-label">Estado actual de metodos de pago</span>
+    <strong>Bitcoin y pago en efectivo estan desactivados</strong> en la plataforma, precisamente porque requieren validacion fiscal antes de habilitarse. Las preguntas de las secciones 4.3 y 4.4 de este documento son las que determinan si y como se activan estos metodos. Actualmente solo operan tarjeta (Stripe Connect) y OXXO (Stripe).
+  </div>
+
+  <h3>1.2 Posicionamiento Estrategico del Sistema de Retenciones</h3>
+
+  <p>Reconocemos que la obligacion de retener ISR/IVA es un <strong>mandato gubernamental</strong> que toda plataforma digital debe cumplir. Sin embargo, BeautyCita pretende convertir esta obligacion en un <strong>diferenciador competitivo y beneficio real para los proveedores</strong> (salones y estilistas).</p>
+
+  <p><strong>La propuesta de valor hacia el proveedor:</strong></p>
+
+  <div class="callout callout-success">
+    <span class="callout-label">Beneficio para el salon</span>
+    <p>&ldquo;BeautyCita te hace tus impuestos.&rdquo;</p>
+    <p>Al registrarte en la plataforma, obtienes <strong>sin costo adicional</strong>:</p>
+    <ul>
+      <li><strong>Retenciones automaticas y correctas</strong> &mdash; nunca te atrases con el SAT. Cada transaccion calcula y aparta tu ISR e IVA automaticamente.</li>
+      <li><strong>Contabilidad fiscal verificable</strong> &mdash; un ledger inmutable de todas tus transacciones, retenciones y pagos netos, disponible 24/7 desde tu panel.</li>
+      <li><strong>CFDI de retenciones emitidos automaticamente</strong> &mdash; tus comprobantes fiscales generados y entregados dentro de los 5 dias que marca la ley, sin que tengas que pedirlos.</li>
+      <li><strong>Siempre al dia con el SAT</strong> &mdash; tus pagos provisionales de ISR e IVA retenidos se enteran puntualmente. Si el SAT te revisa, todo esta en orden.</li>
+      <li><strong>Sin contador adicional para tus ingresos de plataforma</strong> &mdash; la parte fiscal de lo que ganas en BeautyCita ya esta resuelta.</li>
+    </ul>
+  </div>
+
+  <p>Para el salon promedio (persona fisica en RESICO), las retenciones de la plataforma funcionan como <strong>pagos provisionales definitivos</strong>. Esto significa que, para sus ingresos generados a traves de BeautyCita, el salon puede estar al corriente con sus obligaciones fiscales <strong>sin hacer nada adicional</strong>.</p>
+
+  <div class="callout callout-warning">
+    <span class="callout-label">Pregunta para el asesor</span>
+    <p>Queremos comunicar a los proveedores que las retenciones de la plataforma &ldquo;les hacen sus impuestos.&rdquo; Desde la perspectiva legal y fiscal:</p>
+    <ol>
+      <li>Es correcto afirmar que para personas fisicas en RESICO, las retenciones de la plataforma funcionan como pago provisional definitivo de sus ingresos por plataforma?</li>
+      <li>Hay algun riesgo legal en posicionar las retenciones como un servicio de cumplimiento fiscal automatico? Es decir, podria interpretarse como que estamos ofreciendo servicios contables o de asesoria fiscal sin licencia?</li>
+      <li>Que limitaciones o disclaimers debemos incluir? (Por ejemplo: &ldquo;esto cubre unicamente los ingresos generados a traves de BeautyCita, consulta a tu contador para el resto de tus ingresos.&rdquo;)</li>
+    </ol>
+  </div>
 </div>
 
 <!-- ============ SECTION 2 ============ -->
@@ -602,6 +651,17 @@
 
   <h3>3.1 Motor de Calculo de Retenciones</h3>
 
+  <div class="callout callout-danger">
+    <span class="callout-label">Verificacion critica requerida &mdash; las bases de calculo pueden estar incorrectas</span>
+    <p>Hemos identificado ambiguedades en nuestro calculo que necesitan validacion antes de seguir adelante:</p>
+    <ol>
+      <li><strong>Base del ISR:</strong> Aplicamos 2.5% sobre el <em>monto bruto</em> (IVA-incluido). Pero si la base correcta es la <em>base gravable</em> (pre-IVA), nuestro calculo esta inflado. Cual es la base correcta?</li>
+      <li><strong>Base del IVA retenido:</strong> La ley dice retener &ldquo;50% del IVA&rdquo; cuando hay RFC. Esto equivale a <strong>8% de la base gravable</strong> ($862.07 &times; 8% = $68.97) o <strong>50% de la porcion IVA</strong> ($137.93 &times; 50% = $68.97). En nuestro ejemplo actual calculamos $11.03 (8% de la porcion IVA) &mdash; <strong>si esto es incorrecto, el error es de 6x.</strong> Favor de validar.</li>
+      <li><strong>Comision de la plataforma:</strong> Nuestro 3% de comision es un servicio que BeautyCita cobra al proveedor. Esta comision genera su propio IVA? Se resta antes o despues de calcular las retenciones?</li>
+    </ol>
+    <p>Los ejemplos numericos que siguen usan nuestra interpretacion actual. <strong>Si las bases son incorrectas, los recalcularemos inmediatamente.</strong></p>
+  </div>
+
   <p><strong>Entrada:</strong> Monto bruto cobrado al cliente (precio IVA-incluido, como es costumbre en Mexico).</p>
 
   <p><strong>Formulas:</strong></p>
@@ -698,9 +758,9 @@
 
   <h3>3.5 Bandera de Activacion (Feature Flag)</h3>
   <div class="formula">
-    tax_withholding_enabled = <span class="highlight">true</span> <span class="comment">// activado en produccion desde 9 de marzo de 2026</span>
+    tax_withholding_enabled = <span class="highlight">true</span> <span class="comment">// bandera activa en produccion desde 9 de marzo de 2026</span>
   </div>
-  <p>El sistema de retenciones esta <strong>activo en produccion</strong>. Los pagos procesados a traves de la plataforma automaticamente calculan y aplican las retenciones. Se puede desactivar temporalmente desde el panel de superadmin si se requiere. La infraestructura (tablas de ledger, reportes SAT, API de acceso) esta completamente desplegada.</p>
+  <p>La <strong>infraestructura de retenciones</strong> esta desplegada en produccion: tablas de ledger inmutable, reportes SAT, API de acceso Art. 30-B, y la bandera de activacion. El motor de calculo (<code>tax_mx.ts</code>) esta construido y listo. Sin embargo, <strong>la aplicacion efectiva de retenciones a pagos en vivo requiere validacion del asesor</strong> para confirmar que las tasas, formulas y procedimientos son correctos. Se puede activar o desactivar desde el panel de superadmin.</p>
 
   <h3>3.6 PAC Seleccionado &mdash; SW Sapien <span class="badge badge-partial">Pendiente integracion</span></h3>
   <p><strong>Decision (marzo 2026):</strong> Se selecciono <strong>SW Sapien</strong> como PAC definitivo por:</p>
@@ -772,7 +832,12 @@
   </div>
 
   <!-- 4.3 -->
-  <h3>4.3 Bitcoin <span class="badge badge-critical">Requiere analisis fiscal profundo</span></h3>
+  <h3>4.3 Bitcoin <span class="badge badge-critical">Desactivado &mdash; requiere analisis fiscal</span></h3>
+
+  <div class="callout callout-danger">
+    <span class="callout-label">Metodo desactivado en produccion</span>
+    Bitcoin esta <strong>desactivado como metodo de pago</strong> hasta obtener respuesta del asesor fiscal. La infraestructura tecnica (BTCPay Server, wallet, facturacion) esta construida y lista, pero no se puede habilitar sin claridad sobre la naturaleza juridica de la operacion y las obligaciones ante la UIF. <strong>Las respuestas a esta seccion determinan si se activa y bajo que condiciones.</strong>
+  </div>
 
   <div class="flow">
     <div class="flow-steps">
@@ -818,7 +883,12 @@
   </div>
 
   <!-- 4.4 -->
-  <h3>4.4 Efectivo en Salon <span class="badge badge-missing">Requiere definicion</span></h3>
+  <h3>4.4 Efectivo en Salon <span class="badge badge-critical">Desactivado &mdash; requiere definicion</span></h3>
+
+  <div class="callout callout-danger">
+    <span class="callout-label">Metodo desactivado en produccion</span>
+    El pago en efectivo en salon esta <strong>desactivado</strong> hasta definir si BeautyCita tiene obligacion de retener cuando no toca el dinero. <strong>La respuesta a esta seccion determina si se habilita la opcion de "pagar en salon" y bajo que modelo.</strong>
+  </div>
 
   <div class="flow">
     <div class="flow-steps">
@@ -1207,11 +1277,18 @@
 
   <p>Todas las preguntas del documento consolidadas por prioridad:</p>
 
+  <div class="callout callout-danger">
+    <span class="callout-label">Contexto clave para el asesor</span>
+    Bitcoin y pago en efectivo estan <strong>desactivados en produccion</strong> precisamente porque las preguntas #1 y #2 no tienen respuesta. Estas son las preguntas mas criticas del documento &mdash; sus respuestas determinan si habilitamos estos metodos de pago y bajo que condiciones. El resto de la plataforma (tarjeta + OXXO via Stripe) ya opera.
+  </div>
+
   <div class="priority-section priority-alta">
     <h3 style="color: var(--danger);">Prioridad Alta &mdash; Bloquean la arquitectura</h3>
     <ol>
-      <li><strong>Bitcoin:</strong> Cuando BeautyCita recibe Bitcoin y paga pesos al proveedor, cual es la naturaleza juridica de esta operacion? Se requiere registro como actividad vulnerable ante la UIF?</li>
-      <li><strong>Efectivo:</strong> Si BeautyCita solo facilita la reserva pero el pago es en efectivo en el salon, hay obligacion de retener ISR/IVA?</li>
+      <li><strong>Bitcoin (BLOQUEANTE &mdash; metodo desactivado):</strong> Cuando BeautyCita recibe Bitcoin y paga pesos al proveedor, cual es la naturaleza juridica de esta operacion? Se requiere registro como actividad vulnerable ante la UIF? (Ver Seccion 4.3 para el analisis completo y las 6 preguntas detalladas)</li>
+      <li><strong>Efectivo (BLOQUEANTE &mdash; metodo desactivado):</strong> Si BeautyCita solo facilita la reserva pero el pago es en efectivo en el salon, hay obligacion de retener ISR/IVA? Es recomendable eliminar esta opcion? (Ver Seccion 4.4)</li>
+      <li><strong>Inicio de obligaciones (BLOQUEANTE):</strong> <span class="badge badge-critical">Nuevo</span> La plataforma ya procesa transacciones pero la sociedad no esta constituida. Desde cuando aplican las obligaciones de retencion? El Art. 30-B (abril 2026) aplica antes de tener RFC? (Ver Seccion 1)</li>
+      <li><strong>Bases de calculo (VERIFICAR):</strong> <span class="badge badge-critical">Nuevo</span> El ISR se calcula sobre monto bruto o base gravable? El IVA retenido es 8% de la base gravable o 8% de la porcion IVA? Nuestro calculo actual puede tener un error de 6x en el IVA retenido. (Ver Seccion 3.1)</li>
       <li><strong>Tasas:</strong> Para personas morales en servicios de belleza, la tasa de ISR es 2.5% o 4%? Confirmar IVA retenido 8% con RFC y 16% sin RFC para ambos (PF y PM).</li>
       <li><strong>CFDI de retenciones:</strong> Se propone SW Sapien como PAC con integracion directa por API (~$0.25/timbre). Confirmar que es adecuado para CFDI de retenciones de plataformas digitales. Cual complemento de CFDI aplica?</li>
       <li><strong>Declaracion informativa:</strong> Existe API del SAT para envio automatizado, o es carga manual en portal? Formato requerido?</li>
@@ -1224,7 +1301,8 @@
 
   <div class="priority-section priority-media">
     <h3 style="color: var(--warning);">Prioridad Media &mdash; Afectan operacion</h3>
-    <ol start="7">
+    <ol start="10">
+      <li><strong>Posicionamiento fiscal como beneficio:</strong> <span class="badge badge-critical">Nuevo</span> Podemos comunicar a los proveedores que las retenciones &ldquo;les hacen sus impuestos&rdquo;? Para RESICO, las retenciones de plataforma son pago provisional definitivo? Hay riesgo de que se interprete como oferta de servicios contables sin licencia? (Ver Seccion 1.2)</li>
       <li><strong>Cuentas bancarias:</strong> Se requiere cuenta separada para fondos retenidos? Estructura recomendada?</li>
       <li><strong>Intereses:</strong> Los intereses sobre fondos retenidos se reportan como ingreso ordinario de la empresa?</li>
       <li><strong>Reembolsos:</strong> Procedimiento para revertir retenciones en cancelaciones?</li>
@@ -1236,7 +1314,7 @@
 
   <div class="priority-section priority-baja">
     <h3 style="color: var(--info);">Prioridad Baja &mdash; Planeacion futura</h3>
-    <ol start="13">
+    <ol start="17">
       <li><strong>Inscripcion RFC:</strong> Existe servicio web del SAT para inscripciones masivas de proveedores?</li>
       <li><strong>Extranjeros:</strong> Tratamiento fiscal de estilistas extranjeros que trabajan temporalmente en Mexico?</li>
     </ol>
@@ -1273,7 +1351,8 @@
 <!-- ============ FOOTER ============ -->
 <div class="footer">
   Este documento fue preparado por el equipo tecnico de BeautyCita para facilitar la consulta fiscal con su asesor.<br>
-  No constituye asesoramiento fiscal o legal. Todas las tasas, calculos y procedimientos descritos requieren validacion por un profesional fiscal certificado.
+  No constituye asesoramiento fiscal o legal. Todas las tasas, calculos y procedimientos descritos requieren validacion por un profesional fiscal certificado.<br>
+  <em>Ultima actualizacion: 11 de marzo de 2026</em>
 </div>
 
 </div><!-- /container -->
