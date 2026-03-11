@@ -1171,7 +1171,7 @@ class _HorizontalDayViewState extends ConsumerState<_HorizontalDayView> {
                                 left: 0,
                                 right: 0,
                                 child: Center(
-                                  child: _PulsingTooltip(text: 'Ctrl+Click en una cita para mover'),
+                                  child: _PulsingTooltip(),
                                 ),
                               ),
                           ],
@@ -2278,8 +2278,7 @@ class _DragOrTapDetectorState extends State<_DragOrTapDetector> {
 }
 
 class _PulsingTooltip extends StatefulWidget {
-  const _PulsingTooltip({required this.text});
-  final String text;
+  const _PulsingTooltip();
 
   @override
   State<_PulsingTooltip> createState() => _PulsingTooltipState();
@@ -2309,12 +2308,12 @@ class _PulsingTooltipState extends State<_PulsingTooltip>
     return FadeTransition(
       opacity: Tween<double>(begin: 0.6, end: 1.0).animate(_ctrl),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
             colors: [Color(0xFFec4899), Color(0xFF9333ea), Color(0xFF3b82f6)],
           ),
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
               color: const Color(0xFF9333ea).withValues(alpha: 0.3),
@@ -2323,15 +2322,114 @@ class _PulsingTooltipState extends State<_PulsingTooltip>
             ),
           ],
         ),
-        child: Text(
-          widget.text,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Step 1: Hold Ctrl
+            _DragHintStep(
+              icon: Icons.keyboard,
+              label: 'Ctrl',
+              sublabel: 'mantener',
+            ),
+            const _DragHintArrow(),
+            // Step 2: Click appointment
+            _DragHintStep(
+              icon: Icons.mouse,
+              label: 'Click',
+              sublabel: 'en cita',
+            ),
+            const _DragHintArrow(),
+            // Step 3: Move to new slot
+            _DragHintStep(
+              icon: Icons.open_with,
+              label: 'Mover',
+              sublabel: 'arrastrar',
+            ),
+            const _DragHintArrow(),
+            // Step 4: Click to drop
+            _DragHintStep(
+              icon: Icons.mouse,
+              label: 'Click',
+              sublabel: 'soltar',
+            ),
+            const SizedBox(width: 12),
+            // Esc hint
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: const Text(
+                'Esc = cancelar',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
+    );
+  }
+}
+
+class _DragHintStep extends StatelessWidget {
+  const _DragHintStep({
+    required this.icon,
+    required this.label,
+    required this.sublabel,
+  });
+  final IconData icon;
+  final String label;
+  final String sublabel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: Colors.white, size: 18),
+        ),
+        const SizedBox(height: 3),
+        Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        Text(
+          sublabel,
+          style: const TextStyle(
+            color: Colors.white70,
+            fontSize: 9,
+            fontWeight: FontWeight.w400,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DragHintArrow extends StatelessWidget {
+  const _DragHintArrow();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.symmetric(horizontal: 6),
+      child: Icon(Icons.chevron_right, color: Colors.white54, size: 16),
     );
   }
 }
