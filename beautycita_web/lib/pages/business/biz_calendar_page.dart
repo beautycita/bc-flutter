@@ -16,6 +16,7 @@ import '../../providers/demo_providers.dart';
 final calendarDateProvider = StateProvider<DateTime>((ref) => DateTime.now());
 final calendarStaffFilterProvider = StateProvider<Set<String>>((ref) => {});
 final selectedAppointmentProvider = StateProvider<Map<String, dynamic>?>((ref) => null);
+final calendarDragActiveProvider = StateProvider<bool>((ref) => false);
 
 /// Helper to get staff display name (supports first_name/last_name or name).
 String _staffDisplayName(Map<String, dynamic> staff) {
@@ -688,6 +689,7 @@ class _HorizontalDayViewState extends ConsumerState<_HorizontalDayView> {
     _autoScrollTimer?.cancel();
     _autoScrollTimer = null;
     _lastGlobalPos = null;
+    ref.read(calendarDragActiveProvider.notifier).state = false;
     setState(() {
       _dragAppt = null;
       _dragPos = null;
@@ -1108,6 +1110,7 @@ class _HorizontalDayViewState extends ConsumerState<_HorizontalDayView> {
                                       final renderBox = _timelineKey.currentContext?.findRenderObject() as RenderBox?;
                                       if (renderBox == null) return;
                                       final localPos = renderBox.globalToLocal(globalPos);
+                                      ref.read(calendarDragActiveProvider.notifier).state = true;
                                       setState(() {
                                         _dragAppt = appt;
                                         _dragPos = localPos;
@@ -1456,7 +1459,7 @@ class _NowTrianglePainter extends CustomPainter {
 
 // ── Compact Week Strip (bottom) ─────────────────────────────────────────────
 
-class _CompactWeekStrip extends ConsumerWidget {
+class _CompactWeekStrip extends ConsumerStatefulWidget {
   const _CompactWeekStrip({
     required this.weekStart,
     required this.selectedDate,
@@ -1469,13 +1472,27 @@ class _CompactWeekStrip extends ConsumerWidget {
   final AsyncValue<List<Map<String, dynamic>>> weekApptsAsync;
   final ValueChanged<DateTime> onDayTap;
 
+  @override
+  ConsumerState<_CompactWeekStrip> createState() => _CompactWeekStripState();
+}
+
+class _CompactWeekStripState extends ConsumerState<_CompactWeekStrip> {
   static const _dayNames = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+  Timer? _hoverTimer;
+  int? _hoverDayIndex;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  void dispose() {
+    _hoverTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final appts = weekApptsAsync.valueOrNull ?? [];
+    final appts = widget.weekApptsAsync.valueOrNull ?? [];
     final now = DateTime.now();
+    final isDragActive = ref.watch(calendarDragActiveProvider);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -1485,37 +1502,60 @@ class _CompactWeekStrip extends ConsumerWidget {
       ),
       child: Row(
         children: List.generate(7, (i) {
-          final day = weekStart.add(Duration(days: i));
+          final day = widget.weekStart.add(Duration(days: i));
           final dayCount = appts.where((a) {
             final dt = DateTime.tryParse(a['starts_at'] as String? ?? '');
             return dt != null && dt.year == day.year && dt.month == day.month && dt.day == day.day;
           }).length;
 
           final isToday = day.year == now.year && day.month == now.month && day.day == now.day;
-          final isSelected = day.year == selectedDate.year &&
-              day.month == selectedDate.month &&
-              day.day == selectedDate.day;
+          final isSelected = day.year == widget.selectedDate.year &&
+              day.month == widget.selectedDate.month &&
+              day.day == widget.selectedDate.day;
+          final isDragHover = isDragActive && _hoverDayIndex == i;
 
           return Expanded(
-            child: GestureDetector(
-              onTap: () => onDayTap(day),
-              child: MouseRegion(
-                cursor: SystemMouseCursors.click,
-                child: Container(
+            child: MouseRegion(
+              cursor: SystemMouseCursors.click,
+              onEnter: isDragActive
+                  ? (_) {
+                      setState(() => _hoverDayIndex = i);
+                      _hoverTimer?.cancel();
+                      if (!isSelected) {
+                        _hoverTimer = Timer(const Duration(milliseconds: 700), () {
+                          widget.onDayTap(day);
+                        });
+                      }
+                    }
+                  : null,
+              onExit: isDragActive
+                  ? (_) {
+                      _hoverTimer?.cancel();
+                      setState(() => _hoverDayIndex = null);
+                    }
+                  : null,
+              child: GestureDetector(
+                onTap: () => widget.onDayTap(day),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
                   margin: const EdgeInsets.symmetric(horizontal: 2),
                   padding: const EdgeInsets.symmetric(vertical: 6),
                   decoration: BoxDecoration(
-                    color: isSelected
-                        ? colors.primary.withValues(alpha: 0.12)
-                        : isToday
-                            ? colors.primary.withValues(alpha: 0.04)
-                            : Colors.transparent,
+                    color: isDragHover
+                        ? colors.primary.withValues(alpha: 0.25)
+                        : isSelected
+                            ? colors.primary.withValues(alpha: 0.12)
+                            : isToday
+                                ? colors.primary.withValues(alpha: 0.04)
+                                : Colors.transparent,
                     borderRadius: BorderRadius.circular(8),
-                    border: isSelected
-                        ? Border.all(color: colors.primary, width: 1.5)
-                        : isToday
-                            ? Border.all(color: colors.primary.withValues(alpha: 0.3))
-                            : null,
+                    border: isDragHover
+                        ? Border.all(color: colors.primary, width: 2)
+                        : isSelected
+                            ? Border.all(color: colors.primary, width: 1.5)
+                            : isToday
+                                ? Border.all(color: colors.primary.withValues(alpha: 0.3))
+                                : null,
                   ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
