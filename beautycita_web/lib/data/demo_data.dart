@@ -328,6 +328,7 @@ abstract final class DemoData {
       'status': status,
       'starts_at': start.toIso8601String(),
       'ends_at': end.toIso8601String(),
+      'duration_minutes': durationMin,
       'price': price,
       'payment_status': status == 'completed' || status == 'no_show'
           ? 'paid'

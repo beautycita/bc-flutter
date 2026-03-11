@@ -9,6 +9,15 @@ import '../../providers/business_portal_provider.dart';
 import '../../providers/demo_providers.dart';
 import '../../widgets/kpi_card.dart';
 
+/// Remap a /negocio route to /demo when inside the demo shell.
+String _demoAware(BuildContext context, String route) {
+  final loc = GoRouterState.of(context).matchedLocation;
+  if (loc.startsWith('/demo')) {
+    return route.replaceFirst('/negocio', '/demo');
+  }
+  return route;
+}
+
 /// Business dashboard — stylist/owner daily command center.
 ///
 /// KPI cards, today's appointments, monthly trend chart.
@@ -135,12 +144,12 @@ class _KpiSection extends StatelessWidget {
       error: (_, __) => _loadingGrid(context),
       data: (stats) {
         final kpiData = [
-          (Icons.calendar_today_outlined, 'Citas hoy', stats.appointmentsToday.toString(), const Color(0xFF4CAF50), WebRoutes.negocioCalendar, '', trend?.dailyCounts),
-          (Icons.date_range_outlined, 'Citas esta semana', stats.appointmentsWeek.toString(), const Color(0xFF2196F3), WebRoutes.negocioCalendar, '', trend?.dailyCounts),
-          (Icons.payments_outlined, 'Ingresos del mes', _formatCurrency(stats.revenueMonth), const Color(0xFFFF9800), WebRoutes.negocioPayments, '\$', trend?.dailyRevenue),
-          (Icons.pending_actions_outlined, 'Por confirmar', stats.pendingConfirmations.toString(), const Color(0xFF9C27B0), WebRoutes.negocioCalendar, '', trend?.dailyPending),
-          (Icons.star_outlined, 'Calificacion', stats.averageRating.toStringAsFixed(1), const Color(0xFFFFC107), WebRoutes.negocioReviews, '', null as List<double>?),
-          (Icons.rate_review_outlined, 'Resenas', stats.totalReviews.toString(), const Color(0xFF00BCD4), WebRoutes.negocioReviews, '', null as List<double>?),
+          (Icons.calendar_today_outlined, 'Citas hoy', stats.appointmentsToday.toString(), const Color(0xFF4CAF50), _demoAware(context, WebRoutes.negocioCalendar), '', trend?.dailyCounts),
+          (Icons.date_range_outlined, 'Citas esta semana', stats.appointmentsWeek.toString(), const Color(0xFF2196F3), _demoAware(context, WebRoutes.negocioCalendar), '', trend?.dailyCounts),
+          (Icons.payments_outlined, 'Ingresos del mes', _formatCurrency(stats.revenueMonth), const Color(0xFFFF9800), _demoAware(context, WebRoutes.negocioPayments), '\$', trend?.dailyRevenue),
+          (Icons.pending_actions_outlined, 'Por confirmar', stats.pendingConfirmations.toString(), const Color(0xFF9C27B0), _demoAware(context, WebRoutes.negocioCalendar), '', trend?.dailyPending),
+          (Icons.star_outlined, 'Calificacion', stats.averageRating.toStringAsFixed(1), const Color(0xFFFFC107), _demoAware(context, WebRoutes.negocioReviews), '', null as List<double>?),
+          (Icons.rate_review_outlined, 'Resenas', stats.totalReviews.toString(), const Color(0xFF00BCD4), _demoAware(context, WebRoutes.negocioReviews), '', null as List<double>?),
         ];
 
         final cards = [
@@ -238,10 +247,10 @@ class _QuickActions extends StatelessWidget {
     final colors = theme.colorScheme;
 
     final actions = [
-      (Icons.calendar_month_outlined, 'Ver calendario', WebRoutes.negocioCalendar),
-      (Icons.spa_outlined, 'Agregar servicio', WebRoutes.negocioServices),
-      (Icons.people_outlined, 'Gestionar staff', WebRoutes.negocioStaff),
-      (Icons.settings_outlined, 'Configuracion', WebRoutes.negocioSettings),
+      (Icons.calendar_month_outlined, 'Ver calendario', _demoAware(context, WebRoutes.negocioCalendar)),
+      (Icons.spa_outlined, 'Agregar servicio', _demoAware(context, WebRoutes.negocioServices)),
+      (Icons.people_outlined, 'Gestionar staff', _demoAware(context, WebRoutes.negocioStaff)),
+      (Icons.settings_outlined, 'Configuracion', _demoAware(context, WebRoutes.negocioSettings)),
     ];
 
     return Wrap(

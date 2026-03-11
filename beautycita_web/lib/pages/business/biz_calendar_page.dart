@@ -507,15 +507,28 @@ class _HorizontalDayViewState extends ConsumerState<_HorizontalDayView> {
   final GlobalKey _timelineKey = GlobalKey();
   bool _hasCompletedDemoDrag = false;
 
+  // ── Ctrl+Click grab state (mouse only) ──
+  bool _isMouseGrab = false; // true when grab was initiated via Ctrl+Click (not touch)
+  Timer? _autoScrollTimer;
+  Offset? _lastGlobalPos;
+  // Cache build-time data for use in grab methods
+  List<_LaneData> _currentLanes = [];
+  List<Map<String, dynamic>> _currentAppts = [];
+  Map<String, Set<String>> _currentStaffServices = {};
+  List<Map<String, dynamic>> _currentAllStaff = [];
+
   @override
   void initState() {
     super.initState();
     _scrollController = ScrollController();
+    HardwareKeyboard.instance.addHandler(_handleKeyEvent);
     WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToNow());
   }
 
   @override
   void dispose() {
+    HardwareKeyboard.instance.removeHandler(_handleKeyEvent);
+    _autoScrollTimer?.cancel();
     _scrollController.dispose();
     super.dispose();
   }
@@ -585,6 +598,128 @@ class _HorizontalDayViewState extends ConsumerState<_HorizontalDayView> {
       if (newStart.isBefore(aEnd) && newEnd.isAfter(aStart)) return true;
     }
     return false;
+  }
+
+  // ── Ctrl+Click grab-and-place methods ──────────────────────────────────────
+
+  /// Handle keyboard events for grab cancellation (Ctrl release / Esc).
+  bool _handleKeyEvent(KeyEvent event) {
+    if (!_isDragging || !_isMouseGrab) return false;
+    // Cancel on Ctrl release
+    if (event is KeyUpEvent &&
+        (event.logicalKey == LogicalKeyboardKey.controlLeft ||
+         event.logicalKey == LogicalKeyboardKey.controlRight)) {
+      _cancelGrab();
+      return true;
+    }
+    // Cancel on Escape
+    if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape) {
+      _cancelGrab();
+      return true;
+    }
+    return false;
+  }
+
+  /// Update drag position from global cursor position (used by both grab overlay and touch drag).
+  void _updateDragPosition(Offset globalPos) {
+    final renderBox = _timelineKey.currentContext?.findRenderObject() as RenderBox?;
+    if (renderBox == null || _dragAppt == null) return;
+    final localPos = renderBox.globalToLocal(globalPos);
+    if (_currentLanes.isEmpty) return;
+    final laneIdx = _yToLaneIndex(localPos.dy, _currentLanes.length);
+    final targetLane = _currentLanes[laneIdx];
+    final targetTime = _xToTime(localPos.dx);
+    final duration = (_dragAppt!['duration_minutes'] as num?)?.toInt() ?? 60;
+    final targetEnd = targetTime.add(Duration(minutes: duration));
+    final serviceId = _dragAppt!['service_id'] as String?;
+
+    final canDo = _canStaffDoService(targetLane.id, serviceId, _currentStaffServices);
+    final noCollision = !_hasCollision(targetLane.id, targetTime, targetEnd, _dragAppt!['id'] as String, _currentAppts);
+
+    setState(() {
+      _dragPos = localPos;
+      _dragTargetStaffId = targetLane.id;
+      _dragTargetTime = targetTime;
+      _dragValid = canDo && noCollision;
+    });
+  }
+
+  /// Drop the grabbed appointment at the current position.
+  void _executeDragDrop() {
+    if (_dragAppt != null && _dragValid && _dragTargetTime != null && _dragTargetStaffId != null) {
+      _executeReschedule(_dragAppt!, _dragTargetTime!, _dragTargetStaffId!, _currentAllStaff);
+    } else if (_dragAppt != null && !_dragValid) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No se puede mover aquí'),
+          duration: Duration(seconds: 2),
+          backgroundColor: Color(0xFFE53935),
+        ),
+      );
+    }
+    _clearDragState();
+  }
+
+  /// Cancel the grab without dropping.
+  void _cancelGrab() {
+    _clearDragState();
+  }
+
+  /// Reset all drag state.
+  void _clearDragState() {
+    _autoScrollTimer?.cancel();
+    _autoScrollTimer = null;
+    _lastGlobalPos = null;
+    setState(() {
+      _dragAppt = null;
+      _dragPos = null;
+      _dragTargetStaffId = null;
+      _dragTargetTime = null;
+      _dragValid = false;
+      _isDragging = false;
+      _isMouseGrab = false;
+    });
+  }
+
+  /// Auto-scroll horizontally when cursor is near left/right edge of viewport.
+  void _updateAutoScroll(Offset globalPos) {
+    if (!_scrollController.hasClients) return;
+    _lastGlobalPos = globalPos;
+
+    // Get the scrollable viewport bounds
+    final renderBox = _timelineKey.currentContext?.findRenderObject() as RenderBox?;
+    if (renderBox == null) return;
+    final localPos = renderBox.globalToLocal(globalPos);
+    final viewportWidth = _scrollController.position.viewportDimension;
+    final scrollOffset = _scrollController.offset;
+    final viewportLocalX = localPos.dx - scrollOffset;
+
+    const edgeThreshold = 60.0;
+    const scrollSpeed = 4.0;
+
+    double scrollDelta = 0;
+    if (viewportLocalX < edgeThreshold) {
+      scrollDelta = -scrollSpeed * (1 - viewportLocalX / edgeThreshold);
+    } else if (viewportLocalX > viewportWidth - edgeThreshold) {
+      scrollDelta = scrollSpeed * (1 - (viewportWidth - viewportLocalX) / edgeThreshold);
+    }
+
+    if (scrollDelta == 0) {
+      _autoScrollTimer?.cancel();
+      _autoScrollTimer = null;
+      return;
+    }
+
+    _autoScrollTimer ??= Timer.periodic(const Duration(milliseconds: 16), (_) {
+      if (!_scrollController.hasClients || _lastGlobalPos == null) return;
+      final maxScroll = _scrollController.position.maxScrollExtent;
+      final newOffset = (_scrollController.offset + scrollDelta).clamp(0.0, maxScroll);
+      if (newOffset != _scrollController.offset) {
+        _scrollController.jumpTo(newOffset);
+        // Re-update drag position since scroll changed
+        _updateDragPosition(_lastGlobalPos!);
+      }
+    });
   }
 
   /// Execute the reschedule after a valid drop.
@@ -801,6 +936,12 @@ class _HorizontalDayViewState extends ConsumerState<_HorizontalDayView> {
               ));
             }
 
+            // Cache for grab-and-place methods
+            _currentLanes = lanes;
+            _currentAppts = appts;
+            _currentStaffServices = staffServices;
+            _currentAllStaff = allStaff;
+
             // Now-line
             final now = DateTime.now();
             final isToday = now.year == widget.date.year &&
@@ -812,15 +953,17 @@ class _HorizontalDayViewState extends ConsumerState<_HorizontalDayView> {
               nowLineX = (minutesSinceStart / 60.0) * _hourWidth;
             }
 
-            return SingleChildScrollView(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Fixed staff name column
-                  SizedBox(
-                    width: _staffColumnWidth,
-                    child: Column(
-                      children: [
+            return Stack(
+              children: [
+                SingleChildScrollView(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Fixed staff name column
+                      SizedBox(
+                        width: _staffColumnWidth,
+                        child: Column(
+                          children: [
                         SizedBox(height: _labelRowHeight),
                         for (var li = 0; li < lanes.length; li++)
                           Container(
@@ -932,53 +1075,14 @@ class _HorizontalDayViewState extends ConsumerState<_HorizontalDayView> {
                                         _dragAppt = appt;
                                         _dragPos = localPos;
                                         _isDragging = true;
+                                        _isMouseGrab = HardwareKeyboard.instance.isControlPressed;
                                         _dragTargetStaffId = lane.id;
                                         _dragTargetTime = _xToTime(localPos.dx);
                                         _dragValid = true;
                                       });
                                     },
-                                    onDragUpdate: (globalPos) {
-                                      final renderBox = _timelineKey.currentContext?.findRenderObject() as RenderBox?;
-                                      if (renderBox == null || _dragAppt == null) return;
-                                      final localPos = renderBox.globalToLocal(globalPos);
-                                      final laneIdx = _yToLaneIndex(localPos.dy, lanes.length);
-                                      final targetLane = lanes[laneIdx];
-                                      final targetTime = _xToTime(localPos.dx);
-                                      final duration = (_dragAppt!['duration_minutes'] as num?)?.toInt() ?? 60;
-                                      final targetEnd = targetTime.add(Duration(minutes: duration));
-                                      final serviceId = _dragAppt!['service_id'] as String?;
-
-                                      final canDo = _canStaffDoService(targetLane.id, serviceId, staffServices);
-                                      final noCollision = !_hasCollision(targetLane.id, targetTime, targetEnd, _dragAppt!['id'] as String, appts);
-
-                                      setState(() {
-                                        _dragPos = localPos;
-                                        _dragTargetStaffId = targetLane.id;
-                                        _dragTargetTime = targetTime;
-                                        _dragValid = canDo && noCollision;
-                                      });
-                                    },
-                                    onDragEnd: () {
-                                      if (_dragAppt != null && _dragValid && _dragTargetTime != null && _dragTargetStaffId != null) {
-                                        _executeReschedule(_dragAppt!, _dragTargetTime!, _dragTargetStaffId!, allStaff);
-                                      } else if (_dragAppt != null && !_dragValid) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(
-                                            content: Text('No se puede mover aqui'),
-                                            duration: Duration(seconds: 2),
-                                            backgroundColor: Color(0xFFE53935),
-                                          ),
-                                        );
-                                      }
-                                      setState(() {
-                                        _dragAppt = null;
-                                        _dragPos = null;
-                                        _dragTargetStaffId = null;
-                                        _dragTargetTime = null;
-                                        _dragValid = false;
-                                        _isDragging = false;
-                                      });
-                                    },
+                                    onDragUpdate: (globalPos) => _updateDragPosition(globalPos),
+                                    onDragEnd: () => _executeDragDrop(),
                                   ),
                               ],
                             ),
@@ -1026,7 +1130,7 @@ class _HorizontalDayViewState extends ConsumerState<_HorizontalDayView> {
                                 left: 0,
                                 right: 0,
                                 child: Center(
-                                  child: _PulsingTooltip(text: 'Arrastra una cita para reprogramar'),
+                                  child: _PulsingTooltip(text: 'Ctrl+Click en una cita para mover'),
                                 ),
                               ),
                           ],
@@ -1036,6 +1140,28 @@ class _HorizontalDayViewState extends ConsumerState<_HorizontalDayView> {
                   ),
                 ],
               ),
+            ),
+            // ── Grab overlay: captures mouse hover + click during Ctrl+Click grab ──
+            if (_isDragging && _isMouseGrab)
+              Positioned.fill(
+                child: Listener(
+                  behavior: HitTestBehavior.opaque,
+                  onPointerHover: (event) {
+                    _lastGlobalPos = event.position;
+                    _updateDragPosition(event.position);
+                    _updateAutoScroll(event.position);
+                  },
+                  onPointerDown: (event) {
+                    // Click to drop
+                    _executeDragDrop();
+                  },
+                  child: MouseRegion(
+                    cursor: _dragValid ? SystemMouseCursors.copy : SystemMouseCursors.forbidden,
+                    child: const SizedBox.expand(),
+                  ),
+                ),
+              ),
+          ],
             );
           },
         );
@@ -1951,6 +2077,7 @@ class _DragOrTapDetectorState extends State<_DragOrTapDetector> {
   /// Whether the device has a touch screen. Detected on first pointer event.
   /// Starts null (unknown), then locks after first interaction.
   static bool? _isTouchDevice;
+  bool _suppressTap = false;
 
   @override
   Widget build(BuildContext context) {
@@ -1970,21 +2097,27 @@ class _DragOrTapDetectorState extends State<_DragOrTapDetector> {
   }
 
   Widget _buildMouse() {
-    return GestureDetector(
-      onTap: widget.onTap,
-      onPanStart: widget.enableDrag && widget.onDragStart != null
-          ? (details) => widget.onDragStart!(details.globalPosition)
-          : null,
-      onPanUpdate: widget.enableDrag && widget.onDragUpdate != null
-          ? (details) => widget.onDragUpdate!(details.globalPosition)
-          : null,
-      onPanEnd: widget.enableDrag && widget.onDragEnd != null
-          ? (_) => widget.onDragEnd!()
-          : null,
-      onPanCancel: widget.enableDrag && widget.onDragEnd != null
-          ? () => widget.onDragEnd!()
-          : null,
-      child: widget.child,
+    // Ctrl+Click to grab, overlay handles movement + drop.
+    return Listener(
+      behavior: HitTestBehavior.translucent,
+      onPointerDown: (event) {
+        if (widget.enableDrag &&
+            widget.onDragStart != null &&
+            HardwareKeyboard.instance.isControlPressed) {
+          _suppressTap = true;
+          widget.onDragStart!(event.position);
+        }
+      },
+      child: GestureDetector(
+        onTap: () {
+          if (_suppressTap) {
+            _suppressTap = false;
+            return;
+          }
+          widget.onTap();
+        },
+        child: widget.child,
+      ),
     );
   }
 
