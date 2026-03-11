@@ -14,7 +14,7 @@ import '../../providers/demo_providers.dart';
 
 /// State providers for calendar UI.
 final calendarDateProvider = StateProvider<DateTime>((ref) => DateTime.now());
-final calendarStaffFilterProvider = StateProvider<String?>((ref) => null);
+final calendarStaffFilterProvider = StateProvider<Set<String>>((ref) => {});
 final selectedAppointmentProvider = StateProvider<Map<String, dynamic>?>((ref) => null);
 
 /// Helper to get staff display name (supports first_name/last_name or name).
@@ -170,7 +170,9 @@ class _CalendarToolbar extends ConsumerWidget {
       builder: (ctx) => _WalkInDialog(
         bizId: bizId,
         date: ref.read(calendarDateProvider),
-        preSelectedStaffId: ref.read(calendarStaffFilterProvider),
+        preSelectedStaffId: ref.read(calendarStaffFilterProvider).isEmpty
+            ? null
+            : ref.read(calendarStaffFilterProvider).first,
       ),
     );
   }
@@ -339,13 +341,14 @@ class _StaffFilterBar extends ConsumerWidget {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
     final staffAsync = ref.watch(businessStaffProvider);
-    final selectedStaff = ref.watch(calendarStaffFilterProvider);
+    final selectedSet = ref.watch(calendarStaffFilterProvider);
 
     return staffAsync.when(
       loading: () => const SizedBox(height: 48),
       error: (_, __) => const SizedBox(height: 48),
       data: (staff) {
         if (staff.isEmpty) return const SizedBox.shrink();
+        final allSelected = selectedSet.isEmpty; // empty set = show all
         return Container(
           height: 48,
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -359,8 +362,8 @@ class _StaffFilterBar extends ConsumerWidget {
                 padding: const EdgeInsets.only(right: 8),
                 child: FilterChip(
                   label: const Text('Todos'),
-                  selected: selectedStaff == null,
-                  onSelected: (_) => ref.read(calendarStaffFilterProvider.notifier).state = null,
+                  selected: allSelected,
+                  onSelected: (_) => ref.read(calendarStaffFilterProvider.notifier).state = {},
                 ),
               ),
               for (var i = 0; i < staff.length; i++)
@@ -376,8 +379,22 @@ class _StaffFilterBar extends ConsumerWidget {
                       ),
                     ),
                     label: Text(_staffDisplayName(staff[i])),
-                    selected: selectedStaff == staff[i]['id'],
-                    onSelected: (_) => ref.read(calendarStaffFilterProvider.notifier).state = staff[i]['id'] as String?,
+                    selected: allSelected || selectedSet.contains(staff[i]['id']),
+                    onSelected: (_) {
+                      final id = staff[i]['id'] as String;
+                      final current = ref.read(calendarStaffFilterProvider);
+                      if (allSelected) {
+                        // Switching from "all" → select only this one
+                        ref.read(calendarStaffFilterProvider.notifier).state = {id};
+                      } else if (current.contains(id)) {
+                        final next = Set<String>.from(current)..remove(id);
+                        // If removing leaves empty, revert to "all"
+                        ref.read(calendarStaffFilterProvider.notifier).state = next;
+                      } else {
+                        ref.read(calendarStaffFilterProvider.notifier).state =
+                            Set<String>.from(current)..add(id);
+                      }
+                    },
                   ),
                 ),
             ],
@@ -511,6 +528,7 @@ class _HorizontalDayViewState extends ConsumerState<_HorizontalDayView> {
   bool _isMouseGrab = false; // true when grab was initiated via Ctrl+Click (not touch)
   Timer? _autoScrollTimer;
   Offset? _lastGlobalPos;
+  double _effectiveLaneHeight = _laneHeight;
   // Cache build-time data for use in grab methods
   List<_LaneData> _currentLanes = [];
   List<Map<String, dynamic>> _currentAppts = [];
@@ -575,7 +593,7 @@ class _HorizontalDayViewState extends ConsumerState<_HorizontalDayView> {
   int _yToLaneIndex(double y, int laneCount) {
     final adjusted = y - _labelRowHeight;
     if (adjusted < 0) return 0;
-    return (adjusted / _laneHeight).floor().clamp(0, laneCount - 1);
+    return (adjusted / _effectiveLaneHeight).floor().clamp(0, laneCount - 1);
   }
 
   /// Check if staff can perform this service.
@@ -894,8 +912,8 @@ class _HorizontalDayViewState extends ConsumerState<_HorizontalDayView> {
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (_, __) => const Center(child: Text('Error al cargar staff')),
       data: (allStaff) {
-        final staff = staffFilter != null
-            ? allStaff.where((s) => s['id'] == staffFilter).toList()
+        final staff = staffFilter.isNotEmpty
+            ? allStaff.where((s) => staffFilter.contains(s['id'])).toList()
             : allStaff.where((s) => s['is_active'] == true).toList();
 
         if (staff.isEmpty) {
@@ -936,7 +954,7 @@ class _HorizontalDayViewState extends ConsumerState<_HorizontalDayView> {
               ));
             }
 
-            // Cache for grab-and-place methods
+            // Cache for grab-and-place methods (used outside build)
             _currentLanes = lanes;
             _currentAppts = appts;
             _currentStaffServices = staffServices;
@@ -953,10 +971,18 @@ class _HorizontalDayViewState extends ConsumerState<_HorizontalDayView> {
               nowLineX = (minutesSinceStart / 60.0) * _hourWidth;
             }
 
+            return LayoutBuilder(
+              builder: (context, constraints) {
+            // Dynamic lane height: compress to fit available space
+            final availableH = constraints.maxHeight - _labelRowHeight;
+            final effectiveLaneHeight = lanes.isNotEmpty
+                ? (availableH / lanes.length).clamp(36.0, _laneHeight)
+                : _laneHeight;
+            _effectiveLaneHeight = effectiveLaneHeight;
+
             return Stack(
               children: [
-                SingleChildScrollView(
-                  child: Row(
+                Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Fixed staff name column
@@ -967,7 +993,7 @@ class _HorizontalDayViewState extends ConsumerState<_HorizontalDayView> {
                         SizedBox(height: _labelRowHeight),
                         for (var li = 0; li < lanes.length; li++)
                           Container(
-                            height: _laneHeight,
+                            height: effectiveLaneHeight,
                             alignment: Alignment.centerLeft,
                             padding: const EdgeInsets.only(left: 8),
                             decoration: _isDragging && _dragTargetStaffId == lanes[li].id
@@ -976,31 +1002,42 @@ class _HorizontalDayViewState extends ConsumerState<_HorizontalDayView> {
                                         .withValues(alpha: 0.08),
                                   )
                                 : null,
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                CircleAvatar(
-                                  radius: 12,
-                                  backgroundColor: _staffColor(lanes[li].colorIndex).withValues(alpha: 0.15),
-                                  child: Text(
-                                    lanes[li].name.isNotEmpty ? lanes[li].name[0].toUpperCase() : '?',
-                                    style: TextStyle(fontSize: 10, color: _staffColor(lanes[li].colorIndex), fontWeight: FontWeight.bold),
+                            child: effectiveLaneHeight < 50
+                                ? Center(
+                                    child: CircleAvatar(
+                                      radius: 12,
+                                      backgroundColor: _staffColor(lanes[li].colorIndex).withValues(alpha: 0.15),
+                                      child: Text(
+                                        lanes[li].name.isNotEmpty ? lanes[li].name[0].toUpperCase() : '?',
+                                        style: TextStyle(fontSize: 10, color: _staffColor(lanes[li].colorIndex), fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                  )
+                                : Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      CircleAvatar(
+                                        radius: 12,
+                                        backgroundColor: _staffColor(lanes[li].colorIndex).withValues(alpha: 0.15),
+                                        child: Text(
+                                          lanes[li].name.isNotEmpty ? lanes[li].name[0].toUpperCase() : '?',
+                                          style: TextStyle(fontSize: 10, color: _staffColor(lanes[li].colorIndex), fontWeight: FontWeight.bold),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        lanes[li].name.split(' ').first,
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: _staffColor(lanes[li].colorIndex),
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
                                   ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  lanes[li].name.split(' ').first,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: _staffColor(lanes[li].colorIndex),
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ),
                           ),
                       ],
                     ),
@@ -1052,7 +1089,7 @@ class _HorizontalDayViewState extends ConsumerState<_HorizontalDayView> {
                                 for (final lane in lanes)
                                   _StaffLane(
                                     lane: lane,
-                                    laneHeight: _laneHeight,
+                                    laneHeight: effectiveLaneHeight,
                                     hourWidth: _hourWidth,
                                     startHour: _startHour,
                                     endHour: _endHour,
@@ -1095,14 +1132,14 @@ class _HorizontalDayViewState extends ConsumerState<_HorizontalDayView> {
                                 final snapMinutes = (snapTime.hour - _startHour) * 60 + snapTime.minute;
                                 final snapX = (snapMinutes / 60.0) * _hourWidth;
                                 final ghostWidth = (duration / 60.0) * _hourWidth;
-                                final ghostTop = _labelRowHeight + laneIdx * _laneHeight + 4;
+                                final ghostTop = _labelRowHeight + laneIdx * effectiveLaneHeight + 4;
                                 final service = _dragAppt!['service_name'] as String? ?? '';
                                 final borderColor = _dragValid ? const Color(0xFF4CAF50) : const Color(0xFFE53935);
 
                                 return Positioned(
                                   left: snapX,
                                   top: ghostTop,
-                                  height: _laneHeight - 8,
+                                  height: effectiveLaneHeight - 8,
                                   width: ghostWidth.clamp(30.0, _totalWidth - snapX),
                                   child: IgnorePointer(
                                     child: Container(
@@ -1140,7 +1177,6 @@ class _HorizontalDayViewState extends ConsumerState<_HorizontalDayView> {
                   ),
                 ],
               ),
-            ),
             // ── Grab overlay: captures mouse hover + click during Ctrl+Click grab ──
             if (_isDragging && _isMouseGrab)
               Positioned.fill(
@@ -1162,7 +1198,9 @@ class _HorizontalDayViewState extends ConsumerState<_HorizontalDayView> {
                 ),
               ),
           ],
-            );
+            ); // Stack
+            }, // LayoutBuilder builder
+            ); // LayoutBuilder
           },
         );
       },
