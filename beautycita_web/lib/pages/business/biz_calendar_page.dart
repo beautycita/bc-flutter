@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:beautycita_core/supabase.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/breakpoints.dart';
 import '../../data/demo_data.dart';
@@ -1750,6 +1751,9 @@ class _AppointmentDetailState extends ConsumerState<_AppointmentDetail> {
                   if (duration > 0) _DetailRow(icon: Icons.timer_outlined, label: 'Duracion', value: '$duration min'),
                   _DetailRow(icon: Icons.payments_outlined, label: 'Precio', value: '\$${price.toStringAsFixed(0)}'),
 
+                  const SizedBox(height: 16),
+                  _ContactSalonButton(bizId: widget.bizId, isDemo: isDemo),
+
                   if (!isDemo) ...[
                     const SizedBox(height: 12),
                     Row(
@@ -2060,6 +2064,60 @@ class _RescheduleDialogState extends State<_RescheduleDialog> {
 }
 
 // ── Shared Widgets ──────────────────────────────────────────────────────────
+
+class _ContactSalonButton extends ConsumerWidget {
+  const _ContactSalonButton({required this.bizId, required this.isDemo});
+  final String bizId;
+  final bool isDemo;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = Theme.of(context).colorScheme;
+
+    if (isDemo) {
+      return _buildButton(context, colors, '+523221429800');
+    }
+
+    final bizAsync = ref.watch(currentBusinessProvider);
+    final phone = bizAsync.valueOrNull?['phone'] as String?;
+    if (phone == null || phone.isEmpty) return const SizedBox.shrink();
+    return _buildButton(context, colors, phone.replaceAll(RegExp(r'[^\d+]'), ''));
+  }
+
+  Widget _buildButton(BuildContext context, ColorScheme colors, String digits) {
+    final waDigits = digits.startsWith('+') ? digits.substring(1) : digits;
+
+    return Row(
+      children: [
+        Expanded(
+          child: OutlinedButton.icon(
+            icon: const Icon(Icons.message_outlined, size: 16),
+            label: const Text('WhatsApp'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: const Color(0xFF25D366),
+              side: const BorderSide(color: Color(0xFF25D366)),
+              visualDensity: VisualDensity.compact,
+            ),
+            onPressed: () => launchUrl(Uri.parse('https://wa.me/$waDigits')),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: OutlinedButton.icon(
+            icon: const Icon(Icons.phone_outlined, size: 16),
+            label: const Text('Llamar'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: colors.primary,
+              side: BorderSide(color: colors.primary),
+              visualDensity: VisualDensity.compact,
+            ),
+            onPressed: () => launchUrl(Uri.parse('tel:$digits')),
+          ),
+        ),
+      ],
+    );
+  }
+}
 
 class _ActionButton extends StatelessWidget {
   const _ActionButton({
