@@ -44,9 +44,12 @@ function generateOtp(): string {
   return String(array[0] % 1000000).padStart(6, "0");
 }
 
-/** Send OTP via beautypi WhatsApp API */
+/** Send OTP via beautypi WhatsApp API (5s timeout to avoid hanging the isolate) */
 async function sendWhatsApp(phone: string, code: string): Promise<{ sent: boolean; channel: string }> {
+  if (!BEAUTYPI_WA_URL) return { sent: false, channel: "whatsapp" };
   try {
+    const ac1 = new AbortController();
+    const t1 = setTimeout(() => ac1.abort(), 5000);
     const checkRes = await fetch(`${BEAUTYPI_WA_URL}/api/wa/check`, {
       method: "POST",
       headers: {
@@ -54,7 +57,9 @@ async function sendWhatsApp(phone: string, code: string): Promise<{ sent: boolea
         Authorization: `Bearer ${BEAUTYPI_WA_TOKEN}`,
       },
       body: JSON.stringify({ phone }),
+      signal: ac1.signal,
     });
+    clearTimeout(t1);
 
     if (!checkRes.ok) {
       console.log(`[WA] Check failed: ${checkRes.status}`);
@@ -69,6 +74,8 @@ async function sendWhatsApp(phone: string, code: string): Promise<{ sent: boolea
 
     const message = `*BeautyCita* - Tu codigo de verificacion es: *${code}*\n\nValido por ${OTP_EXPIRY_MINUTES} minutos. No compartas este codigo.`;
 
+    const ac2 = new AbortController();
+    const t2 = setTimeout(() => ac2.abort(), 5000);
     const sendRes = await fetch(`${BEAUTYPI_WA_URL}/api/wa/send`, {
       method: "POST",
       headers: {
@@ -76,7 +83,9 @@ async function sendWhatsApp(phone: string, code: string): Promise<{ sent: boolea
         Authorization: `Bearer ${BEAUTYPI_WA_TOKEN}`,
       },
       body: JSON.stringify({ phone, message }),
+      signal: ac2.signal,
     });
+    clearTimeout(t2);
 
     if (!sendRes.ok) {
       console.log(`[WA] Send failed: ${sendRes.status}`);

@@ -712,8 +712,8 @@ class _HorizontalDayViewState extends ConsumerState<_HorizontalDayView> {
     final scrollOffset = _scrollController.offset;
     final viewportLocalX = localPos.dx - scrollOffset;
 
-    const edgeThreshold = 60.0;
-    const scrollSpeed = 4.0;
+    const edgeThreshold = 120.0;
+    const scrollSpeed = 20.0;
 
     double scrollDelta = 0;
     if (viewportLocalX < edgeThreshold) {
