@@ -2,8 +2,6 @@ import 'package:beautycita_core/supabase.dart';
 import 'package:beautycita_core/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
-
 import '../../providers/admin_salons_provider.dart';
 import '../../services/csv_export.dart';
 import '../../widgets/bc_data_table.dart';
@@ -482,8 +480,6 @@ class _DiscoveredTab extends ConsumerWidget {
     final colors = theme.colorScheme;
     final filter = ref.watch(discoveredSalonsFilterProvider);
     final salonsAsync = ref.watch(discoveredSalonsProvider);
-    final dateFormat = DateFormat('d MMM yy', 'es');
-
     // Surface errors
     if (salonsAsync.hasError) {
       return Center(
@@ -581,6 +577,24 @@ class _DiscoveredTab extends ConsumerWidget {
                   filter.copyWith(city: () => value, page: 0);
             },
           ),
+          _SalonFilterDropdown(
+            value: filter.enrichmentFilter,
+            hint: 'Enrichment',
+            items: const {
+              null: 'Todos',
+              'ig_enriched': 'IG Enriched',
+              'wa_verified': 'WA Verified',
+              'wa_checked': 'WA Checked',
+              'has_website': 'Has Website',
+              'has_ig': 'Has IG URL',
+              'has_booking': 'Has Booking System',
+              'not_enriched': 'Not Enriched',
+            },
+            onChanged: (value) {
+              ref.read(discoveredSalonsFilterProvider.notifier).state =
+                  filter.copyWith(enrichmentFilter: () => value, page: 0);
+            },
+          ),
         ],
         onClearAll: filter.hasActiveFilters
             ? () {
@@ -596,31 +610,31 @@ class _DiscoveredTab extends ConsumerWidget {
             id: 'name',
             label: 'Nombre',
             sortable: true,
-            cellBuilder: (salon) => Text(
-              salon.name,
-              style: theme.textTheme.bodySmall?.copyWith(
-                fontWeight: FontWeight.w500,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          BCColumn<DiscoveredSalon>(
-            id: 'source',
-            label: 'Fuente',
-            width: 110,
-            cellBuilder: (salon) => _SourceChip(
-              source: salon.source,
-            ),
-          ),
-          BCColumn<DiscoveredSalon>(
-            id: 'phone',
-            label: 'Telefono',
-            cellBuilder: (salon) => Text(
-              salon.phone ?? '-',
-              style: theme.textTheme.bodySmall,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+            cellBuilder: (salon) => Row(
+              children: [
+                CircleAvatar(
+                  radius: 14,
+                  backgroundColor:
+                      colors.secondary.withValues(alpha: 0.1),
+                  backgroundImage: salon.photoUrl != null
+                      ? NetworkImage(salon.photoUrl!)
+                      : null,
+                  child: salon.photoUrl == null
+                      ? Icon(Icons.store, size: 14, color: colors.secondary)
+                      : null,
+                ),
+                const SizedBox(width: BCSpacing.sm),
+                Flexible(
+                  child: Text(
+                    salon.name,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      fontWeight: FontWeight.w500,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
             ),
           ),
           BCColumn<DiscoveredSalon>(
@@ -635,37 +649,94 @@ class _DiscoveredTab extends ConsumerWidget {
             ),
           ),
           BCColumn<DiscoveredSalon>(
-            id: 'country',
-            label: 'Pais',
-            width: 50,
-            cellBuilder: (salon) => Text(
-              salon.country ?? '-',
-              style: theme.textTheme.bodySmall?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          BCColumn<DiscoveredSalon>(
-            id: 'wa_status',
-            label: 'WA',
-            width: 60,
-            cellBuilder: (salon) => _WaChip(
-              status: salon.waStatus,
-            ),
-          ),
-          BCColumn<DiscoveredSalon>(
-            id: 'last_contact_date',
-            label: 'Ultimo contacto',
+            id: 'rating_average',
+            label: 'Rating',
             sortable: true,
-            width: 110,
+            width: 90,
+            cellBuilder: (salon) => salon.rating != null && salon.rating! > 0
+                ? Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.star, size: 14, color: Colors.amber),
+                      const SizedBox(width: 2),
+                      Text(
+                        '${salon.rating!.toStringAsFixed(1)} (${salon.reviewCount ?? 0})',
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ],
+                  )
+                : Text('-', style: theme.textTheme.bodySmall),
+          ),
+          BCColumn<DiscoveredSalon>(
+            id: 'enrichment',
+            label: 'Enrichment',
+            width: 100,
+            cellBuilder: (salon) => Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Tooltip(
+                  message: salon.waStatus == 'valid'
+                      ? 'WA verificado'
+                      : salon.waStatus == 'invalid'
+                          ? 'WA invalido'
+                          : 'WA no checado',
+                  child: Icon(
+                    Icons.chat,
+                    size: 14,
+                    color: salon.waStatus == 'valid'
+                        ? Colors.green
+                        : salon.waStatus == 'invalid'
+                            ? Colors.red
+                            : Colors.grey.shade300,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Tooltip(
+                  message: salon.isIgEnriched
+                      ? 'IG enriquecido (${salon.igFollowers ?? 0} followers)'
+                      : salon.instagramUrl != null
+                          ? 'Tiene IG, pendiente enrichment'
+                          : 'Sin IG',
+                  child: Icon(
+                    Icons.camera_alt,
+                    size: 14,
+                    color: salon.isIgEnriched
+                        ? Colors.purple
+                        : salon.instagramUrl != null
+                            ? Colors.orange
+                            : Colors.grey.shade300,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Tooltip(
+                  message: salon.website != null ? 'Tiene web' : 'Sin web',
+                  child: Icon(
+                    Icons.language,
+                    size: 14,
+                    color: salon.website != null
+                        ? Colors.blue
+                        : Colors.grey.shade300,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          BCColumn<DiscoveredSalon>(
+            id: 'phone',
+            label: 'Telefono',
             cellBuilder: (salon) => Text(
-              salon.lastContactDate != null
-                  ? dateFormat.format(salon.lastContactDate!)
-                  : 'Nunca',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: colors.onSurface.withValues(alpha: 0.7),
-              ),
+              salon.phone ?? '-',
+              style: theme.textTheme.bodySmall,
               maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          BCColumn<DiscoveredSalon>(
+            id: 'source',
+            label: 'Fuente',
+            width: 90,
+            cellBuilder: (salon) => _SourceChip(
+              source: salon.source,
             ),
           ),
           BCColumn<DiscoveredSalon>(
@@ -677,6 +748,30 @@ class _DiscoveredTab extends ConsumerWidget {
               '${salon.interestSignals}',
               style: theme.textTheme.bodySmall,
             ),
+          ),
+          BCColumn<DiscoveredSalon>(
+            id: 'booking_system',
+            label: 'Booking',
+            width: 80,
+            cellBuilder: (salon) => salon.bookingSystem != null
+                ? Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.deepPurple.withValues(alpha: 0.1),
+                      borderRadius:
+                          BorderRadius.circular(BCSpacing.radiusFull),
+                    ),
+                    child: Text(
+                      salon.bookingSystem!,
+                      style: const TextStyle(
+                        color: Colors.deepPurple,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  )
+                : const SizedBox.shrink(),
           ),
         ],
         items: items,
@@ -895,22 +990,6 @@ class _SourceChip extends StatelessWidget {
         ),
       ),
     );
-  }
-}
-
-class _WaChip extends StatelessWidget {
-  const _WaChip({required this.status});
-  final String status;
-
-  @override
-  Widget build(BuildContext context) {
-    final (icon, color) = switch (status) {
-      'valid' => (Icons.check_circle, Colors.green),
-      'invalid' => (Icons.cancel, Colors.red),
-      _ => (Icons.help_outline, Colors.grey),
-    };
-
-    return Icon(icon, size: 16, color: color);
   }
 }
 

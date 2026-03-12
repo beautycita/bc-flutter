@@ -7,6 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../providers/admin_salons_provider.dart';
+import '../../providers/outreach_contact_provider.dart';
+import '../../widgets/contact_panel.dart';
 
 /// Detail panel content for a registered salon.
 class RegisteredSalonDetailContent extends ConsumerStatefulWidget {
@@ -762,18 +764,23 @@ class _DiscoveredSalonDetailContentState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ── Name + Source ──────────────────────────────────────────────
+        // ── Name + Source + Photo ──────────────────────────────────────
         Center(
           child: Column(
             children: [
               CircleAvatar(
                 radius: BCSpacing.avatarLg / 2,
                 backgroundColor: colors.secondary.withValues(alpha: 0.1),
-                child: Icon(
-                  Icons.explore,
-                  size: BCSpacing.iconLg,
-                  color: colors.secondary,
-                ),
+                backgroundImage: salon.photoUrl != null
+                    ? NetworkImage(salon.photoUrl!)
+                    : null,
+                child: salon.photoUrl == null
+                    ? Icon(
+                        Icons.explore,
+                        size: BCSpacing.iconLg,
+                        color: colors.secondary,
+                      )
+                    : null,
               ),
               const SizedBox(height: BCSpacing.sm),
               Text(
@@ -784,10 +791,54 @@ class _DiscoveredSalonDetailContentState
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: BCSpacing.xs),
-              _SourceBadge(source: salon.source),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _SourceBadge(source: salon.source),
+                  if (salon.rating != null && salon.rating! > 0) ...[
+                    const SizedBox(width: BCSpacing.xs),
+                    Icon(Icons.star, size: 14, color: Colors.amber),
+                    const SizedBox(width: 2),
+                    Text(
+                      '${salon.rating!.toStringAsFixed(1)} (${salon.reviewCount ?? 0})',
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ],
+                ],
+              ),
             ],
           ),
         ),
+
+        // ── Categories ──────────────────────────────────────────────
+        if (salon.categories.isNotEmpty) ...[
+          const SizedBox(height: BCSpacing.sm),
+          Center(
+            child: Wrap(
+              spacing: 4,
+              runSpacing: 4,
+              children: salon.categories
+                  .map((cat) => Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: colors.primary.withValues(alpha: 0.1),
+                          borderRadius:
+                              BorderRadius.circular(BCSpacing.radiusFull),
+                        ),
+                        child: Text(
+                          cat,
+                          style: TextStyle(
+                            color: colors.primary,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ))
+                  .toList(),
+            ),
+          ),
+        ],
 
         const SizedBox(height: BCSpacing.lg),
         const Divider(),
@@ -808,7 +859,7 @@ class _DiscoveredSalonDetailContentState
         _InfoRow(
           icon: Icons.location_on_outlined,
           label: 'Ciudad',
-          value: salon.city ?? 'Desconocida',
+          value: [salon.city, salon.state].where((s) => s != null).join(', '),
         ),
         const SizedBox(height: BCSpacing.sm),
         if (salon.address != null) ...[
@@ -816,6 +867,14 @@ class _DiscoveredSalonDetailContentState
             icon: Icons.map_outlined,
             label: 'Direccion',
             value: salon.address!,
+          ),
+          const SizedBox(height: BCSpacing.sm),
+        ],
+        if (salon.website != null) ...[
+          _InfoRow(
+            icon: Icons.language,
+            label: 'Website',
+            value: salon.website!,
           ),
           const SizedBox(height: BCSpacing.sm),
         ],
@@ -849,12 +908,153 @@ class _DiscoveredSalonDetailContentState
           ),
         ],
 
+        // ── Enrichment ────────────────────────────────────────────────
+        const SizedBox(height: BCSpacing.lg),
+        const Divider(),
+        const SizedBox(height: BCSpacing.md),
+        _SectionTitle(title: 'Enrichment'),
+        const SizedBox(height: BCSpacing.sm),
+        Row(
+          children: [
+            _StatCard(
+              label: 'WA',
+              value: salon.waStatus == 'valid'
+                  ? 'OK'
+                  : salon.waStatus == 'invalid'
+                      ? 'No'
+                      : '?',
+              icon: Icons.chat,
+            ),
+            const SizedBox(width: BCSpacing.sm),
+            _StatCard(
+              label: 'IG',
+              value: salon.isIgEnriched
+                  ? '${salon.igFollowers ?? 0}'
+                  : salon.instagramUrl != null
+                      ? 'Pending'
+                      : 'N/A',
+              icon: Icons.camera_alt,
+            ),
+            const SizedBox(width: BCSpacing.sm),
+            _StatCard(
+              label: 'Rating',
+              value: salon.rating != null
+                  ? salon.rating!.toStringAsFixed(1)
+                  : '-',
+              icon: Icons.star,
+            ),
+          ],
+        ),
+        if (salon.igBio != null && salon.igBio!.isNotEmpty) ...[
+          const SizedBox(height: BCSpacing.sm),
+          _InfoRow(
+            icon: Icons.camera_alt,
+            label: 'IG Bio',
+            value: salon.igBio!,
+          ),
+        ],
+        if (salon.instagramUrl != null) ...[
+          const SizedBox(height: BCSpacing.sm),
+          _InfoRow(
+            icon: Icons.link,
+            label: 'Instagram',
+            value: salon.instagramUrl!,
+          ),
+        ],
+        if (salon.workingHours != null &&
+            salon.workingHours!.isNotEmpty) ...[
+          const SizedBox(height: BCSpacing.sm),
+          _InfoRow(
+            icon: Icons.schedule,
+            label: 'Horario',
+            value: salon.workingHours!.length > 100
+                ? '${salon.workingHours!.substring(0, 100)}...'
+                : salon.workingHours!,
+          ),
+        ],
+
+        // ── Booking System ─────────────────────────────────────────────
+        if (salon.bookingSystem != null) ...[
+          const SizedBox(height: BCSpacing.sm),
+          _InfoRow(
+            icon: Icons.event_available,
+            label: 'Sistema de reservas',
+            value: salon.bookingSystem!,
+          ),
+        ],
+        if (salon.bookingUrl != null) ...[
+          const SizedBox(height: BCSpacing.sm),
+          _InfoRow(
+            icon: Icons.open_in_new,
+            label: 'Pagina de reservas',
+            value: salon.bookingUrl!,
+          ),
+        ],
+        if (salon.calendarUrl != null) ...[
+          const SizedBox(height: BCSpacing.sm),
+          _InfoRow(
+            icon: Icons.calendar_month,
+            label: 'Calendario compartido',
+            value: salon.calendarUrl!,
+          ),
+        ],
+        if (salon.email != null) ...[
+          const SizedBox(height: BCSpacing.sm),
+          _InfoRow(
+            icon: Icons.email_outlined,
+            label: 'Email',
+            value: salon.email!,
+          ),
+        ],
+
+        // ── Contact History ────────────────────────────────────────────
+        const SizedBox(height: BCSpacing.lg),
+        const Divider(),
+        const SizedBox(height: BCSpacing.md),
+        _SectionTitle(title: 'Historial de contacto'),
+        const SizedBox(height: BCSpacing.sm),
+        Consumer(builder: (context, ref, _) {
+          final historyAsync =
+              ref.watch(salonOutreachHistoryProvider(salon.id));
+          return historyAsync.when(
+            data: (entries) => entries.isEmpty
+                ? Text('Sin contacto previo',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colors.onSurface.withValues(alpha: 0.5),
+                      fontStyle: FontStyle.italic,
+                    ))
+                : Column(
+                    children: entries
+                        .take(10)
+                        .map((e) => _ContactHistoryTile(entry: e))
+                        .toList(),
+                  ),
+            loading: () => const SizedBox(
+              height: 40,
+              child: Center(
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+            error: (e, _) => Text('Error: $e',
+                style: theme.textTheme.bodySmall),
+          );
+        }),
+
         const SizedBox(height: BCSpacing.lg),
         const Divider(),
         const SizedBox(height: BCSpacing.md),
 
         // ── Actions ────────────────────────────────────────────────────
         _SectionTitle(title: 'Acciones'),
+        const SizedBox(height: BCSpacing.sm),
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton.icon(
+            onPressed: () => _openContactPanel(context, ref, salon),
+            icon: const Icon(Icons.contact_phone, size: 18),
+            label: const Text('Contactar'),
+          ),
+        ),
         const SizedBox(height: BCSpacing.sm),
         SizedBox(
           width: double.infinity,
@@ -904,6 +1104,133 @@ class _DiscoveredSalonDetailContentState
           ),
         ),
       ],
+    );
+  }
+
+  void _openContactPanel(
+    BuildContext context,
+    WidgetRef ref,
+    DiscoveredSalon salon,
+  ) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        insetPadding: const EdgeInsets.all(BCSpacing.lg),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 500, maxHeight: 700),
+          child: ContactPanel(
+            salon: salon,
+            onClose: () => Navigator.of(ctx).pop(),
+            onSent: () {
+              ref.invalidate(salonOutreachHistoryProvider(salon.id));
+              ref.invalidate(discoveredSalonsProvider);
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Contact History Tile ──────────────────────────────────────────────────────
+
+class _ContactHistoryTile extends StatelessWidget {
+  const _ContactHistoryTile({required this.entry});
+  final OutreachLogEntry entry;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final dateFormat = DateFormat('d MMM HH:mm', 'es');
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: BCSpacing.sm),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(entry.channelIcon, size: 16, color: entry.outcomeColor),
+          const SizedBox(width: BCSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      entry.channelLabel,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      dateFormat.format(entry.sentAt),
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: colors.onSurface.withValues(alpha: 0.5),
+                      ),
+                    ),
+                  ],
+                ),
+                if (entry.outcome != null) ...[
+                  const SizedBox(height: 2),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: entry.outcomeColor.withValues(alpha: 0.1),
+                      borderRadius:
+                          BorderRadius.circular(BCSpacing.radiusFull),
+                    ),
+                    child: Text(
+                      entry.outcome!,
+                      style: TextStyle(
+                        color: entry.outcomeColor,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+                if (entry.messageText != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    entry.messageText!.length > 80
+                        ? '${entry.messageText!.substring(0, 80)}...'
+                        : entry.messageText!,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colors.onSurface.withValues(alpha: 0.7),
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+                if (entry.notes != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    entry.notes!,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colors.onSurface.withValues(alpha: 0.6),
+                      fontStyle: FontStyle.italic,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+                if (entry.rpDisplayName != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    'Por: ${entry.rpDisplayName}',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: colors.onSurface.withValues(alpha: 0.4),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
