@@ -80,6 +80,7 @@ class DiscoveredSalon {
   final String? source; // 'google_maps', 'facebook', 'bing'
   final String? phone;
   final String? city;
+  final String? state;
   final String? country; // 'MX', 'US'
   final String waStatus; // 'valid', 'invalid', 'unknown'
   final DateTime? lastContactDate;
@@ -88,6 +89,25 @@ class DiscoveredSalon {
   final double? latitude;
   final double? longitude;
   final DateTime createdAt;
+  // Enrichment fields
+  final double? rating;
+  final int? reviewCount;
+  final String? photoUrl;
+  final String? website;
+  final String? instagramUrl;
+  final String? igBio;
+  final int? igFollowers;
+  final List<String> categories;
+  final List<String> specialties;
+  final String? workingHours;
+  final DateTime? igEnrichedAt;
+  final DateTime? waCheckedAt;
+  // Booking enrichment fields
+  final String? bookingSystem;
+  final String? bookingUrl;
+  final String? calendarUrl;
+  final DateTime? bookingEnrichedAt;
+  final String? email;
 
   const DiscoveredSalon({
     required this.id,
@@ -95,6 +115,7 @@ class DiscoveredSalon {
     this.source,
     this.phone,
     this.city,
+    this.state,
     this.country,
     this.waStatus = 'unknown',
     this.lastContactDate,
@@ -103,7 +124,27 @@ class DiscoveredSalon {
     this.latitude,
     this.longitude,
     required this.createdAt,
+    this.rating,
+    this.reviewCount,
+    this.photoUrl,
+    this.website,
+    this.instagramUrl,
+    this.igBio,
+    this.igFollowers,
+    this.categories = const [],
+    this.specialties = const [],
+    this.workingHours,
+    this.igEnrichedAt,
+    this.waCheckedAt,
+    this.bookingSystem,
+    this.bookingUrl,
+    this.calendarUrl,
+    this.bookingEnrichedAt,
+    this.email,
   });
+
+  bool get isIgEnriched => igEnrichedAt != null;
+  bool get isWaChecked => waCheckedAt != null;
 
   factory DiscoveredSalon.fromJson(Map<String, dynamic> json) {
     return DiscoveredSalon(
@@ -112,6 +153,7 @@ class DiscoveredSalon {
       source: json['source'] as String?,
       phone: json['phone'] as String?,
       city: json['location_city'] as String?,
+      state: json['location_state'] as String?,
       country: json['country'] as String?,
       waStatus: json['whatsapp_verified'] == true
           ? 'valid'
@@ -126,6 +168,32 @@ class DiscoveredSalon {
       longitude: (json['longitude'] as num?)?.toDouble(),
       createdAt: DateTime.tryParse(json['created_at'] as String? ?? '') ??
           DateTime.now(),
+      rating: (json['rating_average'] as num?)?.toDouble(),
+      reviewCount: json['rating_count'] as int?,
+      photoUrl: json['feature_image_url'] as String?,
+      website: json['website'] as String?,
+      instagramUrl: json['instagram_url'] as String?,
+      igBio: json['ig_bio'] as String?,
+      igFollowers: json['ig_followers'] as int?,
+      categories: (json['matched_categories'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [],
+      specialties: (json['specialties'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [],
+      workingHours: json['working_hours'] as String?,
+      igEnrichedAt:
+          DateTime.tryParse(json['ig_enriched_at'] as String? ?? ''),
+      waCheckedAt:
+          DateTime.tryParse(json['whatsapp_checked_at'] as String? ?? ''),
+      bookingSystem: json['booking_system'] as String?,
+      bookingUrl: json['booking_url'] as String?,
+      calendarUrl: json['calendar_url'] as String?,
+      bookingEnrichedAt:
+          DateTime.tryParse(json['booking_enriched_at'] as String? ?? ''),
+      email: json['email'] as String?,
     );
   }
 }
@@ -156,6 +224,7 @@ class SalonsFilter {
   final String? country;
   final String searchText;
   final bool? verified;
+  final String? enrichmentFilter; // 'ig_enriched', 'wa_verified', 'wa_checked', 'has_photo', 'has_website'
   final int page;
   final int pageSize;
   final String? sortColumn;
@@ -166,6 +235,7 @@ class SalonsFilter {
     this.country,
     this.searchText = '',
     this.verified,
+    this.enrichmentFilter,
     this.page = 0,
     this.pageSize = 20,
     this.sortColumn,
@@ -177,6 +247,7 @@ class SalonsFilter {
     String? Function()? country,
     String? searchText,
     bool? Function()? verified,
+    String? Function()? enrichmentFilter,
     int? page,
     int? pageSize,
     String? Function()? sortColumn,
@@ -187,6 +258,7 @@ class SalonsFilter {
       country: country != null ? country() : this.country,
       searchText: searchText ?? this.searchText,
       verified: verified != null ? verified() : this.verified,
+      enrichmentFilter: enrichmentFilter != null ? enrichmentFilter() : this.enrichmentFilter,
       page: page ?? this.page,
       pageSize: pageSize ?? this.pageSize,
       sortColumn: sortColumn != null ? sortColumn() : this.sortColumn,
@@ -198,7 +270,8 @@ class SalonsFilter {
       city != null ||
       country != null ||
       searchText.isNotEmpty ||
-      verified != null;
+      verified != null ||
+      enrichmentFilter != null;
 }
 
 // ── Providers ─────────────────────────────────────────────────────────────────
@@ -339,15 +412,47 @@ final discoveredSalonsProvider =
   final to = from + filter.pageSize - 1;
 
   var query = client.from(BCTables.discoveredSalons).select(
-    'id, business_name, source, phone, location_city, country, '
+    'id, business_name, source, phone, location_city, location_state, country, '
     'whatsapp_verified, last_outreach_at, interest_count, '
-    'location_address, latitude, longitude, created_at',
+    'location_address, latitude, longitude, created_at, '
+    'rating_average, rating_count, feature_image_url, website, '
+    'instagram_url, ig_bio, ig_followers, matched_categories, specialties, '
+    'working_hours, ig_enriched_at, whatsapp_checked_at, '
+    'booking_system, booking_url, calendar_url, booking_enriched_at, email',
   );
   if (filter.city != null) {
     query = query.eq('location_city', filter.city!);
   }
   if (filter.country != null) {
-    query = query.eq('country', filter.country!);
+    if (filter.country == 'MX') {
+      query = query.or('country.eq.MX,country.eq.Mexico');
+    } else {
+      query = query.eq('country', filter.country!);
+    }
+  }
+  // Enrichment filters
+  switch (filter.enrichmentFilter) {
+    case 'ig_enriched':
+      query = query.not('ig_enriched_at', 'is', null);
+      break;
+    case 'wa_verified':
+      query = query.eq('whatsapp_verified', true);
+      break;
+    case 'wa_checked':
+      query = query.not('whatsapp_checked_at', 'is', null);
+      break;
+    case 'has_website':
+      query = query.not('website', 'is', null).neq('website', '');
+      break;
+    case 'has_ig':
+      query = query.not('instagram_url', 'is', null).neq('instagram_url', '');
+      break;
+    case 'not_enriched':
+      query = query.isFilter('ig_enriched_at', null).isFilter('whatsapp_checked_at', null);
+      break;
+    case 'has_booking':
+      query = query.not('booking_system', 'is', null);
+      break;
   }
 
   final List<dynamic> data;
@@ -371,7 +476,34 @@ final discoveredSalonsProvider =
     countQuery = countQuery.eq('location_city', filter.city!);
   }
   if (filter.country != null) {
-    countQuery = countQuery.eq('country', filter.country!);
+    if (filter.country == 'MX') {
+      countQuery = countQuery.or('country.eq.MX,country.eq.Mexico');
+    } else {
+      countQuery = countQuery.eq('country', filter.country!);
+    }
+  }
+  switch (filter.enrichmentFilter) {
+    case 'ig_enriched':
+      countQuery = countQuery.not('ig_enriched_at', 'is', null);
+      break;
+    case 'wa_verified':
+      countQuery = countQuery.eq('whatsapp_verified', true);
+      break;
+    case 'wa_checked':
+      countQuery = countQuery.not('whatsapp_checked_at', 'is', null);
+      break;
+    case 'has_website':
+      countQuery = countQuery.not('website', 'is', null).neq('website', '');
+      break;
+    case 'has_ig':
+      countQuery = countQuery.not('instagram_url', 'is', null).neq('instagram_url', '');
+      break;
+    case 'not_enriched':
+      countQuery = countQuery.isFilter('ig_enriched_at', null).isFilter('whatsapp_checked_at', null);
+      break;
+    case 'has_booking':
+      countQuery = countQuery.not('booking_system', 'is', null);
+      break;
   }
   final int totalCount;
   if (searchText.isNotEmpty) {

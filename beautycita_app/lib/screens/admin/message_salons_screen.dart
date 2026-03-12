@@ -5,13 +5,14 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../config/constants.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
+import '../../widgets/outreach_contact_sheet.dart';
 
 /// Provider to fetch discovered salons with WA-verified status for messaging.
 final _messageSalonsProvider = FutureProvider.family<List<Map<String, dynamic>>, _SalonFilter>(
   (ref, filter) async {
     var query = SupabaseClientService.client
         .from('discovered_salons')
-        .select('id, business_name, phone, whatsapp, location_city, location_address, latitude, longitude, rating_average, interest_count, status, whatsapp_verified, outreach_count, last_outreach_at, feature_image_url');
+        .select('id, business_name, phone, whatsapp, location_city, location_address, latitude, longitude, rating_average, rating_count, interest_count, status, whatsapp_verified, outreach_count, last_outreach_at, feature_image_url, booking_system, email');
 
     if (filter.city != null && filter.city!.isNotEmpty) {
       query = query.eq('location_city', filter.city!);
@@ -231,6 +232,7 @@ class _MessageSalonsScreenState extends ConsumerState<MessageSalonsScreen> {
                       salon: salon,
                       onTap: () => _showSalonDetail(salon),
                       onMessage: () => _showMessageDialog(salon),
+                      onContact: () => showOutreachContactSheet(context, salon),
                     );
                   },
                 );
@@ -519,9 +521,18 @@ class _MessageSalonsScreenState extends ConsumerState<MessageSalonsScreen> {
                       },
                     ),
                     _ActionIcon(
-                      icon: Icons.send_rounded,
-                      label: 'Mensaje',
+                      icon: Icons.contact_phone_rounded,
+                      label: 'Contactar',
                       color: const Color(0xFFC2185B),
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        showOutreachContactSheet(context, salon);
+                      },
+                    ),
+                    _ActionIcon(
+                      icon: Icons.send_rounded,
+                      label: 'WA rápido',
+                      color: const Color(0xFF25D366),
                       onTap: () {
                         Navigator.pop(ctx);
                         _showMessageDialog(salon);
@@ -663,11 +674,13 @@ class _SalonCard extends StatelessWidget {
   final Map<String, dynamic> salon;
   final VoidCallback onTap;
   final VoidCallback onMessage;
+  final VoidCallback? onContact;
 
   const _SalonCard({
     required this.salon,
     required this.onTap,
     required this.onMessage,
+    this.onContact,
   });
 
   @override
@@ -681,6 +694,7 @@ class _SalonCard extends StatelessWidget {
     final waVerified = salon['whatsapp_verified'] == true;
     final status = salon['status'] as String? ?? 'discovered';
     final imageUrl = salon['feature_image_url'] as String?;
+    final bookingSystem = salon['booking_system'] as String?;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -769,16 +783,42 @@ class _SalonCard extends StatelessWidget {
                                 style: GoogleFonts.nunito(fontSize: 10, fontWeight: FontWeight.w700,
                                   color: Colors.blue[700])),
                             ),
+                          if (bookingSystem != null)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                              margin: const EdgeInsets.only(left: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.deepPurple.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(bookingSystem,
+                                style: GoogleFonts.nunito(fontSize: 10, fontWeight: FontWeight.w700,
+                                  color: Colors.deepPurple)),
+                            ),
                         ],
                       ),
                     ],
                   ),
                 ),
-                // Send button
-                IconButton(
-                  icon: const Icon(Icons.send_rounded, size: 20, color: Color(0xFFC2185B)),
-                  tooltip: 'Enviar mensaje',
-                  onPressed: onMessage,
+                // Action buttons
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.contact_phone_rounded, size: 20, color: Color(0xFFC2185B)),
+                      tooltip: 'Contactar (multicanal)',
+                      onPressed: onContact,
+                      constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                      padding: EdgeInsets.zero,
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.send_rounded, size: 18, color: Color(0xFF25D366)),
+                      tooltip: 'WA rápido',
+                      onPressed: onMessage,
+                      constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                      padding: EdgeInsets.zero,
+                    ),
+                  ],
                 ),
               ],
             ),
