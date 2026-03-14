@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:beautycita_core/supabase.dart';
+import '../data/demo_data.dart';
+import 'demo_providers.dart';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -293,6 +295,10 @@ final staffScheduleProvider = FutureProvider.autoDispose
 /// Services assigned to a specific staff member, with joined service details.
 final staffServicesProvider = FutureProvider.autoDispose
     .family<List<Map<String, dynamic>>, String>((ref, staffId) async {
+  if (ref.watch(isDemoProvider)) {
+    return DemoData.staffServicesFor(staffId);
+  }
+
   final response = await BCSupabase.client
       .from(BCTables.staffServices)
       .select('*, services(name, price, duration_minutes)')

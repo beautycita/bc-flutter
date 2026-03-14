@@ -789,7 +789,10 @@ class _HorizontalDayViewState extends ConsumerState<_HorizontalDayView> {
       }
 
       // Fire-and-forget: send reschedule notification
-      _sendRescheduleNotification(id);
+      _sendRescheduleNotification(
+        id,
+        oldStaffId: (newStaffId != oldStaffId) ? oldStaffId : null,
+      );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error al reagendar: $e')));
@@ -797,11 +800,14 @@ class _HorizontalDayViewState extends ConsumerState<_HorizontalDayView> {
     }
   }
 
-  Future<void> _sendRescheduleNotification(String appointmentId) async {
+  Future<void> _sendRescheduleNotification(String appointmentId, {String? oldStaffId}) async {
     try {
       await BCSupabase.client.functions.invoke(
         'reschedule-notification',
-        body: {'appointment_id': appointmentId},
+        body: {
+          'appointment_id': appointmentId,
+          if (oldStaffId != null) 'old_staff_id': oldStaffId,
+        },
       );
     } catch (e) {
       debugPrint('[Reschedule] Notification error: $e');
@@ -2053,6 +2059,12 @@ class _RescheduleDialogState extends State<_RescheduleDialog> {
 
       widget.onSaved();
       if (mounted) Navigator.of(context).pop();
+
+      // Fire-and-forget: notify customer + stylist of reschedule
+      BCSupabase.client.functions.invoke(
+        'reschedule-notification',
+        body: {'appointment_id': widget.appointmentId},
+      ).catchError((e) => debugPrint('[Reschedule] Notification error: $e'));
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
