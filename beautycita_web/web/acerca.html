@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <meta name="description" content="Sobre BeautyCita — tu agente de belleza inteligente, construido desde Puerto Vallarta para todo Mexico.">
+  <meta name="theme-color" content="#9333ea">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Sobre Nosotros — BeautyCita</title>
+  <link rel="icon" type="image/png" href="/icons/Icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --pink: #ec4899;
+      --purple: #9333ea;
+      --blue: #3b82f6;
+      --text: #1a1a2e;
+      --text-light: rgba(26, 26, 46, 0.65);
+      --text-muted: rgba(26, 26, 46, 0.45);
+      --bg: #faf9fe;
+      --card-bg: #ffffff;
+      --border: rgba(147, 51, 234, 0.08);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Nunito', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.75;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    /* ── Header ── */
+    .header {
+      background: linear-gradient(135deg, var(--pink), var(--purple), var(--blue));
+      color: #fff;
+      padding: 3.5rem 1.5rem 3rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .header::before {
+      content: '';
+      position: absolute;
+      top: -50%; left: -50%;
+      width: 200%; height: 200%;
+      background: radial-gradient(circle at 30% 50%, rgba(255,255,255,0.08) 0%, transparent 50%);
+      pointer-events: none;
+    }
+
+    .header-content {
+      position: relative;
+      z-index: 1;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .header-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: rgba(255,255,255,0.15);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 2rem;
+      padding: 0.35rem 1rem;
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      margin-bottom: 1.25rem;
+    }
+
+    .header h1 {
+      font-family: 'Poppins', sans-serif;
+      font-size: clamp(2rem, 7vw, 3rem);
+      font-weight: 800;
+      line-height: 1.1;
+      margin-bottom: 0.75rem;
+    }
+
+    .header .subtitle {
+      font-size: clamp(0.95rem, 2.5vw, 1.1rem);
+      opacity: 0.88;
+      font-weight: 500;
+      line-height: 1.55;
+      max-width: 480px;
+    }
+
+    /* ── Main ── */
+    main {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 2.5rem 1rem 4rem;
+    }
+
+    .section-title {
+      font-family: 'Poppins', sans-serif;
+      font-size: clamp(1.25rem, 4vw, 1.5rem);
+      font-weight: 700;
+      margin-bottom: 1rem;
+    }
+
+    /* ── Story card ── */
+    .story-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      padding: 1.75rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 2px 12px rgba(147, 51, 234, 0.05);
+    }
+
+    .story-card p {
+      font-size: 0.95rem;
+      color: var(--text-light);
+      line-height: 1.8;
+      margin-bottom: 1rem;
+    }
+
+    .story-card p:last-child { margin-bottom: 0; }
+
+    .chips {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-top: 0.5rem;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      background: rgba(147, 51, 234, 0.06);
+      border: 1px solid rgba(147, 51, 234, 0.15);
+      border-radius: 2rem;
+      padding: 0.4rem 0.9rem;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--purple);
+    }
+
+    .chip .chip-icon { font-size: 1rem; }
+
+    /* ── Values grid ── */
+    .values-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+      margin: 1rem 0 2.5rem;
+    }
+
+    .value-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      padding: 1.25rem;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+    }
+
+    .value-icon {
+      width: 40px; height: 40px;
+      background: linear-gradient(135deg, var(--pink), var(--purple));
+      border-radius: 0.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+      color: #fff;
+      margin-bottom: 0.6rem;
+    }
+
+    .value-card h3 {
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 700;
+      line-height: 1.25;
+      margin-bottom: 0.3rem;
+    }
+
+    .value-card p {
+      font-size: 0.8rem;
+      color: var(--text-light);
+      line-height: 1.5;
+    }
+
+    /* ── Careers ── */
+    .careers-intro {
+      font-size: 0.9rem;
+      color: var(--text-light);
+      margin-bottom: 1rem;
+      line-height: 1.65;
+    }
+
+    .job-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      padding: 1.5rem;
+      margin-bottom: 0.75rem;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+    }
+
+    .job-card h3 {
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 0.4rem;
+    }
+
+    .job-type {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.2rem 0.65rem;
+      border-radius: 2rem;
+      margin-bottom: 0.6rem;
+    }
+
+    .job-card p {
+      font-size: 0.85rem;
+      color: var(--text-light);
+      line-height: 1.6;
+      margin-bottom: 0.6rem;
+    }
+
+    .job-email {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--purple);
+      text-decoration: none;
+    }
+
+    .job-email:hover { text-decoration: underline; }
+
+    /* ── Footer card ── */
+    .footer-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      padding: 1.5rem;
+      text-align: center;
+      margin-top: 2rem;
+    }
+
+    .footer-card .company {
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    .footer-card .location {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 0.2rem;
+    }
+
+    /* ── Footer ── */
+    .footer {
+      text-align: center;
+      padding: 2rem 1rem 3rem;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+    }
+
+    .footer .brand {
+      font-family: 'Poppins', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--pink), var(--purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 0.25rem;
+    }
+
+    /* ── Responsive ── */
+    @media (min-width: 640px) {
+      .header { padding: 4.5rem 2rem 3.5rem; }
+      main { padding: 3rem 2rem 5rem; }
+    }
+
+    @media (max-width: 400px) {
+      .values-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ── Dark mode ── */
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --text: #e8e6f0;
+        --text-light: rgba(232, 230, 240, 0.7);
+        --text-muted: rgba(232, 230, 240, 0.4);
+        --bg: #0f0e17;
+        --card-bg: #1a1929;
+        --border: rgba(147, 51, 234, 0.15);
+      }
+    }
+
+    /* ── Print ── */
+    @media print {
+      .header { background: #333 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      body { font-size: 11pt; }
+      main { max-width: 100%; padding: 1rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header class="header">
+  <div class="header-content">
+    <div class="header-badge">Hecho con amor en Mexico</div>
+    <h1>BeautyCita</h1>
+    <p class="subtitle">Tu agente de belleza inteligente, construido desde Puerto Vallarta para todo Mexico.</p>
+  </div>
+</header>
+
+<!-- ── Content ── -->
+<main>
+
+  <!-- Our Story -->
+  <h2 class="section-title">Nuestra Historia</h2>
+  <div class="story-card">
+    <p>BeautyCita nacio en 2023 en Puerto Vallarta — no en Silicon Valley, no en un acelerador de startups. Comenzo con una laptop y visitas puerta a puerta hablando con duenos de salones.</p>
+    <p>Sin fondos de VC, sin influencers pagados. Solo una mision: conectar a las personas con los mejores profesionales de belleza cerca de ellos.</p>
+  </div>
+  <div class="chips">
+    <span class="chip"><span class="chip-icon">&#127925;</span> Cancion propia</span>
+    <span class="chip"><span class="chip-icon">&#37;</span> Solo 3% comision</span>
+  </div>
+
+  <!-- Values -->
+  <h2 class="section-title" style="margin-top: 2.5rem;">Nuestros Valores</h2>
+  <div class="values-grid">
+    <div class="value-card">
+      <div class="value-icon">&#127793;</div>
+      <h3>Crecimiento de Base</h3>
+      <p>Crecemos barrio por barrio, salon por salon.</p>
+    </div>
+    <div class="value-card">
+      <div class="value-icon">&#10084;</div>
+      <h3>Autenticidad</h3>
+      <p>Conexiones reales, resenas honestas.</p>
+    </div>
+    <div class="value-card">
+      <div class="value-icon">&#128101;</div>
+      <h3>Comunidad Primero</h3>
+      <p>Cada decision pone a la comunidad primero.</p>
+    </div>
+    <div class="value-card">
+      <div class="value-icon">&#129309;</div>
+      <h3>Ganar Juntos</h3>
+      <p>Los profesionales conservan el 97% de cada reserva.</p>
+    </div>
+  </div>
+
+  <!-- Careers -->
+  <h2 class="section-title">Unete al equipo</h2>
+  <p class="careers-intro">Construimos BeautyCita desde cero. Si compartes nuestra mision, hay un lugar para ti.</p>
+
+  <div class="job-card">
+    <h3>Marketer de Crecimiento (Regional)</h3>
+    <div class="job-type" style="background: rgba(123,97,255,0.12); color: #7B61FF;">Comision / Medio tiempo</div>
+    <p>Impulsa el crecimiento local a traves de marketing en redes sociales y relaciones con la comunidad en tu ciudad.</p>
+    <a href="mailto:careers@beautycita.com" class="job-email">&#9993; careers@beautycita.com</a>
+  </div>
+
+  <div class="job-card">
+    <h3>Lider de Exito del Cliente</h3>
+    <div class="job-type" style="background: rgba(0,168,120,0.12); color: #00A878;">Tiempo completo / Remoto</div>
+    <p>Brinda atencion excepcional a clientes y profesionales de la industria de belleza. Experiencia en salones es un plus.</p>
+    <a href="mailto:careers@beautycita.com" class="job-email">&#9993; careers@beautycita.com</a>
+  </div>
+
+  <div class="job-card">
+    <h3>Coordinador de Operaciones</h3>
+    <div class="job-type" style="background: rgba(232,97,77,0.12); color: #E8614D;">Tiempo completo / Ciudad de Mexico</div>
+    <p>Gestiona logistica operacional, coordina equipos multidisciplinarios y mantiene procesos eficientes. Multitarea esencial.</p>
+    <a href="mailto:careers@beautycita.com" class="job-email">&#9993; careers@beautycita.com</a>
+  </div>
+
+  <div class="job-card">
+    <h3>Especialista de Belleza (Asesor)</h3>
+    <div class="job-type" style="background: rgba(229,160,0,0.12); color: #E5A000;">Medio tiempo / Contrato / Remoto</div>
+    <p>Comparte tu expertise del sector. Licencia de belleza requerida, 5+ anos de experiencia en la industria.</p>
+    <a href="mailto:careers@beautycita.com" class="job-email">&#9993; careers@beautycita.com</a>
+  </div>
+
+  <!-- Footer card -->
+  <div class="footer-card">
+    <div class="company">BeautyCita S.A. de C.V.</div>
+    <div class="location">Puerto Vallarta, Jalisco, Mexico</div>
+  </div>
+
+</main>
+
+<!-- ── Footer ── -->
+<footer class="footer">
+  <div class="brand">BeautyCita</div>
+  <p>Puerto Vallarta, Jalisco, Mexico</p>
+  <p style="margin-top: 0.5rem;">&copy; 2026 BeautyCita S.A. de C.V. Todos los derechos reservados.</p>
+</footer>
+
+</body>
+</html>

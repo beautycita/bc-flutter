@@ -3,9 +3,7 @@ import 'package:flutter/material.dart' show Color, ThemeMode;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
-import 'package:beautycita/services/btcpay_service.dart';
 import 'package:beautycita/services/toast_service.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../models/curate_result.dart';
 import '../models/follow_up_question.dart';
 import '../repositories/booking_repository.dart';
@@ -62,7 +60,7 @@ class BookingFlowState {
   final int currentQuestionIndex;
   final Map<String, String> followUpAnswers;
   final String? bookingId;
-  final String paymentMethod; // 'card', 'oxxo', 'bitcoin'
+  final String paymentMethod; // 'card', 'oxxo'
 
   const BookingFlowState({
     this.step = BookingFlowStep.categorySelect,
@@ -296,8 +294,6 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
 
     try {
       switch (state.paymentMethod) {
-        case 'bitcoin':
-          await _confirmBitcoin(result);
         case 'oxxo':
           await _confirmStripe(result, oxxoOnly: true);
         default: // card
@@ -478,53 +474,6 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
     );
   }
 
-  /// Bitcoin path — BTCPay invoice + external browser checkout.
-  Future<void> _confirmBitcoin(ResultCard result) async {
-    final serviceId = result.service.id ?? '';
-
-    // Create booking first as pending
-    final booking = await _bookingRepo.createBooking(
-      providerId: result.business.id,
-      providerServiceId: result.service.id ?? '',
-      serviceName: result.service.name,
-      category: state.serviceType ?? '',
-      scheduledAt: result.slot!.startTime,
-      durationMinutes: result.service.durationMinutes,
-      price: result.service.price ?? 0,
-      paymentStatus: 'pending',
-      paymentMethod: 'bitcoin',
-      transportMode: state.transportMode,
-    );
-
-    // Create BTCPay invoice
-    final invoice = await BTCPayService.createInvoice(
-      serviceId: serviceId,
-      scheduledAt: result.slot!.startTime.toUtc().toIso8601String(),
-    );
-
-    debugPrint('[PAYMENT] BTCPay invoice created: ${invoice.invoiceId}');
-
-    // Store invoice ID on booking
-    await _bookingRepo.updateNotes(
-      booking.id,
-      'btcpay_invoice:${invoice.invoiceId}',
-    );
-
-    // Open checkout in external browser
-    final url = Uri.parse(invoice.checkoutLink);
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
-    }
-
-    // Fire booking confirmation + push (fire and forget)
-    _sendBookingNotifications(booking.id);
-
-    // Transition to email verification gate
-    state = state.copyWith(
-      step: BookingFlowStep.emailVerification,
-      bookingId: booking.id,
-    );
-  }
 
   /// Fire-and-forget booking notifications (push + multi-channel receipt).
   void _sendBookingNotifications(String bookingId) {

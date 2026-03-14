@@ -9,6 +9,7 @@ import 'package:beautycita/providers/profile_provider.dart';
 import 'package:beautycita/providers/admin_provider.dart';
 import 'package:beautycita/providers/business_provider.dart';
 import 'package:beautycita/providers/security_provider.dart';
+import 'package:beautycita/providers/feature_toggle_provider.dart';
 import 'package:beautycita/services/toast_service.dart';
 import 'package:beautycita/widgets/settings_widgets.dart';
 
@@ -329,6 +330,12 @@ class SettingsScreen extends ConsumerWidget {
           },
         ),
       ]);
+    }
+
+    // Feature toggle: salon registration disabled
+    final toggles = ref.watch(featureTogglesProvider);
+    if (!toggles.isEnabled('enable_salon_registration')) {
+      return const SizedBox.shrink();
     }
 
     // Non-customer roles (admin, superadmin, stylist): hide registration

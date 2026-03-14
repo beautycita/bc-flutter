@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../config/constants.dart';
 import '../config/theme_extension.dart';
 import '../providers/chat_provider.dart';
@@ -56,7 +57,7 @@ const _faqCategories = [
       _FaqItem(
         question: '¿Que metodos de pago aceptan?',
         answer:
-            'Tarjeta de credito/debito (via Stripe), Bitcoin (via BTCPay), y efectivo directamente en el salon.',
+            'Tarjeta de credito/debito (via Stripe, certificado PCI-DSS Nivel 1) y efectivo directamente en el salon.',
       ),
       _FaqItem(
         question: '¿Como funcionan los reembolsos?',
@@ -114,6 +115,13 @@ const _faqCategories = [
 class HelpScreen extends ConsumerWidget {
   const HelpScreen({super.key});
 
+  Future<void> _launch(String uri) async {
+    final url = Uri.parse(uri);
+    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      debugPrint('Could not launch $uri');
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ext = Theme.of(context).extension<BCThemeExtension>()!;
@@ -123,7 +131,7 @@ class HelpScreen extends ConsumerWidget {
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
-          'Centro de Ayuda',
+          'Ayuda y Contacto',
           style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
         ),
         centerTitle: false,
@@ -138,53 +146,19 @@ class HelpScreen extends ConsumerWidget {
 
           const SizedBox(height: AppConstants.paddingLG),
 
-          // ── Quick Actions ─────────────────────────────────────────────────
+          // ── Eros AI — Big prominent card ────────────────────────────────
           Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: AppConstants.screenPaddingHorizontal,
             ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _QuickActionCard(
-                    label: 'Chat con Eros',
-                    sublabel: 'Asistente con IA',
-                    icon: Icons.smart_toy_outlined,
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [Color(0xFF1565C0), Color(0xFF42A5F5)],
-                    ),
-                    onTap: () async {
-                      final thread =
-                          await ref.read(erosThreadProvider.future);
-                      if (thread != null && context.mounted) {
-                        context.push('/chat/${thread.id}');
-                      }
-                    },
-                  ),
-                ),
-                const SizedBox(width: AppConstants.paddingMD),
-                Expanded(
-                  child: _QuickActionCard(
-                    label: 'Soporte humano',
-                    sublabel: 'Agente en vivo',
-                    icon: Icons.headset_mic_outlined,
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [Color(0xFFAD1457), Color(0xFFEC407A)],
-                    ),
-                    onTap: () async {
-                      final thread =
-                          await ref.read(supportThreadProvider.future);
-                      if (thread != null && context.mounted) {
-                        context.push('/chat/${thread.id}');
-                      }
-                    },
-                  ),
-                ),
-              ],
+            child: _ErosCard(
+              onTap: () async {
+                final thread =
+                    await ref.read(erosThreadProvider.future);
+                if (thread != null && context.mounted) {
+                  context.push('/chat/${thread.id}');
+                }
+              },
             ),
           ),
 
@@ -217,8 +191,37 @@ class HelpScreen extends ConsumerWidget {
 
           const SizedBox(height: AppConstants.paddingLG),
 
-          // ── Contact Footer ────────────────────────────────────────────────
-          _ContactFooter(ext: ext),
+          // ── Human support card (smaller, secondary) ─────────────────────
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppConstants.screenPaddingHorizontal,
+            ),
+            child: _HumanSupportCard(
+              onTap: () async {
+                final thread =
+                    await ref.read(supportThreadProvider.future);
+                if (thread != null && context.mounted) {
+                  context.push('/chat/${thread.id}');
+                }
+              },
+              colorScheme: colorScheme,
+              ext: ext,
+            ),
+          ),
+
+          const SizedBox(height: AppConstants.paddingMD),
+
+          // ── "Still need help?" expandable contact section ───────────────
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppConstants.screenPaddingHorizontal,
+            ),
+            child: _ContactAccordion(
+              ext: ext,
+              colorScheme: colorScheme,
+              onLaunch: _launch,
+            ),
+          ),
         ],
       ),
     );
@@ -270,7 +273,7 @@ class _HeroSection extends StatelessWidget {
           ),
           const SizedBox(height: AppConstants.paddingXS),
           Text(
-            'Encuentra respuestas rapidas o contactanos directamente.',
+            'Respuestas rapidas, IA inteligente, o contacto directo.',
             textAlign: TextAlign.center,
             style: GoogleFonts.nunito(
               fontSize: 14,
@@ -284,28 +287,18 @@ class _HeroSection extends StatelessWidget {
   }
 }
 
-// ── Quick Action Card ─────────────────────────────────────────────────────────
+// ── Eros AI Card — Big, prominent, first thing they see ──────────────────────
 
-class _QuickActionCard extends StatefulWidget {
-  final String label;
-  final String sublabel;
-  final IconData icon;
-  final LinearGradient gradient;
+class _ErosCard extends StatefulWidget {
   final VoidCallback onTap;
 
-  const _QuickActionCard({
-    required this.label,
-    required this.sublabel,
-    required this.icon,
-    required this.gradient,
-    required this.onTap,
-  });
+  const _ErosCard({required this.onTap});
 
   @override
-  State<_QuickActionCard> createState() => _QuickActionCardState();
+  State<_ErosCard> createState() => _ErosCardState();
 }
 
-class _QuickActionCardState extends State<_QuickActionCard> {
+class _ErosCardState extends State<_ErosCard> {
   bool _loading = false;
 
   Future<void> _handleTap() async {
@@ -323,54 +316,187 @@ class _QuickActionCardState extends State<_QuickActionCard> {
     return GestureDetector(
       onTap: _handleTap,
       child: Container(
-        height: AppConstants.largeTouchHeight * 1.4,
+        padding: const EdgeInsets.all(AppConstants.paddingLG),
         decoration: BoxDecoration(
-          gradient: widget.gradient,
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF1565C0), Color(0xFF42A5F5)],
+          ),
           borderRadius: BorderRadius.circular(AppConstants.radiusMD),
           boxShadow: [
             BoxShadow(
-              color: widget.gradient.colors.first.withValues(alpha: 0.35),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
+              color: const Color(0xFF1565C0).withValues(alpha: 0.35),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
             ),
           ],
         ),
-        padding: const EdgeInsets.all(AppConstants.paddingMD),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        child: Row(
           children: [
-            _loading
-                ? const SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.5,
-                      valueColor:
-                          AlwaysStoppedAnimation<Color>(Colors.white),
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(AppConstants.radiusSM),
+              ),
+              child: _loading
+                  ? const Center(
+                      child: SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      ),
+                    )
+                  : const Icon(
+                      Icons.smart_toy_rounded,
+                      color: Colors.white,
+                      size: 30,
                     ),
-                  )
-                : Icon(widget.icon, color: Colors.white, size: 28),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.label,
-                  style: GoogleFonts.poppins(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                    height: 1.2,
+            ),
+            const SizedBox(width: AppConstants.paddingMD),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Habla con Eros',
+                    style: GoogleFonts.poppins(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                      height: 1.2,
+                    ),
                   ),
-                ),
-                Text(
-                  widget.sublabel,
-                  style: GoogleFonts.nunito(
-                    fontSize: 11,
-                    color: Colors.white.withValues(alpha: 0.85),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Tu forma mas rapida de obtener ayuda. Disponible 24/7.',
+                    style: GoogleFonts.nunito(
+                      fontSize: 13,
+                      color: Colors.white.withValues(alpha: 0.9),
+                      height: 1.4,
+                    ),
                   ),
+                ],
+              ),
+            ),
+            const SizedBox(width: AppConstants.paddingSM),
+            Icon(
+              Icons.arrow_forward_ios_rounded,
+              color: Colors.white.withValues(alpha: 0.7),
+              size: 18,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Human Support Card (smaller, secondary) ──────────────────────────────────
+
+class _HumanSupportCard extends StatefulWidget {
+  final VoidCallback onTap;
+  final ColorScheme colorScheme;
+  final BCThemeExtension ext;
+
+  const _HumanSupportCard({
+    required this.onTap,
+    required this.colorScheme,
+    required this.ext,
+  });
+
+  @override
+  State<_HumanSupportCard> createState() => _HumanSupportCardState();
+}
+
+class _HumanSupportCardState extends State<_HumanSupportCard> {
+  bool _loading = false;
+
+  Future<void> _handleTap() async {
+    if (_loading) return;
+    setState(() => _loading = true);
+    try {
+      await Future.microtask(widget.onTap);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: _handleTap,
+      child: Container(
+        padding: const EdgeInsets.all(AppConstants.paddingMD),
+        decoration: BoxDecoration(
+          color: widget.colorScheme.surface,
+          borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+          border: Border.all(color: widget.ext.cardBorderColor, width: 1),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFFAD1457), Color(0xFFEC407A)],
                 ),
-              ],
+                borderRadius: BorderRadius.circular(AppConstants.radiusSM),
+              ),
+              child: _loading
+                  ? const Center(
+                      child: SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      ),
+                    )
+                  : const Icon(
+                      Icons.headset_mic_outlined,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+            ),
+            const SizedBox(width: AppConstants.paddingMD),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Soporte humano',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: widget.colorScheme.onSurface,
+                    ),
+                  ),
+                  Text(
+                    'Agente en vivo en horario de oficina',
+                    style: GoogleFonts.nunito(
+                      fontSize: 12,
+                      color: widget.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: widget.colorScheme.onSurface.withValues(alpha: 0.35),
+              size: AppConstants.iconSizeMD,
             ),
           ],
         ),
@@ -469,7 +595,6 @@ class _FaqExpansionTile extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Theme(
-      // Remove the default dividers injected by ExpansionTile
       data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
       child: ExpansionTile(
         tilePadding: const EdgeInsets.symmetric(
@@ -508,65 +633,180 @@ class _FaqExpansionTile extends StatelessWidget {
   }
 }
 
-// ── Contact Footer ────────────────────────────────────────────────────────────
+// ── Contact Accordion ("Still need help?") ───────────────────────────────────
 
-class _ContactFooter extends StatelessWidget {
+class _ContactAccordion extends StatelessWidget {
   final BCThemeExtension ext;
+  final ColorScheme colorScheme;
+  final Future<void> Function(String uri) onLaunch;
 
-  const _ContactFooter({required this.ext});
+  const _ContactAccordion({
+    required this.ext,
+    required this.colorScheme,
+    required this.onLaunch,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppConstants.screenPaddingHorizontal,
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+        border: Border.all(color: ext.cardBorderColor, width: 1),
       ),
-      child: Container(
-        padding: const EdgeInsets.all(AppConstants.paddingLG),
-        decoration: BoxDecoration(
-          color: colorScheme.surface,
-          borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-          border: Border.all(color: ext.cardBorderColor, width: 1),
-        ),
-        child: Column(
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.symmetric(
+            horizontal: AppConstants.paddingMD,
+            vertical: AppConstants.paddingSM,
+          ),
+          childrenPadding: const EdgeInsets.only(
+            left: AppConstants.paddingMD,
+            right: AppConstants.paddingMD,
+            bottom: AppConstants.paddingLG,
+          ),
+          iconColor: colorScheme.primary,
+          collapsedIconColor: colorScheme.onSurfaceVariant,
+          leading: Icon(
+            Icons.contact_support_outlined,
+            size: 28,
+            color: colorScheme.primary,
+          ),
+          title: Text(
+            '¿Aun necesitas ayuda?',
+            style: GoogleFonts.poppins(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: colorScheme.onSurface,
+            ),
+          ),
+          subtitle: Text(
+            'Contacto directo con nuestro equipo',
+            style: GoogleFonts.nunito(
+              fontSize: 12,
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
           children: [
-            Icon(
-              Icons.contact_support_outlined,
-              size: 36,
-              color: colorScheme.primary,
+            const SizedBox(height: AppConstants.paddingSM),
+
+            // Phone
+            _ContactTile(
+              icon: Icons.phone_rounded,
+              label: 'Telefono',
+              value: '+52 (720) 677-7800',
+              onTap: () => onLaunch('tel:+527206777800'),
+              colorScheme: colorScheme,
             ),
             const SizedBox(height: AppConstants.paddingSM),
+
+            // General email
+            _ContactTile(
+              icon: Icons.email_rounded,
+              label: 'General',
+              value: 'hello@beautycita.com',
+              onTap: () => onLaunch('mailto:hello@beautycita.com'),
+              colorScheme: colorScheme,
+            ),
+            const SizedBox(height: AppConstants.paddingSM),
+
+            // Support email
+            _ContactTile(
+              icon: Icons.support_agent_rounded,
+              label: 'Soporte',
+              value: 'soporte@beautycita.com',
+              onTap: () => onLaunch('mailto:soporte@beautycita.com'),
+              colorScheme: colorScheme,
+            ),
+
+            const SizedBox(height: AppConstants.paddingLG),
+
+            // Department emails
             Text(
-              '¿No encontraste lo que buscabas?',
-              textAlign: TextAlign.center,
+              'DEPARTAMENTOS',
               style: GoogleFonts.poppins(
-                fontSize: 15,
+                fontSize: 11,
                 fontWeight: FontWeight.w700,
-                color: colorScheme.onSurface,
+                letterSpacing: 1.2,
+                color: colorScheme.primary,
               ),
             ),
             const SizedBox(height: AppConstants.paddingSM),
+            _DeptRow(
+              dept: 'Legal',
+              email: 'legal@beautycita.com',
+              onTap: () => onLaunch('mailto:legal@beautycita.com'),
+              colorScheme: colorScheme,
+            ),
+            _DeptRow(
+              dept: 'Alianzas',
+              email: 'partnerships@beautycita.com',
+              onTap: () => onLaunch('mailto:partnerships@beautycita.com'),
+              colorScheme: colorScheme,
+            ),
+            _DeptRow(
+              dept: 'Prensa',
+              email: 'press@beautycita.com',
+              onTap: () => onLaunch('mailto:press@beautycita.com'),
+              colorScheme: colorScheme,
+            ),
+            _DeptRow(
+              dept: 'Empleo',
+              email: 'careers@beautycita.com',
+              onTap: () => onLaunch('mailto:careers@beautycita.com'),
+              colorScheme: colorScheme,
+            ),
+
+            const SizedBox(height: AppConstants.paddingLG),
+
+            // Business hours
             Text(
-              'Estamos aqui para ayudarte.',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.nunito(
-                fontSize: 13,
-                color: colorScheme.onSurfaceVariant,
+              'HORARIO DE ATENCION',
+              style: GoogleFonts.poppins(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.2,
+                color: colorScheme.primary,
               ),
             ),
-            const SizedBox(height: AppConstants.paddingMD),
-            _ContactRow(
-              icon: Icons.email_outlined,
-              label: 'soporte@beautycita.com',
-              colorScheme: colorScheme,
-            ),
             const SizedBox(height: AppConstants.paddingSM),
-            _ContactRow(
-              icon: Icons.phone_outlined,
-              label: '+52 (720) 677-7800',
-              colorScheme: colorScheme,
+            Row(
+              children: [
+                Icon(Icons.schedule_rounded,
+                    size: 16, color: colorScheme.onSurfaceVariant),
+                const SizedBox(width: AppConstants.paddingSM),
+                Expanded(
+                  child: Text(
+                    'L-V: 9:00 AM — 6:00 PM  |  S-D: 10:00 AM — 4:00 PM',
+                    style: GoogleFonts.nunito(
+                      fontSize: 13,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: AppConstants.paddingMD),
+
+            // Address
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.location_on_rounded,
+                    size: 16, color: colorScheme.onSurfaceVariant),
+                const SizedBox(width: AppConstants.paddingSM),
+                Expanded(
+                  child: Text(
+                    'Plaza Caracol local 27, Puerto Vallarta, Jalisco, C.P. 48330',
+                    style: GoogleFonts.nunito(
+                      fontSize: 13,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -575,33 +815,128 @@ class _ContactFooter extends StatelessWidget {
   }
 }
 
-class _ContactRow extends StatelessWidget {
+class _ContactTile extends StatelessWidget {
   final IconData icon;
   final String label;
+  final String value;
+  final VoidCallback onTap;
   final ColorScheme colorScheme;
 
-  const _ContactRow({
+  const _ContactTile({
     required this.icon,
     required this.label,
+    required this.value,
+    required this.onTap,
     required this.colorScheme,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(icon, size: 16, color: colorScheme.primary),
-        const SizedBox(width: AppConstants.paddingXS),
-        Text(
-          label,
-          style: GoogleFonts.nunito(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: colorScheme.onSurface,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppConstants.radiusSM),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: colorScheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(AppConstants.radiusSM),
+                ),
+                child: Icon(icon, color: colorScheme.primary, size: 18),
+              ),
+              const SizedBox(width: AppConstants.paddingMD),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: GoogleFonts.nunito(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: colorScheme.onSurface.withValues(alpha: 0.5),
+                      ),
+                    ),
+                    Text(
+                      value,
+                      style: GoogleFonts.nunito(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: colorScheme.onSurface,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: colorScheme.onSurface.withValues(alpha: 0.3),
+                size: 20,
+              ),
+            ],
           ),
         ),
-      ],
+      ),
+    );
+  }
+}
+
+class _DeptRow extends StatelessWidget {
+  final String dept;
+  final String email;
+  final VoidCallback onTap;
+  final ColorScheme colorScheme;
+
+  const _DeptRow({
+    required this.dept,
+    required this.email,
+    required this.onTap,
+    required this.colorScheme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppConstants.radiusSM),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+          child: Row(
+            children: [
+              Icon(
+                Icons.alternate_email_rounded,
+                size: 16,
+                color: colorScheme.primary.withValues(alpha: 0.7),
+              ),
+              const SizedBox(width: AppConstants.paddingSM),
+              Text(
+                dept,
+                style: GoogleFonts.nunito(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: colorScheme.onSurface,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                email,
+                style: GoogleFonts.nunito(
+                  fontSize: 12,
+                  color: colorScheme.primary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

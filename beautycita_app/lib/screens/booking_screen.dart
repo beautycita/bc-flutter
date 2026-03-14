@@ -28,7 +28,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
   String? _selectedTime;
   final TextEditingController _notesController = TextEditingController();
   bool _isSubmitting = false;
-  String _selectedPaymentMethod = 'card'; // 'card', 'oxxo', 'bitcoin'
+  String _selectedPaymentMethod = 'card'; // 'card', 'oxxo'
 
   /// Generate the next 14 days starting from today.
   List<DateTime> get _availableDates {
@@ -509,7 +509,6 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
 
     final stripeEnabled = toggles.isEnabled('enable_stripe_payments');
     final cashEnabled = toggles.isEnabled('enable_cash_payments');
-    final btcEnabled = toggles.isEnabled('enable_btc_payments');
 
     return Column(
       children: [
@@ -536,18 +535,6 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
             subtitle: 'OXXO, 7-Eleven',
             selected: _selectedPaymentMethod == 'oxxo',
             onTap: () => setState(() => _selectedPaymentMethod = 'oxxo'),
-          ),
-        ],
-        // Bitcoin
-        if (btcEnabled) ...[
-          if (stripeEnabled || cashEnabled) const SizedBox(height: 8),
-          _PaymentOptionTile(
-            icon: Icons.currency_bitcoin_rounded,
-            iconColor: const Color(0xFFF7931A),
-            label: 'Bitcoin',
-            subtitle: 'Pago con criptomoneda',
-            selected: _selectedPaymentMethod == 'bitcoin',
-            onTap: () => setState(() => _selectedPaymentMethod = 'bitcoin'),
           ),
         ],
       ],
