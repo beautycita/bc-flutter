@@ -2,7 +2,7 @@
 // salon-registro — Multi-step salon owner registration via WhatsApp invite link
 // =============================================================================
 // GET  ?ref=<id>  → Serve multi-step HTML page (info → OTP → confirm → success)
-// POST action=send_otp     → Send OTP via WA/SMS
+// POST action=send_otp     → Send OTP via WhatsApp
 // POST action=verify_otp   → Verify OTP, return HMAC token
 // POST action=create_account → Create auth user + business + staff + schedule
 // POST action=set_web_access → Optional: set email+password for web dashboard
@@ -14,9 +14,6 @@ const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const BEAUTYPI_WA_URL = Deno.env.get("BEAUTYPI_WA_URL") ?? "";
 const BEAUTYPI_WA_TOKEN = Deno.env.get("BEAUTYPI_WA_TOKEN") ?? "";
-const TWILIO_ACCOUNT_SID = Deno.env.get("TWILIO_ACCOUNT_SID") || "";
-const TWILIO_AUTH_TOKEN = Deno.env.get("TWILIO_AUTH_TOKEN") || "";
-const TWILIO_VERIFY_SID = Deno.env.get("TWILIO_VERIFY_SID") || "";
 const HMAC_SECRET = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!; // Reuse service key as HMAC secret
 
 const OTP_EXPIRY_MINUTES = 5;
@@ -153,54 +150,6 @@ async function sendWhatsApp(
   } catch (e) {
     console.error(`[SALON-REG][WA] Error: ${e}`);
     return { sent: false, channel: "whatsapp" };
-  }
-}
-
-async function twilioVerifySend(
-  phone: string,
-): Promise<{ sent: boolean; channel: string }> {
-  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_VERIFY_SID) {
-    return { sent: false, channel: "sms" };
-  }
-  try {
-    const url =
-      `https://verify.twilio.com/v2/Services/${TWILIO_VERIFY_SID}/Verifications`;
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        Authorization: `Basic ${btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`)}`,
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: new URLSearchParams({ To: phone, Channel: "sms" }),
-    });
-    if (!res.ok) return { sent: false, channel: "sms" };
-    return { sent: true, channel: "sms" };
-  } catch (e) {
-    console.error(`[SALON-REG][TWILIO] Error: ${e}`);
-    return { sent: false, channel: "sms" };
-  }
-}
-
-async function twilioVerifyCheck(phone: string, code: string): Promise<boolean> {
-  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_VERIFY_SID) {
-    return false;
-  }
-  try {
-    const url =
-      `https://verify.twilio.com/v2/Services/${TWILIO_VERIFY_SID}/VerificationCheck`;
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        Authorization: `Basic ${btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`)}`,
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: new URLSearchParams({ To: phone, Code: code }),
-    });
-    if (!res.ok) return false;
-    const data = await res.json();
-    return data.status === "approved";
-  } catch {
-    return false;
   }
 }
 
@@ -891,39 +840,23 @@ Deno.serve(async (req: Request) => {
         const otp = generateOtp();
         let result = await sendWhatsApp(phone, otp);
 
-        if (result.sent) {
-          const expiresAt = new Date(
-            Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000,
-          ).toISOString();
-          await supabase.from("phone_verification_codes").insert({
-            user_id: SENTINEL_USER_ID,
-            phone,
-            code: otp,
-            channel: "whatsapp",
-            expires_at: expiresAt,
-          });
-        } else {
-          result = await twilioVerifySend(phone);
-          if (result.sent) {
-            const expiresAt = new Date(
-              Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000,
-            ).toISOString();
-            await supabase.from("phone_verification_codes").insert({
-              user_id: SENTINEL_USER_ID,
-              phone,
-              code: "__TWILIO_VERIFY__",
-              channel: "sms",
-              expires_at: expiresAt,
-            });
-          }
-        }
-
         if (!result.sent) {
           return json(
-            { error: "No se pudo enviar el codigo. Intenta mas tarde." },
+            { error: "No se pudo enviar el codigo por WhatsApp. Verifica que tu numero tenga WhatsApp activo e intenta de nuevo." },
             500,
           );
         }
+
+        const expiresAt = new Date(
+          Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000,
+        ).toISOString();
+        await supabase.from("phone_verification_codes").insert({
+          user_id: SENTINEL_USER_ID,
+          phone,
+          code: otp,
+          channel: "whatsapp",
+          expires_at: expiresAt,
+        });
 
         console.log(
           `[SALON-REG] OTP sent to ${phone} via ${result.channel}`,
@@ -973,12 +906,7 @@ Deno.serve(async (req: Request) => {
           .update({ attempts: record.attempts + 1 })
           .eq("id", record.id);
 
-        let verified = false;
-        if (record.code === "__TWILIO_VERIFY__") {
-          verified = await twilioVerifyCheck(phone, code);
-        } else {
-          verified = record.code === code;
-        }
+        const verified = record.code === code;
 
         if (!verified) {
           return json(

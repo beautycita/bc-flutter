@@ -157,6 +157,38 @@ abstract final class DemoData {
       'bio':
           'Nail artist especializada en acrilicas, gel y nail art de diseno.',
     },
+    {
+      'id': 'd0000001-0000-4000-8000-000000000004',
+      'business_id': businessId,
+      'first_name': 'Sofia',
+      'last_name': 'Ramirez',
+      'avatar_url': null,
+      'phone': null,
+      'experience_years': 7,
+      'average_rating': 4.9,
+      'total_reviews': 14,
+      'is_active': true,
+      'accept_online_booking': true,
+      'sort_order': 7,
+      'bio':
+          'Colorista certificada L\'Oreal Professionnel. Especialista en mechas y color fantasia.',
+    },
+    {
+      'id': 'd0000001-0000-4000-8000-000000000005',
+      'business_id': businessId,
+      'first_name': 'Ricardo',
+      'last_name': 'Vega',
+      'avatar_url': null,
+      'phone': null,
+      'experience_years': 10,
+      'average_rating': 4.7,
+      'total_reviews': 18,
+      'is_active': true,
+      'accept_online_booking': true,
+      'sort_order': 8,
+      'bio':
+          'Barbero y estilista masculino. Cortes clasicos, fades y grooming completo.',
+    },
   ];
 
   // ── Services ───────────────────────────────────────────────────────────
@@ -199,6 +231,31 @@ abstract final class DemoData {
 
   // ── Staff → service pool mapping ──────────────────────────────────────
   // Each staff member has a pool of service indices they typically perform.
+  /// Returns demo staff_services rows for a given staff ID, matching the shape
+  /// returned by: `staff_services.select('*, services(name, price, duration_minutes)')`.
+  static List<Map<String, dynamic>> staffServicesFor(String staffId) {
+    final indices = _staffServicePool[staffId];
+    if (indices == null) return [];
+    return indices
+        .where((i) => i < services.length)
+        .map((i) {
+          final svc = services[i];
+          return {
+            'id': '${staffId}_${svc['id']}',
+            'staff_id': staffId,
+            'service_id': svc['id'],
+            'custom_price': null,
+            'custom_duration': null,
+            'services': {
+              'name': svc['name'],
+              'price': svc['price'],
+              'duration_minutes': svc['duration_minutes'],
+            },
+          };
+        })
+        .toList();
+  }
+
   static const Map<String, List<int>> _staffServicePool = {
     '261a09a2-8e09-41da-abe6-00ce582a3607': [0, 4, 5],       // Amber: Corte, Corte Caballero, Peinado Evento
     'd0000001-0000-4000-8000-000000000001': [1, 2, 3],        // Valentina: Balayage, Tinte Raiz, Keratina
@@ -206,6 +263,8 @@ abstract final class DemoData {
     'fcd1e90a-9811-4ea6-b672-385b2c01c7c6': [3, 23, 24],      // Juan: Keratina, Tratamiento Capilar, Masaje, Facial
     'd0000001-0000-4000-8000-000000000002': [6, 7, 8, 9, 10], // Daniela: Pestanas, Cejas, Microblading
     'd0000001-0000-4000-8000-000000000003': [16, 17, 18, 19, 20, 21], // Andrea: Unas
+    'd0000001-0000-4000-8000-000000000004': [1, 2, 5],                // Sofia: Balayage, Tinte, Peinado
+    'd0000001-0000-4000-8000-000000000005': [0, 4],                   // Ricardo: Corte y Estilo, Corte Caballero
   };
 
   // ── Appointments ───────────────────────────────────────────────────────

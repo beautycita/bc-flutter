@@ -85,6 +85,12 @@ class _BookingDetailContentState extends State<BookingDetailContent> {
           const SnackBar(content: Text('Reserva cancelada')),
         );
       }
+
+      // Fire-and-forget: notify customer + stylist of cancellation
+      BCSupabase.client.functions.invoke(
+        'cancel-notification',
+        body: {'appointment_id': booking.id},
+      ).catchError((e) => debugPrint('[Cancel] Notification error: $e'));
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

@@ -1,8 +1,8 @@
 // =============================================================================
-// reschedule-notification — Notify customer when appointment is rescheduled
+// cancel-notification — Notify customer + stylist when appointment is cancelled
 // =============================================================================
-// Called from Flutter (web/mobile) after drag-and-drop reschedule.
-// Sends WhatsApp + push notification to the customer.
+// Called from admin panel after cancellation.
+// Sends WhatsApp + push notification to the customer, WhatsApp to stylist.
 // =============================================================================
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -58,13 +58,13 @@ async function sendWhatsApp(phone: string, message: string): Promise<boolean> {
     });
     clearTimeout(t);
     if (!res.ok) {
-      console.error(`[RESCHEDULE] WA send failed for ${phone}: ${res.status}`);
+      console.error(`[CANCEL] WA send failed for ${phone}: ${res.status}`);
       return false;
     }
     const data = await res.json();
     return data.sent === true;
   } catch (err) {
-    console.error(`[RESCHEDULE] WA error for ${phone}:`, err);
+    console.error(`[CANCEL] WA error for ${phone}:`, err);
     return false;
   }
 }
@@ -78,7 +78,6 @@ Deno.serve(async (req) => {
     return json({ error: "Method not allowed" }, 405);
   }
 
-  // Auth: require valid JWT or service-role key
   const authHeader = req.headers.get("authorization") ?? "";
   const token = authHeader.replace("Bearer ", "");
   if (!token) {
@@ -99,26 +98,23 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { appointment_id, old_staff_id } = await req.json();
+    const { appointment_id } = await req.json();
 
     if (!appointment_id) {
       return json({ error: "appointment_id is required" }, 400);
     }
 
-    // 1. Fetch appointment with business + staff join
     const { data: appt, error: apptErr } = await supabase
       .from("appointments")
       .select(
         `
         id,
         user_id,
-        business_id,
         staff_id,
         service_name,
         staff_name,
         customer_name,
         starts_at,
-        ends_at,
         businesses!appointments_business_id_fkey (
           name
         )
@@ -128,48 +124,43 @@ Deno.serve(async (req) => {
       .single();
 
     if (apptErr || !appt) {
-      console.error("[RESCHEDULE] Appointment lookup failed:", apptErr);
+      console.error("[CANCEL] Appointment lookup failed:", apptErr);
       return json({ error: "Appointment not found" }, 404);
     }
 
-    const salonName =
-      (appt as any).businesses?.name ?? "Salon";
+    const salonName = (appt as any).businesses?.name ?? "Salon";
     const { date, time } = formatDateEs(appt.starts_at);
     const staffName = appt.staff_name || "";
     const serviceName = appt.service_name || "servicio";
 
     const results: Record<string, string> = {};
 
-    // 2. Fetch customer profile (phone, fcm_token)
+    // 1. Notify customer (WhatsApp + push)
     if (appt.user_id) {
       const { data: profile } = await supabase
         .from("profiles")
-        .select("phone, fcm_token, full_name")
+        .select("phone, fcm_token")
         .eq("id", appt.user_id)
         .single();
 
       const phone = profile?.phone ?? null;
       const fcmToken = profile?.fcm_token ?? null;
 
-      // 3. WhatsApp notification
       if (phone) {
         const message =
-          `*BeautyCita - Cita Reagendada*\n` +
-          `Tu cita de ${serviceName} ha sido reagendada.\n` +
-          `Nueva fecha: ${date}, ${time}\n` +
+          `*BeautyCita - Cita Cancelada*\n` +
+          `Tu cita de ${serviceName} ha sido cancelada.\n` +
+          `Fecha original: ${date}, ${time}\n` +
           (staffName ? `Estilista: ${staffName}\n` : "") +
-          `Salon: ${salonName}`;
+          `Salon: ${salonName}\n\n` +
+          `Si tienes preguntas, contacta al salon directamente.`;
 
         const waSent = await sendWhatsApp(phone, message);
         results.whatsapp = waSent ? "sent" : "failed";
-        console.log(
-          `[RESCHEDULE] WA ${waSent ? "sent" : "failed"} to ${phone}`
-        );
       } else {
         results.whatsapp = "skipped";
       }
 
-      // 4. Push notification
       if (fcmToken) {
         try {
           const pushRes = await fetch(
@@ -182,38 +173,31 @@ Deno.serve(async (req) => {
               },
               body: JSON.stringify({
                 user_id: appt.user_id,
-                notification_type: "booking_confirmed",
-                custom_title: "Cita Reagendada",
-                custom_body: `Tu cita de ${serviceName} fue movida a ${date}, ${time}${staffName ? ` con ${staffName}` : ""}`,
+                notification_type: "booking_cancelled",
+                custom_title: "Cita Cancelada",
+                custom_body: `Tu cita de ${serviceName} (${date}, ${time}) ha sido cancelada.`,
                 data: {
                   route: "/bookings",
                   booking_id: appt.id,
-                  type: "rescheduled",
+                  type: "cancelled",
                 },
               }),
             }
           );
-
           results.push = pushRes.ok ? "sent" : "failed";
-          if (!pushRes.ok) {
-            console.error(
-              `[RESCHEDULE] Push failed: ${await pushRes.text()}`
-            );
-          }
         } catch (pushErr) {
           results.push = "error";
-          console.error("[RESCHEDULE] Push error:", pushErr);
+          console.error("[CANCEL] Push error:", pushErr);
         }
       } else {
         results.push = "skipped";
       }
     } else {
-      // Walk-in appointment (no user_id) — skip customer notifications
       results.whatsapp = "skipped";
       results.push = "skipped";
     }
 
-    // 5. Notify stylist via WhatsApp
+    // 2. Notify stylist via WhatsApp
     if (appt.staff_id) {
       const { data: staffMember } = await supabase
         .from("staff")
@@ -225,14 +209,13 @@ Deno.serve(async (req) => {
       if (staffPhone) {
         const customerName = (appt as any).customer_name || "un cliente";
         const staffMsg =
-          `*BeautyCita - Cita Reagendada*\n` +
-          `La cita de ${serviceName} con ${customerName} ha sido movida.\n` +
-          `Nueva fecha: ${date}, ${time}\n` +
+          `*BeautyCita - Cita Cancelada*\n` +
+          `La cita de ${serviceName} con ${customerName} ha sido cancelada.\n` +
+          `Fecha: ${date}, ${time}\n` +
           `Salon: ${salonName}`;
 
         const staffWaSent = await sendWhatsApp(staffPhone, staffMsg);
         results.staff_whatsapp = staffWaSent ? "sent" : "failed";
-        console.log(`[RESCHEDULE] Staff WA ${staffWaSent ? "sent" : "failed"} to ${staffPhone}`);
       } else {
         results.staff_whatsapp = "no_phone";
       }
@@ -240,38 +223,13 @@ Deno.serve(async (req) => {
       results.staff_whatsapp = "no_staff";
     }
 
-    // 6. If stylist was reassigned, notify old stylist they lost the appointment
-    if (old_staff_id && old_staff_id !== appt.staff_id) {
-      const { data: oldStaff } = await supabase
-        .from("staff")
-        .select("phone, display_name")
-        .eq("id", old_staff_id)
-        .single();
-
-      const oldStaffPhone = oldStaff?.phone ?? null;
-      if (oldStaffPhone) {
-        const customerName = (appt as any).customer_name || "un cliente";
-        const oldStaffMsg =
-          `*BeautyCita - Cita Reasignada*\n` +
-          `La cita de ${serviceName} con ${customerName} ha sido reasignada a otro estilista.\n` +
-          `Fecha: ${date}, ${time}\n` +
-          `Salon: ${salonName}`;
-
-        const oldStaffWaSent = await sendWhatsApp(oldStaffPhone, oldStaffMsg);
-        results.old_staff_whatsapp = oldStaffWaSent ? "sent" : "failed";
-        console.log(`[RESCHEDULE] Old staff WA ${oldStaffWaSent ? "sent" : "failed"} to ${oldStaffPhone}`);
-      } else {
-        results.old_staff_whatsapp = "no_phone";
-      }
-    }
-
     console.log(
-      `[RESCHEDULE] Appointment ${appointment_id} — results:`,
+      `[CANCEL] Appointment ${appointment_id} — results:`,
       results
     );
     return json({ success: true, appointment_id, channels: results });
   } catch (err) {
-    console.error("[RESCHEDULE] Handler error:", (err as Error).message);
+    console.error("[CANCEL] Handler error:", (err as Error).message);
     return json({ error: "Internal server error" }, 500);
   }
 });
