@@ -148,8 +148,8 @@ class AppConstants {
   static const Duration cacheDurationLong = Duration(days: 1);
 
   // URLs
-  static const String privacyPolicyUrl = 'https://beautycita.com/privacy';
-  static const String termsOfServiceUrl = 'https://beautycita.com/terms';
+  static const String privacyPolicyUrl = 'https://beautycita.com/privacidad';
+  static const String termsOfServiceUrl = 'https://beautycita.com/terminos';
   static const String supportEmail = 'soporte@beautycita.com';
 
   // Regex Patterns

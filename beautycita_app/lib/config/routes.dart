@@ -26,7 +26,6 @@ import 'package:beautycita/screens/preferences_screen.dart';
 import 'package:beautycita/screens/profile_screen.dart';
 import 'package:beautycita/screens/security_screen.dart';
 import 'package:beautycita/screens/payment_methods_screen.dart';
-import 'package:beautycita/screens/btc_wallet_screen.dart';
 import 'package:beautycita/screens/cash_payment_screen.dart';
 import 'package:beautycita/screens/cita_express_screen.dart';
 import 'package:beautycita/screens/legal_screens.dart';
@@ -37,7 +36,6 @@ import 'package:beautycita/screens/feed/feed_screen.dart';
 import 'package:beautycita/screens/feed/saved_screen.dart';
 import 'package:beautycita/screens/rp/rp_shell_screen.dart';
 import 'package:beautycita/screens/about_screen.dart';
-import 'package:beautycita/screens/contact_screen.dart';
 import 'package:beautycita/screens/help_screen.dart';
 import 'package:beautycita/screens/press_screen.dart';
 import 'package:beautycita/screens/system_status_screen.dart';
@@ -72,7 +70,6 @@ class AppRoutes {
   static const String profile = '/settings/profile';
   static const String security = '/settings/security';
   static const String paymentMethods = '/settings/payment-methods';
-  static const String btcWallet = '/settings/btc-wallet';
   static const String cashPayment = '/settings/cash-payment';
   static const String citaExpress = '/cita-express/:businessId';
   static const String discoveredSalonConfirm = '/discovered-salon-confirm';
@@ -584,22 +581,6 @@ class AppRoutes {
         ),
       ),
       GoRoute(
-        path: btcWallet,
-        name: 'btc-wallet',
-        pageBuilder: (context, state) => CustomTransitionPage(
-          key: state.pageKey,
-          child: const BtcWalletScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
-                .chain(CurveTween(curve: Curves.easeInOutCubic));
-            return SlideTransition(
-              position: animation.drive(tween),
-              child: child,
-            );
-          },
-        ),
-      ),
-      GoRoute(
         path: cashPayment,
         name: 'cash-payment',
         pageBuilder: (context, state) {
@@ -729,15 +710,7 @@ class AppRoutes {
       GoRoute(
         path: contact,
         name: 'contact',
-        pageBuilder: (context, state) => CustomTransitionPage(
-          key: state.pageKey,
-          child: const ContactScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
-                .chain(CurveTween(curve: Curves.easeInOutCubic));
-            return SlideTransition(position: animation.drive(tween), child: child);
-          },
-        ),
+        redirect: (_, _) => help,
       ),
       GoRoute(
         path: help,

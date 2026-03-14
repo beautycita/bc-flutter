@@ -7,7 +7,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/services/toast_service.dart';
 
-/// Consistent card decoration — same as btc_wallet_screen
+/// Consistent card decoration
 BoxDecoration _cardDecoration(ColorScheme cs) => BoxDecoration(
       color: cs.surface,
       borderRadius: BorderRadius.circular(AppConstants.radiusMD),

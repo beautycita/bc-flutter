@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:beautycita/config/constants.dart';
-import 'package:beautycita/config/routes.dart';
 import 'package:beautycita/providers/payment_methods_provider.dart';
 import 'package:beautycita/services/toast_service.dart';
 import 'package:beautycita/widgets/settings_widgets.dart';
@@ -149,19 +147,6 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
             badgeText: 'Disponible',
             badgeColor: Colors.green.shade600,
             onTap: () => _showCashInfo(context),
-          ),
-
-          const SizedBox(height: AppConstants.paddingXS),
-
-          // Bitcoin
-          _OtherMethodTile(
-            icon: Icons.currency_bitcoin_rounded,
-            iconColor: const Color(0xFFF7931A),
-            label: 'Bitcoin',
-            subtitle: 'Pago con criptomoneda',
-            badgeText: 'Disponible',
-            badgeColor: Colors.green.shade600,
-            onTap: () => context.push(AppRoutes.btcWallet),
           ),
 
           const SizedBox(height: AppConstants.paddingLG),

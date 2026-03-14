@@ -1348,11 +1348,63 @@
   </ul>
 </div>
 
+<!-- ============ POST-MEETING ADDENDUM ============ -->
+<div class="section" id="post-meeting" style="border-top: 4px solid var(--danger); margin-top: 3rem; padding-top: 2rem;">
+  <h2 class="section-title" style="color: var(--danger);"><span class="section-number">ADDENDUM</span>Consulta Post-Reunion &mdash; 13 de marzo de 2026</h2>
+
+  <div class="callout callout-danger">
+    <span class="callout-label">Decisiones tomadas en reunion</span>
+    <strong>Bitcoin eliminado como metodo de pago.</strong> El modelo propuesto (comprar BTC del cliente, pagar MXN al proveedor) constituye intermediacion financiera que requiere licencia CNBV y registro UIF/LFPIORPI. El costo regulatorio no justifica el beneficio. BTC queda permanentemente desactivado.
+  </div>
+
+  <h3>Estructura de Cuentas Bancarias &mdash; Recomendacion para validar</h3>
+
+  <p>Independientemente de las obligaciones fiscales de plataforma, proponemos abrir <strong>tres cuentas bancarias separadas</strong> desde la constitucion de la S.A. de C.V.:</p>
+
+  <table>
+    <thead>
+      <tr><th>Cuenta</th><th>Proposito</th><th>Flujo</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Operativa</strong></td>
+        <td>Ingresos propios de BeautyCita: comisiones (3% servicios, 10% productos), suscripciones, publicidad</td>
+        <td>Stripe/Conekta depositan aqui la porcion de comision. Gastos operativos salen de aqui.</td>
+      </tr>
+      <tr>
+        <td><strong>Retenciones</strong></td>
+        <td>Fondos retenidos de ISR e IVA en custodia para entero al SAT</td>
+        <td>Se fondea automaticamente al momento del cobro. Solo sale hacia SAT en declaracion mensual (dia 17).</td>
+      </tr>
+      <tr>
+        <td><strong>Dispersiones</strong></td>
+        <td>Montos pendientes de pago a salones/proveedores</td>
+        <td>Se fondea al cobro menos comision y retenciones. Sale via SPEI a cada proveedor segun calendario de pago.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="question-box">
+    <ol>
+      <li><strong>Es obligatorio legalmente separar los fondos retenidos en cuenta aparte?</strong> O basta con separacion contable en una sola cuenta? (Referencia: mejores practicas para plataformas Art. 113-A LISR)</li>
+      <li><strong>Recomienda abrir las tres cuentas desde el inicio?</strong> O es suficiente con dos (operativa + retenciones) y agregar dispersiones cuando el volumen lo justifique?</li>
+      <li><strong>Tipo de cuenta recomendada:</strong> Cuenta empresarial en banco tradicional (BBVA, Banorte, etc.) o fintech (STP, Albo, Konfio)? Alguna restriccion para cuentas que manejan fondos en custodia?</li>
+      <li><strong>Pueden abrirse antes de la constitucion formal?</strong> La S.A. de C.V. esta en proceso. Podemos abrir cuentas a nombre personal con intencion de migrar, o debemos esperar el RFC empresarial?</li>
+      <li><strong>Intereses sobre fondos retenidos:</strong> Si la cuenta de retenciones genera intereses entre el cobro y el entero al SAT, cual es el tratamiento fiscal? Son ingreso acumulable de la empresa?</li>
+      <li><strong>Conciliacion bancaria:</strong> El SAT requiere que los estados de cuenta bancarios cuadren exactamente con el ledger de retenciones? Que nivel de granularidad esperan en una auditoria?</li>
+      <li><strong>Multi-procesador:</strong> Al recibir fondos de Stripe (tarjetas/OXXO) y Conekta (SPEI), es necesario separar contablemente por procesador o basta con el agregado mensual en la declaracion?</li>
+    </ol>
+  </div>
+
+  <h3>Contexto de volumen</h3>
+  <p>Referencia Seccion 6.2 arriba. En los primeros 6 meses estimamos ~$18,000 MXN/mes en retenciones. A 2 anos, ~$1,800,000 MXN/mes. La estructura de cuentas debe escalar sin cambios.</p>
+</div>
+
 <!-- ============ FOOTER ============ -->
 <div class="footer">
   Este documento fue preparado por el equipo tecnico de BeautyCita para facilitar la consulta fiscal con su asesor.<br>
   No constituye asesoramiento fiscal o legal. Todas las tasas, calculos y procedimientos descritos requieren validacion por un profesional fiscal certificado.<br>
-  <em>Ultima actualizacion: 11 de marzo de 2026</em>
+  <em>Ultima actualizacion: 13 de marzo de 2026</em>
 </div>
 
 </div><!-- /container -->

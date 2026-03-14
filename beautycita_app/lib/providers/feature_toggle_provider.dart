@@ -6,7 +6,6 @@ import 'package:beautycita/services/supabase_client.dart';
 const _defaults = <String, bool>{
   // Payments
   'enable_stripe_payments': true,
-  'enable_btc_payments': true,
   'enable_cash_payments': true,
   'enable_deposit_required': false,
   // Booking
@@ -28,6 +27,8 @@ const _defaults = <String, bool>{
   'enable_pos': true,
   'enable_feed': true,
   'enable_portfolio': true,
+  // Registration
+  'enable_salon_registration': false,
 };
 
 /// Fetches all boolean feature toggles from app_config and returns a map.

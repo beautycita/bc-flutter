@@ -21,6 +21,7 @@ import 'package:beautycita/services/username_validator.dart';
 import 'package:beautycita/widgets/settings_widgets.dart';
 import 'package:beautycita/providers/admin_provider.dart';
 import 'package:beautycita/providers/business_provider.dart';
+import 'package:beautycita/providers/feature_toggle_provider.dart';
 import 'package:beautycita/services/toast_service.dart';
 
 // ── AI Avatar Style Model ──
@@ -965,6 +966,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   // ── Register salon tile (after 10 app opens, for customers only) ──
 
   Widget _buildRegisterSalonTile() {
+    final toggles = ref.watch(featureTogglesProvider);
+    if (!toggles.isEnabled('enable_salon_registration')) {
+      return const SizedBox.shrink();
+    }
+
     final role = ref.watch(userRoleProvider).valueOrNull;
     if (role == 'admin' || role == 'superadmin' || role == 'stylist') {
       return const SizedBox.shrink();

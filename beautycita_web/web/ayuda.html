@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <meta name="description" content="Centro de Ayuda de BeautyCita. Preguntas frecuentes, soporte con IA y contacto directo.">
+  <meta name="theme-color" content="#9333ea">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Ayuda y Contacto — BeautyCita</title>
+  <link rel="icon" type="image/png" href="/icons/Icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --pink: #ec4899;
+      --purple: #9333ea;
+      --blue: #3b82f6;
+      --text: #1a1a2e;
+      --text-light: rgba(26, 26, 46, 0.65);
+      --text-muted: rgba(26, 26, 46, 0.45);
+      --bg: #faf9fe;
+      --card-bg: #ffffff;
+      --border: rgba(147, 51, 234, 0.08);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Nunito', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.75;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    /* ── Header ── */
+    .header {
+      background: linear-gradient(135deg, var(--pink), var(--purple), var(--blue));
+      color: #fff;
+      padding: 3rem 1.5rem 2.5rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .header::before {
+      content: '';
+      position: absolute;
+      top: -50%; left: -50%;
+      width: 200%; height: 200%;
+      background: radial-gradient(circle at 30% 50%, rgba(255,255,255,0.08) 0%, transparent 50%);
+      pointer-events: none;
+    }
+
+    .header-content {
+      position: relative;
+      z-index: 1;
+      max-width: 700px;
+      margin: 0 auto;
+    }
+
+    .header-icon {
+      width: 72px; height: 72px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 1rem;
+      font-size: 2rem;
+    }
+
+    .header h1 {
+      font-family: 'Poppins', sans-serif;
+      font-size: clamp(1.5rem, 5vw, 2.25rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+      margin-bottom: 0.5rem;
+    }
+
+    .header .subtitle {
+      font-size: clamp(0.85rem, 2.5vw, 1rem);
+      opacity: 0.9;
+      font-weight: 600;
+    }
+
+    /* ── Eros AI Card ── */
+    .eros-card {
+      max-width: 800px;
+      margin: -1.5rem auto 0;
+      padding: 0 1rem;
+      position: relative;
+      z-index: 2;
+    }
+
+    .eros-inner {
+      background: linear-gradient(135deg, #1565C0, #42A5F5);
+      border-radius: 1rem;
+      padding: 1.75rem;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+      box-shadow: 0 8px 32px rgba(21, 101, 192, 0.3);
+    }
+
+    .eros-icon {
+      width: 56px; height: 56px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 0.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.75rem;
+      flex-shrink: 0;
+    }
+
+    .eros-inner h2 {
+      font-family: 'Poppins', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 0.15rem;
+    }
+
+    .eros-inner p {
+      font-size: 0.85rem;
+      opacity: 0.9;
+    }
+
+    /* ── Main ── */
+    main {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 2rem 1rem 4rem;
+    }
+
+    .section-title {
+      font-family: 'Poppins', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin: 2rem 0 1rem;
+    }
+
+    /* ── FAQ ── */
+    .faq-category {
+      margin-bottom: 1.5rem;
+    }
+
+    .faq-category-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .faq-category-header .icon {
+      font-size: 1.25rem;
+    }
+
+    .faq-category-header h3 {
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+    }
+
+    .faq-list {
+      background: var(--card-bg);
+      border-radius: 1rem;
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .faq-item {
+      border-bottom: 1px solid var(--border);
+    }
+
+    .faq-item:last-child { border-bottom: none; }
+
+    .faq-question {
+      width: 100%;
+      background: none;
+      border: none;
+      padding: 1rem 1.25rem;
+      text-align: left;
+      cursor: pointer;
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .faq-question:hover { background: rgba(147, 51, 234, 0.03); }
+
+    .faq-question .chevron {
+      font-size: 0.75rem;
+      color: var(--purple);
+      transition: transform 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .faq-item.open .faq-question .chevron { transform: rotate(180deg); }
+
+    .faq-answer {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+    }
+
+    .faq-answer-inner {
+      padding: 0 1.25rem 1rem;
+      font-size: 0.85rem;
+      color: var(--text-light);
+      line-height: 1.7;
+    }
+
+    .faq-item.open .faq-answer { max-height: 200px; }
+
+    /* ── Support card ── */
+    .support-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      padding: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+
+    .support-icon {
+      width: 40px; height: 40px;
+      background: linear-gradient(135deg, #AD1457, #EC407A);
+      border-radius: 0.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+
+    .support-card h3 {
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    .support-card p {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    /* ── Contact accordion ── */
+    .contact-accordion {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      margin-top: 1rem;
+      overflow: hidden;
+    }
+
+    .contact-toggle {
+      width: 100%;
+      background: none;
+      border: none;
+      padding: 1.25rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .contact-toggle .toggle-icon {
+      font-size: 1.5rem;
+      color: var(--purple);
+    }
+
+    .contact-toggle h3 {
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text);
+      text-align: left;
+    }
+
+    .contact-toggle .sub {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      text-align: left;
+    }
+
+    .contact-toggle .chevron {
+      margin-left: auto;
+      font-size: 0.75rem;
+      color: var(--purple);
+      transition: transform 0.2s ease;
+    }
+
+    .contact-accordion.open .contact-toggle .chevron { transform: rotate(180deg); }
+
+    .contact-body {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.4s ease;
+    }
+
+    .contact-accordion.open .contact-body { max-height: 600px; }
+
+    .contact-body-inner {
+      padding: 0 1.25rem 1.5rem;
+    }
+
+    .contact-tile {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.6rem 0;
+      text-decoration: none;
+      color: var(--text);
+    }
+
+    .contact-tile:hover { opacity: 0.8; }
+
+    .contact-tile .tile-icon {
+      width: 36px; height: 36px;
+      background: rgba(147, 51, 234, 0.08);
+      border-radius: 0.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      color: var(--purple);
+      flex-shrink: 0;
+    }
+
+    .contact-tile .tile-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .contact-tile .tile-value {
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+
+    .dept-label {
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--purple);
+      margin: 1.25rem 0 0.5rem;
+    }
+
+    .dept-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.4rem 0;
+    }
+
+    .dept-row .at-icon {
+      font-size: 1rem;
+      color: var(--purple);
+      opacity: 0.7;
+    }
+
+    .dept-row .dept-name {
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+
+    .dept-row .dept-email {
+      margin-left: auto;
+      font-size: 0.8rem;
+      color: var(--purple);
+      text-decoration: none;
+    }
+
+    .dept-row .dept-email:hover { text-decoration: underline; }
+
+    .info-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+      padding: 0.3rem 0;
+      font-size: 0.85rem;
+      color: var(--text-light);
+    }
+
+    .info-row .info-icon {
+      font-size: 1rem;
+      color: var(--text-muted);
+      flex-shrink: 0;
+      margin-top: 0.1rem;
+    }
+
+    /* ── Footer ── */
+    .footer {
+      text-align: center;
+      padding: 2rem 1rem 3rem;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+    }
+
+    .footer .brand {
+      font-family: 'Poppins', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--pink), var(--purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 0.25rem;
+    }
+
+    /* ── Responsive ── */
+    @media (min-width: 640px) {
+      .header { padding: 4rem 2rem 3rem; }
+      main { padding: 2.5rem 2rem 5rem; }
+      .eros-card { padding: 0 2rem; margin-top: -2rem; }
+    }
+
+    /* ── Dark mode ── */
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --text: #e8e6f0;
+        --text-light: rgba(232, 230, 240, 0.7);
+        --text-muted: rgba(232, 230, 240, 0.4);
+        --bg: #0f0e17;
+        --card-bg: #1a1929;
+        --border: rgba(147, 51, 234, 0.15);
+      }
+    }
+
+    /* ── Print ── */
+    @media print {
+      .header { background: #333 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .eros-card { display: none; }
+      body { font-size: 11pt; }
+      main { max-width: 100%; padding: 1rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header class="header">
+  <div class="header-content">
+    <div class="header-icon">&#10067;</div>
+    <h1>Ayuda y Contacto</h1>
+    <p class="subtitle">Respuestas rapidas, IA inteligente, o contacto directo.</p>
+  </div>
+</header>
+
+<!-- ── Eros AI Card ── -->
+<div class="eros-card">
+  <div class="eros-inner">
+    <div class="eros-icon">&#129302;</div>
+    <div>
+      <h2>Habla con Eros</h2>
+      <p>Tu forma mas rapida de obtener ayuda. Disponible 24/7. Abre la app para iniciar una conversacion.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ── Content ── -->
+<main>
+
+  <h2 class="section-title">Preguntas frecuentes</h2>
+
+  <!-- Reservas -->
+  <div class="faq-category">
+    <div class="faq-category-header">
+      <span class="icon">&#128197;</span>
+      <h3>Reservas</h3>
+    </div>
+    <div class="faq-list">
+      <div class="faq-item">
+        <button class="faq-question" onclick="this.parentElement.classList.toggle('open')">
+          <span>¿Como reservo una cita?</span>
+          <span class="chevron">&#9660;</span>
+        </button>
+        <div class="faq-answer"><div class="faq-answer-inner">Selecciona el servicio que deseas, y BeautyCita te mostrara los 3 mejores salones cerca de ti con el mejor horario disponible. Solo confirma con un toque.</div></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question" onclick="this.parentElement.classList.toggle('open')">
+          <span>¿Puedo cancelar una cita?</span>
+          <span class="chevron">&#9660;</span>
+        </button>
+        <div class="faq-answer"><div class="faq-answer-inner">Si, puedes cancelar hasta 24 horas antes sin cargo. Cancelaciones dentro de las 24 horas pueden generar un cargo por cancelacion.</div></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question" onclick="this.parentElement.classList.toggle('open')">
+          <span>¿Que pasa si no me presento?</span>
+          <span class="chevron">&#9660;</span>
+        </button>
+        <div class="faq-answer"><div class="faq-answer-inner">El salon puede cobrar el monto completo del servicio por inasistencia.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pagos -->
+  <div class="faq-category">
+    <div class="faq-category-header">
+      <span class="icon">&#128179;</span>
+      <h3>Pagos</h3>
+    </div>
+    <div class="faq-list">
+      <div class="faq-item">
+        <button class="faq-question" onclick="this.parentElement.classList.toggle('open')">
+          <span>¿Que metodos de pago aceptan?</span>
+          <span class="chevron">&#9660;</span>
+        </button>
+        <div class="faq-answer"><div class="faq-answer-inner">Tarjeta de credito/debito (via Stripe, certificado PCI-DSS Nivel 1) y efectivo directamente en el salon.</div></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question" onclick="this.parentElement.classList.toggle('open')">
+          <span>¿Como funcionan los reembolsos?</span>
+          <span class="chevron">&#9660;</span>
+        </button>
+        <div class="faq-answer"><div class="faq-answer-inner">Los reembolsos se procesan en 5-7 dias habiles al metodo de pago original.</div></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question" onclick="this.parentElement.classList.toggle('open')">
+          <span>¿Mis datos de pago estan seguros?</span>
+          <span class="chevron">&#9660;</span>
+        </button>
+        <div class="faq-answer"><div class="faq-answer-inner">Si. Nunca almacenamos numeros de tarjeta. Los pagos los procesa Stripe, certificado PCI-DSS Nivel 1.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cuenta -->
+  <div class="faq-category">
+    <div class="faq-category-header">
+      <span class="icon">&#128100;</span>
+      <h3>Cuenta</h3>
+    </div>
+    <div class="faq-list">
+      <div class="faq-item">
+        <button class="faq-question" onclick="this.parentElement.classList.toggle('open')">
+          <span>¿Como funciona el registro?</span>
+          <span class="chevron">&#9660;</span>
+        </button>
+        <div class="faq-answer"><div class="faq-answer-inner">Te registras con la autenticacion biometrica de tu dispositivo (huella o rostro). Se te asigna un nombre de usuario automatico. No necesitas contrasena.</div></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question" onclick="this.parentElement.classList.toggle('open')">
+          <span>¿Puedo vincular mi correo o telefono?</span>
+          <span class="chevron">&#9660;</span>
+        </button>
+        <div class="faq-answer"><div class="faq-answer-inner">Si, desde Ajustes > Seguridad puedes vincular correo, telefono o Google.</div></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question" onclick="this.parentElement.classList.toggle('open')">
+          <span>¿Como elimino mi cuenta?</span>
+          <span class="chevron">&#9660;</span>
+        </button>
+        <div class="faq-answer"><div class="faq-answer-inner">Desde Ajustes > Seguridad > Eliminar cuenta, o escribe a soporte@beautycita.com.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Para profesionales -->
+  <div class="faq-category">
+    <div class="faq-category-header">
+      <span class="icon">&#127978;</span>
+      <h3>Para profesionales</h3>
+    </div>
+    <div class="faq-list">
+      <div class="faq-item">
+        <button class="faq-question" onclick="this.parentElement.classList.toggle('open')">
+          <span>¿Como registro mi salon?</span>
+          <span class="chevron">&#9660;</span>
+        </button>
+        <div class="faq-answer"><div class="faq-answer-inner">Desde Ajustes > Registra tu salon. Necesitas verificar tu telefono y correo primero.</div></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question" onclick="this.parentElement.classList.toggle('open')">
+          <span>¿Cuanto cobra BeautyCita?</span>
+          <span class="chevron">&#9660;</span>
+        </button>
+        <div class="faq-answer"><div class="faq-answer-inner">Una comision del 10% por cada reserva completada. Los profesionales conservan el 90%.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Support card ── -->
+  <div class="support-card">
+    <div class="support-icon">&#127911;</div>
+    <div>
+      <h3>Soporte humano</h3>
+      <p>Agente en vivo en horario de oficina. Abre la app para conectar.</p>
+    </div>
+  </div>
+
+  <!-- ── Contact accordion ── -->
+  <div class="contact-accordion" id="contactAccordion">
+    <button class="contact-toggle" onclick="document.getElementById('contactAccordion').classList.toggle('open')">
+      <span class="toggle-icon">&#128222;</span>
+      <div>
+        <h3>¿Aun necesitas ayuda?</h3>
+        <p class="sub">Contacto directo con nuestro equipo</p>
+      </div>
+      <span class="chevron">&#9660;</span>
+    </button>
+    <div class="contact-body">
+      <div class="contact-body-inner">
+        <a href="tel:+527206777800" class="contact-tile">
+          <div class="tile-icon">&#128222;</div>
+          <div>
+            <div class="tile-label">Telefono</div>
+            <div class="tile-value">+52 (720) 677-7800</div>
+          </div>
+        </a>
+        <a href="mailto:hello@beautycita.com" class="contact-tile">
+          <div class="tile-icon">&#9993;</div>
+          <div>
+            <div class="tile-label">General</div>
+            <div class="tile-value">hello@beautycita.com</div>
+          </div>
+        </a>
+        <a href="mailto:soporte@beautycita.com" class="contact-tile">
+          <div class="tile-icon">&#127911;</div>
+          <div>
+            <div class="tile-label">Soporte</div>
+            <div class="tile-value">soporte@beautycita.com</div>
+          </div>
+        </a>
+
+        <div class="dept-label">Departamentos</div>
+        <div class="dept-row">
+          <span class="at-icon">@</span>
+          <span class="dept-name">Legal</span>
+          <a href="mailto:legal@beautycita.com" class="dept-email">legal@beautycita.com</a>
+        </div>
+        <div class="dept-row">
+          <span class="at-icon">@</span>
+          <span class="dept-name">Alianzas</span>
+          <a href="mailto:partnerships@beautycita.com" class="dept-email">partnerships@beautycita.com</a>
+        </div>
+        <div class="dept-row">
+          <span class="at-icon">@</span>
+          <span class="dept-name">Prensa</span>
+          <a href="mailto:press@beautycita.com" class="dept-email">press@beautycita.com</a>
+        </div>
+        <div class="dept-row">
+          <span class="at-icon">@</span>
+          <span class="dept-name">Empleo</span>
+          <a href="mailto:careers@beautycita.com" class="dept-email">careers@beautycita.com</a>
+        </div>
+
+        <div class="dept-label">Horario de atencion</div>
+        <div class="info-row">
+          <span class="info-icon">&#128338;</span>
+          <span>L-V: 9:00 AM — 6:00 PM &nbsp;|&nbsp; S-D: 10:00 AM — 4:00 PM</span>
+        </div>
+
+        <div style="margin-top: 0.75rem;">
+          <div class="info-row">
+            <span class="info-icon">&#128205;</span>
+            <span>Plaza Caracol local 27, Puerto Vallarta, Jalisco, C.P. 48330</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ── Footer ── -->
+<footer class="footer">
+  <div class="brand">BeautyCita</div>
+  <p>Puerto Vallarta, Jalisco, Mexico</p>
+  <p style="margin-top: 0.5rem;">&copy; 2026 BeautyCita S.A. de C.V. Todos los derechos reservados.</p>
+</footer>
+
+</body>
+</html>

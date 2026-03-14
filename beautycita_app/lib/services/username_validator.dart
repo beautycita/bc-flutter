@@ -72,7 +72,7 @@ class UsernameValidator {
     'api', 'webhook', 'server',
     'security', 'seguridad',
     'payment', 'pago', 'pagos',
-    'stripe', 'btcpay', 'bitcoin',
+    'stripe',
   ];
 
   /// Check if the normalized username contains any reserved word.

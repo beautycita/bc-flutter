@@ -83,19 +83,19 @@ class _TermsAndPolicyScreenState extends State<TermsAndPolicyScreen>
           _LegalTab(
             icon: Icons.description_outlined,
             subtitle: 'Reglas de uso de la plataforma',
-            lastUpdated: '10 de marzo de 2026',
+            lastUpdated: '13 de marzo de 2026',
             sections: _termsSections,
           ),
           _LegalTab(
             icon: Icons.privacy_tip_outlined,
             subtitle: 'Aviso de Privacidad Integral (LFPDPPP)',
-            lastUpdated: '10 de marzo de 2026',
+            lastUpdated: '13 de marzo de 2026',
             sections: _privacySections,
           ),
           _LegalTab(
             icon: Icons.storage_outlined,
             subtitle: 'Que guardamos en tu dispositivo',
-            lastUpdated: '10 de marzo de 2026',
+            lastUpdated: '13 de marzo de 2026',
             sections: _storageSections,
           ),
         ],
@@ -522,8 +522,8 @@ const _termsSections = [
   _Section(
     heading: '4. Pagos',
     body:
-        'Procesamos pagos con tarjeta via Stripe (certificado PCI-DSS) y Bitcoin '
-        'via BTCPay Server. No almacenamos numeros completos de tarjeta. '
+        'Procesamos pagos con tarjeta via Stripe (certificado PCI-DSS Nivel 1). '
+        'No almacenamos numeros completos de tarjeta. '
         'Pagos en efectivo se coordinan directamente con el salon.',
   ),
   _Section(
@@ -674,7 +674,7 @@ const _privacySections = [
         '• Crear y gestionar su cuenta de usuario.\n'
         '• Buscar salones y profesionales de belleza cercanos a su ubicacion.\n'
         '• Procesar reservas de servicios de belleza.\n'
-        '• Procesar pagos con tarjeta (via Stripe) y Bitcoin (via BTCPay).\n'
+        '• Procesar pagos con tarjeta (via Stripe, certificado PCI-DSS Nivel 1).\n'
         '• Calcular y retener ISR e IVA conforme a los articulos 113-A LISR '
         'y 18-J LIVA (aplica a proveedores de servicios).\n'
         '• Enviar notificaciones de confirmacion, recordatorio y seguimiento '
@@ -737,10 +737,8 @@ const _privacySections = [
         'G) SAT — SERVICIO DE ADMINISTRACION TRIBUTARIA (MEXICO): montos '
         'de transacciones, retenciones de ISR e IVA, y RFC de proveedores. '
         'Transferencia obligatoria por ley (Art. 37 LFPDPPP). El SAT tiene '
-        'acceso en tiempo real a registros de transacciones conforme a la '
+        'acceso a registros de transacciones conforme a la '
         'legislacion fiscal vigente.\n\n'
-        'H) BTCPAY SERVER (AUTO-HOSPEDADO): pagos en Bitcoin procesados en '
-        'nuestro propio servidor. No hay transferencia a terceros.\n\n'
         'BeautyCita NO vende, comercializa ni renta sus datos personales '
         'a terceros bajo ninguna circunstancia.',
   ),
@@ -914,7 +912,7 @@ const _privacySections = [
         'consentimiento expreso se obtiene al momento de utilizar la '
         'funcion de estudio virtual, mediante confirmacion explicita '
         'en pantalla antes del procesamiento.\n\n'
-        'Fecha de ultima actualizacion: 10 de marzo de 2026.',
+        'Fecha de ultima actualizacion: 13 de marzo de 2026.',
   ),
 ];
 
