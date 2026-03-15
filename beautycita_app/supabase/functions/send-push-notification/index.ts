@@ -20,6 +20,39 @@ const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
+const BEAUTYPI_WA_URL = Deno.env.get("BEAUTYPI_WA_URL") ?? "";
+const BEAUTYPI_WA_TOKEN = Deno.env.get("BEAUTYPI_WA_TOKEN") ?? "";
+
+/** Send a WhatsApp message as push notification fallback */
+async function sendWhatsAppFallback(
+  phone: string,
+  title: string,
+  body: string
+): Promise<boolean> {
+  if (!BEAUTYPI_WA_URL || !phone) return false;
+  try {
+    const message = `*${title}*\n${body}`;
+    const ac = new AbortController();
+    const t = setTimeout(() => ac.abort(), 5000);
+    const res = await fetch(`${BEAUTYPI_WA_URL}/api/wa/send`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${BEAUTYPI_WA_TOKEN}`,
+      },
+      body: JSON.stringify({ phone, message }),
+      signal: ac.signal,
+    });
+    clearTimeout(t);
+    const ok = res.ok;
+    console.log(`[WA-FALLBACK] ${ok ? "Sent" : "Failed"} to ${phone}`);
+    return ok;
+  } catch (e) {
+    console.error("[WA-FALLBACK] Error:", e);
+    return false;
+  }
+}
+
 // ── FCM v1 Auth via Service Account ──────────────────────────────────────
 
 interface ServiceAccount {
@@ -279,13 +312,13 @@ async function getBookingContext(bookingId: string): Promise<any> {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id, full_name, fcm_token")
+    .select("id, full_name, fcm_token, phone")
     .eq("id", booking.user_id)
     .single();
 
   const { data: business } = await supabase
     .from("businesses")
-    .select("id, name, fcm_token")
+    .select("id, name, fcm_token, phone")
     .eq("id", booking.business_id)
     .single();
 
@@ -303,9 +336,11 @@ async function getBookingContext(bookingId: string): Promise<any> {
     client_id: profile?.id,
     client_name: profile?.full_name || "Cliente",
     client_fcm_token: profile?.fcm_token,
+    client_phone: profile?.phone || null,
     business_id: business?.id,
     business_name: business?.name || "Salón",
     business_fcm_token: business?.fcm_token,
+    business_phone: business?.phone || null,
     service_name: booking.service_name || "servicio",
     staff_name: booking.staff_name || "",
     formatted_time: formattedTime,
@@ -408,6 +443,7 @@ Deno.serve(async (req) => {
     }
 
     let fcmToken: string | null = null;
+    let recipientPhone: string | null = null;
     let notificationContent: NotificationContent;
 
     // Custom notification (direct to user or business)
@@ -415,17 +451,19 @@ Deno.serve(async (req) => {
       if (user_id) {
         const { data: profile } = await supabase
           .from("profiles")
-          .select("fcm_token")
+          .select("fcm_token, phone")
           .eq("id", user_id)
           .single();
         fcmToken = profile?.fcm_token;
+        recipientPhone = profile?.phone || null;
       } else if (business_id) {
         const { data: business } = await supabase
           .from("businesses")
-          .select("fcm_token")
+          .select("fcm_token, phone")
           .eq("id", business_id)
           .single();
         fcmToken = business?.fcm_token;
+        recipientPhone = business?.phone || null;
       }
 
       notificationContent = {
@@ -447,10 +485,12 @@ Deno.serve(async (req) => {
       switch (notification_type) {
         case "new_booking":
           fcmToken = ctx.business_fcm_token;
+          recipientPhone = ctx.business_phone;
           break;
         case "booking_confirmed":
         case "booking_reminder":
           fcmToken = ctx.client_fcm_token;
+          recipientPhone = ctx.client_phone;
           ctx.time_until = getTimeUntil(ctx.start_time);
           break;
         case "booking_cancelled":
@@ -458,6 +498,9 @@ Deno.serve(async (req) => {
           fcmToken = ctx.is_provider
             ? ctx.business_fcm_token
             : ctx.client_fcm_token;
+          recipientPhone = ctx.is_provider
+            ? ctx.business_phone
+            : ctx.client_phone;
           break;
       }
 
@@ -477,19 +520,28 @@ Deno.serve(async (req) => {
       );
     }
 
-    if (!fcmToken) {
-      console.log("[FCM] No FCM token for recipient, skipping notification");
-      return new Response(
-        JSON.stringify({ success: false, reason: "no_fcm_token" }),
-        { status: 200, headers: { "Content-Type": "application/json" } }
+    let fcmSent = false;
+    if (fcmToken) {
+      fcmSent = await sendFcmNotification(fcmToken, notificationContent);
+    } else {
+      console.log("[FCM] No FCM token for recipient, skipping push");
+    }
+
+    // WA fallback — covers iOS sideload (no APNs) and FCM failures
+    let waSent = false;
+    if (recipientPhone) {
+      waSent = await sendWhatsAppFallback(
+        recipientPhone,
+        notificationContent.title,
+        notificationContent.body
       );
     }
 
-    const sent = await sendFcmNotification(fcmToken, notificationContent);
-
     return new Response(
       JSON.stringify({
-        success: sent,
+        success: fcmSent || waSent,
+        fcm: fcmSent ? "sent" : (fcmToken ? "failed" : "no_token"),
+        whatsapp: waSent ? "sent" : (recipientPhone ? "failed" : "no_phone"),
         notification_type,
         title: notificationContent.title,
       }),
