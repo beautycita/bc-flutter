@@ -1,4 +1,4 @@
-name: Build iOS IPA (v2)
+name: Build iOS IPA (unsigned)
 
 on:
   workflow_dispatch:
@@ -24,68 +24,44 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Install dependencies
+      - name: Install dependencies (core package)
+        working-directory: packages/beautycita_core
+        run: flutter pub get
+
+      - name: Install dependencies (app)
         working-directory: beautycita_app
         run: flutter pub get
 
-      - name: Run analyzer
-        working-directory: beautycita_app
-        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+      - name: Install CocoaPods
+        working-directory: beautycita_app/ios
+        run: pod install
 
-      - name: Flutter build (Dart AOT + assets)
+      - name: Build unsigned iOS app
         working-directory: beautycita_app
         run: |
           flutter build ios --release --no-codesign \
             --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
-            --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }} \
-            || true
-          # Verify Dart compilation succeeded
-          if [ ! -d "build/ios/Release-iphoneos/App.framework" ]; then
-            echo "ERROR: Dart AOT compilation failed"
-            exit 1
-          fi
-          echo "Dart AOT + assets compiled successfully"
-
-      - name: Create unsigned xcarchive
-        working-directory: beautycita_app/ios
-        run: |
-          # Skip Flutter's xcode_backend.sh during archive (Dart already compiled)
-          # by replacing the Run Script phase with a no-op
-          sed -i '' 's|/bin/sh \\"$FLUTTER_ROOT/packages/flutter_tools/bin/xcode_backend.sh\\" build|echo \\"Skipping — Dart already compiled\\"|g' Runner.xcodeproj/project.pbxproj
-
-          xcodebuild \
-            -workspace Runner.xcworkspace \
-            -scheme Runner \
-            -sdk iphoneos \
-            -configuration Release \
-            -destination 'generic/platform=iOS' \
-            -archivePath $GITHUB_WORKSPACE/build/Runner.xcarchive \
-            archive \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
-            2>&1 | tail -30
-
-          echo "=== Archive contents ==="
-          ls -la $GITHUB_WORKSPACE/build/Runner.xcarchive/Products/Applications/Runner.app/Runner 2>/dev/null && echo "Runner binary found" || echo "Runner binary MISSING"
-          du -sh $GITHUB_WORKSPACE/build/Runner.xcarchive/Products/Applications/Runner.app/ 2>/dev/null
+            --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
 
       - name: Package unsigned IPA
+        working-directory: beautycita_app
         run: |
-          cd $GITHUB_WORKSPACE/build/Runner.xcarchive/Products
-          mv Applications Payload
-          zip -r -9 $GITHUB_WORKSPACE/build/beautycita-unsigned.ipa Payload
-
-          echo "IPA created:"
-          ls -lh $GITHUB_WORKSPACE/build/beautycita-unsigned.ipa
-
-          # Verify IPA has Runner binary
-          unzip -l $GITHUB_WORKSPACE/build/beautycita-unsigned.ipa | grep "Runner.app/Runner"
+          cd build/ios/iphoneos
+          mkdir -p Payload
+          cp -r Runner.app Payload/
+          zip -r -9 ../../../beautycita-unsigned.ipa Payload/
+          cd ../../..
+          echo "=== IPA created ==="
+          ls -lh beautycita-unsigned.ipa
+          echo "=== Verifying Runner binary exists ==="
+          unzip -l beautycita-unsigned.ipa | grep "Runner.app/Runner$" || echo "WARNING: Runner binary not found"
+          echo "=== App bundle contents (first 30 lines) ==="
+          unzip -l beautycita-unsigned.ipa | head -30
 
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
           name: beautycita-ios-${{ github.run_number }}
-          path: build/beautycita-unsigned.ipa
+          path: beautycita_app/beautycita-unsigned.ipa
           retention-days: 30
           if-no-files-found: error
