@@ -32,27 +32,38 @@ jobs:
         working-directory: beautycita_app
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
-      - name: Build unsigned xcarchive
+      - name: Disable code signing in Xcode project
+        working-directory: beautycita_app/ios
+        run: |
+          # Disable code signing so --no-codesign actually works
+          sed -i '' 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g' Runner.xcodeproj/project.pbxproj
+          sed -i '' 's/"CODE_SIGN_IDENTITY\[sdk=iphoneos\*\]" = "iPhone Developer";/CODE_SIGN_IDENTITY = "-";/g' Runner.xcodeproj/project.pbxproj
+          # Add CODE_SIGNING_ALLOWED=NO to all build configurations
+          sed -i '' '/INFOPLIST_FILE/a\
+				CODE_SIGNING_ALLOWED = NO;' Runner.xcodeproj/project.pbxproj
+
+      - name: Build iOS app (no codesign)
         working-directory: beautycita_app
         run: |
-          flutter build ipa --no-codesign \
+          flutter build ios --no-codesign \
             --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
             --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
 
-      - name: Package xcarchive into IPA
+      - name: Package .app into IPA
         working-directory: beautycita_app
         run: |
-          # Find the .app inside the xcarchive
-          ARCHIVE_PATH=$(find build/ios/archive -name "*.xcarchive" -maxdepth 1 | head -1)
-          if [ -z "$ARCHIVE_PATH" ]; then
-            echo "ERROR: No xcarchive found"
+          # flutter build ios --no-codesign puts the .app in build/ios/iphoneos/
+          APP_PATH=$(find build/ios/iphoneos -name "*.app" -maxdepth 1 | head -1)
+          if [ -z "$APP_PATH" ]; then
+            echo "ERROR: No .app found in build/ios/iphoneos/"
+            find build/ios/ -name "*.app" -type d 2>/dev/null
             exit 1
           fi
-          echo "Found archive: $ARCHIVE_PATH"
+          echo "Found app: $APP_PATH"
 
           # Create IPA structure: Payload/Runner.app
           mkdir -p /tmp/ipa-payload/Payload
-          cp -r "$ARCHIVE_PATH/Products/Applications/"*.app /tmp/ipa-payload/Payload/
+          cp -r "$APP_PATH" /tmp/ipa-payload/Payload/
 
           # Zip into .ipa
           mkdir -p build/ios/ipa
