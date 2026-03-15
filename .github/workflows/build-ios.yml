@@ -32,71 +32,56 @@ jobs:
         working-directory: beautycita_app
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
-      - name: Build iOS frameworks (Dart AOT compilation)
+      - name: Flutter build (Dart AOT + assets)
         working-directory: beautycita_app
         run: |
-          # This compiles Dart to AOT, runs pod install, and builds
-          # all dependent frameworks. It fails at the Runner.app linking
-          # step due to missing Development Team, but that's OK — we'll
-          # do the final link with xcodebuild ourselves.
-          flutter build ios --no-codesign \
+          flutter build ios --release --no-codesign \
             --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
             --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }} \
             || true
-
-          # Verify Dart AOT output exists
+          # Verify Dart compilation succeeded
           if [ ! -d "build/ios/Release-iphoneos/App.framework" ]; then
-            echo "ERROR: App.framework not found — Dart compilation failed"
+            echo "ERROR: Dart AOT compilation failed"
             exit 1
           fi
-          echo "Dart AOT compilation successful"
+          echo "Dart AOT + assets compiled successfully"
 
-      - name: Build Runner.app with xcodebuild (unsigned)
+      - name: Create unsigned xcarchive
         working-directory: beautycita_app/ios
         run: |
-          xcodebuild build \
+          xcodebuild \
             -workspace Runner.xcworkspace \
             -scheme Runner \
-            -configuration Release \
             -sdk iphoneos \
-            -derivedDataPath ../build/ios/xc-derived \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath $GITHUB_WORKSPACE/build/Runner.xcarchive \
+            archive \
             CODE_SIGN_IDENTITY="" \
-            COMPILER_INDEX_STORE_ENABLE=NO \
-            2>&1 | tail -20
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            2>&1 | tail -30
 
-          # Find the built .app
-          APP_PATH=$(find ../build/ios/xc-derived -name "Runner.app" -path "*/Release-iphoneos/*" -type d | head -1)
-          echo "Built app: $APP_PATH"
-          ls -la "$APP_PATH/Runner" 2>/dev/null || echo "WARNING: Runner binary not in .app yet"
-          du -sh "$APP_PATH" 2>/dev/null
+          echo "=== Archive contents ==="
+          ls -la $GITHUB_WORKSPACE/build/Runner.xcarchive/Products/Applications/Runner.app/Runner 2>/dev/null && echo "Runner binary found" || echo "Runner binary MISSING"
+          du -sh $GITHUB_WORKSPACE/build/Runner.xcarchive/Products/Applications/Runner.app/ 2>/dev/null
 
-      - name: Package into IPA
-        working-directory: beautycita_app
+      - name: Package unsigned IPA
         run: |
-          APP_PATH=$(find build/ios/xc-derived -name "Runner.app" -path "*/Release-iphoneos/*" -type d | head -1)
+          cd $GITHUB_WORKSPACE/build/Runner.xcarchive/Products
+          mv Applications Payload
+          zip -r -9 $GITHUB_WORKSPACE/build/beautycita-unsigned.ipa Payload
 
-          if [ -z "$APP_PATH" ] || [ ! -f "$APP_PATH/Runner" ]; then
-            echo "ERROR: Runner.app with binary not found"
-            find build/ios/xc-derived -name "Runner.app" -type d 2>/dev/null
-            find build/ios/xc-derived -name "Runner" -type f 2>/dev/null
-            exit 1
-          fi
-
-          echo "Using: $APP_PATH ($(du -sh "$APP_PATH" | cut -f1))"
-          mkdir -p /tmp/ipa-payload/Payload
-          cp -r "$APP_PATH" /tmp/ipa-payload/Payload/
-          mkdir -p build/ios/ipa
-          cd /tmp/ipa-payload
-          zip -r "$GITHUB_WORKSPACE/beautycita_app/build/ios/ipa/beautycita.ipa" Payload
           echo "IPA created:"
-          ls -lh "$GITHUB_WORKSPACE/beautycita_app/build/ios/ipa/beautycita.ipa"
+          ls -lh $GITHUB_WORKSPACE/build/beautycita-unsigned.ipa
+
+          # Verify IPA has Runner binary
+          unzip -l $GITHUB_WORKSPACE/build/beautycita-unsigned.ipa | grep "Runner.app/Runner"
 
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
           name: beautycita-ios-${{ github.run_number }}
-          path: beautycita_app/build/ios/ipa/beautycita.ipa
+          path: build/beautycita-unsigned.ipa
           retention-days: 30
           if-no-files-found: error
