@@ -1,0 +1,70 @@
+name: Build iOS IPA
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_note:
+        description: 'Build note (optional)'
+        required: false
+        default: ''
+
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.9'
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        working-directory: beautycita_app
+        run: flutter pub get
+
+      - name: Run analyzer
+        working-directory: beautycita_app
+        run: flutter analyze --no-fatal-infos
+
+      - name: Build unsigned xcarchive
+        working-directory: beautycita_app
+        run: |
+          flutter build ipa --no-codesign \
+            --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
+            --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+
+      - name: Package xcarchive into IPA
+        working-directory: beautycita_app
+        run: |
+          # Find the .app inside the xcarchive
+          ARCHIVE_PATH=$(find build/ios/archive -name "*.xcarchive" -maxdepth 1 | head -1)
+          if [ -z "$ARCHIVE_PATH" ]; then
+            echo "ERROR: No xcarchive found"
+            exit 1
+          fi
+          echo "Found archive: $ARCHIVE_PATH"
+
+          # Create IPA structure: Payload/Runner.app
+          mkdir -p /tmp/ipa-payload/Payload
+          cp -r "$ARCHIVE_PATH/Products/Applications/"*.app /tmp/ipa-payload/Payload/
+
+          # Zip into .ipa
+          mkdir -p build/ios/ipa
+          cd /tmp/ipa-payload
+          zip -r "$GITHUB_WORKSPACE/beautycita_app/build/ios/ipa/beautycita.ipa" Payload
+          echo "IPA created at build/ios/ipa/beautycita.ipa"
+          ls -lh "$GITHUB_WORKSPACE/beautycita_app/build/ios/ipa/beautycita.ipa"
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: beautycita-ios-${{ github.run_number }}
+          path: beautycita_app/build/ios/ipa/beautycita.ipa
+          retention-days: 30
+          if-no-files-found: error
