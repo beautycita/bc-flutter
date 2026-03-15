@@ -48,7 +48,6 @@ dependencies:
   csv: ^6.0.0
   syncfusion_flutter_xlsio: ^32.2.7
   pdf: ^3.11.2
-  shorebird_code_push: ^2.0.5
   beautycita_core:
     path: ../packages/beautycita_core
   package_info_plus: ^9.0.0
@@ -66,7 +65,6 @@ flutter:
   uses-material-design: true
   assets:
     - .env
-    - shorebird.yaml
     - assets/images/
     - assets/google_fonts/
     - assets/videos/
