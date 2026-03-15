@@ -1,11 +1,11 @@
 {
-    "name": "beautycita",
-    "short_name": "beautycita",
+    "name": "BeautyCita",
+    "short_name": "BeautyCita",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#1a1a2e",
+    "theme_color": "#ec4899",
+    "description": "Tu agente de belleza inteligente. Reserva servicios de belleza en segundos.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

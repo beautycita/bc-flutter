@@ -544,6 +544,20 @@ const _termsSections = [
         'disposicion de los proveedores un desglose de retenciones en su panel.',
   ),
   _Section(
+    heading: '4b. Pagos en efectivo y obligaciones fiscales del proveedor',
+    body:
+        'Cuando el servicio se paga en efectivo directamente al proveedor '
+        '(incluyendo pagos mediante OXXO o QR de walk-in), BeautyCita actua '
+        'unicamente como intermediario de la reserva y no procesa el pago.\n\n'
+        'En estos casos, BeautyCita NO tiene obligacion de retener ISR ni IVA '
+        'sobre dichos montos. El proveedor de servicios es el unico responsable '
+        'de declarar y enterar los impuestos correspondientes a los ingresos '
+        'recibidos en efectivo o por medios directos, conforme a su regimen '
+        'fiscal aplicable.\n\n'
+        'Al registrarse como proveedor en la plataforma, el estilista o salon '
+        'acepta esta responsabilidad fiscal sobre transacciones en efectivo.',
+  ),
+  _Section(
     heading: '5. Transporte',
     body:
         'La integracion con Uber es opcional. Al vincular tu cuenta, autorizas a '

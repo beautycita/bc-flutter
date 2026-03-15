@@ -1124,7 +1124,7 @@ class _NearbyResultsView extends StatelessWidget {
 // Confirmation
 // ---------------------------------------------------------------------------
 
-class _ConfirmView extends StatelessWidget {
+class _ConfirmView extends ConsumerWidget {
   final CitaExpressState state;
   final VoidCallback onConfirm;
   final VoidCallback onBack;
@@ -1137,13 +1137,14 @@ class _ConfirmView extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).colorScheme;
     final result = state.selectedResult!;
     final slot = result.slot!;
     final startTime = slot.startTime.toLocal();
     final timeFormat = DateFormat('h:mm a', 'es');
     final dateFormat = DateFormat('EEEE d MMMM', 'es');
+    final selectedMethod = state.paymentMethod;
 
     return ListView(
       padding: const EdgeInsets.all(AppConstants.paddingMD),
@@ -1279,6 +1280,45 @@ class _ConfirmView extends StatelessWidget {
           ),
         ),
 
+        const SizedBox(height: AppConstants.paddingLG),
+
+        // Payment method selection
+        Text(
+          'METODO DE PAGO',
+          style: GoogleFonts.poppins(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1.2,
+            color: colors.onSurface.withValues(alpha: 0.4),
+          ),
+        ),
+        const SizedBox(height: AppConstants.paddingSM),
+
+        // Cash direct option
+        _PaymentMethodTile(
+          icon: Icons.payments_rounded,
+          label: 'Efectivo al estilista',
+          subtitle: 'Paga directamente en el salon',
+          selected: selectedMethod == 'cash_direct',
+          colors: colors,
+          onTap: () => ref
+              .read(citaExpressProvider.notifier)
+              .setPaymentMethod('cash_direct'),
+        ),
+        const SizedBox(height: 8),
+
+        // Card option
+        _PaymentMethodTile(
+          icon: Icons.credit_card_rounded,
+          label: 'Tarjeta de credito/debito',
+          subtitle: 'Pago seguro con Stripe',
+          selected: selectedMethod == 'card',
+          colors: colors,
+          onTap: () => ref
+              .read(citaExpressProvider.notifier)
+              .setPaymentMethod('card'),
+        ),
+
         const SizedBox(height: AppConstants.paddingXL),
 
         // CONFIRMAR button
@@ -1306,6 +1346,71 @@ class _ConfirmView extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _PaymentMethodTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String subtitle;
+  final bool selected;
+  final ColorScheme colors;
+  final VoidCallback onTap;
+
+  const _PaymentMethodTile({
+    required this.icon,
+    required this.label,
+    required this.subtitle,
+    required this.selected,
+    required this.colors,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+          border: Border.all(
+            color: selected
+                ? colors.primary
+                : colors.onSurface.withValues(alpha: 0.1),
+            width: selected ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 22,
+                color: selected ? colors.primary : colors.onSurface.withValues(alpha: 0.4)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label,
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: colors.onSurface,
+                      )),
+                  Text(subtitle,
+                      style: GoogleFonts.nunito(
+                        fontSize: 12,
+                        color: colors.onSurface.withValues(alpha: 0.5),
+                      )),
+                ],
+              ),
+            ),
+            if (selected)
+              Icon(Icons.check_circle_rounded, size: 22, color: colors.primary),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -1457,6 +1562,35 @@ class _BookedView extends StatelessWidget {
                 style: GoogleFonts.nunito(
                   fontSize: 14,
                   color: colors.onSurface.withValues(alpha: 0.6),
+                ),
+              ),
+            ],
+            if (state.paymentMethod == 'cash_direct') ...[
+              const SizedBox(height: AppConstants.paddingMD),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.amber.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+                  border: Border.all(
+                    color: Colors.amber.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.payments_rounded,
+                        size: 20, color: Colors.amber),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Paga directamente al estilista en el salon.',
+                        style: GoogleFonts.nunito(
+                          fontSize: 13,
+                          color: colors.onSurface.withValues(alpha: 0.7),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
