@@ -6,7 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:beautycita/config/constants.dart';
 
 // We test the version comparison and dismissal logic directly
-// rather than mocking the full UpdaterService (which wraps Shorebird).
+// rather than mocking the full UpdaterService singleton.
 
 void main() {
   group('UpdaterService version check logic', () {
