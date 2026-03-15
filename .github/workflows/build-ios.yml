@@ -32,48 +32,46 @@ jobs:
         working-directory: beautycita_app
         run: flutter pub get
 
+      - name: Generate Xcode project config
+        working-directory: beautycita_app
+        run: |
+          flutter build ios --config-only --release --no-codesign \
+            --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
+            --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+
       - name: Install CocoaPods
         working-directory: beautycita_app/ios
         run: pod install
 
-      - name: Build unsigned iOS app
-        working-directory: beautycita_app
+      - name: Build xcarchive
+        working-directory: beautycita_app/ios
         run: |
-          # flutter build ios --no-codesign exits non-zero due to signing validation
-          # but xcodebuild actually completes successfully. Ignore the exit code and
-          # verify the binary exists in the next step.
-          flutter build ios --release --no-codesign \
-            --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
-            --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }} \
-            || true
+          xcodebuild archive \
+            -workspace Runner.xcworkspace \
+            -scheme Runner \
+            -sdk iphoneos \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath $RUNNER_TEMP/Runner.xcarchive \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
 
-      - name: Verify and package unsigned IPA
-        working-directory: beautycita_app
+      - name: Package unsigned IPA
         run: |
-          echo "=== Checking build output ==="
-          ls -la build/ios/iphoneos/Runner.app/ || true
-          ls -la build/ios/iphoneos/Runner.app/Runner || true
+          echo "=== xcarchive contents ==="
+          ls -la $RUNNER_TEMP/Runner.xcarchive/Products/Applications/Runner.app/ | head -20
 
-          if [ ! -f build/ios/iphoneos/Runner.app/Runner ]; then
-            echo "ERROR: Runner binary not found. Build failed."
-            echo "=== Checking DerivedData for binary ==="
-            find ~/Library/Developer/Xcode/DerivedData -name "Runner" -type f 2>/dev/null | head -5
-            echo "=== Checking build directory tree ==="
-            find build/ios -name "Runner" -type f 2>/dev/null | head -10
-            exit 1
-          fi
+          cd $RUNNER_TEMP/Runner.xcarchive/Products
+          mv Applications Payload
+          zip -r -9 $GITHUB_WORKSPACE/beautycita_app/beautycita-unsigned.ipa Payload
 
-          echo "=== Runner binary found! Packaging IPA ==="
-          cd build/ios/iphoneos
-          mkdir -p Payload
-          cp -r Runner.app Payload/
-          zip -r -9 ../../../beautycita-unsigned.ipa Payload/
-          cd ../../..
           echo "=== IPA created ==="
-          ls -lh beautycita-unsigned.ipa
-          echo "=== Verifying IPA contents ==="
-          unzip -l beautycita-unsigned.ipa | grep "Runner.app/Runner$" || echo "WARNING: Runner binary not in IPA"
-          unzip -l beautycita-unsigned.ipa | head -30
+          ls -lh $GITHUB_WORKSPACE/beautycita_app/beautycita-unsigned.ipa
+          echo "=== Verifying Runner binary ==="
+          unzip -l $GITHUB_WORKSPACE/beautycita_app/beautycita-unsigned.ipa | grep "Runner.app/Runner$"
+          echo "=== IPA contents (first 30 lines) ==="
+          unzip -l $GITHUB_WORKSPACE/beautycita_app/beautycita-unsigned.ipa | head -30
 
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
