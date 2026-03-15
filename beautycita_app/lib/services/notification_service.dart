@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -64,6 +65,15 @@ class NotificationService {
       }
     } catch (e) {
       debugPrint('[Notifications] Toggle check failed, proceeding: $e');
+    }
+
+    // iOS sideload (free Apple ID) has no APNs certificate.
+    // Skip ALL FCM initialization — no token registration, no foreground
+    // handlers, no background handlers. All notifications come via WhatsApp.
+    // This early return is intentional — not just token registration.
+    if (Platform.isIOS) {
+      debugPrint('[Notifications] iOS sideload — skipping FCM entirely (no APNs)');
+      return;
     }
 
     try {
