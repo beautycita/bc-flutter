@@ -39,13 +39,31 @@ jobs:
       - name: Build unsigned iOS app
         working-directory: beautycita_app
         run: |
+          # flutter build ios --no-codesign exits non-zero due to signing validation
+          # but xcodebuild actually completes successfully. Ignore the exit code and
+          # verify the binary exists in the next step.
           flutter build ios --release --no-codesign \
             --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
-            --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+            --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }} \
+            || true
 
-      - name: Package unsigned IPA
+      - name: Verify and package unsigned IPA
         working-directory: beautycita_app
         run: |
+          echo "=== Checking build output ==="
+          ls -la build/ios/iphoneos/Runner.app/ || true
+          ls -la build/ios/iphoneos/Runner.app/Runner || true
+
+          if [ ! -f build/ios/iphoneos/Runner.app/Runner ]; then
+            echo "ERROR: Runner binary not found. Build failed."
+            echo "=== Checking DerivedData for binary ==="
+            find ~/Library/Developer/Xcode/DerivedData -name "Runner" -type f 2>/dev/null | head -5
+            echo "=== Checking build directory tree ==="
+            find build/ios -name "Runner" -type f 2>/dev/null | head -10
+            exit 1
+          fi
+
+          echo "=== Runner binary found! Packaging IPA ==="
           cd build/ios/iphoneos
           mkdir -p Payload
           cp -r Runner.app Payload/
@@ -53,9 +71,8 @@ jobs:
           cd ../../..
           echo "=== IPA created ==="
           ls -lh beautycita-unsigned.ipa
-          echo "=== Verifying Runner binary exists ==="
-          unzip -l beautycita-unsigned.ipa | grep "Runner.app/Runner$" || echo "WARNING: Runner binary not found"
-          echo "=== App bundle contents (first 30 lines) ==="
+          echo "=== Verifying IPA contents ==="
+          unzip -l beautycita-unsigned.ipa | grep "Runner.app/Runner$" || echo "WARNING: Runner binary not in IPA"
           unzip -l beautycita-unsigned.ipa | head -30
 
       - name: Upload IPA artifact
