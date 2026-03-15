@@ -44,10 +44,17 @@ jobs:
             --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }} \
             || true
 
-          # Verify the .app was actually built
-          APP_PATH=$(find build/ios/iphoneos -name "Runner.app" -type d 2>/dev/null | head -1)
+          # Find the .app — Flutter may place it in different locations
+          echo "=== Searching for Runner.app ==="
+          find build/ios -name "Runner.app" -type d 2>/dev/null
+          find ~/Library/Developer/Xcode/DerivedData -name "Runner.app" -type d 2>/dev/null
+
+          APP_PATH=$(find build/ios -name "Runner.app" -type d 2>/dev/null | head -1)
           if [ -z "$APP_PATH" ]; then
-            echo "ERROR: Runner.app was not built"
+            APP_PATH=$(find ~/Library/Developer/Xcode/DerivedData -name "Runner.app" -path "*/Release-iphoneos/*" -type d 2>/dev/null | head -1)
+          fi
+          if [ -z "$APP_PATH" ]; then
+            echo "ERROR: Runner.app was not built anywhere"
             exit 1
           fi
           APP_SIZE=$(du -sh "$APP_PATH" | cut -f1)
@@ -64,7 +71,10 @@ jobs:
       - name: Package .app into IPA
         working-directory: beautycita_app
         run: |
-          APP_PATH=$(find build/ios/iphoneos -name "Runner.app" -type d | head -1)
+          APP_PATH=$(find build/ios -name "Runner.app" -type d 2>/dev/null | head -1)
+          if [ -z "$APP_PATH" ]; then
+            APP_PATH=$(find ~/Library/Developer/Xcode/DerivedData -name "Runner.app" -path "*/Release-iphoneos/*" -type d 2>/dev/null | head -1)
+          fi
           echo "Packaging: $APP_PATH"
 
           mkdir -p /tmp/ipa-payload/Payload
