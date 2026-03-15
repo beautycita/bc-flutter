@@ -49,6 +49,10 @@ jobs:
       - name: Create unsigned xcarchive
         working-directory: beautycita_app/ios
         run: |
+          # Skip Flutter's xcode_backend.sh during archive (Dart already compiled)
+          # by replacing the Run Script phase with a no-op
+          sed -i '' 's|/bin/sh \\"$FLUTTER_ROOT/packages/flutter_tools/bin/xcode_backend.sh\\" build|echo \\"Skipping — Dart already compiled\\"|g' Runner.xcodeproj/project.pbxproj
+
           xcodebuild \
             -workspace Runner.xcworkspace \
             -scheme Runner \
