@@ -11,7 +11,7 @@ on:
 jobs:
   build:
     runs-on: macos-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
       - name: Checkout code
@@ -32,51 +32,54 @@ jobs:
         working-directory: beautycita_app
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
-      - name: Disable code signing in Xcode project
-        working-directory: beautycita_app/ios
-        run: |
-          sed -i '' 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g' Runner.xcodeproj/project.pbxproj
-          sed -i '' 's/"CODE_SIGN_IDENTITY\[sdk=iphoneos\*\]" = "iPhone Developer";/CODE_SIGN_IDENTITY = "-";/g' Runner.xcodeproj/project.pbxproj
-          python3 -c "
-          import re
-          with open('Runner.xcodeproj/project.pbxproj') as f:
-              content = f.read()
-          content = content.replace('CODE_SIGNING_ALLOWED = YES;', 'CODE_SIGNING_ALLOWED = NO;')
-          if 'CODE_SIGNING_ALLOWED' not in content:
-              content = content.replace('INFOPLIST_FILE =', 'CODE_SIGNING_ALLOWED = NO;\n\t\t\t\tINFOPLIST_FILE =')
-          with open('Runner.xcodeproj/project.pbxproj', 'w') as f:
-              f.write(content)
-          print('Code signing disabled')
-          "
-
-      - name: Build iOS app (no codesign)
+      - name: Build Flutter iOS framework
         working-directory: beautycita_app
         run: |
-          flutter build ios --no-codesign \
+          # Build the Flutter framework (Dart compilation + native code)
+          # This generates build/ios/iphoneos/Runner.app via xcodebuild
+          flutter build ios --no-codesign --config-only \
             --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
             --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+
+      - name: Install CocoaPods
+        working-directory: beautycita_app/ios
+        run: pod install
+
+      - name: Build with xcodebuild (unsigned)
+        working-directory: beautycita_app/ios
+        run: |
+          xcodebuild build \
+            -workspace Runner.xcworkspace \
+            -scheme Runner \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath ../build/ios/derived \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="-" \
+            | tail -30
+
+          echo "=== Build output ==="
+          find ../build/ios/derived -name "*.app" -type d | head -5
 
       - name: Package .app into IPA
         working-directory: beautycita_app
         run: |
-          # flutter build ios --no-codesign puts the .app in build/ios/iphoneos/
-          APP_PATH=$(find build/ios/iphoneos -name "*.app" -maxdepth 1 | head -1)
+          APP_PATH=$(find build/ios/derived -name "Runner.app" -type d | head -1)
           if [ -z "$APP_PATH" ]; then
-            echo "ERROR: No .app found in build/ios/iphoneos/"
+            echo "ERROR: No Runner.app found"
             find build/ios/ -name "*.app" -type d 2>/dev/null
             exit 1
           fi
           echo "Found app: $APP_PATH"
 
-          # Create IPA structure: Payload/Runner.app
           mkdir -p /tmp/ipa-payload/Payload
           cp -r "$APP_PATH" /tmp/ipa-payload/Payload/
 
-          # Zip into .ipa
           mkdir -p build/ios/ipa
           cd /tmp/ipa-payload
           zip -r "$GITHUB_WORKSPACE/beautycita_app/build/ios/ipa/beautycita.ipa" Payload
-          echo "IPA created at build/ios/ipa/beautycita.ipa"
+          echo "IPA created:"
           ls -lh "$GITHUB_WORKSPACE/beautycita_app/build/ios/ipa/beautycita.ipa"
 
       - name: Upload IPA artifact
