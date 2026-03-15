@@ -1,21 +1,18 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:shorebird_code_push/shorebird_code_push.dart';
 import '../config/constants.dart';
 
-/// Two-tier OTA updater:
-///   Tier 1 (Shorebird): Silent Dart-only patches — downloads in background, applies on next cold start.
-///   Tier 2 (APK):       Full binary update — checks version.json on R2, prompts user to download.
+/// OTA updater — checks R2 version.json for newer APK builds.
+/// Android only. iOS uses AltStore for updates.
 class UpdaterService {
   static final UpdaterService _instance = UpdaterService._();
   static UpdaterService get instance => _instance;
   UpdaterService._();
 
-  final _updater = ShorebirdUpdater();
-
-  // ── Tier 2: APK update state ──
+  // ── APK update state ──
   bool _apkUpdateAvailable = false;
   bool _apkUpdateRequired = false;
   String _apkUpdateUrl = '';
@@ -28,40 +25,15 @@ class UpdaterService {
   String get apkUpdateVersion => _apkUpdateVersion;
   int get apkRemoteBuild => _remoteBuildNumber;
 
-  // ── Tier 1: Shorebird patches (unchanged) ──
-
-  /// Check for and silently apply any available patch.
-  /// Fire-and-forget — call without await during splash.
-  Future<void> checkAndUpdate() async {
-    try {
-      final status = await _updater.checkForUpdate();
-      if (status == UpdateStatus.outdated) {
-        debugPrint('[Updater] Patch available, downloading...');
-        await _updater.update();
-        debugPrint('[Updater] Patch downloaded. Will apply on next restart.');
-      } else {
-        debugPrint('[Updater] App is up to date (status: $status)');
-      }
-    } catch (e) {
-      debugPrint('[Updater] Update check failed: $e');
-    }
-  }
-
-  /// Get currently installed patch number, if any.
-  Future<int?> currentPatchNumber() async {
-    try {
-      final patch = await _updater.readCurrentPatch();
-      return patch?.number;
-    } catch (_) {
-      return null;
-    }
-  }
-
-  // ── Tier 2: Full APK update ──
-
   /// Check R2 for a newer APK version. Non-blocking, fail-silent.
-  /// Fire-and-forget — call without await during splash.
+  /// Skipped on iOS — AltStore handles updates there.
   Future<void> checkForApkUpdate() async {
+    // iOS uses AltStore for updates, not R2
+    if (!Platform.isAndroid) {
+      debugPrint('[Updater] Skipping APK check (not Android)');
+      return;
+    }
+
     try {
       final response = await http
           .get(Uri.parse(AppConstants.versionCheckUrl))
