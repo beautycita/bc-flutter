@@ -32,46 +32,40 @@ jobs:
         working-directory: beautycita_app
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
-      - name: Build Flutter iOS framework
+      - name: Build iOS app (no codesign)
         working-directory: beautycita_app
         run: |
-          # Build the Flutter framework (Dart compilation + native code)
-          # This generates build/ios/iphoneos/Runner.app via xcodebuild
-          flutter build ios --no-codesign --config-only \
+          # flutter build ios --no-codesign exits non-zero with
+          # "requires Development Team" even though the .app is built.
+          # The actual xcodebuild succeeds — Flutter just validates
+          # signing post-build and fails. We suppress this known error.
+          flutter build ios --no-codesign \
             --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
-            --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+            --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }} \
+            || true
 
-      - name: Install CocoaPods
-        working-directory: beautycita_app/ios
-        run: pod install
+          # Verify the .app was actually built
+          APP_PATH=$(find build/ios/iphoneos -name "Runner.app" -type d 2>/dev/null | head -1)
+          if [ -z "$APP_PATH" ]; then
+            echo "ERROR: Runner.app was not built"
+            exit 1
+          fi
+          APP_SIZE=$(du -sh "$APP_PATH" | cut -f1)
+          echo "Runner.app built: $APP_PATH ($APP_SIZE)"
 
-      - name: Build with xcodebuild (unsigned)
-        working-directory: beautycita_app/ios
-        run: |
-          xcodebuild build \
-            -workspace Runner.xcworkspace \
-            -scheme Runner \
-            -configuration Release \
-            -sdk iphoneos \
-            -derivedDataPath ../build/ios/derived \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="-" \
-            | tail -30
-
-          echo "=== Build output ==="
-          find ../build/ios/derived -name "*.app" -type d | head -5
+          # Verify it contains the actual binary
+          if [ ! -f "$APP_PATH/Runner" ]; then
+            echo "ERROR: Runner binary not found inside .app"
+            ls -la "$APP_PATH/"
+            exit 1
+          fi
+          echo "Runner binary exists: $(ls -lh "$APP_PATH/Runner" | awk '{print $5}')"
 
       - name: Package .app into IPA
         working-directory: beautycita_app
         run: |
-          APP_PATH=$(find build/ios/derived -name "Runner.app" -type d | head -1)
-          if [ -z "$APP_PATH" ]; then
-            echo "ERROR: No Runner.app found"
-            find build/ios/ -name "*.app" -type d 2>/dev/null
-            exit 1
-          fi
-          echo "Found app: $APP_PATH"
+          APP_PATH=$(find build/ios/iphoneos -name "Runner.app" -type d | head -1)
+          echo "Packaging: $APP_PATH"
 
           mkdir -p /tmp/ipa-payload/Payload
           cp -r "$APP_PATH" /tmp/ipa-payload/Payload/
