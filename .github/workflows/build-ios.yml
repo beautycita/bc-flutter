@@ -32,6 +32,21 @@ jobs:
         working-directory: beautycita_app
         run: flutter pub get
 
+      - name: Create .env asset
+        working-directory: beautycita_app
+        run: |
+          printf '%s\n' \
+            "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" \
+            "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" \
+            "GOOGLE_ANDROID_API_KEY=${{ secrets.GOOGLE_ANDROID_API_KEY }}" \
+            "UBER_CLIENT_ID=${{ secrets.UBER_CLIENT_ID }}" \
+            "UBER_REDIRECT_URI=https://beautycita.com/auth/uber-callback" \
+            "UBER_SANDBOX=false" \
+            "STRIPE_PUBLIC_KEY=${{ secrets.STRIPE_PUBLIC_KEY }}" \
+            "MAPBOX_TOKEN=${{ secrets.MAPBOX_TOKEN }}" \
+            "GOOGLE_OAUTH_CLIENT_ID=${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}" \
+            > .env
+
       - name: Generate Xcode project config
         working-directory: beautycita_app
         run: |
