@@ -32,48 +32,55 @@ jobs:
         working-directory: beautycita_app
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
-      - name: Build iOS app (no codesign)
+      - name: Build iOS frameworks (Dart AOT compilation)
         working-directory: beautycita_app
         run: |
+          # This compiles Dart to AOT, runs pod install, and builds
+          # all dependent frameworks. It fails at the Runner.app linking
+          # step due to missing Development Team, but that's OK — we'll
+          # do the final link with xcodebuild ourselves.
           flutter build ios --no-codesign \
             --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
             --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }} \
             || true
 
-          # Debug: find ALL .app directories and Runner binaries
-          echo "=== All .app dirs under build/ ==="
-          find build/ -name "*.app" -type d 2>/dev/null
-          echo "=== All Runner binaries ==="
-          find build/ -name "Runner" -type f 2>/dev/null
-          echo "=== All .app dirs under DerivedData ==="
-          find ~/Library/Developer/Xcode/DerivedData -name "Runner.app" -type d 2>/dev/null | head -5
-          echo "=== Runner binaries in DerivedData ==="
-          find ~/Library/Developer/Xcode/DerivedData -name "Runner" -not -path "*/Runner.app/*" -type f 2>/dev/null | head -5
-          echo "=== build/ios directory tree (3 levels) ==="
-          find build/ios -maxdepth 3 -type d 2>/dev/null
-          echo "=== App.framework check ==="
-          find build/ -name "App.framework" -type d 2>/dev/null
+          # Verify Dart AOT output exists
+          if [ ! -d "build/ios/Release-iphoneos/App.framework" ]; then
+            echo "ERROR: App.framework not found — Dart compilation failed"
+            exit 1
+          fi
+          echo "Dart AOT compilation successful"
 
-      - name: Package .app into IPA
+      - name: Build Runner.app with xcodebuild (unsigned)
+        working-directory: beautycita_app/ios
+        run: |
+          xcodebuild build \
+            -workspace Runner.xcworkspace \
+            -scheme Runner \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath ../build/ios/xc-derived \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            COMPILER_INDEX_STORE_ENABLE=NO \
+            2>&1 | tail -20
+
+          # Find the built .app
+          APP_PATH=$(find ../build/ios/xc-derived -name "Runner.app" -path "*/Release-iphoneos/*" -type d | head -1)
+          echo "Built app: $APP_PATH"
+          ls -la "$APP_PATH/Runner" 2>/dev/null || echo "WARNING: Runner binary not in .app yet"
+          du -sh "$APP_PATH" 2>/dev/null
+
+      - name: Package into IPA
         working-directory: beautycita_app
         run: |
-          # Find Runner.app with actual binary content
-          for dir in \
-            "build/ios/iphoneos" \
-            "build/ios/Release-iphoneos" \
-            ~/Library/Developer/Xcode/DerivedData/*/Build/Products/Release-iphoneos; do
-            if [ -f "$dir/Runner.app/Runner" ]; then
-              APP_PATH="$dir/Runner.app"
-              break
-            fi
-          done
+          APP_PATH=$(find build/ios/xc-derived -name "Runner.app" -path "*/Release-iphoneos/*" -type d | head -1)
 
-          if [ -z "$APP_PATH" ]; then
-            echo "ERROR: No Runner.app with binary found"
-            echo "Attempting to find any Runner binary..."
-            find build/ ~/Library/Developer/Xcode/DerivedData -name "Runner" -type f 2>/dev/null | while read f; do
-              echo "  Found: $f ($(ls -lh "$f" | awk '{print $5}'))"
-            done
+          if [ -z "$APP_PATH" ] || [ ! -f "$APP_PATH/Runner" ]; then
+            echo "ERROR: Runner.app with binary not found"
+            find build/ios/xc-derived -name "Runner.app" -type d 2>/dev/null
+            find build/ios/xc-derived -name "Runner" -type f 2>/dev/null
             exit 1
           fi
 
