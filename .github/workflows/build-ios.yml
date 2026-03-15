@@ -35,12 +35,19 @@ jobs:
       - name: Disable code signing in Xcode project
         working-directory: beautycita_app/ios
         run: |
-          # Disable code signing so --no-codesign actually works
           sed -i '' 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g' Runner.xcodeproj/project.pbxproj
           sed -i '' 's/"CODE_SIGN_IDENTITY\[sdk=iphoneos\*\]" = "iPhone Developer";/CODE_SIGN_IDENTITY = "-";/g' Runner.xcodeproj/project.pbxproj
-          # Add CODE_SIGNING_ALLOWED=NO to all build configurations
-          sed -i '' '/INFOPLIST_FILE/a\
-				CODE_SIGNING_ALLOWED = NO;' Runner.xcodeproj/project.pbxproj
+          python3 -c "
+          import re
+          with open('Runner.xcodeproj/project.pbxproj') as f:
+              content = f.read()
+          content = content.replace('CODE_SIGNING_ALLOWED = YES;', 'CODE_SIGNING_ALLOWED = NO;')
+          if 'CODE_SIGNING_ALLOWED' not in content:
+              content = content.replace('INFOPLIST_FILE =', 'CODE_SIGNING_ALLOWED = NO;\n\t\t\t\tINFOPLIST_FILE =')
+          with open('Runner.xcodeproj/project.pbxproj', 'w') as f:
+              f.write(content)
+          print('Code signing disabled')
+          "
 
       - name: Build iOS app (no codesign)
         working-directory: beautycita_app
