@@ -23,6 +23,7 @@ import 'package:beautycita/services/debug_log.dart';
 import 'package:beautycita/services/presence_service.dart';
 import 'package:beautycita/services/screenshot_detector_service.dart';
 import 'package:beautycita/screens/screenshot_editor_screen.dart';
+import 'package:beautycita/widgets/screenshot_report_button.dart';
 import 'package:go_router/go_router.dart';
 
 /// Completes when Supabase is ready (or failed). Splash screen awaits this.
@@ -327,7 +328,12 @@ class _BeautyCitaAppState extends ConsumerState<BeautyCitaApp> {
             data: MediaQuery.of(context).copyWith(
               textScaler: TextScaler.linear(scale),
             ),
-            child: child ?? const SizedBox.shrink(),
+            child: Stack(
+              children: [
+                child ?? const SizedBox.shrink(),
+                const ScreenshotReportButton(),
+              ],
+            ),
           ),
         );
       },
