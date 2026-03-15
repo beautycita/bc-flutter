@@ -330,7 +330,10 @@ class _BeautyCitaAppState extends ConsumerState<BeautyCitaApp> {
             ),
             child: Stack(
               children: [
-                child ?? const SizedBox.shrink(),
+                RepaintBoundary(
+                  key: screenshotBoundaryKey,
+                  child: child ?? const SizedBox.shrink(),
+                ),
                 const ScreenshotReportButton(),
               ],
             ),
