@@ -32,50 +32,51 @@ jobs:
         working-directory: beautycita_app
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
-      - name: Build iOS app (no codesign)
+      - name: Build iOS IPA (no codesign)
         working-directory: beautycita_app
         run: |
-          # flutter build ios --no-codesign exits non-zero with
-          # "requires Development Team" even though the .app is built.
-          # The actual xcodebuild succeeds — Flutter just validates
-          # signing post-build and fails. We suppress this known error.
-          flutter build ios --no-codesign \
+          # flutter build ipa --no-codesign produces a full xcarchive
+          # but exits non-zero because it can't export without signing.
+          # The archive itself is complete — we just package it manually.
+          flutter build ipa --no-codesign \
             --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
             --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }} \
             || true
 
-          # Find the .app — Flutter may place it in different locations
-          echo "=== Searching for Runner.app ==="
-          find build/ios -name "Runner.app" -type d 2>/dev/null
-          find ~/Library/Developer/Xcode/DerivedData -name "Runner.app" -type d 2>/dev/null
+          echo "=== Searching for xcarchive and .app ==="
+          find build/ios -name "*.xcarchive" -type d 2>/dev/null
+          find build/ios -name "*.app" -type d 2>/dev/null
+          find ~/Library/Developer/Xcode -name "Runner.app" -path "*/Release-iphoneos/*" -type d 2>/dev/null | head -3
 
-          APP_PATH=$(find build/ios -name "Runner.app" -type d 2>/dev/null | head -1)
-          if [ -z "$APP_PATH" ]; then
+      - name: Package into IPA
+        working-directory: beautycita_app
+        run: |
+          # Look for the .app in the xcarchive first
+          ARCHIVE_PATH=$(find build/ios/archive -name "*.xcarchive" -type d 2>/dev/null | head -1)
+
+          if [ -n "$ARCHIVE_PATH" ]; then
+            echo "Found xcarchive: $ARCHIVE_PATH"
+            APP_PATH=$(find "$ARCHIVE_PATH" -name "Runner.app" -type d | head -1)
+          fi
+
+          # Fallback: check DerivedData
+          if [ -z "$APP_PATH" ] || [ ! -f "$APP_PATH/Runner" ]; then
+            echo "Checking DerivedData..."
             APP_PATH=$(find ~/Library/Developer/Xcode/DerivedData -name "Runner.app" -path "*/Release-iphoneos/*" -type d 2>/dev/null | head -1)
           fi
+
           if [ -z "$APP_PATH" ]; then
-            echo "ERROR: Runner.app was not built anywhere"
+            echo "ERROR: No Runner.app found anywhere"
             exit 1
           fi
-          APP_SIZE=$(du -sh "$APP_PATH" | cut -f1)
-          echo "Runner.app built: $APP_PATH ($APP_SIZE)"
 
-          # Verify it contains the actual binary
           if [ ! -f "$APP_PATH/Runner" ]; then
-            echo "ERROR: Runner binary not found inside .app"
+            echo "ERROR: Runner binary not found in $APP_PATH"
             ls -la "$APP_PATH/"
             exit 1
           fi
-          echo "Runner binary exists: $(ls -lh "$APP_PATH/Runner" | awk '{print $5}')"
 
-      - name: Package .app into IPA
-        working-directory: beautycita_app
-        run: |
-          APP_PATH=$(find build/ios -name "Runner.app" -type d 2>/dev/null | head -1)
-          if [ -z "$APP_PATH" ]; then
-            APP_PATH=$(find ~/Library/Developer/Xcode/DerivedData -name "Runner.app" -path "*/Release-iphoneos/*" -type d 2>/dev/null | head -1)
-          fi
-          echo "Packaging: $APP_PATH"
+          echo "Using app: $APP_PATH ($(du -sh "$APP_PATH" | cut -f1))"
 
           mkdir -p /tmp/ipa-payload/Payload
           cp -r "$APP_PATH" /tmp/ipa-payload/Payload/
