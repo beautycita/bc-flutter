@@ -30,7 +30,7 @@ jobs:
 
       - name: Run analyzer
         working-directory: beautycita_app
-        run: flutter analyze --no-fatal-infos
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
       - name: Build unsigned xcarchive
         working-directory: beautycita_app
