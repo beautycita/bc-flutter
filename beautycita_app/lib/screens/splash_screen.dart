@@ -77,9 +77,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     AppConstants.version = info.version;
     AppConstants.buildNumber = int.tryParse(info.buildNumber) ?? 0;
 
-    // OTA update check (silent, non-blocking — downloads patch in background)
-    UpdaterService.instance.checkAndUpdate();
     // APK version check (result checked after home screen loads)
+    // Skipped on iOS — AltStore handles updates there.
     UpdaterService.instance.checkForApkUpdate();
 
     try {
