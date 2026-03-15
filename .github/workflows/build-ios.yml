@@ -32,55 +32,54 @@ jobs:
         working-directory: beautycita_app
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
-      - name: Build iOS IPA (no codesign)
+      - name: Build iOS app (no codesign)
         working-directory: beautycita_app
         run: |
-          # flutter build ipa --no-codesign produces a full xcarchive
-          # but exits non-zero because it can't export without signing.
-          # The archive itself is complete — we just package it manually.
-          flutter build ipa --no-codesign \
+          flutter build ios --no-codesign \
             --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
             --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }} \
             || true
 
-          echo "=== Searching for xcarchive and .app ==="
-          find build/ios -name "*.xcarchive" -type d 2>/dev/null
-          find build/ios -name "*.app" -type d 2>/dev/null
-          find ~/Library/Developer/Xcode -name "Runner.app" -path "*/Release-iphoneos/*" -type d 2>/dev/null | head -3
+          # Debug: find ALL .app directories and Runner binaries
+          echo "=== All .app dirs under build/ ==="
+          find build/ -name "*.app" -type d 2>/dev/null
+          echo "=== All Runner binaries ==="
+          find build/ -name "Runner" -type f 2>/dev/null
+          echo "=== All .app dirs under DerivedData ==="
+          find ~/Library/Developer/Xcode/DerivedData -name "Runner.app" -type d 2>/dev/null | head -5
+          echo "=== Runner binaries in DerivedData ==="
+          find ~/Library/Developer/Xcode/DerivedData -name "Runner" -not -path "*/Runner.app/*" -type f 2>/dev/null | head -5
+          echo "=== build/ios directory tree (3 levels) ==="
+          find build/ios -maxdepth 3 -type d 2>/dev/null
+          echo "=== App.framework check ==="
+          find build/ -name "App.framework" -type d 2>/dev/null
 
-      - name: Package into IPA
+      - name: Package .app into IPA
         working-directory: beautycita_app
         run: |
-          # Look for the .app in the xcarchive first
-          ARCHIVE_PATH=$(find build/ios/archive -name "*.xcarchive" -type d 2>/dev/null | head -1)
-
-          if [ -n "$ARCHIVE_PATH" ]; then
-            echo "Found xcarchive: $ARCHIVE_PATH"
-            APP_PATH=$(find "$ARCHIVE_PATH" -name "Runner.app" -type d | head -1)
-          fi
-
-          # Fallback: check DerivedData
-          if [ -z "$APP_PATH" ] || [ ! -f "$APP_PATH/Runner" ]; then
-            echo "Checking DerivedData..."
-            APP_PATH=$(find ~/Library/Developer/Xcode/DerivedData -name "Runner.app" -path "*/Release-iphoneos/*" -type d 2>/dev/null | head -1)
-          fi
+          # Find Runner.app with actual binary content
+          for dir in \
+            "build/ios/iphoneos" \
+            "build/ios/Release-iphoneos" \
+            ~/Library/Developer/Xcode/DerivedData/*/Build/Products/Release-iphoneos; do
+            if [ -f "$dir/Runner.app/Runner" ]; then
+              APP_PATH="$dir/Runner.app"
+              break
+            fi
+          done
 
           if [ -z "$APP_PATH" ]; then
-            echo "ERROR: No Runner.app found anywhere"
+            echo "ERROR: No Runner.app with binary found"
+            echo "Attempting to find any Runner binary..."
+            find build/ ~/Library/Developer/Xcode/DerivedData -name "Runner" -type f 2>/dev/null | while read f; do
+              echo "  Found: $f ($(ls -lh "$f" | awk '{print $5}'))"
+            done
             exit 1
           fi
 
-          if [ ! -f "$APP_PATH/Runner" ]; then
-            echo "ERROR: Runner binary not found in $APP_PATH"
-            ls -la "$APP_PATH/"
-            exit 1
-          fi
-
-          echo "Using app: $APP_PATH ($(du -sh "$APP_PATH" | cut -f1))"
-
+          echo "Using: $APP_PATH ($(du -sh "$APP_PATH" | cut -f1))"
           mkdir -p /tmp/ipa-payload/Payload
           cp -r "$APP_PATH" /tmp/ipa-payload/Payload/
-
           mkdir -p build/ios/ipa
           cd /tmp/ipa-payload
           zip -r "$GITHUB_WORKSPACE/beautycita_app/build/ios/ipa/beautycita.ipa" Payload
