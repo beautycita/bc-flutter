@@ -246,6 +246,7 @@ serve(async (req) => {
                 business_id: paymentIntent.metadata.business_id,
                 payment_intent_id: paymentIntent.id,
                 payment_type: "stripe",
+                jurisdiction: paymentIntent.metadata.tax_jurisdiction ?? "MX",
                 gross_amount: parseFloat(paymentIntent.metadata.full_price ?? "0"),
                 tax_base: parseFloat(paymentIntent.metadata.tax_base ?? "0"),
                 iva_portion: parseFloat(paymentIntent.metadata.iva_portion ?? "0"),

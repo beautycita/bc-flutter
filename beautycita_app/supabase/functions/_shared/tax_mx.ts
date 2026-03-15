@@ -9,12 +9,24 @@
 //   With RFC:    ISR 2.5% of gross, IVA 8% (50% of 16%)
 //   Without RFC: ISR 20% of gross,  IVA 16% (100%)
 //   Foreign:     Same as without RFC
+//   PF and PM:   Same rates (confirmed by attorney 2026-03-13)
 //
 // Mexican prices are IVA-inclusive: base = price / 1.16
+//
+// COUNTRY EXTENSIBILITY:
+// This module handles Mexico (MX) only. To add another country:
+//   1. Create a new file: tax_{country_code}.ts (e.g., tax_co.ts for Colombia)
+//   2. Export the same { calculateWithholding, TaxWithholding } interface
+//   3. In the calling edge function, route by business.tax_residency to the
+//      correct country module: 'MX' → tax_mx.ts, 'CO' → tax_co.ts, etc.
+//   4. The TaxWithholding interface is country-agnostic — all countries return
+//      the same structure (grossAmount, taxBase, rates, withheld, providerNet).
 // =============================================================================
 
 /** Tax withholding breakdown for a single transaction. */
 export interface TaxWithholding {
+  /** ISO 3166-1 alpha-2 country code for the tax jurisdiction */
+  jurisdiction: string;
   /** Total amount charged to customer (IVA-inclusive) */
   grossAmount: number;
   /** Pre-IVA base: gross / 1.16 */
@@ -83,6 +95,7 @@ export function calculateWithholding(
   const providerNet = round2(grossAmount - platformFee - isrWithheld - ivaWithheld);
 
   return {
+    jurisdiction: "MX",
     grossAmount,
     taxBase,
     ivaPortion,

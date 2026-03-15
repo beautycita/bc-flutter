@@ -18,7 +18,7 @@
 		</dict>
 	</array>
 	<key>CFBundleDisplayName</key>
-	<string>Beautycita</string>
+	<string>BeautyCita</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -26,7 +26,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>beautycita</string>
+	<string>BeautyCita</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>

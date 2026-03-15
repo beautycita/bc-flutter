@@ -48,6 +48,7 @@ class BookingRepository {
       'payment_status': dbPaymentStatus,
       'staff_id': ?staffId,
       'payment_intent_id': ?paymentIntentId,
+      'payment_method': ?paymentMethod,
       'transport_mode': ?transportMode,
     };
 

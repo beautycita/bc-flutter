@@ -52,7 +52,7 @@ class CitaExpressState {
     this.selectedResult,
     this.bookingId,
     this.error,
-    this.paymentMethod = 'card',
+    this.paymentMethod = 'cash_direct',
     this.nearbyAlternatives,
   });
 
@@ -236,6 +236,10 @@ class CitaExpressNotifier extends StateNotifier<CitaExpressState> {
     state = state.copyWith(step: CitaExpressStep.booking);
 
     try {
+      // Cash direct: no Stripe processing, booking is confirmed immediately.
+      // The stylist collects cash — BeautyCita has no tax retention obligation.
+      final isCashDirect = state.paymentMethod == 'cash_direct';
+
       final booking = await _bookingRepo.createBooking(
         providerId: result.business.id,
         providerServiceId: result.service.id ?? '',
@@ -245,6 +249,7 @@ class CitaExpressNotifier extends StateNotifier<CitaExpressState> {
         durationMinutes: result.service.durationMinutes,
         price: result.service.price ?? 0,
         paymentMethod: state.paymentMethod,
+        paymentStatus: isCashDirect ? 'paid' : null,
         staffId: result.staff?.id,
       );
 

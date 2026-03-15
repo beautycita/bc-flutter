@@ -243,6 +243,7 @@ serve(async (req) => {
 
     if (taxInfo) {
       metadata.tax_withholding = "true";
+      metadata.tax_jurisdiction = taxInfo.jurisdiction;
       metadata.tax_base = taxInfo.taxBase.toString();
       metadata.iva_portion = taxInfo.ivaPortion.toString();
       metadata.platform_fee_amount = taxInfo.platformFee.toString();
