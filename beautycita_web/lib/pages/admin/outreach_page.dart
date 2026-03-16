@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import 'package:beautycita_core/supabase.dart';
+
 import '../../config/breakpoints.dart';
 import '../../providers/admin_outreach_provider.dart';
+import '../../providers/admin_salons_provider.dart' as salons_provider;
+import '../../widgets/contact_panel.dart';
 
 /// Outreach pipeline page — `/app/admin/outreach`
 ///
@@ -751,12 +755,42 @@ class _SalonDetail extends StatelessWidget {
                     runSpacing: 8,
                     children: [
                       OutlinedButton.icon(
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Enviar WA: proximamente'),
-                            ),
-                          );
+                        onPressed: () async {
+                          // Fetch full salon data for ContactPanel
+                          try {
+                            final data = await BCSupabase.client
+                                .from('discovered_salons')
+                                .select()
+                                .eq('id', salon.id)
+                                .single();
+                            final fullSalon =
+                                salons_provider.DiscoveredSalon.fromJson(data);
+                            if (!context.mounted) return;
+                            showDialog(
+                              context: context,
+                              builder: (ctx) => Dialog(
+                                insetPadding: const EdgeInsets.all(24),
+                                child: ConstrainedBox(
+                                  constraints: const BoxConstraints(
+                                    maxWidth: 500,
+                                    maxHeight: 700,
+                                  ),
+                                  child: ContactPanel(
+                                    salon: fullSalon,
+                                    onClose: () => Navigator.of(ctx).pop(),
+                                    onSent: () {
+                                      ref.invalidate(pipelineSalonsProvider);
+                                    },
+                                  ),
+                                ),
+                              ),
+                            );
+                          } catch (e) {
+                            if (!context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Error: $e')),
+                            );
+                          }
                         },
                         icon: const Icon(Icons.message, size: 16),
                         label: const Text('Enviar WA'),
@@ -766,27 +800,53 @@ class _SalonDetail extends StatelessWidget {
                         ),
                       ),
                       OutlinedButton.icon(
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content:
-                                  Text('Marcar interesado: proximamente'),
-                            ),
-                          );
+                        onPressed: () async {
+                          try {
+                            await BCSupabase.client.functions.invoke(
+                              'outreach-discovered-salon',
+                              body: {
+                                'action': 'invite',
+                                'discovered_salon_id': salon.id,
+                              },
+                            );
+                            if (!context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Marcado como interesado'),
+                              ),
+                            );
+                            ref.invalidate(pipelineSalonsProvider);
+                          } catch (e) {
+                            if (!context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Error: $e')),
+                            );
+                          }
                         },
                         icon: const Icon(Icons.star_outline, size: 16),
                         label: const Text('Interesado'),
                       ),
                       OutlinedButton.icon(
                         onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Importar: proximamente'),
+                          showDialog(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: const Text('Importar (CSV)'),
+                              content: const Text(
+                                'Subir archivo CSV con salones.\n\n'
+                                'Esta funcionalidad esta en desarrollo.',
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.of(ctx).pop(),
+                                  child: const Text('Cerrar'),
+                                ),
+                              ],
                             ),
                           );
                         },
                         icon: const Icon(Icons.upload, size: 16),
-                        label: const Text('Importar'),
+                        label: const Text('Importar (CSV)'),
                       ),
                     ],
                   ),

@@ -350,7 +350,7 @@ serve(async (req: Request) => {
           // Send outreach via beautypi WhatsApp API
           const registrationLink = `https://beautycita.com/registro/${discovered_salon_id}`;
           const demoLink = "https://beautycita.com/demo";
-          const message = `Hola ${salon.business_name}! Hoy un usuario quiso reservar tu servicio en BeautyCita.\n\nMas clientes, menos costos, herramientas gratis para tu negocio.\n\nRegistrate gratis: ${registrationLink}\nVe como funciona: ${demoLink}`;
+          const message = getOutreachMessage(interestCount, salon.business_name, registrationLink) + `\nVe como funciona: ${demoLink}`;
 
           // Update outreach tracking
           await serviceClient
