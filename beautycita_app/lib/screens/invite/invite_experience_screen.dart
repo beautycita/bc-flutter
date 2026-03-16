@@ -35,6 +35,9 @@ class _InviteExperienceScreenState
   void initState() {
     super.initState();
     Future.microtask(() {
+      // Force fresh state every time screen opens — clears stale results
+      // from previous searches with different service types.
+      ref.invalidate(inviteProvider);
       ref
           .read(inviteProvider.notifier)
           .initialize(serviceType: widget.serviceType);
