@@ -49,6 +49,11 @@ class ClientShell extends StatelessWidget {
             isActive: currentPath == WebRoutes.reservar,
           ),
           _NavButton(
+            label: 'Invitar',
+            route: WebRoutes.invitar,
+            isActive: currentPath == WebRoutes.invitar,
+          ),
+          _NavButton(
             label: 'Mis Citas',
             route: WebRoutes.misCitas,
             isActive: currentPath == WebRoutes.misCitas,
