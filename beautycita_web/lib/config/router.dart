@@ -45,6 +45,7 @@ import '../pages/auth/register_page.dart';
 import '../pages/auth/verify_page.dart';
 import '../pages/error/not_found_page.dart';
 import '../pages/landing_page.dart';
+import '../pages/registro_page.dart';
 import '../pages/support/soporte_page.dart';
 import '../shells/admin_shell.dart';
 import '../shells/business_shell.dart';
@@ -118,6 +119,7 @@ abstract final class WebRoutes {
 
   // Public
   static const String soporte = '/soporte';
+  static const String registro = '/registro';
 }
 
 /// Map user role → correct portal route.
@@ -151,7 +153,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           path == '/soporte' ||
           path.startsWith('/demo') ||
           path.startsWith('/explorar') ||
-          path.startsWith('/reservar');
+          path.startsWith('/reservar') ||
+          path.startsWith('/registro');
 
       // If Supabase never initialized (offline, failed, etc.),
       // only allow public routes — redirect protected routes to /auth
@@ -208,6 +211,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: WebRoutes.soporte,
         builder: (context, state) => const SoportePage(),
+      ),
+
+      // ── Salon registration (public, no shell) ─────────────────────────
+      GoRoute(
+        path: '/registro/:salonId',
+        builder: (context, state) => RegistroPage(
+          salonId: state.pathParameters['salonId'] ?? '',
+        ),
       ),
 
       // ── Auth routes (no shell) ───────────────────────────────────────────
