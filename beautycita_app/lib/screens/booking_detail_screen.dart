@@ -13,6 +13,7 @@ import 'package:beautycita/providers/booking_provider.dart'
     show userBookingsProvider, upcomingBookingsProvider;
 import 'package:beautycita/providers/profile_provider.dart';
 import 'package:beautycita/providers/route_provider.dart';
+import 'package:beautycita/providers/feature_toggle_provider.dart';
 import 'package:beautycita/providers/uber_provider.dart';
 import 'package:beautycita/services/location_service.dart';
 import 'package:beautycita/services/supabase_client.dart';
@@ -829,9 +830,11 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
     final colorScheme = Theme.of(context).colorScheme;
     final current = booking.transportMode;
 
+    final uberEnabled = ref.watch(featureTogglesProvider).isEnabled('enable_uber_integration');
     final modes = [
       (id: 'car', icon: Icons.directions_car_rounded, label: 'Mi auto'),
-      (id: 'uber', icon: Icons.local_taxi_rounded, label: 'Uber'),
+      if (uberEnabled)
+        (id: 'uber', icon: Icons.local_taxi_rounded, label: 'Uber'),
       (id: 'transit', icon: Icons.directions_bus_rounded, label: 'Transporte'),
     ];
 
