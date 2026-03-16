@@ -2,7 +2,7 @@
 // aphrodite-chat — BeautyCita AI Chat (Responses API)
 // =============================================================================
 // Proxies between Flutter app and OpenAI Responses API.
-// Actions: send_message, try_on
+// Actions: send_message, try_on, generate_copy, generate_salon_bio, generate_invite_message
 // Manages conversation history in Supabase.
 // Never exposes OpenAI key to client.
 // =============================================================================
@@ -68,7 +68,7 @@ RULES:
 // ---------------------------------------------------------------------------
 
 interface ChatRequest {
-  action: "send_message" | "try_on" | "get_history" | "generate_copy";
+  action: "send_message" | "try_on" | "get_history" | "generate_copy" | "generate_salon_bio" | "generate_invite_message";
   thread_id?: string;
   message?: string;
   image_base64?: string;
@@ -557,6 +557,79 @@ Solo el texto, nada mas.`;
 
       return new Response(
         JSON.stringify({ text: generatedText.trim() }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    // ----- generate_salon_bio -----
+    if (action === "generate_salon_bio") {
+      const { salon_name, salon_category, salon_specialties, salon_city, salon_rating, salon_review_count, discovered_salon_id } = body as ChatRequest & {
+        salon_name?: string;
+        salon_category?: string;
+        salon_specialties?: string[];
+        salon_city?: string;
+        salon_rating?: number;
+        salon_review_count?: number;
+        discovered_salon_id?: string;
+      };
+
+      if (!salon_name || !discovered_salon_id) {
+        return new Response(
+          JSON.stringify({ error: "salon_name and discovered_salon_id required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      const systemPrompt = "Eres Aphrodite, asesora de belleza de BeautyCita. Escribe una descripcion unica y calida de 2-3 oraciones para este salon/estilista. Usa los datos proporcionados para hacerla especifica — no generica. Escribe en espanol informal pero sin errores. No uses emojis.";
+
+      const userMessage = `Salon: ${salon_name}
+Categoria: ${salon_category || "belleza"}
+Ciudad: ${salon_city || "Mexico"}
+Calificacion: ${salon_rating ?? "sin calificacion"} (${salon_review_count ?? 0} resenas)
+Especialidades: ${(salon_specialties && salon_specialties.length > 0) ? salon_specialties.join(", ") : "general"}`;
+
+      const { response: bio } = await callResponsesAPI(systemPrompt, [], userMessage);
+
+      // Cache generated bio in discovered_salons
+      await supabase
+        .from("discovered_salons")
+        .update({ generated_bio: bio.trim() })
+        .eq("id", discovered_salon_id);
+
+      return new Response(
+        JSON.stringify({ bio: bio.trim() }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    // ----- generate_invite_message -----
+    if (action === "generate_invite_message") {
+      const { user_name, salon_name, salon_category, service_searched, salon_city } = body as ChatRequest & {
+        user_name?: string;
+        salon_name?: string;
+        salon_category?: string;
+        service_searched?: string | null;
+        salon_city?: string;
+      };
+
+      if (!salon_name) {
+        return new Response(
+          JSON.stringify({ error: "salon_name required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      const systemPrompt = "Genera un mensaje de WhatsApp de 1-3 oraciones para invitar a un salon a registrarse en BeautyCita. El mensaje es de parte de un usuario real que quiere reservar con ellos. Usa espanol moderno y casual — como alguien texteando, pero sin errores ortograficos ni gramaticales. Menciona que el usuario quiere reservar. Menciona BeautyCita de forma natural, no como pitch de ventas. Cada mensaje debe ser diferente — varia el tono y el angulo. No uses emojis.";
+
+      const userMessage = `Usuario: ${user_name || "un usuario"}
+Salon: ${salon_name}
+Categoria: ${salon_category || "belleza"}
+Ciudad: ${salon_city || "Mexico"}${service_searched ? `\nServicio buscado: ${service_searched}` : ""}`;
+
+      const { response: message } = await callResponsesAPI(systemPrompt, [], userMessage);
+
+      return new Response(
+        JSON.stringify({ message: message.trim() }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
