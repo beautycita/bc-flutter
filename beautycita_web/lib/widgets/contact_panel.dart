@@ -1,3 +1,4 @@
+import 'package:beautycita_core/supabase.dart';
 import 'package:beautycita_core/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -99,6 +100,18 @@ class _ContactPanelState extends ConsumerState<ContactPanel> {
 
   // ── Template substitution ──────────────────────────────────────────────────
 
+  String get _rpName {
+    final user = BCSupabase.client.auth.currentUser;
+    return user?.userMetadata?['full_name'] as String? ??
+        user?.email?.split('@')[0] ??
+        'BeautyCita';
+  }
+
+  String get _rpPhone {
+    final user = BCSupabase.client.auth.currentUser;
+    return user?.userMetadata?['phone'] as String? ?? '+52 720 677 7800';
+  }
+
   String _substituteVars(String template) {
     final s = widget.salon;
     return template
@@ -106,8 +119,8 @@ class _ContactPanelState extends ConsumerState<ContactPanel> {
         .replaceAll('{city}', s.city ?? '')
         .replaceAll('{rating}', s.rating?.toStringAsFixed(1) ?? '')
         .replaceAll('{review_count}', '${s.reviewCount ?? 0}')
-        .replaceAll('{rp_name}', 'BC Team') // TODO: get from logged-in profile
-        .replaceAll('{rp_phone}', '+52 720 677 7800')
+        .replaceAll('{rp_name}', _rpName)
+        .replaceAll('{rp_phone}', _rpPhone)
         .replaceAll('{interest_count}', '${s.interestSignals}')
         .replaceAll('{booking_system}', s.bookingSystem ?? 'ninguno');
   }
@@ -162,8 +175,8 @@ class _ContactPanelState extends ConsumerState<ContactPanel> {
           message:
               _bodyCtrl.text.trim().isEmpty ? null : _bodyCtrl.text.trim(),
           templateId: _selectedTemplate?.id,
-          rpName: 'BC Team',
-          rpPhone: '+52 720 677 7800',
+          rpName: _rpName,
+          rpPhone: _rpPhone,
         );
       case ContactChannel.waCall:
         success = await OutreachContactService.logCall(
@@ -192,8 +205,8 @@ class _ContactPanelState extends ConsumerState<ContactPanel> {
           subject: _subjectCtrl.text.trim(),
           message: _bodyCtrl.text.trim(),
           templateId: _selectedTemplate?.id,
-          rpName: 'BC Team',
-          rpPhone: '+52 720 677 7800',
+          rpName: _rpName,
+          rpPhone: _rpPhone,
         );
       case ContactChannel.sms:
         if (_bodyCtrl.text.trim().isEmpty) {
@@ -210,7 +223,7 @@ class _ContactPanelState extends ConsumerState<ContactPanel> {
         success = await OutreachContactService.sendSms(
           salonId: salonId,
           message: _bodyCtrl.text.trim(),
-          rpName: 'BC Team',
+          rpName: _rpName,
         );
       case ContactChannel.phoneCall:
         success = await OutreachContactService.logCall(
