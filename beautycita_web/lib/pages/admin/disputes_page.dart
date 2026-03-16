@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:beautycita_core/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -25,6 +27,15 @@ class _DisputesPageState extends ConsumerState<DisputesPage> {
   Set<Dispute> _checkedItems = {};
   String? _sortColumn;
   bool _sortAscending = true;
+  Timer? _debounce;
+  final _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -51,7 +62,18 @@ class _DisputesPageState extends ConsumerState<DisputesPage> {
           ref.read(selectedDisputeProvider.notifier).state = null;
         },
       ),
-      filterBar: _DisputeFilterBar(filters: filters, ref: ref),
+      filterBar: _DisputeFilterBar(
+        filters: filters,
+        ref: ref,
+        searchController: _searchController,
+        onSearchChanged: (q) {
+          _debounce?.cancel();
+          _debounce = Timer(const Duration(milliseconds: 400), () {
+            ref.read(disputeFiltersProvider.notifier).state =
+                filters.copyWith(searchQuery: q);
+          });
+        },
+      ),
       table: BCDataTable<Dispute>(
         columns: _buildColumns(context),
         items: disputes,
@@ -183,9 +205,16 @@ class _DisputesPageState extends ConsumerState<DisputesPage> {
 // ── Filter bar ───────────────────────────────────────────────────────────────
 
 class _DisputeFilterBar extends StatelessWidget {
-  const _DisputeFilterBar({required this.filters, required this.ref});
+  const _DisputeFilterBar({
+    required this.filters,
+    required this.ref,
+    required this.searchController,
+    required this.onSearchChanged,
+  });
   final DisputeFilters filters;
   final WidgetRef ref;
+  final TextEditingController searchController;
+  final ValueChanged<String> onSearchChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -195,6 +224,7 @@ class _DisputeFilterBar extends StatelessWidget {
       searchField: SizedBox(
         height: 36,
         child: TextField(
+          controller: searchController,
           decoration: InputDecoration(
             hintText: 'Buscar disputas...',
             prefixIcon: const Icon(Icons.search, size: 18),
@@ -203,12 +233,19 @@ class _DisputeFilterBar extends StatelessWidget {
             ),
             contentPadding: const EdgeInsets.symmetric(horizontal: 12),
             isDense: true,
+            suffixIcon: filters.searchQuery.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.clear, size: 16),
+                    onPressed: () {
+                      searchController.clear();
+                      ref.read(disputeFiltersProvider.notifier).state =
+                          filters.copyWith(searchQuery: '');
+                    },
+                  )
+                : null,
           ),
           style: theme.textTheme.bodySmall,
-          onChanged: (q) {
-            ref.read(disputeFiltersProvider.notifier).state =
-                filters.copyWith(searchQuery: q);
-          },
+          onChanged: onSearchChanged,
         ),
       ),
       filters: [

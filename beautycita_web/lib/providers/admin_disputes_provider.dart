@@ -234,7 +234,9 @@ final disputesProvider = FutureProvider<List<Dispute>>((ref) async {
       query = query.lte('created_at', filters.dateTo!.toIso8601String());
     }
 
-    final data = await query.order('created_at', ascending: false);
+    final data = await query
+        .order('created_at', ascending: false)
+        .limit(200);
 
     var disputes = (data as List).map((row) {
       // Extract joined data
