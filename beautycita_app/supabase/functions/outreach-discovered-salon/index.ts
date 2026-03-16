@@ -109,7 +109,7 @@ serve(async (req: Request) => {
         // Fallback: plain query without PostGIS function
         const { data: fallback, error: fallbackErr } = await serviceClient
           .from("discovered_salons")
-          .select("id, business_name, phone, whatsapp, location_address, location_city, latitude, longitude, feature_image_url, rating_average, rating_count, interest_count, categories, specialties, status, created_at")
+          .select("id, business_name, phone, whatsapp, location_address, location_city, latitude, longitude, feature_image_url, rating_average, rating_count, interest_count, categories, specialties, matched_categories, status, created_at")
           .in("status", ["discovered", "selected", "outreach_sent"])
           .not("latitude", "is", null)
           .limit(candidatePool);
@@ -626,8 +626,10 @@ const SERVICE_KEYWORD_MAP: Record<string, string[]> = {
   "manicure": ["manicure", "nail", "uña", "una", "gel", "acrilico"],
   "pedicure": ["pedicure", "nail", "uña", "una", "pie"],
   "unas": ["uña", "una", "nail", "acrilico", "gel"],
-  // Hair
-  "corte": ["corte", "cabello", "hair", "pelo", "salon", "estilista", "peluqueria", "barberia"],
+  // Hair / Barber
+  "corte": ["corte", "cabello", "hair", "pelo", "salon", "estilista", "peluqueria", "barberia", "barber"],
+  "corte_hombre": ["corte", "barber", "barberia", "hair", "cabello", "hombre", "caballero", "pelo"],
+  "barberia": ["barber", "barberia", "corte", "barba", "afeitado", "cabello", "hair", "pelo"],
   "tinte": ["tinte", "color", "cabello", "hair", "salon", "estilista"],
   "recogido": ["recogido", "peinado", "cabello", "hair", "salon", "estilista", "novia"],
   "alisado": ["alisado", "keratina", "cabello", "hair", "salon"],
@@ -670,6 +672,7 @@ function matchesService(salon: any, keywords: string[]): boolean {
     salon.business_name ?? "",
     salon.categories ?? "",
     ...(Array.isArray(salon.specialties) ? salon.specialties : []),
+    ...(Array.isArray(salon.matched_categories) ? salon.matched_categories : []),
   ].join(" "));
 
   return keywords.some(kw => searchable.includes(kw));
@@ -681,12 +684,16 @@ function serviceMatchScore(salon: any, keywords: string[]): number {
   const cats = normalizeText(
     (Array.isArray(salon.specialties) ? salon.specialties : []).join(" ")
   );
+  const matched = normalizeText(
+    (Array.isArray(salon.matched_categories) ? salon.matched_categories : []).join(" ")
+  );
 
   let score = 0;
   for (const kw of keywords) {
     if (name.includes(kw)) score += 3;       // Name match is strongest
     if (category.includes(kw)) score += 2;    // Category match
-    if (cats.includes(kw)) score += 1;        // Service categories match
+    if (cats.includes(kw)) score += 1;        // Specialties match
+    if (matched.includes(kw)) score += 2;     // Mapped category match
   }
   return score;
 }
