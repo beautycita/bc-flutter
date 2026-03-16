@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../config/constants.dart';
 import '../../config/theme.dart';
 import '../../config/theme_extension.dart';
+import '../../providers/feature_toggle_provider.dart';
 import '../../providers/invite_provider.dart';
 import '../invite_salon_screen.dart' show DiscoveredSalon;
 
@@ -135,7 +136,8 @@ class _InviteExperienceScreenState
         );
 
       case InviteStep.browsing:
-        if (state.salons.isEmpty && state.suggestScrape) {
+        final scrapeEnabled = ref.watch(featureTogglesProvider).isEnabled('enable_on_demand_scrape');
+        if (state.salons.isEmpty && state.suggestScrape && scrapeEnabled) {
           return _ScrapePrompt(
             searchQuery: state.searchQuery ?? '',
             onScrape: () {

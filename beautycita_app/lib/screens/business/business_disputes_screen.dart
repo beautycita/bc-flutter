@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/constants.dart';
 import '../../providers/business_provider.dart';
+import '../../providers/feature_toggle_provider.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 
@@ -20,6 +21,14 @@ class _BusinessDisputesScreenState
 
   @override
   Widget build(BuildContext context) {
+    final toggles = ref.watch(featureTogglesProvider);
+    if (!toggles.isEnabled('enable_disputes')) {
+      return const Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Center(child: Text('Disputas no disponibles')),
+      );
+    }
+
     final disputesAsync = ref.watch(businessDisputesProvider);
     final colors = Theme.of(context).colorScheme;
 

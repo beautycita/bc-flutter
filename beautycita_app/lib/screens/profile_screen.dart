@@ -498,15 +498,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     _pickAndCropAvatar(useAI: false);
                   },
                 ),
-                SettingsTile(
-                  icon: Icons.auto_awesome,
-                  label: 'Crear avatar IA',
-                  iconColor: Colors.deepPurple,
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    _pickAndCropAvatar(useAI: true);
-                  },
-                ),
+                if (ref.read(featureTogglesProvider).isEnabled('enable_ai_avatars'))
+                  SettingsTile(
+                    icon: Icons.auto_awesome,
+                    label: 'Crear avatar IA',
+                    iconColor: Colors.deepPurple,
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _pickAndCropAvatar(useAI: true);
+                    },
+                  ),
               ],
             ),
           ),

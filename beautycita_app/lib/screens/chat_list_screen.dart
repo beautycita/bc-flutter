@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../config/theme_extension.dart';
 import '../models/chat_thread.dart';
 import '../providers/chat_provider.dart';
+import '../providers/feature_toggle_provider.dart';
 
 class ChatListScreen extends ConsumerStatefulWidget {
   const ChatListScreen({super.key});
@@ -78,11 +79,15 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
               final thread = threads[index];
               final Widget row;
               if (thread.isAphrodite) {
+                final aphEnabled = ref.watch(featureTogglesProvider).isEnabled('enable_aphrodite_ai');
+                if (!aphEnabled) return const SizedBox.shrink();
                 row = _AphroditeRow(
                   thread: thread,
                   onTap: () => context.push('/chat/${thread.id}'),
                 );
               } else if (thread.isEros) {
+                final erosEnabled = ref.watch(featureTogglesProvider).isEnabled('enable_eros_support');
+                if (!erosEnabled) return const SizedBox.shrink();
                 return const SizedBox.shrink(); // Eros hidden from chat list
               } else if (thread.isSupport) {
                 row = _SupportRow(

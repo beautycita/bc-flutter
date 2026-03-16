@@ -29,6 +29,22 @@ const _defaults = <String, bool>{
   'enable_portfolio': true,
   // Registration
   'enable_salon_registration': false,
+  // AI & Studio
+  'enable_virtual_studio': true,
+  'enable_aphrodite_ai': true,
+  'enable_eros_support': true,
+  'enable_ai_copy': true,
+  'enable_ai_avatars': true,
+  // Integrations
+  'enable_google_calendar': true,
+  'enable_cita_express': true,
+  'enable_salon_invite': true,
+  // Operations
+  'enable_disputes': true,
+  'enable_on_demand_scrape': true,
+  'enable_outreach_pipeline': true,
+  'enable_screenshot_report': true,
+  'enable_qr_auth': true,
 };
 
 /// Fetches all boolean feature toggles from app_config and returns a map.
