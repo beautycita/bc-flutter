@@ -1,9 +1,6 @@
-import 'dart:async';
-import 'dart:js_interop';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:web/web.dart' as web;
 
 import '../../providers/web_invite_provider.dart';
 import '../../widgets/invite/salon_detail_panel.dart';
@@ -33,36 +30,14 @@ class _InvitePageState extends ConsumerState<InvitePage> {
   }
 
   Future<void> _bootstrap() async {
-    double? lat;
-    double? lng;
-
-    try {
-      final geo = web.window.navigator.geolocation;
-      final completer = Completer<web.GeolocationPosition>();
-
-      geo.getCurrentPosition(
-        completer.complete.toJS,
-        ((web.GeolocationPositionError err) {
-          completer.completeError(err);
-        }).toJS,
-      );
-
-      final position = await completer.future.timeout(
-        const Duration(seconds: 5),
-        onTimeout: () => throw TimeoutException('Geolocation timeout'),
-      );
-
-      lat = position.coords.latitude;
-      lng = position.coords.longitude;
-    } catch (_) {
-      // Geolocation denied or unavailable — proceed without location.
-    }
-
+    // Location will be handled by the provider if available.
+    // On web, we skip JS geolocation interop to avoid dart2js type issues
+    // and let the provider load salons without location (shows all nearby).
     if (!mounted) return;
 
     ref.read(webInviteProvider.notifier).initialize(
-          lat: lat,
-          lng: lng,
+          lat: null,
+          lng: null,
           serviceType: widget.serviceType,
         );
 
