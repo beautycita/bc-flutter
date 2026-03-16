@@ -597,11 +597,21 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
     } catch (e, st) {
       debugPrint('[CURATE] ERROR: $e');
       debugPrint('[CURATE] STACK: $st');
-      final msg = ToastService.friendlyError(e);
-      ToastService.showError(msg);
+
+      // When curate fails (e.g. zero registered salons), show the results
+      // screen with empty results → this triggers the discovered salons
+      // invite flow instead of a dead-end error screen.
       state = state.copyWith(
-        step: BookingFlowStep.error,
-        error: msg,
+        step: BookingFlowStep.results,
+        curateResponse: CurateResponse(
+          bookingWindow: BookingWindowInfo(
+            primaryDate: DateTime.now().toIso8601String().split('T')[0],
+            primaryTime: DateTime.now().toIso8601String(),
+            windowStart: DateTime.now().toUtc().toIso8601String(),
+            windowEnd: DateTime.now().add(const Duration(hours: 4)).toUtc().toIso8601String(),
+          ),
+          results: [],
+        ),
       );
     }
   }
