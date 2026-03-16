@@ -1,6 +1,7 @@
 // outreach-discovered-salon/index.ts
 // Actions:
 //   list     — return nearby discovered salons (not yet on BeautyCita)
+//   search   — search discovered salons by name within radius
 //   invite   — record interest signal + evaluate outreach rules
 //   import   — bulk upsert discovered salons from CSV/JSON payload (admin only)
 
@@ -153,6 +154,68 @@ serve(async (req: Request) => {
       return jsonResponse({ salons: sanitized, count: sanitized.length });
     }
 
+    // ───────── SEARCH: find discovered salons by name within radius ─────────
+    if (action === "search") {
+      // Require authenticated user
+      const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        global: { headers: { Authorization: `Bearer ${token}` } },
+      });
+      const { data: { user }, error: authError } = await userClient.auth.getUser();
+      if (authError || !user) {
+        return jsonResponse({ error: "Unauthorized" }, 401);
+      }
+
+      const { query, lat, lng } = params;
+      if (!query || !lat || !lng) {
+        return jsonResponse({ error: "query, lat, lng required" }, 400);
+      }
+
+      // Search by name with ILIKE, grab a candidate pool
+      const { data, error } = await serviceClient
+        .from("discovered_salons")
+        .select("id, business_name, phone, whatsapp, location_address, location_city, latitude, longitude, feature_image_url, rating_average, rating_count, interest_count, categories, specialties, matched_categories, generated_bio, status, created_at")
+        .ilike("business_name", `%${query}%`)
+        .in("status", ["discovered", "selected", "outreach_sent"])
+        .not("latitude", "is", null)
+        .limit(50);
+
+      if (error) {
+        return jsonResponse({ error: error.message }, 500);
+      }
+
+      // Client-side distance filter (50km) + sort
+      const SEARCH_RADIUS_KM = 50;
+      let results = (data ?? [])
+        .map((s: any) => ({
+          ...s,
+          distance_km: haversineKm(lat, lng, s.latitude, s.longitude),
+        }))
+        .filter((s: any) => s.distance_km <= SEARCH_RADIUS_KM);
+
+      // Sort: exact name match first, then contains, then by distance
+      const queryLower = query.toLowerCase();
+      results.sort((a: any, b: any) => {
+        const aName = (a.business_name ?? "").toLowerCase();
+        const bName = (b.business_name ?? "").toLowerCase();
+        const aExact = aName === queryLower ? 1 : 0;
+        const bExact = bName === queryLower ? 1 : 0;
+        if (aExact !== bExact) return bExact - aExact;
+        // Both same match type — sort by distance
+        return a.distance_km - b.distance_km;
+      });
+
+      // Limit to 10
+      results = results.slice(0, 10);
+
+      // Strip PII before sending to client
+      const sanitized = results.map(({ phone, whatsapp, email, phone_raw, ...safe }: any) => safe);
+
+      return jsonResponse({
+        salons: sanitized,
+        suggest_scrape: sanitized.length === 0,
+      });
+    }
+
     // ───────── INVITE: record interest + evaluate outreach ─────────
     if (action === "invite") {
       // Verify user auth
@@ -164,7 +227,7 @@ serve(async (req: Request) => {
         return jsonResponse({ error: "Unauthorized" }, 401);
       }
 
-      const { discovered_salon_id } = params;
+      const { discovered_salon_id, invite_message } = params;
       if (!discovered_salon_id) {
         return jsonResponse({ error: "discovered_salon_id required" }, 400);
       }
@@ -230,6 +293,22 @@ serve(async (req: Request) => {
         return jsonResponse({ error: signalError.message }, 500);
       }
 
+      // 1b. Insert user_salon_invites record
+      const { data: inviteRecord, error: inviteInsertError } = await serviceClient
+        .from("user_salon_invites")
+        .insert({
+          user_id: user.id,
+          discovered_salon_id,
+          invite_message: invite_message ?? "",
+          platform_message_sent: false,
+        })
+        .select("id")
+        .single();
+
+      if (inviteInsertError) {
+        console.error(`[INVITE] user_salon_invites insert failed: ${inviteInsertError.message}`);
+      }
+
       // 2. Count unique signals for this salon
       const { count } = await serviceClient
         .from("salon_interest_signals")
@@ -269,8 +348,9 @@ serve(async (req: Request) => {
 
         if (salon && canSendOutreach(salon)) {
           // Send outreach via beautypi WhatsApp API
-          const registrationLink = `https://beautycita.com/supabase/functions/v1/salon-registro?ref=${discovered_salon_id}`;
-          const message = getOutreachMessage(interestCount, salon.business_name, registrationLink);
+          const registrationLink = `https://beautycita.com/registro/${discovered_salon_id}`;
+          const demoLink = "https://beautycita.com/demo";
+          const message = `Hola ${salon.business_name}! Hoy un usuario quiso reservar tu servicio en BeautyCita.\n\nMas clientes, menos costos, herramientas gratis para tu negocio.\n\nRegistrate gratis: ${registrationLink}\nVe como funciona: ${demoLink}`;
 
           // Update outreach tracking
           await serviceClient
@@ -316,6 +396,14 @@ serve(async (req: Request) => {
                 });
                 const sendData = await sendRes.json();
                 outreachSent = sendData.sent === true;
+
+                // Update user_salon_invites record if WA sent successfully
+                if (outreachSent && inviteRecord?.id) {
+                  await serviceClient
+                    .from("user_salon_invites")
+                    .update({ platform_message_sent: true })
+                    .eq("id", inviteRecord.id);
+                }
 
                 // Log to outreach log table
                 await serviceClient
