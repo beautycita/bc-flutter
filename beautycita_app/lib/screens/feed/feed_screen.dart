@@ -21,16 +21,18 @@ const _kCategories = <(String, String?)>[
 ];
 
 // YouTube Shorts hashtag per category (null = default/all).
+// Spanish hashtags surface Latin American creators — relatable to our audience.
+// Accent-free: YT hashtag URLs don't handle ñ/accents reliably.
 const _kVideoHashtags = <String?, String>{
-  null: 'beautytransformation',
-  'cabello': 'hairtransformation',
-  'unas': 'nailart',
-  'pestanas': 'lashextensions',
-  'cejas': 'browsonfleek',
-  'maquillaje': 'makeuptutorial',
-  'facial': 'skincare',
-  'corporal': 'bodysculpting',
-  'novias': 'bridalmakeup',
+  null: 'cambiodelook',
+  'cabello': 'cortedecabello',
+  'unas': 'unasacrilicas',
+  'pestanas': 'extensionesdepestanas',
+  'cejas': 'disenocejas',
+  'maquillaje': 'maquillajetutorial',
+  'facial': 'cuidadodelapiel',
+  'corporal': 'tratamientocorporal',
+  'novias': 'maquillajedenovia',
 };
 
 class FeedScreen extends ConsumerStatefulWidget {
