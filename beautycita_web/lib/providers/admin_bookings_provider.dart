@@ -204,8 +204,9 @@ final adminBookingsProvider = FutureProvider<BookingsPageData>((ref) async {
 
     final List data;
     if (filter.searchText.isNotEmpty) {
+      final q = _sanitize(filter.searchText);
       data = await query
-          .or('service_name.ilike.%${_sanitize(filter.searchText)}%')
+          .or('service_name.ilike.%$q%,businesses.name.ilike.%$q%')
           .order(sortCol, ascending: filter.sortAscending)
           .range(from, to);
     } else {
@@ -214,8 +215,10 @@ final adminBookingsProvider = FutureProvider<BookingsPageData>((ref) async {
           .range(from, to);
     }
 
-    // Count query — separate chain
-    var countQuery = client.from(BCTables.appointments).select('id');
+    // Count query — separate chain (include join for search filter)
+    var countQuery = client.from(BCTables.appointments).select(
+      'id, businesses!appointments_business_id_fkey(name)',
+    );
     if (filter.status != null) {
       countQuery = countQuery.eq('status', filter.status!);
     }
@@ -233,8 +236,9 @@ final adminBookingsProvider = FutureProvider<BookingsPageData>((ref) async {
     }
     final int totalCount;
     if (filter.searchText.isNotEmpty) {
+      final cq = _sanitize(filter.searchText);
       final r = await countQuery
-          .or('service_name.ilike.%${_sanitize(filter.searchText)}%')
+          .or('service_name.ilike.%$cq%,businesses.name.ilike.%$cq%')
           .count();
       totalCount = r.count;
     } else {

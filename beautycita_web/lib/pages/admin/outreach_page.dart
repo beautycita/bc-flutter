@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -25,12 +27,29 @@ class OutreachPage extends ConsumerStatefulWidget {
 
 class _OutreachPageState extends ConsumerState<OutreachPage> {
   DiscoveredSalon? _selectedSalon;
+  String _searchQuery = '';
+  final _searchController = TextEditingController();
+  Timer? _debounce;
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  List<DiscoveredSalon> _filterSalons(List<DiscoveredSalon> salons) {
+    if (_searchQuery.isEmpty) return salons;
+    final q = _searchQuery.toLowerCase();
+    return salons.where((s) => s.name.toLowerCase().contains(q)).toList();
+  }
 
   @override
   Widget build(BuildContext context) {
     final salonsAsync = ref.watch(pipelineSalonsProvider);
     final stageCounts = ref.watch(outreachStageCounts);
     final discoveredCounts = ref.watch(discoveredCountsProvider);
+    final enrichmentAsync = ref.watch(enrichmentStatsProvider);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -45,7 +64,16 @@ class _OutreachPageState extends ConsumerState<OutreachPage> {
               stageCounts: stageCounts,
               discoveredCounts: discoveredCounts,
               isMobile: isMobile,
+              searchController: _searchController,
+              onSearchChanged: (value) {
+                _debounce?.cancel();
+                _debounce = Timer(const Duration(milliseconds: 400), () {
+                  setState(() => _searchQuery = value);
+                });
+              },
             ),
+            // Enrichment monitor card
+            _EnrichmentMonitorCard(enrichmentAsync: enrichmentAsync),
             const Divider(height: 1),
             Expanded(
               child: salonsAsync.when(
@@ -53,7 +81,8 @@ class _OutreachPageState extends ConsumerState<OutreachPage> {
                     child: CircularProgressIndicator(strokeWidth: 2)),
                 error: (e, _) => Center(child: Text('Error: $e')),
                 data: (salons) {
-                  if (salons.isEmpty) {
+                  final filtered = _filterSalons(salons);
+                  if (filtered.isEmpty && salons.isEmpty) {
                     return _emptyState(context);
                   }
 
@@ -63,7 +92,7 @@ class _OutreachPageState extends ConsumerState<OutreachPage> {
                       children: [
                         Expanded(
                           child: _KanbanBoard(
-                            salons: salons,
+                            salons: filtered,
                             isDesktop: isDesktop,
                             isMobile: isMobile,
                             onSelect: (s) =>
@@ -98,7 +127,7 @@ class _OutreachPageState extends ConsumerState<OutreachPage> {
                   }
 
                   return _KanbanBoard(
-                    salons: salons,
+                    salons: filtered,
                     isDesktop: isDesktop,
                     isMobile: isMobile,
                     onSelect: (s) =>
@@ -154,10 +183,14 @@ class _Header extends StatelessWidget {
     required this.stageCounts,
     required this.discoveredCounts,
     required this.isMobile,
+    required this.searchController,
+    required this.onSearchChanged,
   });
   final Map<OutreachStage, int> stageCounts;
   final AsyncValue<Map<String, int>> discoveredCounts;
   final bool isMobile;
+  final TextEditingController searchController;
+  final ValueChanged<String> onSearchChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -253,6 +286,36 @@ class _Header extends StatelessWidget {
                 ),
             ],
           ),
+          const SizedBox(height: 10),
+          // Search bar
+          SizedBox(
+            height: 36,
+            width: isMobile ? double.infinity : 320,
+            child: TextField(
+              controller: searchController,
+              decoration: InputDecoration(
+                hintText: 'Buscar salon...',
+                prefixIcon: const Icon(Icons.search, size: 18),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 12),
+                isDense: true,
+                suffixIcon: searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, size: 16),
+                        onPressed: () {
+                          searchController.clear();
+                          onSearchChanged('');
+                        },
+                      )
+                    : null,
+              ),
+              style: theme.textTheme.bodySmall,
+              onChanged: onSearchChanged,
+            ),
+          ),
         ],
       ),
     );
@@ -261,6 +324,131 @@ class _Header extends StatelessWidget {
   String _formatCount(int n) {
     if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}k';
     return '$n';
+  }
+}
+
+// ── Enrichment Monitor Card ────────────────────────────────────────────────
+
+class _EnrichmentMonitorCard extends StatelessWidget {
+  const _EnrichmentMonitorCard({required this.enrichmentAsync});
+  final AsyncValue<EnrichmentStats> enrichmentAsync;
+
+  String _fmt(int n) {
+    if (n >= 1000) return NumberFormat.compact().format(n);
+    return '$n';
+  }
+
+  String _timeAgo(DateTime dt) {
+    final diff = DateTime.now().difference(dt);
+    if (diff.inSeconds < 60) return 'hace ${diff.inSeconds}s';
+    if (diff.inMinutes < 60) return 'hace ${diff.inMinutes} min';
+    return 'hace ${diff.inHours}h';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+
+    return enrichmentAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (stats) => Container(
+        margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          border: Border.all(color: colors.outlineVariant),
+          borderRadius: BorderRadius.circular(10),
+          color: colors.surfaceContainerHighest.withValues(alpha: 0.2),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.sync, size: 16,
+                color: colors.onSurface.withValues(alpha: 0.5)),
+            const SizedBox(width: 8),
+            Text(
+              'Enrichment',
+              style: theme.textTheme.labelMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(width: 12),
+            _StatChip(label: 'Total', value: _fmt(stats.total)),
+            const SizedBox(width: 8),
+            _StatChip(label: 'WA', value: _fmt(stats.waEnriched)),
+            const SizedBox(width: 8),
+            _StatChip(label: 'IG', value: _fmt(stats.igEnriched)),
+            const SizedBox(width: 8),
+            _StatChip(label: 'Foto', value: _fmt(stats.hasPhoto)),
+            const SizedBox(width: 8),
+            _StatChip(
+              label: 'Sin enriquecer',
+              value: _fmt(stats.unenriched),
+              color: stats.unenriched > 0 ? Colors.orange : Colors.green,
+            ),
+            const Spacer(),
+            // Active indicator
+            Container(
+              width: 6,
+              height: 6,
+              decoration: const BoxDecoration(
+                color: Colors.green,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              'Activo',
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: Colors.green,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              _timeAgo(stats.fetchedAt),
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: colors.onSurface.withValues(alpha: 0.4),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StatChip extends StatelessWidget {
+  const _StatChip({
+    required this.label,
+    required this.value,
+    this.color,
+  });
+  final String label;
+  final String value;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final chipColor = color ?? colors.primary;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: chipColor.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        '$label: $value',
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: chipColor,
+        ),
+      ),
+    );
   }
 }
 

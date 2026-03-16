@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:beautycita_core/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -24,9 +26,11 @@ class _UsersPageState extends ConsumerState<UsersPage> {
   AdminUser? _selectedUser;
   Set<AdminUser> _checkedUsers = {};
   final _searchController = TextEditingController();
+  Timer? _debounce;
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -112,8 +116,11 @@ class _UsersPageState extends ConsumerState<UsersPage> {
                 : null,
           ),
           onChanged: (value) {
-            ref.read(usersFilterProvider.notifier).state =
-                filter.copyWith(searchText: value, page: 0);
+            _debounce?.cancel();
+            _debounce = Timer(const Duration(milliseconds: 400), () {
+              ref.read(usersFilterProvider.notifier).state =
+                  filter.copyWith(searchText: value, page: 0);
+            });
           },
         ),
         filters: [

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:beautycita_core/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -24,9 +26,11 @@ class _BookingsPageState extends ConsumerState<BookingsPage> {
   AdminBooking? _selectedBooking;
   Set<AdminBooking> _checkedBookings = {};
   final _searchController = TextEditingController();
+  Timer? _debounce;
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -155,8 +159,11 @@ class _BookingsPageState extends ConsumerState<BookingsPage> {
                 : null,
           ),
           onChanged: (value) {
-            ref.read(bookingsFilterProvider.notifier).state =
-                filter.copyWith(searchText: value, page: 0);
+            _debounce?.cancel();
+            _debounce = Timer(const Duration(milliseconds: 400), () {
+              ref.read(bookingsFilterProvider.notifier).state =
+                  filter.copyWith(searchText: value, page: 0);
+            });
           },
         ),
         filters: [

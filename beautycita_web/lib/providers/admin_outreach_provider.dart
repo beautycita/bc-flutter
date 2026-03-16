@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:beautycita_core/supabase.dart';
@@ -277,4 +279,85 @@ final salonOutreachLogProvider =
     debugPrint('Outreach log error: $e');
     return [];
   }
+});
+
+// ── Enrichment stats ─────────────────────────────────────────────────────────
+
+@immutable
+class EnrichmentStats {
+  final int total;
+  final int waEnriched;
+  final int igEnriched;
+  final int hasPhoto;
+  final int unenriched;
+  final DateTime fetchedAt;
+
+  const EnrichmentStats({
+    required this.total,
+    required this.waEnriched,
+    required this.igEnriched,
+    required this.hasPhoto,
+    required this.unenriched,
+    required this.fetchedAt,
+  });
+}
+
+/// Enrichment stats provider — auto-refreshes every 60 seconds.
+final enrichmentStatsProvider =
+    FutureProvider.autoDispose<EnrichmentStats>((ref) async {
+  // Auto-refresh every 60 seconds
+  final timer = Timer(const Duration(seconds: 60), () => ref.invalidateSelf());
+  ref.onDispose(timer.cancel);
+
+  if (!BCSupabase.isInitialized) {
+    return EnrichmentStats(
+      total: 0,
+      waEnriched: 0,
+      igEnriched: 0,
+      hasPhoto: 0,
+      unenriched: 0,
+      fetchedAt: DateTime.now(),
+    );
+  }
+
+  final client = BCSupabase.client;
+  const timeout = Duration(seconds: 5);
+
+  final results = await Future.wait([
+    client
+        .from(BCTables.discoveredSalons)
+        .select('id')
+        .count()
+        .timeout(timeout),
+    client
+        .from(BCTables.discoveredSalons)
+        .select('id')
+        .not('whatsapp', 'is', null)
+        .count()
+        .timeout(timeout),
+    client
+        .from(BCTables.discoveredSalons)
+        .select('id')
+        .not('instagram_url', 'is', null)
+        .count()
+        .timeout(timeout),
+    client
+        .from(BCTables.discoveredSalons)
+        .select('id')
+        .not('feature_image_url', 'is', null)
+        .count()
+        .timeout(timeout),
+  ]);
+
+  final total = results[0].count;
+  final waCount = results[1].count;
+
+  return EnrichmentStats(
+    total: total,
+    waEnriched: waCount,
+    igEnriched: results[2].count,
+    hasPhoto: results[3].count,
+    unenriched: total - waCount,
+    fetchedAt: DateTime.now(),
+  );
 });
