@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../config/constants.dart';
@@ -70,9 +71,7 @@ class _InviteExperienceScreenState
       if (next.step == InviteStep.salonDetail &&
           prev?.step != InviteStep.salonDetail &&
           next.selectedSalon != null) {
-        // Detail screen is Task 8 — navigate when ready
-        // For now, this is where the push to detail would happen.
-        // e.g., context.push('/invite/detail');
+        context.push('/invite/detail');
       }
     });
 

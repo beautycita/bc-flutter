@@ -292,6 +292,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   );
                                 },
                               ),
+                              // Invite salon button
+                              Padding(
+                                padding: const EdgeInsets.only(right: AppConstants.paddingSM),
+                                child: _HeaderButton(
+                                  icon: Icons.card_giftcard_rounded,
+                                  onTap: () => context.push('/invite'),
+                                ),
+                              ),
                               // Chat — gated by enable_salon_chat toggle
                               Consumer(
                                 builder: (context, ref, _) {
