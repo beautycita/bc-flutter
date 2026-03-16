@@ -7,10 +7,22 @@ class LocationService {
   static DateTime? _lastFetchedAt;
   static const _cacheDuration = Duration(minutes: 1);
 
+  /// Test-only: set to a [LatLng] to bypass Geolocator in tests.
+  @visibleForTesting
+  static LatLng? testOverride;
+
+  /// Test-only: set to true to force returning null (simulates no GPS).
+  @visibleForTesting
+  static bool testOverrideNull = false;
+
   /// Get the user's current location. Requests permission if needed.
   /// Returns cached position if less than 1 minute old.
   /// Returns null if location cannot be obtained.
   static Future<LatLng?> getCurrentLocation() async {
+    // Test hooks — bypass real Geolocator in unit tests.
+    if (testOverrideNull) return null;
+    if (testOverride != null) return testOverride;
+
     // Return cached position if fresh enough
     if (_lastPosition != null && _lastFetchedAt != null) {
       if (DateTime.now().difference(_lastFetchedAt!) < _cacheDuration) {
