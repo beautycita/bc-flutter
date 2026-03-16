@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../config/constants.dart';
 import '../models/curate_result.dart';
 import '../providers/cita_express_provider.dart';
+import '../providers/feature_toggle_provider.dart';
 import '../services/supabase_client.dart';
 
 class CitaExpressScreen extends ConsumerStatefulWidget {
@@ -27,6 +28,16 @@ class _CitaExpressScreenState extends ConsumerState<CitaExpressScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final toggles = ref.watch(featureTogglesProvider);
+    if (!toggles.isEnabled('enable_cita_express')) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Cita Express')),
+        body: const Center(
+          child: Text('Cita Express no esta disponible'),
+        ),
+      );
+    }
+
     final state = ref.watch(citaExpressProvider);
     final colors = Theme.of(context).colorScheme;
 

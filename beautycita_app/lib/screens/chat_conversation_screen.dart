@@ -7,6 +7,7 @@ import 'package:uuid/uuid.dart';
 import '../config/theme_extension.dart';
 import '../models/chat_message.dart';
 import '../providers/chat_provider.dart';
+import '../providers/feature_toggle_provider.dart';
 import '../services/supabase_client.dart';
 import 'package:beautycita/services/toast_service.dart';
 
@@ -165,9 +166,10 @@ class _ChatConversationScreenState
     if (thread != null) {
       _resolvedContactType = thread.contactType;
     }
-    final isAphrodite = thread?.isAphrodite ?? false;
+    final toggles = ref.watch(featureTogglesProvider);
+    final isAphrodite = (thread?.isAphrodite ?? false) && toggles.isEnabled('enable_aphrodite_ai');
     final isSupport = thread?.isSupport ?? false;
-    final isEros = thread?.isEros ?? false;
+    final isEros = (thread?.isEros ?? false) && toggles.isEnabled('enable_eros_support');
     final title = isAphrodite ? 'Afrodita' : isSupport ? 'Soporte en Vivo' : (thread?.displayName ?? 'Chat');
 
     return Scaffold(

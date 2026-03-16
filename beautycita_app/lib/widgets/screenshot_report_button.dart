@@ -3,6 +3,8 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/feature_toggle_provider.dart';
 import '../screens/screenshot_editor_screen.dart';
 
 /// Key for the RepaintBoundary that wraps the app content.
@@ -27,6 +29,17 @@ class _ScreenshotReportButtonState extends State<ScreenshotReportButton> {
   @override
   Widget build(BuildContext context) {
     if (!Platform.isIOS) return const SizedBox.shrink();
+
+    return Consumer(
+      builder: (context, ref, child) {
+        final toggles = ref.watch(featureTogglesProvider);
+        if (!toggles.isEnabled('enable_screenshot_report')) return const SizedBox.shrink();
+        return _buildButton(context);
+      },
+    );
+  }
+
+  Widget _buildButton(BuildContext context) {
 
     final mq = MediaQuery.of(context);
     if (_position.dx < 0) {

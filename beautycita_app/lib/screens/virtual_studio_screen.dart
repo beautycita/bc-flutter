@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:beautycita/services/toast_service.dart';
+import '../providers/feature_toggle_provider.dart';
 import '../services/lightx_service.dart';
 import '../services/media_service.dart';
 
@@ -63,6 +64,14 @@ class _VirtualStudioScreenState extends ConsumerState<VirtualStudioScreen>
 
   @override
   Widget build(BuildContext context) {
+    final toggles = ref.watch(featureTogglesProvider);
+    if (!toggles.isEnabled('enable_virtual_studio')) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Estudio Virtual')),
+        body: const Center(child: Text('Estudio Virtual no esta disponible')),
+      );
+    }
+
     final primary = Theme.of(context).colorScheme.primary;
     final onSurfaceLight = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
 

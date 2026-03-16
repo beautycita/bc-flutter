@@ -292,13 +292,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   );
                                 },
                               ),
-                              // Invite salon button
-                              Padding(
-                                padding: const EdgeInsets.only(right: AppConstants.paddingSM),
-                                child: _HeaderButton(
-                                  icon: Icons.card_giftcard_rounded,
-                                  onTap: () => context.push('/invite'),
-                                ),
+                              // Invite salon button — gated by enable_salon_invite toggle
+                              Consumer(
+                                builder: (context, ref, _) {
+                                  final toggles = ref.watch(featureTogglesProvider);
+                                  if (!toggles.isEnabled('enable_salon_invite')) return const SizedBox.shrink();
+                                  return Padding(
+                                    padding: const EdgeInsets.only(right: AppConstants.paddingSM),
+                                    child: _HeaderButton(
+                                      icon: Icons.card_giftcard_rounded,
+                                      onTap: () => context.push('/invite'),
+                                    ),
+                                  );
+                                },
                               ),
                               // Chat — gated by enable_salon_chat toggle
                               Consumer(
