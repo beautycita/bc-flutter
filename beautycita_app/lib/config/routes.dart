@@ -11,6 +11,8 @@ import 'package:beautycita/screens/my_bookings_screen.dart';
 import 'package:beautycita/screens/booking_flow_screen.dart';
 import 'package:beautycita/screens/admin/admin_shell_screen.dart';
 import 'package:beautycita/screens/invite_salon_screen.dart';
+import 'package:beautycita/screens/invite/invite_experience_screen.dart';
+import 'package:beautycita/screens/invite/invite_salon_detail_screen.dart';
 import 'package:beautycita/screens/salon_onboarding_screen.dart';
 import 'package:beautycita/screens/settings_screen.dart';
 import 'package:beautycita/screens/chat_list_screen.dart';
@@ -330,11 +332,30 @@ class AppRoutes {
       GoRoute(
         path: inviteSalon,
         name: 'invite',
+        pageBuilder: (context, state) {
+          final serviceType = state.extra as String?;
+          return CustomTransitionPage(
+            key: state.pageKey,
+            child: InviteExperienceScreen(serviceType: serviceType),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              final tween = Tween(begin: const Offset(0.0, 1.0), end: Offset.zero)
+                  .chain(CurveTween(curve: Curves.easeInOutCubic));
+              return SlideTransition(
+                position: animation.drive(tween),
+                child: child,
+              );
+            },
+          );
+        },
+      ),
+      GoRoute(
+        path: '/invite/detail',
+        name: 'invite-detail',
         pageBuilder: (context, state) => CustomTransitionPage(
           key: state.pageKey,
-          child: const InviteSalonScreen(),
+          child: const InviteSalonDetailScreen(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            final tween = Tween(begin: const Offset(0.0, 1.0), end: Offset.zero)
+            final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
                 .chain(CurveTween(curve: Curves.easeInOutCubic));
             return SlideTransition(
               position: animation.drive(tween),
