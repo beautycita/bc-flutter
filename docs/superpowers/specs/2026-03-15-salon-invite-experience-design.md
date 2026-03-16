@@ -14,8 +14,8 @@ The user feels like they're part of the salon's success on BeautyCita. The invit
 
 ## Entry Points
 
-### 1. Home Screen Card
-Prominent CTA card below the category grid: "Invita tu salon favorito". Shows nearby discovered salon count as social proof (e.g., "1,207 salones cerca de ti"). No service context — opens invite screen showing top 20 nearby salons weighted by proximity, rating, review count.
+### 1. Top Nav Button (alongside Feed/Chat/Settings)
+Icon button in the home screen top row — same level as the feed/explore button. Tapping opens the invite screen. No service context — shows top 20 nearby salons weighted by proximity, rating, review count.
 
 ### 2. Booking Flow Fallback
 When curate-results returns zero registered salons, the results screen shows the invite list filtered by the service the user searched for. This is the existing `_NoResultsWithNearbySalons` widget, upgraded to use the new invite experience instead of the basic list.
@@ -36,7 +36,7 @@ Full-screen, feels like browsing — not admin work.
 ### Salon List
 - **Top 20** nearby discovered salons
 - Weighted ranking: proximity + rating + review count + photo availability (same `qualityScore` logic as outreach-discovered-salon edge function)
-- **Context-aware filtering**: if arriving from booking flow with a service type, filter to salons matching that service. If arriving from home screen card, show all categories
+- **Context-aware filtering**: if arriving from booking flow with a service type, filter to salons matching that service. If arriving from the top nav button, show all categories
 - Each card shows: photo (or placeholder), name, category, rating + review count, distance
 - Infinite scroll for "load more" beyond initial 20
 
