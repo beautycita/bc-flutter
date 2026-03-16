@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/theme_extension.dart';
 import '../providers/chat_provider.dart';
+import '../providers/feature_toggle_provider.dart';
 
 const _prefHasSeenAphrodite = 'has_seen_aphrodite';
 
@@ -14,6 +15,8 @@ class ChatRouterScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final aphroditeEnabled = ref.watch(featureTogglesProvider).isEnabled('enable_aphrodite_ai');
+
     return FutureBuilder<bool>(
       future: SharedPreferences.getInstance()
           .then((p) => p.getBool(_prefHasSeenAphrodite) ?? false),
@@ -22,7 +25,7 @@ class ChatRouterScreen extends ConsumerWidget {
 
         final hasSeenAphrodite = snap.data!;
 
-        if (hasSeenAphrodite) {
+        if (hasSeenAphrodite || !aphroditeEnabled) {
           // Already met Aphrodite — always show chat list
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (context.mounted) context.pushReplacement('/chat/list');

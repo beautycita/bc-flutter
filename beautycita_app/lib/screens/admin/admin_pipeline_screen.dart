@@ -8,6 +8,7 @@ import 'package:latlong2/latlong.dart' as ll;
 
 import '../../config/constants.dart';
 import '../../providers/admin_provider.dart';
+import '../../providers/feature_toggle_provider.dart';
 import '../../providers/rp_provider.dart';
 import '../../services/export_service.dart';
 import '../../services/supabase_client.dart';
@@ -471,6 +472,11 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final toggles = ref.watch(featureTogglesProvider);
+    if (!toggles.isEnabled('enable_outreach_pipeline')) {
+      return const Center(child: Text('Pipeline no disponible'));
+    }
+
     final colors = Theme.of(context).colorScheme;
     final statsAsync = ref.watch(pipelineFunnelStatsProvider);
     // Set params before watching so the provider can read them

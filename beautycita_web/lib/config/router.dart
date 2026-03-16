@@ -35,8 +35,10 @@ import '../pages/business/biz_pos_page.dart';
 import '../pages/business/biz_settings_page.dart';
 import '../pages/business/biz_staff_page.dart';
 import '../pages/client/feed_page.dart';
+import '../pages/client/invite_page.dart';
 import '../pages/client/mis_citas_page.dart';
 import '../pages/client/reservar_page.dart';
+import '../pages/public/invite_public_page.dart';
 import '../pages/auth/callback_page.dart';
 import '../pages/auth/forgot_page.dart';
 import '../pages/auth/login_page.dart';
@@ -102,7 +104,11 @@ abstract final class WebRoutes {
   // Client
   static const String explorar = '/explorar';
   static const String reservar = '/reservar';
+  static const String invitar = '/client/invitar';
   static const String misCitas = '/mis-citas';
+
+  // Public invite
+  static const String invitarPublic = '/invitar';
 
   // Demo (read-only business portal preview)
   static const String demo = '/demo';
@@ -154,7 +160,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           path.startsWith('/demo') ||
           path.startsWith('/explorar') ||
           path.startsWith('/reservar') ||
-          path.startsWith('/registro');
+          path.startsWith('/registro') ||
+          path == '/invitar';
 
       // If Supabase never initialized (offline, failed, etc.),
       // only allow public routes — redirect protected routes to /auth
@@ -219,6 +226,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => RegistroPage(
           salonId: state.pathParameters['salonId'] ?? '',
         ),
+      ),
+
+      // ── Public invite page (no shell, no auth) ────────────────────────
+      GoRoute(
+        path: WebRoutes.invitarPublic,
+        builder: (context, state) => const InvitePublicPage(),
       ),
 
       // ── Auth routes (no shell) ───────────────────────────────────────────
@@ -454,6 +467,11 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: WebRoutes.reservar,
             builder: (context, state) => const ReservarPage(),
+          ),
+          GoRoute(
+            path: WebRoutes.invitar,
+            builder: (context, state) =>
+                InvitePage(serviceType: state.extra as String?),
           ),
           GoRoute(
             path: WebRoutes.misCitas,

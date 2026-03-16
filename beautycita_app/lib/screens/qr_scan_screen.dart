@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:beautycita/config/constants.dart';
+import 'package:beautycita/providers/feature_toggle_provider.dart';
 import 'package:beautycita/services/qr_auth_service.dart';
 import 'package:beautycita/services/biometric_service.dart';
 
@@ -254,6 +256,21 @@ class _QrScanScreenState extends State<QrScanScreen> with SingleTickerProviderSt
 
   @override
   Widget build(BuildContext context) {
+    return Consumer(
+      builder: (context, ref, _) {
+        final toggles = ref.watch(featureTogglesProvider);
+        if (!toggles.isEnabled('enable_qr_auth')) {
+          return Scaffold(
+            appBar: AppBar(title: const Text('QR Auth')),
+            body: const Center(child: Text('QR Auth no esta disponible')),
+          );
+        }
+        return _buildScanner(context);
+      },
+    );
+  }
+
+  Widget _buildScanner(BuildContext context) {
     final primary = Theme.of(context).colorScheme.primary;
 
     return Scaffold(
