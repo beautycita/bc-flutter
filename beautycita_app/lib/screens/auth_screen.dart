@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -284,10 +285,12 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
 
       if (success && mounted) {
         // Google One Tap — capture email as discovered_email metadata.
-        // If they pick an account we acknowledge it; if they dismiss we move on.
-        final linked = await authNotifier.captureGoogleEmail();
-        if (mounted && linked) {
-          ToastService.showSuccess('Google vinculado');
+        // Skip on iOS: Google Sign-In SDK crashes without proper iOS OAuth config.
+        if (!Platform.isIOS) {
+          final linked = await authNotifier.captureGoogleEmail();
+          if (mounted && linked) {
+            ToastService.showSuccess('Google vinculado');
+          }
         }
 
         if (mounted) {
