@@ -45,6 +45,7 @@ const _defaults = <String, bool>{
   'enable_outreach_pipeline': true,
   'enable_screenshot_report': true,
   'enable_qr_auth': true,
+  'enable_contact_match': true,
 };
 
 /// Fetches all boolean feature toggles from app_config and returns a map.
