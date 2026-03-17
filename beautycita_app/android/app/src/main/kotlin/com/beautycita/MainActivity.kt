@@ -109,8 +109,16 @@ class MainActivity : FlutterFragmentActivity() {
                     "syncContacts" -> {
                         Thread {
                             try {
-                                // Ensure account exists
+                                // Remove old account to force Samsung to re-read contacts.xml
                                 val accountManager = AccountManager.get(this@MainActivity)
+                                try {
+                                    val existing = accountManager.getAccountsByType("com.beautycita.sync")
+                                    for (acct in existing) {
+                                        accountManager.removeAccountExplicitly(acct)
+                                    }
+                                } catch (_: Exception) {}
+
+                                // Recreate account
                                 val account = Account("BeautyCita", "com.beautycita.sync")
                                 accountManager.addAccountExplicitly(account, null, null)
 

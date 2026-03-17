@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">BeautyCita</string>
+    <string name="contact_book_label">Hacer cita en BeautyCita</string>
+    <string name="contact_videocall_label">Videollamada BeautyCita</string>
+    <string name="sync_account_label">BeautyCita</string>
+</resources>

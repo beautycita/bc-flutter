@@ -82,7 +82,7 @@
         <activity
             android:name=".sync.ContactActionActivity"
             android:exported="true"
-            android:label="Hacer cita en BeautyCita"
+            android:label="@string/contact_book_label"
             android:theme="@android:style/Theme.NoDisplay">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
