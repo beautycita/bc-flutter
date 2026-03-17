@@ -115,6 +115,12 @@ class DiscoveredSalon {
   final bool? whatsappVerified;
   final dynamic servicesDetected; // jsonb — list or map
   final String? bio; // Google scraped bio
+  // Business intelligence estimates
+  final int? estMonthlyClients;
+  final double? estDailyClients;
+  final double? estAvgServicePrice;
+  final double? estMonthlyRevenue;
+  final double? estAnnualRevenue;
 
   const DiscoveredSalon({
     required this.id,
@@ -154,6 +160,11 @@ class DiscoveredSalon {
     this.whatsappVerified,
     this.servicesDetected,
     this.bio,
+    this.estMonthlyClients,
+    this.estDailyClients,
+    this.estAvgServicePrice,
+    this.estMonthlyRevenue,
+    this.estAnnualRevenue,
   });
 
   bool get isIgEnriched => igEnrichedAt != null;
@@ -216,6 +227,11 @@ class DiscoveredSalon {
       whatsappVerified: json['whatsapp_verified'] as bool?,
       servicesDetected: json['services_detected'],
       bio: json['bio'] as String?,
+      estMonthlyClients: json['est_monthly_clients'] as int?,
+      estDailyClients: (json['est_daily_clients'] as num?)?.toDouble(),
+      estAvgServicePrice: (json['est_avg_service_price'] as num?)?.toDouble(),
+      estMonthlyRevenue: (json['est_monthly_revenue'] as num?)?.toDouble(),
+      estAnnualRevenue: (json['est_annual_revenue'] as num?)?.toDouble(),
     );
   }
 }
@@ -440,6 +456,7 @@ final discoveredSalonsProvider =
     'rating_average, rating_count, feature_image_url, website, '
     'instagram_url, ig_bio, ig_followers, matched_categories, specialties, '
     'working_hours, ig_enriched_at, whatsapp_checked_at, '
+    'est_monthly_clients, est_daily_clients, est_avg_service_price, est_monthly_revenue, est_annual_revenue, '
     'booking_system, booking_url, calendar_url, booking_enriched_at, email, '
     'portfolio_images, ig_post_captions, facebook_url, services_detected, bio',
   );
