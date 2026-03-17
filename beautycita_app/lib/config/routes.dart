@@ -470,7 +470,7 @@ class AppRoutes {
         name: 'studio',
         pageBuilder: (context, state) {
           final tabParam = state.uri.queryParameters['tab'];
-          const tabIds = ['hair_color', 'hairstyle', 'headshot', 'face_swap'];
+          const tabIds = ['hair_color', 'hairstyle', 'headshot', 'look_swap'];
           final initialTab = tabParam != null ? tabIds.indexOf(tabParam).clamp(0, 3) : 0;
           return CustomTransitionPage(
             key: state.pageKey,

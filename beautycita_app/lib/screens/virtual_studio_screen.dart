@@ -30,7 +30,7 @@ const _tools = [
   _StudioTool(id: 'hair_color', icon: Icons.palette, label: 'Color', description: 'Prueba un nuevo color de cabello', defaultPrompt: 'Rubio platino'),
   _StudioTool(id: 'hairstyle', icon: Icons.content_cut, label: 'Peinado', description: 'Prueba un peinado diferente', defaultPrompt: 'Bob corto moderno'),
   _StudioTool(id: 'headshot', icon: Icons.camera_alt, label: 'Retrato', description: 'Foto profesional estilo headshot', defaultPrompt: 'Professional corporate headshot'),
-  _StudioTool(id: 'face_swap', icon: Icons.swap_horiz, label: 'Cambio', description: 'Tu cara sobre una foto de referencia', defaultPrompt: ''),
+  _StudioTool(id: 'look_swap', icon: Icons.swap_horiz, label: 'Look Swap', description: 'Prueba el look de una modelo con tu cara', defaultPrompt: ''),
 ];
 
 class VirtualStudioScreen extends ConsumerStatefulWidget {
@@ -110,7 +110,7 @@ class _VirtualStudioScreenState extends ConsumerState<VirtualStudioScreen>
       body: TabBarView(
         controller: _tabController,
         children: _tools.map((tool) =>
-          tool.id == 'face_swap'
+          tool.id == 'look_swap'
             ? _FaceSwapView(tool: tool)
             : _ToolView(tool: tool),
         ).toList(),
@@ -812,7 +812,7 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
       final url = await service.processTryOn(
         imageBytes: _selfieBytes!,
         stylePrompt: '',
-        tryOnTypeId: 'face_swap',
+        tryOnTypeId: 'look_swap',
         targetImageBytes: referenceBytes,
       );
       if (mounted) {
@@ -837,7 +837,7 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
       final mediaService = MediaService();
       final saved = await mediaService.saveLightXResult(
         resultUrl: resultUrl,
-        toolType: 'face_swap',
+        toolType: 'look_swap',
         stylePrompt: _selectedSample?.label ?? 'Custom look swap',
       );
       if (saved != null) {

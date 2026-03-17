@@ -237,6 +237,7 @@ const LIGHTX_TOOL_ENDPOINTS: Record<string, string> = {
   hairstyle: "/hairstyle/",
   headshot: "/headshot/",
   face_swap: "/face-swap/",
+  look_swap: "/face-swap/", // Same API, but parameters are reversed: keep user's face, use model's hair/style
 };
 
 async function uploadImageToLightX(imageBase64: string): Promise<string> {
@@ -639,11 +640,11 @@ Ciudad: ${salon_city || "Mexico"}${service_searched ? `\nServicio buscado: ${ser
       const { image_base64, target_image_base64, style_prompt, tool_type } = body;
       const tool = tool_type || "hair_color";
 
-      // Face swap needs two images; other tools need image + prompt
-      if (tool === "face_swap") {
+      // Face swap / look swap need two images; other tools need image + prompt
+      if (tool === "face_swap" || tool === "look_swap") {
         if (!image_base64 || !target_image_base64) {
           return new Response(
-            JSON.stringify({ error: "face_swap requires image_base64 (your face) and target_image_base64 (reference photo)" }),
+            JSON.stringify({ error: `${tool} requires image_base64 (your photo) and target_image_base64 (reference model)` }),
             { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
           );
         }
@@ -664,10 +665,19 @@ Ciudad: ${salon_city || "Mexico"}${service_searched ? `\nServicio buscado: ${ser
       }
 
       // v2 flow: upload → tool call → poll
-      const imageUrl = await uploadImageToLightX(image_base64);
+      let imageUrl: string;
       let modelReferenceUrl: string | undefined;
-      if (tool === "face_swap" && target_image_base64) {
+
+      if (tool === "look_swap" && target_image_base64) {
+        // Look Swap: REVERSE — model photo is the body/hair source (imageUrl),
+        // user's photo is the face to keep (modelReferenceUrl)
+        imageUrl = await uploadImageToLightX(target_image_base64); // model = body/hair
+        modelReferenceUrl = await uploadImageToLightX(image_base64); // user = face to keep
+      } else if (tool === "face_swap" && target_image_base64) {
+        imageUrl = await uploadImageToLightX(image_base64);
         modelReferenceUrl = await uploadImageToLightX(target_image_base64);
+      } else {
+        imageUrl = await uploadImageToLightX(image_base64);
       }
       const orderId = await callLightXTool(tool, imageUrl, style_prompt || "", modelReferenceUrl);
       const resultUrl = await pollLightXResult(orderId);

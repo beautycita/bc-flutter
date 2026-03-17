@@ -448,10 +448,10 @@ class _ChatConversationScreenState
                 ),
                 _StudioOption(
                   icon: Icons.swap_horiz_rounded,
-                  label: 'Face Swap',
+                  label: 'Look Swap',
                   onTap: () {
                     Navigator.pop(ctx);
-                    context.push('/studio?tab=face_swap');
+                    context.push('/studio?tab=look_swap');
                   },
                 ),
               ],
