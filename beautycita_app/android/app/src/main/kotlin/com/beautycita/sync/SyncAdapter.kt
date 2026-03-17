@@ -118,6 +118,7 @@ class SyncAdapter(
                 .withValue(ContactsContract.Data.DATA1, match.salonId)
                 .withValue(ContactsContract.Data.DATA2, "Reservar en BeautyCita")
                 .withValue(ContactsContract.Data.DATA3, match.salonName)
+                .withValue(ContactsContract.Data.DATA4, match.salonType)
                 .build()
         )
 
@@ -175,7 +176,8 @@ class SyncAdapter(
                     MatchData(
                         phone = obj.getString("phone"),
                         salonName = obj.optString("salon_name", ""),
-                        salonId = obj.optString("salon_id", "")
+                        salonId = obj.optString("salon_id", ""),
+                        salonType = obj.optString("salon_type", "d")
                     )
                 )
             }
@@ -189,6 +191,7 @@ class SyncAdapter(
     private data class MatchData(
         val phone: String,
         val salonName: String,
-        val salonId: String
+        val salonId: String,
+        val salonType: String = "d"
     )
 }

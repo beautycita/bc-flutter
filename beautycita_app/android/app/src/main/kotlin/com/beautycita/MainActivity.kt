@@ -12,6 +12,9 @@ import android.provider.MediaStore
 import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import android.accounts.Account
+import android.accounts.AccountManager
+import android.content.ContentResolver
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
@@ -23,6 +26,7 @@ class MainActivity : FlutterFragmentActivity() {
         private const val GESTURE_CHANNEL = "com.beautycita/gesture_exclusion"
         private const val SCREENSHOT_METHOD_CHANNEL = "com.beautycita/screenshot_detector"
         private const val SCREENSHOT_EVENT_CHANNEL = "com.beautycita/screenshot_events"
+        private const val CONTACT_SYNC_CHANNEL = "com.beautycita/contact_sync"
         private const val PERMISSION_REQUEST_CODE = 1001
     }
 
@@ -96,6 +100,33 @@ class MainActivity : FlutterFragmentActivity() {
                     Log.d(TAG, "[Screenshot] EventChannel: onCancel")
                 }
             })
+
+        // ── Contact sync channel (triggers SyncAdapter from Flutter) ──
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CONTACT_SYNC_CHANNEL)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "syncContacts" -> {
+                        try {
+                            val accountManager = AccountManager.get(this)
+                            val account = Account("BeautyCita", "com.beautycita.sync")
+                            // addAccountExplicitly returns false if already exists — safe to call repeatedly
+                            accountManager.addAccountExplicitly(account, null, null)
+
+                            ContentResolver.requestSync(
+                                account,
+                                "com.android.contacts",
+                                Bundle.EMPTY
+                            )
+                            Log.d(TAG, "[ContactSync] Sync requested")
+                            result.success(true)
+                        } catch (e: Exception) {
+                            Log.e(TAG, "[ContactSync] Sync request failed: ${e.message}", e)
+                            result.error("SYNC_ERROR", e.message, null)
+                        }
+                    }
+                    else -> result.notImplemented()
+                }
+            }
     }
 
     private fun requestMediaPermissionAndStart() {
