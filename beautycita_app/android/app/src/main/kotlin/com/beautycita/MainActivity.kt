@@ -15,6 +15,7 @@ import androidx.core.content.ContextCompat
 import android.accounts.Account
 import android.accounts.AccountManager
 import android.content.ContentResolver
+import android.os.Bundle
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
