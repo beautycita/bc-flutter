@@ -9,13 +9,11 @@ import 'engine_settings_editor_screen.dart';
 import 'category_tree_screen.dart';
 import 'time_rules_screen.dart';
 import 'admin_salones_screen.dart';
-import 'admin_pipeline_screen.dart';
 import 'analytics_screen.dart';
 import 'notification_templates_screen.dart';
 import 'dashboard_screen.dart';
 import 'users_screen.dart';
 import 'disputes_screen.dart';
-import 'applications_screen.dart';
 import 'bookings_screen.dart';
 import 'feature_toggles_screen.dart';
 import 'reviews_screen.dart';
@@ -34,13 +32,11 @@ class AdminShellScreen extends ConsumerWidget {
   static const _adminTabs = <_AdminTab>[
     _AdminTab(icon: Icons.dashboard, label: 'Dashboard', section: 'Gestion'),
     _AdminTab(icon: Icons.people, label: 'Usuarios', section: 'Gestion'),
-    _AdminTab(icon: Icons.assignment, label: 'Solicitudes', section: 'Gestion'),
     _AdminTab(icon: Icons.calendar_today, label: 'Citas', section: 'Gestion'),
     _AdminTab(icon: Icons.gavel, label: 'Disputas', section: 'Gestion'),
     _AdminTab(icon: Icons.store, label: 'Salones', section: 'Gestion'),
     _AdminTab(icon: Icons.analytics, label: 'Analitica', section: 'Gestion'),
     _AdminTab(icon: Icons.rate_review, label: 'Resenas', section: 'Gestion'),
-    _AdminTab(icon: Icons.rocket_launch_rounded, label: 'Pipeline', section: 'Gestion'),
     _AdminTab(icon: Icons.chat_rounded, label: 'Chat', section: 'Gestion'),
     _AdminTab(icon: Icons.receipt_long, label: 'Retenciones SAT', section: 'Finanzas'),
     _AdminTab(icon: Icons.account_balance, label: 'Finanzas CEO', section: 'Finanzas'),
@@ -209,8 +205,6 @@ class _AdminContent extends ConsumerWidget {
         return const DashboardScreen();
       case 'Usuarios':
         return const UsersScreen();
-      case 'Solicitudes':
-        return const ApplicationsScreen();
       case 'Citas':
         return const BookingsScreen();
       case 'Disputas':
@@ -221,8 +215,6 @@ class _AdminContent extends ConsumerWidget {
         return const AnalyticsScreen();
       case 'Resenas':
         return const ReviewsScreen();
-      case 'Pipeline':
-        return const AdminPipelineScreen();
       case 'Chat':
         return const AdminChatScreen();
       case 'Retenciones SAT':

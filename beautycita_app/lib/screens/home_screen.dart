@@ -25,7 +25,6 @@ import 'subcategory_sheet.dart';
 import 'business/business_shell_screen.dart' show businessTabProvider;
 import 'admin/admin_shell_screen.dart' show adminTabProvider;
 import '../providers/feature_toggle_provider.dart';
-import '../widgets/contact_match_section.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -386,9 +385,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
 
           // Category Grid
-          // Contact salon matches (below header, above grid)
-          const ContactMatchSection(),
-
           Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(

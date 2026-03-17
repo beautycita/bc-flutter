@@ -1026,7 +1026,7 @@ class _LeadDetailSheetState extends State<_LeadDetailSheet> {
         onPressed: () => _showRegisterContactDialog(context, ref),
         icon: const Icon(Icons.add_comment_outlined),
         label: Text(
-          'Registrar Contacto',
+          'Registrar Visita Presencial',
           style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
         ),
         style: OutlinedButton.styleFrom(
@@ -1307,46 +1307,10 @@ class _LeadDetailSheetState extends State<_LeadDetailSheet> {
   // ---------------------------------------------------------------------------
 
   Widget _buildQuickActions(BuildContext context, WidgetRef ref) {
-    final phone = _lead['phone']?.toString() ?? '';
-    final whatsapp = _lead['whatsapp']?.toString() ?? phone;
-    final email = _lead['email']?.toString();
-    final phoneForWa =
-        whatsapp.replaceAll(RegExp(r'[^0-9]'), '');
-    final phoneForSms = phone.replaceAll(RegExp(r'[^0-9+]'), '');
-
     return Wrap(
       spacing: 8,
       runSpacing: 8,
       children: [
-        // WhatsApp
-        _quickBtn(
-          label: 'WhatsApp',
-          icon: Icons.chat,
-          color: const Color(0xFF25D366),
-          onTap: phoneForWa.isNotEmpty
-              ? () => _launch('https://wa.me/$phoneForWa')
-              : null,
-        ),
-
-        // SMS
-        _quickBtn(
-          label: 'SMS',
-          icon: Icons.sms,
-          color: Colors.blue,
-          onTap: phoneForSms.isNotEmpty
-              ? () => _launch('sms:$phoneForSms')
-              : null,
-        ),
-
-        // Email
-        if (email != null && email.isNotEmpty)
-          _quickBtn(
-            label: 'Email',
-            icon: Icons.email,
-            color: Colors.orange,
-            onTap: () => _launch('mailto:$email'),
-          ),
-
         // Mark as registered
         _quickBtn(
           label: 'Registrado',
