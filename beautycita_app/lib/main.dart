@@ -24,6 +24,7 @@ import 'package:beautycita/services/presence_service.dart';
 import 'package:beautycita/services/screenshot_detector_service.dart';
 import 'package:beautycita/screens/screenshot_editor_screen.dart';
 import 'package:beautycita/services/contact_match_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:beautycita/widgets/screenshot_report_button.dart';
 import 'package:go_router/go_router.dart';
 
@@ -272,8 +273,19 @@ class _BeautyCitaAppState extends ConsumerState<BeautyCitaApp> {
       // Invalid or missing bizId — fall through to home.
     }
 
-    // Default: go home
-    supabaseReady.future.then((_) {
+    // Check for pending contact route (from Samsung Contacts "Reservar en BeautyCita" action)
+    supabaseReady.future.then((_) async {
+      if (!mounted) return;
+      final prefs = await SharedPreferences.getInstance();
+      final pendingRoute = prefs.getString('pending_contact_route');
+      if (pendingRoute != null && pendingRoute.isNotEmpty) {
+        await prefs.remove('pending_contact_route');
+        debugPrint('[DeepLink] Pending contact route: $pendingRoute');
+        if (mounted) {
+          AppRoutes.router.go(pendingRoute);
+          return;
+        }
+      }
       if (mounted) AppRoutes.router.go('/home');
     });
   }

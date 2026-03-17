@@ -48,18 +48,20 @@ class ContactActionActivity : Activity() {
             Log.i(TAG, "Launching booking for salon $salonId (type=$salonType)")
 
             // Use deep link URI — Flutter's GoRouter handles these
-            val deepLink = if (salonType == "r" && salonId.isNotEmpty()) {
-                // Registered salon → Cita Express (direct booking)
-                Uri.parse("https://beautycita.com/cita-express/$salonId")
+            // Launch MainActivity with route info stored in SharedPreferences
+            // (avoids deep link race condition with Supabase initialization)
+            val prefs = getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)
+            val route = if (salonType == "r" && salonId.isNotEmpty()) {
+                "/cita-express/$salonId"
             } else if (salonId.isNotEmpty()) {
-                // Discovered salon → invite flow
-                Uri.parse("https://beautycita.com/invite")
+                "/invite"
             } else {
-                Uri.parse("https://beautycita.com/home")
+                "/home"
             }
+            prefs.edit().putString("flutter.pending_contact_route", route).apply()
+            Log.i(TAG, "Stored pending route: $route")
 
-            val launchIntent = Intent(Intent.ACTION_VIEW, deepLink).apply {
-                setPackage("com.beautycita")
+            val launchIntent = Intent(this, MainActivity::class.java).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             }
             startActivity(launchIntent)
