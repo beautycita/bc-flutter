@@ -5,6 +5,7 @@ import 'package:beautycita_core/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../providers/admin_salons_provider.dart';
 import '../../providers/outreach_contact_provider.dart';
@@ -754,12 +755,70 @@ class _DiscoveredSalonDetailContentState
     extends ConsumerState<DiscoveredSalonDetailContent> {
   bool _sendingInvite = false;
 
+  String _relativeTime(DateTime dt) {
+    final diff = DateTime.now().difference(dt);
+    if (diff.inMinutes < 60) return 'hace ${diff.inMinutes} min';
+    if (diff.inHours < 24) return 'hace ${diff.inHours}h';
+    if (diff.inDays < 30) return 'hace ${diff.inDays} dias';
+    if (diff.inDays < 365) return 'hace ${diff.inDays ~/ 30} meses';
+    return 'hace ${diff.inDays ~/ 365} anos';
+  }
+
+  String _formatNumber(int n) {
+    if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
+    if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}K';
+    return n.toString();
+  }
+
+  void _openUrl(String url) {
+    var uri = url;
+    if (!uri.startsWith('http://') && !uri.startsWith('https://')) {
+      uri = 'https://$uri';
+    }
+    launchUrl(Uri.parse(uri), mode: LaunchMode.externalApplication);
+  }
+
+  void _showImageDialog(BuildContext context, String imageUrl) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: GestureDetector(
+          onTap: () => Navigator.of(ctx).pop(),
+          child: InteractiveViewer(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.network(
+                imageUrl,
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => Container(
+                  width: 300,
+                  height: 300,
+                  color: Colors.black54,
+                  child: const Center(
+                    child: Icon(Icons.broken_image,
+                        size: 48, color: Colors.white54),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
     final dateFormat = DateFormat('d MMM yyyy', 'es');
     final salon = widget.salon;
+    final linkStyle = theme.textTheme.bodySmall?.copyWith(
+      color: colors.primary,
+      decoration: TextDecoration.underline,
+      decorationColor: colors.primary,
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -840,22 +899,245 @@ class _DiscoveredSalonDetailContentState
           ),
         ],
 
+        // ── Enrichment Status Bar ─────────────────────────────────────
+        const SizedBox(height: BCSpacing.md),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(BCSpacing.sm),
+          decoration: BoxDecoration(
+            color: colors.surfaceContainerHighest.withValues(alpha: 0.4),
+            borderRadius: BorderRadius.circular(BCSpacing.radiusXs),
+            border: Border.all(
+              color: colors.outlineVariant.withValues(alpha: 0.3),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.sync, size: 14,
+                      color: colors.onSurface.withValues(alpha: 0.6)),
+                  const SizedBox(width: 4),
+                  Text('Enrichment',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: colors.onSurface.withValues(alpha: 0.6),
+                      )),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                children: [
+                  _EnrichmentChip(
+                    label: 'WA',
+                    done: salon.waCheckedAt != null,
+                    verified: salon.waStatus == 'valid',
+                  ),
+                  _EnrichmentChip(
+                    label: 'IG',
+                    done: salon.isIgEnriched,
+                  ),
+                  _EnrichmentChip(
+                    label: 'Web',
+                    done: salon.website != null &&
+                        salon.website!.isNotEmpty,
+                  ),
+                  _EnrichmentChip(
+                    label: 'Booking',
+                    done: salon.bookingSystem != null &&
+                        salon.bookingSystem!.isNotEmpty,
+                  ),
+                  _EnrichmentChip(
+                    label: 'Email',
+                    done: salon.email != null && salon.email!.isNotEmpty,
+                  ),
+                  _EnrichmentChip(
+                    label: 'FB',
+                    done: salon.facebookUrl != null &&
+                        salon.facebookUrl!.isNotEmpty,
+                  ),
+                ],
+              ),
+              if (salon.waCheckedAt != null || salon.isIgEnriched) ...[
+                const SizedBox(height: 4),
+                Text(
+                  [
+                    if (salon.waCheckedAt != null)
+                      'WA: ${_relativeTime(salon.waCheckedAt!)}',
+                    if (salon.isIgEnriched)
+                      'IG: ${_relativeTime(salon.igEnrichedAt!)}',
+                    if (salon.bookingEnrichedAt != null)
+                      'Booking: ${_relativeTime(salon.bookingEnrichedAt!)}',
+                  ].join(' · '),
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: colors.onSurface.withValues(alpha: 0.45),
+                    fontSize: 10,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+
         const SizedBox(height: BCSpacing.lg),
         const Divider(),
         const SizedBox(height: BCSpacing.md),
 
-        // ── Info ────────────────────────────────────────────────────────
-        _SectionTitle(title: 'Informacion'),
+        // ── Contact Info (complete) ──────────────────────────────────
+        _SectionTitle(title: 'Contacto'),
         const SizedBox(height: BCSpacing.sm),
-        _InfoRow(
-          icon: Icons.phone_outlined,
-          label: 'Telefono',
-          value: salon.phone ?? 'No disponible',
-          trailing: salon.phone != null
-              ? _WaStatusBadge(status: salon.waStatus)
-              : null,
+
+        // Phone — clickable tel: link with WA badge
+        if (salon.phone != null) ...[
+          Row(
+            children: [
+              Icon(Icons.phone_outlined, size: 16,
+                  color: colors.onSurface.withValues(alpha: 0.5)),
+              const SizedBox(width: BCSpacing.sm),
+              Expanded(
+                child: InkWell(
+                  onTap: () => launchUrl(Uri.parse('tel:${salon.phone}')),
+                  child: Text(salon.phone!, style: linkStyle),
+                ),
+              ),
+              _WaStatusBadge(status: salon.waStatus),
+            ],
+          ),
+          const SizedBox(height: BCSpacing.xs),
+          // WhatsApp direct link
+          Row(
+            children: [
+              Icon(Icons.chat, size: 16, color: Colors.green),
+              const SizedBox(width: BCSpacing.sm),
+              Expanded(
+                child: InkWell(
+                  onTap: () {
+                    final cleanPhone =
+                        salon.phone!.replaceAll(RegExp(r'[^\d+]'), '');
+                    launchUrl(
+                      Uri.parse('https://wa.me/$cleanPhone'),
+                      mode: LaunchMode.externalApplication,
+                    );
+                  },
+                  child: Row(
+                    children: [
+                      Text('WhatsApp', style: linkStyle),
+                      if (salon.whatsappVerified == true) ...[
+                        const SizedBox(width: 4),
+                        const Icon(Icons.verified, size: 12,
+                            color: Colors.green),
+                      ] else if (salon.whatsappVerified == false) ...[
+                        const SizedBox(width: 4),
+                        const Icon(Icons.cancel, size: 12,
+                            color: Colors.red),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: BCSpacing.sm),
+        ] else ...[
+          _InfoRow(
+            icon: Icons.phone_outlined,
+            label: 'Telefono',
+            value: 'No disponible',
+          ),
+          const SizedBox(height: BCSpacing.sm),
+        ],
+
+        // Email
+        if (salon.email != null && salon.email!.isNotEmpty) ...[
+          Row(
+            children: [
+              Icon(Icons.email_outlined, size: 16,
+                  color: colors.onSurface.withValues(alpha: 0.5)),
+              const SizedBox(width: BCSpacing.sm),
+              Expanded(
+                child: InkWell(
+                  onTap: () => launchUrl(Uri.parse('mailto:${salon.email}')),
+                  child: Text(salon.email!, style: linkStyle),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: BCSpacing.sm),
+        ],
+
+        // Social links row — clickable
+        Wrap(
+          spacing: 12,
+          runSpacing: 8,
+          children: [
+            if (salon.instagramUrl != null)
+              InkWell(
+                onTap: () => _openUrl(salon.instagramUrl!),
+                borderRadius: BorderRadius.circular(4),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.camera_alt, size: 16,
+                          color: Colors.pink),
+                      const SizedBox(width: 4),
+                      Text(
+                        '@${Uri.parse(salon.instagramUrl!.endsWith('/') ? salon.instagramUrl!.substring(0, salon.instagramUrl!.length - 1) : salon.instagramUrl!).pathSegments.lastWhere((s) => s.isNotEmpty, orElse: () => salon.instagramUrl!)}',
+                        style: linkStyle,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            if (salon.facebookUrl != null &&
+                salon.facebookUrl!.isNotEmpty)
+              InkWell(
+                onTap: () => _openUrl(salon.facebookUrl!),
+                borderRadius: BorderRadius.circular(4),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.facebook, size: 16,
+                          color: Colors.indigo),
+                      const SizedBox(width: 4),
+                      Text('Facebook', style: linkStyle),
+                    ],
+                  ),
+                ),
+              ),
+            if (salon.website != null && salon.website!.isNotEmpty)
+              InkWell(
+                onTap: () => _openUrl(salon.website!),
+                borderRadius: BorderRadius.circular(4),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.language, size: 16,
+                          color: colors.onSurface.withValues(alpha: 0.6)),
+                      const SizedBox(width: 4),
+                      Text(
+                        Uri.tryParse(salon.website!)?.host ??
+                            salon.website!,
+                        style: linkStyle,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
         ),
-        const SizedBox(height: BCSpacing.sm),
+
+        // ── Location ─────────────────────────────────────────────────
+        const SizedBox(height: BCSpacing.md),
         _InfoRow(
           icon: Icons.location_on_outlined,
           label: 'Ciudad',
@@ -870,11 +1152,12 @@ class _DiscoveredSalonDetailContentState
           ),
           const SizedBox(height: BCSpacing.sm),
         ],
-        if (salon.website != null) ...[
+        if (salon.latitude != null && salon.longitude != null) ...[
           _InfoRow(
-            icon: Icons.language,
-            label: 'Website',
-            value: salon.website!,
+            icon: Icons.gps_fixed,
+            label: 'Coordenadas',
+            value:
+                '${salon.latitude!.toStringAsFixed(4)}, ${salon.longitude!.toStringAsFixed(4)}',
           ),
           const SizedBox(height: BCSpacing.sm),
         ],
@@ -898,21 +1181,232 @@ class _DiscoveredSalonDetailContentState
           value: '${salon.interestSignals}',
         ),
 
-        if (salon.latitude != null && salon.longitude != null) ...[
+        // ── Bio (Google scraped) ─────────────────────────────────────
+        if (salon.bio != null && salon.bio!.isNotEmpty) ...[
+          const SizedBox(height: BCSpacing.lg),
+          const Divider(),
+          const SizedBox(height: BCSpacing.md),
+          _SectionTitle(title: 'Descripcion (Google)'),
           const SizedBox(height: BCSpacing.sm),
-          _InfoRow(
-            icon: Icons.gps_fixed,
-            label: 'Coordenadas',
-            value:
-                '${salon.latitude!.toStringAsFixed(4)}, ${salon.longitude!.toStringAsFixed(4)}',
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(BCSpacing.sm),
+            decoration: BoxDecoration(
+              color: colors.surfaceContainerHighest.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(BCSpacing.radiusXs),
+            ),
+            child: Text(
+              salon.bio!,
+              style: theme.textTheme.bodySmall?.copyWith(
+                fontStyle: FontStyle.italic,
+              ),
+            ),
           ),
         ],
 
-        // ── Enrichment ────────────────────────────────────────────────
+        // ── Instagram Section ────────────────────────────────────────
+        if (salon.isIgEnriched || salon.instagramUrl != null) ...[
+          const SizedBox(height: BCSpacing.lg),
+          const Divider(),
+          const SizedBox(height: BCSpacing.md),
+          _SectionTitle(title: 'Instagram'),
+          const SizedBox(height: BCSpacing.sm),
+
+          // Handle + followers
+          Row(
+            children: [
+              if (salon.instagramUrl != null)
+                InkWell(
+                  onTap: () => _openUrl(salon.instagramUrl!),
+                  child: Text(
+                    '@${Uri.tryParse(salon.instagramUrl!.endsWith('/') ? salon.instagramUrl!.substring(0, salon.instagramUrl!.length - 1) : salon.instagramUrl!)?.pathSegments.lastWhere((s) => s.isNotEmpty, orElse: () => '?') ?? '?'}',
+                    style: linkStyle?.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                ),
+              if (salon.igFollowers != null) ...[
+                const SizedBox(width: 8),
+                Text(
+                  '${_formatNumber(salon.igFollowers!)} seguidores',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colors.onSurface.withValues(alpha: 0.6),
+                  ),
+                ),
+              ],
+            ],
+          ),
+
+          // IG Bio
+          if (salon.igBio != null && salon.igBio!.isNotEmpty) ...[
+            const SizedBox(height: BCSpacing.xs),
+            Text(
+              salon.igBio!,
+              style: theme.textTheme.bodySmall?.copyWith(
+                fontStyle: FontStyle.italic,
+                color: colors.onSurface.withValues(alpha: 0.7),
+              ),
+              maxLines: 4,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+
+          // Portfolio images — horizontal scroll
+          if (salon.portfolioImages.isNotEmpty) ...[
+            const SizedBox(height: BCSpacing.sm),
+            SizedBox(
+              height: 80,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: salon.portfolioImages.length,
+                separatorBuilder: (_, __) =>
+                    const SizedBox(width: BCSpacing.xs),
+                itemBuilder: (context, index) {
+                  final imgUrl = salon.portfolioImages[index];
+                  return GestureDetector(
+                    onTap: () => _showImageDialog(context, imgUrl),
+                    child: ClipRRect(
+                      borderRadius:
+                          BorderRadius.circular(BCSpacing.radiusXs),
+                      child: Image.network(
+                        imgUrl,
+                        width: 80,
+                        height: 80,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(
+                          width: 80,
+                          height: 80,
+                          color: colors.surfaceContainerHighest,
+                          child: const Icon(Icons.broken_image, size: 20),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+
+          // Last post caption
+          if (salon.igPostCaptions != null &&
+              salon.igPostCaptions!.isNotEmpty) ...[
+            const SizedBox(height: BCSpacing.sm),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.format_quote, size: 14,
+                    color: colors.onSurface.withValues(alpha: 0.4)),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    salon.igPostCaptions!.length > 100
+                        ? '${salon.igPostCaptions!.substring(0, 100)}...'
+                        : salon.igPostCaptions!,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colors.onSurface.withValues(alpha: 0.6),
+                    ),
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ],
+
+          // Enriched timestamp
+          if (salon.igEnrichedAt != null) ...[
+            const SizedBox(height: BCSpacing.xs),
+            Text(
+              'Enriquecido: ${_relativeTime(salon.igEnrichedAt!)}',
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: colors.onSurface.withValues(alpha: 0.4),
+                fontSize: 10,
+              ),
+            ),
+          ],
+        ],
+
+        // ── Detected Services ────────────────────────────────────────
+        if (salon.servicesDetected != null) ...[
+          const SizedBox(height: BCSpacing.lg),
+          const Divider(),
+          const SizedBox(height: BCSpacing.md),
+          _SectionTitle(title: 'Servicios Detectados'),
+          const SizedBox(height: BCSpacing.sm),
+          _ServicesDetectedSection(data: salon.servicesDetected),
+        ],
+
+        // ── Working Hours ────────────────────────────────────────────
+        if (salon.workingHours != null &&
+            salon.workingHours!.isNotEmpty) ...[
+          const SizedBox(height: BCSpacing.lg),
+          const Divider(),
+          const SizedBox(height: BCSpacing.md),
+          _SectionTitle(title: 'Horario'),
+          const SizedBox(height: BCSpacing.sm),
+          _WorkingHoursSection(data: salon.workingHours!),
+        ],
+
+        // ── Booking System ───────────────────────────────────────────
+        if (salon.bookingSystem != null ||
+            salon.bookingUrl != null ||
+            salon.calendarUrl != null) ...[
+          const SizedBox(height: BCSpacing.lg),
+          const Divider(),
+          const SizedBox(height: BCSpacing.md),
+          _SectionTitle(title: 'Sistema de Reservas'),
+          const SizedBox(height: BCSpacing.sm),
+          if (salon.bookingSystem != null)
+            _InfoRow(
+              icon: Icons.event_available,
+              label: 'Sistema',
+              value: salon.bookingSystem!,
+            ),
+          if (salon.bookingUrl != null) ...[
+            const SizedBox(height: BCSpacing.sm),
+            Row(
+              children: [
+                Icon(Icons.open_in_new, size: 16,
+                    color: colors.onSurface.withValues(alpha: 0.5)),
+                const SizedBox(width: BCSpacing.sm),
+                Expanded(
+                  child: InkWell(
+                    onTap: () => _openUrl(salon.bookingUrl!),
+                    child: Text(
+                      salon.bookingUrl!,
+                      style: linkStyle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+          if (salon.calendarUrl != null) ...[
+            const SizedBox(height: BCSpacing.sm),
+            Row(
+              children: [
+                Icon(Icons.calendar_month, size: 16,
+                    color: colors.onSurface.withValues(alpha: 0.5)),
+                const SizedBox(width: BCSpacing.sm),
+                Expanded(
+                  child: InkWell(
+                    onTap: () => _openUrl(salon.calendarUrl!),
+                    child: Text(
+                      'Calendario',
+                      style: linkStyle,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+
+        // ── Enrichment Stats Row ─────────────────────────────────────
         const SizedBox(height: BCSpacing.lg),
         const Divider(),
         const SizedBox(height: BCSpacing.md),
-        _SectionTitle(title: 'Enrichment'),
+        _SectionTitle(title: 'Metricas'),
         const SizedBox(height: BCSpacing.sm),
         Row(
           children: [
@@ -929,7 +1423,7 @@ class _DiscoveredSalonDetailContentState
             _StatCard(
               label: 'IG',
               value: salon.isIgEnriched
-                  ? '${salon.igFollowers ?? 0}'
+                  ? _formatNumber(salon.igFollowers ?? 0)
                   : salon.instagramUrl != null
                       ? 'Pending'
                       : 'N/A',
@@ -945,67 +1439,6 @@ class _DiscoveredSalonDetailContentState
             ),
           ],
         ),
-        if (salon.igBio != null && salon.igBio!.isNotEmpty) ...[
-          const SizedBox(height: BCSpacing.sm),
-          _InfoRow(
-            icon: Icons.camera_alt,
-            label: 'IG Bio',
-            value: salon.igBio!,
-          ),
-        ],
-        if (salon.instagramUrl != null) ...[
-          const SizedBox(height: BCSpacing.sm),
-          _InfoRow(
-            icon: Icons.link,
-            label: 'Instagram',
-            value: salon.instagramUrl!,
-          ),
-        ],
-        if (salon.workingHours != null &&
-            salon.workingHours!.isNotEmpty) ...[
-          const SizedBox(height: BCSpacing.sm),
-          _InfoRow(
-            icon: Icons.schedule,
-            label: 'Horario',
-            value: salon.workingHours!.length > 100
-                ? '${salon.workingHours!.substring(0, 100)}...'
-                : salon.workingHours!,
-          ),
-        ],
-
-        // ── Booking System ─────────────────────────────────────────────
-        if (salon.bookingSystem != null) ...[
-          const SizedBox(height: BCSpacing.sm),
-          _InfoRow(
-            icon: Icons.event_available,
-            label: 'Sistema de reservas',
-            value: salon.bookingSystem!,
-          ),
-        ],
-        if (salon.bookingUrl != null) ...[
-          const SizedBox(height: BCSpacing.sm),
-          _InfoRow(
-            icon: Icons.open_in_new,
-            label: 'Pagina de reservas',
-            value: salon.bookingUrl!,
-          ),
-        ],
-        if (salon.calendarUrl != null) ...[
-          const SizedBox(height: BCSpacing.sm),
-          _InfoRow(
-            icon: Icons.calendar_month,
-            label: 'Calendario compartido',
-            value: salon.calendarUrl!,
-          ),
-        ],
-        if (salon.email != null) ...[
-          const SizedBox(height: BCSpacing.sm),
-          _InfoRow(
-            icon: Icons.email_outlined,
-            label: 'Email',
-            value: salon.email!,
-          ),
-        ],
 
         // ── Contact History ────────────────────────────────────────────
         const SizedBox(height: BCSpacing.lg),
@@ -1506,6 +1939,222 @@ class _WaStatusBadge extends StatelessWidget {
     };
 
     return Icon(icon, size: 16, color: color);
+  }
+}
+
+class _EnrichmentChip extends StatelessWidget {
+  const _EnrichmentChip({
+    required this.label,
+    required this.done,
+    this.verified,
+  });
+  final String label;
+  final bool done;
+  final bool? verified;
+
+  @override
+  Widget build(BuildContext context) {
+    // For WA: verified=true means green check, verified=false means red x,
+    // done but verified==null means orange (checked but ambiguous)
+    final Color color;
+    final IconData icon;
+    if (done) {
+      if (verified == false) {
+        color = Colors.red;
+        icon = Icons.cancel;
+      } else {
+        color = Colors.green;
+        icon = Icons.check_circle;
+      }
+    } else {
+      color = Colors.grey;
+      icon = Icons.radio_button_unchecked;
+    }
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 12, color: color),
+        const SizedBox(width: 2),
+        Text(
+          label,
+          style: TextStyle(
+            color: color,
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ServicesDetectedSection extends StatelessWidget {
+  const _ServicesDetectedSection({required this.data});
+  final dynamic data;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+
+    List<String> services = [];
+    if (data is List) {
+      services = (data as List).map((e) => e.toString()).toList();
+    } else if (data is Map) {
+      // Map structure — flatten keys and values
+      (data as Map).forEach((key, value) {
+        if (value is List) {
+          for (final v in value) {
+            services.add(v.toString());
+          }
+        } else {
+          services.add('$key: $value');
+        }
+      });
+    } else if (data is String) {
+      // Try parsing as JSON
+      try {
+        final parsed = jsonDecode(data as String);
+        if (parsed is List) {
+          services = parsed.map((e) => e.toString()).toList();
+        }
+      } catch (_) {
+        services = [data as String];
+      }
+    }
+
+    if (services.isEmpty) {
+      return Text(
+        'Sin servicios detectados',
+        style: theme.textTheme.bodySmall?.copyWith(
+          fontStyle: FontStyle.italic,
+          color: colors.onSurface.withValues(alpha: 0.5),
+        ),
+      );
+    }
+
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: services.map((s) {
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          decoration: BoxDecoration(
+            color: colors.tertiary.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(BCSpacing.radiusFull),
+            border: Border.all(
+              color: colors.tertiary.withValues(alpha: 0.3),
+            ),
+          ),
+          child: Text(
+            s,
+            style: TextStyle(
+              color: colors.tertiary,
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
+
+class _WorkingHoursSection extends StatelessWidget {
+  const _WorkingHoursSection({required this.data});
+  final String data;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+
+    // Try to parse as JSON (common format from Google)
+    dynamic parsed;
+    try {
+      parsed = jsonDecode(data);
+    } catch (_) {
+      parsed = null;
+    }
+
+    if (parsed is Map) {
+      // Map of day -> hours
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: parsed.entries.map<Widget>((entry) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 2),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 80,
+                  child: Text(
+                    entry.key.toString(),
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: colors.onSurface.withValues(alpha: 0.7),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Text(
+                    entry.value.toString(),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colors.onSurface.withValues(alpha: 0.6),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+      );
+    }
+
+    if (parsed is List) {
+      // List of strings like "Monday: 9 AM - 6 PM"
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: parsed.map<Widget>((line) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 2),
+            child: Text(
+              line.toString(),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: colors.onSurface.withValues(alpha: 0.6),
+              ),
+            ),
+          );
+        }).toList(),
+      );
+    }
+
+    // Plain text — split by common delimiters
+    final lines = data.contains('\n')
+        ? data.split('\n')
+        : data.contains(';')
+            ? data.split(';')
+            : data.contains(',')
+                ? data.split(',')
+                : [data];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: lines
+          .where((l) => l.trim().isNotEmpty)
+          .map<Widget>((line) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 2),
+          child: Text(
+            line.trim(),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: colors.onSurface.withValues(alpha: 0.6),
+            ),
+          ),
+        );
+      }).toList(),
+    );
   }
 }
 

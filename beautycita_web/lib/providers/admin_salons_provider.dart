@@ -108,6 +108,13 @@ class DiscoveredSalon {
   final String? calendarUrl;
   final DateTime? bookingEnrichedAt;
   final String? email;
+  // Additional enrichment fields
+  final List<String> portfolioImages;
+  final String? igPostCaptions;
+  final String? facebookUrl;
+  final bool? whatsappVerified;
+  final dynamic servicesDetected; // jsonb — list or map
+  final String? bio; // Google scraped bio
 
   const DiscoveredSalon({
     required this.id,
@@ -141,6 +148,12 @@ class DiscoveredSalon {
     this.calendarUrl,
     this.bookingEnrichedAt,
     this.email,
+    this.portfolioImages = const [],
+    this.igPostCaptions,
+    this.facebookUrl,
+    this.whatsappVerified,
+    this.servicesDetected,
+    this.bio,
   });
 
   bool get isIgEnriched => igEnrichedAt != null;
@@ -194,6 +207,15 @@ class DiscoveredSalon {
       bookingEnrichedAt:
           DateTime.tryParse(json['booking_enriched_at'] as String? ?? ''),
       email: json['email'] as String?,
+      portfolioImages: (json['portfolio_images'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [],
+      igPostCaptions: json['ig_post_captions'] as String?,
+      facebookUrl: json['facebook_url'] as String?,
+      whatsappVerified: json['whatsapp_verified'] as bool?,
+      servicesDetected: json['services_detected'],
+      bio: json['bio'] as String?,
     );
   }
 }
@@ -418,7 +440,8 @@ final discoveredSalonsProvider =
     'rating_average, rating_count, feature_image_url, website, '
     'instagram_url, ig_bio, ig_followers, matched_categories, specialties, '
     'working_hours, ig_enriched_at, whatsapp_checked_at, '
-    'booking_system, booking_url, calendar_url, booking_enriched_at, email',
+    'booking_system, booking_url, calendar_url, booking_enriched_at, email, '
+    'portfolio_images, ig_post_captions, facebook_url, services_detected, bio',
   );
   if (filter.city != null) {
     query = query.eq('location_city', filter.city!);
