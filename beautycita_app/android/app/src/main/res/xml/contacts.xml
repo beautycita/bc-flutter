@@ -6,4 +6,10 @@
         android:summaryColumn="data2"
         android:detailColumn="data3"
         android:detailSocialSummary="true" />
+    <ContactsDataKind
+        android:mimeType="vnd.android.cursor.item/com.beautycita.videocall"
+        android:icon="@mipmap/ic_launcher"
+        android:summaryColumn="data2"
+        android:detailColumn="data3"
+        android:detailSocialSummary="true" />
 </ContactsAccountType>

@@ -33,6 +33,7 @@ class SyncAdapter(
         private const val PREFS_NAME = "FlutterSharedPreferences"
         private const val MATCHES_KEY = "flutter.contact_sync_matches"
         private const val MIME_TYPE = "vnd.android.cursor.item/com.beautycita.book"
+        private const val MIME_TYPE_VIDEO = "vnd.android.cursor.item/com.beautycita.videocall"
         private const val ACCOUNT_TYPE = "com.beautycita.sync"
     }
 
@@ -51,6 +52,7 @@ class SyncAdapter(
                 return
             }
             Log.d(TAG, "Syncing ${matches.size} matches")
+            Log.i(TAG, "=== BEAUTYCITA SYNC: ${matches.size} salon contacts to sync ===")
 
             for (match in matches) {
                 try {
@@ -111,7 +113,7 @@ class SyncAdapter(
                 .build()
         )
 
-        // Op 2: Insert BeautyCita action data row
+        // Op 2: Insert BeautyCita booking action data row
         ops.add(
             ContentProviderOperation.newInsert(ContactsContract.Data.CONTENT_URI)
                 .withValueBackReference(ContactsContract.Data.RAW_CONTACT_ID, 0)
@@ -120,6 +122,17 @@ class SyncAdapter(
                 .withValue(ContactsContract.Data.DATA2, "Reservar en BeautyCita")
                 .withValue(ContactsContract.Data.DATA3, match.salonName)
                 .withValue(ContactsContract.Data.DATA4, match.salonType)
+                .build()
+        )
+
+        // Op 3: Insert video call action — Samsung shows these prominently in contact header
+        ops.add(
+            ContentProviderOperation.newInsert(ContactsContract.Data.CONTENT_URI)
+                .withValueBackReference(ContactsContract.Data.RAW_CONTACT_ID, 0)
+                .withValue(ContactsContract.Data.MIMETYPE, MIME_TYPE_VIDEO)
+                .withValue(ContactsContract.Data.DATA1, match.salonId)
+                .withValue(ContactsContract.Data.DATA2, "Videollamada BeautyCita")
+                .withValue(ContactsContract.Data.DATA3, match.salonName)
                 .build()
         )
 
