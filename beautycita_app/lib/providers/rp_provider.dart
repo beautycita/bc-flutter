@@ -106,26 +106,18 @@ Future<void> adminAssignSalonsToRp({
   final client = SupabaseClientService.client;
 
   for (final salonId in salonIds) {
-    try {
-      // Unassign any existing active assignment first (prevents duplicate key)
-      await client.from('rp_assignments').update({
-        'unassigned_at': DateTime.now().toUtc().toIso8601String(),
-      }).eq('discovered_salon_id', salonId).isFilter('unassigned_at', null);
-    } catch (_) {
-      // May fail if no active assignment exists — that's fine
-    }
+    // Delete any existing active assignment (hard delete — cleaner than soft delete)
+    await client.from('rp_assignments')
+        .delete()
+        .eq('discovered_salon_id', salonId)
+        .isFilter('unassigned_at', null);
 
-    try {
-      // Create new assignment
-      await client.from('rp_assignments').insert({
-        'discovered_salon_id': salonId,
-        'rp_user_id': rpUserId,
-        'assigned_by': adminId,
-      });
-    } catch (e) {
-      // Skip this salon on error, try next
-      continue; // Skip this salon, try next
-    }
+    // Create new assignment
+    await client.from('rp_assignments').insert({
+      'discovered_salon_id': salonId,
+      'rp_user_id': rpUserId,
+      'assigned_by': adminId,
+    });
 
     await client.from('discovered_salons').update({
       'assigned_rp_id': rpUserId,
