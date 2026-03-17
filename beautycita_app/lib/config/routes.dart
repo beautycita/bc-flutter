@@ -37,6 +37,8 @@ import 'package:beautycita/screens/post_registration_screen.dart';
 import 'package:beautycita/screens/feed/feed_screen.dart';
 import 'package:beautycita/screens/feed/saved_screen.dart';
 import 'package:beautycita/screens/rp/rp_shell_screen.dart';
+import 'package:beautycita/screens/rp/rp_centro_screen.dart';
+import 'package:beautycita/screens/rp/rp_chat_screen.dart';
 import 'package:beautycita/screens/about_screen.dart';
 import 'package:beautycita/screens/help_screen.dart';
 import 'package:beautycita/screens/press_screen.dart';
@@ -83,6 +85,8 @@ class AppRoutes {
   static const String feed = '/feed';
   static const String feedSaved = '/feed/saved';
   static const String rp = '/rp';
+  static const String rpCentro = '/rp/centro';
+  static const String rpChat = '/rp/chat';
   static const String about = '/about';
   static const String contact = '/contact';
   static const String help = '/help';
@@ -312,6 +316,41 @@ class AppRoutes {
             );
           },
         ),
+      ),
+      GoRoute(
+        path: rpCentro,
+        name: 'rp-centro',
+        pageBuilder: (context, state) {
+          final salon = state.extra as Map<String, dynamic>;
+          return CustomTransitionPage(
+            key: state.pageKey,
+            child: RPCentroScreen(salon: salon),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
+                  .chain(CurveTween(curve: Curves.easeInOutCubic));
+              return SlideTransition(position: animation.drive(tween), child: child);
+            },
+          );
+        },
+      ),
+      GoRoute(
+        path: rpChat,
+        name: 'rp-chat',
+        pageBuilder: (context, state) {
+          final args = state.extra as Map<String, dynamic>;
+          return CustomTransitionPage(
+            key: state.pageKey,
+            child: RPChatScreen(
+              salon: args['salon'] as Map<String, dynamic>,
+              channel: args['channel'] as String,
+            ),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
+                  .chain(CurveTween(curve: Curves.easeInOutCubic));
+              return SlideTransition(position: animation.drive(tween), child: child);
+            },
+          );
+        },
       ),
       GoRoute(
         path: business,

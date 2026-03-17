@@ -32,7 +32,6 @@ class _SalonOnboardingScreenState
   final _emailCtrl = TextEditingController();
   final _addressCtrl = TextEditingController();
   final _detailsCtrl = TextEditingController();
-  final _rfcCtrl = TextEditingController();
   final _scrollCtrl = ScrollController();
   final _suggestionsKey = GlobalKey();
 
@@ -185,7 +184,6 @@ class _SalonOnboardingScreenState
     _emailCtrl.dispose();
     _addressCtrl.dispose();
     _detailsCtrl.dispose();
-    _rfcCtrl.dispose();
     _scrollCtrl.dispose();
     _mapCtrl.dispose();
     super.dispose();
@@ -459,7 +457,6 @@ class _SalonOnboardingScreenState
           'lng': _pickedLng,
           'photo_url': ?_photoUrl,
           'discovered_salon_id': ?discoveredSalonId,
-          if (_rfcCtrl.text.trim().isNotEmpty) 'rfc': _rfcCtrl.text.trim(),
         },
       );
 
@@ -817,26 +814,6 @@ class _SalonOnboardingScreenState
                           hint: 'Local, piso, interior...',
                           icon: Icons.edit_location_alt_outlined,
                           textCapitalization: TextCapitalization.sentences,
-                        ),
-                        const SizedBox(height: 14),
-
-                        // Optional RFC
-                        _StyledField(
-                          controller: _rfcCtrl,
-                          label: 'RFC (opcional)',
-                          hint: 'XAXX010101000',
-                          icon: Icons.receipt_long_rounded,
-                          textCapitalization: TextCapitalization.characters,
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.only(left: 4, top: 2),
-                          child: Text(
-                            'Con RFC la retencion de ISR es solo 2.5%. Sin RFC es 20%.',
-                            style: GoogleFonts.nunito(
-                              fontSize: 11,
-                              color: colors.onSurface.withValues(alpha: 0.45),
-                            ),
-                          ),
                         ),
                         const SizedBox(height: 14),
 

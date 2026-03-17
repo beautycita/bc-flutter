@@ -52,12 +52,22 @@ function substituteVars(
     .replace(/\{booking_system\}/g, String(salon.booking_system ?? "ninguno"));
 }
 
-// ── Auth: verify admin/superadmin ──
+// ── Auth: verify admin/superadmin/rp ──
 
-async function verifyAdmin(
+const RP_ALLOWED_ACTIONS = new Set([
+  "send_wa", "send_email", "send_sms", "log_call",
+  "get_history", "get_templates",
+]);
+
+const ADMIN_ONLY_ACTIONS = new Set([
+  "upload_recording", "transcribe",
+]);
+
+async function verifyAuthorized(
   token: string,
   serviceClient: ReturnType<typeof createClient>,
-): Promise<{ user: { id: string }; error?: Response }> {
+  action: string,
+): Promise<{ user: { id: string; role: string }; error?: Response }> {
   const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     global: { headers: { Authorization: `Bearer ${token}` } },
   });
@@ -76,11 +86,22 @@ async function verifyAdmin(
     .eq("id", user.id)
     .single();
 
-  if (!profile || !["admin", "superadmin"].includes(profile.role)) {
-    return { user: null as any, error: jsonResponse({ error: "Admin access required" }, 403) };
+  if (!profile) {
+    return { user: null as any, error: jsonResponse({ error: "Profile not found" }, 403) };
   }
 
-  return { user: { id: user.id } };
+  const isAdmin = ["admin", "superadmin"].includes(profile.role);
+  const isRp = profile.role === "rp";
+
+  if (isAdmin) {
+    return { user: { id: user.id, role: profile.role } };
+  }
+
+  if (isRp && RP_ALLOWED_ACTIONS.has(action)) {
+    return { user: { id: user.id, role: profile.role } };
+  }
+
+  return { user: null as any, error: jsonResponse({ error: "Access denied" }, 403) };
 }
 
 // ── Fetch salon by ID ──
@@ -148,8 +169,8 @@ serve(async (req: Request) => {
 
     const serviceClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
-    // All actions require admin/superadmin
-    const { user, error: authErr } = await verifyAdmin(token, serviceClient);
+    // All actions require admin/superadmin or rp (for allowed actions)
+    const { user, error: authErr } = await verifyAuthorized(token, serviceClient, action);
     if (authErr) return authErr;
 
     // ───────── SEND_WA: send WhatsApp message ─────────
