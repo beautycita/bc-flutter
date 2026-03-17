@@ -7,8 +7,10 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../config/constants.dart';
 import '../../providers/admin_provider.dart';
 import '../../services/export_service.dart';
+import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 import 'admin_salon_detail_screen.dart';
+import 'pipeline_lead_detail_sheet.dart';
 
 const _salonExportColumns = [
   ExportColumn('name', 'Nombre'),
@@ -23,14 +25,49 @@ const _salonExportColumns = [
   ExportColumn('total_reviews', 'Resenas'),
 ];
 
-class AdminSalonesScreen extends ConsumerStatefulWidget {
+/// Wrapper with Registrados / Descubiertos tabs.
+class AdminSalonesScreen extends StatelessWidget {
   const AdminSalonesScreen({super.key});
 
   @override
-  ConsumerState<AdminSalonesScreen> createState() => _AdminSalonesScreenState();
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return DefaultTabController(
+      length: 2,
+      child: Column(
+        children: [
+          TabBar(
+            labelColor: colors.primary,
+            unselectedLabelColor: colors.onSurface.withValues(alpha: 0.5),
+            indicatorColor: colors.primary,
+            tabs: const [
+              Tab(text: 'Registrados'),
+              Tab(text: 'Descubiertos'),
+            ],
+          ),
+          const Expanded(
+            child: TabBarView(
+              children: [
+                _RegisteredSalonesTab(),
+                _DiscoveredSalonesTab(),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
-class _AdminSalonesScreenState extends ConsumerState<AdminSalonesScreen> {
+/// Tab 1: Registered salons (original AdminSalonesScreen content).
+class _RegisteredSalonesTab extends ConsumerStatefulWidget {
+  const _RegisteredSalonesTab();
+
+  @override
+  ConsumerState<_RegisteredSalonesTab> createState() => _RegisteredSalonesTabState();
+}
+
+class _RegisteredSalonesTabState extends ConsumerState<_RegisteredSalonesTab> {
   final _searchController = TextEditingController();
   Timer? _debounce;
   String _activeQuery = '';
@@ -779,4 +816,198 @@ class _ExportOption extends StatelessWidget {
       onTap: onTap,
     );
   }
+}
+
+// ---------------------------------------------------------------------------
+// Tab 2: Discovered salons (pipeline)
+// ---------------------------------------------------------------------------
+
+class _DiscoveredSalonesTab extends ConsumerStatefulWidget {
+  const _DiscoveredSalonesTab();
+
+  @override
+  ConsumerState<_DiscoveredSalonesTab> createState() => _DiscoveredSalonesTabState();
+}
+
+class _DiscoveredSalonesTabState extends ConsumerState<_DiscoveredSalonesTab> {
+  final _searchCtrl = TextEditingController();
+  Timer? _debounce;
+  String _query = '';
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return Column(
+      children: [
+        // Search
+        Padding(
+          padding: const EdgeInsets.all(AppConstants.paddingMD),
+          child: TextField(
+            controller: _searchCtrl,
+            decoration: InputDecoration(
+              hintText: 'Buscar salon descubierto...',
+              prefixIcon: const Icon(Icons.search, size: 20),
+              suffixIcon: _query.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.close, size: 18),
+                      onPressed: () {
+                        _searchCtrl.clear();
+                        setState(() => _query = '');
+                      },
+                    )
+                  : null,
+              filled: true,
+              fillColor: colors.surfaceContainerHighest.withValues(alpha: 0.3),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+                borderSide: BorderSide.none,
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            ),
+            onChanged: (v) {
+              _debounce?.cancel();
+              _debounce = Timer(const Duration(milliseconds: 400), () {
+                if (mounted) setState(() => _query = v.trim());
+              });
+            },
+          ),
+        ),
+        // Results
+        Expanded(
+          child: FutureBuilder<List<Map<String, dynamic>>>(
+            future: _fetchDiscovered(),
+            builder: (context, snap) {
+              if (snap.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              final salons = snap.data ?? [];
+              if (salons.isEmpty) {
+                return Center(
+                  child: Text(
+                    _query.isEmpty ? 'Cargando salones...' : 'Sin resultados',
+                    style: GoogleFonts.nunito(color: colors.onSurface.withValues(alpha: 0.5)),
+                  ),
+                );
+              }
+              return ListView.separated(
+                padding: const EdgeInsets.symmetric(horizontal: AppConstants.paddingMD),
+                itemCount: salons.length,
+                separatorBuilder: (_, __) => const Divider(height: 1),
+                itemBuilder: (context, i) {
+                  final s = salons[i];
+                  final name = s['business_name'] as String? ?? '';
+                  final city = s['location_city'] as String? ?? '';
+                  final status = s['status'] as String? ?? 'discovered';
+                  final rating = s['rating_average'];
+                  final waVerified = s['whatsapp_verified'] == true;
+
+                  return ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: colors.primary.withValues(alpha: 0.1),
+                      child: Text(
+                        name.isNotEmpty ? name[0].toUpperCase() : '?',
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w700,
+                          color: colors.primary,
+                        ),
+                      ),
+                    ),
+                    title: Text(
+                      name,
+                      style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    subtitle: Row(
+                      children: [
+                        Text(city, style: GoogleFonts.nunito(fontSize: 12)),
+                        if (rating != null) ...[
+                          const SizedBox(width: 8),
+                          Icon(Icons.star, size: 12, color: Colors.amber.shade700),
+                          Text(' $rating', style: GoogleFonts.nunito(fontSize: 12)),
+                        ],
+                        const SizedBox(width: 8),
+                        if (waVerified)
+                          const Icon(Icons.verified, size: 12, color: Colors.green),
+                      ],
+                    ),
+                    trailing: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: _statusColor(status).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        _statusLabel(status),
+                        style: GoogleFonts.nunito(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: _statusColor(status),
+                        ),
+                      ),
+                    ),
+                    onTap: () {
+                      // Open discovered salon detail
+                      showLeadDetailSheet(context, s);
+                    },
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchDiscovered() async {
+    try {
+      var query = SupabaseClientService.client
+          .from('discovered_salons')
+          .select('id, business_name, phone, whatsapp, location_city, location_state, status, rating_average, rating_count, whatsapp_verified, feature_image_url, matched_categories, interest_count')
+          .not('latitude', 'is', null);
+
+      if (_query.isNotEmpty) {
+        query = query.ilike('business_name', '%$_query%');
+      }
+
+      final data = await query
+          .order('interest_count', ascending: false)
+          .limit(100);
+      return List<Map<String, dynamic>>.from(data);
+    } catch (e) {
+      debugPrint('[DiscoveredTab] Error: $e');
+      return [];
+    }
+  }
+
+  Color _statusColor(String status) => switch (status) {
+    'discovered' => Colors.grey,
+    'selected' => Colors.blue,
+    'outreach_sent' => Colors.orange,
+    'registered' => Colors.green,
+    'converted' => Colors.green,
+    'declined' => Colors.red,
+    'unreachable' => Colors.grey.shade400,
+    _ => Colors.grey,
+  };
+
+  String _statusLabel(String status) => switch (status) {
+    'discovered' => 'Encontrado',
+    'selected' => 'Seleccionado',
+    'outreach_sent' => 'Contactado',
+    'registered' => 'Registrado',
+    'converted' => 'Convertido',
+    'declined' => 'Rechazado',
+    'unreachable' => 'Inalcanzable',
+    _ => status,
+  };
 }
