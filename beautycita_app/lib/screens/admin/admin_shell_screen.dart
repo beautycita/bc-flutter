@@ -22,6 +22,7 @@ import 'admin_chat_screen.dart';
 import 'admin_tax_reports_screen.dart';
 import 'admin_finance_dashboard_screen.dart';
 import 'admin_operations_dashboard_screen.dart';
+import 'admin_rp_tracking_screen.dart';
 
 /// Index of the currently selected admin tab.
 final adminTabProvider = StateProvider<int>((ref) => 0);
@@ -39,6 +40,7 @@ class AdminShellScreen extends ConsumerWidget {
     _AdminTab(icon: Icons.analytics, label: 'Analitica', section: 'Gestion'),
     _AdminTab(icon: Icons.rate_review, label: 'Resenas', section: 'Gestion'),
     _AdminTab(icon: Icons.chat_rounded, label: 'Chat', section: 'Gestion'),
+    _AdminTab(icon: Icons.directions_walk, label: 'RP Tracking', section: 'Gestion'),
     _AdminTab(icon: Icons.receipt_long, label: 'Retenciones SAT', section: 'Finanzas'),
     _AdminTab(icon: Icons.account_balance, label: 'Finanzas CEO', section: 'Finanzas'),
     _AdminTab(icon: Icons.monitor_heart, label: 'Operaciones', section: 'Finanzas'),
@@ -218,6 +220,8 @@ class _AdminContent extends ConsumerWidget {
         return const ReviewsScreen();
       case 'Chat':
         return const AdminChatScreen();
+      case 'RP Tracking':
+        return const AdminRpTrackingScreen();
       case 'Retenciones SAT':
         return const AdminTaxReportsScreen();
       case 'Perfiles de Servicio':

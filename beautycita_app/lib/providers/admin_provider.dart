@@ -993,6 +993,66 @@ final searchDiscoveredSalonsProvider = FutureProvider.family<List<Map<String, dy
 /// before watching [searchDiscoveredSalonsProvider].
 final pipelineSearchParamsProvider = StateProvider<Map<String, dynamic>>((ref) => {});
 
+/// RP performance tracking — assignment counts, conversions, positive feedback.
+final rpTrackingProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  final client = SupabaseClientService.client;
+
+  // Get all RP users
+  final rpUsers = await client
+      .from('profiles')
+      .select('id, username, full_name, avatar_url')
+      .eq('role', 'rp');
+
+  final stats = <Map<String, dynamic>>[];
+
+  for (final rp in (rpUsers as List)) {
+    final rpId = rp['id'] as String;
+
+    // Count assignments
+    final assigned = await client
+        .from('discovered_salons')
+        .select('id')
+        .eq('assigned_rp_id', rpId)
+        .count();
+
+    // Count registered/converted
+    final converted = await client
+        .from('discovered_salons')
+        .select('id')
+        .eq('assigned_rp_id', rpId)
+        .inFilter('status', ['registered', 'converted'])
+        .count();
+
+    // Count positive visits (interest >= 4)
+    final positiveVisits = await client
+        .from('rp_visits')
+        .select('id')
+        .eq('rp_user_id', rpId)
+        .gte('interest_level', 4)
+        .count();
+
+    // First assignment date
+    final firstAssignment = await client
+        .from('discovered_salons')
+        .select('updated_at')
+        .eq('assigned_rp_id', rpId)
+        .order('updated_at')
+        .limit(1);
+
+    stats.add({
+      ...rp as Map<String, dynamic>,
+      'assigned_count': assigned.count,
+      'converted_count': converted.count,
+      'positive_visits': positiveVisits.count,
+      'first_assignment': (firstAssignment as List).isNotEmpty
+          ? firstAssignment[0]['updated_at']
+          : null,
+    });
+  }
+
+  return stats;
+});
+
 /// Aggregates discovered_salons by status for the funnel metrics header.
 /// Uses parallel count queries (indexed) instead of loading all 35k+ rows.
 final pipelineFunnelStatsProvider = FutureProvider<Map<String, int>>((ref) async {
