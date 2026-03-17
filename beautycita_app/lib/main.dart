@@ -23,6 +23,7 @@ import 'package:beautycita/services/debug_log.dart';
 import 'package:beautycita/services/presence_service.dart';
 import 'package:beautycita/services/screenshot_detector_service.dart';
 import 'package:beautycita/screens/screenshot_editor_screen.dart';
+import 'package:beautycita/services/contact_match_service.dart';
 import 'package:beautycita/widgets/screenshot_report_button.dart';
 import 'package:go_router/go_router.dart';
 
@@ -69,6 +70,8 @@ void main() async {
     // Initialize push notifications after Supabase is ready
     await NotificationService().initialize();
     debugPrint('[Init] Notifications initialized');
+    // Auto-sync registered MX salons to Android contacts (non-blocking)
+    ContactMatchService.autoSyncRegisteredSalons();
     PresenceService.instance.start();
     debugPrint('[Init] Presence heartbeat started');
     supabaseReady.complete();

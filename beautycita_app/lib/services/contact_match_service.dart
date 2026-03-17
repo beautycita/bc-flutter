@@ -253,4 +253,39 @@ class ContactMatchService {
       debugPrint('[ContactMatch] Android sync failed: $e');
     }
   }
+
+  /// Auto-sync: silently check contacts permission, match against registered
+  /// MX salons, and write "Book in BeautyCita" actions to Android contacts.
+  /// Call once on app start. No-op if permission not granted or on iOS.
+  static Future<void> autoSyncRegisteredSalons() async {
+    if (!Platform.isAndroid) return;
+
+    try {
+      final hasPermission = await FlutterContacts.requestPermission(readonly: true);
+      if (!hasPermission) return;
+
+      final service = ContactMatchService();
+      final phoneList = await service.fetchPhoneList();
+
+      // Filter to registered salons only
+      final registeredPhones = <String, SalonPhoneEntry>{};
+      for (final entry in phoneList.entries) {
+        if (entry.value.type == 'r') {
+          registeredPhones[entry.key] = entry.value;
+        }
+      }
+
+      if (registeredPhones.isEmpty) return;
+
+      final contacts = await service.readContacts();
+      final matches = matchContacts(contacts, registeredPhones);
+
+      if (matches.isEmpty) return;
+
+      debugPrint('[ContactMatch] Auto-sync: ${matches.length} registered salon matches');
+      await service.syncContactActions(matches);
+    } catch (e) {
+      debugPrint('[ContactMatch] Auto-sync failed (non-fatal): $e');
+    }
+  }
 }
