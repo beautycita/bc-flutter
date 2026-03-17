@@ -165,8 +165,20 @@ serve(async (req: Request) => {
       }
 
       // Apply service-type filtering if query provided
+      // If too few matched results, pad with nearby unfiltered salons
+      let allResults = results;
       if (serviceKeywords && serviceKeywords.length > 0) {
-        results = results.filter((s: any) => matchesService(s, serviceKeywords));
+        const filtered = results.filter((s: any) => matchesService(s, serviceKeywords));
+        if (filtered.length >= limit) {
+          results = filtered;
+        } else {
+          // Put matched salons first, then pad with closest unmatched
+          const matchedIds = new Set(filtered.map((s: any) => s.id));
+          const unmatched = results
+            .filter((s: any) => !matchedIds.has(s.id))
+            .sort((a: any, b: any) => a.distance_km - b.distance_km);
+          results = [...filtered, ...unmatched];
+        }
       }
 
       // Quality-weighted ranking: best salons first, not just closest
@@ -702,6 +714,11 @@ function qualityScore(salon: any, serviceKeywords: string[] | null): number {
   if (salon.working_hours) score += 1;
   if (salon.website || salon.facebook_url || salon.instagram_url) score += 1;
   if (salon.specialties && Array.isArray(salon.specialties) && salon.specialties.length > 0) score += 1;
+
+  // Penalty for non-beauty businesses (dental, hotel, mall, clinic, hospital, veterinary)
+  const name = (salon.business_name ?? "").toLowerCase();
+  const nonBeauty = ["dental", "dentist", "odontol", "hospital", "clinica medica", "veterinar", "hotel", "resort", "plaza", "soriana", "walmart", "oxxo", "farmacia"];
+  if (nonBeauty.some(nb => name.includes(nb))) score -= 50;
 
   return score;
 }
