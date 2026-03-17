@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -162,28 +164,43 @@ class _SalonContent extends ConsumerWidget {
 
 // ── Hero ────────────────────────────────────────────────────────────────────
 
-class _HeroSection extends StatelessWidget {
+class _HeroSection extends StatefulWidget {
   const _HeroSection({required this.salon});
 
   final Map<String, dynamic> salon;
 
-  String get _name => (salon['name'] ?? salon['salon_name'] ?? '').toString();
+  @override
+  State<_HeroSection> createState() => _HeroSectionState();
+}
+
+class _HeroSectionState extends State<_HeroSection> {
+  bool _hovering = false;
+
+  String get _name => (widget.salon['name'] ?? widget.salon['salon_name'] ?? '').toString();
   String? get _imageUrl =>
-      (salon['feature_image_url'] ?? salon['photo_url'])?.toString();
+      (widget.salon['feature_image_url'] ?? widget.salon['photo_url'])?.toString();
 
   @override
   Widget build(BuildContext context) {
     if (_imageUrl != null && _imageUrl!.isNotEmpty) {
-      return SizedBox(
+      return MouseRegion(
+        onEnter: (_) => setState(() => _hovering = true),
+        onExit: (_) => setState(() => _hovering = false),
+        child: SizedBox(
         height: 220,
         width: double.infinity,
         child: Stack(
           fit: StackFit.expand,
           children: [
-            Image.network(
-              _imageUrl!,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => _gradientFallback(),
+            AnimatedScale(
+              scale: _hovering ? 1.03 : 1.0,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOutCubic,
+              child: Image.network(
+                _imageUrl!,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => _gradientFallback(),
+              ),
             ),
             // Gradient overlay
             Container(
@@ -216,6 +233,7 @@ class _HeroSection extends StatelessWidget {
             ),
           ],
         ),
+      ),
       );
     }
 
@@ -422,18 +440,30 @@ class _BioSectionState extends State<_BioSection>
             ),
           ),
           const SizedBox(height: 12),
-          // Blockquote style
-          Container(
-            padding: const EdgeInsets.only(left: 16),
-            decoration: const BoxDecoration(
-              border: Border(
-                left: BorderSide(
-                  color: Color(0xFFe8b4f8),
-                  width: 3,
-                ),
+          // Blockquote style with slide-in animation
+          TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0, end: 1),
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOutCubic,
+            builder: (context, value, child) => Opacity(
+              opacity: value,
+              child: Transform.translate(
+                offset: Offset(-20 * (1 - value), 0),
+                child: child,
               ),
             ),
-            child: widget.isLoading ? _buildShimmer() : _buildBio(),
+            child: Container(
+              padding: const EdgeInsets.only(left: 16),
+              decoration: const BoxDecoration(
+                border: Border(
+                  left: BorderSide(
+                    color: Color(0xFFe8b4f8),
+                    width: 3,
+                  ),
+                ),
+              ),
+              child: widget.isLoading ? _buildShimmer() : _buildBio(),
+            ),
           ),
         ],
       ),
@@ -542,14 +572,16 @@ class _InviteSection extends StatelessWidget {
           ),
           const SizedBox(height: 16),
 
-          // Invite message card
-          InviteMessageCard(
-            message: state.inviteMessage,
-            isGenerating: _isGenerating,
-            onRedo: state.inviteMessage != null
-                ? () =>
-                    ref.read(webInviteProvider.notifier).generateMessage()
-                : null,
+          // Invite message card with gentle float
+          _BreathingFloat(
+            child: InviteMessageCard(
+              message: state.inviteMessage,
+              isGenerating: _isGenerating,
+              onRedo: state.inviteMessage != null
+                  ? () =>
+                      ref.read(webInviteProvider.notifier).generateMessage()
+                  : null,
+            ),
           ),
 
           // Generate button when on salonDetail with no message and not generating
@@ -735,30 +767,125 @@ class _BottomBar extends StatelessWidget {
     required VoidCallback? onPressed,
     required Widget child,
   }) {
-    return SizedBox(
-      height: 48,
-      child: DecoratedBox(
+    return _SendButtonHover(
+      enabled: onPressed != null,
+      child: SizedBox(
+        height: 48,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            gradient: onPressed != null
+                ? const LinearGradient(
+                    colors: [Color(0xFFec4899), Color(0xFF9333ea)],
+                  )
+                : null,
+            color: onPressed == null ? const Color(0xFFE5E7EB) : null,
+          ),
+          child: ElevatedButton(
+            onPressed: onPressed,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.transparent,
+              shadowColor: Colors.transparent,
+              disabledBackgroundColor: Colors.transparent,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: child,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Breathing float animation ─────────────────────────────────────────────────
+
+class _BreathingFloat extends StatefulWidget {
+  const _BreathingFloat({required this.child});
+  final Widget child;
+
+  @override
+  State<_BreathingFloat> createState() => _BreathingFloatState();
+}
+
+class _BreathingFloatState extends State<_BreathingFloat>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        final offset = math.sin(_controller.value * math.pi) * 2;
+        return Transform.translate(
+          offset: Offset(0, offset),
+          child: child,
+        );
+      },
+      child: widget.child,
+    );
+  }
+}
+
+// ── Send button hover glow ────────────────────────────────────────────────────
+
+class _SendButtonHover extends StatefulWidget {
+  const _SendButtonHover({required this.child, required this.enabled});
+  final Widget child;
+  final bool enabled;
+
+  @override
+  State<_SendButtonHover> createState() => _SendButtonHoverState();
+}
+
+class _SendButtonHoverState extends State<_SendButtonHover> {
+  bool _hovering = false;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!widget.enabled) return widget.child;
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovering = true),
+      onExit: (_) => setState(() => _hovering = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOutCubic,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
-          gradient: onPressed != null
-              ? const LinearGradient(
-                  colors: [Color(0xFFec4899), Color(0xFF9333ea)],
-                )
-              : null,
-          color: onPressed == null ? const Color(0xFFE5E7EB) : null,
+          boxShadow: _hovering
+              ? [
+                  BoxShadow(
+                    color: const Color(0xFFec4899).withValues(alpha: 0.3),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
+                  ),
+                  BoxShadow(
+                    color: const Color(0xFF9333ea).withValues(alpha: 0.15),
+                    blurRadius: 20,
+                    offset: const Offset(0, 6),
+                  ),
+                ]
+              : [],
         ),
-        child: ElevatedButton(
-          onPressed: onPressed,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.transparent,
-            shadowColor: Colors.transparent,
-            disabledBackgroundColor: Colors.transparent,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-          child: child,
-        ),
+        child: widget.child,
       ),
     );
   }

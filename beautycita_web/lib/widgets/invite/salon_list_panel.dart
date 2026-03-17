@@ -110,58 +110,82 @@ class _SalonListPanelState extends ConsumerState<SalonListPanel>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       color: const Color(0xFFF8F7F5),
-      child: TextField(
-        controller: _searchController,
-        onChanged: _onSearchChanged,
-        style: const TextStyle(
-          fontFamily: 'Nunito',
-          fontSize: 15,
-          fontWeight: FontWeight.w500,
-        ),
-        decoration: InputDecoration(
-          filled: true,
-          fillColor: Colors.white,
-          hintText: _placeholders[_placeholderIndex],
-          hintStyle: TextStyle(
-            fontFamily: 'Nunito',
-            fontSize: 15,
-            color: Colors.grey.shade400,
-          ),
-          prefixIcon: Icon(
-            Icons.search_rounded,
-            color: Colors.grey.shade500,
-            size: 22,
-          ),
-          suffixIcon: _searchController.text.isNotEmpty
-              ? IconButton(
-                  icon: Icon(
-                    Icons.close_rounded,
-                    color: Colors.grey.shade500,
-                    size: 20,
+      child: Focus(
+        onFocusChange: (focused) => setState(() {}),
+        child: Builder(
+          builder: (context) {
+            final isFocused = Focus.of(context).hasFocus;
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOutCubic,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: isFocused
+                    ? [
+                        BoxShadow(
+                          color: const Color(0xFFec4899).withValues(alpha: 0.10),
+                          blurRadius: 8,
+                          spreadRadius: 1,
+                        ),
+                      ]
+                    : [],
+              ),
+              child: TextField(
+                controller: _searchController,
+                onChanged: _onSearchChanged,
+                style: const TextStyle(
+                  fontFamily: 'Nunito',
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                ),
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: Colors.white,
+                  hintText: _placeholders[_placeholderIndex],
+                  hintStyle: TextStyle(
+                    fontFamily: 'Nunito',
+                    fontSize: 15,
+                    color: Colors.grey.shade400,
                   ),
-                  onPressed: _onClear,
-                  splashRadius: 18,
-                )
-              : null,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 12,
-          ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(24),
-            borderSide: BorderSide.none,
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(24),
-            borderSide: BorderSide.none,
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(24),
-            borderSide: const BorderSide(
-              color: Color(0xFFec4899),
-              width: 1.5,
-            ),
-          ),
+                  prefixIcon: Icon(
+                    Icons.search_rounded,
+                    color: Colors.grey.shade500,
+                    size: 22,
+                  ),
+                  suffixIcon: _searchController.text.isNotEmpty
+                      ? IconButton(
+                          icon: Icon(
+                            Icons.close_rounded,
+                            color: Colors.grey.shade500,
+                            size: 20,
+                          ),
+                          onPressed: _onClear,
+                          splashRadius: 18,
+                        )
+                      : null,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(24),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(24),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(24),
+                    borderSide: const BorderSide(
+                      color: Color(0xFFec4899),
+                      width: 1.5,
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
         ),
       ),
     );

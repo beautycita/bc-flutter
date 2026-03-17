@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 /// Web-styled invite message card with Aphrodite attribution.
@@ -22,8 +24,10 @@ class InviteMessageCard extends StatefulWidget {
 }
 
 class _InviteMessageCardState extends State<InviteMessageCard>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late AnimationController _shimmerCtrl;
+  late AnimationController _badgeShimmerCtrl;
+  late AnimationController _redoSpinCtrl;
   bool _redoHovering = false;
 
   @override
@@ -33,11 +37,21 @@ class _InviteMessageCardState extends State<InviteMessageCard>
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     )..repeat(reverse: true);
+    _badgeShimmerCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 4),
+    )..repeat();
+    _redoSpinCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
   }
 
   @override
   void dispose() {
     _shimmerCtrl.dispose();
+    _badgeShimmerCtrl.dispose();
+    _redoSpinCtrl.dispose();
     super.dispose();
   }
 
@@ -105,11 +119,29 @@ class _InviteMessageCardState extends State<InviteMessageCard>
         // Footer: Aphrodite badge + redo button
         Row(
           children: [
-            // Aphrodite attribution
-            ShaderMask(
-              shaderCallback: (bounds) => const LinearGradient(
-                colors: [Color(0xFFec4899), Color(0xFF9333ea), Color(0xFF3b82f6)],
-              ).createShader(bounds),
+            // Aphrodite attribution with shimmer sweep
+            AnimatedBuilder(
+              animation: _badgeShimmerCtrl,
+              builder: (context, child) {
+                return ShaderMask(
+                  shaderCallback: (bounds) {
+                    final sweepPos = _badgeShimmerCtrl.value * 3 - 1;
+                    return LinearGradient(
+                      colors: const [
+                        Color(0xFFec4899),
+                        Color(0xFFFFFFFF),
+                        Color(0xFF3b82f6),
+                      ],
+                      stops: [
+                        (sweepPos - 0.2).clamp(0.0, 1.0),
+                        sweepPos.clamp(0.0, 1.0),
+                        (sweepPos + 0.2).clamp(0.0, 1.0),
+                      ],
+                    ).createShader(bounds);
+                  },
+                  child: child!,
+                );
+              },
               child: const Text(
                 'Creado por Aphrodite',
                 style: TextStyle(
@@ -122,27 +154,39 @@ class _InviteMessageCardState extends State<InviteMessageCard>
               ),
             ),
             const Spacer(),
-            // Redo button
+            // Redo button with spin on tap
             if (widget.onRedo != null)
               MouseRegion(
                 onEnter: (_) => setState(() => _redoHovering = true),
                 onExit: (_) => setState(() => _redoHovering = false),
-                child: IconButton(
-                  onPressed: widget.onRedo,
-                  icon: Icon(
-                    Icons.refresh_rounded,
-                    size: 18,
-                    color: _redoHovering
-                        ? colors.primary
-                        : colors.onSurface.withValues(alpha: 0.35),
+                child: AnimatedBuilder(
+                  animation: _redoSpinCtrl,
+                  builder: (context, child) {
+                    return Transform.rotate(
+                      angle: _redoSpinCtrl.value * 2 * math.pi,
+                      child: child,
+                    );
+                  },
+                  child: IconButton(
+                    onPressed: () {
+                      _redoSpinCtrl.forward(from: 0);
+                      widget.onRedo?.call();
+                    },
+                    icon: Icon(
+                      Icons.refresh_rounded,
+                      size: 18,
+                      color: _redoHovering
+                          ? colors.primary
+                          : colors.onSurface.withValues(alpha: 0.35),
+                    ),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(
+                      minWidth: 32,
+                      minHeight: 32,
+                    ),
+                    splashRadius: 18,
+                    tooltip: 'Regenerar mensaje',
                   ),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(
-                    minWidth: 32,
-                    minHeight: 32,
-                  ),
-                  splashRadius: 18,
-                  tooltip: 'Regenerar mensaje',
                 ),
               ),
           ],

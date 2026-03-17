@@ -901,7 +901,7 @@ class _DiscoveredSalonDetailContentState
 
         // ── Enrichment Status Bar ─────────────────────────────────────
         const SizedBox(height: BCSpacing.md),
-        Container(
+        _HoverLift(child: Container(
           width: double.infinity,
           padding: const EdgeInsets.all(BCSpacing.sm),
           decoration: BoxDecoration(
@@ -980,7 +980,7 @@ class _DiscoveredSalonDetailContentState
               ],
             ],
           ),
-        ),
+        )),
 
         const SizedBox(height: BCSpacing.lg),
         const Divider(),
@@ -992,53 +992,32 @@ class _DiscoveredSalonDetailContentState
 
         // Phone — clickable tel: link with WA badge
         if (salon.phone != null) ...[
-          Row(
-            children: [
-              Icon(Icons.phone_outlined, size: 16,
-                  color: colors.onSurface.withValues(alpha: 0.5)),
-              const SizedBox(width: BCSpacing.sm),
-              Expanded(
-                child: InkWell(
-                  onTap: () => launchUrl(Uri.parse('tel:${salon.phone}')),
-                  child: Text(salon.phone!, style: linkStyle),
-                ),
-              ),
-              _WaStatusBadge(status: salon.waStatus),
-            ],
+          _HoverContactLink(
+            icon: Icons.phone_outlined,
+            iconColor: colors.onSurface.withValues(alpha: 0.5),
+            label: salon.phone!,
+            onTap: () => launchUrl(Uri.parse('tel:${salon.phone}')),
+            trailing: _WaStatusBadge(status: salon.waStatus),
           ),
           const SizedBox(height: BCSpacing.xs),
           // WhatsApp direct link
-          Row(
-            children: [
-              Icon(Icons.chat, size: 16, color: Colors.green),
-              const SizedBox(width: BCSpacing.sm),
-              Expanded(
-                child: InkWell(
-                  onTap: () {
-                    final cleanPhone =
-                        salon.phone!.replaceAll(RegExp(r'[^\d+]'), '');
-                    launchUrl(
-                      Uri.parse('https://wa.me/$cleanPhone'),
-                      mode: LaunchMode.externalApplication,
-                    );
-                  },
-                  child: Row(
-                    children: [
-                      Text('WhatsApp', style: linkStyle),
-                      if (salon.whatsappVerified == true) ...[
-                        const SizedBox(width: 4),
-                        const Icon(Icons.verified, size: 12,
-                            color: Colors.green),
-                      ] else if (salon.whatsappVerified == false) ...[
-                        const SizedBox(width: 4),
-                        const Icon(Icons.cancel, size: 12,
-                            color: Colors.red),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-            ],
+          _HoverContactLink(
+            icon: Icons.chat,
+            iconColor: Colors.green,
+            label: 'WhatsApp',
+            onTap: () {
+              final cleanPhone =
+                  salon.phone!.replaceAll(RegExp(r'[^\d+]'), '');
+              launchUrl(
+                Uri.parse('https://wa.me/$cleanPhone'),
+                mode: LaunchMode.externalApplication,
+              );
+            },
+            trailing: salon.whatsappVerified == true
+                ? const Icon(Icons.verified, size: 12, color: Colors.green)
+                : salon.whatsappVerified == false
+                    ? const Icon(Icons.cancel, size: 12, color: Colors.red)
+                    : null,
           ),
           const SizedBox(height: BCSpacing.sm),
         ] else ...[
@@ -1052,18 +1031,11 @@ class _DiscoveredSalonDetailContentState
 
         // Email
         if (salon.email != null && salon.email!.isNotEmpty) ...[
-          Row(
-            children: [
-              Icon(Icons.email_outlined, size: 16,
-                  color: colors.onSurface.withValues(alpha: 0.5)),
-              const SizedBox(width: BCSpacing.sm),
-              Expanded(
-                child: InkWell(
-                  onTap: () => launchUrl(Uri.parse('mailto:${salon.email}')),
-                  child: Text(salon.email!, style: linkStyle),
-                ),
-              ),
-            ],
+          _HoverContactLink(
+            icon: Icons.email_outlined,
+            iconColor: colors.onSurface.withValues(alpha: 0.5),
+            label: salon.email!,
+            onTap: () => launchUrl(Uri.parse('mailto:${salon.email}')),
           ),
           const SizedBox(height: BCSpacing.sm),
         ],
@@ -1261,24 +1233,10 @@ class _DiscoveredSalonDetailContentState
                     const SizedBox(width: BCSpacing.xs),
                 itemBuilder: (context, index) {
                   final imgUrl = salon.portfolioImages[index];
-                  return GestureDetector(
+                  return _PortfolioThumb(
+                    imageUrl: imgUrl,
                     onTap: () => _showImageDialog(context, imgUrl),
-                    child: ClipRRect(
-                      borderRadius:
-                          BorderRadius.circular(BCSpacing.radiusXs),
-                      child: Image.network(
-                        imgUrl,
-                        width: 80,
-                        height: 80,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          width: 80,
-                          height: 80,
-                          color: colors.surfaceContainerHighest,
-                          child: const Icon(Icons.broken_image, size: 20),
-                        ),
-                      ),
-                    ),
+                    colors: colors,
                   );
                 },
               ),
@@ -1352,20 +1310,7 @@ class _DiscoveredSalonDetailContentState
           const SizedBox(height: BCSpacing.md),
           _SectionTitle(title: 'Inteligencia de Negocio (estimado)'),
           const SizedBox(height: BCSpacing.sm),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  const Color(0xFFec4899).withValues(alpha: 0.05),
-                  const Color(0xFF9333ea).withValues(alpha: 0.05),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: const Color(0xFFec4899).withValues(alpha: 0.15),
-              ),
-            ),
+          _HoverLift(child: _ShimmerBorderContainer(
             child: Column(
               children: [
                 Row(
@@ -1416,7 +1361,7 @@ class _DiscoveredSalonDetailContentState
                 ),
               ],
             ),
-          ),
+          )),
         ],
 
         // ── Booking System ───────────────────────────────────────────
@@ -1554,19 +1499,24 @@ class _DiscoveredSalonDetailContentState
         // ── Actions ────────────────────────────────────────────────────
         _SectionTitle(title: 'Acciones'),
         const SizedBox(height: BCSpacing.sm),
-        SizedBox(
-          width: double.infinity,
-          child: FilledButton.icon(
-            onPressed: () => _openContactPanel(context, ref, salon),
-            icon: const Icon(Icons.contact_phone, size: 18),
-            label: const Text('Contactar'),
+        _HoverActionButton(
+          onPressed: () => _openContactPanel(context, ref, salon),
+          child: SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: () => _openContactPanel(context, ref, salon),
+              icon: const Icon(Icons.contact_phone, size: 18),
+              label: const Text('Contactar'),
+            ),
           ),
         ),
         const SizedBox(height: BCSpacing.sm),
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton.icon(
-            onPressed: _sendingInvite
+        _HoverActionButton(
+          onPressed: _sendingInvite ? null : () {},
+          child: SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _sendingInvite
                 ? null
                 : () async {
                     setState(() => _sendingInvite = true);
@@ -1608,6 +1558,7 @@ class _DiscoveredSalonDetailContentState
                   )
                 : const Icon(Icons.send, size: 18),
             label: const Text('Enviar invitacion WA'),
+            ),
           ),
         ),
       ],
@@ -2310,6 +2261,291 @@ class _SuspensionBadge extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Hover lift widget ─────────────────────────────────────────────────────────
+
+class _HoverLift extends StatefulWidget {
+  const _HoverLift({required this.child});
+  final Widget child;
+  static const double _liftPx = 2;
+
+  @override
+  State<_HoverLift> createState() => _HoverLiftState();
+}
+
+class _HoverLiftState extends State<_HoverLift> {
+  bool _hovering = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovering = true),
+      onExit: (_) => setState(() => _hovering = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOutCubic,
+        transform: Matrix4.translationValues(0, _hovering ? -_HoverLift._liftPx : 0, 0),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: _hovering
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
+              : [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
+        ),
+        child: widget.child,
+      ),
+    );
+  }
+}
+
+// ── Biz intel shimmer border ──────────────────────────────────────────────────
+
+class _ShimmerBorderContainer extends StatefulWidget {
+  const _ShimmerBorderContainer({required this.child});
+  final Widget child;
+
+  @override
+  State<_ShimmerBorderContainer> createState() => _ShimmerBorderContainerState();
+}
+
+class _ShimmerBorderContainerState extends State<_ShimmerBorderContainer>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        final opacity = 0.1 + (_controller.value * 0.15);
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                const Color(0xFFec4899).withValues(alpha: 0.05),
+                const Color(0xFF9333ea).withValues(alpha: 0.05),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: const Color(0xFFec4899).withValues(alpha: opacity),
+            ),
+          ),
+          child: child,
+        );
+      },
+      child: widget.child,
+    );
+  }
+}
+
+// ── Portfolio image hover zoom ────────────────────────────────────────────────
+
+class _PortfolioThumb extends StatefulWidget {
+  const _PortfolioThumb({
+    required this.imageUrl,
+    required this.onTap,
+    required this.colors,
+  });
+  final String imageUrl;
+  final VoidCallback onTap;
+  final ColorScheme colors;
+
+  @override
+  State<_PortfolioThumb> createState() => _PortfolioThumbState();
+}
+
+class _PortfolioThumbState extends State<_PortfolioThumb> {
+  bool _hovering = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovering = true),
+      onExit: (_) => setState(() => _hovering = false),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOutCubic,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(BCSpacing.radiusXs),
+            boxShadow: _hovering
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.15),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : [],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(BCSpacing.radiusXs),
+            child: AnimatedScale(
+              scale: _hovering ? 1.08 : 1.0,
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOutCubic,
+              child: Image.network(
+                widget.imageUrl,
+                width: 80,
+                height: 80,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                  width: 80,
+                  height: 80,
+                  color: widget.colors.surfaceContainerHighest,
+                  child: const Icon(Icons.broken_image, size: 20),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Contact link with hover ───────────────────────────────────────────────────
+
+class _HoverContactLink extends StatefulWidget {
+  const _HoverContactLink({
+    required this.icon,
+    required this.iconColor,
+    required this.label,
+    required this.onTap,
+    this.trailing,
+  });
+  final IconData icon;
+  final Color iconColor;
+  final String label;
+  final VoidCallback onTap;
+  final Widget? trailing;
+
+  @override
+  State<_HoverContactLink> createState() => _HoverContactLinkState();
+}
+
+class _HoverContactLinkState extends State<_HoverContactLink> {
+  bool _hovering = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    const brandPink = Color(0xFFec4899);
+    final textColor = _hovering ? brandPink : colors.primary;
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovering = true),
+      onExit: (_) => setState(() => _hovering = false),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: Row(
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              child: Icon(widget.icon, size: 16, color: _hovering ? brandPink : widget.iconColor),
+            ),
+            const SizedBox(width: BCSpacing.sm),
+            Expanded(
+              child: AnimatedDefaultTextStyle(
+                duration: const Duration(milliseconds: 200),
+                style: TextStyle(
+                  fontFamily: 'Nunito',
+                  fontSize: 13,
+                  color: textColor,
+                  decoration: _hovering ? TextDecoration.underline : TextDecoration.none,
+                  decorationColor: textColor,
+                ),
+                child: Text(widget.label),
+              ),
+            ),
+            if (widget.trailing != null) widget.trailing!,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Action button with hover glow ─────────────────────────────────────────────
+
+class _HoverActionButton extends StatefulWidget {
+  const _HoverActionButton({
+    required this.child,
+    required this.onPressed,
+  });
+  final Widget child;
+  final VoidCallback? onPressed;
+
+  @override
+  State<_HoverActionButton> createState() => _HoverActionButtonState();
+}
+
+class _HoverActionButtonState extends State<_HoverActionButton> {
+  bool _hovering = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovering = true),
+      onExit: (_) => setState(() => _hovering = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOutCubic,
+        transform: Matrix4.diagonal3Values(_hovering ? 1.02 : 1.0, _hovering ? 1.02 : 1.0, 1.0),
+        transformAlignment: Alignment.center,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: _hovering
+              ? [
+                  BoxShadow(
+                    color: const Color(0xFFec4899).withValues(alpha: 0.2),
+                    blurRadius: 12,
+                    offset: const Offset(0, 2),
+                  ),
+                  BoxShadow(
+                    color: const Color(0xFF9333ea).withValues(alpha: 0.1),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
+              : [],
+        ),
+        child: widget.child,
       ),
     );
   }
