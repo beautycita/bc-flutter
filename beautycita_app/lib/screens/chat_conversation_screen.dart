@@ -402,7 +402,61 @@ class _ChatConversationScreenState
                 ),
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 16),
+            Text(
+              'Estudio Virtual',
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Prueba un nuevo look con IA',
+              style: GoogleFonts.nunito(
+                fontSize: 13,
+                color: Colors.grey,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _StudioOption(
+                  icon: Icons.color_lens_rounded,
+                  label: 'Color',
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    context.push('/studio?tab=hair_color');
+                  },
+                ),
+                _StudioOption(
+                  icon: Icons.face_retouching_natural,
+                  label: 'Peinado',
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    context.push('/studio?tab=hairstyle');
+                  },
+                ),
+                _StudioOption(
+                  icon: Icons.portrait_rounded,
+                  label: 'Headshot',
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    context.push('/studio?tab=headshot');
+                  },
+                ),
+                _StudioOption(
+                  icon: Icons.swap_horiz_rounded,
+                  label: 'Face Swap',
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    context.push('/studio?tab=face_swap');
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
           ],
         ),
       ),
@@ -936,6 +990,58 @@ class _InputBar extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _StudioOption extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _StudioOption({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    colors.primary.withValues(alpha: 0.1),
+                    colors.secondary.withValues(alpha: 0.1),
+                  ],
+                ),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: colors.primary, size: 24),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              style: GoogleFonts.nunito(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: colors.onSurface,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
