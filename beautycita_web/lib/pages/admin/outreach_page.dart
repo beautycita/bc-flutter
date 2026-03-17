@@ -329,9 +329,16 @@ class _Header extends StatelessWidget {
 
 // ── Enrichment Monitor Card ────────────────────────────────────────────────
 
-class _EnrichmentMonitorCard extends StatelessWidget {
+class _EnrichmentMonitorCard extends StatefulWidget {
   const _EnrichmentMonitorCard({required this.enrichmentAsync});
   final AsyncValue<EnrichmentStats> enrichmentAsync;
+
+  @override
+  State<_EnrichmentMonitorCard> createState() => _EnrichmentMonitorCardState();
+}
+
+class _EnrichmentMonitorCardState extends State<_EnrichmentMonitorCard> {
+  AsyncValue<EnrichmentStats> get enrichmentAsync => widget.enrichmentAsync;
 
   String _fmt(int n) {
     if (n >= 1000) return NumberFormat.compact().format(n);
@@ -353,7 +360,18 @@ class _EnrichmentMonitorCard extends StatelessWidget {
     return enrichmentAsync.when(
       loading: () => const SizedBox.shrink(),
       error: (_, __) => const SizedBox.shrink(),
-      data: (stats) => Container(
+      data: (stats) => TweenAnimationBuilder<double>(
+        tween: Tween(begin: 0, end: 1),
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeOutCubic,
+        builder: (context, value, child) => Opacity(
+          opacity: value,
+          child: Transform.translate(
+            offset: Offset(0, 12 * (1 - value)),
+            child: child,
+          ),
+        ),
+        child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
@@ -414,6 +432,7 @@ class _EnrichmentMonitorCard extends StatelessWidget {
           ],
         ),
       ),
+      ),
     );
   }
 }
@@ -452,12 +471,19 @@ class _StatChip extends StatelessWidget {
   }
 }
 
-class _StageChip extends StatelessWidget {
+class _StageChip extends StatefulWidget {
   const _StageChip({required this.stage, required this.count});
   final OutreachStage stage;
   final int count;
 
-  Color get _color => switch (stage) {
+  @override
+  State<_StageChip> createState() => _StageChipState();
+}
+
+class _StageChipState extends State<_StageChip> {
+  bool _hovering = false;
+
+  Color get _color => switch (widget.stage) {
         OutreachStage.discovered => const Color(0xFF607D8B),
         OutreachStage.selected => const Color(0xFF2196F3),
         OutreachStage.outreachSent => const Color(0xFFFF9800),
@@ -470,18 +496,26 @@ class _StageChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: _color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _color.withValues(alpha: 0.3)),
-      ),
-      child: Text(
-        '${stage.label} ($count)',
-        style: theme.textTheme.labelSmall?.copyWith(
-          color: _color,
-          fontWeight: FontWeight.w600,
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovering = true),
+      onExit: (_) => setState(() => _hovering = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOutCubic,
+        transform: Matrix4.diagonal3Values(_hovering ? 1.02 : 1.0, _hovering ? 1.02 : 1.0, 1.0),
+        transformAlignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: _color.withValues(alpha: _hovering ? 0.15 : 0.1),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: _color.withValues(alpha: 0.3)),
+        ),
+        child: Text(
+          '${widget.stage.label} (${widget.count})',
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: _color,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
     );
@@ -750,9 +784,11 @@ class _SalonCardState extends State<_SalonCard> {
       child: GestureDetector(
         onTap: widget.onTap,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOutCubic,
           margin: const EdgeInsets.only(bottom: 8),
           padding: const EdgeInsets.all(10),
+          transform: Matrix4.translationValues(0, _hovering ? -1 : 0, 0),
           decoration: BoxDecoration(
             color: colors.surface,
             borderRadius: BorderRadius.circular(8),
@@ -764,12 +800,18 @@ class _SalonCardState extends State<_SalonCard> {
             boxShadow: _hovering
                 ? [
                     BoxShadow(
-                      color: colors.primary.withValues(alpha: 0.06),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
+                      color: colors.primary.withValues(alpha: 0.08),
+                      blurRadius: 12,
+                      offset: const Offset(0, 3),
                     ),
                   ]
-                : null,
+                : [
+                    BoxShadow(
+                      color: colors.onSurface.withValues(alpha: 0.02),
+                      blurRadius: 2,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

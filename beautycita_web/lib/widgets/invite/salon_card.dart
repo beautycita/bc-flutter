@@ -57,8 +57,12 @@ class _SalonCardState extends State<SalonCard> {
                 borderRadius: BorderRadius.circular(12),
                 border: Border(
                   left: BorderSide(
-                    color: widget.selected ? brandPink : Colors.transparent,
-                    width: widget.selected ? 3 : 0,
+                    color: widget.selected
+                        ? brandPink
+                        : _hovering
+                            ? brandPink.withValues(alpha: 0.5)
+                            : Colors.transparent,
+                    width: widget.selected ? 3 : _hovering ? 2 : 0,
                   ),
                   top: BorderSide(color: colors.outlineVariant, width: 1),
                   right: BorderSide(color: colors.outlineVariant, width: 1),
@@ -82,8 +86,8 @@ class _SalonCardState extends State<SalonCard> {
               ),
               child: Row(
                 children: [
-                  // Photo / placeholder
-                  _SalonAvatar(photoUrl: photoUrl, name: name),
+                  // Photo / placeholder with hover zoom
+                  _SalonAvatar(photoUrl: photoUrl, name: name, hovering: _hovering),
                   const SizedBox(width: 12),
                   // Name + city
                   Expanded(
@@ -162,11 +166,17 @@ class _SalonCardState extends State<SalonCard> {
 }
 
 /// 64x64 rounded salon photo, or gradient placeholder with first letter.
+/// Zooms to 1.05 when the parent card is hovered.
 class _SalonAvatar extends StatelessWidget {
-  const _SalonAvatar({required this.photoUrl, required this.name});
+  const _SalonAvatar({
+    required this.photoUrl,
+    required this.name,
+    required this.hovering,
+  });
 
   final String? photoUrl;
   final String name;
+  final bool hovering;
 
   @override
   Widget build(BuildContext context) {
@@ -177,13 +187,18 @@ class _SalonAvatar extends StatelessWidget {
       child: SizedBox(
         width: 64,
         height: 64,
-        child: photoUrl != null && photoUrl!.isNotEmpty
-            ? Image.network(
-                photoUrl!,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => _placeholder(letter),
-              )
-            : _placeholder(letter),
+        child: AnimatedScale(
+          scale: hovering ? 1.05 : 1.0,
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOutCubic,
+          child: photoUrl != null && photoUrl!.isNotEmpty
+              ? Image.network(
+                  photoUrl!,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => _placeholder(letter),
+                )
+              : _placeholder(letter),
+        ),
       ),
     );
   }
