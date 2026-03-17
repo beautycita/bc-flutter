@@ -710,6 +710,13 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
                 });
               },
               onClose: _exitSelection,
+              onSelectAll: () {
+                leadsAsync.whenData((leads) {
+                  setState(() {
+                    _selectedIds = leads.map((l) => l['id']?.toString() ?? '').where((id) => id.isNotEmpty).toSet();
+                  });
+                });
+              },
             ),
           ),
         ),
@@ -1391,6 +1398,7 @@ class _BulkActionBar extends StatelessWidget {
   final VoidCallback onUnassign;
   final VoidCallback onExport;
   final VoidCallback onClose;
+  final VoidCallback onSelectAll;
 
   const _BulkActionBar({
     required this.count,
@@ -1400,6 +1408,7 @@ class _BulkActionBar extends StatelessWidget {
     required this.onUnassign,
     required this.onExport,
     required this.onClose,
+    required this.onSelectAll,
   });
 
   @override
@@ -1436,6 +1445,19 @@ class _BulkActionBar extends StatelessWidget {
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
                 color: colors.onSurface,
+              ),
+            ),
+            const SizedBox(width: 4),
+            // Select All button
+            TextButton(
+              onPressed: onSelectAll,
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                minimumSize: const Size(0, 28),
+              ),
+              child: Text(
+                'Todos',
+                style: GoogleFonts.nunito(fontSize: 12, fontWeight: FontWeight.w600),
               ),
             ),
             const SizedBox(width: AppConstants.paddingSM),
