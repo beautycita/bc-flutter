@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -57,7 +59,9 @@ class ContactMatchService {
   static const _phoneCacheKey = 'contact_match_phone_cache';
   static const _cacheTimestampKey = 'contact_match_cache_ts';
   static const _matchesCacheKey = 'contact_match_results';
+  static const _syncMatchesKey = 'contact_sync_matches';
   static const _cacheDuration = Duration(hours: 24);
+  static const _syncChannel = MethodChannel('com.beautycita/contact_sync');
 
   /// Normalize a phone number for comparison.
   /// Strips all non-digit chars except leading +, ensures +52 prefix for MX
@@ -224,5 +228,29 @@ class ContactMatchService {
     return list
         .map((j) => ContactMatch.fromJson(j as Map<String, dynamic>))
         .toList();
+  }
+
+  /// Trigger Android SyncAdapter to write "Reservar en BeautyCita" actions
+  /// to matched contacts in the native Contacts app.
+  /// No-op on iOS.
+  Future<void> syncContactActions(List<ContactMatch> matches) async {
+    if (!Platform.isAndroid) return;
+    try {
+      // Write matches in the format SyncAdapter expects
+      final syncData = matches
+          .map((m) => {
+                'phone': m.matchedPhone,
+                'salon_name': m.contactName,
+                'salon_id': m.salonId,
+                'salon_type': m.salonType,
+              })
+          .toList();
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_syncMatchesKey, jsonEncode(syncData));
+      await _syncChannel.invokeMethod('syncContacts');
+    } catch (e) {
+      debugPrint('[ContactMatch] Android sync failed: $e');
+    }
   }
 }
