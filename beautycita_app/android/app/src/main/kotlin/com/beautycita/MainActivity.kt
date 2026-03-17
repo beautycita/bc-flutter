@@ -102,28 +102,144 @@ class MainActivity : FlutterFragmentActivity() {
                 }
             })
 
-        // ── Contact sync channel (triggers SyncAdapter from Flutter) ──
+        // ── Contact sync channel — writes RawContacts directly (no SyncAdapter delay) ──
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CONTACT_SYNC_CHANNEL)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
                     "syncContacts" -> {
-                        try {
-                            val accountManager = AccountManager.get(this)
-                            val account = Account("BeautyCita", "com.beautycita.sync")
-                            // addAccountExplicitly returns false if already exists — safe to call repeatedly
-                            accountManager.addAccountExplicitly(account, null, null)
+                        Thread {
+                            try {
+                                // Ensure account exists
+                                val accountManager = AccountManager.get(this@MainActivity)
+                                val account = Account("BeautyCita", "com.beautycita.sync")
+                                accountManager.addAccountExplicitly(account, null, null)
 
-                            ContentResolver.requestSync(
-                                account,
-                                "com.android.contacts",
-                                Bundle.EMPTY
-                            )
-                            Log.d(TAG, "[ContactSync] Sync requested")
-                            result.success(true)
-                        } catch (e: Exception) {
-                            Log.e(TAG, "[ContactSync] Sync request failed: ${e.message}", e)
-                            result.error("SYNC_ERROR", e.message, null)
-                        }
+                                // Read matches from SharedPreferences
+                                val prefs = getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)
+                                val json = prefs.getString("flutter.contact_sync_matches", null)
+                                if (json == null) {
+                                    Log.d(TAG, "[ContactSync] No matches in SharedPrefs")
+                                    runOnUiThread { result.success(0) }
+                                    return@Thread
+                                }
+
+                                val matches = org.json.JSONArray(json)
+                                var synced = 0
+                                Log.d(TAG, "[ContactSync] Processing ${matches.length()} matches directly")
+
+                                for (i in 0 until matches.length()) {
+                                    val match = matches.getJSONObject(i)
+                                    val phone = match.getString("phone")
+                                    val salonName = match.optString("salon_name", "")
+                                    val salonId = match.optString("salon_id", "")
+                                    val salonType = match.optString("salon_type", "r")
+
+                                    // Find contact by phone
+                                    val contactUri = android.net.Uri.withAppendedPath(
+                                        android.provider.ContactsContract.PhoneLookup.CONTENT_FILTER_URI,
+                                        android.net.Uri.encode(phone)
+                                    )
+                                    var contactId: Long? = null
+                                    contentResolver.query(contactUri, arrayOf(android.provider.ContactsContract.PhoneLookup._ID), null, null, null)?.use { c ->
+                                        if (c.moveToFirst()) contactId = c.getLong(0)
+                                    }
+
+                                    if (contactId == null) {
+                                        Log.d(TAG, "[ContactSync] No contact found for $phone")
+                                        continue
+                                    }
+
+                                    // Check if already synced
+                                    val mime = "vnd.android.cursor.item/com.beautycita.book"
+                                    var exists = false
+                                    contentResolver.query(
+                                        android.provider.ContactsContract.Data.CONTENT_URI,
+                                        arrayOf(android.provider.ContactsContract.Data._ID),
+                                        "${android.provider.ContactsContract.Data.CONTACT_ID} = ? AND ${android.provider.ContactsContract.Data.MIMETYPE} = ?",
+                                        arrayOf(contactId.toString(), mime),
+                                        null
+                                    )?.use { c -> exists = c.count > 0 }
+
+                                    if (exists) {
+                                        Log.d(TAG, "[ContactSync] Already synced contact $contactId")
+                                        continue
+                                    }
+
+                                    // Find existing RawContact to link to
+                                    var existingRawId: Long? = null
+                                    contentResolver.query(
+                                        android.provider.ContactsContract.RawContacts.CONTENT_URI,
+                                        arrayOf(android.provider.ContactsContract.RawContacts._ID),
+                                        "${android.provider.ContactsContract.RawContacts.CONTACT_ID} = ? AND ${android.provider.ContactsContract.RawContacts.ACCOUNT_TYPE} != ?",
+                                        arrayOf(contactId.toString(), "com.beautycita.sync"),
+                                        null
+                                    )?.use { c -> if (c.moveToFirst()) existingRawId = c.getLong(0) }
+
+                                    // Batch: RawContact + Phone + Book action + Video action
+                                    val ops = ArrayList<android.content.ContentProviderOperation>()
+
+                                    ops.add(android.content.ContentProviderOperation.newInsert(android.provider.ContactsContract.RawContacts.CONTENT_URI)
+                                        .withValue(android.provider.ContactsContract.RawContacts.ACCOUNT_TYPE, "com.beautycita.sync")
+                                        .withValue(android.provider.ContactsContract.RawContacts.ACCOUNT_NAME, "BeautyCita")
+                                        .withValue(android.provider.ContactsContract.RawContacts.AGGREGATION_MODE, android.provider.ContactsContract.RawContacts.AGGREGATION_MODE_DEFAULT)
+                                        .build())
+
+                                    // Phone for aggregation
+                                    ops.add(android.content.ContentProviderOperation.newInsert(android.provider.ContactsContract.Data.CONTENT_URI)
+                                        .withValueBackReference(android.provider.ContactsContract.Data.RAW_CONTACT_ID, 0)
+                                        .withValue(android.provider.ContactsContract.Data.MIMETYPE, android.provider.ContactsContract.CommonDataKinds.Phone.CONTENT_ITEM_TYPE)
+                                        .withValue(android.provider.ContactsContract.CommonDataKinds.Phone.NUMBER, phone)
+                                        .withValue(android.provider.ContactsContract.CommonDataKinds.Phone.TYPE, android.provider.ContactsContract.CommonDataKinds.Phone.TYPE_OTHER)
+                                        .build())
+
+                                    // Book action
+                                    ops.add(android.content.ContentProviderOperation.newInsert(android.provider.ContactsContract.Data.CONTENT_URI)
+                                        .withValueBackReference(android.provider.ContactsContract.Data.RAW_CONTACT_ID, 0)
+                                        .withValue(android.provider.ContactsContract.Data.MIMETYPE, mime)
+                                        .withValue(android.provider.ContactsContract.Data.DATA1, salonId)
+                                        .withValue(android.provider.ContactsContract.Data.DATA2, "Reservar en BeautyCita")
+                                        .withValue(android.provider.ContactsContract.Data.DATA3, salonName)
+                                        .withValue(android.provider.ContactsContract.Data.DATA4, salonType)
+                                        .build())
+
+                                    // Video call action
+                                    ops.add(android.content.ContentProviderOperation.newInsert(android.provider.ContactsContract.Data.CONTENT_URI)
+                                        .withValueBackReference(android.provider.ContactsContract.Data.RAW_CONTACT_ID, 0)
+                                        .withValue(android.provider.ContactsContract.Data.MIMETYPE, "vnd.android.cursor.item/com.beautycita.videocall")
+                                        .withValue(android.provider.ContactsContract.Data.DATA1, salonId)
+                                        .withValue(android.provider.ContactsContract.Data.DATA2, "Videollamada BeautyCita")
+                                        .withValue(android.provider.ContactsContract.Data.DATA3, salonName)
+                                        .build())
+
+                                    val results = contentResolver.applyBatch(android.provider.ContactsContract.AUTHORITY, ops)
+                                    Log.i(TAG, "[ContactSync] Wrote BeautyCita actions for contact $contactId ($salonName)")
+
+                                    // Force aggregation
+                                    val newRawId = android.content.ContentUris.parseId(results[0].uri!!)
+                                    if (existingRawId != null) {
+                                        try {
+                                            val aggOps = ArrayList<android.content.ContentProviderOperation>()
+                                            aggOps.add(android.content.ContentProviderOperation.newUpdate(android.provider.ContactsContract.AggregationExceptions.CONTENT_URI)
+                                                .withValue(android.provider.ContactsContract.AggregationExceptions.TYPE, android.provider.ContactsContract.AggregationExceptions.TYPE_KEEP_TOGETHER)
+                                                .withValue(android.provider.ContactsContract.AggregationExceptions.RAW_CONTACT_ID1, existingRawId)
+                                                .withValue(android.provider.ContactsContract.AggregationExceptions.RAW_CONTACT_ID2, newRawId)
+                                                .build())
+                                            contentResolver.applyBatch(android.provider.ContactsContract.AUTHORITY, aggOps)
+                                            Log.i(TAG, "[ContactSync] Aggregated raw $newRawId with $existingRawId")
+                                        } catch (e: Exception) {
+                                            Log.w(TAG, "[ContactSync] Aggregation failed: ${e.message}")
+                                        }
+                                    }
+                                    synced++
+                                }
+
+                                Log.i(TAG, "[ContactSync] Done: $synced contacts synced")
+                                runOnUiThread { result.success(synced) }
+                            } catch (e: Exception) {
+                                Log.e(TAG, "[ContactSync] Failed: ${e.message}", e)
+                                runOnUiThread { result.error("SYNC_ERROR", e.message, null) }
+                            }
+                        }.start()
                     }
                     else -> result.notImplemented()
                 }
