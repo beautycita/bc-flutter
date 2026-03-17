@@ -280,10 +280,17 @@ class ContactMatchService {
       final contacts = await service.readContacts();
       final matches = matchContacts(contacts, registeredPhones);
 
-      if (matches.isEmpty) return;
+      if (matches.isEmpty) {
+        debugPrint('[ContactMatch] Auto-sync: no matches found (${contacts.length} contacts, ${registeredPhones.length} registered phones)');
+        return;
+      }
 
       debugPrint('[ContactMatch] Auto-sync: ${matches.length} registered salon matches');
+      for (final m in matches) {
+        debugPrint('[ContactMatch]   → ${m.contactName} = ${m.matchedPhone} (${m.salonId})');
+      }
       await service.syncContactActions(matches);
+      debugPrint('[ContactMatch] Auto-sync: Android sync triggered');
     } catch (e) {
       debugPrint('[ContactMatch] Auto-sync failed (non-fatal): $e');
     }
