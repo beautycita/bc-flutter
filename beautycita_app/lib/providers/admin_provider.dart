@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' show AuthState;
+import 'package:supabase_flutter/supabase_flutter.dart' show AuthState, CountOption;
 import 'package:beautycita/services/supabase_client.dart';
 import 'package:beautycita/services/user_session.dart';
 import 'package:beautycita/services/location_service.dart';
@@ -1008,44 +1008,50 @@ final rpTrackingProvider = FutureProvider<List<Map<String, dynamic>>>((ref) asyn
   for (final rp in (rpUsers as List)) {
     final rpId = rp['id'] as String;
 
-    // Count assignments
+    // Count assignments — use count(CountOption.exact)
     final assigned = await client
         .from('discovered_salons')
-        .select('id')
+        .select()
         .eq('assigned_rp_id', rpId)
-        .count();
+        .count(CountOption.exact);
 
     // Count registered/converted
     final converted = await client
         .from('discovered_salons')
-        .select('id')
+        .select()
         .eq('assigned_rp_id', rpId)
         .inFilter('status', ['registered', 'converted'])
-        .count();
+        .count(CountOption.exact);
 
     // Count positive visits (interest >= 4)
-    final positiveVisits = await client
-        .from('rp_visits')
-        .select('id')
-        .eq('rp_user_id', rpId)
-        .gte('interest_level', 4)
-        .count();
+    int positiveCount = 0;
+    try {
+      final positiveVisits = await client
+          .from('rp_visits')
+          .select()
+          .eq('rp_user_id', rpId)
+          .gte('interest_level', 4)
+          .count(CountOption.exact);
+      positiveCount = positiveVisits.count;
+    } catch (_) {
+      // rp_visits may not have data yet
+    }
 
     // First assignment date
     final firstAssignment = await client
-        .from('discovered_salons')
-        .select('updated_at')
-        .eq('assigned_rp_id', rpId)
-        .order('updated_at')
+        .from('rp_assignments')
+        .select('assigned_at')
+        .eq('rp_user_id', rpId)
+        .order('assigned_at')
         .limit(1);
 
     stats.add({
       ...rp as Map<String, dynamic>,
       'assigned_count': assigned.count,
       'converted_count': converted.count,
-      'positive_visits': positiveVisits.count,
+      'positive_visits': positiveCount,
       'first_assignment': (firstAssignment as List).isNotEmpty
-          ? firstAssignment[0]['updated_at']
+          ? firstAssignment[0]['assigned_at']
           : null,
     });
   }
