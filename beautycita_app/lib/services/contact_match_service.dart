@@ -261,7 +261,8 @@ class ContactMatchService {
     if (!Platform.isAndroid) return;
 
     try {
-      final hasPermission = await FlutterContacts.requestPermission(readonly: true);
+      // Need write permission to add BeautyCita actions to contacts
+      final hasPermission = await FlutterContacts.requestPermission(readonly: false);
       if (!hasPermission) return;
 
       final service = ContactMatchService();
