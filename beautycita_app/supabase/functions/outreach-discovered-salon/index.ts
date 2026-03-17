@@ -1,9 +1,10 @@
 // outreach-discovered-salon/index.ts
 // Actions:
-//   list     — return nearby discovered salons (not yet on BeautyCita)
-//   search   — search discovered salons by name within radius
-//   invite   — record interest signal + evaluate outreach rules
-//   import   — bulk upsert discovered salons from CSV/JSON payload (admin only)
+//   phone_list — compact MX salon phone list for client-side contact matching
+//   list       — return nearby discovered salons (not yet on BeautyCita)
+//   search     — search discovered salons by name within radius
+//   invite     — record interest signal + evaluate outreach rules
+//   import     — bulk upsert discovered salons from CSV/JSON payload (admin only)
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -71,6 +72,36 @@ serve(async (req: Request) => {
 
     // Service client for admin operations
     const serviceClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+
+    // ───────── PHONE_LIST: compact MX salon phone list for contact matching ─────────
+    if (action === "phone_list") {
+      // Public endpoint — salon business phone numbers are not PII
+      const { data: discovered } = await serviceClient
+        .from("discovered_salons")
+        .select("id, phone")
+        .in("country", ["MX", "Mexico"])
+        .not("phone", "is", null);
+
+      const { data: registered } = await serviceClient
+        .from("businesses")
+        .select("id, phone")
+        .eq("is_active", true)
+        .not("phone", "is", null);
+
+      const phones = [
+        ...(discovered ?? []).map((s: any) => ({ p: s.phone, id: s.id, t: "d" })),
+        ...(registered ?? []).map((b: any) => ({ p: b.phone, id: b.id, t: "r" })),
+      ];
+
+      return new Response(JSON.stringify({ phones, count: phones.length }), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "public, max-age=86400",
+          "Access-Control-Allow-Origin": "*",
+        },
+      });
+    }
 
     // ───────── LIST: nearby discovered salons ─────────
     if (action === "list") {
