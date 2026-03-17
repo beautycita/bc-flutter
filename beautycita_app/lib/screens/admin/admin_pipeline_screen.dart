@@ -214,6 +214,8 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
         if (_sourceFilter != null) 'source_filter': _sourceFilter,
         if (_rpStatusFilter != null) 'p_rp_status_filter': _rpStatusFilter,
         if (_assignedRpId != null) 'p_assigned_rp_id': _assignedRpId,
+        // Only show unassigned salons in pipeline — assigned ones are managed by their RP
+        'p_unassigned_only': true,
         if (_pinLat != null) 'p_pin_lat': _pinLat,
         if (_pinLng != null) 'p_pin_lng': _pinLng,
         if (_hasGeoFilter) 'p_radius_km': _radiusKm,
