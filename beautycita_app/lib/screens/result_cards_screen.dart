@@ -1013,7 +1013,7 @@ class _NoResultsWithNearbySalonsState
         ),
       ),
       data: (salons) {
-        final preview = salons.take(3).toList();
+        final preview = salons.take(20).toList();
         return ListView(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           children: [
@@ -1095,59 +1095,7 @@ class _NoResultsWithNearbySalonsState
               );
             }),
 
-            // "Ver mas e invitar" gradient CTA
-            if (salons.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 8, bottom: 16),
-                child: Center(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFFEC4899), Color(0xFF9333EA)],
-                        begin: Alignment.centerLeft,
-                        end: Alignment.centerRight,
-                      ),
-                      borderRadius: BorderRadius.circular(AppConstants.radiusFull),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFFEC4899).withValues(alpha: 0.3),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: () => context.push('/invite', extra: widget.serviceType),
-                        borderRadius: BorderRadius.circular(AppConstants.radiusFull),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.card_giftcard_rounded,
-                                color: Colors.white,
-                                size: 20,
-                              ),
-                              const SizedBox(width: 10),
-                              Text(
-                                'Ver mas e invitar',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+            const SizedBox(height: 16),
 
             if (salons.isEmpty)
               Padding(
