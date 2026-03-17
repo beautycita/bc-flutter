@@ -107,7 +107,7 @@ Future<void> adminAssignSalonsToRp({
 
   for (final salonId in salonIds) {
     await client.from('rp_assignments').insert({
-      'salon_id': salonId,
+      'discovered_salon_id': salonId,
       'rp_user_id': rpUserId,
       'assigned_by': adminId,
     });
