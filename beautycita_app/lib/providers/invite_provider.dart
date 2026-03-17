@@ -206,7 +206,7 @@ class InviteNotifier extends StateNotifier<InviteState> {
     }
   }
 
-  /// User selected a salon — load bio (cached or generate).
+  /// User selected a salon — load bio then auto-generate invite message.
   Future<void> selectSalon(DiscoveredSalon salon) async {
     state = state.copyWith(
       step: InviteStep.salonDetail,
@@ -217,6 +217,11 @@ class InviteNotifier extends StateNotifier<InviteState> {
     );
 
     await _loadBio(salon);
+
+    // Auto-generate invite message after bio (regardless of bio success)
+    if (state.selectedSalon?.id == salon.id && state.inviteMessage == null) {
+      await generateMessage();
+    }
   }
 
   /// Generate (or regenerate) the personalized invite message.
@@ -313,13 +318,18 @@ class InviteNotifier extends StateNotifier<InviteState> {
   Future<void> _loadBio(DiscoveredSalon salon) async {
     try {
       final bio = await _service.generateBio(salon);
-      // Only update if still viewing this salon
       if (state.selectedSalon?.id == salon.id) {
         state = state.copyWith(generatedBio: bio);
       }
     } catch (e) {
       debugPrint('[INVITE] generateBio error: $e');
-      // Bio failure is non-fatal — salon detail still shows without bio
+      // Set fallback bio so the UI isn't empty
+      if (state.selectedSalon?.id == salon.id) {
+        final city = salon.city ?? '';
+        state = state.copyWith(
+          generatedBio: 'Salon de belleza en $city. Invitalo a BeautyCita para que puedas reservar facilmente.',
+        );
+      }
     }
   }
 
