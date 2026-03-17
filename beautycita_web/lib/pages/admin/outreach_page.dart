@@ -9,6 +9,7 @@ import 'package:beautycita_core/supabase.dart';
 import '../../config/breakpoints.dart';
 import '../../providers/admin_outreach_provider.dart';
 import '../../providers/admin_salons_provider.dart' as salons_provider;
+import '../../providers/rp_centro_provider.dart';
 import '../../widgets/contact_panel.dart';
 
 /// Outreach pipeline page — `/app/admin/outreach`
@@ -108,7 +109,6 @@ class _OutreachPageState extends ConsumerState<OutreachPage> {
                           width: 380,
                           child: _SalonDetail(
                             salon: _selectedSalon!,
-                            ref: ref,
                             onClose: () =>
                                 setState(() => _selectedSalon = null),
                           ),
@@ -120,7 +120,6 @@ class _OutreachPageState extends ConsumerState<OutreachPage> {
                   if (_selectedSalon != null && isMobile) {
                     return _SalonDetail(
                       salon: _selectedSalon!,
-                      ref: ref,
                       onClose: () =>
                           setState(() => _selectedSalon = null),
                     );
@@ -883,19 +882,17 @@ class _SalonCardState extends State<_SalonCard> {
 
 // ── Salon detail panel ─────────────────────────────────────────────────────
 
-class _SalonDetail extends StatelessWidget {
+class _SalonDetail extends ConsumerWidget {
   const _SalonDetail({
     required this.salon,
-    required this.ref,
     required this.onClose,
   });
 
   final DiscoveredSalon salon;
-  final WidgetRef ref;
   final VoidCallback onClose;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
     final logAsync = ref.watch(salonOutreachLogProvider(salon.id));
@@ -1082,6 +1079,22 @@ class _SalonDetail extends StatelessWidget {
                   ),
                   const SizedBox(height: 24),
 
+                  // ── RP Assignment Info ──
+                  _RpAssignmentSection(salon: salon),
+                  const SizedBox(height: 16),
+
+                  // ── Checklist ──
+                  _RpChecklistSection(salonId: salon.id),
+                  const SizedBox(height: 16),
+
+                  // ── Meetings ──
+                  _RpMeetingsSection(salonId: salon.id, salonName: salon.name),
+                  const SizedBox(height: 16),
+
+                  // ── Close Process ──
+                  _RpCloseProcessButton(salon: salon),
+                  const SizedBox(height: 24),
+
                   // Outreach history
                   Text(
                     'Historial de contacto',
@@ -1129,6 +1142,651 @@ class _SalonDetail extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── RP Assignment Info ─────────────────────────────────────────────────────
+
+class _RpAssignmentSection extends ConsumerWidget {
+  const _RpAssignmentSection({required this.salon});
+  final DiscoveredSalon salon;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final rpNameAsync = ref.watch(rpAssignmentInfoProvider(salon.assignedRpId));
+    final rpStatus = salon.rpStatus ?? 'unassigned';
+
+    const statusLabels = {
+      'unassigned': 'Sin asignar',
+      'assigned': 'Sin visitar',
+      'visited': 'Contactado',
+      'contacted': 'Contactado',
+      'onboarding': 'En onboarding',
+      'onboarding_complete': 'Completado',
+      'converted': 'Convertido',
+      'declined': 'Rechazado',
+    };
+    final statusColors = {
+      'unassigned': Colors.grey,
+      'assigned': Colors.blue,
+      'visited': Colors.orange,
+      'contacted': Colors.orange,
+      'onboarding': Colors.purple,
+      'onboarding_complete': Colors.green,
+      'converted': Colors.green.shade800,
+      'declined': Colors.red,
+    };
+    final statusColor = statusColors[rpStatus] ?? Colors.grey;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Asignación RP',
+          style: theme.textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Icon(Icons.person_outline, size: 16,
+                color: colors.onSurface.withValues(alpha: 0.5)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: rpNameAsync.when(
+                data: (name) => Text(
+                  name ?? 'Sin asignar',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                loading: () => const SizedBox(
+                  height: 14,
+                  width: 14,
+                  child: CircularProgressIndicator(strokeWidth: 1.5),
+                ),
+                error: (_, __) => Text(
+                  'Error cargando RP',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colors.error,
+                  ),
+                ),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: statusColor.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                statusLabels[rpStatus] ?? rpStatus,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: statusColor,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+// ── RP Checklist Section ──────────────────────────────────────────────────
+
+class _RpChecklistSection extends ConsumerStatefulWidget {
+  const _RpChecklistSection({required this.salonId});
+  final String salonId;
+
+  @override
+  ConsumerState<_RpChecklistSection> createState() =>
+      _RpChecklistSectionState();
+}
+
+class _RpChecklistSectionState extends ConsumerState<_RpChecklistSection> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final checklistAsync = ref.watch(rpChecklistProvider(widget.salonId));
+    final progress = ref.watch(rpChecklistProgressProvider(widget.salonId));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: () => setState(() => _expanded = !_expanded),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Checklist de Onboarding',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                Text(
+                  '${progress.required}/7 requeridos',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: colors.onSurface.withValues(alpha: 0.5),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Icon(
+                  _expanded
+                      ? Icons.expand_less
+                      : Icons.expand_more,
+                  size: 20,
+                  color: colors.onSurface.withValues(alpha: 0.5),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 6),
+        // Progress bar
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(
+            value: progress.total > 0
+                ? progress.required / progress.total
+                : 0,
+            minHeight: 6,
+            backgroundColor: colors.outlineVariant.withValues(alpha: 0.3),
+            valueColor: AlwaysStoppedAnimation<Color>(
+              progress.required >= 7 ? Colors.green : colors.primary,
+            ),
+          ),
+        ),
+        if (_expanded) ...[
+          const SizedBox(height: 12),
+          checklistAsync.when(
+            loading: () => const Center(
+              child: Padding(
+                padding: EdgeInsets.all(8),
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+            error: (e, _) => Text('Error: $e',
+                style: theme.textTheme.bodySmall
+                    ?.copyWith(color: colors.error)),
+            data: (items) {
+              final checkedKeys = {
+                for (final item in items)
+                  if (item.checkedAt != null) item.itemKey,
+              };
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Requeridos',
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: colors.onSurface.withValues(alpha: 0.6),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  ...kRpChecklistRequired.map((key) =>
+                      _checklistTile(context, ref, key,
+                          checkedKeys.contains(key))),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Opcionales',
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: colors.onSurface.withValues(alpha: 0.6),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  ...kRpChecklistOptional.map((key) =>
+                      _checklistTile(context, ref, key,
+                          checkedKeys.contains(key))),
+                ],
+              );
+            },
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _checklistTile(
+      BuildContext context, WidgetRef ref, String key, bool checked) {
+    final theme = Theme.of(context);
+
+    return SizedBox(
+      height: 36,
+      child: Row(
+        children: [
+          SizedBox(
+            width: 24,
+            height: 24,
+            child: Checkbox(
+              value: checked,
+              onChanged: (val) async {
+                await rpToggleChecklistItem(
+                  salonId: widget.salonId,
+                  itemKey: key,
+                  checked: val ?? false,
+                );
+                ref.invalidate(rpChecklistProvider(widget.salonId));
+              },
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              kRpChecklistLabels[key] ?? key,
+              style: theme.textTheme.bodySmall?.copyWith(
+                fontWeight: FontWeight.w500,
+                decoration:
+                    checked ? TextDecoration.lineThrough : null,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── RP Meetings Section ───────────────────────────────────────────────────
+
+class _RpMeetingsSection extends ConsumerWidget {
+  const _RpMeetingsSection({
+    required this.salonId,
+    required this.salonName,
+  });
+  final String salonId;
+  final String salonName;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final meetingAsync = ref.watch(rpNextMeetingProvider(salonId));
+
+    const statusColors = {
+      'pending': Colors.amber,
+      'confirmed': Colors.green,
+      'denied': Colors.red,
+      'rescheduled': Colors.orange,
+    };
+    const statusLabels = {
+      'pending': 'Pendiente',
+      'confirmed': 'Confirmada',
+      'denied': 'Rechazada',
+      'rescheduled': 'Reagendada',
+    };
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Próxima Reunión',
+          style: theme.textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        meetingAsync.when(
+          loading: () => const Center(
+            child: Padding(
+              padding: EdgeInsets.all(8),
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          ),
+          error: (e, _) => Text('Error: $e',
+              style:
+                  theme.textTheme.bodySmall?.copyWith(color: colors.error)),
+          data: (meeting) {
+            if (meeting == null) {
+              return Text(
+                'Sin reuniones programadas',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colors.onSurface.withValues(alpha: 0.5),
+                ),
+              );
+            }
+
+            final color = statusColors[meeting.status] ?? Colors.grey;
+            return Row(
+              children: [
+                Icon(Icons.calendar_today, size: 16,
+                    color: colors.onSurface.withValues(alpha: 0.5)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        DateFormat('dd MMM yyyy, HH:mm', 'es')
+                            .format(meeting.proposedAt),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      if (meeting.note != null && meeting.note!.isNotEmpty)
+                        Text(
+                          meeting.note!,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color:
+                                colors.onSurface.withValues(alpha: 0.5),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    statusLabels[meeting.status] ?? meeting.status,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: color,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: () => _showMeetingDialog(context, ref),
+            icon: const Icon(Icons.calendar_month, size: 16),
+            label: const Text('Agendar Reunión'),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showMeetingDialog(BuildContext context, WidgetRef ref) {
+    DateTime? selectedDate;
+    TimeOfDay? selectedTime;
+    final noteCtrl = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Agendar Reunión'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.calendar_today),
+                title: Text(selectedDate != null
+                    ? DateFormat('dd MMM yyyy').format(selectedDate!)
+                    : 'Seleccionar fecha'),
+                onTap: () async {
+                  final d = await showDatePicker(
+                    context: ctx,
+                    initialDate:
+                        DateTime.now().add(const Duration(days: 1)),
+                    firstDate: DateTime.now(),
+                    lastDate:
+                        DateTime.now().add(const Duration(days: 90)),
+                  );
+                  if (d != null) setDialogState(() => selectedDate = d);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.access_time),
+                title: Text(selectedTime != null
+                    ? selectedTime!.format(ctx)
+                    : 'Seleccionar hora'),
+                onTap: () async {
+                  final t = await showTimePicker(
+                      context: ctx,
+                      initialTime: const TimeOfDay(hour: 10, minute: 0));
+                  if (t != null) setDialogState(() => selectedTime = t);
+                },
+              ),
+              TextField(
+                controller: noteCtrl,
+                decoration:
+                    const InputDecoration(hintText: 'Nota (opcional)'),
+                maxLines: 2,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: (selectedDate == null || selectedTime == null)
+                  ? null
+                  : () async {
+                      final proposedAt = DateTime(
+                        selectedDate!.year,
+                        selectedDate!.month,
+                        selectedDate!.day,
+                        selectedTime!.hour,
+                        selectedTime!.minute,
+                      );
+                      final note = noteCtrl.text.trim();
+                      try {
+                        await rpCreateMeeting(
+                          salonId: salonId,
+                          proposedAt: proposedAt,
+                          note: note.isEmpty ? null : note,
+                        );
+                        ref.invalidate(rpNextMeetingProvider(salonId));
+                        if (ctx.mounted) Navigator.pop(ctx);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content: Text('Reunión solicitada')),
+                          );
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Error: $e')),
+                          );
+                        }
+                      }
+                    },
+              child: const Text('Solicitar'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── RP Close Process Button ───────────────────────────────────────────────
+
+class _RpCloseProcessButton extends ConsumerWidget {
+  const _RpCloseProcessButton({required this.salon});
+  final DiscoveredSalon salon;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Only show if an RP is assigned
+    if (salon.assignedRpId == null) return const SizedBox.shrink();
+
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: () => _showCerrarDialog(context, ref),
+        icon: const Icon(Icons.close, size: 16, color: Colors.red),
+        label: const Text('Cerrar Proceso'),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: Colors.red,
+          side: const BorderSide(color: Colors.red),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+        ),
+      ),
+    );
+  }
+
+  void _showCerrarDialog(BuildContext context, WidgetRef ref) {
+    String? outcome;
+    String? selectedReason;
+    final reasonCtrl = TextEditingController();
+    const reasons = [
+      'No interesado',
+      'Ya tiene sistema',
+      'Cerró el negocio',
+      'No contactable',
+      'Otro',
+    ];
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Cerrar Proceso'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('¿El salón se registró en BeautyCita?'),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: ChoiceChip(
+                      label: const Text('Sí, completado'),
+                      selected: outcome == 'completed',
+                      onSelected: (_) => setDialogState(() {
+                        outcome = 'completed';
+                        selectedReason = null;
+                      }),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ChoiceChip(
+                      label: const Text('No'),
+                      selected: outcome == 'not_converted',
+                      onSelected: (_) =>
+                          setDialogState(() => outcome = 'not_converted'),
+                    ),
+                  ),
+                ],
+              ),
+              if (outcome == 'not_converted') ...[
+                const SizedBox(height: 16),
+                const Text('Razón:'),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: reasons
+                      .map((r) => ChoiceChip(
+                            label: Text(r),
+                            selected: selectedReason == r,
+                            onSelected: (_) =>
+                                setDialogState(() => selectedReason = r),
+                          ))
+                      .toList(),
+                ),
+                if (selectedReason == 'Otro') ...[
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: reasonCtrl,
+                    decoration: const InputDecoration(
+                        hintText: 'Especificar razón'),
+                  ),
+                ],
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: Colors.red),
+              onPressed: outcome == null ||
+                      (outcome == 'not_converted' && selectedReason == null)
+                  ? null
+                  : () async {
+                      try {
+                        final assignmentId =
+                            await getActiveAssignmentId(salon.id);
+                        if (assignmentId == null) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content:
+                                    Text('No se encontró asignación activa'),
+                              ),
+                            );
+                          }
+                          return;
+                        }
+                        final finalReason = selectedReason == 'Otro'
+                            ? reasonCtrl.text.trim()
+                            : selectedReason;
+                        await rpCloseProcess(
+                          salonId: salon.id,
+                          assignmentId: assignmentId,
+                          outcome: outcome!,
+                          reason: outcome == 'not_converted'
+                              ? finalReason
+                              : null,
+                        );
+                        ref.invalidate(pipelineSalonsProvider);
+                        if (ctx.mounted) Navigator.pop(ctx);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                outcome == 'completed'
+                                    ? 'Proceso cerrado: Convertido'
+                                    : 'Proceso cerrado',
+                              ),
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Error: $e')),
+                          );
+                        }
+                      }
+                    },
+              child: const Text('Cerrar Proceso'),
+            ),
+          ],
+        ),
       ),
     );
   }

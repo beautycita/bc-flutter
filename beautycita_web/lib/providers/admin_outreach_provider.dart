@@ -67,6 +67,8 @@ class DiscoveredSalon {
   final String? facebookUrl;
   final String? instagramUrl;
   final String? featureImageUrl;
+  final String? assignedRpId;
+  final String? rpStatus;
   final DateTime createdAt;
 
   const DiscoveredSalon({
@@ -89,6 +91,8 @@ class DiscoveredSalon {
     this.facebookUrl,
     this.instagramUrl,
     this.featureImageUrl,
+    this.assignedRpId,
+    this.rpStatus,
     required this.createdAt,
   });
 
@@ -123,6 +127,8 @@ class DiscoveredSalon {
       facebookUrl: row['facebook_url'] as String?,
       instagramUrl: row['instagram_url'] as String?,
       featureImageUrl: row['feature_image_url'] as String?,
+      assignedRpId: row['assigned_rp_id'] as String?,
+      rpStatus: row['rp_status'] as String?,
       createdAt: DateTime.tryParse(row['created_at'] as String? ?? '') ??
           DateTime.now(),
     );
@@ -182,7 +188,8 @@ final pipelineSalonsProvider =
           'id, business_name, location_city, location_state, country, phone, '
           'whatsapp_verified, status, last_outreach_at, outreach_count, source, '
           'location_address, rating_average, rating_count, categories, website, '
-          'facebook_url, instagram_url, feature_image_url, created_at',
+          'facebook_url, instagram_url, feature_image_url, assigned_rp_id, '
+          'rp_status, created_at',
         )
         .inFilter('status', pipelineStatuses)
         .order('last_outreach_at', ascending: false)
