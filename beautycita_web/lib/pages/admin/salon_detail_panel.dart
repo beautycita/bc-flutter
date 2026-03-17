@@ -1345,6 +1345,80 @@ class _DiscoveredSalonDetailContentState
           _WorkingHoursSection(data: salon.workingHours!),
         ],
 
+        // ── Business Intelligence Estimates ────────────────────────
+        if (salon.estMonthlyClients != null) ...[
+          const SizedBox(height: BCSpacing.lg),
+          const Divider(),
+          const SizedBox(height: BCSpacing.md),
+          _SectionTitle(title: 'Inteligencia de Negocio (estimado)'),
+          const SizedBox(height: BCSpacing.sm),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  const Color(0xFFec4899).withValues(alpha: 0.05),
+                  const Color(0xFF9333ea).withValues(alpha: 0.05),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: const Color(0xFFec4899).withValues(alpha: 0.15),
+              ),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(child: _BizIntelCard(
+                      icon: Icons.people_outline,
+                      label: 'Clientes/mes',
+                      value: '~${salon.estMonthlyClients}',
+                    )),
+                    const SizedBox(width: 12),
+                    Expanded(child: _BizIntelCard(
+                      icon: Icons.today_outlined,
+                      label: 'Clientes/dia',
+                      value: '~${salon.estDailyClients?.toStringAsFixed(0)}',
+                    )),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(child: _BizIntelCard(
+                      icon: Icons.attach_money,
+                      label: 'Precio promedio',
+                      value: '\$${salon.estAvgServicePrice?.toStringAsFixed(0)} MXN',
+                    )),
+                    const SizedBox(width: 12),
+                    Expanded(child: _BizIntelCard(
+                      icon: Icons.trending_up,
+                      label: 'Rev. mensual',
+                      value: '\$${_fmtRevenue(salon.estMonthlyRevenue)} MXN',
+                    )),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Rev. anual estimado: \$${_fmtRevenue(salon.estAnnualRevenue)} MXN',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFFec4899),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Basado en ${salon.reviewCount ?? 0} resenas Google · Precio estimado por categoria',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: colors.onSurface.withValues(alpha: 0.4),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+
         // ── Booking System ───────────────────────────────────────────
         if (salon.bookingSystem != null ||
             salon.bookingUrl != null ||
@@ -2059,6 +2133,48 @@ class _ServicesDetectedSection extends StatelessWidget {
       }).toList(),
     );
   }
+}
+
+class _BizIntelCard extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  const _BizIntelCard({required this.icon, required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Icon(icon, size: 14, color: colors.onSurface.withValues(alpha: 0.4)),
+            const SizedBox(width: 4),
+            Text(label, style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: colors.onSurface.withValues(alpha: 0.5),
+            )),
+          ]),
+          const SizedBox(height: 4),
+          Text(value, style: Theme.of(context).textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.w700,
+          )),
+        ],
+      ),
+    );
+  }
+}
+
+String _fmtRevenue(double? amount) {
+  if (amount == null) return '0';
+  if (amount >= 1000000) return '${(amount / 1000000).toStringAsFixed(1)}M';
+  if (amount >= 1000) return '${(amount / 1000).toStringAsFixed(0)}K';
+  return amount.toStringAsFixed(0);
 }
 
 class _WorkingHoursSection extends StatelessWidget {
