@@ -9,6 +9,7 @@ import '../../providers/admin_provider.dart';
 import '../../services/export_service.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
+import 'admin_pipeline_screen.dart';
 import 'admin_salon_detail_screen.dart';
 import 'pipeline_lead_detail_sheet.dart';
 
@@ -33,16 +34,18 @@ class AdminSalonesScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     return DefaultTabController(
-      length: 2,
+      length: 3,
       child: Column(
         children: [
           TabBar(
             labelColor: colors.primary,
             unselectedLabelColor: colors.onSurface.withValues(alpha: 0.5),
             indicatorColor: colors.primary,
+            isScrollable: true,
             tabs: const [
               Tab(text: 'Registrados'),
               Tab(text: 'Descubiertos'),
+              Tab(text: 'Pipeline'),
             ],
           ),
           const Expanded(
@@ -50,6 +53,7 @@ class AdminSalonesScreen extends StatelessWidget {
               children: [
                 _RegisteredSalonesTab(),
                 _DiscoveredSalonesTab(),
+                AdminPipelineScreen(),
               ],
             ),
           ),

@@ -36,7 +36,6 @@ class AdminShellScreen extends ConsumerWidget {
     _AdminTab(icon: Icons.calendar_today, label: 'Citas', section: 'Gestion'),
     _AdminTab(icon: Icons.gavel, label: 'Disputas', section: 'Gestion'),
     _AdminTab(icon: Icons.store, label: 'Salones', section: 'Gestion'),
-    _AdminTab(icon: Icons.rocket_launch_rounded, label: 'Pipeline', section: 'Gestion'),
     _AdminTab(icon: Icons.analytics, label: 'Analitica', section: 'Gestion'),
     _AdminTab(icon: Icons.rate_review, label: 'Resenas', section: 'Gestion'),
     _AdminTab(icon: Icons.chat_rounded, label: 'Chat', section: 'Gestion'),
@@ -213,8 +212,6 @@ class _AdminContent extends ConsumerWidget {
         return const DisputesScreen();
       case 'Salones':
         return const AdminSalonesScreen();
-      case 'Pipeline':
-        return const AdminPipelineScreen();
       case 'Analitica':
         return const AnalyticsScreen();
       case 'Resenas':
