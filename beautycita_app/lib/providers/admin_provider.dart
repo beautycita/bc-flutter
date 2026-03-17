@@ -979,7 +979,14 @@ final searchDiscoveredSalonsProvider = FutureProvider.family<List<Map<String, dy
     'result_limit': params['result_limit'] ?? 50,
     'result_offset': params['result_offset'] ?? 0,
   });
-  return (response as List).cast<Map<String, dynamic>>();
+  var results = (response as List).cast<Map<String, dynamic>>();
+
+  // Pipeline mode: hide salons already assigned to an RP
+  if (params['p_unassigned_only'] == true) {
+    results = results.where((s) => s['assigned_rp_id'] == null).toList();
+  }
+
+  return results;
 });
 
 /// Holds the current pipeline search parameters. Set by the pipeline screen
