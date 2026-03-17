@@ -32,6 +32,8 @@ class _DiscoveredSalonDetailScreenState extends ConsumerState<DiscoveredSalonDet
     with SingleTickerProviderStateMixin {
   late AnimationController _breathingController;
   late Animation<double> _breathingAnimation;
+  String? _generatedBio;
+  bool _bioLoading = true;
 
   @override
   void initState() {
@@ -47,6 +49,37 @@ class _DiscoveredSalonDetailScreenState extends ConsumerState<DiscoveredSalonDet
       ),
     );
     _breathingController.repeat(reverse: true);
+    _loadBio();
+  }
+
+  Future<void> _loadBio() async {
+    try {
+      final response = await SupabaseClientService.client.functions.invoke(
+        'aphrodite-chat',
+        body: {
+          'action': 'generate_salon_bio',
+          'salon_name': widget.salon.name,
+          'salon_category': '',
+          'salon_specialties': <String>[],
+          'salon_city': widget.salon.city ?? '',
+          'salon_rating': widget.salon.rating,
+          'salon_review_count': widget.salon.reviewsCount,
+          'discovered_salon_id': widget.salon.id,
+        },
+      );
+      if (response.status == 200 && mounted) {
+        final data = response.data as Map<String, dynamic>;
+        setState(() {
+          _generatedBio = data['bio'] as String?;
+          _bioLoading = false;
+        });
+      } else if (mounted) {
+        setState(() => _bioLoading = false);
+      }
+    } catch (e) {
+      debugPrint('[DiscoveredDetail] Bio generation failed: $e');
+      if (mounted) setState(() => _bioLoading = false);
+    }
   }
 
   @override
@@ -236,17 +269,30 @@ class _DiscoveredSalonDetailScreenState extends ConsumerState<DiscoveredSalonDet
 
                   const SizedBox(height: 14),
 
-                  // About card with narrative
+                  // About card with Aphrodite-generated bio
                   _InfoCard(
                     icon: Icons.info_outline_rounded,
                     title: 'Acerca de este estilista',
-                    child: Text(
-                      _buildNarrative(),
-                      style: GoogleFonts.nunito(
-                        fontSize: 14,
-                        color: Theme.of(context).colorScheme.onSurface,
-                        height: 1.5,
-                      ),
+                    child: _bioLoading
+                        ? SizedBox(
+                            height: 40,
+                            child: Center(
+                              child: SizedBox(
+                                width: 20, height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                              ),
+                            ),
+                          )
+                        : Text(
+                            _generatedBio ?? _buildNarrative(),
+                            style: GoogleFonts.nunito(
+                              fontSize: 14,
+                              color: Theme.of(context).colorScheme.onSurface,
+                              height: 1.5,
+                            ),
                     ),
                   ),
 

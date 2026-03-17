@@ -26,7 +26,15 @@ class _InviteSalonDetailScreenState
   Widget build(BuildContext context) {
     final state = ref.watch(inviteProvider);
     final salon = state.selectedSalon;
-    if (salon == null) return const SizedBox.shrink();
+    if (salon == null) {
+      // Salon cleared (e.g., backToList was called) — pop this screen
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted && Navigator.canPop(context)) {
+          Navigator.of(context).pop();
+        }
+      });
+      return const Scaffold(backgroundColor: Colors.white);
+    }
 
     // Auto-generate message when bio is ready and we haven't triggered yet.
     if (state.generatedBio != null &&
@@ -157,8 +165,10 @@ class _InviteSalonDetailScreenState
               shape: const CircleBorder(),
               child: IconButton(
                 icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-                onPressed: () =>
-                    ref.read(inviteProvider.notifier).backToList(),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  ref.read(inviteProvider.notifier).backToList();
+                },
               ),
             ),
           ),
