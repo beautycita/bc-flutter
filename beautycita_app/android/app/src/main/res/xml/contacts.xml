@@ -4,5 +4,6 @@
         android:mimeType="vnd.android.cursor.item/com.beautycita.book"
         android:icon="@mipmap/ic_launcher"
         android:summaryColumn="data2"
-        android:detailColumn="data3" />
+        android:detailColumn="data3"
+        android:detailSocialSummary="true" />
 </ContactsAccountType>

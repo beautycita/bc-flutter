@@ -4,6 +4,7 @@ import android.accounts.Account
 import android.content.AbstractThreadedSyncAdapter
 import android.content.ContentProviderClient
 import android.content.ContentProviderOperation
+import android.content.ContentUris
 import android.content.Context
 import android.content.SyncResult
 import android.net.Uri
@@ -124,6 +125,35 @@ class SyncAdapter(
 
         val results = context.contentResolver.applyBatch(ContactsContract.AUTHORITY, ops)
         Log.d(TAG, "Inserted BeautyCita row for contact $contactId (${results.size} ops)")
+
+        // Force aggregation: link our new RawContact with the existing contact
+        // This is critical for Samsung One UI to show the action under the contact
+        val newRawContactUri = results[0].uri
+        if (newRawContactUri != null) {
+            val newRawContactId = ContentUris.parseId(newRawContactUri)
+            val existingRawContactId = findRawContactIdForContact(contactId)
+            if (existingRawContactId != null && existingRawContactId != newRawContactId) {
+                val aggOp = ContentProviderOperation.newUpdate(
+                    ContactsContract.AggregationExceptions.CONTENT_URI
+                )
+                    .withValue(
+                        ContactsContract.AggregationExceptions.TYPE,
+                        ContactsContract.AggregationExceptions.TYPE_KEEP_TOGETHER
+                    )
+                    .withValue(ContactsContract.AggregationExceptions.RAW_CONTACT_ID1, existingRawContactId)
+                    .withValue(ContactsContract.AggregationExceptions.RAW_CONTACT_ID2, newRawContactId)
+                    .build()
+                try {
+                    context.contentResolver.applyBatch(
+                        ContactsContract.AUTHORITY,
+                        arrayListOf(aggOp)
+                    )
+                    Log.d(TAG, "Aggregated RawContact $newRawContactId with $existingRawContactId")
+                } catch (e: Exception) {
+                    Log.w(TAG, "Aggregation failed (non-fatal): ${e.message}")
+                }
+            }
+        }
     }
 
     private fun findContactByPhone(phone: String): Long? {
@@ -143,6 +173,25 @@ class SyncAdapter(
             }
         } catch (e: Exception) {
             Log.e(TAG, "findContactByPhone error: ${e.message}", e)
+        }
+        return null
+    }
+
+    private fun findRawContactIdForContact(contactId: Long): Long? {
+        try {
+            context.contentResolver.query(
+                ContactsContract.RawContacts.CONTENT_URI,
+                arrayOf(ContactsContract.RawContacts._ID),
+                "${ContactsContract.RawContacts.CONTACT_ID} = ? AND ${ContactsContract.RawContacts.ACCOUNT_TYPE} != ?",
+                arrayOf(contactId.toString(), ACCOUNT_TYPE),
+                null
+            )?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    return cursor.getLong(0)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "findRawContactIdForContact error: ${e.message}", e)
         }
         return null
     }
