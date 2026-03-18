@@ -367,7 +367,8 @@ class _RPChatScreenState extends ConsumerState<RPChatScreen> {
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) {
+      builder: (_) => Consumer(
+        builder: (context, ref, _) {
         final templates = ref.watch(rpTemplatesProvider(channel));
         return DraggableScrollableSheet(
           initialChildSize: 0.6,
@@ -458,6 +459,7 @@ class _RPChatScreenState extends ConsumerState<RPChatScreen> {
           ),
         );
       },
+    ),
     );
   }
 
