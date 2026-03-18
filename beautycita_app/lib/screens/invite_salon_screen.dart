@@ -807,6 +807,7 @@ class DiscoveredSalon {
   final int? reviewsCount;
   final int interestCount;
   final double? distanceKm;
+  final String? generatedBio;
 
   const DiscoveredSalon({
     required this.id,
@@ -820,6 +821,7 @@ class DiscoveredSalon {
     this.reviewsCount,
     required this.interestCount,
     this.distanceKm,
+    this.generatedBio,
   });
 
   factory DiscoveredSalon.fromJson(Map<String, dynamic> json) {
@@ -836,6 +838,7 @@ class DiscoveredSalon {
       reviewsCount: (json['rating_count'] ?? json['reviews_count']) as int?,
       interestCount: json['interest_count'] as int? ?? 0,
       distanceKm: (json['distance_km'] as num?)?.toDouble(),
+      generatedBio: json['generated_bio'] as String?,
     );
   }
 }

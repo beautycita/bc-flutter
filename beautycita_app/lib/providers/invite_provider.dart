@@ -225,32 +225,29 @@ class InviteNotifier extends StateNotifier<InviteState> {
   }
 
   /// Generate (or regenerate) the personalized invite message.
+  /// Uses local template for instant display — no API call needed.
   Future<void> generateMessage() async {
     final salon = state.selectedSalon;
     if (salon == null) return;
 
-    state = state.copyWith(step: InviteStep.generating);
+    final userName = _getCurrentUserName();
+    final salonName = salon.name;
+    final service = state.serviceFilter;
 
-    try {
-      final userName = _getCurrentUserName();
+    // Instant local template — no API round-trip
+    final serviceNote = service != null && service.isNotEmpty
+        ? ' Estaba buscando $service y me encantaría reservar contigo.'
+        : ' Me encantaría poder reservar contigo desde la app.';
 
-      final message = await _service.generateInviteMessage(
-        userName: userName,
-        salon: salon,
-        serviceSearched: state.serviceFilter,
-      );
+    final message = 'Hola $salonName! Soy $userName.$serviceNote '
+        'BeautyCita es una app gratuita donde tus clientas pueden reservar '
+        'en segundos. ¡Registrate y nos vemos pronto! '
+        'https://beautycita.com/registro?ref=${salon.id}';
 
-      state = state.copyWith(
-        step: InviteStep.readyToSend,
-        inviteMessage: message,
-      );
-    } catch (e) {
-      debugPrint('[INVITE] generateMessage error: $e');
-      state = state.copyWith(
-        step: InviteStep.error,
-        error: e.toString(),
-      );
-    }
+    state = state.copyWith(
+      step: InviteStep.readyToSend,
+      inviteMessage: message,
+    );
   }
 
   /// Send the invite: record in DB + platform WA. Returns WA URL.
@@ -316,21 +313,29 @@ class InviteNotifier extends StateNotifier<InviteState> {
   // ---------------------------------------------------------------------------
 
   Future<void> _loadBio(DiscoveredSalon salon) async {
-    try {
-      final bio = await _service.generateBio(salon);
+    // Use pre-generated bio from DB if available — skip the slow API call
+    if (salon.generatedBio != null && salon.generatedBio!.isNotEmpty) {
       if (state.selectedSalon?.id == salon.id) {
-        state = state.copyWith(generatedBio: bio);
+        state = state.copyWith(generatedBio: salon.generatedBio);
       }
-    } catch (e) {
-      debugPrint('[INVITE] generateBio error: $e');
-      // Set fallback bio so the UI isn't empty
-      if (state.selectedSalon?.id == salon.id) {
-        final city = salon.city ?? '';
-        state = state.copyWith(
-          generatedBio: 'Salon de belleza en $city. Invitalo a BeautyCita para que puedas reservar facilmente.',
-        );
-      }
+      return;
     }
+
+    // No bio in DB — use local fallback instead of calling OpenAI (edge function times out)
+    final city = salon.city ?? 'tu zona';
+    final rating = salon.rating != null ? ' con ${salon.rating!.toStringAsFixed(1)} estrellas' : '';
+    final bio = '${salon.name} es un salón de belleza en $city$rating. '
+        'Aún no está en BeautyCita — invítalo para que puedas reservar fácilmente.';
+    if (state.selectedSalon?.id == salon.id) {
+      state = state.copyWith(generatedBio: bio);
+    }
+
+    // Try API in background to enrich — but don't block
+    _service.generateBio(salon).then((apiBio) {
+      if (state.selectedSalon?.id == salon.id && apiBio.isNotEmpty) {
+        state = state.copyWith(generatedBio: apiBio);
+      }
+    }).catchError((_) {});
   }
 
   String _getCurrentUserName() {
