@@ -520,7 +520,10 @@ class _RPCentroScreenState extends ConsumerState<RPCentroScreen> {
         builder: (ctx, setDialogState) => AlertDialog(
           title: Text('Solicitar Reunión',
               style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
-          content: Column(
+          content: SizedBox(
+            width: MediaQuery.of(ctx).size.width * 0.8,
+            child: SingleChildScrollView(
+              child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
@@ -559,6 +562,8 @@ class _RPCentroScreenState extends ConsumerState<RPCentroScreen> {
                 maxLines: 2,
               ),
             ],
+          ),
+          ),
           ),
           actions: [
             TextButton(

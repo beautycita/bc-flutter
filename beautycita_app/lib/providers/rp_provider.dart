@@ -279,7 +279,7 @@ Future<bool> rpSendMessage({
   final sb = SupabaseClientService.client;
   final currentUser = sb.auth.currentUser;
   if (currentUser == null) throw Exception('Not authenticated');
-  final profile = await sb.from('profiles').select('display_name, phone').eq('id', currentUser.id).single();
+  final profile = await sb.from('profiles').select('full_name, phone').eq('id', currentUser.id).single();
 
   final action = channel == 'email' ? 'send_email' : 'send_wa';
   final res = await sb.functions.invoke('outreach-contact', body: {
@@ -288,7 +288,7 @@ Future<bool> rpSendMessage({
     'message': message,
     if (subject != null) 'subject': subject,
     if (templateId != null) 'template_id': templateId,
-    'rp_name': profile['display_name'] ?? 'RP',
+    'rp_name': profile['full_name'] ?? 'RP',
     'rp_phone': profile['phone'] ?? '',
   });
   return res.status == 200 && (res.data['sent'] == true || res.data['logged'] == true);
