@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,7 +10,6 @@ import 'package:beautycita/config/routes.dart';
 import 'package:beautycita/providers/admin_provider.dart';
 import 'package:beautycita/providers/rp_provider.dart';
 import 'package:beautycita/services/location_service.dart';
-import 'package:beautycita/services/toast_service.dart';
 import 'package:beautycita/models/curate_result.dart' show LatLng;
 
 class RPShellScreen extends ConsumerStatefulWidget {
@@ -56,20 +53,6 @@ class _RPShellScreenState extends ConsumerState<RPShellScreen> {
       default:
         return const Color(0xFF2196F3);
     }
-  }
-
-  // ── Haversine distance in km ──
-  static double _haversineKm(
-      double lat1, double lng1, double lat2, double lng2) {
-    const r = 6371.0;
-    final dLat = (lat2 - lat1) * pi / 180;
-    final dLng = (lng2 - lng1) * pi / 180;
-    final a = sin(dLat / 2) * sin(dLat / 2) +
-        cos(lat1 * pi / 180) *
-            cos(lat2 * pi / 180) *
-            sin(dLng / 2) *
-            sin(dLng / 2);
-    return r * 2 * atan2(sqrt(a), sqrt(1 - a));
   }
 
   @override
@@ -375,118 +358,4 @@ class _RPShellScreenState extends ConsumerState<RPShellScreen> {
     );
   }
 
-  // ══════════════════════════════════════════════════════════════════════════
-  //  Nearby Unvisited
-  // ══════════════════════════════════════════════════════════════════════════
-
-  void _showNearbyUnvisited(Map<String, dynamic> salon) {
-    final salonsAsync = ref.read(rpAssignedSalonsProvider);
-    final salons = salonsAsync.valueOrNull ?? [];
-
-    final salonLat = (salon['latitude'] as num?)?.toDouble();
-    final salonLng = (salon['longitude'] as num?)?.toDouble();
-    if (salonLat == null || salonLng == null) {
-      ToastService.showWarning('Este salon no tiene coordenadas.');
-      return;
-    }
-
-    final unvisited = salons
-        .where((s) =>
-            s['rp_status'] == 'assigned' &&
-            s['id'] != salon['id'] &&
-            s['latitude'] != null &&
-            s['longitude'] != null)
-        .toList();
-
-    if (unvisited.isEmpty) {
-      ToastService.showSuccess('No hay salones sin visitar cercanos.');
-      return;
-    }
-
-    final withDistance = unvisited.map((s) {
-      final d = _haversineKm(
-        salonLat,
-        salonLng,
-        (s['latitude'] as num).toDouble(),
-        (s['longitude'] as num).toDouble(),
-      );
-      return MapEntry(s, d);
-    }).toList()
-      ..sort((a, b) => a.value.compareTo(b.value));
-
-    final top5 = withDistance.take(5).toList();
-
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-            top: Radius.circular(AppConstants.radiusLG)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(AppConstants.paddingLG),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.only(
-                      bottom: AppConstants.paddingMD),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              Text('Salones cercanos sin visitar',
-                  style: GoogleFonts.poppins(
-                      fontSize: 16, fontWeight: FontWeight.w600)),
-              const SizedBox(height: AppConstants.paddingSM),
-              ...top5.map((entry) {
-                final s = entry.key;
-                final km = entry.value;
-                return ListTile(
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  leading: Container(
-                    width: 10,
-                    height: 10,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF2196F3),
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  title: Text(s['business_name'] ?? 'Sin nombre',
-                      style: GoogleFonts.poppins(
-                          fontSize: 14, fontWeight: FontWeight.w500)),
-                  subtitle: Text(
-                    [s['location_city'], s['location_state']]
-                        .where((e) => e != null)
-                        .join(', '),
-                    style: GoogleFonts.nunito(fontSize: 12),
-                  ),
-                  trailing: Text(
-                    km < 1
-                        ? '${(km * 1000).round()} m'
-                        : '${km.toStringAsFixed(1)} km',
-                    style: GoogleFonts.nunito(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: Theme.of(context).colorScheme.primary),
-                  ),
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    context.push(AppRoutes.rpCentro, extra: s);
-                  },
-                );
-              }),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }

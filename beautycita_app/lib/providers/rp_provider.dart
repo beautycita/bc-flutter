@@ -27,57 +27,6 @@ final rpAssignedSalonsProvider =
   return (response as List).cast<Map<String, dynamic>>();
 });
 
-/// Visit history for a single salon by the current RP. Limited to 20 most recent.
-final rpVisitsForSalonProvider =
-    FutureProvider.family<List<Map<String, dynamic>>, String>(
-        (ref, salonId) async {
-  final userId = SupabaseClientService.currentUserId;
-  if (userId == null) return [];
-
-  final response = await SupabaseClientService.client
-      .from('rp_visits')
-      .select()
-      .eq('salon_id', salonId)
-      .eq('rp_user_id', userId)
-      .order('visited_at', ascending: false)
-      .limit(20);
-
-  return (response as List).cast<Map<String, dynamic>>();
-});
-
-/// Log a visit and update the salon's rp_status accordingly.
-Future<void> rpLogVisit({
-  required String assignmentId,
-  required String salonId,
-  required bool verbalContact,
-  required bool onboardingComplete,
-  int? interestLevel,
-  String? notes,
-}) async {
-  final userId = SupabaseClientService.currentUserId;
-  if (userId == null) throw Exception('Not authenticated');
-
-  final client = SupabaseClientService.client;
-
-  // Insert visit record
-  await client.from('rp_visits').insert({
-    'assignment_id': assignmentId,
-    'salon_id': salonId,
-    'rp_user_id': userId,
-    'verbal_contact': verbalContact,
-    'onboarding_complete': onboardingComplete,
-    'interest_level': ?interestLevel,
-    'notes': ?notes,
-  });
-
-  // Update salon rp_status
-  final newStatus = onboardingComplete ? 'onboarding_complete' : 'visited';
-  await client
-      .from('discovered_salons')
-      .update({'rp_status': newStatus})
-      .eq('id', salonId);
-}
-
 // ---------------------------------------------------------------------------
 // Admin-facing RP providers
 // ---------------------------------------------------------------------------
@@ -137,7 +86,7 @@ Future<void> adminUnassignSalons({
     await client
         .from('rp_assignments')
         .update({'unassigned_at': DateTime.now().toUtc().toIso8601String()})
-        .eq('salon_id', salonId)
+        .eq('discovered_salon_id', salonId)
         .isFilter('unassigned_at', null);
 
     await client.from('discovered_salons').update({
@@ -152,7 +101,7 @@ Future<String?> getActiveAssignmentId(String salonId) async {
   final response = await SupabaseClientService.client
       .from('rp_assignments')
       .select('id')
-      .eq('salon_id', salonId)
+      .eq('discovered_salon_id', salonId)
       .isFilter('unassigned_at', null)
       .maybeSingle();
 
@@ -218,7 +167,8 @@ Future<void> rpToggleChecklistItem({
   String? notes,
 }) async {
   final sb = SupabaseClientService.client;
-  final userId = SupabaseClientService.currentUserId!;
+  final userId = SupabaseClientService.currentUserId;
+  if (userId == null) throw Exception('Not authenticated');
 
   if (checked) {
     await sb.from('rp_checklist').upsert({
@@ -247,7 +197,7 @@ final rpNextMeetingProvider = FutureProvider.family<Map<String, dynamic>?, Strin
         .select()
         .eq('discovered_salon_id', salonId)
         .inFilter('status', ['pending', 'confirmed', 'rescheduled'])
-        .gte('proposed_at', DateTime.now().toIso8601String())
+        .gte('proposed_at', DateTime.now().toUtc().toIso8601String())
         .order('proposed_at')
         .limit(1)
         .maybeSingle();
@@ -261,7 +211,8 @@ Future<String> rpCreateMeeting({
   String? note,
 }) async {
   final sb = SupabaseClientService.client;
-  final userId = SupabaseClientService.currentUserId!;
+  final userId = SupabaseClientService.currentUserId;
+  if (userId == null) throw Exception('Not authenticated');
   final res = await sb.from('rp_meetings').insert({
     'discovered_salon_id': salonId,
     'rp_user_id': userId,
@@ -326,7 +277,9 @@ Future<bool> rpSendMessage({
   String? templateId,
 }) async {
   final sb = SupabaseClientService.client;
-  final profile = await sb.from('profiles').select('display_name, phone').eq('id', sb.auth.currentUser!.id).single();
+  final currentUser = sb.auth.currentUser;
+  if (currentUser == null) throw Exception('Not authenticated');
+  final profile = await sb.from('profiles').select('display_name, phone').eq('id', currentUser.id).single();
 
   final action = channel == 'email' ? 'send_email' : 'send_wa';
   final res = await sb.functions.invoke('outreach-contact', body: {
@@ -356,6 +309,8 @@ Future<void> rpCloseProcess({
     'closed_at': DateTime.now().toIso8601String(),
     'close_outcome': outcome,
     if (reason != null) 'close_reason': reason,
+    if (outcome == 'not_converted')
+      'unassigned_at': DateTime.now().toUtc().toIso8601String(),
   }).eq('id', assignmentId);
 
   if (outcome == 'not_converted') {

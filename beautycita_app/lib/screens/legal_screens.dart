@@ -83,19 +83,19 @@ class _TermsAndPolicyScreenState extends State<TermsAndPolicyScreen>
           _LegalTab(
             icon: Icons.description_outlined,
             subtitle: 'Reglas de uso de la plataforma',
-            lastUpdated: '13 de marzo de 2026',
+            lastUpdated: '17 de marzo de 2026',
             sections: _termsSections,
           ),
           _LegalTab(
             icon: Icons.privacy_tip_outlined,
             subtitle: 'Aviso de Privacidad Integral (LFPDPPP)',
-            lastUpdated: '13 de marzo de 2026',
+            lastUpdated: '17 de marzo de 2026',
             sections: _privacySections,
           ),
           _LegalTab(
             icon: Icons.storage_outlined,
             subtitle: 'Que guardamos en tu dispositivo',
-            lastUpdated: '13 de marzo de 2026',
+            lastUpdated: '17 de marzo de 2026',
             sections: _storageSections,
           ),
         ],
@@ -517,7 +517,9 @@ const _termsSections = [
     body:
         'Al confirmar una reserva aceptas los terminos del salon, incluyendo '
         'politicas de cancelacion y depositos. BeautyCita no es responsable por '
-        'la calidad o resultado de los servicios del salon.',
+        'la calidad o resultado de los servicios del salon.\n\n'
+        'Cancelaciones gratuitas hasta 24 horas antes de la cita. '
+        'Cancelaciones tardias pueden resultar en cargo del deposito.',
   ),
   _Section(
     heading: '4. Pagos',
@@ -538,7 +540,8 @@ const _termsSections = [
         '- Sin RFC: ISR 20% + IVA 16% del monto bruto.\n\n'
         'Las retenciones se deducen automaticamente del pago al proveedor. '
         'El cliente paga el precio publicado sin cambio. El proveedor recibe '
-        'el monto neto despues de la comision de plataforma y las retenciones.\n\n'
+        'el monto neto despues de la comision de plataforma del 10% por cada '
+        'reserva completada y las retenciones.\n\n'
         'BeautyCita entera las retenciones al SAT (Servicio de Administracion '
         'Tributaria) mediante declaraciones informativas mensuales y pone a '
         'disposicion de los proveedores un desglose de retenciones en su panel.',
@@ -643,8 +646,12 @@ const _privacySections = [
     body:
         'A) Datos de identificacion: nombre de usuario (generado automaticamente), '
         'nombre y apellidos (opcional), correo electronico, numero telefonico, '
-        'genero y fecha de nacimiento.\n\n'
+        'genero, fecha de nacimiento y direccion de domicilio.\n\n'
         'B) Datos de contacto: correo electronico, numero de telefono.\n\n'
+        'B-1) Datos de lista de contactos: BeautyCita accede a los numeros de '
+        'telefono de tu lista de contactos para identificar salones registrados. '
+        'Solo se comparan numeros de telefono; no se almacenan ni transmiten '
+        'nombres ni otros datos de contactos.\n\n'
         'C) Datos de ubicacion: coordenadas GPS (solo con su consentimiento '
         'explicito a traves del permiso de ubicacion de su dispositivo).\n\n'
         'D) Datos de transacciones: historial de reservas, preferencias de '
@@ -654,7 +661,9 @@ const _privacySections = [
         'de Contribuyentes) y regimen fiscal, proporcionados voluntariamente '
         'para el calculo de retenciones de impuestos.\n\n'
         'F) Datos de imagen: fotografias que usted suba o genere mediante '
-        'nuestras herramientas de inteligencia artificial (estudio virtual).\n\n'
+        'nuestras herramientas de inteligencia artificial (estudio virtual). '
+        'Las fotografias de portafolio, incluyendo imagenes de antes y despues, '
+        'pueden ser visibles publicamente en beautycita.com/p/salon-slug.\n\n'
         'G) Datos tecnicos: token de notificaciones push, identificador de '
         'dispositivo, sistema operativo y version de la aplicacion.\n\n'
         'H) Datos de navegacion y uso: pantallas visitadas, acciones realizadas '
@@ -753,6 +762,17 @@ const _privacySections = [
         'Transferencia obligatoria por ley (Art. 37 LFPDPPP). El SAT tiene '
         'acceso a registros de transacciones conforme a la '
         'legislacion fiscal vigente.\n\n'
+        'H) WHATSAPP BUSINESS API (META): envio de notificaciones, '
+        'verificacion de telefono y comunicacion con salones via WhatsApp. '
+        'Transferencia internacional con clausulas contractuales.\n\n'
+        'I) SUPABASE (INFRAESTRUCTURA): base de datos, autenticacion y '
+        'almacenamiento de archivos. Transferencia internacional con '
+        'clausulas contractuales.\n\n'
+        'J) GOOGLE CALENDAR: sincronizacion de citas con el calendario del '
+        'usuario (solo si el usuario conecta su cuenta de Google). '
+        'Transferencia internacional con clausulas contractuales.\n\n'
+        'K) CLOUDFLARE R2: almacenamiento de archivos multimedia. '
+        'Transferencia internacional con clausulas contractuales.\n\n'
         'BeautyCita NO vende, comercializa ni renta sus datos personales '
         'a terceros bajo ninguna circunstancia.',
   ),
@@ -926,7 +946,7 @@ const _privacySections = [
         'consentimiento expreso se obtiene al momento de utilizar la '
         'funcion de estudio virtual, mediante confirmacion explicita '
         'en pantalla antes del procesamiento.\n\n'
-        'Fecha de ultima actualizacion: 13 de marzo de 2026.',
+        'Fecha de ultima actualizacion: 17 de marzo de 2026.',
   ),
 ];
 
