@@ -23,7 +23,6 @@ import 'package:beautycita/screens/qr_scan_screen.dart';
 import 'package:beautycita/screens/device_manager_screen.dart';
 import 'package:beautycita/screens/discovered_salon_detail_screen.dart';
 import 'package:beautycita/screens/virtual_studio_screen.dart';
-import 'package:beautycita/screens/media_manager_screen.dart';
 import 'package:beautycita/screens/preferences_screen.dart';
 import 'package:beautycita/screens/profile_screen.dart';
 import 'package:beautycita/screens/security_screen.dart';
@@ -69,7 +68,6 @@ class AppRoutes {
   static const String devices = '/devices';
   static const String discoveredSalon = '/discovered-salon';
   static const String studio = '/studio';
-  static const String mediaManager = '/media-manager';
   static const String preferences = '/settings/preferences';
   static const String profile = '/settings/profile';
   static const String security = '/settings/security';
@@ -550,22 +548,6 @@ class AppRoutes {
         pageBuilder: (context, state) => CustomTransitionPage(
           key: state.pageKey,
           child: const DeviceManagerScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
-                .chain(CurveTween(curve: Curves.easeInOutCubic));
-            return SlideTransition(
-              position: animation.drive(tween),
-              child: child,
-            );
-          },
-        ),
-      ),
-      GoRoute(
-        path: mediaManager,
-        name: 'media-manager',
-        pageBuilder: (context, state) => CustomTransitionPage(
-          key: state.pageKey,
-          child: const MediaManagerScreen(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
                 .chain(CurveTween(curve: Curves.easeInOutCubic));

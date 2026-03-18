@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:beautycita_core/models.dart' hide Provider;
 import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/providers/feed_provider.dart';
+import 'package:beautycita/screens/feed/feed_image_viewer.dart';
 import 'package:beautycita/screens/feed/product_detail_sheet.dart';
 
 class FeedCard extends ConsumerStatefulWidget {
@@ -235,40 +236,56 @@ class _MainImage extends StatelessWidget {
     final palette = Theme.of(context).colorScheme;
     final imageUrl = showBefore ? item.beforeUrl! : item.afterUrl;
 
-    return AspectRatio(
-      aspectRatio: 4 / 5,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          // Main image
-          Image.network(
-            imageUrl,
-            fit: BoxFit.cover,
-            loadingBuilder: (_, child, progress) {
-              if (progress == null) return child;
-              return Container(
-                color: palette.surfaceContainerHighest,
-                child: Center(
-                  child: CircularProgressIndicator(
-                    value: progress.expectedTotalBytes != null
-                        ? progress.cumulativeBytesLoaded /
-                            progress.expectedTotalBytes!
-                        : null,
-                    strokeWidth: 2,
-                    color: palette.primary,
+    return GestureDetector(
+      onTap: () {
+        final urls = <String>[item.afterUrl];
+        final labels = <String>[];
+        if (item.isBeforeAfter) {
+          urls.insert(0, item.beforeUrl!);
+          labels.addAll(['Antes', 'Despues']);
+        }
+        FeedImageViewer.open(
+          context,
+          imageUrls: urls,
+          labels: labels.isNotEmpty ? labels : null,
+          initialIndex: item.isBeforeAfter && showBefore ? 0 : (item.isBeforeAfter ? 1 : 0),
+          title: item.businessName,
+        );
+      },
+      child: AspectRatio(
+        aspectRatio: 4 / 5,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // Main image
+            Image.network(
+              imageUrl,
+              fit: BoxFit.cover,
+              loadingBuilder: (_, child, progress) {
+                if (progress == null) return child;
+                return Container(
+                  color: palette.surfaceContainerHighest,
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      value: progress.expectedTotalBytes != null
+                          ? progress.cumulativeBytesLoaded /
+                              progress.expectedTotalBytes!
+                          : null,
+                      strokeWidth: 2,
+                      color: palette.primary,
+                    ),
                   ),
+                );
+              },
+              errorBuilder: (_, _, _) => Container(
+                color: palette.surfaceContainerHighest,
+                child: Icon(
+                  Icons.broken_image_outlined,
+                  size: AppConstants.iconSizeXL,
+                  color: palette.onSurface.withValues(alpha: 0.3),
                 ),
-              );
-            },
-            errorBuilder: (_, _, _) => Container(
-              color: palette.surfaceContainerHighest,
-              child: Icon(
-                Icons.broken_image_outlined,
-                size: AppConstants.iconSizeXL,
-                color: palette.onSurface.withValues(alpha: 0.3),
               ),
             ),
-          ),
 
           // Before/After toggle button
           if (item.isBeforeAfter && onToggleBeforeAfter != null)
@@ -340,6 +357,7 @@ class _MainImage extends StatelessWidget {
               ),
             ),
         ],
+        ),
       ),
     );
   }

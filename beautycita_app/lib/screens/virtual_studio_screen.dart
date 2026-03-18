@@ -1,5 +1,5 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:google_fonts/google_fonts.dart';
@@ -8,6 +8,178 @@ import 'package:beautycita/services/toast_service.dart';
 import '../providers/feature_toggle_provider.dart';
 import '../services/lightx_service.dart';
 import '../services/media_service.dart';
+
+/// Opens a fullscreen image viewer with pinch-to-zoom and optional save/share.
+///
+/// Accepts either [bytes] (for before/source images) or [url] (for result images).
+/// When [url] is provided, save and share actions are shown in the bottom bar.
+void _openImageFullscreen(
+  BuildContext context, {
+  Uint8List? bytes,
+  String? url,
+  required String title,
+}) {
+  assert(bytes != null || url != null, 'Provide either bytes or url');
+
+  Navigator.of(context).push(
+    PageRouteBuilder(
+      opaque: false,
+      barrierColor: Colors.black,
+      pageBuilder: (ctx, anim, secondAnim) => _FullscreenImageView(
+        bytes: bytes,
+        url: url,
+        title: title,
+      ),
+      transitionsBuilder: (ctx, anim, secondAnim, child) {
+        return FadeTransition(opacity: anim, child: child);
+      },
+    ),
+  );
+}
+
+class _FullscreenImageView extends StatelessWidget {
+  final Uint8List? bytes;
+  final String? url;
+  final String title;
+
+  const _FullscreenImageView({
+    this.bytes,
+    this.url,
+    required this.title,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    final hasUrl = url != null && url!.isNotEmpty;
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        backgroundColor: Colors.black54,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.close, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          title,
+          style: GoogleFonts.nunito(
+            color: Colors.white,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        centerTitle: true,
+      ),
+      body: InteractiveViewer(
+        minScale: 1.0,
+        maxScale: 4.0,
+        child: Center(
+          child: bytes != null
+              ? Image.memory(bytes!, fit: BoxFit.contain)
+              : Image.network(
+                  url!,
+                  fit: BoxFit.contain,
+                  loadingBuilder: (_, child, progress) {
+                    if (progress == null) return child;
+                    return Center(
+                      child: CircularProgressIndicator(
+                        value: progress.expectedTotalBytes != null
+                            ? progress.cumulativeBytesLoaded /
+                                progress.expectedTotalBytes!
+                            : null,
+                        color: primary,
+                      ),
+                    );
+                  },
+                  errorBuilder: (_, _, _) => const Icon(
+                    Icons.broken_image,
+                    color: Colors.white38,
+                    size: 64,
+                  ),
+                ),
+        ),
+      ),
+      bottomNavigationBar: hasUrl
+          ? Container(
+              color: Colors.black87,
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 12,
+                bottom: MediaQuery.of(context).padding.bottom + 12,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _FullscreenAction(
+                    icon: Icons.download,
+                    label: 'Guardar',
+                    onTap: () async {
+                      HapticFeedback.lightImpact();
+                      final mediaService = MediaService();
+                      final success =
+                          await mediaService.saveUrlToGallery(url!);
+                      if (success) {
+                        ToastService.showSuccess('Guardado en galeria');
+                      } else {
+                        ToastService.showError('Error al guardar');
+                      }
+                    },
+                  ),
+                  _FullscreenAction(
+                    icon: Icons.share,
+                    label: 'Compartir',
+                    onTap: () async {
+                      HapticFeedback.lightImpact();
+                      final mediaService = MediaService();
+                      await mediaService.shareImage(url!,
+                          text: 'Mi look en BeautyCita');
+                    },
+                  ),
+                ],
+              ),
+            )
+          : null,
+    );
+  }
+}
+
+class _FullscreenAction extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _FullscreenAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: Colors.white, size: 24),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: GoogleFonts.nunito(
+              color: Colors.white,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 /// Tool metadata for each studio tab.
 class _StudioTool {
@@ -551,11 +723,18 @@ class _ToolViewState extends ConsumerState<_ToolView>
                       ),
                     ),
                     const SizedBox(height: 8),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: AspectRatio(
-                        aspectRatio: 3 / 4,
-                        child: Image.memory(_imageBytes!, fit: BoxFit.contain),
+                    GestureDetector(
+                      onTap: () => _openImageFullscreen(
+                        context,
+                        bytes: _imageBytes,
+                        title: 'Antes',
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: AspectRatio(
+                          aspectRatio: 3 / 4,
+                          child: Image.memory(_imageBytes!, fit: BoxFit.contain),
+                        ),
                       ),
                     ),
                   ],
@@ -575,17 +754,24 @@ class _ToolViewState extends ConsumerState<_ToolView>
                       ),
                     ),
                     const SizedBox(height: 8),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: AspectRatio(
-                        aspectRatio: 3 / 4,
-                        child: Image.network(
-                          _resultUrl!,
-                          fit: BoxFit.contain,
-                          errorBuilder: (_, _, _) => Container(
-                            color: surface,
-                            child: const Center(
-                              child: Icon(Icons.broken_image, size: 48),
+                    GestureDetector(
+                      onTap: () => _openImageFullscreen(
+                        context,
+                        url: _resultUrl,
+                        title: 'Despues',
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: AspectRatio(
+                          aspectRatio: 3 / 4,
+                          child: Image.network(
+                            _resultUrl!,
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, _, _) => Container(
+                              color: surface,
+                              child: const Center(
+                                child: Icon(Icons.broken_image, size: 48),
+                              ),
                             ),
                           ),
                         ),
@@ -1175,9 +1361,16 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
                   children: [
                     Text('Tu foto', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: onSurfaceLight)),
                     const SizedBox(height: 8),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: AspectRatio(aspectRatio: 3 / 4, child: Image.memory(_selfieBytes!, fit: BoxFit.contain)),
+                    GestureDetector(
+                      onTap: () => _openImageFullscreen(
+                        context,
+                        bytes: _selfieBytes,
+                        title: 'Tu foto',
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: AspectRatio(aspectRatio: 3 / 4, child: Image.memory(_selfieBytes!, fit: BoxFit.contain)),
+                      ),
                     ),
                   ],
                 ),
@@ -1188,16 +1381,23 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
                   children: [
                     Text('Resultado', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: primary)),
                     const SizedBox(height: 8),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: AspectRatio(
-                        aspectRatio: 3 / 4,
-                        child: Image.network(
-                          _resultUrl!,
-                          fit: BoxFit.contain,
-                          errorBuilder: (_, _, _) => Container(
-                            color: surface,
-                            child: const Center(child: Icon(Icons.broken_image, size: 48)),
+                    GestureDetector(
+                      onTap: () => _openImageFullscreen(
+                        context,
+                        url: _resultUrl,
+                        title: 'Resultado',
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: AspectRatio(
+                          aspectRatio: 3 / 4,
+                          child: Image.network(
+                            _resultUrl!,
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, _, _) => Container(
+                              color: surface,
+                              child: const Center(child: Icon(Icons.broken_image, size: 48)),
+                            ),
                           ),
                         ),
                       ),

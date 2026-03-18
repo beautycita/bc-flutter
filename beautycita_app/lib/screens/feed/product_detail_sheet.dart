@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:beautycita_core/models.dart' hide Provider;
 import 'package:beautycita/config/constants.dart';
+import 'package:beautycita/screens/feed/feed_image_viewer.dart';
 
 class ProductDetailSheet extends StatelessWidget {
   final FeedProductTag product;
@@ -65,21 +66,28 @@ class ProductDetailSheet extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Product photo
-                  ClipRRect(
-                    borderRadius:
-                        BorderRadius.circular(AppConstants.radiusMD),
-                    child: AspectRatio(
-                      aspectRatio: 1,
-                      child: Image.network(
-                        product.photoUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) => Container(
-                          color: palette.surfaceContainerHighest,
-                          child: Icon(
-                            Icons.image_outlined,
-                            size: AppConstants.iconSizeXXL,
-                            color: palette.onSurface.withValues(alpha: 0.3),
+                  // Product photo (tap to fullscreen)
+                  GestureDetector(
+                    onTap: () => FeedImageViewer.open(
+                      context,
+                      imageUrls: [product.photoUrl],
+                      title: product.name,
+                    ),
+                    child: ClipRRect(
+                      borderRadius:
+                          BorderRadius.circular(AppConstants.radiusMD),
+                      child: AspectRatio(
+                        aspectRatio: 1,
+                        child: Image.network(
+                          product.photoUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) => Container(
+                            color: palette.surfaceContainerHighest,
+                            child: Icon(
+                              Icons.image_outlined,
+                              size: AppConstants.iconSizeXXL,
+                              color: palette.onSurface.withValues(alpha: 0.3),
+                            ),
                           ),
                         ),
                       ),

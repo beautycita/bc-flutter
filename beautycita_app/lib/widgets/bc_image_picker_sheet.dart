@@ -6,9 +6,17 @@ import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 
 import '../config/constants.dart';
-import '../providers/media_provider.dart';
 import '../services/media_service.dart';
 import 'package:beautycita/services/toast_service.dart';
+
+/// Singleton MediaService provider (for image picker library tab).
+final _mediaServiceProvider = Provider<MediaService>((ref) => MediaService());
+
+/// All user media (for BC media library tab in image picker).
+final personalMediaProvider = FutureProvider<List<MediaItem>>((ref) async {
+  final service = ref.read(_mediaServiceProvider);
+  return service.fetchAllUserMedia();
+});
 
 /// Source of the selected image.
 enum BCImageSource {
