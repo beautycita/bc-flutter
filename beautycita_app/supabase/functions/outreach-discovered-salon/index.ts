@@ -413,7 +413,7 @@ serve(async (req: Request) => {
 
           if (recipientPhone) {
             try {
-              // Check if recipient is on WhatsApp
+              // Check if recipient is on WhatsApp (5s timeout)
               const checkRes = await fetch(`${WA_API_URL}/api/wa/check`, {
                 method: "POST",
                 headers: {
@@ -421,6 +421,7 @@ serve(async (req: Request) => {
                   Authorization: `Bearer ${WA_API_TOKEN}`,
                 },
                 body: JSON.stringify({ phone: recipientPhone }),
+                signal: AbortSignal.timeout(5000),
               });
               const checkData = await checkRes.json();
 
@@ -436,6 +437,7 @@ serve(async (req: Request) => {
                     phone: recipientPhone,
                     message: messagePrefix + message,
                   }),
+                  signal: AbortSignal.timeout(10000),
                 });
                 const sendData = await sendRes.json();
                 outreachSent = sendData.sent === true;

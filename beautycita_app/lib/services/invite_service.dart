@@ -198,9 +198,9 @@ class InviteService {
       body: {
         'action': 'invite',
         'discovered_salon_id': salonId,
-        'user_message': inviteMessage,
+        'invite_message': inviteMessage,
       },
-    );
+    ).timeout(const Duration(seconds: 30));
 
     debugPrint('[INVITE-SVC] sendInvite status: ${response.status}');
 
