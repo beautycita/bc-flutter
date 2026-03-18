@@ -184,11 +184,11 @@ class InviteService {
     return data['text'] as String? ?? '';
   }
 
-  /// Send invite: record in DB + trigger platform WA.
-  /// Returns the WhatsApp URL for the user to open.
+  /// Send invite: record interest signal in DB. Server sends via best channel
+  /// (WA if available, email if not, SMS as fallback).
+  /// Returns WA URL if server provides the phone for user-side WA opening.
   Future<String?> sendInvite({
     required String salonId,
-    required String salonPhone,
     required String inviteMessage,
   }) async {
     final client = SupabaseClientService.client;
@@ -197,9 +197,8 @@ class InviteService {
       'outreach-discovered-salon',
       body: {
         'action': 'invite',
-        'salon_id': salonId,
-        'salon_phone': salonPhone,
-        'invite_message': inviteMessage,
+        'discovered_salon_id': salonId,
+        'user_message': inviteMessage,
       },
     );
 
@@ -213,12 +212,9 @@ class InviteService {
       );
     }
 
-    // Build WhatsApp URL for user to open
-    final cleanPhone = cleanPhoneForWhatsApp(salonPhone);
-    if (cleanPhone == null) return null;
-
-    final encodedMessage = Uri.encodeComponent(inviteMessage);
-    return 'https://wa.me/$cleanPhone?text=$encodedMessage';
+    // Server may return a wa_url for user to open
+    final data = response.data as Map<String, dynamic>;
+    return data['wa_url'] as String?;
   }
 
   /// Cleans a phone number for use in a wa.me URL.

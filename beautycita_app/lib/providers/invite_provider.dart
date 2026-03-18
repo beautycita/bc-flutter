@@ -225,7 +225,7 @@ class InviteNotifier extends StateNotifier<InviteState> {
   }
 
   /// Generate (or regenerate) the personalized invite message.
-  /// Uses local template for instant display — no API call needed.
+  /// Uses local templates with variation for instant display.
   Future<void> generateMessage() async {
     final salon = state.selectedSalon;
     if (salon == null) return;
@@ -233,44 +233,49 @@ class InviteNotifier extends StateNotifier<InviteState> {
     final userName = _getCurrentUserName();
     final salonName = salon.name;
     final service = state.serviceFilter;
+    final regUrl = 'https://beautycita.com/registro?ref=${salon.id}';
 
-    // Instant local template — no API round-trip
-    final serviceNote = service != null && service.isNotEmpty
-        ? ' Estaba buscando $service y me encantaría reservar contigo.'
-        : ' Me encantaría poder reservar contigo desde la app.';
+    final templates = <String>[
+      'Hola $salonName! Soy $userName.${service != null && service.isNotEmpty ? ' Estaba buscando $service y' : ''} Me encantaría poder reservar contigo desde BeautyCita. Es gratis para ti y tus clientas reservan en segundos. $regUrl',
+      'Hola! Me llamo $userName y quisiera ser tu clienta en BeautyCita. Es una app donde reservas citas de belleza súper fácil. Regístrate gratis: $regUrl',
+      '$salonName, soy $userName. Tus clientas te buscan en BeautyCita pero aún no estás! Regístrate gratis y empieza a recibir reservas: $regUrl',
+      'Hola $salonName! Uso BeautyCita para mis citas de belleza y me encantaría encontrarte ahí. El registro es gratis y en 60 segundos: $regUrl',
+      'Hola! Soy $userName. Quiero recomendarte BeautyCita — es una app gratuita donde tus clientas reservan en 30 segundos sin llamar. $regUrl',
+    ];
 
-    final message = 'Hola $salonName! Soy $userName.$serviceNote '
-        'BeautyCita es una app gratuita donde tus clientas pueden reservar '
-        'en segundos. ¡Registrate y nos vemos pronto! '
-        'https://beautycita.com/registro?ref=${salon.id}';
+    // Pick a different template each time (cycle through on redo)
+    final currentMsg = state.inviteMessage;
+    var idx = 0;
+    if (currentMsg != null) {
+      for (var i = 0; i < templates.length; i++) {
+        if (currentMsg == templates[i]) {
+          idx = (i + 1) % templates.length;
+          break;
+        }
+      }
+      // If current message doesn't match any template (edited), pick next random
+      if (idx == 0 && currentMsg != templates[0]) {
+        idx = DateTime.now().millisecond % templates.length;
+      }
+    }
 
     state = state.copyWith(
       step: InviteStep.readyToSend,
-      inviteMessage: message,
+      inviteMessage: templates[idx],
     );
   }
 
-  /// Send the invite: record in DB + platform WA. Returns WA URL.
+  /// Send the invite: record in DB + server sends via WA/email/SMS.
   Future<void> sendInvite() async {
     final salon = state.selectedSalon;
     final message = state.inviteMessage;
     if (salon == null || message == null) return;
-
-    final phone = salon.whatsapp ?? salon.phone;
-    if (phone == null || phone.isEmpty) {
-      state = state.copyWith(
-        step: InviteStep.error,
-        error: 'Este salón no tiene número de teléfono registrado.',
-      );
-      return;
-    }
 
     state = state.copyWith(step: InviteStep.sending);
 
     try {
       final waUrl = await _service.sendInvite(
         salonId: salon.id,
-        salonPhone: phone,
         inviteMessage: message,
       );
 

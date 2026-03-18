@@ -346,7 +346,7 @@ class _InviteSalonDetailScreenState
             ),
             const SizedBox(width: 6),
             Text(
-              'Tu invitacion personalizada',
+              'Invitación',
               style: GoogleFonts.poppins(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
