@@ -230,7 +230,7 @@ class InviteNotifier extends StateNotifier<InviteState> {
     final salon = state.selectedSalon;
     if (salon == null) return;
 
-    final userName = _getCurrentUserName();
+    final userName = await _getCurrentUserName();
     final salonName = salon.name;
     final service = state.serviceFilter;
     final regUrl = 'https://beautycita.com/registro?ref=${salon.id}';
@@ -343,14 +343,27 @@ class InviteNotifier extends StateNotifier<InviteState> {
     }).catchError((_) {});
   }
 
-  String _getCurrentUserName() {
+  Future<String> _getCurrentUserName() async {
     try {
-      final user = SupabaseClientService.client.auth.currentUser;
-      final username =
-          user?.userMetadata?['username'] as String? ?? 'Usuaria';
-      return username;
+      final client = SupabaseClientService.client;
+      final userId = client.auth.currentUser?.id;
+      if (userId == null) return 'Una clienta';
+
+      final profile = await client
+          .from('profiles')
+          .select('full_name, username')
+          .eq('id', userId)
+          .maybeSingle();
+
+      if (profile != null) {
+        final fullName = profile['full_name'] as String?;
+        if (fullName != null && fullName.isNotEmpty) return fullName;
+        final username = profile['username'] as String?;
+        if (username != null && username.isNotEmpty) return username;
+      }
+      return 'Una clienta';
     } catch (_) {
-      return 'Usuaria';
+      return 'Una clienta';
     }
   }
 }
