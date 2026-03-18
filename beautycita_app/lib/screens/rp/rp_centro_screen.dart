@@ -635,7 +635,8 @@ class _RPCentroScreenState extends ConsumerState<RPCentroScreen> {
         builder: (ctx, setDialogState) => AlertDialog(
           title: Text('Cerrar Proceso',
               style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
-          content: Column(
+          content: SingleChildScrollView(
+            child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -694,6 +695,7 @@ class _RPCentroScreenState extends ConsumerState<RPCentroScreen> {
                 ],
               ],
             ],
+          ),
           ),
           actions: [
             TextButton(
