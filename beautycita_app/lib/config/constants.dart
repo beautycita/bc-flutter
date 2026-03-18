@@ -23,7 +23,7 @@ class AppConstants {
   }
 
   static const String versionCheckUrl =
-      'https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/apk/version.json';
+      'https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/version.json';
   static const String tableErrorReports = 'user_error_reports';
 
   // Animation Durations

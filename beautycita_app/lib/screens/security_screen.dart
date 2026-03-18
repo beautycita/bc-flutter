@@ -16,6 +16,8 @@ class SecurityScreen extends ConsumerStatefulWidget {
 }
 
 class _SecurityScreenState extends ConsumerState<SecurityScreen> {
+  bool _checkingUpdate = false;
+
   @override
   void initState() {
     super.initState();
@@ -172,6 +174,16 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
             ),
           ),
 
+          SettingsTile(
+            icon: Icons.refresh_rounded,
+            iconColor: Colors.teal,
+            label: 'Buscar actualizaciones',
+            trailing: _checkingUpdate
+                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                : const Icon(Icons.chevron_right, size: 20),
+            onTap: _checkingUpdate ? null : () => _checkForUpdates(),
+          ),
+
           const SizedBox(height: AppConstants.paddingLG),
         ],
       ),
@@ -182,6 +194,21 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
     final url = UpdaterService.instance.apkUpdateUrl;
     if (url.isNotEmpty) {
       launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    }
+  }
+
+  Future<void> _checkForUpdates() async {
+    setState(() => _checkingUpdate = true);
+    await UpdaterService.instance.checkForApkUpdate();
+    if (!mounted) return;
+    setState(() => _checkingUpdate = false);
+
+    if (UpdaterService.instance.apkUpdateAvailable) {
+      ToastService.showSuccess(
+        'Actualización disponible: v${UpdaterService.instance.apkUpdateVersion}',
+      );
+    } else {
+      ToastService.showSuccess('Tu app está al día');
     }
   }
 
