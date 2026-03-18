@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../config/theme.dart';
 import '../models/curate_result.dart';
+import '../providers/contact_match_provider.dart';
 import '../providers/profile_provider.dart';
 import '../providers/security_provider.dart';
 import '../services/location_service.dart';
@@ -63,6 +64,8 @@ class _InviteSalonScreenState extends ConsumerState<InviteSalonScreen> {
   void initState() {
     super.initState();
     _fetchLocation();
+    // Trigger contact match check (uses cached if permission already granted)
+    Future.microtask(() => ref.read(contactMatchProvider.notifier).checkPermission());
   }
 
   Future<void> _fetchLocation() async {
@@ -232,18 +235,24 @@ class _InviteSalonScreenState extends ConsumerState<InviteSalonScreen> {
                     );
                   }
 
-                  return Column(
-                    children: [
-                      // Count header
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(
-                          BeautyCitaTheme.spaceLG,
-                          BeautyCitaTheme.spaceMD,
-                          BeautyCitaTheme.spaceLG,
-                          BeautyCitaTheme.spaceSM,
+                  return Expanded(
+                    child: ListView(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: BeautyCitaTheme.spaceMD,
+                      ),
+                      children: [
+                        // ── Contact matches section ──
+                        _ContactMatchesSection(
+                          invitedIds: _invitedIds,
+                          onInvite: _handleContactInvite,
                         ),
-                        child: Align(
-                          alignment: Alignment.centerLeft,
+                        // ── Nearby salons header ──
+                        Padding(
+                          padding: const EdgeInsets.only(
+                            left: BeautyCitaTheme.spaceSM,
+                            top: BeautyCitaTheme.spaceSM,
+                            bottom: BeautyCitaTheme.spaceSM,
+                          ),
                           child: Text(
                             '${filtered.length} estilistas en tu zona',
                             style: GoogleFonts.nunito(
@@ -252,21 +261,14 @@ class _InviteSalonScreenState extends ConsumerState<InviteSalonScreen> {
                             ),
                           ),
                         ),
-                      ),
-                      Expanded(
-                        child: ListView.builder(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: BeautyCitaTheme.spaceMD,
-                          ),
-                          itemCount: filtered.length,
-                          itemBuilder: (context, i) => _SalonCard(
-                            salon: filtered[i],
-                            invited: _invitedIds.contains(filtered[i].id),
-                            onInvite: () => _handleInvite(filtered[i]),
-                          ),
-                        ),
-                      ),
-                    ],
+                        // ── Nearby salon cards ──
+                        ...filtered.map((s) => _SalonCard(
+                              salon: s,
+                              invited: _invitedIds.contains(s.id),
+                              onInvite: () => _handleInvite(s),
+                            )),
+                      ],
+                    ),
                   );
                 },
                 loading: () => const Center(
@@ -340,6 +342,315 @@ class _InviteSalonScreenState extends ConsumerState<InviteSalonScreen> {
         'action': 'invite',
         'discovered_salon_id': salon.id,
       },
+    );
+  }
+
+  Future<void> _handleContactInvite(EnrichedMatch match) async {
+    if (!_hasVerifiedIdentity()) {
+      ToastService.showWarning(
+        'Verifica tu telefono o email en Ajustes > Seguridad para invitar salones.',
+      );
+      return;
+    }
+
+    setState(() => _invitedIds.add(match.salonId));
+
+    final phone = match.matchedPhone;
+    final regUrl = Uri.https(
+      'beautycita.com',
+      '/supabase/functions/v1/salon-registro',
+      {'ref': match.salonId},
+    );
+    final message = Uri.encodeComponent(
+      'Hola! Queria hacer una cita contigo pero no te encontre '
+      'en BeautyCita. Deberias estar ahi, te llegan mas clientes '
+      'y es gratis: $regUrl '
+      'Manana te busco en la app si no ando muy ocupada!',
+    );
+    final waUrl = Uri.parse('https://wa.me/${phone.replaceAll('+', '')}?text=$message');
+    launchUrl(waUrl, mode: LaunchMode.externalApplication);
+
+    // Record interest signal
+    SupabaseClientService.client.functions.invoke(
+      'outreach-discovered-salon',
+      body: {
+        'action': 'invite',
+        'discovered_salon_id': match.salonId,
+      },
+    );
+  }
+}
+
+// ── Contact Matches Section ──
+
+class _ContactMatchesSection extends ConsumerWidget {
+  final Set<String> invitedIds;
+  final Future<void> Function(EnrichedMatch) onInvite;
+
+  const _ContactMatchesSection({
+    required this.invitedIds,
+    required this.onInvite,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final matchState = ref.watch(contactMatchProvider);
+
+    // Only show discovered (unregistered) salons — those are the ones to invite
+    final discoveredMatches = matchState.matches
+        .where((m) => m.salonType == 'd' && !invitedIds.contains(m.salonId))
+        .toList();
+
+    // Idle state — show subtle CTA to enable contact matching
+    if (matchState.step == ContactMatchStep.idle) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Material(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+            onTap: () => ref.read(contactMatchProvider.notifier).requestAndScan(),
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: waLightGreen.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.people_outline, color: waGreen, size: 22),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Tus salones favoritos',
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: BeautyCitaTheme.textDark,
+                          ),
+                        ),
+                        Text(
+                          'Encuentra salones que ya conoces e invitalos',
+                          style: GoogleFonts.nunito(
+                            fontSize: 12,
+                            color: BeautyCitaTheme.textLight,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right, color: Colors.grey),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Scanning state
+    if (matchState.step == ContactMatchStep.scanning ||
+        matchState.step == ContactMatchStep.requesting) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+          ),
+          child: Row(
+            children: [
+              const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2, color: waLightGreen),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Buscando salones que ya conoces...',
+                style: GoogleFonts.nunito(fontSize: 13, color: BeautyCitaTheme.textLight),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Denied or error — don't show anything
+    if (matchState.step == ContactMatchStep.denied ||
+        matchState.step == ContactMatchStep.error) {
+      return const SizedBox.shrink();
+    }
+
+    // Loaded but no discovered matches — nothing to show
+    if (discoveredMatches.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    // Show matched salons
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(
+            left: BeautyCitaTheme.spaceSM,
+            top: BeautyCitaTheme.spaceMD,
+            bottom: BeautyCitaTheme.spaceSM,
+          ),
+          child: Text(
+            'Ya te conocen pero aún no están aquí',
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: waGreen,
+            ),
+          ),
+        ),
+        ...discoveredMatches.map((match) => _ContactMatchCard(
+              match: match,
+              invited: invitedIds.contains(match.salonId),
+              onInvite: () => onInvite(match),
+            )),
+        const SizedBox(height: 8),
+        Divider(color: Colors.grey.shade300, height: 1),
+      ],
+    );
+  }
+}
+
+class _ContactMatchCard extends StatelessWidget {
+  final EnrichedMatch match;
+  final bool invited;
+  final VoidCallback onInvite;
+
+  const _ContactMatchCard({
+    required this.match,
+    required this.invited,
+    required this.onInvite,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: invited ? waCardTint : Colors.white,
+        borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+        border: Border.all(
+          color: waLightGreen.withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            // Avatar
+            ClipRRect(
+              borderRadius: BorderRadius.circular(25),
+              child: match.salonPhoto != null
+                  ? Image.network(
+                      match.salonPhoto!,
+                      width: 50,
+                      height: 50,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => _defaultAvatar(),
+                    )
+                  : _defaultAvatar(),
+            ),
+            const SizedBox(width: 12),
+
+            // Info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    match.salonName,
+                    style: GoogleFonts.poppins(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: BeautyCitaTheme.textDark,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Icon(Icons.person_outline, size: 13, color: Colors.grey.shade500),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          match.contactName,
+                          style: GoogleFonts.nunito(
+                            fontSize: 12,
+                            color: BeautyCitaTheme.textLight,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (match.salonRating != null) ...[
+                        const SizedBox(width: 8),
+                        Icon(Icons.star, size: 14, color: BeautyCitaTheme.secondaryGold),
+                        const SizedBox(width: 2),
+                        Text(
+                          match.salonRating!.toStringAsFixed(1),
+                          style: GoogleFonts.nunito(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: BeautyCitaTheme.textDark,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            // Invite button
+            ElevatedButton.icon(
+              onPressed: invited ? null : onInvite,
+              icon: Icon(invited ? Icons.check : Icons.chat, size: 16),
+              label: Text(
+                invited ? 'ENVIADO' : 'INVITAR',
+                style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: invited ? Colors.grey[300] : waLightGreen,
+                foregroundColor: invited ? Colors.grey[600] : Colors.white,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                minimumSize: const Size(0, 36),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _defaultAvatar() {
+    return Container(
+      width: 50,
+      height: 50,
+      decoration: BoxDecoration(
+        color: waGreen.withValues(alpha: 0.15),
+        shape: BoxShape.circle,
+      ),
+      child: const Icon(Icons.store, color: waGreen, size: 24),
     );
   }
 }
