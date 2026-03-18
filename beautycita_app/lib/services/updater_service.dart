@@ -45,10 +45,10 @@ class UpdaterService {
       }
 
       final data = jsonDecode(response.body) as Map<String, dynamic>;
-      final remoteBuild = data['build'] as int? ?? 0;
+      final remoteBuild = data['buildNumber'] as int? ?? data['build'] as int? ?? 0;
       final remoteVersion = data['version'] as String? ?? '';
       final url = data['url'] as String? ?? '';
-      final required = data['required'] as bool? ?? true;
+      final required = data['forceUpdate'] as bool? ?? data['required'] as bool? ?? true;
 
       final localBase = AppConstants.baseBuildNumber;
       if (remoteBuild <= localBase) {
