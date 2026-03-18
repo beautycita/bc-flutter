@@ -158,7 +158,9 @@ final rpChecklistProgressProvider =
   final items = checklist.valueOrNull ?? [];
 
   final checkedRequired = items
-      .where((item) => kRpChecklistRequired.contains(item.itemKey))
+      .where((item) =>
+          kRpChecklistRequired.contains(item.itemKey) &&
+          item.checkedAt != null)
       .length;
 
   return (required: checkedRequired, total: kRpChecklistRequired.length);

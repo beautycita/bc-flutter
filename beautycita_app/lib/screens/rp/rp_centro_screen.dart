@@ -28,6 +28,15 @@ class _RPCentroScreenState extends ConsumerState<RPCentroScreen> {
     final chatHistory =
         ref.watch(rpChatHistoryProvider((salonId: salonId, channel: null)));
 
+    final requiredChecked = checklist.whenOrNull(
+          data: (items) => items
+              .where((i) =>
+                  kRpChecklistRequired.contains(i['item_key']) &&
+                  i['checked_at'] != null)
+              .length,
+        ) ??
+        0;
+
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
@@ -45,9 +54,9 @@ class _RPCentroScreenState extends ConsumerState<RPCentroScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            _buildHeader(checklist),
+            _buildHeader(requiredChecked),
             const SizedBox(height: 20),
-            _buildActionGrid(checklist),
+            _buildActionGrid(requiredChecked),
             const SizedBox(height: 20),
             _buildUltimoContacto(chatHistory),
             const SizedBox(height: 16),
@@ -65,21 +74,12 @@ class _RPCentroScreenState extends ConsumerState<RPCentroScreen> {
 
   // ── Header ──
 
-  Widget _buildHeader(AsyncValue<List<Map<String, dynamic>>> checklist) {
+  Widget _buildHeader(int requiredChecked) {
     final city = salon['location_city'] ?? '';
     final state = salon['location_state'] ?? '';
     final rating = salon['rating_average'];
     final reviews = salon['rating_count'] ?? 0;
     final status = salon['rp_status'] ?? 'unassigned';
-
-    final requiredChecked = checklist.whenOrNull(
-          data: (items) => items
-              .where((i) =>
-                  kRpChecklistRequired.contains(i['item_key']) &&
-                  i['checked_at'] != null)
-              .length,
-        ) ??
-        0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -105,7 +105,7 @@ class _RPCentroScreenState extends ConsumerState<RPCentroScreen> {
             ],
             _statusBadge(status),
             const Spacer(),
-            Text('$requiredChecked/7 requeridos',
+            Text('$requiredChecked/${kRpChecklistRequired.length} requeridos',
                 style: GoogleFonts.poppins(
                     fontSize: 12, color: Colors.grey.shade500)),
           ],
@@ -152,16 +152,7 @@ class _RPCentroScreenState extends ConsumerState<RPCentroScreen> {
 
   // ── Action Grid ──
 
-  Widget _buildActionGrid(AsyncValue<List<Map<String, dynamic>>> checklist) {
-    final requiredChecked = checklist.whenOrNull(
-          data: (items) => items
-              .where((i) =>
-                  kRpChecklistRequired.contains(i['item_key']) &&
-                  i['checked_at'] != null)
-              .length,
-        ) ??
-        0;
-
+  Widget _buildActionGrid(int requiredChecked) {
     return Column(
       children: [
         Row(
@@ -196,7 +187,7 @@ class _RPCentroScreenState extends ConsumerState<RPCentroScreen> {
               child: _actionCardOutline(
                 icon: Icons.checklist,
                 label: 'Checklist',
-                subtitle: '$requiredChecked de 7 requeridos',
+                subtitle: '$requiredChecked de ${kRpChecklistRequired.length} requeridos',
                 onTap: _showChecklist,
               ),
             ),
@@ -577,38 +568,44 @@ class _RPCentroScreenState extends ConsumerState<RPCentroScreen> {
               onPressed: (selectedDate == null || selectedTime == null)
                   ? null
                   : () async {
-                      final proposedAt = DateTime(
-                        selectedDate!.year,
-                        selectedDate!.month,
-                        selectedDate!.day,
-                        selectedTime!.hour,
-                        selectedTime!.minute,
-                      );
-                      final note = noteCtrl.text.trim();
-                      await rpCreateMeeting(
-                        salonId: salonId,
-                        proposedAt: proposedAt,
-                        note: note.isEmpty ? null : note,
-                      );
-                      ref.invalidate(rpNextMeetingProvider(salonId));
-                      if (ctx.mounted) Navigator.pop(ctx);
-                      if (mounted) {
-                        ToastService.showSuccess('Reunión solicitada');
-                      }
-
-                      // Send WA to salon
-                      final salonName =
-                          salon['business_name'] ?? '';
-                      final fecha =
-                          DateFormat('dd MMM yyyy').format(proposedAt);
-                      final hora =
-                          DateFormat('HH:mm').format(proposedAt);
-                      final msg =
-                          'Hola $salonName, somos BeautyCita. Nos gustaría visitarte el $fecha a las $hora${note.isNotEmpty ? ' para $note' : ''}. ¿Te funciona? Puedes responder con: Sí / No / Proponer otro horario';
-                      await rpSendMessage(
+                      try {
+                        final proposedAt = DateTime(
+                          selectedDate!.year,
+                          selectedDate!.month,
+                          selectedDate!.day,
+                          selectedTime!.hour,
+                          selectedTime!.minute,
+                        );
+                        final note = noteCtrl.text.trim();
+                        await rpCreateMeeting(
                           salonId: salonId,
-                          channel: 'whatsapp',
-                          message: msg);
+                          proposedAt: proposedAt,
+                          note: note.isEmpty ? null : note,
+                        );
+                        ref.invalidate(rpNextMeetingProvider(salonId));
+                        if (ctx.mounted) Navigator.pop(ctx);
+                        if (mounted) {
+                          ToastService.showSuccess('Reunión solicitada');
+                        }
+
+                        // Send WA to salon
+                        final salonName =
+                            salon['business_name'] ?? '';
+                        final fecha =
+                            DateFormat('dd MMM yyyy').format(proposedAt);
+                        final hora =
+                            DateFormat('HH:mm').format(proposedAt);
+                        final msg =
+                            'Hola $salonName, somos BeautyCita. Nos gustaría visitarte el $fecha a las $hora${note.isNotEmpty ? ' para $note' : ''}. ¿Te funciona? Puedes responder con: Sí / No / Proponer otro horario';
+                        await rpSendMessage(
+                            salonId: salonId,
+                            channel: 'whatsapp',
+                            message: msg);
+                      } catch (e) {
+                        if (mounted) {
+                          ToastService.showError('Error al crear reunión: $e');
+                        }
+                      }
                     },
               child: const Text('Solicitar'),
             ),
@@ -709,34 +706,40 @@ class _RPCentroScreenState extends ConsumerState<RPCentroScreen> {
                           selectedReason == null)
                   ? null
                   : () async {
-                      final assignmentId =
-                          await getActiveAssignmentId(salonId);
-                      if (assignmentId == null) {
-                        if (mounted) {
-                          ToastService.showError(
-                              'No se encontró asignación activa');
+                      try {
+                        final assignmentId =
+                            await getActiveAssignmentId(salonId);
+                        if (assignmentId == null) {
+                          if (mounted) {
+                            ToastService.showError(
+                                'No se encontró asignación activa');
+                          }
+                          return;
                         }
-                        return;
-                      }
-                      final finalReason = selectedReason == 'Otro'
-                          ? reasonCtrl.text.trim()
-                          : selectedReason;
-                      await rpCloseProcess(
-                        salonId: salonId,
-                        assignmentId: assignmentId,
-                        outcome: outcome!,
-                        reason: outcome == 'not_converted'
-                            ? finalReason
-                            : null,
-                      );
-                      ref.invalidate(rpAssignedSalonsProvider);
-                      if (ctx.mounted) Navigator.pop(ctx);
-                      if (context.mounted) {
-                        ToastService.showSuccess(
-                            outcome == 'completed'
-                                ? 'Proceso cerrado: Convertido'
-                                : 'Proceso cerrado');
-                        context.pop();
+                        final finalReason = selectedReason == 'Otro'
+                            ? reasonCtrl.text.trim()
+                            : selectedReason;
+                        await rpCloseProcess(
+                          salonId: salonId,
+                          assignmentId: assignmentId,
+                          outcome: outcome!,
+                          reason: outcome == 'not_converted'
+                              ? finalReason
+                              : null,
+                        );
+                        ref.invalidate(rpAssignedSalonsProvider);
+                        if (ctx.mounted) Navigator.pop(ctx);
+                        if (context.mounted) {
+                          ToastService.showSuccess(
+                              outcome == 'completed'
+                                  ? 'Proceso cerrado: Convertido'
+                                  : 'Proceso cerrado');
+                          context.pop();
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          ToastService.showError('Error al cerrar proceso: $e');
+                        }
                       }
                     },
               child: const Text('Cerrar Proceso'),
@@ -827,9 +830,14 @@ class _ChecklistSheetState extends ConsumerState<_ChecklistSheet> {
       controlAffinity: ListTileControlAffinity.leading,
       contentPadding: EdgeInsets.zero,
       onChanged: (val) async {
-        await rpToggleChecklistItem(
-            salonId: widget.salonId, itemKey: key, checked: val ?? false);
-        ref.invalidate(rpChecklistProvider(widget.salonId));
+        try {
+          await rpToggleChecklistItem(
+              salonId: widget.salonId, itemKey: key, checked: val ?? false);
+          ref.invalidate(rpChecklistProvider(widget.salonId));
+        } catch (e) {
+          if (!context.mounted) return;
+          ToastService.showError('Error: $e');
+        }
       },
     );
   }

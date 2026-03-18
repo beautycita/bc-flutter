@@ -1378,12 +1378,19 @@ class _RpChecklistSectionState extends ConsumerState<_RpChecklistSection> {
             child: Checkbox(
               value: checked,
               onChanged: (val) async {
-                await rpToggleChecklistItem(
-                  salonId: widget.salonId,
-                  itemKey: key,
-                  checked: val ?? false,
-                );
-                ref.invalidate(rpChecklistProvider(widget.salonId));
+                try {
+                  await rpToggleChecklistItem(
+                    salonId: widget.salonId,
+                    itemKey: key,
+                    checked: val ?? false,
+                  );
+                  ref.invalidate(rpChecklistProvider(widget.salonId));
+                } catch (e) {
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error: $e')),
+                  );
+                }
               },
               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),

@@ -516,22 +516,42 @@ class _RPChatScreenState extends ConsumerState<RPChatScreen> {
               onPressed: outcome == null
                   ? null
                   : () async {
-                      await SupabaseClientService.client.functions
-                          .invoke('outreach-contact', body: {
-                        'action': 'log_call',
-                        'discovered_salon_id': salonId,
-                        'channel': 'in_person',
-                        'outcome':
-                            outcome!.toLowerCase().replaceAll(' ', '_'),
-                        'notes': notesCtrl.text.trim().isEmpty
-                            ? null
-                            : notesCtrl.text.trim(),
-                      });
-                      ref.invalidate(rpChatHistoryProvider(
-                          (salonId: salonId, channel: widget.channel)));
-                      if (ctx.mounted) Navigator.pop(ctx);
-                      if (mounted) {
-                        ToastService.showSuccess('Visita registrada');
+                      try {
+                        final res = await SupabaseClientService.client.functions
+                            .invoke('outreach-contact', body: {
+                          'action': 'log_call',
+                          'discovered_salon_id': salonId,
+                          'channel': 'in_person',
+                          'outcome':
+                              outcome!.toLowerCase().replaceAll(' ', '_'),
+                          'notes': notesCtrl.text.trim().isEmpty
+                              ? null
+                              : notesCtrl.text.trim(),
+                        });
+                        if (res.status != 200) {
+                          if (mounted) {
+                            ToastService.showError('Error al registrar visita');
+                          }
+                          return;
+                        }
+                        // Update rp_status to 'visited' if currently 'assigned'
+                        final currentStatus = widget.salon['rp_status'] as String?;
+                        if (currentStatus == 'assigned') {
+                          await SupabaseClientService.client
+                              .from('discovered_salons')
+                              .update({'rp_status': 'visited'})
+                              .eq('id', salonId);
+                        }
+                        ref.invalidate(rpChatHistoryProvider(
+                            (salonId: salonId, channel: widget.channel)));
+                        if (ctx.mounted) Navigator.pop(ctx);
+                        if (mounted) {
+                          ToastService.showSuccess('Visita registrada');
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          ToastService.showError('Error al registrar visita: $e');
+                        }
                       }
                     },
               child: const Text('Guardar'),
