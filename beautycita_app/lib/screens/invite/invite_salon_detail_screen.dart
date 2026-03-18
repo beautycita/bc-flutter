@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/constants.dart';
 import '../../providers/invite_provider.dart';
+import '../../services/toast_service.dart';
 import 'invite_message_bubble.dart';
 
 /// Salon detail screen in the invite flow.
@@ -24,6 +25,16 @@ class _InviteSalonDetailScreenState
 
   @override
   Widget build(BuildContext context) {
+    // Listen for errors and success
+    ref.listen<InviteState>(inviteProvider, (prev, next) {
+      if (next.step == InviteStep.error && next.error != null) {
+        ToastService.showError(next.error!);
+      }
+      if (next.step == InviteStep.sent && prev?.step != InviteStep.sent) {
+        ToastService.showSuccess('Invitación enviada');
+      }
+    });
+
     final state = ref.watch(inviteProvider);
     final salon = state.selectedSalon;
     if (salon == null) {
