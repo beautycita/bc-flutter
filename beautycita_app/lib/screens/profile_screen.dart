@@ -297,16 +297,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
           const SizedBox(height: AppConstants.paddingLG),
 
-          // ── Contenido ──
-          const SectionHeader(label: 'Contenido'),
-          const SizedBox(height: AppConstants.paddingXS),
-
-          SettingsTile(
-            icon: Icons.perm_media_rounded,
-            label: 'Media Manager',
-            onTap: () => context.push('/media-manager'),
-          ),
-
           // ── Registra tu salon (shown here after 10 app opens for customers) ──
           _buildRegisterSalonTile(),
 
@@ -655,7 +645,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       }
       debugPrint('[Avatar] Avatar saved: $permanentUrl');
 
-      // Save to user_media for media manager
+      // Save to user_media for media library
       try {
         final mediaService = MediaService();
         await mediaService.saveLightXResult(

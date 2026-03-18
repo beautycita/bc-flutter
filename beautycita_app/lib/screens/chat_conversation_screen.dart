@@ -10,6 +10,8 @@ import '../providers/chat_provider.dart';
 import '../providers/feature_toggle_provider.dart';
 import '../services/supabase_client.dart';
 import 'package:beautycita/services/toast_service.dart';
+import 'package:beautycita/widgets/media_viewer.dart';
+import 'package:beautycita/services/media_service.dart';
 
 class ChatConversationScreen extends ConsumerStatefulWidget {
   final String threadId;
@@ -478,6 +480,43 @@ class _MessageBubble extends StatelessWidget {
     this.isErosThread = false,
   });
 
+  void _openImageViewer(BuildContext context, ChatMessage message) {
+    final mediaService = MediaService();
+    final item = MediaItem(
+      id: message.id,
+      userId: message.senderId ?? '',
+      mediaType: 'image',
+      source: message.isTryOnResult ? 'lightx' : 'chat',
+      sourceRef: message.threadId,
+      url: message.mediaUrl!,
+      metadata: message.metadata,
+      section: 'chat',
+      createdAt: message.createdAt,
+    );
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => MediaViewer(
+          items: [item],
+          initialIndex: 0,
+          onSaveToGallery: (item) async {
+            final ok = await mediaService.saveUrlToGallery(item.url);
+            if (ok) {
+              ToastService.showSuccess('Imagen guardada');
+            }
+          },
+          onShare: (item) async {
+            await mediaService.shareImage(
+              item.url,
+              text: 'BeautyCita',
+            );
+          },
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isUser = message.isFromUser;
@@ -525,22 +564,45 @@ class _MessageBubble extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  ClipRRect(
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(16),
-                    ),
-                    child: Image.network(
-                      message.mediaUrl!,
-                      fit: BoxFit.cover,
-                      width: double.infinity,
-                      height: 200,
-                      errorBuilder: (_, _, _) => Container(
-                        height: 200,
-                        color: Theme.of(context).colorScheme.surface,
-                        child: const Center(
-                          child: Icon(Icons.image_not_supported, size: 48),
+                  GestureDetector(
+                    onTap: () => _openImageViewer(context, message),
+                    child: Stack(
+                      children: [
+                        ClipRRect(
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(16),
+                          ),
+                          child: Image.network(
+                            message.mediaUrl!,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            height: 200,
+                            errorBuilder: (_, _, _) => Container(
+                              height: 200,
+                              color: Theme.of(context).colorScheme.surface,
+                              child: const Center(
+                                child: Icon(Icons.image_not_supported, size: 48),
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
+                        Positioned(
+                          right: 8,
+                          bottom: 8,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.45),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Icon(
+                              Icons.zoom_in_rounded,
+                              color: Colors.white,
+                              size: 18,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   Padding(
@@ -600,18 +662,41 @@ class _MessageBubble extends StatelessWidget {
                   ),
                 ],
               ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: Image.network(
-                  message.mediaUrl!,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => Container(
-                    height: 150,
-                    color: Theme.of(context).colorScheme.surface,
-                    child: const Center(
-                      child: Icon(Icons.broken_image, size: 48),
+              child: GestureDetector(
+                onTap: () => _openImageViewer(context, message),
+                child: Stack(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: Image.network(
+                        message.mediaUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => Container(
+                          height: 150,
+                          color: Theme.of(context).colorScheme.surface,
+                          child: const Center(
+                            child: Icon(Icons.broken_image, size: 48),
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
+                    Positioned(
+                      right: 8,
+                      bottom: 8,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.45),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Icon(
+                          Icons.zoom_in_rounded,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
