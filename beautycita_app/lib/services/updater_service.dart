@@ -25,13 +25,34 @@ class UpdaterService {
   String get apkUpdateVersion => _apkUpdateVersion;
   int get apkRemoteBuild => _remoteBuildNumber;
 
+  static const _lastVersionCheckKey = 'last_version_check';
+
   /// Check R2 for a newer APK version. Non-blocking, fail-silent.
   /// Skipped on iOS — AltStore handles updates there.
-  Future<void> checkForApkUpdate() async {
+  /// Set [force] to true to bypass the 24h rate limit (manual check button).
+  Future<void> checkForApkUpdate({bool force = false}) async {
     // iOS uses AltStore for updates, not R2
     if (!Platform.isAndroid) {
       debugPrint('[Updater] Skipping APK check (not Android)');
       return;
+    }
+
+    // Rate-limit to once per 24h unless forced (manual button)
+    if (!force) {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final lastCheck = prefs.getString(_lastVersionCheckKey);
+        if (lastCheck != null) {
+          final lastTime = DateTime.tryParse(lastCheck);
+          if (lastTime != null &&
+              DateTime.now().difference(lastTime) < const Duration(hours: 24)) {
+            debugPrint('[Updater] Skipping version check (last check < 24h ago)');
+            return;
+          }
+        }
+      } catch (_) {
+        // If prefs fail, proceed with check
+      }
     }
 
     try {
@@ -53,6 +74,11 @@ class UpdaterService {
       final localBase = AppConstants.baseBuildNumber;
       if (remoteBuild <= localBase) {
         debugPrint('[Updater] APK is current (local=$localBase [raw=${AppConstants.buildNumber}], remote=$remoteBuild)');
+        // Record successful check even when current
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString(_lastVersionCheckKey, DateTime.now().toIso8601String());
+        } catch (_) {}
         return;
       }
 
@@ -68,6 +94,12 @@ class UpdaterService {
       _apkUpdateVersion = remoteVersion;
       _remoteBuildNumber = remoteBuild;
       debugPrint('[Updater] APK update available: $remoteVersion (build $remoteBuild), required=$required');
+
+      // Record successful check timestamp
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(_lastVersionCheckKey, DateTime.now().toIso8601String());
+      } catch (_) {}
     } catch (e) {
       debugPrint('[Updater] APK version check failed: $e');
     }

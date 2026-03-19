@@ -540,7 +540,6 @@ void main() {
 
       when(() => mockService.sendInvite(
             salonId: salon.id,
-            salonPhone: salon.whatsapp!,
             inviteMessage: 'invite msg',
           )).thenAnswer((_) async => 'https://wa.me/521234567890?text=invite+msg');
 
@@ -609,7 +608,6 @@ void main() {
 
       when(() => mockService.sendInvite(
             salonId: any(named: 'salonId'),
-            salonPhone: any(named: 'salonPhone'),
             inviteMessage: any(named: 'inviteMessage'),
           )).thenThrow(InviteException('WA API down'));
 
