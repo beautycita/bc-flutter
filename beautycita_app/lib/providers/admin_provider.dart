@@ -981,8 +981,10 @@ final searchDiscoveredSalonsProvider = FutureProvider.family<List<Map<String, dy
   });
   var results = (response as List).cast<Map<String, dynamic>>();
 
-  // Pipeline mode: hide salons already assigned to an RP
-  if (params['p_unassigned_only'] == true) {
+  // Pipeline mode: hide salons already assigned to an RP (unless filtering by RP)
+  if (params['p_unassigned_only'] == true &&
+      params['p_assigned_rp_id'] == null &&
+      params['p_rp_status_filter'] == null) {
     results = results.where((s) => s['assigned_rp_id'] == null).toList();
   }
 
