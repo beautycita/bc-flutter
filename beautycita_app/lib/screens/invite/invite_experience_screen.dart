@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../config/constants.dart';
 import '../../config/theme.dart';
 import '../../config/theme_extension.dart';
+import '../../providers/contact_match_provider.dart';
 import '../../providers/feature_toggle_provider.dart';
 import '../../providers/invite_provider.dart';
 import '../invite_salon_screen.dart' show DiscoveredSalon;
@@ -41,6 +42,8 @@ class _InviteExperienceScreenState
       ref
           .read(inviteProvider.notifier)
           .initialize(serviceType: widget.serviceType);
+      // Trigger contact match check
+      ref.read(contactMatchProvider.notifier).checkPermission();
     });
   }
 
@@ -159,6 +162,7 @@ class _InviteExperienceScreenState
           onTap: (salon) {
             ref.read(inviteProvider.notifier).selectSalon(salon);
           },
+          header: _ContactMatchesBanner(ref: ref),
         );
 
       // These states are handled by the detail screen (Task 8)
@@ -270,22 +274,26 @@ class _InviteSearchBar extends StatelessWidget {
 class _SalonListView extends StatelessWidget {
   final List<DiscoveredSalon> salons;
   final ValueChanged<DiscoveredSalon> onTap;
+  final Widget? header;
 
-  const _SalonListView({required this.salons, required this.onTap});
+  const _SalonListView({required this.salons, required this.onTap, this.header});
 
   @override
   Widget build(BuildContext context) {
+    final headerCount = header != null ? 1 : 0;
     return ListView.separated(
       padding: const EdgeInsets.symmetric(
         horizontal: AppConstants.screenPaddingHorizontal,
       ),
-      itemCount: salons.length,
+      itemCount: salons.length + headerCount,
       separatorBuilder: (_, _) =>
           const SizedBox(height: AppConstants.paddingSM),
       itemBuilder: (context, index) {
+        if (header != null && index == 0) return header!;
+        final salonIndex = index - headerCount;
         return _SalonCard(
-          salon: salons[index],
-          onTap: () => onTap(salons[index]),
+          salon: salons[salonIndex],
+          onTap: () => onTap(salons[salonIndex]),
         );
       },
     );
@@ -929,6 +937,129 @@ class _ErrorContent extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Contact Matches Banner — shows matched discovered salons from contacts
+// ---------------------------------------------------------------------------
+
+class _ContactMatchesBanner extends ConsumerWidget {
+  final WidgetRef ref;
+  const _ContactMatchesBanner({required this.ref});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final matchState = ref.watch(contactMatchProvider);
+    final theme = Theme.of(context);
+
+    final discoveredMatches = matchState.matches
+        .where((m) => m.salonType == 'd')
+        .toList();
+
+    if (matchState.step == ContactMatchStep.idle) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: AppConstants.paddingMD),
+        child: Material(
+          color: theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+            onTap: () => ref.read(contactMatchProvider.notifier).requestAndScan(),
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Row(
+                children: [
+                  Container(
+                    width: 40, height: 40,
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.people_outline, color: theme.colorScheme.primary, size: 22),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Tus salones favoritos',
+                            style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600)),
+                        Text('Encuentra salones que ya conoces e invitalos',
+                            style: GoogleFonts.nunito(fontSize: 12, color: theme.colorScheme.onSurface.withValues(alpha: 0.5))),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.chevron_right, color: theme.colorScheme.onSurface.withValues(alpha: 0.3)),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (matchState.step == ContactMatchStep.scanning || matchState.step == ContactMatchStep.requesting) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: AppConstants.paddingMD),
+        child: Row(
+          children: [
+            const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+            const SizedBox(width: 12),
+            Text('Buscando salones que ya conoces...', style: GoogleFonts.nunito(fontSize: 13, color: theme.colorScheme.onSurface.withValues(alpha: 0.5))),
+          ],
+        ),
+      );
+    }
+
+    if (matchState.step == ContactMatchStep.denied || matchState.step == ContactMatchStep.error || discoveredMatches.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Ya te conocen pero aún no están aquí',
+            style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: theme.colorScheme.primary)),
+        const SizedBox(height: 8),
+        ...discoveredMatches.take(5).map((match) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Material(
+                color: theme.colorScheme.surface,
+                borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+                  onTap: () {
+                    final salon = DiscoveredSalon(id: match.salonId, name: match.salonName, city: match.salonCity, photoUrl: match.salonPhoto, rating: match.salonRating, interestCount: 0);
+                    ref.read(inviteProvider.notifier).selectSalon(salon);
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Row(
+                      children: [
+                        CircleAvatar(radius: 22, backgroundImage: match.salonPhoto != null ? NetworkImage(match.salonPhoto!) : null, child: match.salonPhoto == null ? Icon(Icons.store, color: theme.colorScheme.primary) : null),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Text(match.salonName, style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis),
+                            Row(children: [
+                              Icon(Icons.person_outline, size: 13, color: theme.colorScheme.onSurface.withValues(alpha: 0.4)),
+                              const SizedBox(width: 4),
+                              Flexible(child: Text(match.contactName, style: GoogleFonts.nunito(fontSize: 12, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                            ]),
+                          ]),
+                        ),
+                        Icon(Icons.chevron_right, size: 20, color: theme.colorScheme.onSurface.withValues(alpha: 0.3)),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            )),
+        Divider(color: theme.colorScheme.outlineVariant),
+        const SizedBox(height: 8),
+      ],
     );
   }
 }
