@@ -138,6 +138,15 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
+    // Auth: cron secret or service-role key required
+    const authHeader = req.headers.get("authorization") ?? "";
+    const cronSecret = Deno.env.get("CRON_SECRET") ?? "";
+    const isValidCron = cronSecret && authHeader === `Bearer ${cronSecret}`;
+    const isServiceRole = authHeader === `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`;
+    if (!isValidCron && !isServiceRole) {
+      return json({ error: "Unauthorized" }, 401);
+    }
+
     // Feature toggle check
     const blocked = await requireFeature("enable_pos");
     if (blocked) return blocked;

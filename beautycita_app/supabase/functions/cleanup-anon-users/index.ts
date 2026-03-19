@@ -7,9 +7,21 @@ serve(async (req: Request) => {
   }
 
   try {
+    // Auth: cron secret or service-role key required
+    const authHeader = req.headers.get("authorization") ?? "";
+    const cronSecret = Deno.env.get("CRON_SECRET") ?? "";
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const isValidCron = cronSecret && authHeader === `Bearer ${cronSecret}`;
+    const isServiceRole = authHeader === `Bearer ${serviceKey}`;
+    if (!isValidCron && !isServiceRole) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { "Content-Type": "application/json" },
+      });
+    }
+
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      serviceKey
     );
 
     const { data, error } = await supabase.rpc("cleanup_anon_users");

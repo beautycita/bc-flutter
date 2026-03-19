@@ -46,8 +46,11 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
 
-  // Install debug log capture (before anything else that uses debugPrint)
-  DebugLog.instance.install();
+  // Install debug log capture only in debug builds (prevents sensitive data
+  // accumulation in release ring buffer)
+  if (kDebugMode) {
+    DebugLog.instance.install();
+  }
 
   // Track app open count (fire-and-forget, no await needed)
   UserSession.incrementAppOpenCount();

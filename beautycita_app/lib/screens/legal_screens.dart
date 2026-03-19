@@ -844,7 +844,7 @@ const _privacySections = [
         '• Control de acceso por roles (Row Level Security) a nivel de '
         'base de datos.\n'
         '• Autenticacion JWT con tokens de sesion.\n'
-        '• Certificate pinning para conexiones a beautycita.com y stripe.com.\n'
+        '• Cifrado TLS 1.2+ con conjuntos de cifrado modernos (ECDHE/AES-GCM/CHACHA20).\n'
         '• Pagos delegados a procesadores certificados PCI-DSS Nivel 1.\n'
         '• Respaldos diarios cifrados con almacenamiento redundante.\n'
         '• Firewall (UFW), Fail2ban, y monitoreo continuo del servidor.\n'
