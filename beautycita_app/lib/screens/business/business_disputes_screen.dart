@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -972,7 +973,7 @@ class _DisputeDetailSheetState extends ConsumerState<_DisputeDetailSheet> {
                 .maybeSingle();
             price = (apptRow?['price'] as num?)?.toDouble() ?? 0;
           } catch (e) {
-            debugPrint('[Disputes] Failed to fetch appointment price: $e');
+            if (kDebugMode) debugPrint('[Disputes] Failed to fetch appointment price: $e');
           }
         }
         updateData['status'] = 'resolved';
@@ -1006,9 +1007,9 @@ class _DisputeDetailSheetState extends ConsumerState<_DisputeDetailSheet> {
           'process-dispute-refund',
           body: {'dispute_id': disputeId},
         ).then((_) {
-          debugPrint('Dispute refund processed for $disputeId');
+          if (kDebugMode) debugPrint('Dispute refund processed for $disputeId');
         }).catchError((e) {
-          debugPrint('Dispute refund failed for $disputeId: $e');
+          if (kDebugMode) debugPrint('Dispute refund failed for $disputeId: $e');
         });
       }
 
@@ -1023,7 +1024,7 @@ class _DisputeDetailSheetState extends ConsumerState<_DisputeDetailSheet> {
               : 'El salon respondio a tu disputa. Revisa la oferta.',
           'channel': 'in_app',
         }).then((_) {}).catchError((e) {
-          debugPrint('[Disputes] Failed to send dispute notification: $e');
+          if (kDebugMode) debugPrint('[Disputes] Failed to send dispute notification: $e');
         });
       }
 

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -118,7 +119,7 @@ class HelpScreen extends ConsumerWidget {
   Future<void> _launch(String uri) async {
     final url = Uri.parse(uri);
     if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
-      debugPrint('Could not launch $uri');
+      if (kDebugMode) debugPrint('Could not launch $uri');
     }
   }
 

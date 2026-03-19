@@ -29,7 +29,7 @@ class ErrorReportRepository {
           .from('user_error_reports')
           .insert(report.toInsertMap());
     } catch (e) {
-      debugPrint('[ErrorReportRepository] Submit failed: $e');
+      if (kDebugMode) debugPrint('[ErrorReportRepository] Submit failed: $e');
     }
   }
 }

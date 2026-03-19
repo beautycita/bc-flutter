@@ -30,7 +30,7 @@ class InviteService {
       body: body,
     );
 
-    debugPrint('[INVITE-SVC] fetchNearbySalons status: ${response.status}');
+    if (kDebugMode) debugPrint('[INVITE-SVC] fetchNearbySalons status: ${response.status}');
 
     if (response.status != 200) {
       final error = response.data is Map ? response.data['error'] : 'Unknown error';
@@ -66,7 +66,7 @@ class InviteService {
       },
     );
 
-    debugPrint('[INVITE-SVC] searchSalons status: ${response.status}');
+    if (kDebugMode) debugPrint('[INVITE-SVC] searchSalons status: ${response.status}');
 
     if (response.status != 200) {
       final error = response.data is Map ? response.data['error'] : 'Unknown error';
@@ -103,7 +103,7 @@ class InviteService {
       },
     );
 
-    debugPrint('[INVITE-SVC] scrapeAndEnrich status: ${response.status}');
+    if (kDebugMode) debugPrint('[INVITE-SVC] scrapeAndEnrich status: ${response.status}');
 
     if (response.status != 200) {
       final error = response.data is Map ? response.data['error'] : 'Unknown error';
@@ -136,7 +136,7 @@ class InviteService {
       },
     ).timeout(const Duration(seconds: 20));
 
-    debugPrint('[INVITE-SVC] generateBio status: ${response.status}');
+    if (kDebugMode) debugPrint('[INVITE-SVC] generateBio status: ${response.status}');
 
     if (response.status != 200) {
       final error = response.data is Map ? response.data['error'] : 'Unknown error';
@@ -170,7 +170,7 @@ class InviteService {
       },
     ).timeout(const Duration(seconds: 20));
 
-    debugPrint('[INVITE-SVC] generateInviteMessage status: ${response.status}');
+    if (kDebugMode) debugPrint('[INVITE-SVC] generateInviteMessage status: ${response.status}');
 
     if (response.status != 200) {
       final error = response.data is Map ? response.data['error'] : 'Unknown error';
@@ -202,7 +202,7 @@ class InviteService {
       },
     ).timeout(const Duration(seconds: 30));
 
-    debugPrint('[INVITE-SVC] sendInvite status: ${response.status}');
+    if (kDebugMode) debugPrint('[INVITE-SVC] sendInvite status: ${response.status}');
 
     if (response.status != 200) {
       final error = response.data is Map ? response.data['error'] : 'Unknown error';

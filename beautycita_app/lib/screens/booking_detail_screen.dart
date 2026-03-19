@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -204,7 +205,7 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
         );
       }
     } catch (e) {
-      debugPrint('[BookingDetail] Failed to open Uber to salon: $e');
+      if (kDebugMode) debugPrint('[BookingDetail] Failed to open Uber to salon: $e');
     }
   }
 
@@ -228,7 +229,7 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
         );
       }
     } catch (e) {
-      debugPrint('[BookingDetail] Failed to open Uber from salon: $e');
+      if (kDebugMode) debugPrint('[BookingDetail] Failed to open Uber from salon: $e');
     }
   }
 

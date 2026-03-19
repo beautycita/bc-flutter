@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -84,7 +85,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     try {
       await ref.read(authStateProvider.notifier).checkRegistration();
     } catch (e) {
-      debugPrint('[SplashScreen] checkRegistration failed: $e');
+      if (kDebugMode) debugPrint('[SplashScreen] checkRegistration failed: $e');
     }
 
     await Future.delayed(AppConstants.splashDuration);

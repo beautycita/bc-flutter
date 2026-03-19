@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:beautycita/config/routes.dart';
 import 'package:beautycita/repositories/error_report_repository.dart';
@@ -114,7 +115,7 @@ class ToastService {
     try {
       _currentEntry?.remove();
     } catch (e) {
-      debugPrint('[ToastService] Overlay entry removal failed: $e');
+      if (kDebugMode) debugPrint('[ToastService] Overlay entry removal failed: $e');
     }
     _currentEntry = null;
   }
@@ -122,7 +123,7 @@ class ToastService {
   static void _fallbackSnackBar(String message, BCToastType type) {
     final messenger = messengerKey.currentState;
     if (messenger == null) {
-      debugPrint('[ToastService] No messenger: $message');
+      if (kDebugMode) debugPrint('[ToastService] No messenger: $message');
       return;
     }
     Color bg;
@@ -157,7 +158,7 @@ class ToastService {
         screenName: screenName,
       );
     } catch (e) {
-      debugPrint('[ToastService] Report failed: $e');
+      if (kDebugMode) debugPrint('[ToastService] Report failed: $e');
     }
   }
 

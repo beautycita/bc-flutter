@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -373,7 +374,7 @@ class _BCImagePickerBodyState extends State<_BCImagePickerBody> {
   }
 
   Future<void> _pickFromGallery() async {
-    debugPrint('BCImagePicker: _pickFromGallery called');
+    if (kDebugMode) debugPrint('BCImagePicker: _pickFromGallery called');
     setState(() => _loading = true);
     try {
       final XFile? file = await _picker.pickImage(
@@ -382,26 +383,26 @@ class _BCImagePickerBodyState extends State<_BCImagePickerBody> {
         maxHeight: 2048,
         imageQuality: 90,
       );
-      debugPrint('BCImagePicker: picked file = ${file?.path}');
+      if (kDebugMode) debugPrint('BCImagePicker: picked file = ${file?.path}');
 
       if (file != null && mounted) {
         final bytes = await file.readAsBytes();
-        debugPrint('BCImagePicker: read ${bytes.length} bytes');
+        if (kDebugMode) debugPrint('BCImagePicker: read ${bytes.length} bytes');
         if (!mounted) {
-          debugPrint('BCImagePicker: not mounted after readAsBytes');
+          if (kDebugMode) debugPrint('BCImagePicker: not mounted after readAsBytes');
           return;
         }
         HapticFeedback.lightImpact();
-        debugPrint('BCImagePicker: popping with result');
+        if (kDebugMode) debugPrint('BCImagePicker: popping with result');
         Navigator.of(context).pop(BCImagePickerResult(
           bytes: bytes,
           source: BCImageSource.gallery,
         ));
       } else {
-        debugPrint('BCImagePicker: file null or not mounted');
+        if (kDebugMode) debugPrint('BCImagePicker: file null or not mounted');
       }
     } catch (e) {
-      debugPrint('BCImagePicker: gallery error: $e');
+      if (kDebugMode) debugPrint('BCImagePicker: gallery error: $e');
     } finally {
       if (mounted) setState(() => _loading = false);
     }

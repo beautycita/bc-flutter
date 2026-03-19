@@ -30,15 +30,15 @@ class SupabaseClientService {
       final key = dotenv.env['SUPABASE_ANON_KEY'] ?? '';
 
       if (url.isEmpty || key.isEmpty || url.contains('PLACEHOLDER')) {
-        debugPrint('Supabase: No credentials configured, running offline.');
+        if (kDebugMode) debugPrint('Supabase: No credentials configured, running offline.');
         return;
       }
 
       await Supabase.initialize(url: url, anonKey: key);
       _initialized = true;
-      debugPrint('Supabase: Connected to $url');
+      if (kDebugMode) debugPrint('Supabase: Connected to $url');
     } catch (e) {
-      debugPrint('Supabase: Init failed ($e), running offline.');
+      if (kDebugMode) debugPrint('Supabase: Init failed ($e), running offline.');
     }
   }
 

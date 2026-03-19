@@ -78,7 +78,7 @@ class FeedPaginationNotifier extends ChangeNotifier {
       _hasMore = newItems.length >= 20;
       _page++;
     } catch (e) {
-      debugPrint('[FeedPagination] _loadPage: $e');
+      if (kDebugMode) debugPrint('[FeedPagination] _loadPage: $e');
     }
     _loading = false;
     notifyListeners();

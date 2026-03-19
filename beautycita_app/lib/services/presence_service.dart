@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'supabase_client.dart';
 
@@ -48,7 +49,7 @@ class PresenceService with WidgetsBindingObserver {
           .update({'last_seen': DateTime.now().toUtc().toIso8601String()})
           .eq('id', userId);
     } catch (e) {
-      debugPrint('[Presence] ping failed: $e');
+      if (kDebugMode) debugPrint('[Presence] ping failed: $e');
     }
   }
 }

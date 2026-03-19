@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -44,7 +45,7 @@ class _BusinessPaymentsScreenState
       // Refresh the business provider so UI picks up new status
       ref.invalidate(currentBusinessProvider);
     } catch (e) {
-      debugPrint('Stripe status sync error: $e');
+      if (kDebugMode) debugPrint('Stripe status sync error: $e');
     }
   }
 
@@ -246,7 +247,7 @@ class _BusinessPaymentsScreenState
       try {
         navigator.pop();
       } catch (e2) {
-        debugPrint('[Payments] navigator.pop() failed: $e2');
+        if (kDebugMode) debugPrint('[Payments] navigator.pop() failed: $e2');
       }
       ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
     }

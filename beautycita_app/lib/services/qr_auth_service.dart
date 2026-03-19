@@ -55,7 +55,7 @@ class QrAuthService {
           await Future.delayed(const Duration(milliseconds: 500));
           await SupabaseClientService.client.removeChannel(channel);
         } catch (e) {
-          debugPrint('[QrAuth] Broadcast failed (best-effort): $e');
+          if (kDebugMode) debugPrint('[QrAuth] Broadcast failed (best-effort): $e');
         }
         return const QrAuthSuccess();
       }

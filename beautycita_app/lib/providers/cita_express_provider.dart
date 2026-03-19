@@ -154,7 +154,7 @@ class CitaExpressNotifier extends StateNotifier<CitaExpressState> {
         services: activeServices,
       );
     } catch (e) {
-      debugPrint('[CitaExpress] Error loading business: $e');
+      if (kDebugMode) debugPrint('[CitaExpress] Error loading business: $e');
       state = state.copyWith(
         step: CitaExpressStep.error,
         error: 'Error cargando salon: $e',
@@ -258,7 +258,7 @@ class CitaExpressNotifier extends StateNotifier<CitaExpressState> {
         bookingId: booking.id,
       );
     } catch (e) {
-      debugPrint('[CitaExpress] Booking error: $e');
+      if (kDebugMode) debugPrint('[CitaExpress] Booking error: $e');
       state = state.copyWith(
         step: CitaExpressStep.error,
         error: 'Error al crear la cita: $e',
@@ -335,7 +335,7 @@ class CitaExpressNotifier extends StateNotifier<CitaExpressState> {
         nearbyAlternatives: filtered.take(3).toList(),
       );
     } catch (e) {
-      debugPrint('[CitaExpress] Nearby alternatives error: $e');
+      if (kDebugMode) debugPrint('[CitaExpress] Nearby alternatives error: $e');
       state = state.copyWith(
         step: CitaExpressStep.noSlotsToday,
         error: 'Error buscando salones cercanos: $e',
@@ -516,7 +516,7 @@ class CitaExpressNotifier extends StateNotifier<CitaExpressState> {
         ),
       );
     } catch (e) {
-      debugPrint('[CitaExpress] Walk-in slots error: $e');
+      if (kDebugMode) debugPrint('[CitaExpress] Walk-in slots error: $e');
       state = state.copyWith(
         step: CitaExpressStep.error,
         error: 'Error buscando disponibilidad: $e',

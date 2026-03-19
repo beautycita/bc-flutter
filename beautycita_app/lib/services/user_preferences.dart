@@ -58,7 +58,7 @@ class UserPreferences {
       }
       _serverLoaded = true;
     } catch (e) {
-      debugPrint('UserPreferences.loadFromServer error: $e');
+      if (kDebugMode) debugPrint('UserPreferences.loadFromServer error: $e');
       _serverLoaded = true; // Don't retry on every call
     }
   }
@@ -90,7 +90,7 @@ class UserPreferences {
           .update({'preferences': map})
           .eq('id', userId);
     } catch (e) {
-      debugPrint('UserPreferences._syncToServer error: $e');
+      if (kDebugMode) debugPrint('UserPreferences._syncToServer error: $e');
     }
   }
 

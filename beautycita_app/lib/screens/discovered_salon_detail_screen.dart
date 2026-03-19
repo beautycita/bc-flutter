@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -77,7 +78,7 @@ class _DiscoveredSalonDetailScreenState extends ConsumerState<DiscoveredSalonDet
         setState(() => _bioLoading = false);
       }
     } catch (e) {
-      debugPrint('[DiscoveredDetail] Bio generation failed: $e');
+      if (kDebugMode) debugPrint('[DiscoveredDetail] Bio generation failed: $e');
       if (mounted) setState(() => _bioLoading = false);
     }
   }

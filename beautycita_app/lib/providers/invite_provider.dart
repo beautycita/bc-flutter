@@ -127,7 +127,7 @@ class InviteNotifier extends StateNotifier<InviteState> {
         salons: salons,
       );
     } catch (e) {
-      debugPrint('[INVITE] initialize error: $e');
+      if (kDebugMode) debugPrint('[INVITE] initialize error: $e');
       state = state.copyWith(
         step: InviteStep.error,
         error: e.toString(),
@@ -157,7 +157,7 @@ class InviteNotifier extends StateNotifier<InviteState> {
         suggestScrape: result.suggestScrape,
       );
     } catch (e) {
-      debugPrint('[INVITE] searchSalons error: $e');
+      if (kDebugMode) debugPrint('[INVITE] searchSalons error: $e');
       state = state.copyWith(
         step: InviteStep.error,
         error: e.toString(),
@@ -198,7 +198,7 @@ class InviteNotifier extends StateNotifier<InviteState> {
       // Auto-generate bio for the scraped salon
       await _loadBio(salon);
     } catch (e) {
-      debugPrint('[INVITE] scrapeAndShow error: $e');
+      if (kDebugMode) debugPrint('[INVITE] scrapeAndShow error: $e');
       state = state.copyWith(
         step: InviteStep.error,
         error: e.toString(),
@@ -284,7 +284,7 @@ class InviteNotifier extends StateNotifier<InviteState> {
         waUrl: waUrl,
       );
     } catch (e) {
-      debugPrint('[INVITE] sendInvite error: $e');
+      if (kDebugMode) debugPrint('[INVITE] sendInvite error: $e');
       state = state.copyWith(
         step: InviteStep.error,
         error: e.toString(),

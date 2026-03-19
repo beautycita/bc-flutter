@@ -10,7 +10,7 @@ import 'supabase_client.dart';
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
-  debugPrint('[FCM-BG] Message: ${message.messageId}');
+  if (kDebugMode) debugPrint('[FCM-BG] Message: ${message.messageId}');
 }
 
 /// Notification service for FCM push notifications
@@ -59,12 +59,12 @@ class NotificationService {
             .eq('key', 'enable_push_notifications')
             .maybeSingle();
         if (row != null && row['value'] == 'false') {
-          debugPrint('[Notifications] Push disabled by feature toggle');
+          if (kDebugMode) debugPrint('[Notifications] Push disabled by feature toggle');
           return;
         }
       }
     } catch (e) {
-      debugPrint('[Notifications] Toggle check failed, proceeding: $e');
+      if (kDebugMode) debugPrint('[Notifications] Toggle check failed, proceeding: $e');
     }
 
     // iOS sideload (free Apple ID) has no APNs certificate.
@@ -72,7 +72,7 @@ class NotificationService {
     // handlers, no background handlers. All notifications come via WhatsApp.
     // This early return is intentional — not just token registration.
     if (Platform.isIOS) {
-      debugPrint('[Notifications] iOS sideload — skipping FCM entirely (no APNs)');
+      if (kDebugMode) debugPrint('[Notifications] iOS sideload — skipping FCM entirely (no APNs)');
       return;
     }
 
@@ -94,7 +94,7 @@ class NotificationService {
         provisional: false,
       );
 
-      debugPrint('[FCM] Permission status: ${settings.authorizationStatus}');
+      if (kDebugMode) debugPrint('[FCM] Permission status: ${settings.authorizationStatus}');
 
       if (settings.authorizationStatus == AuthorizationStatus.authorized ||
           settings.authorizationStatus == AuthorizationStatus.provisional) {
@@ -127,10 +127,10 @@ class NotificationService {
         FirebaseMessaging.onMessageOpenedApp.listen(_handleNotificationTap);
 
         _initialized = true;
-        debugPrint('[FCM] Initialized successfully');
+        if (kDebugMode) debugPrint('[FCM] Initialized successfully');
       }
     } catch (e) {
-      debugPrint('[FCM] Initialization error: $e');
+      if (kDebugMode) debugPrint('[FCM] Initialization error: $e');
     }
   }
 
@@ -146,7 +146,7 @@ class NotificationService {
     await _localNotifications.initialize(
       const InitializationSettings(android: androidInit, iOS: iosInit),
       onDidReceiveNotificationResponse: (response) {
-        debugPrint('[LOCAL] Notification tapped: ${response.payload}');
+        if (kDebugMode) debugPrint('[LOCAL] Notification tapped: ${response.payload}');
         // Parse payload and navigate if needed
       },
     );
@@ -160,7 +160,7 @@ class NotificationService {
 
   /// Handle foreground messages - show local notification
   void _handleForegroundMessage(RemoteMessage message) {
-    debugPrint('[FCM-FG] Message: ${message.notification?.title}');
+    if (kDebugMode) debugPrint('[FCM-FG] Message: ${message.notification?.title}');
 
     final notification = message.notification;
     if (notification != null) {
@@ -193,7 +193,7 @@ class NotificationService {
 
   /// Handle notification tap - navigate to relevant screen
   void _handleNotificationTap(RemoteMessage message) {
-    debugPrint('[FCM] Notification tapped: ${message.data}');
+    if (kDebugMode) debugPrint('[FCM] Notification tapped: ${message.data}');
 
     final route = message.data['route'];
     final bookingId = message.data['booking_id'];
@@ -231,9 +231,9 @@ class NotificationService {
           })
           .eq('id', userId);
 
-      debugPrint('[FCM] Token saved to database');
+      if (kDebugMode) debugPrint('[FCM] Token saved to database');
     } catch (e) {
-      debugPrint('[FCM] Error saving token: $e');
+      if (kDebugMode) debugPrint('[FCM] Error saving token: $e');
     }
   }
 
@@ -244,14 +244,14 @@ class NotificationService {
   Future<void> subscribeToTopic(String topic) async {
     if (_messaging == null) return;
     await _messaging!.subscribeToTopic(topic);
-    debugPrint('[FCM] Subscribed to topic: $topic');
+    if (kDebugMode) debugPrint('[FCM] Subscribed to topic: $topic');
   }
 
   /// Unsubscribe from topic
   Future<void> unsubscribeFromTopic(String topic) async {
     if (_messaging == null) return;
     await _messaging!.unsubscribeFromTopic(topic);
-    debugPrint('[FCM] Unsubscribed from topic: $topic');
+    if (kDebugMode) debugPrint('[FCM] Unsubscribed from topic: $topic');
   }
 
   /// Cleanup

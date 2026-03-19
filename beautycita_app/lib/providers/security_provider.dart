@@ -67,7 +67,7 @@ class SecurityNotifier extends StateNotifier<SecurityState> {
       try {
         await SupabaseClientService.client.auth.refreshSession();
       } catch (e) {
-        debugPrint('[Security] Session refresh failed (non-fatal): $e');
+        if (kDebugMode) debugPrint('[Security] Session refresh failed (non-fatal): $e');
       }
 
       final user = SupabaseClientService.client.auth.currentUser;
@@ -92,7 +92,7 @@ class SecurityNotifier extends StateNotifier<SecurityState> {
         email: user.email,
       );
     } catch (e) {
-      debugPrint('SecurityNotifier.checkIdentities error: $e');
+      if (kDebugMode) debugPrint('SecurityNotifier.checkIdentities error: $e');
       final msg = ToastService.friendlyError(e);
       ToastService.showError(msg);
       state = state.copyWith(isLoading: false, error: msg);
@@ -141,7 +141,7 @@ class SecurityNotifier extends StateNotifier<SecurityState> {
           successMessage: 'Google vinculado exitosamente',
         );
       } on AuthException catch (e) {
-        debugPrint('linkIdentityWithIdToken failed: ${e.message}');
+        if (kDebugMode) debugPrint('linkIdentityWithIdToken failed: ${e.message}');
         // Identity already linked to another user — fall back to sign in
         // This recovers the existing account (e.g., after app reinstall)
         await SupabaseClientService.client.auth.signInWithIdToken(
@@ -159,7 +159,7 @@ class SecurityNotifier extends StateNotifier<SecurityState> {
         );
       }
     } catch (e) {
-      debugPrint('SecurityNotifier.linkGoogle error: $e');
+      if (kDebugMode) debugPrint('SecurityNotifier.linkGoogle error: $e');
       final msg = ToastService.friendlyError(e);
       ToastService.showError(msg);
       state = state.copyWith(isLoading: false, error: msg);
@@ -182,7 +182,7 @@ class SecurityNotifier extends StateNotifier<SecurityState> {
         successMessage: 'Se envio un correo de confirmacion a $email',
       );
     } catch (e) {
-      debugPrint('SecurityNotifier.addEmail error: $e');
+      if (kDebugMode) debugPrint('SecurityNotifier.addEmail error: $e');
       final msg = ToastService.friendlyError(e);
       ToastService.showError(msg);
       state = state.copyWith(isLoading: false, error: msg);
@@ -236,7 +236,7 @@ class SecurityNotifier extends StateNotifier<SecurityState> {
         successMessage: 'Contrasena configurada exitosamente',
       );
     } catch (e) {
-      debugPrint('SecurityNotifier.addPassword error: $e');
+      if (kDebugMode) debugPrint('SecurityNotifier.addPassword error: $e');
       final msg = ToastService.friendlyError(e);
       ToastService.showError(msg);
       state = state.copyWith(isLoading: false, error: msg);

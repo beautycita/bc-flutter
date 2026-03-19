@@ -83,12 +83,12 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
   /// Shows an error toast if not ready.
   bool _ensureReady(String method) {
     if (!SupabaseClientService.isInitialized) {
-      debugPrint('ProfileNotifier.$method: Supabase not initialized');
+      if (kDebugMode) debugPrint('ProfileNotifier.$method: Supabase not initialized');
       ToastService.showError('Sin conexion — intenta de nuevo');
       return false;
     }
     if (SupabaseClientService.currentUserId == null) {
-      debugPrint('ProfileNotifier.$method: userId is null');
+      if (kDebugMode) debugPrint('ProfileNotifier.$method: userId is null');
       ToastService.showError('Sesion no activa — reinicia la app');
       return false;
     }
@@ -131,7 +131,7 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
         state = const ProfileState();
       }
     } catch (e) {
-      debugPrint('ProfileNotifier.load error: $e');
+      if (kDebugMode) debugPrint('ProfileNotifier.load error: $e');
       final msg = ToastService.friendlyError(e);
       ToastService.showError(msg);
       state = state.copyWith(isLoading: false, error: msg);
@@ -154,7 +154,7 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
       }
       state = state.copyWith(fullName: name, isLoading: false);
     } catch (e) {
-      debugPrint('ProfileNotifier.updateFullName error: $e');
+      if (kDebugMode) debugPrint('ProfileNotifier.updateFullName error: $e');
       final msg = ToastService.friendlyError(e);
       ToastService.showError(msg);
       state = state.copyWith(isLoading: false, error: msg);
@@ -177,7 +177,7 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
       }
       state = state.copyWith(avatarUrl: url, isLoading: false);
     } catch (e) {
-      debugPrint('ProfileNotifier.updateAvatar error: $e');
+      if (kDebugMode) debugPrint('ProfileNotifier.updateAvatar error: $e');
       final msg = ToastService.friendlyError(e);
       ToastService.showError(msg);
       state = state.copyWith(isLoading: false, error: msg);
@@ -185,37 +185,37 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
   }
 
   Future<String?> uploadAvatar(Uint8List bytes, String fileName) async {
-    debugPrint('ProfileNotifier.uploadAvatar: called with ${bytes.length} bytes, fileName=$fileName');
+    if (kDebugMode) debugPrint('ProfileNotifier.uploadAvatar: called with ${bytes.length} bytes, fileName=$fileName');
     if (!SupabaseClientService.isInitialized) {
-      debugPrint('ProfileNotifier.uploadAvatar: Supabase not initialized');
+      if (kDebugMode) debugPrint('ProfileNotifier.uploadAvatar: Supabase not initialized');
       return null;
     }
     final userId = SupabaseClientService.currentUserId;
     if (userId == null) {
-      debugPrint('ProfileNotifier.uploadAvatar: userId is null');
+      if (kDebugMode) debugPrint('ProfileNotifier.uploadAvatar: userId is null');
       return null;
     }
-    debugPrint('ProfileNotifier.uploadAvatar: userId=$userId');
+    if (kDebugMode) debugPrint('ProfileNotifier.uploadAvatar: userId=$userId');
 
     try {
       final path = '$userId/$fileName';
       final contentType = fileName.endsWith('.png') ? 'image/png' : 'image/jpeg';
-      debugPrint('ProfileNotifier.uploadAvatar: uploading to avatars/$path');
+      if (kDebugMode) debugPrint('ProfileNotifier.uploadAvatar: uploading to avatars/$path');
       await SupabaseClientService.client.storage
           .from('avatars')
           .uploadBinary(path, bytes, fileOptions: FileOptions(upsert: true, contentType: contentType));
-      debugPrint('ProfileNotifier.uploadAvatar: upload success');
+      if (kDebugMode) debugPrint('ProfileNotifier.uploadAvatar: upload success');
       final baseUrl = SupabaseClientService.client.storage
           .from('avatars')
           .getPublicUrl(path);
       // Add cache-busting query param to ensure new image loads
       final url = '$baseUrl?t=${DateTime.now().millisecondsSinceEpoch}';
-      debugPrint('ProfileNotifier.uploadAvatar: publicUrl=$url');
+      if (kDebugMode) debugPrint('ProfileNotifier.uploadAvatar: publicUrl=$url');
       await updateAvatar(url);
-      debugPrint('ProfileNotifier.uploadAvatar: updateAvatar complete, state.avatarUrl=${state.avatarUrl}');
+      if (kDebugMode) debugPrint('ProfileNotifier.uploadAvatar: updateAvatar complete, state.avatarUrl=${state.avatarUrl}');
       return url;
     } catch (e) {
-      debugPrint('ProfileNotifier.uploadAvatar error: $e');
+      if (kDebugMode) debugPrint('ProfileNotifier.uploadAvatar error: $e');
       final msg = ToastService.friendlyError(e);
       ToastService.showError(msg);
       state = state.copyWith(error: msg);
@@ -248,7 +248,7 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
         isLoading: false,
       );
     } catch (e) {
-      debugPrint('ProfileNotifier.updateHomeLocation error: $e');
+      if (kDebugMode) debugPrint('ProfileNotifier.updateHomeLocation error: $e');
       final msg = ToastService.friendlyError(e);
       ToastService.showError(msg);
       state = state.copyWith(isLoading: false, error: msg);
@@ -272,7 +272,7 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
       state = state.copyWith(phone: phone, phoneVerified: false, isLoading: false);
       return true;
     } catch (e) {
-      debugPrint('ProfileNotifier.updatePhone error: $e');
+      if (kDebugMode) debugPrint('ProfileNotifier.updatePhone error: $e');
       final msg = ToastService.friendlyError(e);
       ToastService.showError(msg);
       state = state.copyWith(isLoading: false, error: msg);
@@ -304,11 +304,11 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
       if (data == null || data['sent'] != true) {
         throw Exception(data?['error'] ?? 'No se pudo enviar el codigo');
       }
-      debugPrint('OTP sent via ${data['channel']}');
+      if (kDebugMode) debugPrint('OTP sent via ${data['channel']}');
       state = state.copyWith(isLoading: false);
       return true;
     } catch (e) {
-      debugPrint('ProfileNotifier.sendPhoneOtp error: $e');
+      if (kDebugMode) debugPrint('ProfileNotifier.sendPhoneOtp error: $e');
       final msg = ToastService.friendlyError(e);
       ToastService.showError(msg);
       state = state.copyWith(isLoading: false, error: msg);
@@ -339,7 +339,7 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
 
       return true;
     } catch (e) {
-      debugPrint('ProfileNotifier.verifyPhoneOtp error: $e');
+      if (kDebugMode) debugPrint('ProfileNotifier.verifyPhoneOtp error: $e');
       final msg = ToastService.friendlyError(e);
       ToastService.showError(msg);
       state = state.copyWith(isLoading: false, error: msg);
@@ -363,11 +363,11 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
           .maybeSingle();
 
       if (match != null) {
-        debugPrint('ProfileNotifier: Discovered salon match found: ${match['business_name']}');
+        if (kDebugMode) debugPrint('ProfileNotifier: Discovered salon match found: ${match['business_name']}');
         state = state.copyWith(discoveredSalonMatch: match);
       }
     } catch (e) {
-      debugPrint('ProfileNotifier._checkDiscoveredSalonMatch error: $e');
+      if (kDebugMode) debugPrint('ProfileNotifier._checkDiscoveredSalonMatch error: $e');
       // Non-fatal — don't block the verification success
     }
   }
@@ -395,7 +395,7 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
         state = state.copyWith(clearBirthday: true, isLoading: false);
       }
     } catch (e) {
-      debugPrint('ProfileNotifier.updateBirthday error: $e');
+      if (kDebugMode) debugPrint('ProfileNotifier.updateBirthday error: $e');
       final msg = ToastService.friendlyError(e);
       ToastService.showError(msg);
       state = state.copyWith(isLoading: false, error: msg);
@@ -420,7 +420,7 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
         state = state.copyWith(clearGender: true, isLoading: false);
       }
     } catch (e) {
-      debugPrint('ProfileNotifier.updateGender error: $e');
+      if (kDebugMode) debugPrint('ProfileNotifier.updateGender error: $e');
       final msg = ToastService.friendlyError(e);
       ToastService.showError(msg);
       state = state.copyWith(isLoading: false, error: msg);
@@ -452,7 +452,7 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
       state = state.copyWith(isLoading: false);
       return true;
     } catch (e) {
-      debugPrint('ProfileNotifier.updateUsername error: $e');
+      if (kDebugMode) debugPrint('ProfileNotifier.updateUsername error: $e');
       final msg = ToastService.friendlyError(e);
       ToastService.showError(msg);
       state = state.copyWith(isLoading: false, error: msg);
@@ -468,7 +468,7 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
           .rpc('check_username_available', params: {'username_to_check': username});
       return result == true;
     } catch (e) {
-      debugPrint('ProfileNotifier.checkUsernameAvailable error: $e');
+      if (kDebugMode) debugPrint('ProfileNotifier.checkUsernameAvailable error: $e');
       return false;
     }
   }

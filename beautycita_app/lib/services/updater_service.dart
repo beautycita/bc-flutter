@@ -33,7 +33,7 @@ class UpdaterService {
   Future<void> checkForApkUpdate({bool force = false}) async {
     // iOS uses AltStore for updates, not R2
     if (!Platform.isAndroid) {
-      debugPrint('[Updater] Skipping APK check (not Android)');
+      if (kDebugMode) debugPrint('[Updater] Skipping APK check (not Android)');
       return;
     }
 
@@ -46,7 +46,7 @@ class UpdaterService {
           final lastTime = DateTime.tryParse(lastCheck);
           if (lastTime != null &&
               DateTime.now().difference(lastTime) < const Duration(hours: 24)) {
-            debugPrint('[Updater] Skipping version check (last check < 24h ago)');
+            if (kDebugMode) debugPrint('[Updater] Skipping version check (last check < 24h ago)');
             return;
           }
         }
@@ -61,7 +61,7 @@ class UpdaterService {
           .timeout(const Duration(seconds: 5));
 
       if (response.statusCode != 200) {
-        debugPrint('[Updater] version.json fetch failed: ${response.statusCode}');
+        if (kDebugMode) debugPrint('[Updater] version.json fetch failed: ${response.statusCode}');
         return;
       }
 
@@ -73,7 +73,7 @@ class UpdaterService {
 
       final localBase = AppConstants.baseBuildNumber;
       if (remoteBuild <= localBase) {
-        debugPrint('[Updater] APK is current (local=$localBase [raw=${AppConstants.buildNumber}], remote=$remoteBuild)');
+        if (kDebugMode) debugPrint('[Updater] APK is current (local=$localBase [raw=${AppConstants.buildNumber}], remote=$remoteBuild)');
         // Record successful check even when current
         try {
           final prefs = await SharedPreferences.getInstance();
@@ -84,7 +84,7 @@ class UpdaterService {
 
       // Skip if user dismissed this build recently (unless required)
       if (!required && await _isDismissedRecently(remoteBuild)) {
-        debugPrint('[Updater] APK update $remoteBuild dismissed recently, skipping');
+        if (kDebugMode) debugPrint('[Updater] APK update $remoteBuild dismissed recently, skipping');
         return;
       }
 
@@ -93,7 +93,7 @@ class UpdaterService {
       _apkUpdateUrl = url;
       _apkUpdateVersion = remoteVersion;
       _remoteBuildNumber = remoteBuild;
-      debugPrint('[Updater] APK update available: $remoteVersion (build $remoteBuild), required=$required');
+      if (kDebugMode) debugPrint('[Updater] APK update available: $remoteVersion (build $remoteBuild), required=$required');
 
       // Record successful check timestamp
       try {
@@ -101,7 +101,7 @@ class UpdaterService {
         await prefs.setString(_lastVersionCheckKey, DateTime.now().toIso8601String());
       } catch (_) {}
     } catch (e) {
-      debugPrint('[Updater] APK version check failed: $e');
+      if (kDebugMode) debugPrint('[Updater] APK version check failed: $e');
     }
   }
 
@@ -114,7 +114,7 @@ class UpdaterService {
       await prefs.setString(
           AppConstants.keyUpdateDismissedAt, DateTime.now().toIso8601String());
     } catch (e) {
-      debugPrint('[Updater] Failed to save dismissal: $e');
+      if (kDebugMode) debugPrint('[Updater] Failed to save dismissal: $e');
     }
   }
 

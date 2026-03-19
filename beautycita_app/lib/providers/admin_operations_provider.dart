@@ -143,7 +143,7 @@ final systemHealthProvider = FutureProvider<SystemHealth>((ref) async {
       lastBackupStatus: lastBackupStatus,
     );
   } catch (e) {
-    debugPrint('System health error: $e');
+    if (kDebugMode) debugPrint('System health error: $e');
     return SystemHealth.placeholder;
   }
 });
@@ -234,7 +234,7 @@ final businessActivityProvider = FutureProvider<BusinessActivity>((ref) async {
       totalBookingsToday: confirmed + pending + cancelled,
     );
   } catch (e) {
-    debugPrint('Business activity error: $e');
+    if (kDebugMode) debugPrint('Business activity error: $e');
     return BusinessActivity.placeholder;
   }
 });
@@ -315,7 +315,7 @@ final opsLogsProvider = FutureProvider<List<OpsLogEntry>>((ref) async {
     entries.sort((a, b) => b.timestamp.compareTo(a.timestamp));
     return entries.take(30).toList();
   } catch (e) {
-    debugPrint('Ops logs error: $e');
+    if (kDebugMode) debugPrint('Ops logs error: $e');
     return [];
   }
 });
