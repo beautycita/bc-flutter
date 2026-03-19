@@ -4,6 +4,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/constants.dart';
 import '../config/theme_extension.dart';
+import '../providers/admin_provider.dart';
+import '../services/supabase_client.dart';
 
 // ─────────────────────────────────────────────────────────────
 // System Status Screen — live monitoring via system-health edge function
@@ -135,6 +137,11 @@ class _SystemStatusScreenState extends ConsumerState<SystemStatusScreen> {
                   ),
                 ),
             ],
+
+            const SizedBox(height: AppConstants.paddingLG),
+
+            // ── Smoke Test (admin only) ──
+            _SmokeTestSection(ref: ref),
 
             const SizedBox(height: AppConstants.paddingLG),
 
@@ -590,6 +597,266 @@ class _ShimmerCardState extends State<_ShimmerCard>
           ),
         );
       },
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Smoke Test Section — admin only, tests live flows
+// ─────────────────────────────────────────────────────────────
+
+class _SmokeTestSection extends ConsumerStatefulWidget {
+  final WidgetRef ref;
+  const _SmokeTestSection({required this.ref});
+
+  @override
+  ConsumerState<_SmokeTestSection> createState() => _SmokeTestSectionState();
+}
+
+class _SmokeTestSectionState extends ConsumerState<_SmokeTestSection> {
+  bool _running = false;
+  final List<_TestResult> _results = [];
+
+  @override
+  Widget build(BuildContext context) {
+    final isAdmin = ref.watch(isAdminProvider).valueOrNull ?? false;
+    if (!isAdmin) return const SizedBox.shrink();
+
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 2, bottom: AppConstants.paddingSM),
+          child: Row(
+            children: [
+              Text(
+                'DIAGNOSTICO',
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.4,
+                  color: colorScheme.primary,
+                ),
+              ),
+              const Spacer(),
+              if (!_running)
+                TextButton.icon(
+                  onPressed: _runSmokeTests,
+                  icon: const Icon(Icons.play_arrow, size: 18),
+                  label: Text('Ejecutar', style: GoogleFonts.poppins(fontSize: 12)),
+                ),
+            ],
+          ),
+        ),
+        if (_running && _results.isEmpty)
+          const Padding(
+            padding: EdgeInsets.all(16),
+            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+          ),
+        if (_results.isNotEmpty)
+          ...(_results.map((r) => _TestResultTile(result: r))),
+        if (!_running && _results.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: colorScheme.surface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: colorScheme.outlineVariant),
+            ),
+            child: Text(
+              'Toca "Ejecutar" para verificar que todos los flujos funcionan correctamente.',
+              style: GoogleFonts.nunito(
+                fontSize: 13,
+                color: colorScheme.onSurface.withValues(alpha: 0.5),
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+      ],
+    );
+  }
+
+  Future<void> _runSmokeTests() async {
+    setState(() {
+      _running = true;
+      _results.clear();
+    });
+
+    final client = SupabaseClientService.client;
+
+    // Test 1: DB read
+    await _test('Base de datos (lectura)', () async {
+      final res = await client.from('app_config').select('key').limit(1);
+      if ((res as List).isEmpty) throw Exception('No config rows');
+    });
+
+    // Test 2: DB write (insert + delete a test row)
+    await _test('Base de datos (escritura)', () async {
+      final res = await client.from('contact_submissions').insert({
+        'name': '_smoke_test_',
+        'email': 'test@smoke.test',
+        'subject': 'Smoke test',
+        'message': 'Auto-generated smoke test — safe to delete',
+      }).select('id').single();
+      final id = res['id'] as String;
+      await client.from('contact_submissions').delete().eq('id', id);
+    });
+
+    // Test 3: Auth check
+    await _test('Autenticacion', () async {
+      final user = client.auth.currentUser;
+      if (user == null) throw Exception('No authenticated user');
+    });
+
+    // Test 4: Edge function invocation
+    await _test('Edge functions', () async {
+      final res = await client.functions.invoke('system-health');
+      if (res.status != 200) throw Exception('HTTP ${res.status}');
+    });
+
+    // Test 5: Feed public (unauthenticated endpoint)
+    await _test('Feed publico', () async {
+      final res = await client.functions.invoke('feed-public', body: {
+        'action': 'feed',
+        'limit': 1,
+      });
+      if (res.status != 200) throw Exception('HTTP ${res.status}');
+    });
+
+    // Test 6: Curate results (booking engine)
+    await _test('Motor de reservas', () async {
+      final res = await client.functions.invoke('curate-results', body: {
+        'lat': 20.6534,
+        'lng': -105.2253,
+        'service_type': 'corte_cabello',
+        'limit': 1,
+      });
+      if (res.status != 200) throw Exception('HTTP ${res.status}');
+    });
+
+    // Test 7: Outreach discovered salons (search)
+    await _test('Busqueda de salones', () async {
+      final res = await client.functions.invoke('outreach-discovered-salon', body: {
+        'action': 'search',
+        'query': 'test',
+        'lat': 20.6534,
+        'lng': -105.2253,
+      });
+      if (res.status != 200) throw Exception('HTTP ${res.status}');
+    });
+
+    // Test 8: Storage access
+    await _test('Almacenamiento', () async {
+      final buckets = await client.storage.listBuckets();
+      if (buckets.isEmpty) throw Exception('No buckets');
+    });
+
+    // Test 9: Profile read
+    await _test('Perfil de usuario', () async {
+      final userId = client.auth.currentUser?.id;
+      if (userId == null) throw Exception('No user');
+      final res = await client.from('profiles').select('id, role').eq('id', userId).single();
+      if (res['role'] == null) throw Exception('No role');
+    });
+
+    // Test 10: Outreach templates
+    await _test('Plantillas de outreach', () async {
+      final res = await client.functions.invoke('outreach-contact', body: {
+        'action': 'get_templates',
+      });
+      if (res.status != 200) throw Exception('HTTP ${res.status}');
+    });
+
+    setState(() => _running = false);
+  }
+
+  Future<void> _test(String name, Future<void> Function() check) async {
+    final start = DateTime.now();
+    try {
+      await check().timeout(const Duration(seconds: 15));
+      final elapsed = DateTime.now().difference(start).inMilliseconds;
+      setState(() => _results.add(_TestResult(
+        name: name,
+        passed: true,
+        elapsed: elapsed,
+      )));
+    } catch (e) {
+      final elapsed = DateTime.now().difference(start).inMilliseconds;
+      setState(() => _results.add(_TestResult(
+        name: name,
+        passed: false,
+        elapsed: elapsed,
+        error: e.toString(),
+      )));
+    }
+  }
+}
+
+class _TestResult {
+  final String name;
+  final bool passed;
+  final int elapsed;
+  final String? error;
+
+  const _TestResult({
+    required this.name,
+    required this.passed,
+    required this.elapsed,
+    this.error,
+  });
+}
+
+class _TestResultTile extends StatelessWidget {
+  final _TestResult result;
+  const _TestResultTile({required this.result, super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: result.passed ? Colors.green.shade200 : Colors.red.shade200,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            result.passed ? Icons.check_circle : Icons.cancel,
+            size: 18,
+            color: result.passed ? Colors.green : Colors.red,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(result.name,
+                    style: GoogleFonts.poppins(
+                        fontSize: 13, fontWeight: FontWeight.w500)),
+                if (result.error != null)
+                  Text(result.error!,
+                      style: GoogleFonts.nunito(
+                          fontSize: 11, color: Colors.red.shade700),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis),
+              ],
+            ),
+          ),
+          Text('${result.elapsed}ms',
+              style: GoogleFonts.nunito(
+                  fontSize: 11,
+                  color: colorScheme.onSurface.withValues(alpha: 0.4))),
+        ],
+      ),
     );
   }
 }
