@@ -165,6 +165,11 @@ class SettingsScreen extends ConsumerWidget {
                         label: 'Panel de administracion',
                         onTap: () => context.push(AppRoutes.admin),
                       ),
+                      SettingsTile(
+                        icon: Icons.monitor_heart_outlined,
+                        label: 'Estado del sistema',
+                        onTap: () => context.push(AppRoutes.systemStatus),
+                      ),
                     ],
                   )
                 : const SizedBox.shrink(),

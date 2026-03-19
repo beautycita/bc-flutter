@@ -619,8 +619,8 @@ class _SmokeTestSectionState extends ConsumerState<_SmokeTestSection> {
 
   @override
   Widget build(BuildContext context) {
-    final isAdmin = ref.watch(isAdminProvider).valueOrNull ?? false;
-    if (!isAdmin) return const SizedBox.shrink();
+    final isSuperAdmin = ref.watch(isSuperAdminProvider).valueOrNull ?? false;
+    if (!isSuperAdmin) return const SizedBox.shrink();
 
     final colorScheme = Theme.of(context).colorScheme;
 
