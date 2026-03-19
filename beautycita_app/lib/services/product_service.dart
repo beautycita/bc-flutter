@@ -88,6 +88,17 @@ class ProductService {
         .eq('id', businessId);
   }
 
+  /// Disable POS for a business by setting pos_enabled = false.
+  Future<void> disablePos(String businessId) async {
+    if (!SupabaseClientService.isInitialized) return;
+    final client = SupabaseClientService.client;
+
+    await client
+        .from('businesses')
+        .update({'pos_enabled': false})
+        .eq('id', businessId);
+  }
+
   /// Record acceptance of the POS seller agreement for a specific version.
   Future<void> acceptAgreement(String businessId, String version) async {
     if (!SupabaseClientService.isInitialized) return;
