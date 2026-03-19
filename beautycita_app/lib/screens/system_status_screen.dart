@@ -715,30 +715,32 @@ class _SmokeTestSectionState extends ConsumerState<_SmokeTestSection> {
     });
     await Future.delayed(pause);
 
-    // Test 4: Edge function invocation
+    // Test 4: Edge function invocation (use feed-public as canary — lightweight)
     await _test('Edge functions', () async {
-      final res = await client.functions.invoke('system-health');
+      final res = await client.functions.invoke('feed-public', body: {
+        'action': 'feed',
+        'limit': 0,
+      });
       if (res.status != 200) throw Exception('HTTP ${res.status}');
     });
     await Future.delayed(pause);
 
-    // Test 5: Feed public (unauthenticated endpoint)
-    await _test('Feed publico', () async {
-      final res = await client.functions.invoke('feed-public', body: {
-        'action': 'feed',
-        'limit': 1,
-      });
+    // Test 5: System health endpoint
+    await _test('Health check', () async {
+      final res = await client.functions.invoke('system-health');
       if (res.status != 200) throw Exception('HTTP ${res.status}');
+      final data = res.data as Map<String, dynamic>;
+      final overall = data['overall'] as String? ?? 'unknown';
+      if (overall == 'down') throw Exception('System reports DOWN');
     });
     await Future.delayed(pause);
 
     // Test 6: Curate results (booking engine)
     await _test('Motor de reservas', () async {
       final res = await client.functions.invoke('curate-results', body: {
-        'lat': 20.6534,
-        'lng': -105.2253,
+        'location': {'lat': 20.6534, 'lng': -105.2253},
         'service_type': 'corte_cabello',
-        'limit': 1,
+        'transport_mode': 'car',
       });
       if (res.status != 200) throw Exception('HTTP ${res.status}');
     });
