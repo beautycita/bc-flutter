@@ -686,12 +686,14 @@ class _SmokeTestSectionState extends ConsumerState<_SmokeTestSection> {
     });
 
     final client = SupabaseClientService.client;
+    const pause = Duration(milliseconds: 1500); // prevent edge function overload
 
     // Test 1: DB read
     await _test('Base de datos (lectura)', () async {
       final res = await client.from('app_config').select('key').limit(1);
       if ((res as List).isEmpty) throw Exception('No config rows');
     });
+    await Future.delayed(pause);
 
     // Test 2: DB write (insert + delete a test row)
     await _test('Base de datos (escritura)', () async {
@@ -704,18 +706,21 @@ class _SmokeTestSectionState extends ConsumerState<_SmokeTestSection> {
       final id = res['id'] as String;
       await client.from('contact_submissions').delete().eq('id', id);
     });
+    await Future.delayed(pause);
 
     // Test 3: Auth check
     await _test('Autenticacion', () async {
       final user = client.auth.currentUser;
       if (user == null) throw Exception('No authenticated user');
     });
+    await Future.delayed(pause);
 
     // Test 4: Edge function invocation
     await _test('Edge functions', () async {
       final res = await client.functions.invoke('system-health');
       if (res.status != 200) throw Exception('HTTP ${res.status}');
     });
+    await Future.delayed(pause);
 
     // Test 5: Feed public (unauthenticated endpoint)
     await _test('Feed publico', () async {
@@ -725,6 +730,7 @@ class _SmokeTestSectionState extends ConsumerState<_SmokeTestSection> {
       });
       if (res.status != 200) throw Exception('HTTP ${res.status}');
     });
+    await Future.delayed(pause);
 
     // Test 6: Curate results (booking engine)
     await _test('Motor de reservas', () async {
@@ -736,6 +742,7 @@ class _SmokeTestSectionState extends ConsumerState<_SmokeTestSection> {
       });
       if (res.status != 200) throw Exception('HTTP ${res.status}');
     });
+    await Future.delayed(pause);
 
     // Test 7: Outreach discovered salons (search)
     await _test('Busqueda de salones', () async {
@@ -747,12 +754,14 @@ class _SmokeTestSectionState extends ConsumerState<_SmokeTestSection> {
       });
       if (res.status != 200) throw Exception('HTTP ${res.status}');
     });
+    await Future.delayed(pause);
 
     // Test 8: Storage access
     await _test('Almacenamiento', () async {
       final buckets = await client.storage.listBuckets();
       if (buckets.isEmpty) throw Exception('No buckets');
     });
+    await Future.delayed(pause);
 
     // Test 9: Profile read
     await _test('Perfil de usuario', () async {
@@ -761,6 +770,7 @@ class _SmokeTestSectionState extends ConsumerState<_SmokeTestSection> {
       final res = await client.from('profiles').select('id, role').eq('id', userId).single();
       if (res['role'] == null) throw Exception('No role');
     });
+    await Future.delayed(pause);
 
     // Test 10: Outreach templates
     await _test('Plantillas de outreach', () async {
