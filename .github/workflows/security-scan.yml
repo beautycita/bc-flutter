@@ -1,0 +1,119 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'beautycita_app/lib/**'
+      - 'beautycita_app/supabase/functions/**'
+      - 'beautycita_web/lib/**'
+  pull_request:
+    branches: [main]
+
+jobs:
+  flutter-analyze:
+    name: Flutter Static Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.9'
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies (mobile)
+        working-directory: beautycita_app
+        run: flutter pub get
+
+      - name: Install dependencies (web)
+        working-directory: beautycita_web
+        run: flutter pub get
+
+      - name: Analyze mobile app
+        working-directory: beautycita_app
+        run: |
+          flutter analyze --no-fatal-infos 2>&1 | tee /tmp/analyze-mobile.txt
+          # Fail on errors only (not warnings/infos)
+          if grep -q "error •" /tmp/analyze-mobile.txt; then
+            echo "::error::Flutter analyze found errors in mobile app"
+            exit 1
+          fi
+
+      - name: Analyze web app
+        working-directory: beautycita_web
+        run: |
+          flutter analyze --no-fatal-infos 2>&1 | tee /tmp/analyze-web.txt
+          if grep -q "error •" /tmp/analyze-web.txt; then
+            echo "::error::Flutter analyze found errors in web app"
+            exit 1
+          fi
+
+  secret-scan:
+    name: Secret Detection
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Scan for hardcoded secrets
+        run: |
+          echo "Scanning for potential secrets..."
+          FOUND=0
+
+          # Check for common secret patterns in Dart/TS source
+          for pattern in \
+            'sk_live_' \
+            'sk_test_' \
+            'AKIA[A-Z0-9]{16}' \
+            'password\s*=\s*["\x27][^"\x27]{8,}' \
+            'secret\s*=\s*["\x27][^"\x27]{8,}' \
+            'private_key' \
+            'BEGIN RSA PRIVATE KEY' \
+            'BEGIN EC PRIVATE KEY'; do
+            if grep -rn "$pattern" \
+              --include="*.dart" --include="*.ts" --include="*.js" \
+              --exclude-dir=node_modules --exclude-dir=build \
+              beautycita_app/lib/ beautycita_web/lib/ beautycita_app/supabase/functions/ 2>/dev/null; then
+              echo "::warning::Potential secret found matching pattern: $pattern"
+              FOUND=1
+            fi
+          done
+
+          # Check for .env files that shouldn't be committed
+          if git ls-files | grep -E '\.env$' | grep -v '.env.example' | grep -v '.gitignore'; then
+            echo "::warning::.env file tracked in git"
+            FOUND=1
+          fi
+
+          if [ $FOUND -eq 1 ]; then
+            echo "::warning::Review the findings above. Not all may be real secrets."
+          else
+            echo "No hardcoded secrets detected."
+          fi
+
+  dependency-audit:
+    name: Dependency Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.9'
+          channel: 'stable'
+          cache: true
+
+      - name: Check outdated packages (mobile)
+        working-directory: beautycita_app
+        run: |
+          flutter pub get
+          flutter pub outdated || true
+
+      - name: Check outdated packages (web)
+        working-directory: beautycita_web
+        run: |
+          flutter pub get
+          flutter pub outdated || true
