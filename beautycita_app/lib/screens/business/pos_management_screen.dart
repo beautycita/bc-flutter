@@ -157,10 +157,17 @@ class _PosOptInViewState extends ConsumerState<_PosOptInView> {
               ),
               const SizedBox(height: AppConstants.paddingSM),
               Text(
-                'Al activar el Punto de Venta aceptas que eres responsable '
-                'de la veracidad de la informacion de tus productos, '
-                'precios y disponibilidad. BeautyCita se reserva el derecho '
-                'de suspender catalogos que incumplan las politicas de la plataforma.',
+                'Al activar el Punto de Venta aceptas que:\n\n'
+                '1. Eres responsable de la veracidad de la información de tus productos, precios y disponibilidad.\n\n'
+                '2. Solo puedes vender productos relacionados con belleza, cuidado personal y bienestar: '
+                'cosmeticos, productos capilares, cuidado de piel, herramientas de estilismo, '
+                'accesorios de belleza y productos de bienestar. Productos fuera de estas categorías '
+                'serán removidos sin previo aviso.\n\n'
+                '3. Está prohibido publicar productos falsificados, ilegales, '
+                'medicamentos controlados o cualquier producto que infrinja derechos de propiedad intelectual.\n\n'
+                '4. BeautyCita se reserva el derecho de remover productos que no cumplan con estas políticas '
+                'y de desactivar permanentemente el acceso al Punto de Venta en caso de infracciones repetidas.\n\n'
+                '5. Puedes desactivar tu Punto de Venta en cualquier momento desde esta pantalla.',
                 style: GoogleFonts.nunito(
                   fontSize: 12,
                   color: const Color(0xFF757575),
@@ -311,6 +318,7 @@ class _PosContentView extends ConsumerWidget {
             onDelete: (p) => _confirmDelete(context, ref, p),
             onToggleStock: (p, v) => _toggleStock(ref, p, v),
             onShowcase: () => _showShowcaseSheet(context, ref, products),
+            onDeactivate: () => _confirmDeactivate(context, ref),
           ),
           loading: () => const _LoadingBody(),
           error: (e, _) => _ErrorBody(message: e.toString()),
@@ -402,6 +410,53 @@ class _PosContentView extends ConsumerWidget {
       builder: (_) => _ShowcaseSheet(products: products, ref: ref),
     );
   }
+
+  Future<void> _confirmDeactivate(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+        ),
+        title: Text('Desactivar Punto de Venta',
+            style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
+        content: Text(
+          'Tu catálogo y productos se conservarán pero no serán visibles '
+          'para las clientas. Puedes reactivar el POS en cualquier momento.',
+          style: GoogleFonts.nunito(fontSize: 14, height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text('Cancelar', style: GoogleFonts.poppins()),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('Desactivar',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+    try {
+      final biz = await ref.read(currentBusinessProvider.future);
+      if (biz == null) return;
+      final bizId = biz['id'] as String;
+      final service = ref.read(productServiceProvider);
+      await service.disablePos(bizId);
+      ref.invalidate(posEnabledProvider);
+      ref.invalidate(currentBusinessProvider);
+      ToastService.showSuccess('Punto de Venta desactivado');
+    } catch (e, st) {
+      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, st);
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -415,6 +470,7 @@ class _ProductList extends StatelessWidget {
   final void Function(Product) onDelete;
   final void Function(Product, bool) onToggleStock;
   final VoidCallback onShowcase;
+  final VoidCallback onDeactivate;
 
   const _ProductList({
     required this.products,
@@ -423,6 +479,7 @@ class _ProductList extends StatelessWidget {
     required this.onDelete,
     required this.onToggleStock,
     required this.onShowcase,
+    required this.onDeactivate,
   });
 
   @override
@@ -520,6 +577,23 @@ class _ProductList extends StatelessWidget {
             onToggleStock: (v) => onToggleStock(p, v),
           ),
         ),
+        const SizedBox(height: AppConstants.paddingXL),
+        const Divider(),
+        const SizedBox(height: AppConstants.paddingMD),
+        Center(
+          child: OutlinedButton.icon(
+            onPressed: onDeactivate,
+            icon: const Icon(Icons.power_settings_new, size: 18, color: Colors.red),
+            label: Text('Desactivar Punto de Venta',
+                style: GoogleFonts.poppins(fontSize: 13, color: Colors.red)),
+            style: OutlinedButton.styleFrom(
+              side: const BorderSide(color: Colors.red),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppConstants.radiusLG)),
+            ),
+          ),
+        ),
+        const SizedBox(height: AppConstants.paddingMD),
       ],
     );
   }
