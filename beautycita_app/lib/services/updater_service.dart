@@ -71,9 +71,9 @@ class UpdaterService {
       final url = data['url'] as String? ?? '';
       final required = data['forceUpdate'] as bool? ?? data['required'] as bool? ?? true;
 
-      final localBase = AppConstants.baseBuildNumber;
-      if (remoteBuild <= localBase) {
-        if (kDebugMode) debugPrint('[Updater] APK is current (local=$localBase [raw=${AppConstants.buildNumber}], remote=$remoteBuild)');
+      final localBuild = AppConstants.buildNumber;
+      if (remoteBuild <= localBuild) {
+        if (kDebugMode) debugPrint('[Updater] APK is current (local=$localBuild, remote=$remoteBuild)');
         // Record successful check even when current
         try {
           final prefs = await SharedPreferences.getInstance();
