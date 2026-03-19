@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../config/constants.dart';
+import '../../config/routes.dart';
 import '../../providers/admin_operations_provider.dart';
 
 class AdminOperationsDashboardScreen extends ConsumerWidget {
@@ -138,6 +141,99 @@ class AdminOperationsDashboardScreen extends ConsumerWidget {
             },
             loading: () => const _LoadingCard(),
             error: (e, _) => _ErrorCard(message: 'Error: $e'),
+          ),
+
+          const SizedBox(height: AppConstants.paddingLG),
+
+          // ── Infrastructure tools ──
+          Text(
+            'INFRAESTRUCTURA',
+            style: GoogleFonts.poppins(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.2,
+              color: const Color(0xFF757575),
+            ),
+          ),
+          const SizedBox(height: AppConstants.paddingSM),
+          Row(
+            children: [
+              Expanded(
+                child: _InfraCard(
+                  icon: Icons.monitor_heart_outlined,
+                  label: 'Estado del Sistema',
+                  subtitle: 'Health checks y uptime',
+                  color: const Color(0xFF059669),
+                  onTap: () => context.push(AppRoutes.systemStatus),
+                  statusWidget: healthAsync.when(
+                    data: (health) {
+                      final ok = health.databaseOnline &&
+                          health.edgeFunctionErrors == 0;
+                      return Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: ok
+                                  ? const Color(0xFF059669)
+                                  : const Color(0xFFDC2626),
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: (ok
+                                          ? const Color(0xFF059669)
+                                          : const Color(0xFFDC2626))
+                                      .withValues(alpha: 0.4),
+                                  blurRadius: 6,
+                                  spreadRadius: 1,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            ok ? 'Operativo' : 'Alerta',
+                            style: GoogleFonts.nunito(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: ok
+                                  ? const Color(0xFF059669)
+                                  : const Color(0xFFDC2626),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                    loading: () => const SizedBox(
+                      width: 12,
+                      height: 12,
+                      child: CircularProgressIndicator(strokeWidth: 1.5),
+                    ),
+                    error: (_, _) => const Icon(
+                      Icons.warning_amber_rounded,
+                      size: 14,
+                      color: Color(0xFFF59E0B),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppConstants.paddingSM),
+              Expanded(
+                child: _InfraCard(
+                  icon: Icons.dashboard_rounded,
+                  label: 'Grafana',
+                  subtitle: 'Metricas y dashboards',
+                  color: const Color(0xFFF46800),
+                  onTap: () => launchUrl(
+                    Uri.parse(
+                        'https://admin:JUs3f2m3Fa@beautycita.com/grafana/'),
+                    mode: LaunchMode.externalApplication,
+                  ),
+                ),
+              ),
+            ],
           ),
 
           const SizedBox(height: AppConstants.paddingXL),
@@ -575,6 +671,98 @@ class _EmptyCard extends StatelessWidget {
         child: Text(
           message,
           style: GoogleFonts.nunito(fontSize: 13, color: const Color(0xFF9E9E9E)),
+        ),
+      ),
+    );
+  }
+}
+
+class _InfraCard extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String subtitle;
+  final Color color;
+  final VoidCallback onTap;
+  final Widget? statusWidget;
+
+  const _InfraCard({
+    required this.icon,
+    required this.label,
+    required this.subtitle,
+    required this.color,
+    required this.onTap,
+    this.statusWidget,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+        child: Container(
+          padding: const EdgeInsets.all(AppConstants.paddingMD),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+            border: Border.all(
+              color: color.withValues(alpha: 0.15),
+              width: 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(icon, size: 20, color: color),
+                  ),
+                  const Spacer(),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    size: 20,
+                    color: const Color(0xFF9E9E9E),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                label,
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF212121),
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: GoogleFonts.nunito(
+                  fontSize: 11,
+                  color: const Color(0xFF9E9E9E),
+                ),
+              ),
+              if (statusWidget != null) ...[
+                const SizedBox(height: 10),
+                statusWidget!,
+              ],
+            ],
+          ),
         ),
       ),
     );

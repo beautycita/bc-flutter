@@ -7,7 +7,6 @@ import 'package:beautycita/config/routes.dart';
 import 'package:beautycita/providers/auth_provider.dart';
 import 'package:beautycita/providers/profile_provider.dart';
 import 'package:beautycita/providers/admin_provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:beautycita/providers/business_provider.dart';
 import 'package:beautycita/providers/security_provider.dart';
 import 'package:beautycita/providers/feature_toggle_provider.dart';
@@ -174,33 +173,6 @@ class SettingsScreen extends ConsumerWidget {
               assert(() { debugPrint('isAdminProvider error: $e'); return true; }());
               return const SizedBox.shrink();
             },
-          ),
-
-          // ── Superadmin tools ──
-          ref.watch(isSuperAdminProvider).when(
-            data: (isSuperAdmin) => isSuperAdmin
-                ? Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: AppConstants.paddingSM),
-                      SettingsTile(
-                        icon: Icons.monitor_heart_outlined,
-                        label: 'Estado del sistema',
-                        onTap: () => context.push(AppRoutes.systemStatus),
-                      ),
-                      SettingsTile(
-                        icon: Icons.dashboard_rounded,
-                        label: 'Grafana',
-                        onTap: () => launchUrl(
-                          Uri.parse('https://beautycita.com/grafana/'),
-                          mode: LaunchMode.externalApplication,
-                        ),
-                      ),
-                    ],
-                  )
-                : const SizedBox.shrink(),
-            loading: () => const SizedBox.shrink(),
-            error: (_, _) => const SizedBox.shrink(),
           ),
 
           // ── RP panel (only for rp role) ──
