@@ -721,14 +721,15 @@ class _SmokeTestSectionState extends ConsumerState<_SmokeTestSection> {
     });
     await Future.delayed(pause);
 
-    // Test 5: Phone verify edge function (critical path)
-    await _test('Verificacion telefonica', () async {
-      // Just check the function responds — don't actually send a code
-      final res = await client.functions.invoke('phone-verify', body: {
-        'action': 'check-status',
-        'phone': '+520000000000',
+    // Test 5: Outreach salon search (tests DB + edge function + PostGIS)
+    await _test('Busqueda de salones', () async {
+      final res = await client.functions.invoke('outreach-discovered-salon', body: {
+        'action': 'search',
+        'query': 'salon',
+        'lat': 20.6534,
+        'lng': -105.2253,
       });
-      // Any response means the function is alive (will return error for fake number, that's fine)
+      if (res.status != 200) throw Exception('HTTP ${res.status}');
     });
     await Future.delayed(pause);
 
@@ -743,15 +744,12 @@ class _SmokeTestSectionState extends ConsumerState<_SmokeTestSection> {
     });
     await Future.delayed(pause);
 
-    // Test 7: Outreach discovered salons (search)
-    await _test('Busqueda de salones', () async {
-      final res = await client.functions.invoke('outreach-discovered-salon', body: {
-        'action': 'search',
-        'query': 'test',
-        'lat': 20.6534,
-        'lng': -105.2253,
+    // Test 7: Aphrodite AI chat
+    await _test('Chat AI (Aphrodite)', () async {
+      final res = await client.functions.invoke('aphrodite-chat', body: {
+        'action': 'ping',
       });
-      if (res.status != 200) throw Exception('HTTP ${res.status}');
+      // Any response means the function is alive
     });
     await Future.delayed(pause);
 
