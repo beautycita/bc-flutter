@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../providers/admin_provider.dart';
+import '../../providers/rp_provider.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 
@@ -317,6 +318,8 @@ class _LeadDetailSheetState extends State<_LeadDetailSheet> {
                 _buildHeader(context, ref),
                 const SizedBox(height: 12),
                 _buildInfoCard(context),
+                const SizedBox(height: 12),
+                _buildRpSection(context, ref),
                 const SizedBox(height: 12),
                 _buildOutreachTimeline(context, ref, logAsync),
                 const SizedBox(height: 12),
@@ -1305,6 +1308,188 @@ class _LeadDetailSheetState extends State<_LeadDetailSheet> {
   // ---------------------------------------------------------------------------
   // Section 5: Quick action buttons
   // ---------------------------------------------------------------------------
+
+  Widget _buildRpSection(BuildContext context, WidgetRef ref) {
+    final rpId = _lead['assigned_rp_id'] as String?;
+    final rpName = _lead['rp_name'] as String?;
+    final rpStatus = _lead['rp_status'] as String?;
+    final salonId = _lead['id'] as String;
+    final isAssigned = rpId != null;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('RP Asignado',
+              style: GoogleFonts.poppins(
+                  fontSize: 13, fontWeight: FontWeight.w600,
+                  color: Colors.grey.shade600)),
+          const SizedBox(height: 8),
+          if (isAssigned) ...[
+            Row(
+              children: [
+                Icon(Icons.person, size: 18, color: Colors.blue.shade600),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(rpName ?? 'RP desconocido',
+                      style: GoogleFonts.poppins(
+                          fontSize: 14, fontWeight: FontWeight.w500)),
+                ),
+                if (rpStatus != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(rpStatus,
+                        style: GoogleFonts.nunito(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.blue.shade700)),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () async {
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: Text('Desasignar RP',
+                          style: GoogleFonts.poppins(
+                              fontSize: 15, fontWeight: FontWeight.w700)),
+                      content: Text(
+                          'Desasignar ${rpName ?? "RP"} de ${_lead['business_name'] ?? "este salón"}?',
+                          style: GoogleFonts.nunito(fontSize: 13)),
+                      actions: [
+                        TextButton(
+                            onPressed: () => Navigator.pop(ctx, false),
+                            child: const Text('Cancelar')),
+                        ElevatedButton(
+                          onPressed: () => Navigator.pop(ctx, true),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.deepOrange,
+                            foregroundColor: Colors.white,
+                          ),
+                          child: const Text('Desasignar'),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (confirmed == true && mounted) {
+                    try {
+                      await adminUnassignSalons(salonIds: [salonId]);
+                      setState(() {
+                        _lead['assigned_rp_id'] = null;
+                        _lead['rp_name'] = null;
+                        _lead['rp_status'] = 'unassigned';
+                      });
+                      widget.onChanged?.call();
+                      ToastService.showSuccess('RP desasignado');
+                    } catch (e) {
+                      ToastService.showError('Error: $e');
+                    }
+                  }
+                },
+                icon: const Icon(Icons.person_remove, size: 16),
+                label: Text('Desasignar',
+                    style: GoogleFonts.nunito(fontSize: 13)),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.deepOrange,
+                  side: const BorderSide(color: Colors.deepOrange),
+                ),
+              ),
+            ),
+          ] else ...[
+            Row(
+              children: [
+                Icon(Icons.person_off, size: 18, color: Colors.grey.shade400),
+                const SizedBox(width: 8),
+                Text('Sin asignar',
+                    style: GoogleFonts.nunito(
+                        fontSize: 14, color: Colors.grey.shade500)),
+              ],
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => _showAssignDialog(context, ref, salonId),
+                icon: const Icon(Icons.person_add, size: 16),
+                label: Text('Asignar RP',
+                    style: GoogleFonts.nunito(fontSize: 13)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  void _showAssignDialog(BuildContext context, WidgetRef ref, String salonId) {
+    final rpUsersAsync = ref.read(rpUsersProvider);
+    final rpUsers = rpUsersAsync.valueOrNull ?? [];
+
+    if (rpUsers.isEmpty) {
+      ToastService.showWarning('No hay RPs registrados');
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: Text('Asignar RP',
+            style: GoogleFonts.poppins(
+                fontSize: 15, fontWeight: FontWeight.w700)),
+        children: rpUsers.map((rp) {
+          final rpId = rp['id'] as String;
+          final rpName = rp['full_name'] as String? ??
+              rp['username'] as String? ??
+              'RP';
+          return SimpleDialogOption(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              try {
+                await adminAssignSalonsToRp(
+                  salonIds: [salonId],
+                  rpUserId: rpId,
+                );
+                setState(() {
+                  _lead['assigned_rp_id'] = rpId;
+                  _lead['rp_name'] = rpName;
+                  _lead['rp_status'] = 'assigned';
+                });
+                widget.onChanged?.call();
+                ToastService.showSuccess('Asignado a $rpName');
+              } catch (e) {
+                ToastService.showError('Error: $e');
+              }
+            },
+            child: Row(
+              children: [
+                const Icon(Icons.person, size: 18),
+                const SizedBox(width: 12),
+                Text(rpName, style: GoogleFonts.poppins(fontSize: 14)),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
 
   Widget _buildQuickActions(BuildContext context, WidgetRef ref) {
     return Wrap(
