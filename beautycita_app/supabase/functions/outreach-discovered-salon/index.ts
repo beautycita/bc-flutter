@@ -75,7 +75,14 @@ serve(async (req: Request) => {
 
     // ───────── PHONE_LIST: compact MX salon phone list for contact matching ─────────
     if (action === "phone_list") {
-      // Public endpoint — salon business phone numbers are not PII
+      // Require authenticated user (contact matching needs auth)
+      const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        global: { headers: { Authorization: `Bearer ${token}` } },
+      });
+      const { data: { user }, error: authError } = await userClient.auth.getUser();
+      if (authError || !user) {
+        return jsonResponse({ error: "Unauthorized" }, 401);
+      }
       const { data: discovered } = await serviceClient
         .from("discovered_salons")
         .select("id, phone")

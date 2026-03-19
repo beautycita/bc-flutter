@@ -20,6 +20,7 @@ const SMTP_USER = Deno.env.get("SMTP_USER") ?? "";
 const SMTP_PASS = Deno.env.get("SMTP_PASS") ?? "";
 const SMTP_FROM = Deno.env.get("SMTP_FROM") ?? "no-reply@beautycita.com";
 const SMTP_FROM_NAME = Deno.env.get("SMTP_FROM_NAME") ?? "BeautyCita";
+const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
 // ---------------------------------------------------------------------------
 // Templates
@@ -801,6 +802,34 @@ serve(async (req) => {
   }
 
   try {
+    // Auth: service-role key OR authenticated user with admin/rp role
+    const authHeader = req.headers.get("Authorization") ?? "";
+    const token = authHeader.replace("Bearer ", "");
+    const isServiceRole = SUPABASE_SERVICE_KEY && token === SUPABASE_SERVICE_KEY;
+
+    if (!isServiceRole) {
+      // Check if it's an authenticated user with admin/rp role
+      const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+      const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
+      const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+      const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        global: { headers: { Authorization: `Bearer ${token}` } },
+      });
+      const { data: { user }, error: authError } = await userClient.auth.getUser();
+      if (authError || !user) {
+        return json({ error: "Unauthorized" }, 401);
+      }
+      const svcClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+      const { data: profile } = await svcClient
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+      if (!profile || !["admin", "superadmin", "rp"].includes(profile.role)) {
+        return json({ error: "Admin or RP role required" }, 403);
+      }
+    }
+
     const body: SendEmailRequest = await req.json();
     const { template, to, subject, variables } = body;
 
