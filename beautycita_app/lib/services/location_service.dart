@@ -33,7 +33,7 @@ class LocationService {
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        debugPrint('LocationService: Location services disabled');
+        if (kDebugMode) debugPrint('LocationService: Location services disabled');
         return _cachedOrNull();
       }
 
@@ -41,13 +41,13 @@ class LocationService {
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
-          debugPrint('LocationService: Permission denied');
+          if (kDebugMode) debugPrint('LocationService: Permission denied');
           return _cachedOrNull();
         }
       }
 
       if (permission == LocationPermission.deniedForever) {
-        debugPrint('LocationService: Permission permanently denied');
+        if (kDebugMode) debugPrint('LocationService: Permission permanently denied');
         return _cachedOrNull();
       }
 
@@ -60,10 +60,10 @@ class LocationService {
 
       _lastPosition = position;
       _lastFetchedAt = DateTime.now();
-      debugPrint('LocationService: ${position.latitude}, ${position.longitude}');
+      if (kDebugMode) debugPrint('LocationService: ${position.latitude}, ${position.longitude}');
       return LatLng(lat: position.latitude, lng: position.longitude);
     } catch (e) {
-      debugPrint('LocationService: Error getting location ($e)');
+      if (kDebugMode) debugPrint('LocationService: Error getting location ($e)');
       return _cachedOrNull();
     }
   }

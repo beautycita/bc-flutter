@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -108,7 +109,7 @@ class _SalonOnboardingScreenState
       _phoneCtrl.text = phone;
       _prefillFromDiscoveredSalon(results.first);
     } catch (e) {
-      debugPrint('[SalonOnboarding] Auto-match by phone error: $e');
+      if (kDebugMode) debugPrint('[SalonOnboarding] Auto-match by phone error: $e');
     }
   }
 
@@ -159,7 +160,7 @@ class _SalonOnboardingScreenState
         _photoUrl = response['feature_image_url'] ?? response['photo_url'];
       }
     } catch (e) {
-      debugPrint('[SalonOnboarding] Error loading prefill data: $e');
+      if (kDebugMode) debugPrint('[SalonOnboarding] Error loading prefill data: $e');
     } finally {
       if (mounted) setState(() => _loadingPrefill = false);
     }
@@ -360,7 +361,7 @@ class _SalonOnboardingScreenState
           });
         }
       } catch (e) {
-        debugPrint('[SalonOnboarding] Phone match error: $e');
+        if (kDebugMode) debugPrint('[SalonOnboarding] Phone match error: $e');
       } finally {
         if (mounted) setState(() => _phoneMatchLoading = false);
       }
@@ -475,7 +476,7 @@ class _SalonOnboardingScreenState
             UserAttributes(email: email),
           );
         } catch (e) {
-          debugPrint('[SalonOnboarding] Email update failed (non-critical): $e');
+          if (kDebugMode) debugPrint('[SalonOnboarding] Email update failed (non-critical): $e');
         }
       }
 

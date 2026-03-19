@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -588,7 +589,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   Future<void> _processAIAvatar(Uint8List croppedBytes, String stylePrompt) async {
     if (!mounted) return;
-    debugPrint('[Avatar] Starting AI avatar creation — ${croppedBytes.length} bytes, style: $stylePrompt');
+    if (kDebugMode) debugPrint('[Avatar] Starting AI avatar creation — ${croppedBytes.length} bytes, style: $stylePrompt');
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -610,28 +611,28 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
 
     try {
-      debugPrint('[Avatar] Calling LightX edge function (headshot)...');
+      if (kDebugMode) debugPrint('[Avatar] Calling LightX edge function (headshot)...');
       final lightx = LightXService();
       final resultUrl = await lightx.processTryOn(
         imageBytes: croppedBytes,
         tryOnTypeId: 'headshot',
         stylePrompt: stylePrompt,
       );
-      debugPrint('[Avatar] LightX returned result: $resultUrl');
+      if (kDebugMode) debugPrint('[Avatar] LightX returned result: $resultUrl');
 
       // Download the result image so we can upload to permanent storage
-      debugPrint('[Avatar] Downloading result image...');
+      if (kDebugMode) debugPrint('[Avatar] Downloading result image...');
       final response = await http.get(Uri.parse(resultUrl));
       if (response.statusCode != 200) {
         throw Exception('Failed to download AI result (HTTP ${response.statusCode})');
       }
       final resultBytes = response.bodyBytes;
-      debugPrint('[Avatar] Downloaded ${resultBytes.length} bytes');
+      if (kDebugMode) debugPrint('[Avatar] Downloaded ${resultBytes.length} bytes');
 
       if (!mounted) return;
 
       // Upload to Supabase storage as permanent avatar
-      debugPrint('[Avatar] Uploading to Supabase storage...');
+      if (kDebugMode) debugPrint('[Avatar] Uploading to Supabase storage...');
       final fileName = 'avatar_ai_${DateTime.now().millisecondsSinceEpoch}.jpg';
       final permanentUrl = await ref
           .read(profileProvider.notifier)
@@ -643,7 +644,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       if (permanentUrl == null) {
         throw Exception('Failed to upload avatar');
       }
-      debugPrint('[Avatar] Avatar saved: $permanentUrl');
+      if (kDebugMode) debugPrint('[Avatar] Avatar saved: $permanentUrl');
 
       // Save to user_media for media library
       try {
@@ -654,13 +655,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           stylePrompt: stylePrompt,
         );
       } catch (e) {
-        debugPrint('[Profile] saveLightXResult failed (non-critical): $e');
+        if (kDebugMode) debugPrint('[Profile] saveLightXResult failed (non-critical): $e');
       }
 
       ToastService.showSuccess('Avatar IA creado');
     } catch (e, st) {
-      debugPrint('[Avatar] ERROR: $e');
-      debugPrint('[Avatar] Stack trace: $st');
+      if (kDebugMode) debugPrint('[Avatar] ERROR: $e');
+      if (kDebugMode) debugPrint('[Avatar] Stack trace: $st');
       if (!mounted) return;
       Navigator.of(context).pop(); // dismiss loading
       ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, st);

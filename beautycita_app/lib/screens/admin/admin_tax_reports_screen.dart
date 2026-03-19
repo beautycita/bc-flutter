@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -42,7 +43,7 @@ class _AdminTaxReportsScreenState
         setState(() => _savedReports = List<Map<String, dynamic>>.from(data));
       }
     } catch (e) {
-      debugPrint('[TaxReports] Failed to load saved reports: $e');
+      if (kDebugMode) debugPrint('[TaxReports] Failed to load saved reports: $e');
     }
   }
 

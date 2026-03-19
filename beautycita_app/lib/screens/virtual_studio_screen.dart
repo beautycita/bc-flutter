@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -427,7 +428,7 @@ class _ToolViewState extends ConsumerState<_ToolView>
         ToastService.showWarning('No se pudo guardar (inicia sesion)');
       }
     } catch (e, stack) {
-      debugPrint('Auto-save error: $e');
+      if (kDebugMode) debugPrint('Auto-save error: $e');
       ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
     }
   }
@@ -443,7 +444,7 @@ class _ToolViewState extends ConsumerState<_ToolView>
         ToastService.showError('Error al guardar');
       }
     } catch (e) {
-      debugPrint('Save to gallery error: $e');
+      if (kDebugMode) debugPrint('Save to gallery error: $e');
     }
   }
 
@@ -453,7 +454,7 @@ class _ToolViewState extends ConsumerState<_ToolView>
       final mediaService = MediaService();
       await mediaService.shareImage(_resultUrl!, text: 'Mi look en BeautyCita');
     } catch (e) {
-      debugPrint('Share error: $e');
+      if (kDebugMode) debugPrint('Share error: $e');
     }
   }
 
@@ -1032,7 +1033,7 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
         ToastService.showWarning('No se pudo guardar (inicia sesion)');
       }
     } catch (e) {
-      debugPrint('Auto-save error: $e');
+      if (kDebugMode) debugPrint('Auto-save error: $e');
     }
   }
 
@@ -1047,7 +1048,7 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
         ToastService.showError('Error al guardar');
       }
     } catch (e) {
-      debugPrint('Save to gallery error: $e');
+      if (kDebugMode) debugPrint('Save to gallery error: $e');
     }
   }
 
@@ -1057,7 +1058,7 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
       final mediaService = MediaService();
       await mediaService.shareImage(_resultUrl!, text: 'Mi look en BeautyCita');
     } catch (e) {
-      debugPrint('Share error: $e');
+      if (kDebugMode) debugPrint('Share error: $e');
     }
   }
 

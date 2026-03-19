@@ -106,7 +106,7 @@ class ContactMatchNotifier extends StateNotifier<ContactMatchState> {
         await _scan(forceRefresh: false);
       }
     } catch (e) {
-      debugPrint('[CONTACT-MATCH] checkPermission error: $e');
+      if (kDebugMode) debugPrint('[CONTACT-MATCH] checkPermission error: $e');
       // Non-fatal on startup — stay idle.
     }
   }
@@ -124,7 +124,7 @@ class ContactMatchNotifier extends StateNotifier<ContactMatchState> {
 
       await _scan(forceRefresh: false);
     } catch (e) {
-      debugPrint('[CONTACT-MATCH] requestAndScan error: $e');
+      if (kDebugMode) debugPrint('[CONTACT-MATCH] requestAndScan error: $e');
       state = state.copyWith(
         step: ContactMatchStep.error,
         error: e.toString(),
@@ -139,7 +139,7 @@ class ContactMatchNotifier extends StateNotifier<ContactMatchState> {
     try {
       await _scan(forceRefresh: true);
     } catch (e) {
-      debugPrint('[CONTACT-MATCH] refresh error: $e');
+      if (kDebugMode) debugPrint('[CONTACT-MATCH] refresh error: $e');
       state = state.copyWith(
         step: ContactMatchStep.error,
         error: e.toString(),
@@ -257,7 +257,7 @@ class ContactMatchNotifier extends StateNotifier<ContactMatchState> {
           },
         );
       } catch (e) {
-        debugPrint('[CONTACT-MATCH] background bio error: $e');
+        if (kDebugMode) debugPrint('[CONTACT-MATCH] background bio error: $e');
       }
     });
   }

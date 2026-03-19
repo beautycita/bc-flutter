@@ -46,17 +46,17 @@ class LightXService {
     required String tryOnTypeId,
     Uint8List? targetImageBytes,
   }) async {
-    debugPrint('[LightX] processTryOn called — tool=$tryOnTypeId, imageSize=${imageBytes.length}, prompt=$stylePrompt');
+    if (kDebugMode) debugPrint('[LightX] processTryOn called — tool=$tryOnTypeId, imageSize=${imageBytes.length}, prompt=$stylePrompt');
 
     if (!SupabaseClientService.isInitialized) {
-      debugPrint('[LightX] ERROR: Supabase not initialized');
+      if (kDebugMode) debugPrint('[LightX] ERROR: Supabase not initialized');
       throw LightXException('Supabase not initialized');
     }
 
     final client = SupabaseClientService.client;
 
     final imageB64 = base64Encode(imageBytes);
-    debugPrint('[LightX] Base64 encoded image: ${imageB64.length} chars');
+    if (kDebugMode) debugPrint('[LightX] Base64 encoded image: ${imageB64.length} chars');
 
     final body = <String, dynamic>{
       'action': 'try_on',
@@ -68,22 +68,22 @@ class LightXService {
       body['target_image_base64'] = base64Encode(targetImageBytes);
     }
 
-    debugPrint('[LightX] Invoking aphrodite-chat edge function...');
+    if (kDebugMode) debugPrint('[LightX] Invoking aphrodite-chat edge function...');
     final response = await client.functions.invoke(
       'aphrodite-chat',
       body: body,
     );
-    debugPrint('[LightX] Edge function response status: ${response.status}');
+    if (kDebugMode) debugPrint('[LightX] Edge function response status: ${response.status}');
 
     if (response.status != 200) {
       final errorBody = response.data;
-      debugPrint('[LightX] ERROR response body: $errorBody');
+      if (kDebugMode) debugPrint('[LightX] ERROR response body: $errorBody');
       final message = errorBody is Map ? errorBody['error'] : 'Unknown error';
       throw LightXException('Try-on failed: $message');
     }
 
     final data = response.data as Map<String, dynamic>;
-    debugPrint('[LightX] Success — result_url: ${data['result_url']}');
+    if (kDebugMode) debugPrint('[LightX] Success — result_url: ${data['result_url']}');
     return data['result_url'] as String;
   }
 }

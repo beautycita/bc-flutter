@@ -61,7 +61,7 @@ class UserSession {
               .update({'username': username})
               .eq('id', supaId);
         } catch (e) {
-          debugPrint('[UserSession] Failed to sync username to profiles: $e');
+          if (kDebugMode) debugPrint('[UserSession] Failed to sync username to profiles: $e');
         }
       }
     }
@@ -136,14 +136,14 @@ class UserSession {
     // anon key + RLS policies.
     final storedSupabaseId = await _getSecureSupabaseUserId();
     if (storedSupabaseId != null) {
-      debugPrint('[UserSession] Have stored user $storedSupabaseId but SDK session lost. '
+      if (kDebugMode) debugPrint('[UserSession] Have stored user $storedSupabaseId but SDK session lost. '
           'Creating fresh anonymous session and migrating profile server-side.');
       try {
         final response =
             await SupabaseClientService.client.auth.signInAnonymously();
         final newId = response.user?.id;
         if (newId != null && newId != storedSupabaseId) {
-          debugPrint('[UserSession] Migrating profile $storedSupabaseId -> $newId (server-side)');
+          if (kDebugMode) debugPrint('[UserSession] Migrating profile $storedSupabaseId -> $newId (server-side)');
           // Delegate profile migration to the edge function which validates
           // ownership server-side before touching any profile rows.
           try {
@@ -151,13 +151,13 @@ class UserSession {
               'old_user_id': storedSupabaseId,
             });
           } catch (e) {
-            debugPrint('[UserSession] Profile migration failed: $e');
+            if (kDebugMode) debugPrint('[UserSession] Profile migration failed: $e');
           }
           await _setSecureSupabaseUserId(newId);
         }
         return SupabaseClientService.isAuthenticated;
       } catch (e) {
-        debugPrint('[UserSession] Re-auth failed ($e)');
+        if (kDebugMode) debugPrint('[UserSession] Re-auth failed ($e)');
         return false;
       }
     }
@@ -168,7 +168,7 @@ class UserSession {
       final userId = response.user?.id;
       if (userId != null) {
         await saveSupabaseUserId(userId);
-        debugPrint('[UserSession] New anonymous session $userId');
+        if (kDebugMode) debugPrint('[UserSession] New anonymous session $userId');
         // Tag registration source as APK (Android build)
         try {
           await SupabaseClientService.client
@@ -176,12 +176,12 @@ class UserSession {
               .update({'registration_source': 'apk'})
               .eq('id', userId);
         } catch (e) {
-          debugPrint('[UserSession] Failed to tag registration_source: $e');
+          if (kDebugMode) debugPrint('[UserSession] Failed to tag registration_source: $e');
         }
       }
       return SupabaseClientService.isAuthenticated;
     } catch (e) {
-      debugPrint('[UserSession] Session creation failed ($e)');
+      if (kDebugMode) debugPrint('[UserSession] Session creation failed ($e)');
       return false;
     }
   }
@@ -215,7 +215,7 @@ class UserSession {
     if (id != null) {
       await _secureStorage.write(key: _keyUserId, value: id);
       await prefs.remove(_keyUserId);
-      debugPrint('[UserSession] Migrated user_id to secure storage');
+      if (kDebugMode) debugPrint('[UserSession] Migrated user_id to secure storage');
     }
     return id;
   }
@@ -236,7 +236,7 @@ class UserSession {
     if (id != null) {
       await _secureStorage.write(key: _keySupabaseUserId, value: id);
       await prefs.remove(_keySupabaseUserId);
-      debugPrint('[UserSession] Migrated supabase_user_id to secure storage');
+      if (kDebugMode) debugPrint('[UserSession] Migrated supabase_user_id to secure storage');
     }
     return id;
   }

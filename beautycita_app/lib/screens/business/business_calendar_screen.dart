@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -1085,7 +1086,7 @@ class _HorizontalTimelineState extends State<_HorizontalTimeline> {
         body: {'appointment_id': appointmentId},
       );
     } catch (e) {
-      debugPrint('[Reschedule] Notification error: $e');
+      if (kDebugMode) debugPrint('[Reschedule] Notification error: $e');
     }
   }
 
@@ -2655,7 +2656,7 @@ class _WalkinSheetState extends ConsumerState<_WalkinSheet> {
         });
       }
     } catch (e) {
-      debugPrint('[Calendar] Failed to load popular service names: $e');
+      if (kDebugMode) debugPrint('[Calendar] Failed to load popular service names: $e');
     }
   }
 

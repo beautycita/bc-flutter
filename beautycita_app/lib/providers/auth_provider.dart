@@ -149,7 +149,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
       final account = await googleSignIn.signIn();
       if (account == null) {
-        debugPrint('[Auth] Google One Tap dismissed');
+        if (kDebugMode) debugPrint('[Auth] Google One Tap dismissed');
         return false;
       }
 
@@ -170,17 +170,17 @@ class AuthNotifier extends StateNotifier<AuthState> {
             idToken: idToken,
             accessToken: googleAuth.accessToken,
           );
-          debugPrint('[Auth] Google identity linked + email stored: $email');
+          if (kDebugMode) debugPrint('[Auth] Google identity linked + email stored: $email');
         } on AuthException catch (e) {
           // Identity may already be linked to another user — still have the email
-          debugPrint('[Auth] linkIdentity failed (email still stored): ${e.message}');
+          if (kDebugMode) debugPrint('[Auth] linkIdentity failed (email still stored): ${e.message}');
         }
       }
 
       await googleSignIn.disconnect();
       return true;
     } catch (e) {
-      debugPrint('[Auth] Google capture failed (non-fatal): $e');
+      if (kDebugMode) debugPrint('[Auth] Google capture failed (non-fatal): $e');
       return false;
     }
   }
@@ -369,7 +369,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
               .update({'username': username})
               .eq('id', supaId);
         } catch (e) {
-          debugPrint('[Auth] Failed to sync username to profiles: $e');
+          if (kDebugMode) debugPrint('[Auth] Failed to sync username to profiles: $e');
         }
       }
     }

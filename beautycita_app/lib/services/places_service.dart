@@ -63,7 +63,7 @@ class PlacesService {
   }) async {
     if (query.trim().isEmpty) return [];
 
-    debugPrint('[PlacesService] searchPlaces: "$query"');
+    if (kDebugMode) debugPrint('[PlacesService] searchPlaces: "$query"');
 
     try {
       final body = <String, dynamic>{
@@ -87,16 +87,16 @@ class PlacesService {
         body: jsonEncode(body),
       );
 
-      debugPrint('[PlacesService] status=${response.statusCode}');
+      if (kDebugMode) debugPrint('[PlacesService] status=${response.statusCode}');
 
       if (response.statusCode != 200) {
-        debugPrint('[PlacesService] error: ${response.body}');
+        if (kDebugMode) debugPrint('[PlacesService] error: ${response.body}');
         return [];
       }
 
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       final suggestions = data['suggestions'] as List? ?? [];
-      debugPrint('[PlacesService] got ${suggestions.length} suggestions');
+      if (kDebugMode) debugPrint('[PlacesService] got ${suggestions.length} suggestions');
 
       return suggestions
           .where((s) =>
@@ -126,7 +126,7 @@ class PlacesService {
         );
       }).toList();
     } catch (e) {
-      debugPrint('[PlacesService] searchPlaces error: $e');
+      if (kDebugMode) debugPrint('[PlacesService] searchPlaces error: $e');
       return [];
     }
   }
@@ -149,7 +149,7 @@ class PlacesService {
       final response = await http.get(uri, headers: headers);
 
       if (response.statusCode != 200) {
-        debugPrint('[PlacesService] details error: ${response.body}');
+        if (kDebugMode) debugPrint('[PlacesService] details error: ${response.body}');
         return null;
       }
 
@@ -157,7 +157,7 @@ class PlacesService {
       final location = data['location'] as Map<String, dynamic>?;
 
       if (location == null) {
-        debugPrint('[PlacesService] details missing location: $data');
+        if (kDebugMode) debugPrint('[PlacesService] details missing location: $data');
         return null;
       }
 
@@ -183,7 +183,7 @@ class PlacesService {
         state: state,
       );
     } catch (e) {
-      debugPrint('[PlacesService] getPlaceDetails error: $e');
+      if (kDebugMode) debugPrint('[PlacesService] getPlaceDetails error: $e');
       return null;
     }
   }

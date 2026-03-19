@@ -27,7 +27,7 @@ class ScreenshotSenderService {
       }
       return false;
     } catch (e) {
-      debugPrint('[ScreenshotSender] Error: $e');
+      if (kDebugMode) debugPrint('[ScreenshotSender] Error: $e');
       return false;
     }
   }

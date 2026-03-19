@@ -1,5 +1,5 @@
 import 'dart:typed_data';
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_gallery_saver_plus/image_gallery_saver_plus.dart';
 import 'package:share_plus/share_plus.dart';
@@ -155,7 +155,7 @@ class MediaService {
 
       return result['isSuccess'] == true;
     } catch (e) {
-      debugPrint('MediaService: Failed to save to gallery: $e');
+      if (kDebugMode) debugPrint('MediaService: Failed to save to gallery: $e');
       ToastService.showError('Error al guardar imagen');
       return false;
     }
@@ -171,7 +171,7 @@ class MediaService {
       );
       return result['isSuccess'] == true;
     } catch (e) {
-      debugPrint('MediaService: Failed to save to gallery: $e');
+      if (kDebugMode) debugPrint('MediaService: Failed to save to gallery: $e');
       ToastService.showError('Error al guardar imagen');
       return false;
     }
@@ -193,7 +193,7 @@ class MediaService {
         text: text,
       );
     } catch (e) {
-      debugPrint('MediaService: Failed to share: $e');
+      if (kDebugMode) debugPrint('MediaService: Failed to share: $e');
       ToastService.showError('Error al compartir');
     }
   }
@@ -212,26 +212,26 @@ class MediaService {
     required String section, // 'personal' or 'business'
     String? description,
   }) async {
-    debugPrint('MediaService.uploadMedia: called with ${bytes.length} bytes, section=$section');
+    if (kDebugMode) debugPrint('MediaService.uploadMedia: called with ${bytes.length} bytes, section=$section');
     if (!SupabaseClientService.isInitialized) {
-      debugPrint('MediaService.uploadMedia: Supabase not initialized');
+      if (kDebugMode) debugPrint('MediaService.uploadMedia: Supabase not initialized');
       return null;
     }
     final userId = SupabaseClientService.currentUserId;
     if (userId == null) {
-      debugPrint('MediaService.uploadMedia: userId is null');
+      if (kDebugMode) debugPrint('MediaService.uploadMedia: userId is null');
       return null;
     }
-    debugPrint('MediaService.uploadMedia: userId=$userId');
+    if (kDebugMode) debugPrint('MediaService.uploadMedia: userId=$userId');
 
     final client = SupabaseClientService.client;
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     final fileName = '$userId/$section/$timestamp.jpg';
-    debugPrint('MediaService.uploadMedia: fileName=$fileName');
+    if (kDebugMode) debugPrint('MediaService.uploadMedia: fileName=$fileName');
 
     try {
       // Upload to storage bucket
-      debugPrint('MediaService.uploadMedia: bucket=user-media, path=$fileName');
+      if (kDebugMode) debugPrint('MediaService.uploadMedia: bucket=user-media, path=$fileName');
       await client.storage.from('user-media').uploadBinary(
             fileName,
             bytes,
@@ -240,12 +240,12 @@ class MediaService {
               upsert: false,
             ),
           );
-      debugPrint('MediaService.uploadMedia: storage upload success');
+      if (kDebugMode) debugPrint('MediaService.uploadMedia: storage upload success');
 
       // Get public URL
       final publicUrl =
           client.storage.from('user-media').getPublicUrl(fileName);
-      debugPrint('MediaService.uploadMedia: publicUrl=$publicUrl');
+      if (kDebugMode) debugPrint('MediaService.uploadMedia: publicUrl=$publicUrl');
 
       // Insert record into user_media table
       final row = {
@@ -258,18 +258,18 @@ class MediaService {
         },
         'section': section,
       };
-      debugPrint('MediaService.uploadMedia: inserting into user_media...');
+      if (kDebugMode) debugPrint('MediaService.uploadMedia: inserting into user_media...');
 
       final result = await client
           .from('user_media')
           .insert(row)
           .select()
           .single();
-      debugPrint('MediaService.uploadMedia: insert success, id=${result['id']}');
+      if (kDebugMode) debugPrint('MediaService.uploadMedia: insert success, id=${result['id']}');
 
       return MediaItem.fromJson(result);
     } catch (e) {
-      debugPrint('MediaService.uploadMedia: FAILED: $e');
+      if (kDebugMode) debugPrint('MediaService.uploadMedia: FAILED: $e');
       ToastService.showError(ToastService.friendlyError(e));
       return null;
     }

@@ -17,8 +17,8 @@ class CurateService {
       body: request.toJson(),
     );
 
-    debugPrint('[CURATE-SVC] status: ${response.status}, data type: ${response.data.runtimeType}');
-    debugPrint('[CURATE-SVC] data: ${response.data}');
+    if (kDebugMode) debugPrint('[CURATE-SVC] status: ${response.status}, data type: ${response.data.runtimeType}');
+    if (kDebugMode) debugPrint('[CURATE-SVC] data: ${response.data}');
 
     if (response.status != 200) {
       final errorBody = response.data;

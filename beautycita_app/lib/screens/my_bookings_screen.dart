@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -947,9 +948,9 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
         'process-dispute-refund',
         body: {'dispute_id': disputeId},
       ).then((_) {
-        debugPrint('Dispute refund processed for $disputeId');
+        if (kDebugMode) debugPrint('Dispute refund processed for $disputeId');
       }).catchError((e) {
-        debugPrint('Dispute refund failed for $disputeId: $e');
+        if (kDebugMode) debugPrint('Dispute refund failed for $disputeId: $e');
       });
     }
 

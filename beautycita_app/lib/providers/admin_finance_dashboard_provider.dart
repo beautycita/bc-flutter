@@ -274,7 +274,7 @@ final financeDashboardKpisProvider =
       avgBookingValue: (h['avg_booking_value'] as num?)?.toDouble() ?? 0,
     );
   } catch (e) {
-    debugPrint('Finance dashboard KPIs error: $e');
+    if (kDebugMode) debugPrint('Finance dashboard KPIs error: $e');
     return FinanceDashboardKpis.placeholder;
   }
 });
@@ -310,7 +310,7 @@ final commissionBreakdownProvider =
       productCount: (row['product_orders'] as num?)?.toInt() ?? 0,
     );
   } catch (e) {
-    debugPrint('Commission breakdown error: $e');
+    if (kDebugMode) debugPrint('Commission breakdown error: $e');
     return CommissionBreakdown.placeholder;
   }
 });
@@ -356,7 +356,7 @@ final taxWithholdingProvider =
       ivaAllTime: ivaAll,
     );
   } catch (e) {
-    debugPrint('Tax withholding error: $e');
+    if (kDebugMode) debugPrint('Tax withholding error: $e');
     return TaxWithholdingSummary.placeholder;
   }
 });
@@ -376,7 +376,7 @@ final reconciliationProvider =
         .map((row) => ReconciliationRow.fromJson(row))
         .toList();
   } catch (e) {
-    debugPrint('Reconciliation error: $e');
+    if (kDebugMode) debugPrint('Reconciliation error: $e');
     return [];
   }
 });
@@ -396,7 +396,7 @@ final businessRevenueProvider =
         .map((row) => BusinessRevenueRow.fromJson(row))
         .toList();
   } catch (e) {
-    debugPrint('Business revenue error: $e');
+    if (kDebugMode) debugPrint('Business revenue error: $e');
     return [];
   }
 });

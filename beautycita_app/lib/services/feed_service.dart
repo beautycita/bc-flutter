@@ -43,7 +43,7 @@ class FeedService {
     try {
       final response = await http.get(uri, headers: headers);
       if (response.statusCode != 200) {
-        debugPrint('[FeedService] fetchFeed: HTTP ${response.statusCode}');
+        if (kDebugMode) debugPrint('[FeedService] fetchFeed: HTTP ${response.statusCode}');
         return [];
       }
       final decoded = jsonDecode(response.body);
@@ -61,7 +61,7 @@ class FeedService {
           .map(FeedItem.fromJson)
           .toList();
     } catch (e) {
-      debugPrint('[FeedService] fetchFeed: $e');
+      if (kDebugMode) debugPrint('[FeedService] fetchFeed: $e');
       return [];
     }
   }
@@ -119,7 +119,7 @@ class FeedService {
         'action': action,
       });
     } catch (e) {
-      debugPrint('[FeedService] trackEngagement: $e');
+      if (kDebugMode) debugPrint('[FeedService] trackEngagement: $e');
     }
   }
 
@@ -137,7 +137,7 @@ class FeedService {
 
       return (data as List).whereType<Map<String, dynamic>>().toList();
     } catch (e) {
-      debugPrint('[FeedService] fetchSaved: $e');
+      if (kDebugMode) debugPrint('[FeedService] fetchSaved: $e');
       return [];
     }
   }

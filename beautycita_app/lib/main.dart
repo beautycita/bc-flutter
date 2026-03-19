@@ -65,22 +65,22 @@ void main() async {
     Stripe.merchantIdentifier = 'merchant.com.beautycita';
     assert(() { debugPrint('[Stripe] Configured'); return true; }());
   } else {
-    debugPrint('[Stripe] WARNING: No publishable key found in .env');
+    if (kDebugMode) debugPrint('[Stripe] WARNING: No publishable key found in .env');
   }
 
   // Start Supabase init in background — splash screen awaits supabaseReady
   SupabaseClientService.initialize().then((_) async {
-    debugPrint('[Init] Supabase initialized successfully');
+    if (kDebugMode) debugPrint('[Init] Supabase initialized successfully');
     // Initialize push notifications after Supabase is ready
     await NotificationService().initialize();
-    debugPrint('[Init] Notifications initialized');
+    if (kDebugMode) debugPrint('[Init] Notifications initialized');
     // Auto-sync registered MX salons to Android contacts (non-blocking)
     ContactMatchService.autoSyncRegisteredSalons();
     PresenceService.instance.start();
-    debugPrint('[Init] Presence heartbeat started');
+    if (kDebugMode) debugPrint('[Init] Presence heartbeat started');
     supabaseReady.complete();
   }).catchError((e) {
-    debugPrint('[Init] ERROR: Supabase initialization failed: $e');
+    if (kDebugMode) debugPrint('[Init] ERROR: Supabase initialization failed: $e');
     supabaseReady.complete(); // Complete even on error so splash doesn't hang
   });
 
@@ -120,11 +120,11 @@ class _BeautyCitaAppState extends ConsumerState<BeautyCitaApp> {
     ScreenshotDetectorService.startListening();
     _screenshotSub =
         ScreenshotDetectorService.onScreenshotTaken.listen((bytes) {
-      debugPrint('[Screenshot] Dart received ${bytes.length} bytes');
+      if (kDebugMode) debugPrint('[Screenshot] Dart received ${bytes.length} bytes');
       if (!mounted) return;
       final nav = ToastService.navigatorKey.currentState;
       if (nav == null) {
-        debugPrint('[Screenshot] Navigator not ready yet');
+        if (kDebugMode) debugPrint('[Screenshot] Navigator not ready yet');
         return;
       }
       nav.push(
@@ -133,9 +133,9 @@ class _BeautyCitaAppState extends ConsumerState<BeautyCitaApp> {
           builder: (_) => ScreenshotEditorScreen(screenshotBytes: bytes),
         ),
       );
-      debugPrint('[Screenshot] Pushed editor screen');
+      if (kDebugMode) debugPrint('[Screenshot] Pushed editor screen');
     }, onError: (e) {
-      debugPrint('[Screenshot] Stream error: $e');
+      if (kDebugMode) debugPrint('[Screenshot] Stream error: $e');
     });
   }
 
@@ -184,8 +184,8 @@ class _BeautyCitaAppState extends ConsumerState<BeautyCitaApp> {
   }
 
   void _handleUri(Uri uri) {
-    debugPrint('[DeepLink] Received URI: $uri');
-    debugPrint('[DeepLink] scheme=${uri.scheme} host=${uri.host} path=${uri.path} params=${uri.queryParameters}');
+    if (kDebugMode) debugPrint('[DeepLink] Received URI: $uri');
+    if (kDebugMode) debugPrint('[DeepLink] scheme=${uri.scheme} host=${uri.host} path=${uri.path} params=${uri.queryParameters}');
 
     // Handle HTTPS deep links (beautycita.com)
     if (uri.scheme == 'https' && uri.host == 'beautycita.com') {
@@ -198,10 +198,10 @@ class _BeautyCitaAppState extends ConsumerState<BeautyCitaApp> {
     switch (uri.host) {
       case 'uber-callback':
         // Uber OAuth no longer used — deep link approach instead.
-        debugPrint('[DeepLink] Uber callback (ignored — using deep links now)');
+        if (kDebugMode) debugPrint('[DeepLink] Uber callback (ignored — using deep links now)');
         break;
       case 'stripe-complete':
-        debugPrint('[DeepLink] Stripe onboarding complete');
+        if (kDebugMode) debugPrint('[DeepLink] Stripe onboarding complete');
         // Navigate to business shell, Pagos tab
         ref.read(businessTabProvider.notifier).state = 7;
         Navigator.of(context).pushNamedAndRemoveUntil(
@@ -283,7 +283,7 @@ class _BeautyCitaAppState extends ConsumerState<BeautyCitaApp> {
       final pendingRoute = prefs.getString('pending_contact_route');
       if (pendingRoute != null && pendingRoute.isNotEmpty) {
         await prefs.remove('pending_contact_route');
-        debugPrint('[DeepLink] Pending contact route: $pendingRoute');
+        if (kDebugMode) debugPrint('[DeepLink] Pending contact route: $pendingRoute');
         if (mounted) {
           AppRoutes.router.go(pendingRoute);
           return;

@@ -103,7 +103,7 @@ class UserPrefsNotifier extends StateNotifier<UserPrefsState> {
         onboardingComplete: onboardingComplete,
       );
     } catch (e) {
-      debugPrint('Failed to load user prefs: $e');
+      if (kDebugMode) debugPrint('Failed to load user prefs: $e');
       ToastService.showError(ToastService.friendlyError(e));
     }
   }

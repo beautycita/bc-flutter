@@ -300,7 +300,7 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
           await _confirmStripe(result, oxxoOnly: false);
       }
     } on StripeException catch (e) {
-      debugPrint('[PAYMENT] Stripe error: ${e.error.localizedMessage}');
+      if (kDebugMode) debugPrint('[PAYMENT] Stripe error: ${e.error.localizedMessage}');
       final msg = e.error.code == FailureCode.Canceled
           ? 'Pago cancelado'
           : 'Error de pago: ${e.error.localizedMessage}';
@@ -343,11 +343,11 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
       transportMode: state.transportMode,
     );
 
-    debugPrint('[PAYMENT] Booking created: ${booking.id} (pending payment)');
+    if (kDebugMode) debugPrint('[PAYMENT] Booking created: ${booking.id} (pending payment)');
 
     try {
       if (serviceId.isNotEmpty && (result.service.price ?? 0) > 0) {
-        debugPrint('[PAYMENT] Creating PaymentIntent (${oxxoOnly ? "oxxo" : "card"}) for service $serviceId');
+        if (kDebugMode) debugPrint('[PAYMENT] Creating PaymentIntent (${oxxoOnly ? "oxxo" : "card"}) for service $serviceId');
 
         // Step 2: Create PaymentIntent with booking_id in metadata.
         // The webhook uses this to update the booking on payment success.
@@ -375,7 +375,7 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
         final customerId = piData['customer_id'] as String?;
         final ephemeralKey = piData['ephemeral_key'] as String?;
 
-        debugPrint('[PAYMENT] PaymentIntent created: $paymentIntentId');
+        if (kDebugMode) debugPrint('[PAYMENT] PaymentIntent created: $paymentIntentId');
 
         // Link the PaymentIntent to the booking so we can track it
         await SupabaseClientService.client
@@ -436,7 +436,7 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
         );
 
         await Stripe.instance.presentPaymentSheet();
-        debugPrint('[PAYMENT] Payment sheet completed');
+        if (kDebugMode) debugPrint('[PAYMENT] Payment sheet completed');
 
         // For card: payment is instant, webhook will confirm.
         // For OXXO: payment is pending until customer pays at store.
@@ -454,12 +454,12 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
       }
     } on StripeException {
       // User cancelled or payment failed — cancel the booking
-      debugPrint('[PAYMENT] Stripe error, cancelling booking ${booking.id}');
+      if (kDebugMode) debugPrint('[PAYMENT] Stripe error, cancelling booking ${booking.id}');
       await _bookingRepo.cancelBooking(booking.id);
       rethrow;
     } catch (e) {
       // Any other error — cancel the booking
-      debugPrint('[PAYMENT] Error, cancelling booking ${booking.id}');
+      if (kDebugMode) debugPrint('[PAYMENT] Error, cancelling booking ${booking.id}');
       await _bookingRepo.cancelBooking(booking.id);
       rethrow;
     }
@@ -584,19 +584,19 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
         exploreLoyalty: _userPrefs.exploreLoyalty,
       );
 
-      debugPrint('[CURATE] request: ${request.toJson()}');
+      if (kDebugMode) debugPrint('[CURATE] request: ${request.toJson()}');
 
       final response = await _curateService.curateResults(request);
 
-      debugPrint('[CURATE] results count: ${response.results.length}');
+      if (kDebugMode) debugPrint('[CURATE] results count: ${response.results.length}');
 
       state = state.copyWith(
         step: BookingFlowStep.results,
         curateResponse: response,
       );
     } catch (e, st) {
-      debugPrint('[CURATE] ERROR: $e');
-      debugPrint('[CURATE] STACK: $st');
+      if (kDebugMode) debugPrint('[CURATE] ERROR: $e');
+      if (kDebugMode) debugPrint('[CURATE] STACK: $st');
 
       // When curate fails (e.g. zero registered salons), show the results
       // screen with empty results → this triggers the discovered salons

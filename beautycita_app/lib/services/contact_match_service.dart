@@ -250,7 +250,7 @@ class ContactMatchService {
       await prefs.setString(_syncMatchesKey, jsonEncode(syncData));
       await _syncChannel.invokeMethod('syncContacts');
     } catch (e) {
-      debugPrint('[ContactMatch] Android sync failed: $e');
+      if (kDebugMode) debugPrint('[ContactMatch] Android sync failed: $e');
     }
   }
 
@@ -270,7 +270,7 @@ class ContactMatchService {
         final lastTime = DateTime.tryParse(lastSync);
         if (lastTime != null &&
             DateTime.now().difference(lastTime) < const Duration(hours: 24)) {
-          debugPrint('[ContactMatch] Auto-sync skipped (last sync < 24h ago)');
+          if (kDebugMode) debugPrint('[ContactMatch] Auto-sync skipped (last sync < 24h ago)');
           return;
         }
       }
@@ -300,16 +300,18 @@ class ContactMatchService {
       final matches = matchContacts(contacts, registeredPhones);
 
       if (matches.isEmpty) {
-        debugPrint('[ContactMatch] Auto-sync: no matches found (${contacts.length} contacts, ${registeredPhones.length} registered phones)');
+        if (kDebugMode) debugPrint('[ContactMatch] Auto-sync: no matches found (${contacts.length} contacts, ${registeredPhones.length} registered phones)');
         return;
       }
 
-      debugPrint('[ContactMatch] Auto-sync: ${matches.length} registered salon matches');
-      for (final m in matches) {
-        debugPrint('[ContactMatch]   → ${m.contactName} = ${m.matchedPhone} (${m.salonId})');
+      if (kDebugMode) debugPrint('[ContactMatch] Auto-sync: ${matches.length} registered salon matches');
+      if (kDebugMode) {
+        for (final m in matches) {
+          debugPrint('[ContactMatch]   → ${m.contactName} = ${m.matchedPhone} (${m.salonId})');
+        }
       }
       await service.syncContactActions(matches);
-      debugPrint('[ContactMatch] Auto-sync: Android sync triggered');
+      if (kDebugMode) debugPrint('[ContactMatch] Auto-sync: Android sync triggered');
 
       // Record successful sync timestamp
       final prefs = await SharedPreferences.getInstance();
@@ -318,7 +320,7 @@ class ContactMatchService {
         DateTime.now().toIso8601String(),
       );
     } catch (e) {
-      debugPrint('[ContactMatch] Auto-sync failed (non-fatal): $e');
+      if (kDebugMode) debugPrint('[ContactMatch] Auto-sync failed (non-fatal): $e');
     }
   }
 }

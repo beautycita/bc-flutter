@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/aphrodite_service.dart';
@@ -76,7 +77,7 @@ class _AphroditeCopyFieldState extends State<AphroditeCopyField>
         ToastService.showWarning(e.message);
       }
     } catch (e) {
-      debugPrint('[AphroditeCopyField] Generation failed: $e');
+      if (kDebugMode) debugPrint('[AphroditeCopyField] Generation failed: $e');
     } finally {
       if (mounted) {
         _spinCtrl.stop();

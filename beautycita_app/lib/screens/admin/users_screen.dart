@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -1195,7 +1196,7 @@ class _LiveSupportSheetState extends ConsumerState<_LiveSupportSheet> {
           'data': {'route': '/chat', 'type': 'support_message'},
         });
       } catch (e) {
-        debugPrint('[Users] Push notification failed (best-effort): $e');
+        if (kDebugMode) debugPrint('[Users] Push notification failed (best-effort): $e');
       }
     } catch (e, stack) {
       ToastService.showErrorWithDetails(

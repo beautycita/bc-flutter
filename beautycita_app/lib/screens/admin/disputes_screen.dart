@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -1292,7 +1293,7 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
             body: {'dispute_id': disputeId},
           );
         } catch (refundErr, refundStack) {
-          debugPrint('Dispute refund processing failed: $refundErr');
+          if (kDebugMode) debugPrint('Dispute refund processing failed: $refundErr');
           ToastService.showErrorWithDetails('Disputa resuelta, pero el reembolso fallo', refundErr, refundStack);
         }
       }

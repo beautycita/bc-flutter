@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -988,7 +989,7 @@ class _DiscoveredSalonesTabState extends ConsumerState<_DiscoveredSalonesTab> {
           .limit(100);
       return List<Map<String, dynamic>>.from(data);
     } catch (e) {
-      debugPrint('[DiscoveredTab] Error: $e');
+      if (kDebugMode) debugPrint('[DiscoveredTab] Error: $e');
       return [];
     }
   }

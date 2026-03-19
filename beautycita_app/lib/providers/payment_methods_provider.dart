@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
@@ -87,7 +88,7 @@ class PaymentMethodsNotifier extends StateNotifier<PaymentMethodsState> {
       }
       return response.data as Map<String, dynamic>;
     } catch (e) {
-      debugPrint('PaymentMethods edge call error: $e');
+      if (kDebugMode) debugPrint('PaymentMethods edge call error: $e');
       rethrow;
     }
   }
@@ -108,7 +109,7 @@ class PaymentMethodsNotifier extends StateNotifier<PaymentMethodsState> {
     } catch (e) {
       // Silently handle — Stripe may not be configured yet.
       // Show empty card list instead of an error toast.
-      debugPrint('PaymentMethods.loadCards: $e');
+      if (kDebugMode) debugPrint('PaymentMethods.loadCards: $e');
       state = state.copyWith(isLoading: false);
     }
   }
