@@ -194,6 +194,45 @@ async function checkAuth(): Promise<ServiceStatus> {
 }
 
 // ---------------------------------------------------------------------------
+// Beautypi daemon status (via bpi_status.py on port 3210)
+// ---------------------------------------------------------------------------
+async function checkBeautypi(): Promise<Record<string, ServiceStatus>> {
+  const waUrl = Deno.env.get("BEAUTYPI_WA_URL") ?? "";
+  // Use same URL as WA API but different path — both served by beautypi on same port
+  const bpiUrl = `${waUrl}/api/bpi/status`;
+  if (!bpiUrl) return {};
+
+  try {
+    const res = await fetch(bpiUrl, { signal: AbortSignal.timeout(10000) });
+    if (!res.ok) return { "Beautypi": { status: "down", uptime: `HTTP ${res.status}` } };
+
+    const data = await res.json();
+    const result: Record<string, ServiceStatus> = {};
+
+    result["Lead Generator"] = {
+      status: data.lead_generator ? "operational" : "down",
+      uptime: data.lead_generator ? "running" : "stopped",
+    };
+    result["WA Enrichment"] = {
+      status: data.wa_enrichment ? "operational" : "down",
+      uptime: data.wa_last ?? (data.wa_enrichment ? "running" : "stopped"),
+    };
+    result["IG Enrichment"] = {
+      status: data.ig_enrichment ? "operational" : "down",
+      uptime: data.ig_last ?? (data.ig_enrichment ? "running" : "stopped"),
+    };
+    result["GuestKey"] = {
+      status: data.guestkey ? "operational" : "down",
+      uptime: data.guestkey ? "active" : "stopped",
+    };
+
+    return result;
+  } catch (_) {
+    return { "Beautypi": { status: "degraded", uptime: "unreachable" } };
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Handler
 // ---------------------------------------------------------------------------
 Deno.serve(async (req) => {
@@ -208,12 +247,13 @@ Deno.serve(async (req) => {
     const apiKey = Deno.env.get("UPTIMEROBOT_API_KEY") ?? "";
 
     // Run all checks in parallel
-    const [uptimeServices, dbStatus, waStatus, storageStatus, authStatus] = await Promise.all([
+    const [uptimeServices, dbStatus, waStatus, storageStatus, authStatus, bpiStatus] = await Promise.all([
       apiKey ? fetchUptimeRobot(apiKey) : Promise.resolve({}),
       supabasePing(),
       checkWhatsApp(),
       checkStorage(),
       checkAuth(),
+      checkBeautypi(),
     ]);
 
     // Combine all services
@@ -223,6 +263,7 @@ Deno.serve(async (req) => {
       "WhatsApp API": waStatus,
       "Storage": storageStatus,
       "Auth": authStatus,
+      ...bpiStatus,
     };
 
     // Compute overall from all statuses
