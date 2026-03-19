@@ -83,19 +83,19 @@ class _TermsAndPolicyScreenState extends State<TermsAndPolicyScreen>
           _LegalTab(
             icon: Icons.description_outlined,
             subtitle: 'Reglas de uso de la plataforma',
-            lastUpdated: '17 de marzo de 2026',
+            lastUpdated: '19 de marzo de 2026',
             sections: _termsSections,
           ),
           _LegalTab(
             icon: Icons.privacy_tip_outlined,
             subtitle: 'Aviso de Privacidad Integral (LFPDPPP)',
-            lastUpdated: '17 de marzo de 2026',
+            lastUpdated: '19 de marzo de 2026',
             sections: _privacySections,
           ),
           _LegalTab(
             icon: Icons.storage_outlined,
             subtitle: 'Que guardamos en tu dispositivo',
-            lastUpdated: '17 de marzo de 2026',
+            lastUpdated: '19 de marzo de 2026',
             sections: _storageSections,
           ),
         ],
@@ -561,6 +561,32 @@ const _termsSections = [
         'acepta esta responsabilidad fiscal sobre transacciones en efectivo.',
   ),
   _Section(
+    heading: '4c. Punto de Venta (POS)',
+    body:
+        'BeautyCita ofrece un sistema de Punto de Venta integrado que permite '
+        'a los salones vender productos a traves de la plataforma.\n\n'
+        'Categorias permitidas: Los productos ofrecidos deben pertenecer '
+        'exclusivamente a las categorias de belleza y cuidado personal '
+        '(cosmeticos, productos para cabello, cuidado de piel, accesorios '
+        'de belleza y productos relacionados). Queda prohibida la venta de '
+        'productos ajenos a estas categorias.\n\n'
+        'Comision: BeautyCita cobra una comision del 10% sobre cada venta de '
+        'producto completada a traves del POS, igual que la comision por '
+        'servicios de reserva.\n\n'
+        'Acuerdo de vendedor: Para activar el POS, el salon debe aceptar '
+        'los terminos del acuerdo de vendedor, que incluyen las restricciones '
+        'de categorias de producto, politicas de devolucion y obligaciones '
+        'fiscales aplicables.\n\n'
+        'Derecho de remocion: BeautyCita se reserva el derecho de remover '
+        'cualquier producto que no cumpla con las categorias permitidas, '
+        'que viole derechos de propiedad intelectual, o que sea considerado '
+        'inapropiado. En caso de incumplimiento reiterado, BeautyCita podra '
+        'revocar el acceso al sistema POS del salon.\n\n'
+        'Desactivacion: El salon puede desactivar su POS en cualquier '
+        'momento desde la configuracion de su negocio. Los pedidos '
+        'pendientes seran completados antes de la desactivacion.',
+  ),
+  _Section(
     heading: '5. Transporte',
     body:
         'La integracion con Uber es opcional. Al vincular tu cuenta, autorizas a '
@@ -946,7 +972,7 @@ const _privacySections = [
         'consentimiento expreso se obtiene al momento de utilizar la '
         'funcion de estudio virtual, mediante confirmacion explicita '
         'en pantalla antes del procesamiento.\n\n'
-        'Fecha de ultima actualizacion: 17 de marzo de 2026.',
+        'Fecha de ultima actualizacion: 19 de marzo de 2026.',
   ),
 ];
 
