@@ -753,12 +753,13 @@ class _BrandShimmerText extends StatefulWidget {
 }
 
 class _BrandShimmerTextState extends State<_BrandShimmerText>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late final AnimationController _ctrl;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _ctrl = AnimationController(
       duration: const Duration(seconds: 8),
       vsync: this,
@@ -767,8 +768,18 @@ class _BrandShimmerTextState extends State<_BrandShimmerText>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _ctrl.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      _ctrl.stop();
+    } else if (state == AppLifecycleState.resumed) {
+      _ctrl.repeat();
+    }
   }
 
   @override

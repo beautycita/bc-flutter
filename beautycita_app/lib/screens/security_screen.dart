@@ -199,7 +199,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
 
   Future<void> _checkForUpdates() async {
     setState(() => _checkingUpdate = true);
-    await UpdaterService.instance.checkForApkUpdate();
+    await UpdaterService.instance.checkForApkUpdate(force: true);
     if (!mounted) return;
     setState(() => _checkingUpdate = false);
 

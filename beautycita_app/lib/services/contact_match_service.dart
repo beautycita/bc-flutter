@@ -257,8 +257,26 @@ class ContactMatchService {
   /// Auto-sync: silently check contacts permission, match against registered
   /// MX salons, and write "Book in BeautyCita" actions to Android contacts.
   /// Call once on app start. No-op if permission not granted or on iOS.
+  static const _lastContactSyncKey = 'last_contact_sync';
+
   static Future<void> autoSyncRegisteredSalons() async {
     if (!Platform.isAndroid) return;
+
+    // Rate-limit to once per 24h
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final lastSync = prefs.getString(_lastContactSyncKey);
+      if (lastSync != null) {
+        final lastTime = DateTime.tryParse(lastSync);
+        if (lastTime != null &&
+            DateTime.now().difference(lastTime) < const Duration(hours: 24)) {
+          debugPrint('[ContactMatch] Auto-sync skipped (last sync < 24h ago)');
+          return;
+        }
+      }
+    } catch (_) {
+      // If prefs fail, proceed with sync
+    }
 
     try {
       // Need write permission to add BeautyCita actions to contacts
@@ -292,6 +310,13 @@ class ContactMatchService {
       }
       await service.syncContactActions(matches);
       debugPrint('[ContactMatch] Auto-sync: Android sync triggered');
+
+      // Record successful sync timestamp
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+        _lastContactSyncKey,
+        DateTime.now().toIso8601String(),
+      );
     } catch (e) {
       debugPrint('[ContactMatch] Auto-sync failed (non-fatal): $e');
     }

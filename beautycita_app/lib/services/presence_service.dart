@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'supabase_client.dart';
 
-/// Lightweight heartbeat that updates `profiles.last_seen` every 2 minutes
+/// Lightweight heartbeat that updates `profiles.last_seen` every 5 minutes
 /// while the app is in the foreground. Pauses automatically when backgrounded.
 class PresenceService with WidgetsBindingObserver {
   PresenceService._();
@@ -10,7 +10,7 @@ class PresenceService with WidgetsBindingObserver {
 
   Timer? _timer;
   bool _started = false;
-  static const _interval = Duration(minutes: 2);
+  static const _interval = Duration(minutes: 5);
 
   /// Call once after Supabase is initialized.
   void start() {

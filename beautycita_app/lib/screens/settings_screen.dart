@@ -495,12 +495,13 @@ class _GoldShimmerText extends StatefulWidget {
 }
 
 class _GoldShimmerTextState extends State<_GoldShimmerText>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late AnimationController _controller;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _controller = AnimationController(
       duration: const Duration(milliseconds: 2500),
       vsync: this,
@@ -509,8 +510,18 @@ class _GoldShimmerTextState extends State<_GoldShimmerText>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _controller.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      _controller.stop();
+    } else if (state == AppLifecycleState.resumed) {
+      _controller.repeat();
+    }
   }
 
   @override
