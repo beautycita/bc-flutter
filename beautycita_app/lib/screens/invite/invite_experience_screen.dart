@@ -113,7 +113,16 @@ class _InviteExperienceScreenState
 
           // Content area
           Expanded(
-            child: _buildContent(state, bcTheme),
+            child: RefreshIndicator(
+              onRefresh: () async {
+                ref.invalidate(inviteProvider);
+                ref.invalidate(contactMatchProvider);
+                ref
+                    .read(inviteProvider.notifier)
+                    .initialize(serviceType: widget.serviceType);
+              },
+              child: _buildContent(state, bcTheme),
+            ),
           ),
         ],
       ),
@@ -123,39 +132,61 @@ class _InviteExperienceScreenState
   Widget _buildContent(InviteState state, BCThemeExtension? bcTheme) {
     switch (state.step) {
       case InviteStep.loading:
-        return const Center(child: CircularProgressIndicator());
+        return ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: const [
+            SizedBox(height: 200),
+            Center(child: CircularProgressIndicator()),
+          ],
+        );
 
       case InviteStep.searching:
         return const _ShimmerSalonList();
 
       case InviteStep.scraping:
-        return _AphroditeLoadingAnimation(bcTheme: bcTheme);
+        return ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: [_AphroditeLoadingAnimation(bcTheme: bcTheme)],
+        );
 
       case InviteStep.error:
-        return _ErrorContent(
-          message: state.error ?? AppConstants.errorGeneric,
-          onRetry: () {
-            ref
-                .read(inviteProvider.notifier)
-                .initialize(serviceType: widget.serviceType);
-          },
+        return ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: [
+            _ErrorContent(
+              message: state.error ?? AppConstants.errorGeneric,
+              onRetry: () {
+                ref
+                    .read(inviteProvider.notifier)
+                    .initialize(serviceType: widget.serviceType);
+              },
+            ),
+          ],
         );
 
       case InviteStep.browsing:
         final scrapeEnabled = ref.watch(featureTogglesProvider).isEnabled('enable_on_demand_scrape');
         if (state.salons.isEmpty && state.suggestScrape && scrapeEnabled) {
-          return _ScrapePrompt(
-            searchQuery: state.searchQuery ?? '',
-            onScrape: () {
-              final query = state.searchQuery;
-              if (query != null && query.isNotEmpty) {
-                ref.read(inviteProvider.notifier).scrapeAndShow(query);
-              }
-            },
+          return ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            children: [
+              _ScrapePrompt(
+                searchQuery: state.searchQuery ?? '',
+                onScrape: () {
+                  final query = state.searchQuery;
+                  if (query != null && query.isNotEmpty) {
+                    ref.read(inviteProvider.notifier).scrapeAndShow(query);
+                  }
+                },
+              ),
+            ],
           );
         }
         if (state.salons.isEmpty) {
-          return _EmptyState(hasSearch: state.searchQuery != null);
+          return ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            children: [_EmptyState(hasSearch: state.searchQuery != null)],
+          );
         }
         return _SalonListView(
           salons: state.salons,
@@ -282,6 +313,7 @@ class _SalonListView extends StatelessWidget {
   Widget build(BuildContext context) {
     final headerCount = header != null ? 1 : 0;
     return ListView.separated(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.symmetric(
         horizontal: AppConstants.screenPaddingHorizontal,
       ),
