@@ -233,6 +233,25 @@ async function checkBeautypi(): Promise<Record<string, ServiceStatus>> {
 }
 
 // ---------------------------------------------------------------------------
+// Backup status check
+// ---------------------------------------------------------------------------
+async function checkBackup(): Promise<ServiceStatus> {
+  const waUrl = Deno.env.get("BEAUTYPI_WA_URL") ?? "";
+  const backupUrl = waUrl.replace(/\/api\/.*$/, "").replace(/:\d+$/, ":3201") + "/api/backup/status";
+  try {
+    const res = await fetch(backupUrl, { signal: AbortSignal.timeout(5000) });
+    if (!res.ok) return { status: "unknown", uptime: "check failed" };
+    const data = await res.json();
+    if (data.status === "healthy") {
+      return { status: "operational", uptime: `${data.last_backup} (${data.size_mb}MB, ${data.age_hours}h ago)` };
+    }
+    return { status: "degraded", uptime: `${data.status}: ${data.last_backup || "none"} (${data.age_hours || "?"}h ago)` };
+  } catch (_) {
+    return { status: "unknown", uptime: "unreachable" };
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Handler
 // ---------------------------------------------------------------------------
 Deno.serve(async (req) => {
@@ -247,13 +266,14 @@ Deno.serve(async (req) => {
     const apiKey = Deno.env.get("UPTIMEROBOT_API_KEY") ?? "";
 
     // Run all checks in parallel
-    const [uptimeServices, dbStatus, waStatus, storageStatus, authStatus, bpiStatus] = await Promise.all([
+    const [uptimeServices, dbStatus, waStatus, storageStatus, authStatus, bpiStatus, backupStatus] = await Promise.all([
       apiKey ? fetchUptimeRobot(apiKey) : Promise.resolve({}),
       supabasePing(),
       checkWhatsApp(),
       checkStorage(),
       checkAuth(),
       checkBeautypi(),
+      checkBackup(),
     ]);
 
     // Combine all services
@@ -264,6 +284,7 @@ Deno.serve(async (req) => {
       "Storage": storageStatus,
       "Auth": authStatus,
       ...bpiStatus,
+      "Backup": backupStatus,
     };
 
     // Compute overall from all statuses
