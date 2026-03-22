@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3D Periodic Table</title>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;scrollbar-width:none}
+::-webkit-scrollbar{display:none}
+:root{--bg:#0a0a1a;--panel:#111128;--border:#2a2a4a;--text:#e0e0f0;--text-dim:#8888aa;--accent1:#ec4899;--accent2:#9333ea;--accent3:#3b82f6;--gradient:linear-gradient(135deg,var(--accent1),var(--accent2),var(--accent3))}
+html,body{overflow:hidden}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);overflow:hidden;height:100vh;width:100vw}
+#canvas-container{position:absolute;top:0;left:0;width:100%;height:100%;z-index:0}
+canvas{display:block}
+
+/* Control Panel */
+#control-panel{position:absolute;top:0;left:0;width:300px;height:100%;background:rgba(17,17,40,0.92);border-right:1px solid var(--border);z-index:10;overflow-y:auto;padding:16px;backdrop-filter:blur(10px);transition:transform 0.3s}
+#control-panel.collapsed{transform:translateX(-284px)}
+#panel-toggle{position:absolute;right:-32px;top:50%;transform:translateY(-50%);width:32px;height:60px;background:var(--panel);border:1px solid var(--border);border-left:none;border-radius:0 8px 8px 0;cursor:pointer;color:var(--text);display:flex;align-items:center;justify-content:center;font-size:16px}
+.panel-section{margin-bottom:18px}
+.panel-section h3{font-size:12px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-dim);margin-bottom:8px}
+.brand-title{font-size:20px;font-weight:700;background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:4px}
+.brand-sub{font-size:11px;color:var(--text-dim);margin-bottom:16px}
+
+select,input[type=text]{width:100%;padding:8px 10px;background:#1a1a3a;border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;outline:none;transition:border-color 0.2s}
+select:focus,input:focus{border-color:var(--accent2)}
+option{background:#1a1a3a}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 14px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:500;color:#fff;transition:all 0.2s}
+.btn-gradient{background:var(--gradient)}
+.btn-gradient:hover{opacity:0.85;transform:scale(1.02)}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text)}
+.btn-outline:hover{border-color:var(--accent2)}
+.btn-outline.active{border-color:var(--accent1);color:var(--accent1)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.btn-row{display:flex;gap:6px;flex-wrap:wrap}
+
+.lang-toggle{display:flex;border-radius:6px;overflow:hidden;border:1px solid var(--border)}
+.lang-toggle button{flex:1;padding:6px;background:transparent;border:none;color:var(--text-dim);cursor:pointer;font-size:12px;font-weight:600;transition:all 0.2s}
+.lang-toggle button.active{background:var(--gradient);color:#fff}
+
+.view-info{font-size:12px;color:var(--text-dim);line-height:1.5;margin-top:8px;padding:8px;background:rgba(255,255,255,0.03);border-radius:6px}
+.view-info .learn-more{color:var(--accent1);cursor:pointer;font-size:11px;display:inline-block;margin-top:4px}
+.view-info .expanded{display:none;margin-top:6px;color:var(--text-dim);font-size:11px;line-height:1.5}
+.view-info.show-expanded .expanded{display:block}
+
+.shortcuts{font-size:10px;color:var(--text-dim);line-height:1.8}
+.shortcuts kbd{display:inline-block;padding:1px 5px;background:#1a1a3a;border:1px solid var(--border);border-radius:3px;font-family:monospace;font-size:10px}
+
+/* Tooltip */
+#tooltip{position:absolute;pointer-events:none;background:rgba(17,17,40,0.95);border:1px solid var(--border);border-radius:8px;padding:10px 14px;z-index:20;display:none;backdrop-filter:blur(8px);max-width:220px}
+#tooltip .tt-symbol{font-size:28px;font-weight:700;background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+#tooltip .tt-name{font-size:13px;color:var(--text)}
+#tooltip .tt-number{font-size:11px;color:var(--text-dim)}
+#tooltip .tt-cat{font-size:11px;color:var(--accent1);margin-top:2px}
+
+/* Detail Panel */
+#detail-panel{position:absolute;top:0;right:0;width:340px;height:100%;background:rgba(17,17,40,0.95);border-left:1px solid var(--border);z-index:15;transform:translateX(100%);transition:transform 0.3s;overflow-y:auto;backdrop-filter:blur(10px)}
+#detail-panel.open{transform:translateX(0)}
+#detail-close{position:absolute;top:12px;right:12px;width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--text);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center}
+#detail-close:hover{background:rgba(255,255,255,0.1)}
+.detail-header{padding:20px;text-align:center;border-bottom:1px solid var(--border)}
+.detail-symbol{font-size:56px;font-weight:800;line-height:1}
+.detail-name{font-size:18px;margin-top:4px}
+.detail-number{font-size:13px;color:var(--text-dim)}
+.detail-cat-badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;margin-top:6px;color:#fff}
+.detail-props{padding:16px 20px}
+.detail-props table{width:100%;border-collapse:collapse}
+.detail-props td{padding:5px 0;font-size:12px;border-bottom:1px solid rgba(255,255,255,0.04)}
+.detail-props td:first-child{color:var(--text-dim);width:45%}
+.detail-props td:last-child{color:var(--text);text-align:right}
+.detail-fun{padding:12px 20px;margin:0 20px 20px;background:rgba(255,255,255,0.03);border-radius:8px;font-size:12px;line-height:1.5;color:var(--text-dim)}
+.detail-fun strong{color:var(--accent1)}
+
+/* Loading */
+#loading{position:absolute;top:0;left:0;width:100%;height:100%;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100;transition:opacity 0.5s}
+#loading.done{opacity:0;pointer-events:none}
+#loading .spinner{width:48px;height:48px;border:3px solid var(--border);border-top-color:var(--accent2);border-radius:50%;animation:spin 0.8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#loading p{margin-top:16px;color:var(--text-dim);font-size:14px}
+
+/* Keyboard Legend */
+#kb-legend{position:fixed;bottom:16px;right:16px;z-index:50;background:rgba(10,10,26,0.85);border:1px solid var(--border);border-radius:8px;padding:8px;backdrop-filter:blur(10px);max-width:280px;font-size:10px;color:var(--text-dim);pointer-events:auto;display:none}
+#kb-legend.visible{display:block}
+#kb-legend .kb-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+#kb-legend .kb-title span{font-size:11px;font-weight:600;color:var(--text)}
+#kb-legend .kb-close{background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:14px;padding:0 2px;line-height:1}
+#kb-legend .kb-close:hover{color:var(--text)}
+#kb-legend .kb-grid{display:grid;grid-template-columns:auto 1fr;gap:1px 8px;align-items:center}
+#kb-legend .kb-grid kbd{display:inline-block;padding:1px 4px;background:#1a1a3a;border:1px solid var(--border);border-radius:3px;font-family:monospace;font-size:9px;color:var(--text);text-align:center;min-width:18px}
+#kb-legend .kb-grid .kb-desc{font-size:10px;color:var(--text-dim)}
+#kb-legend .kb-sep{grid-column:1/-1;height:1px;background:var(--border);margin:3px 0}
+
+/* Mobile hamburger */
+#mobile-menu-btn{display:none;position:fixed;top:10px;left:10px;z-index:25;width:40px;height:40px;border-radius:8px;background:rgba(17,17,40,0.9);border:1px solid var(--border);color:var(--text);font-size:20px;cursor:pointer;align-items:center;justify-content:center;backdrop-filter:blur(8px)}
+#mobile-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:8}
+
+/* Responsive */
+@media(min-width:769px){
+  #control-panel{max-width:240px}
+}
+@media(max-width:768px){
+  #mobile-menu-btn{display:flex}
+  #control-panel{position:fixed;top:0;left:0;width:280px;height:100%;z-index:12;transform:translateX(-100%);transition:transform 0.3s}
+  #control-panel.mobile-open{transform:translateX(0)}
+  #control-panel.collapsed{transform:translateX(-100%)}
+  #mobile-overlay.active{display:block}
+  #detail-panel{width:100%}
+  #kb-legend{bottom:10px;left:10px;right:auto;max-width:220px;font-size:9px}
+  #kb-legend .kb-grid kbd{font-size:8px;min-width:16px}
+  #kb-legend .kb-grid .kb-desc{font-size:9px}
+  body{overflow:hidden;-webkit-overflow-scrolling:touch}
+}
+</style>
+</head>
+<body>
+
+<div id="loading"><div class="spinner"></div><p id="loading-text">Loading periodic table...</p></div>
+
+<button id="mobile-menu-btn" onclick="toggleMobileMenu()">&#9776;</button>
+<div id="mobile-overlay" onclick="closeMobileMenu()"></div>
+<div id="canvas-container"></div>
+
+<div id="tooltip">
+  <div class="tt-symbol"></div>
+  <div class="tt-name"></div>
+  <div class="tt-number"></div>
+  <div class="tt-cat"></div>
+</div>
+
+<div id="control-panel">
+  <div id="panel-toggle" onclick="togglePanel()">&#9664;</div>
+  <div class="brand-title">3D Periodic Table</div>
+  <div class="brand-sub" data-i18n="subtitle">Interactive Element Explorer</div>
+
+  <div class="panel-section">
+    <h3 data-i18n="langLabel">Language</h3>
+    <div class="lang-toggle">
+      <button id="lang-en" class="active" onclick="setLang('en')">EN</button>
+      <button id="lang-es" onclick="setLang('es')">ES</button>
+    </div>
+  </div>
+
+  <div class="panel-section">
+    <h3 data-i18n="viewLabel">View Mode</h3>
+    <select id="view-select" onchange="switchView(this.value)">
+      <option value="standard" data-i18n-opt="viewStandard">Standard 2D (Flat)</option>
+      <option value="spiral" data-i18n-opt="viewSpiral">Classic Spiral</option>
+      <option value="electronegativity" data-i18n-opt="viewEN">Electronegativity Map</option>
+      <option value="shell" data-i18n-opt="viewShell">Electron Shell</option>
+      <option value="density" data-i18n-opt="viewDensity">Density vs Melting Point</option>
+    </select>
+    <div id="view-info" class="view-info"></div>
+  </div>
+
+  <div class="panel-section">
+    <h3 data-i18n="colorLabel">Color Coding</h3>
+    <select id="color-select" onchange="switchColor(this.value)">
+      <option value="category" data-i18n-opt="colorCat">By Category</option>
+      <option value="phase" data-i18n-opt="colorPhase">By Phase (Room Temp)</option>
+      <option value="electroneg" data-i18n-opt="colorElectroneg">By Electronegativity</option>
+      <option value="era" data-i18n-opt="colorEra">By Discovery Era</option>
+    </select>
+  </div>
+
+  <div class="panel-section">
+    <h3 data-i18n="searchLabel">Search</h3>
+    <input type="text" id="search-input" placeholder="Name, symbol, or number..." data-i18n-ph="searchPH" oninput="searchElement(this.value)">
+  </div>
+
+  <div class="panel-section">
+    <div class="btn-row">
+      <button class="btn btn-gradient btn-sm" onclick="randomElement()" data-i18n="btnRandom">&#127922; Random</button>
+      <button class="btn btn-outline btn-sm" onclick="exportPNG()" data-i18n="btnExport">&#128247; Export PNG</button>
+      <button class="btn btn-outline btn-sm" id="btn-autorotate" onclick="toggleAutoRotate()" data-i18n="btnRotate">&#8635; Rotate</button>
+    </div>
+  </div>
+
+  <div class="panel-section">
+    <h3 data-i18n="shortcutsLabel">Keyboard Shortcuts</h3>
+    <div class="shortcuts">
+      <kbd>1</kbd>-<kbd>5</kbd> <span data-i18n="scViews">Switch views</span><br>
+      <kbd>R</kbd> <span data-i18n="scRotate">Auto-rotate</span><br>
+      <kbd>S</kbd> <span data-i18n="scStop">Stop rotation</span><br>
+      <kbd>Esc</kbd> <span data-i18n="scClose">Close panel</span><br>
+      <kbd>/</kbd> <span data-i18n="scSearch">Focus search</span>
+    </div>
+  </div>
+</div>
+
+<div id="detail-panel">
+  <button id="detail-close" onclick="closeDetail()">&times;</button>
+  <div class="detail-header">
+    <div class="detail-symbol" id="d-symbol"></div>
+    <div class="detail-name" id="d-name"></div>
+    <div class="detail-number" id="d-number"></div>
+    <div class="detail-cat-badge" id="d-cat"></div>
+  </div>
+  <div class="detail-props">
+    <table id="d-table"></table>
+  </div>
+  <div class="detail-fun" id="d-fun"></div>
+</div>
+
+<div id="kb-legend">
+  <div class="kb-title"><span id="kb-legend-title">Keyboard Shortcuts</span><button class="kb-close" onclick="toggleKbLegend()">&times;</button></div>
+  <div class="kb-grid" id="kb-legend-grid"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+// ============================================================
+// I18N
+// ============================================================
+const I18N = {
+  en: {
+    subtitle:'Interactive Element Explorer',
+    langLabel:'Language',viewLabel:'View Mode',colorLabel:'Color Coding',searchLabel:'Search',
+    searchPH:'Name, symbol, or number...',
+    btnRandom:'\u{1F3B2} Random',btnExport:'\u{1F4F7} Export PNG',btnRotate:'\u21BB Rotate',
+    shortcutsLabel:'Keyboard Shortcuts',
+    scViews:'Switch views',scRotate:'Auto-rotate',scStop:'Stop rotation',scClose:'Close panel',scSearch:'Focus search',
+    viewStandard:'Standard 2D (Flat)',viewSpiral:'Classic Spiral',viewEN:'Electronegativity Map',viewShell:'Electron Shell',viewDensity:'Density vs Melting Point',
+    colorCat:'By Category',colorPhase:'By Phase (Room Temp)',colorElectroneg:'By Electronegativity',colorEra:'By Discovery Era',
+    mass:'Atomic Mass',phase:'Phase',electroneg:'Electronegativity',config:'Electron Config',densityL:'Density',melt:'Melting Point',boil:'Boiling Point',radius:'Atomic Radius',disc:'Discovered',
+    funFact:'Fun Fact',
+    learnMore:'Learn more...',
+    viewInfoStandard:'The classic periodic table layout you know from school, projected flat in 3D space. Elements are arranged by atomic number into rows (periods) and columns (groups).',
+    viewInfoStandardExp:'This arrangement reveals periodic trends: electronegativity increases left-to-right, atomic radius increases top-to-bottom, and elements in the same column share similar chemical properties due to identical valence electron configurations.',
+    viewInfoSpiral:'Elements spiral upward by atomic number, creating a helix that reveals the periodic pattern in three dimensions. Each full turn represents one period.',
+    viewInfoSpiralExp:'The spiral arrangement was first proposed by chemists in the 1800s. It naturally shows how properties repeat cyclically and makes the s/p/d/f block structure visible as the spiral widens for each successive period.',
+    viewInfoEN:'Atomic number vs electronegativity vs atomic radius. Shows how an atom\'s pull on electrons relates to its size and position in the table.',
+    viewInfoENExp:'Electronegativity (Pauling scale) measures how strongly an atom attracts bonding electrons. Fluorine is highest (3.98). This 3D view reveals that small, electron-hungry atoms cluster in one region while large, electropositive metals cluster in another.',
+    viewInfoShell:'Group vs period vs electron affinity. Reveals how the shell structure of electrons determines chemical behavior.',
+    viewInfoShellExp:'Electron affinity is the energy change when an atom gains an electron. Halogens (group 17) have the highest affinity because they need just one electron to fill their outer shell. This view shows the "landscape" of electron hunger across the table.',
+    viewInfoDensity:'Density vs melting point vs atomic number. Heavy, high-melting-point elements cluster together, revealing material science patterns.',
+    viewInfoDensityExp:'This view shows why osmium (densest) and tungsten (highest melting point) are neighbors. Transition metals in periods 5-6 pack electrons into d-orbitals tightly, creating dense, strongly-bonded materials. Light gases float near the origin.',
+    na:'N/A',unknown:'Unknown',
+    catNames:{alkali_metal:'Alkali Metal',alkaline_earth:'Alkaline Earth',transition_metal:'Transition Metal',post_transition:'Post-Transition Metal',metalloid:'Metalloid',nonmetal:'Nonmetal',halogen:'Halogen',noble_gas:'Noble Gas',lanthanide:'Lanthanide',actinide:'Actinide',unknown:'Unknown'},
+    phaseNames:{solid:'Solid',liquid:'Liquid',gas:'Gas',unknown:'Unknown'},
+    eraNames:{ancient:'Ancient',e1700:'1700s',e1800:'1800s',e1900:'1900s',e2000:'2000s'},
+    islandNote:'Predicted island of stability region',
+  },
+  es: {
+    subtitle:'Explorador Interactivo de Elementos',
+    langLabel:'Idioma',viewLabel:'Modo de Vista',colorLabel:'Codificaci\u00f3n de Color',searchLabel:'Buscar',
+    searchPH:'Nombre, s\u00edmbolo o n\u00famero...',
+    btnRandom:'\u{1F3B2} Aleatorio',btnExport:'\u{1F4F7} Exportar PNG',btnRotate:'\u21BB Rotar',
+    shortcutsLabel:'Atajos de Teclado',
+    scViews:'Cambiar vistas',scRotate:'Auto-rotar',scStop:'Detener rotaci\u00f3n',scClose:'Cerrar panel',scSearch:'Buscar',
+    viewStandard:'Est\u00e1ndar 2D (Plano)',viewSpiral:'Espiral Cl\u00e1sica',viewEN:'Mapa de Electronegatividad',viewShell:'Capa Electr\u00f3nica',viewDensity:'Densidad vs Punto de Fusi\u00f3n',
+    colorCat:'Por Categor\u00eda',colorPhase:'Por Fase (Temp. Ambiente)',colorElectroneg:'Por Electronegatividad',colorEra:'Por \u00c9poca de Descubrimiento',
+    mass:'Masa At\u00f3mica',phase:'Fase',electroneg:'Electronegatividad',config:'Config. Electr\u00f3nica',densityL:'Densidad',melt:'Punto de Fusi\u00f3n',boil:'Punto de Ebullici\u00f3n',radius:'Radio At\u00f3mico',disc:'Descubierto',
+    funFact:'Dato Curioso',
+    learnMore:'Saber m\u00e1s...',
+    viewInfoStandard:'La tabla peri\u00f3dica cl\u00e1sica que conoces de la escuela, proyectada en plano en espacio 3D. Los elementos se organizan por n\u00famero at\u00f3mico en filas (per\u00edodos) y columnas (grupos).',
+    viewInfoStandardExp:'Esta disposici\u00f3n revela tendencias peri\u00f3dicas: la electronegatividad aumenta de izquierda a derecha, el radio at\u00f3mico aumenta de arriba a abajo, y los elementos en la misma columna comparten propiedades qu\u00edmicas similares.',
+    viewInfoSpiral:'Los elementos ascienden en espiral por n\u00famero at\u00f3mico, creando una h\u00e9lice que revela el patr\u00f3n peri\u00f3dico en tres dimensiones.',
+    viewInfoSpiralExp:'La disposici\u00f3n en espiral fue propuesta por qu\u00edmicos en el siglo XIX. Muestra naturalmente c\u00f3mo las propiedades se repiten c\u00edclicamente y hace visible la estructura de bloques s/p/d/f.',
+    viewInfoEN:'N\u00famero at\u00f3mico vs electronegatividad vs radio at\u00f3mico. Muestra c\u00f3mo la atracci\u00f3n de electrones se relaciona con el tama\u00f1o del \u00e1tomo.',
+    viewInfoENExp:'La electronegatividad (escala de Pauling) mide cu\u00e1n fuertemente un \u00e1tomo atrae electrones de enlace. El fl\u00faor es el m\u00e1s alto (3.98). Esta vista 3D revela que los \u00e1tomos peque\u00f1os se agrupan en una regi\u00f3n mientras los metales grandes en otra.',
+    viewInfoShell:'Grupo vs per\u00edodo vs afinidad electr\u00f3nica. Revela c\u00f3mo la estructura de capas determina el comportamiento qu\u00edmico.',
+    viewInfoShellExp:'La afinidad electr\u00f3nica es el cambio de energ\u00eda cuando un \u00e1tomo gana un electr\u00f3n. Los hal\u00f3genos tienen la mayor afinidad porque necesitan solo un electr\u00f3n para llenar su capa externa.',
+    viewInfoDensity:'Densidad vs punto de fusi\u00f3n vs n\u00famero at\u00f3mico. Los elementos pesados con alto punto de fusi\u00f3n se agrupan, revelando patrones de ciencia de materiales.',
+    viewInfoDensityExp:'Esta vista muestra por qu\u00e9 el osmio (m\u00e1s denso) y el tungsteno (mayor punto de fusi\u00f3n) son vecinos. Los metales de transici\u00f3n en per\u00edodos 5-6 empaquetan electrones en orbitales d, creando materiales densos y fuertemente enlazados.',
+    na:'N/D',unknown:'Desconocido',
+    catNames:{alkali_metal:'Metal Alcalino',alkaline_earth:'Alcalinot\u00e9rreo',transition_metal:'Metal de Transici\u00f3n',post_transition:'Metal Post-Transici\u00f3n',metalloid:'Metaloide',nonmetal:'No Metal',halogen:'Hal\u00f3geno',noble_gas:'Gas Noble',lanthanide:'Lant\u00e1nido',actinide:'Act\u00ednido',unknown:'Desconocido'},
+    phaseNames:{solid:'S\u00f3lido',liquid:'L\u00edquido',gas:'Gas',unknown:'Desconocido'},
+    eraNames:{ancient:'Antiguo',e1700:'Siglo XVIII',e1800:'Siglo XIX',e1900:'Siglo XX',e2000:'Siglo XXI'},
+    islandNote:'Regi\u00f3n predicha de isla de estabilidad',
+  }
+};
+let lang = 'en';
+function t(key){ return I18N[lang][key] || key; }
+
+// ============================================================
+// ELEMENT DATA — ALL 118 ELEMENTS
+// ============================================================
+const ELEMENTS = [
+{z:1,sym:"H",nameEn:"Hydrogen",nameEs:"Hidr\u00f3geno",mass:1.008,cat:"nonmetal",phase:"gas",en:2.20,config:"1s\u00b9",density:0.00009,mp:-259.16,bp:-252.87,radius:53,year:-1,group:1,period:1,eaff:72.8,funEn:"Hydrogen makes up 75% of all normal matter by mass in the universe.",funEs:"El hidr\u00f3geno constituye el 75% de toda la materia normal del universo por masa."},
+{z:2,sym:"He",nameEn:"Helium",nameEs:"Helio",mass:4.003,cat:"noble_gas",phase:"gas",en:null,config:"1s\u00b2",density:0.000179,mp:-272.2,bp:-268.93,radius:31,year:1868,group:18,period:1,eaff:-48,funEn:"Helium is the only element that cannot be solidified by cooling at normal pressure.",funEs:"El helio es el \u00fanico elemento que no puede solidificarse enfri\u00e1ndolo a presi\u00f3n normal."},
+{z:3,sym:"Li",nameEn:"Lithium",nameEs:"Litio",mass:6.941,cat:"alkali_metal",phase:"solid",en:0.98,config:"[He] 2s\u00b9",density:0.534,mp:180.54,bp:1342,radius:167,year:1817,group:1,period:2,eaff:59.6,funEn:"Lithium is the lightest metal and floats on water.",funEs:"El litio es el metal m\u00e1s ligero y flota en el agua."},
+{z:4,sym:"Be",nameEn:"Beryllium",nameEs:"Berilio",mass:9.012,cat:"alkaline_earth",phase:"solid",en:1.57,config:"[He] 2s\u00b2",density:1.85,mp:1287,bp:2469,radius:112,year:1798,group:2,period:2,eaff:-48,funEn:"Beryllium is transparent to X-rays and is used in X-ray tube windows.",funEs:"El berilio es transparente a los rayos X y se usa en ventanas de tubos de rayos X."},
+{z:5,sym:"B",nameEn:"Boron",nameEs:"Boro",mass:10.81,cat:"metalloid",phase:"solid",en:2.04,config:"[He] 2s\u00b2 2p\u00b9",density:2.34,mp:2076,bp:3927,radius:87,year:1808,group:13,period:2,eaff:26.7,funEn:"Boron is essential for plant cell walls and is found in borax cleaning products.",funEs:"El boro es esencial para las paredes celulares de las plantas y se encuentra en el b\u00f3rax."},
+{z:6,sym:"C",nameEn:"Carbon",nameEs:"Carbono",mass:12.011,cat:"nonmetal",phase:"solid",en:2.55,config:"[He] 2s\u00b2 2p\u00b2",density:2.267,mp:3550,bp:4027,radius:77,year:-1,group:14,period:2,eaff:121.8,funEn:"Carbon can form nearly 10 million different compounds\u2014more than any other element.",funEs:"El carbono puede formar casi 10 millones de compuestos diferentes, m\u00e1s que cualquier otro elemento."},
+{z:7,sym:"N",nameEn:"Nitrogen",nameEs:"Nitr\u00f3geno",mass:14.007,cat:"nonmetal",phase:"gas",en:3.04,config:"[He] 2s\u00b2 2p\u00b3",density:0.001251,mp:-210.1,bp:-195.79,radius:75,year:1772,group:15,period:2,eaff:-6.8,funEn:"Nitrogen makes up 78% of Earth\u2019s atmosphere.",funEs:"El nitr\u00f3geno constituye el 78% de la atm\u00f3sfera terrestre."},
+{z:8,sym:"O",nameEn:"Oxygen",nameEs:"Ox\u00edgeno",mass:15.999,cat:"nonmetal",phase:"gas",en:3.44,config:"[He] 2s\u00b2 2p\u2074",density:0.001429,mp:-218.79,bp:-182.96,radius:73,year:1774,group:16,period:2,eaff:141.0,funEn:"Oxygen is the most abundant element in Earth\u2019s crust at 46% by mass.",funEs:"El ox\u00edgeno es el elemento m\u00e1s abundante en la corteza terrestre con 46% por masa."},
+{z:9,sym:"F",nameEn:"Fluorine",nameEs:"Fl\u00faor",mass:18.998,cat:"halogen",phase:"gas",en:3.98,config:"[He] 2s\u00b2 2p\u2075",density:0.001696,mp:-219.67,bp:-188.12,radius:71,year:1886,group:17,period:2,eaff:328.0,funEn:"Fluorine is the most reactive element and attacks almost all materials.",funEs:"El fl\u00faor es el elemento m\u00e1s reactivo y ataca casi todos los materiales."},
+{z:10,sym:"Ne",nameEn:"Neon",nameEs:"Ne\u00f3n",mass:20.180,cat:"noble_gas",phase:"gas",en:null,config:"[He] 2s\u00b2 2p\u2076",density:0.0009,mp:-248.59,bp:-246.08,radius:38,year:1898,group:18,period:2,eaff:-116,funEn:"Neon signs were first demonstrated in Paris in 1910.",funEs:"Los letreros de ne\u00f3n se demostraron por primera vez en Par\u00eds en 1910."},
+{z:11,sym:"Na",nameEn:"Sodium",nameEs:"Sodio",mass:22.990,cat:"alkali_metal",phase:"solid",en:0.93,config:"[Ne] 3s\u00b9",density:0.971,mp:97.72,bp:883,radius:190,year:1807,group:1,period:3,eaff:52.8,funEn:"Sodium explodes violently on contact with water.",funEs:"El sodio explota violentamente al contacto con el agua."},
+{z:12,sym:"Mg",nameEn:"Magnesium",nameEs:"Magnesio",mass:24.305,cat:"alkaline_earth",phase:"solid",en:1.31,config:"[Ne] 3s\u00b2",density:1.738,mp:650,bp:1091,radius:145,year:1755,group:2,period:3,eaff:-40,funEn:"Magnesium burns with a brilliant white flame that cannot be extinguished with water.",funEs:"El magnesio arde con una llama blanca brillante que no se puede apagar con agua."},
+{z:13,sym:"Al",nameEn:"Aluminum",nameEs:"Aluminio",mass:26.982,cat:"post_transition",phase:"solid",en:1.61,config:"[Ne] 3s\u00b2 3p\u00b9",density:2.70,mp:660.32,bp:2519,radius:118,year:1825,group:13,period:3,eaff:42.5,funEn:"Aluminum was once more valuable than gold before the Hall\u2013H\u00e9roult process.",funEs:"El aluminio fue m\u00e1s valioso que el oro antes del proceso Hall-H\u00e9roult."},
+{z:14,sym:"Si",nameEn:"Silicon",nameEs:"Silicio",mass:28.086,cat:"metalloid",phase:"solid",en:1.90,config:"[Ne] 3s\u00b2 3p\u00b2",density:2.329,mp:1414,bp:3265,radius:111,year:1824,group:14,period:3,eaff:133.6,funEn:"Silicon makes up 27.7% of Earth\u2019s crust and is the basis of all computer chips.",funEs:"El silicio constituye el 27.7% de la corteza terrestre y es la base de todos los chips de computadora."},
+{z:15,sym:"P",nameEn:"Phosphorus",nameEs:"F\u00f3sforo",mass:30.974,cat:"nonmetal",phase:"solid",en:2.19,config:"[Ne] 3s\u00b2 3p\u00b3",density:1.82,mp:44.15,bp:280.5,radius:98,year:1669,group:15,period:3,eaff:72.0,funEn:"White phosphorus glows in the dark due to chemiluminescence.",funEs:"El f\u00f3sforo blanco brilla en la oscuridad debido a la quimioluminiscencia."},
+{z:16,sym:"S",nameEn:"Sulfur",nameEs:"Azufre",mass:32.06,cat:"nonmetal",phase:"solid",en:2.58,config:"[Ne] 3s\u00b2 3p\u2074",density:2.067,mp:115.21,bp:444.6,radius:88,year:-1,group:16,period:3,eaff:200.4,funEn:"Sulfur was known to ancient peoples and was called \u2018brimstone\u2019 in the Bible.",funEs:"El azufre era conocido por los pueblos antiguos y se llamaba \u2018azufre\u2019 en la Biblia."},
+{z:17,sym:"Cl",nameEn:"Chlorine",nameEs:"Cloro",mass:35.45,cat:"halogen",phase:"gas",en:3.16,config:"[Ne] 3s\u00b2 3p\u2075",density:0.003214,mp:-101.5,bp:-34.04,radius:79,year:1774,group:17,period:3,eaff:349.0,funEn:"Chlorine was used as a chemical weapon in World War I.",funEs:"El cloro fue utilizado como arma qu\u00edmica en la Primera Guerra Mundial."},
+{z:18,sym:"Ar",nameEn:"Argon",nameEs:"Arg\u00f3n",mass:39.948,cat:"noble_gas",phase:"gas",en:null,config:"[Ne] 3s\u00b2 3p\u2076",density:0.001784,mp:-189.34,bp:-185.85,radius:71,year:1894,group:18,period:3,eaff:-96,funEn:"Argon makes up nearly 1% of Earth\u2019s atmosphere\u2014more than CO\u2082.",funEs:"El arg\u00f3n constituye casi el 1% de la atm\u00f3sfera, m\u00e1s que el CO\u2082."},
+{z:19,sym:"K",nameEn:"Potassium",nameEs:"Potasio",mass:39.098,cat:"alkali_metal",phase:"solid",en:0.82,config:"[Ar] 4s\u00b9",density:0.862,mp:63.5,bp:759,radius:243,year:1807,group:1,period:4,eaff:48.4,funEn:"Potassium is essential for nerve function\u2014bananas are a famous source.",funEs:"El potasio es esencial para la funci\u00f3n nerviosa; los pl\u00e1tanos son una fuente famosa."},
+{z:20,sym:"Ca",nameEn:"Calcium",nameEs:"Calcio",mass:40.078,cat:"alkaline_earth",phase:"solid",en:1.00,config:"[Ar] 4s\u00b2",density:1.55,mp:842,bp:1484,radius:194,year:1808,group:2,period:4,eaff:2.37,funEn:"Calcium makes up 1.5% of the human body\u2014mostly in bones and teeth.",funEs:"El calcio constituye el 1.5% del cuerpo humano, principalmente en huesos y dientes."},
+{z:21,sym:"Sc",nameEn:"Scandium",nameEs:"Escandio",mass:44.956,cat:"transition_metal",phase:"solid",en:1.36,config:"[Ar] 3d\u00b9 4s\u00b2",density:2.985,mp:1541,bp:2836,radius:184,year:1879,group:3,period:4,eaff:18.1,funEn:"Scandium is used in aerospace alloys for its strength-to-weight ratio.",funEs:"El escandio se usa en aleaciones aeroespaciales por su relaci\u00f3n resistencia-peso."},
+{z:22,sym:"Ti",nameEn:"Titanium",nameEs:"Titanio",mass:47.867,cat:"transition_metal",phase:"solid",en:1.54,config:"[Ar] 3d\u00b2 4s\u00b2",density:4.507,mp:1668,bp:3287,radius:176,year:1791,group:4,period:4,eaff:7.6,funEn:"Titanium is as strong as steel but 45% lighter.",funEs:"El titanio es tan fuerte como el acero pero 45% m\u00e1s ligero."},
+{z:23,sym:"V",nameEn:"Vanadium",nameEs:"Vanadio",mass:50.942,cat:"transition_metal",phase:"solid",en:1.63,config:"[Ar] 3d\u00b3 4s\u00b2",density:6.11,mp:1910,bp:3407,radius:171,year:1801,group:5,period:4,eaff:50.6,funEn:"Vanadium is named after Vanadis, the Scandinavian goddess of beauty.",funEs:"El vanadio lleva el nombre de Vanadis, la diosa escandinava de la belleza."},
+{z:24,sym:"Cr",nameEn:"Chromium",nameEs:"Cromo",mass:51.996,cat:"transition_metal",phase:"solid",en:1.66,config:"[Ar] 3d\u2075 4s\u00b9",density:7.15,mp:1907,bp:2671,radius:166,year:1797,group:6,period:4,eaff:64.3,funEn:"Chromium gives rubies their red color and emeralds their green.",funEs:"El cromo da a los rub\u00edes su color rojo y a las esmeraldas su verde."},
+{z:25,sym:"Mn",nameEn:"Manganese",nameEs:"Manganeso",mass:54.938,cat:"transition_metal",phase:"solid",en:1.55,config:"[Ar] 3d\u2075 4s\u00b2",density:7.44,mp:1246,bp:2061,radius:161,year:1774,group:7,period:4,eaff:-50,funEn:"Manganese is essential for photosynthesis in plants.",funEs:"El manganeso es esencial para la fotos\u00edntesis en las plantas."},
+{z:26,sym:"Fe",nameEn:"Iron",nameEs:"Hierro",mass:55.845,cat:"transition_metal",phase:"solid",en:1.83,config:"[Ar] 3d\u2076 4s\u00b2",density:7.874,mp:1538,bp:2862,radius:156,year:-1,group:8,period:4,eaff:15.7,funEn:"Iron is the most common element on Earth by mass, forming most of the core.",funEs:"El hierro es el elemento m\u00e1s com\u00fan en la Tierra por masa, formando la mayor parte del n\u00facleo."},
+{z:27,sym:"Co",nameEn:"Cobalt",nameEs:"Cobalto",mass:58.933,cat:"transition_metal",phase:"solid",en:1.88,config:"[Ar] 3d\u2077 4s\u00b2",density:8.90,mp:1495,bp:2927,radius:152,year:1735,group:9,period:4,eaff:63.7,funEn:"Cobalt blue has been used as a pigment since ancient Egypt.",funEs:"El azul cobalto se ha usado como pigmento desde el antiguo Egipto."},
+{z:28,sym:"Ni",nameEn:"Nickel",nameEs:"N\u00edquel",mass:58.693,cat:"transition_metal",phase:"solid",en:1.91,config:"[Ar] 3d\u2078 4s\u00b2",density:8.908,mp:1455,bp:2913,radius:149,year:1751,group:10,period:4,eaff:112.0,funEn:"The U.S. five-cent coin is called a \u2018nickel\u2019 though it\u2019s mostly copper.",funEs:"La moneda de cinco centavos de EE.UU. se llama \u2018nickel\u2019 aunque es mayormente cobre."},
+{z:29,sym:"Cu",nameEn:"Copper",nameEs:"Cobre",mass:63.546,cat:"transition_metal",phase:"solid",en:1.90,config:"[Ar] 3d\u00b9\u2070 4s\u00b9",density:8.96,mp:1084.62,bp:2562,radius:145,year:-1,group:11,period:4,eaff:118.4,funEn:"Copper was the first metal smelted by humans, around 5000 BCE.",funEs:"El cobre fue el primer metal fundido por humanos, alrededor del 5000 a.C."},
+{z:30,sym:"Zn",nameEn:"Zinc",nameEs:"Zinc",mass:65.38,cat:"transition_metal",phase:"solid",en:1.65,config:"[Ar] 3d\u00b9\u2070 4s\u00b2",density:7.134,mp:419.53,bp:907,radius:142,year:1746,group:12,period:4,eaff:-58,funEn:"Zinc coatings protect steel from rusting\u2014the process is called galvanizing.",funEs:"Los recubrimientos de zinc protegen el acero de la oxidaci\u00f3n, proceso llamado galvanizado."},
+{z:31,sym:"Ga",nameEn:"Gallium",nameEs:"Galio",mass:69.723,cat:"post_transition",phase:"solid",en:1.81,config:"[Ar] 3d\u00b9\u2070 4s\u00b2 4p\u00b9",density:5.907,mp:29.76,bp:2204,radius:136,year:1875,group:13,period:4,eaff:28.9,funEn:"Gallium melts in your hand\u2014its melting point is just 29.76\u00b0C.",funEs:"El galio se derrite en tu mano: su punto de fusi\u00f3n es solo 29.76\u00b0C."},
+{z:32,sym:"Ge",nameEn:"Germanium",nameEs:"Germanio",mass:72.63,cat:"metalloid",phase:"solid",en:2.01,config:"[Ar] 3d\u00b9\u2070 4s\u00b2 4p\u00b2",density:5.323,mp:938.25,bp:2833,radius:125,year:1886,group:14,period:4,eaff:119.0,funEn:"Germanium was predicted by Mendeleev as \u2018eka-silicon\u2019 before it was discovered.",funEs:"El germanio fue predicho por Mendeleev como \u2018eka-silicio\u2019 antes de ser descubierto."},
+{z:33,sym:"As",nameEn:"Arsenic",nameEs:"Ars\u00e9nico",mass:74.922,cat:"metalloid",phase:"solid",en:2.18,config:"[Ar] 3d\u00b9\u2070 4s\u00b2 4p\u00b3",density:5.776,mp:817,bp:614,radius:114,year:1250,group:15,period:4,eaff:78.2,funEn:"Arsenic was the \u2018king of poisons\u2019 and \u2018poison of kings\u2019 in medieval Europe.",funEs:"El ars\u00e9nico fue el \u2018rey de los venenos\u2019 y el \u2018veneno de reyes\u2019 en la Europa medieval."},
+{z:34,sym:"Se",nameEn:"Selenium",nameEs:"Selenio",mass:78.971,cat:"nonmetal",phase:"solid",en:2.55,config:"[Ar] 3d\u00b9\u2070 4s\u00b2 4p\u2074",density:4.809,mp:221,bp:685,radius:103,year:1817,group:16,period:4,eaff:195.0,funEn:"Selenium is essential for humans in tiny amounts but toxic in larger doses.",funEs:"El selenio es esencial para los humanos en peque\u00f1as cantidades pero t\u00f3xico en dosis mayores."},
+{z:35,sym:"Br",nameEn:"Bromine",nameEs:"Bromo",mass:79.904,cat:"halogen",phase:"liquid",en:2.96,config:"[Ar] 3d\u00b9\u2070 4s\u00b2 4p\u2075",density:3.122,mp:-7.2,bp:58.8,radius:94,year:1826,group:17,period:4,eaff:324.6,funEn:"Bromine is one of only two elements that are liquid at room temperature.",funEs:"El bromo es uno de solo dos elementos l\u00edquidos a temperatura ambiente."},
+{z:36,sym:"Kr",nameEn:"Krypton",nameEs:"Kript\u00f3n",mass:83.798,cat:"noble_gas",phase:"gas",en:3.00,config:"[Ar] 3d\u00b9\u2070 4s\u00b2 4p\u2076",density:0.003733,mp:-157.36,bp:-153.22,radius:88,year:1898,group:18,period:4,eaff:-96,funEn:"Krypton is not from Superman\u2019s planet\u2014it\u2019s a real noble gas used in flash photography.",funEs:"El kript\u00f3n no es del planeta de Superman: es un gas noble real usado en fotograf\u00eda con flash."},
+{z:37,sym:"Rb",nameEn:"Rubidium",nameEs:"Rubidio",mass:85.468,cat:"alkali_metal",phase:"solid",en:0.82,config:"[Kr] 5s\u00b9",density:1.532,mp:39.31,bp:688,radius:265,year:1861,group:1,period:5,eaff:46.9,funEn:"Rubidium ignites spontaneously in air.",funEs:"El rubidio se enciende espont\u00e1neamente en el aire."},
+{z:38,sym:"Sr",nameEn:"Strontium",nameEs:"Estroncio",mass:87.62,cat:"alkaline_earth",phase:"solid",en:0.95,config:"[Kr] 5s\u00b2",density:2.64,mp:777,bp:1382,radius:219,year:1790,group:2,period:5,eaff:5.03,funEn:"Strontium compounds produce brilliant red fireworks.",funEs:"Los compuestos de estroncio producen fuegos artificiales rojos brillantes."},
+{z:39,sym:"Y",nameEn:"Yttrium",nameEs:"Itrio",mass:88.906,cat:"transition_metal",phase:"solid",en:1.22,config:"[Kr] 4d\u00b9 5s\u00b2",density:4.469,mp:1526,bp:3345,radius:212,year:1794,group:3,period:5,eaff:29.6,funEn:"Yttrium is used in LED lights and cancer treatment drugs.",funEs:"El itrio se usa en luces LED y medicamentos contra el c\u00e1ncer."},
+{z:40,sym:"Zr",nameEn:"Zirconium",nameEs:"Circonio",mass:91.224,cat:"transition_metal",phase:"solid",en:1.33,config:"[Kr] 4d\u00b2 5s\u00b2",density:6.506,mp:1855,bp:4409,radius:206,year:1789,group:4,period:5,eaff:41.1,funEn:"Cubic zirconia (ZrO\u2082) is the most popular diamond substitute.",funEs:"La circonia c\u00fabica (ZrO\u2082) es el sustituto de diamante m\u00e1s popular."},
+{z:41,sym:"Nb",nameEn:"Niobium",nameEs:"Niobio",mass:92.906,cat:"transition_metal",phase:"solid",en:1.60,config:"[Kr] 4d\u2074 5s\u00b9",density:8.57,mp:2477,bp:4744,radius:198,year:1801,group:5,period:5,eaff:86.1,funEn:"Niobium is used in superconducting magnets in MRI machines.",funEs:"El niobio se usa en imanes superconductores de m\u00e1quinas de resonancia magn\u00e9tica."},
+{z:42,sym:"Mo",nameEn:"Molybdenum",nameEs:"Molibdeno",mass:95.95,cat:"transition_metal",phase:"solid",en:2.16,config:"[Kr] 4d\u2075 5s\u00b9",density:10.22,mp:2623,bp:4639,radius:190,year:1781,group:6,period:5,eaff:71.9,funEn:"Molybdenum has the 6th highest melting point of all elements.",funEs:"El molibdeno tiene el sexto punto de fusi\u00f3n m\u00e1s alto de todos los elementos."},
+{z:43,sym:"Tc",nameEn:"Technetium",nameEs:"Tecnecio",mass:98,cat:"transition_metal",phase:"solid",en:1.90,config:"[Kr] 4d\u2075 5s\u00b2",density:11.5,mp:2157,bp:4265,radius:183,year:1937,group:7,period:5,eaff:53,funEn:"Technetium was the first artificially produced element.",funEs:"El tecnecio fue el primer elemento producido artificialmente."},
+{z:44,sym:"Ru",nameEn:"Ruthenium",nameEs:"Rutenio",mass:101.07,cat:"transition_metal",phase:"solid",en:2.20,config:"[Kr] 4d\u2077 5s\u00b9",density:12.37,mp:2334,bp:4150,radius:178,year:1844,group:8,period:5,eaff:101.3,funEn:"Ruthenium is used in wear-resistant electrical contacts.",funEs:"El rutenio se usa en contactos el\u00e9ctricos resistentes al desgaste."},
+{z:45,sym:"Rh",nameEn:"Rhodium",nameEs:"Rodio",mass:102.906,cat:"transition_metal",phase:"solid",en:2.28,config:"[Kr] 4d\u2078 5s\u00b9",density:12.41,mp:1964,bp:3695,radius:173,year:1803,group:9,period:5,eaff:109.7,funEn:"Rhodium is the most expensive precious metal\u2014more costly than gold or platinum.",funEs:"El rodio es el metal precioso m\u00e1s caro, m\u00e1s costoso que el oro o el platino."},
+{z:46,sym:"Pd",nameEn:"Palladium",nameEs:"Paladio",mass:106.42,cat:"transition_metal",phase:"solid",en:2.20,config:"[Kr] 4d\u00b9\u2070",density:12.023,mp:1554.9,bp:2963,radius:169,year:1803,group:10,period:5,eaff:53.7,funEn:"Palladium can absorb up to 900 times its own volume of hydrogen.",funEs:"El paladio puede absorber hasta 900 veces su propio volumen de hidr\u00f3geno."},
+{z:47,sym:"Ag",nameEn:"Silver",nameEs:"Plata",mass:107.868,cat:"transition_metal",phase:"solid",en:1.93,config:"[Kr] 4d\u00b9\u2070 5s\u00b9",density:10.501,mp:961.78,bp:2162,radius:165,year:-1,group:11,period:5,eaff:125.6,funEn:"Silver has the highest electrical conductivity of any element.",funEs:"La plata tiene la mayor conductividad el\u00e9ctrica de cualquier elemento."},
+{z:48,sym:"Cd",nameEn:"Cadmium",nameEs:"Cadmio",mass:112.414,cat:"transition_metal",phase:"solid",en:1.69,config:"[Kr] 4d\u00b9\u2070 5s\u00b2",density:8.69,mp:321.07,bp:767,radius:161,year:1817,group:12,period:5,eaff:-68,funEn:"Cadmium yellow was a favorite pigment of impressionist painters.",funEs:"El amarillo de cadmio fue un pigmento favorito de los pintores impresionistas."},
+{z:49,sym:"In",nameEn:"Indium",nameEs:"Indio",mass:114.818,cat:"post_transition",phase:"solid",en:1.78,config:"[Kr] 4d\u00b9\u2070 5s\u00b2 5p\u00b9",density:7.31,mp:156.6,bp:2072,radius:156,year:1863,group:13,period:5,eaff:28.9,funEn:"Indium makes a \u2018tin cry\u2019\u2014a screaming sound when bent.",funEs:"El indio produce un \u2018grito de esta\u00f1o\u2019: un sonido al doblarse."},
+{z:50,sym:"Sn",nameEn:"Tin",nameEs:"Esta\u00f1o",mass:118.710,cat:"post_transition",phase:"solid",en:1.96,config:"[Kr] 4d\u00b9\u2070 5s\u00b2 5p\u00b2",density:7.287,mp:231.93,bp:2602,radius:145,year:-1,group:14,period:5,eaff:107.3,funEn:"Tin cans are actually steel coated with a thin layer of tin.",funEs:"Las latas de \u2018lata\u2019 son en realidad acero recubierto con una fina capa de esta\u00f1o."},
+{z:51,sym:"Sb",nameEn:"Antimony",nameEs:"Antimonio",mass:121.760,cat:"metalloid",phase:"solid",en:2.05,config:"[Kr] 4d\u00b9\u2070 5s\u00b2 5p\u00b3",density:6.685,mp:630.63,bp:1587,radius:133,year:-1,group:15,period:5,eaff:103.2,funEn:"Antimony was used as eyeliner (kohl) in ancient Egypt.",funEs:"El antimonio se usaba como delineador de ojos (kohl) en el antiguo Egipto."},
+{z:52,sym:"Te",nameEn:"Tellurium",nameEs:"Telurio",mass:127.60,cat:"metalloid",phase:"solid",en:2.10,config:"[Kr] 4d\u00b9\u2070 5s\u00b2 5p\u2074",density:6.232,mp:449.51,bp:988,radius:123,year:1783,group:16,period:5,eaff:190.2,funEn:"Tellurium gives you garlic breath even in tiny amounts\u2014for weeks.",funEs:"El telurio te da aliento a ajo incluso en cantidades m\u00ednimas, durante semanas."},
+{z:53,sym:"I",nameEn:"Iodine",nameEs:"Yodo",mass:126.904,cat:"halogen",phase:"solid",en:2.66,config:"[Kr] 4d\u00b9\u2070 5s\u00b2 5p\u2075",density:4.93,mp:113.7,bp:184.3,radius:115,year:1811,group:17,period:5,eaff:295.2,funEn:"Iodine sublimes into a beautiful violet vapor when heated.",funEs:"El yodo sublima en un hermoso vapor violeta cuando se calienta."},
+{z:54,sym:"Xe",nameEn:"Xenon",nameEs:"Xen\u00f3n",mass:131.293,cat:"noble_gas",phase:"gas",en:2.60,config:"[Kr] 4d\u00b9\u2070 5s\u00b2 5p\u2076",density:0.005887,mp:-111.75,bp:-108.1,radius:108,year:1898,group:18,period:5,eaff:-77,funEn:"Xenon is used as a general anesthetic\u2014it\u2019s the \u2018perfect\u2019 anesthetic gas.",funEs:"El xen\u00f3n se usa como anest\u00e9sico general: es el gas anest\u00e9sico \u2018perfecto\u2019."},
+{z:55,sym:"Cs",nameEn:"Cesium",nameEs:"Cesio",mass:132.905,cat:"alkali_metal",phase:"solid",en:0.79,config:"[Xe] 6s\u00b9",density:1.873,mp:28.44,bp:671,radius:298,year:1860,group:1,period:6,eaff:45.5,funEn:"Cesium atomic clocks are accurate to 1 second in 300 million years.",funEs:"Los relojes at\u00f3micos de cesio son precisos a 1 segundo en 300 millones de a\u00f1os."},
+{z:56,sym:"Ba",nameEn:"Barium",nameEs:"Bario",mass:137.327,cat:"alkaline_earth",phase:"solid",en:0.89,config:"[Xe] 6s\u00b2",density:3.594,mp:727,bp:1845,radius:253,year:1808,group:2,period:6,eaff:13.95,funEn:"Barium \u2018milkshakes\u2019 are used in X-ray imaging of the digestive system.",funEs:"Los \u2018batidos\u2019 de bario se usan en im\u00e1genes de rayos X del sistema digestivo."},
+{z:57,sym:"La",nameEn:"Lanthanum",nameEs:"Lantano",mass:138.905,cat:"lanthanide",phase:"solid",en:1.10,config:"[Xe] 5d\u00b9 6s\u00b2",density:6.145,mp:920,bp:3464,radius:195,year:1839,group:3,period:6,eaff:53.8,funEn:"Lanthanum gives its name to the entire lanthanide series of 15 elements.",funEs:"El lantano da su nombre a toda la serie lant\u00e1nida de 15 elementos."},
+{z:58,sym:"Ce",nameEn:"Cerium",nameEs:"Cerio",mass:140.116,cat:"lanthanide",phase:"solid",en:1.12,config:"[Xe] 4f\u00b9 5d\u00b9 6s\u00b2",density:6.770,mp:795,bp:3443,radius:185,year:1803,group:3,period:6,eaff:55,funEn:"Cerium is used in self-cleaning ovens and catalytic converters.",funEs:"El cerio se usa en hornos autolimpiantes y convertidores catal\u00edticos."},
+{z:59,sym:"Pr",nameEn:"Praseodymium",nameEs:"Praseodimio",mass:140.908,cat:"lanthanide",phase:"solid",en:1.13,config:"[Xe] 4f\u00b3 6s\u00b2",density:6.773,mp:935,bp:3520,radius:185,year:1885,group:3,period:6,eaff:93,funEn:"Praseodymium creates the yellow color in welder\u2019s and glassblower\u2019s goggles.",funEs:"El praseodimio crea el color amarillo en las gafas de soldadores y sopladores de vidrio."},
+{z:60,sym:"Nd",nameEn:"Neodymium",nameEs:"Neodimio",mass:144.242,cat:"lanthanide",phase:"solid",en:1.14,config:"[Xe] 4f\u2074 6s\u00b2",density:7.007,mp:1024,bp:3074,radius:185,year:1885,group:3,period:6,eaff:184.9,funEn:"Neodymium magnets are the strongest permanent magnets known.",funEs:"Los imanes de neodimio son los imanes permanentes m\u00e1s fuertes conocidos."},
+{z:61,sym:"Pm",nameEn:"Promethium",nameEs:"Prometio",mass:145,cat:"lanthanide",phase:"solid",en:1.13,config:"[Xe] 4f\u2075 6s\u00b2",density:7.26,mp:1042,bp:3000,radius:185,year:1945,group:3,period:6,eaff:12.4,funEn:"Promethium is the only radioactive rare earth\u2014it was named after the Titan Prometheus.",funEs:"El prometio es la \u00fanica tierra rara radiactiva; fue nombrado por el tit\u00e1n Prometeo."},
+{z:62,sym:"Sm",nameEn:"Samarium",nameEs:"Samario",mass:150.36,cat:"lanthanide",phase:"solid",en:1.17,config:"[Xe] 4f\u2076 6s\u00b2",density:7.52,mp:1072,bp:1794,radius:185,year:1879,group:3,period:6,eaff:15.6,funEn:"Samarium-cobalt magnets work at temperatures where neodymium magnets fail.",funEs:"Los imanes de samario-cobalto funcionan a temperaturas donde fallan los de neodimio."},
+{z:63,sym:"Eu",nameEn:"Europium",nameEs:"Europio",mass:151.964,cat:"lanthanide",phase:"solid",en:1.20,config:"[Xe] 4f\u2077 6s\u00b2",density:5.243,mp:826,bp:1529,radius:185,year:1901,group:3,period:6,eaff:11.2,funEn:"Europium creates the red color in TV screens and euro banknote anti-forgery marks.",funEs:"El europio crea el color rojo en pantallas de TV y las marcas antifalsificaci\u00f3n de billetes de euro."},
+{z:64,sym:"Gd",nameEn:"Gadolinium",nameEs:"Gadolinio",mass:157.25,cat:"lanthanide",phase:"solid",en:1.20,config:"[Xe] 4f\u2077 5d\u00b9 6s\u00b2",density:7.895,mp:1312,bp:3273,radius:180,year:1880,group:3,period:6,eaff:13.2,funEn:"Gadolinium is used as contrast agent in MRI scans.",funEs:"El gadolinio se usa como agente de contraste en resonancias magn\u00e9ticas."},
+{z:65,sym:"Tb",nameEn:"Terbium",nameEs:"Terbio",mass:158.925,cat:"lanthanide",phase:"solid",en:1.20,config:"[Xe] 4f\u2079 6s\u00b2",density:8.229,mp:1356,bp:3230,radius:177,year:1843,group:3,period:6,eaff:112.4,funEn:"Terbium is used in green phosphors for fluorescent lighting.",funEs:"El terbio se usa en f\u00f3sforos verdes para iluminaci\u00f3n fluorescente."},
+{z:66,sym:"Dy",nameEn:"Dysprosium",nameEs:"Disprosio",mass:162.500,cat:"lanthanide",phase:"solid",en:1.22,config:"[Xe] 4f\u00b9\u2070 6s\u00b2",density:8.55,mp:1407,bp:2567,radius:178,year:1886,group:3,period:6,eaff:33.9,funEn:"Dysprosium\u2019s name means \u2018hard to get\u2019 in Greek\u2014it was extremely difficult to isolate.",funEs:"El nombre del disprosio significa \u2018dif\u00edcil de obtener\u2019 en griego; fue extremadamente dif\u00edcil de aislar."},
+{z:67,sym:"Ho",nameEn:"Holmium",nameEs:"Holmio",mass:164.930,cat:"lanthanide",phase:"solid",en:1.23,config:"[Xe] 4f\u00b9\u00b9 6s\u00b2",density:8.795,mp:1461,bp:2720,radius:176,year:1878,group:3,period:6,eaff:32.6,funEn:"Holmium has the strongest magnetic moment of any naturally occurring element.",funEs:"El holmio tiene el momento magn\u00e9tico m\u00e1s fuerte de cualquier elemento natural."},
+{z:68,sym:"Er",nameEn:"Erbium",nameEs:"Erbio",mass:167.259,cat:"lanthanide",phase:"solid",en:1.24,config:"[Xe] 4f\u00b9\u00b2 6s\u00b2",density:9.066,mp:1529,bp:2868,radius:176,year:1843,group:3,period:6,eaff:30.1,funEn:"Erbium is used in fiber-optic amplifiers that power the internet.",funEs:"El erbio se usa en amplificadores de fibra \u00f3ptica que alimentan el internet."},
+{z:69,sym:"Tm",nameEn:"Thulium",nameEs:"Tulio",mass:168.934,cat:"lanthanide",phase:"solid",en:1.25,config:"[Xe] 4f\u00b9\u00b3 6s\u00b2",density:9.321,mp:1545,bp:1950,radius:176,year:1879,group:3,period:6,eaff:99,funEn:"Thulium is the least abundant lanthanide in Earth\u2019s crust.",funEs:"El tulio es el lant\u00e1nido menos abundante en la corteza terrestre."},
+{z:70,sym:"Yb",nameEn:"Ytterbium",nameEs:"Iterbio",mass:173.045,cat:"lanthanide",phase:"solid",en:1.10,config:"[Xe] 4f\u00b9\u2074 6s\u00b2",density:6.965,mp:824,bp:1196,radius:176,year:1878,group:3,period:6,eaff:-1.93,funEn:"Ytterbium clocks are the most accurate timekeeping devices ever built.",funEs:"Los relojes de iterbio son los dispositivos de medici\u00f3n de tiempo m\u00e1s precisos jam\u00e1s construidos."},
+{z:71,sym:"Lu",nameEn:"Lutetium",nameEs:"Lutecio",mass:174.967,cat:"lanthanide",phase:"solid",en:1.27,config:"[Xe] 4f\u00b9\u2074 5d\u00b9 6s\u00b2",density:9.84,mp:1652,bp:3402,radius:174,year:1907,group:3,period:6,eaff:33.4,funEn:"Lutetium is the hardest and densest of all lanthanides.",funEs:"El lutecio es el m\u00e1s duro y denso de todos los lant\u00e1nidos."},
+{z:72,sym:"Hf",nameEn:"Hafnium",nameEs:"Hafnio",mass:178.49,cat:"transition_metal",phase:"solid",en:1.30,config:"[Xe] 4f\u00b9\u2074 5d\u00b2 6s\u00b2",density:13.31,mp:2233,bp:4603,radius:175,year:1923,group:4,period:6,eaff:17.2,funEn:"Hafnium is used in nuclear reactor control rods because it absorbs neutrons.",funEs:"El hafnio se usa en barras de control de reactores nucleares porque absorbe neutrones."},
+{z:73,sym:"Ta",nameEn:"Tantalum",nameEs:"Tantalio",mass:180.948,cat:"transition_metal",phase:"solid",en:1.50,config:"[Xe] 4f\u00b9\u2074 5d\u00b3 6s\u00b2",density:16.654,mp:3017,bp:5458,radius:170,year:1802,group:5,period:6,eaff:31,funEn:"Tantalum is used in every smartphone\u2019s capacitors.",funEs:"El tantalio se usa en los condensadores de cada smartphone."},
+{z:74,sym:"W",nameEn:"Tungsten",nameEs:"Tungsteno",mass:183.84,cat:"transition_metal",phase:"solid",en:2.36,config:"[Xe] 4f\u00b9\u2074 5d\u2074 6s\u00b2",density:19.25,mp:3422,bp:5555,radius:166,year:1783,group:6,period:6,eaff:78.6,funEn:"Tungsten has the highest melting point of all elements at 3422\u00b0C.",funEs:"El tungsteno tiene el punto de fusi\u00f3n m\u00e1s alto de todos los elementos: 3422\u00b0C."},
+{z:75,sym:"Re",nameEn:"Rhenium",nameEs:"Renio",mass:186.207,cat:"transition_metal",phase:"solid",en:1.90,config:"[Xe] 4f\u00b9\u2074 5d\u2075 6s\u00b2",density:21.02,mp:3186,bp:5596,radius:159,year:1925,group:7,period:6,eaff:14.5,funEn:"Rhenium was the last stable element to be discovered (1925).",funEs:"El renio fue el \u00faltimo elemento estable en ser descubierto (1925)."},
+{z:76,sym:"Os",nameEn:"Osmium",nameEs:"Osmio",mass:190.23,cat:"transition_metal",phase:"solid",en:2.20,config:"[Xe] 4f\u00b9\u2074 5d\u2076 6s\u00b2",density:22.59,mp:3033,bp:5012,radius:155,year:1803,group:8,period:6,eaff:104,funEn:"Osmium is the densest naturally occurring element at 22.59 g/cm\u00b3.",funEs:"El osmio es el elemento natural m\u00e1s denso: 22.59 g/cm\u00b3."},
+{z:77,sym:"Ir",nameEn:"Iridium",nameEs:"Iridio",mass:192.217,cat:"transition_metal",phase:"solid",en:2.20,config:"[Xe] 4f\u00b9\u2074 5d\u2077 6s\u00b2",density:22.56,mp:2446,bp:4428,radius:155,year:1803,group:9,period:6,eaff:151,funEn:"An iridium-rich layer in rock marks the asteroid impact that killed the dinosaurs.",funEs:"Una capa rica en iridio en la roca marca el impacto del asteroide que mat\u00f3 a los dinosaurios."},
+{z:78,sym:"Pt",nameEn:"Platinum",nameEs:"Platino",mass:195.084,cat:"transition_metal",phase:"solid",en:2.28,config:"[Xe] 4f\u00b9\u2074 5d\u2079 6s\u00b9",density:21.46,mp:1768.3,bp:3825,radius:153,year:1735,group:10,period:6,eaff:205.3,funEn:"More than 40% of platinum produced is used in catalytic converters.",funEs:"M\u00e1s del 40% del platino producido se usa en convertidores catal\u00edticos."},
+{z:79,sym:"Au",nameEn:"Gold",nameEs:"Oro",mass:196.967,cat:"transition_metal",phase:"solid",en:2.54,config:"[Xe] 4f\u00b9\u2074 5d\u00b9\u2070 6s\u00b9",density:19.282,mp:1064.18,bp:2856,radius:144,year:-1,group:11,period:6,eaff:222.8,funEn:"All the gold ever mined would fit in a cube just 22 meters on each side.",funEs:"Todo el oro jam\u00e1s extra\u00eddo cabr\u00eda en un cubo de solo 22 metros por lado."},
+{z:80,sym:"Hg",nameEn:"Mercury",nameEs:"Mercurio",mass:200.592,cat:"transition_metal",phase:"liquid",en:2.00,config:"[Xe] 4f\u00b9\u2074 5d\u00b9\u2070 6s\u00b2",density:13.5336,mp:-38.83,bp:356.73,radius:151,year:-1,group:12,period:6,eaff:-48,funEn:"Mercury is the only metal that is liquid at room temperature.",funEs:"El mercurio es el \u00fanico metal l\u00edquido a temperatura ambiente."},
+{z:81,sym:"Tl",nameEn:"Thallium",nameEs:"Talio",mass:204.38,cat:"post_transition",phase:"solid",en:1.62,config:"[Xe] 4f\u00b9\u2074 5d\u00b9\u2070 6s\u00b2 6p\u00b9",density:11.85,mp:304,bp:1473,radius:170,year:1861,group:13,period:6,eaff:36.4,funEn:"Thallium is so toxic it was once called \u2018the poisoner\u2019s poison\u2019.",funEs:"El talio es tan t\u00f3xico que se le llam\u00f3 \u2018el veneno del envenenador\u2019."},
+{z:82,sym:"Pb",nameEn:"Lead",nameEs:"Plomo",mass:207.2,cat:"post_transition",phase:"solid",en:2.33,config:"[Xe] 4f\u00b9\u2074 5d\u00b9\u2070 6s\u00b2 6p\u00b2",density:11.342,mp:327.46,bp:1749,radius:154,year:-1,group:14,period:6,eaff:35.1,funEn:"Ancient Romans used lead pipes for plumbing\u2014\u2018plumbing\u2019 comes from \u2018plumbum\u2019 (lead).",funEs:"Los romanos usaban tuber\u00edas de plomo; \u2018plumber\u00eda\u2019 viene de \u2018plumbum\u2019 (plomo)."},
+{z:83,sym:"Bi",nameEn:"Bismuth",nameEs:"Bismuto",mass:208.980,cat:"post_transition",phase:"solid",en:2.02,config:"[Xe] 4f\u00b9\u2074 5d\u00b9\u2070 6s\u00b2 6p\u00b3",density:9.807,mp:271.4,bp:1564,radius:143,year:1753,group:15,period:6,eaff:91.2,funEn:"Bismuth crystals form beautiful rainbow-colored staircase structures.",funEs:"Los cristales de bismuto forman hermosas estructuras de escalera arco\u00edris."},
+{z:84,sym:"Po",nameEn:"Polonium",nameEs:"Polonio",mass:209,cat:"post_transition",phase:"solid",en:2.00,config:"[Xe] 4f\u00b9\u2074 5d\u00b9\u2070 6s\u00b2 6p\u2074",density:9.32,mp:254,bp:962,radius:135,year:1898,group:16,period:6,eaff:183.3,funEn:"Polonium was used to assassinate ex-spy Alexander Litvinenko in 2006.",funEs:"El polonio fue usado para asesinar al ex esp\u00eda Alexander Litvinenko en 2006."},
+{z:85,sym:"At",nameEn:"Astatine",nameEs:"Astato",mass:210,cat:"halogen",phase:"solid",en:2.20,config:"[Xe] 4f\u00b9\u2074 5d\u00b9\u2070 6s\u00b2 6p\u2075",density:7,mp:302,bp:337,radius:127,year:1940,group:17,period:6,eaff:270.1,funEn:"Astatine is the rarest naturally occurring element\u2014less than 30g exists on Earth at any time.",funEs:"El astato es el elemento natural m\u00e1s raro: menos de 30g existen en la Tierra en cualquier momento."},
+{z:86,sym:"Rn",nameEn:"Radon",nameEs:"Rad\u00f3n",mass:222,cat:"noble_gas",phase:"gas",en:2.20,config:"[Xe] 4f\u00b9\u2074 5d\u00b9\u2070 6s\u00b2 6p\u2076",density:0.00973,mp:-71,bp:-61.7,radius:120,year:1900,group:18,period:6,eaff:-68,funEn:"Radon is the leading cause of lung cancer among non-smokers.",funEs:"El rad\u00f3n es la principal causa de c\u00e1ncer de pulm\u00f3n entre no fumadores."},
+{z:87,sym:"Fr",nameEn:"Francium",nameEs:"Francio",mass:223,cat:"alkali_metal",phase:"solid",en:0.70,config:"[Rn] 7s\u00b9",density:1.87,mp:27,bp:677,radius:348,year:1939,group:1,period:7,eaff:46.9,funEn:"Francium is the second rarest natural element\u2014only ~30g exists on Earth at once.",funEs:"El francio es el segundo elemento natural m\u00e1s raro: solo ~30g existen en la Tierra a la vez."},
+{z:88,sym:"Ra",nameEn:"Radium",nameEs:"Radio",mass:226,cat:"alkaline_earth",phase:"solid",en:0.90,config:"[Rn] 7s\u00b2",density:5.5,mp:700,bp:1737,radius:283,year:1898,group:2,period:7,eaff:9.65,funEn:"Radium was once added to drinks, food, and even toothpaste as a \u2018health tonic\u2019.",funEs:"El radio se a\u00f1ad\u00eda a bebidas, comida e incluso pasta dental como \u2018t\u00f3nico de salud\u2019."},
+{z:89,sym:"Ac",nameEn:"Actinium",nameEs:"Actinio",mass:227,cat:"actinide",phase:"solid",en:1.10,config:"[Rn] 6d\u00b9 7s\u00b2",density:10.07,mp:1050,bp:3200,radius:195,year:1899,group:3,period:7,eaff:33.8,funEn:"Actinium glows blue in the dark due to its intense radioactivity.",funEs:"El actinio brilla en azul en la oscuridad debido a su intensa radiactividad."},
+{z:90,sym:"Th",nameEn:"Thorium",nameEs:"Torio",mass:232.038,cat:"actinide",phase:"solid",en:1.30,config:"[Rn] 6d\u00b2 7s\u00b2",density:11.72,mp:1750,bp:4788,radius:180,year:1829,group:3,period:7,eaff:112.7,funEn:"Thorium could fuel nuclear reactors for thousands of years with existing reserves.",funEs:"El torio podr\u00eda alimentar reactores nucleares por miles de a\u00f1os con las reservas existentes."},
+{z:91,sym:"Pa",nameEn:"Protactinium",nameEs:"Protactinio",mass:231.036,cat:"actinide",phase:"solid",en:1.50,config:"[Rn] 5f\u00b2 6d\u00b9 7s\u00b2",density:15.37,mp:1572,bp:4000,radius:180,year:1913,group:3,period:7,eaff:53.5,funEn:"Protactinium is one of the rarest and most expensive natural elements.",funEs:"El protactinio es uno de los elementos naturales m\u00e1s raros y costosos."},
+{z:92,sym:"U",nameEn:"Uranium",nameEs:"Uranio",mass:238.029,cat:"actinide",phase:"solid",en:1.38,config:"[Rn] 5f\u00b3 6d\u00b9 7s\u00b2",density:18.95,mp:1135,bp:4131,radius:175,year:1789,group:3,period:7,eaff:50.9,funEn:"A single uranium fuel pellet contains as much energy as 1 ton of coal.",funEs:"Una sola pastilla de combustible de uranio contiene tanta energ\u00eda como 1 tonelada de carb\u00f3n."},
+{z:93,sym:"Np",nameEn:"Neptunium",nameEs:"Neptunio",mass:237,cat:"actinide",phase:"solid",en:1.36,config:"[Rn] 5f\u2074 6d\u00b9 7s\u00b2",density:20.45,mp:644,bp:3902,radius:175,year:1940,group:3,period:7,eaff:45.8,funEn:"Neptunium was named after Neptune, following uranium (Uranus).",funEs:"El neptunio fue nombrado por Neptuno, siguiendo al uranio (Urano)."},
+{z:94,sym:"Pu",nameEn:"Plutonium",nameEs:"Plutonio",mass:244,cat:"actinide",phase:"solid",en:1.28,config:"[Rn] 5f\u2076 7s\u00b2",density:19.84,mp:640,bp:3228,radius:175,year:1940,group:3,period:7,eaff:-48.6,funEn:"Just 5kg of plutonium is enough to make a nuclear weapon.",funEs:"Solo 5kg de plutonio son suficientes para fabricar un arma nuclear."},
+{z:95,sym:"Am",nameEn:"Americium",nameEs:"Americio",mass:243,cat:"actinide",phase:"solid",en:1.30,config:"[Rn] 5f\u2077 7s\u00b2",density:13.69,mp:1176,bp:2011,radius:175,year:1944,group:3,period:7,eaff:9.93,funEn:"Americium is in most household smoke detectors.",funEs:"El americio est\u00e1 en la mayor\u00eda de los detectores de humo dom\u00e9sticos."},
+{z:96,sym:"Cm",nameEn:"Curium",nameEs:"Curio",mass:247,cat:"actinide",phase:"solid",en:1.30,config:"[Rn] 5f\u2077 6d\u00b9 7s\u00b2",density:13.51,mp:1340,bp:3110,radius:175,year:1944,group:3,period:7,eaff:28.5,funEn:"Curium is named after Marie and Pierre Curie.",funEs:"El curio lleva el nombre de Marie y Pierre Curie."},
+{z:97,sym:"Bk",nameEn:"Berkelium",nameEs:"Berkelio",mass:247,cat:"actinide",phase:"solid",en:1.30,config:"[Rn] 5f\u2079 7s\u00b2",density:14.79,mp:986,bp:2627,radius:175,year:1949,group:3,period:7,eaff:-165.2,funEn:"Berkelium was named after Berkeley, California, where it was created.",funEs:"El berkelio fue nombrado por Berkeley, California, donde fue creado."},
+{z:98,sym:"Cf",nameEn:"Californium",nameEs:"Californio",mass:251,cat:"actinide",phase:"solid",en:1.30,config:"[Rn] 5f\u00b9\u2070 7s\u00b2",density:15.1,mp:900,bp:1472,radius:175,year:1950,group:3,period:7,eaff:-97.3,funEn:"Californium-252 is used to start nuclear reactors and detect gold in ore.",funEs:"El californio-252 se usa para arrancar reactores nucleares y detectar oro en mineral."},
+{z:99,sym:"Es",nameEn:"Einsteinium",nameEs:"Einstenio",mass:252,cat:"actinide",phase:"solid",en:1.30,config:"[Rn] 5f\u00b9\u00b9 7s\u00b2",density:8.84,mp:860,bp:996,radius:175,year:1952,group:3,period:7,eaff:-28.6,funEn:"Einsteinium was discovered in the fallout of the first hydrogen bomb test.",funEs:"El einstenio fue descubierto en la lluvia radiactiva de la primera prueba de bomba de hidr\u00f3geno."},
+{z:100,sym:"Fm",nameEn:"Fermium",nameEs:"Fermio",mass:257,cat:"actinide",phase:"solid",en:1.30,config:"[Rn] 5f\u00b9\u00b2 7s\u00b2",density:9.7,mp:1527,bp:null,radius:175,year:1952,group:3,period:7,eaff:33.96,funEn:"Fermium was also found in H-bomb fallout and named after Enrico Fermi.",funEs:"El fermio tambi\u00e9n fue hallado en la lluvia de la bomba H y nombrado por Enrico Fermi."},
+{z:101,sym:"Md",nameEn:"Mendelevium",nameEs:"Mendelevio",mass:258,cat:"actinide",phase:"solid",en:1.30,config:"[Rn] 5f\u00b9\u00b3 7s\u00b2",density:10.3,mp:827,bp:null,radius:175,year:1955,group:3,period:7,eaff:93.91,funEn:"Mendelevium honors Dmitri Mendeleev, creator of the periodic table.",funEs:"El mendelevio honra a Dmitri Mendeleev, creador de la tabla peri\u00f3dica."},
+{z:102,sym:"No",nameEn:"Nobelium",nameEs:"Nobelio",mass:259,cat:"actinide",phase:"solid",en:1.30,config:"[Rn] 5f\u00b9\u2074 7s\u00b2",density:9.9,mp:827,bp:null,radius:175,year:1966,group:3,period:7,eaff:-223.2,funEn:"Nobelium is named after Alfred Nobel, inventor of dynamite and founder of the Nobel Prize.",funEs:"El nobelio lleva el nombre de Alfred Nobel, inventor de la dinamita y fundador del Premio Nobel."},
+{z:103,sym:"Lr",nameEn:"Lawrencium",nameEs:"Laurencio",mass:266,cat:"actinide",phase:"solid",en:1.30,config:"[Rn] 5f\u00b9\u2074 7s\u00b2 7p\u00b9",density:15.6,mp:1627,bp:null,radius:175,year:1961,group:3,period:7,eaff:-30,funEn:"Lawrencium was the last actinide to be discovered.",funEs:"El laurencio fue el \u00faltimo act\u00ednido en ser descubierto."},
+{z:104,sym:"Rf",nameEn:"Rutherfordium",nameEs:"Rutherfordio",mass:267,cat:"transition_metal",phase:"solid",en:null,config:"[Rn] 5f\u00b9\u2074 6d\u00b2 7s\u00b2",density:23.2,mp:2100,bp:5500,radius:157,year:1964,group:4,period:7,eaff:null,funEn:"Rutherfordium was the center of a naming controversy between the US and USSR.",funEs:"El rutherfordio fue centro de una controversia de nombres entre EE.UU. y la URSS."},
+{z:105,sym:"Db",nameEn:"Dubnium",nameEs:"Dubnio",mass:268,cat:"transition_metal",phase:"solid",en:null,config:"[Rn] 5f\u00b9\u2074 6d\u00b3 7s\u00b2",density:29.3,mp:null,bp:null,radius:149,year:1967,group:5,period:7,eaff:null,funEn:"Dubnium is named after Dubna, Russia, home of the Joint Institute for Nuclear Research.",funEs:"El dubnio lleva el nombre de Dubna, Rusia, sede del Instituto de Investigaci\u00f3n Nuclear."},
+{z:106,sym:"Sg",nameEn:"Seaborgium",nameEs:"Seaborgio",mass:269,cat:"transition_metal",phase:"solid",en:null,config:"[Rn] 5f\u00b9\u2074 6d\u2074 7s\u00b2",density:35,mp:null,bp:null,radius:143,year:1974,group:6,period:7,eaff:null,funEn:"Seaborgium was the first element named after a living person (Glenn Seaborg).",funEs:"El seaborgio fue el primer elemento nombrado por una persona viva (Glenn Seaborg)."},
+{z:107,sym:"Bh",nameEn:"Bohrium",nameEs:"Bohrio",mass:270,cat:"transition_metal",phase:"solid",en:null,config:"[Rn] 5f\u00b9\u2074 6d\u2075 7s\u00b2",density:37.1,mp:null,bp:null,radius:141,year:1981,group:7,period:7,eaff:null,funEn:"Bohrium is named after Niels Bohr, pioneer of atomic structure.",funEs:"El bohrio lleva el nombre de Niels Bohr, pionero de la estructura at\u00f3mica."},
+{z:108,sym:"Hs",nameEn:"Hassium",nameEs:"Hasio",mass:277,cat:"transition_metal",phase:"solid",en:null,config:"[Rn] 5f\u00b9\u2074 6d\u2076 7s\u00b2",density:40.7,mp:null,bp:null,radius:134,year:1984,group:8,period:7,eaff:null,funEn:"Hassium is named after the German state of Hesse.",funEs:"El hasio lleva el nombre del estado alem\u00e1n de Hesse."},
+{z:109,sym:"Mt",nameEn:"Meitnerium",nameEs:"Meitnerio",mass:278,cat:"unknown",phase:"solid",en:null,config:"[Rn] 5f\u00b9\u2074 6d\u2077 7s\u00b2",density:37.4,mp:null,bp:null,radius:129,year:1982,group:9,period:7,eaff:null,funEn:"Meitnerium honors Lise Meitner, who co-discovered nuclear fission.",funEs:"El meitnerio honra a Lise Meitner, codescubridora de la fisi\u00f3n nuclear."},
+{z:110,sym:"Ds",nameEn:"Darmstadtium",nameEs:"Darmstadtio",mass:281,cat:"unknown",phase:"solid",en:null,config:"[Rn] 5f\u00b9\u2074 6d\u2079 7s\u00b9",density:34.8,mp:null,bp:null,radius:128,year:1994,group:10,period:7,eaff:null,funEn:"Darmstadtium was created by bombarding lead with nickel atoms.",funEs:"El darmstadtio fue creado bombardeando plomo con \u00e1tomos de n\u00edquel."},
+{z:111,sym:"Rg",nameEn:"Roentgenium",nameEs:"Roentgenio",mass:282,cat:"unknown",phase:"solid",en:null,config:"[Rn] 5f\u00b9\u2074 6d\u00b9\u2070 7s\u00b9",density:28.7,mp:null,bp:null,radius:121,year:1994,group:11,period:7,eaff:null,funEn:"Roentgenium is named after Wilhelm R\u00f6ntgen, discoverer of X-rays.",funEs:"El roentgenio lleva el nombre de Wilhelm R\u00f6ntgen, descubridor de los rayos X."},
+{z:112,sym:"Cn",nameEn:"Copernicium",nameEs:"Copernicio",mass:285,cat:"unknown",phase:"liquid",en:null,config:"[Rn] 5f\u00b9\u2074 6d\u00b9\u2070 7s\u00b2",density:23.7,mp:null,bp:null,radius:122,year:1996,group:12,period:7,eaff:null,funEn:"Copernicium may be a liquid metal like mercury, based on theoretical predictions.",funEs:"El copernicio podr\u00eda ser un metal l\u00edquido como el mercurio, seg\u00fan predicciones te\u00f3ricas."},
+{z:113,sym:"Nh",nameEn:"Nihonium",nameEs:"Nihonio",mass:286,cat:"unknown",phase:"solid",en:null,config:"[Rn] 5f\u00b9\u2074 6d\u00b9\u2070 7s\u00b2 7p\u00b9",density:16,mp:null,bp:null,radius:136,year:2003,group:13,period:7,eaff:null,funEn:"Nihonium is named after Japan (Nihon)\u2014the first East Asian-named element.",funEs:"El nihonio lleva el nombre de Jap\u00f3n (Nihon): el primer elemento con nombre de Asia oriental."},
+{z:114,sym:"Fl",nameEn:"Flerovium",nameEs:"Flerovio",mass:289,cat:"unknown",phase:"solid",en:null,config:"[Rn] 5f\u00b9\u2074 6d\u00b9\u2070 7s\u00b2 7p\u00b2",density:14,mp:null,bp:null,radius:143,year:1999,group:14,period:7,eaff:null,funEn:"Flerovium sits at the edge of the predicted \u2018island of stability\u2019 for superheavy elements.",funEs:"El flerovio est\u00e1 en el borde de la predicha \u2018isla de estabilidad\u2019 de elementos superpesados."},
+{z:115,sym:"Mc",nameEn:"Moscovium",nameEs:"Moscovio",mass:290,cat:"unknown",phase:"solid",en:null,config:"[Rn] 5f\u00b9\u2074 6d\u00b9\u2070 7s\u00b2 7p\u00b3",density:13.5,mp:null,bp:null,radius:162,year:2003,group:15,period:7,eaff:null,funEn:"Moscovium is named after Moscow Oblast where the JINR lab is located.",funEs:"El moscovio lleva el nombre de la regi\u00f3n de Mosc\u00fa donde se encuentra el laboratorio JINR."},
+{z:116,sym:"Lv",nameEn:"Livermorium",nameEs:"Livermorio",mass:293,cat:"unknown",phase:"solid",en:null,config:"[Rn] 5f\u00b9\u2074 6d\u00b9\u2070 7s\u00b2 7p\u2074",density:12.9,mp:null,bp:null,radius:175,year:2000,group:16,period:7,eaff:null,funEn:"Livermorium is named after Livermore, California and Lawrence Livermore National Lab.",funEs:"El livermorio lleva el nombre de Livermore, California y el Laboratorio Nacional Lawrence Livermore."},
+{z:117,sym:"Ts",nameEn:"Tennessine",nameEs:"Teneso",mass:294,cat:"unknown",phase:"solid",en:null,config:"[Rn] 5f\u00b9\u2074 6d\u00b9\u2070 7s\u00b2 7p\u2075",density:7.2,mp:null,bp:null,radius:165,year:2010,group:17,period:7,eaff:null,funEn:"Tennessine is named after Tennessee, home to Oak Ridge National Laboratory.",funEs:"El teneso lleva el nombre de Tennessee, sede del Laboratorio Nacional Oak Ridge."},
+{z:118,sym:"Og",nameEn:"Oganesson",nameEs:"Oganeson",mass:294,cat:"noble_gas",phase:"solid",en:null,config:"[Rn] 5f\u00b9\u2074 6d\u00b9\u2070 7s\u00b2 7p\u2076",density:5.0,mp:null,bp:null,radius:157,year:2006,group:18,period:7,eaff:null,funEn:"Oganesson is the only element named after a living person at time of naming (Yuri Oganessian).",funEs:"El oganes\u00f3n es el \u00fanico elemento nombrado por una persona viva al momento del nombramiento (Yuri Oganessian)."}
+];
+
+// ============================================================
+// CATEGORY COLORS
+// ============================================================
+const CAT_COLORS = {
+  alkali_metal:    0xff6b6b,
+  alkaline_earth:  0xffa94d,
+  transition_metal:0x51cf66,
+  post_transition: 0x339af0,
+  metalloid:       0xcc5de8,
+  nonmetal:        0x20c997,
+  halogen:         0xffd43b,
+  noble_gas:       0x748ffc,
+  lanthanide:      0xf06595,
+  actinide:        0xe599f7,
+  unknown:         0x868e96,
+};
+
+const PHASE_COLORS = { solid: 0x339af0, liquid: 0xff6b6b, gas: 0x51cf66, unknown: 0x868e96 };
+
+function getEra(year) {
+  if (year === null || year === undefined) return 'unknown';
+  if (year <= 0 || year < 1700) return 'ancient';
+  if (year < 1800) return 'e1700';
+  if (year < 1900) return 'e1800';
+  if (year < 2000) return 'e1900';
+  return 'e2000';
+}
+const ERA_COLORS = { ancient: 0xffd43b, e1700: 0xffa94d, e1800: 0x51cf66, e1900: 0x339af0, e2000: 0xcc5de8, unknown: 0x868e96 };
+
+function enGradientColor(val) {
+  if (val === null || val === undefined) return 0x868e96;
+  const t = Math.min(1, Math.max(0, val / 4.0));
+  const r = Math.round(66 + t * (255 - 66));
+  const g = Math.round(133 - t * 133);
+  const b = Math.round(244 - t * (244 - 107));
+  return (r << 16) | (g << 8) | b;
+}
+
+// ============================================================
+// STANDARD TABLE LAYOUT (group, period, with lanthanide/actinide offset)
+// ============================================================
+function getStandardPos(el) {
+  let col = el.group, row = el.period;
+  // Lanthanides: z 57-71, row = 8.5
+  if (el.z >= 57 && el.z <= 71) { col = 3 + (el.z - 57); row = 8.5; }
+  // Actinides: z 89-103, row = 9.5
+  if (el.z >= 89 && el.z <= 103) { col = 3 + (el.z - 89); row = 9.5; }
+  return { x: (col - 9.5) * 2.2, y: -(row - 5) * 2.2, z: 0 };
+}
+
+// ============================================================
+// THREE.JS SETUP
+// ============================================================
+let scene, camera, renderer, controls;
+let elementMeshes = [];
+let labelSprites = [];
+let currentView = 'standard';
+let currentColor = 'category';
+let hoveredEl = null, selectedEl = null;
+let autoRotate = false;
+let raycaster, mouse;
+let animating = false;
+const ISLAND_RANGE = [114, 126];
+
+function init() {
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0a0a1a);
+  scene.fog = new THREE.FogExp2(0x0a0a1a, 0.008);
+
+  camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+  camera.position.set(0, 5, 45);
+
+  renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+  controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.08;
+  controls.minDistance = 5;
+  controls.maxDistance = 120;
+  controls.autoRotate = false;
+  controls.autoRotateSpeed = 1.0;
+
+  // Lights
+  const ambientLight = new THREE.AmbientLight(0x404060, 0.6);
+  scene.add(ambientLight);
+  const pointLight1 = new THREE.PointLight(0xec4899, 0.8, 100);
+  pointLight1.position.set(20, 20, 20);
+  scene.add(pointLight1);
+  const pointLight2 = new THREE.PointLight(0x3b82f6, 0.8, 100);
+  pointLight2.position.set(-20, -10, 20);
+  scene.add(pointLight2);
+  const dirLight = new THREE.DirectionalLight(0xffffff, 0.4);
+  dirLight.position.set(0, 30, 30);
+  scene.add(dirLight);
+
+  // Stars background
+  const starsGeo = new THREE.BufferGeometry();
+  const starPositions = [];
+  for (let i = 0; i < 2000; i++) {
+    starPositions.push((Math.random() - 0.5) * 400, (Math.random() - 0.5) * 400, (Math.random() - 0.5) * 400);
+  }
+  starsGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPositions, 3));
+  const starsMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.3, transparent: true, opacity: 0.6 });
+  scene.add(new THREE.Points(starsGeo, starsMat));
+
+  raycaster = new THREE.Raycaster();
+  mouse = new THREE.Vector2();
+
+  // Create elements
+  ELEMENTS.forEach(el => {
+    const baseRadius = el.radius ? Math.max(0.25, Math.min(1.2, el.radius / 200)) : 0.4;
+    const geo = new THREE.SphereGeometry(baseRadius, 24, 24);
+    const color = getColor(el);
+    const mat = new THREE.MeshPhongMaterial({
+      color: color,
+      emissive: color,
+      emissiveIntensity: 0.15,
+      shininess: 80,
+      transparent: true,
+      opacity: 0.9,
+    });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.userData = el;
+
+    // Island of stability indicator
+    if (el.z >= ISLAND_RANGE[0] && el.z <= ISLAND_RANGE[1]) {
+      const ringGeo = new THREE.RingGeometry(baseRadius + 0.15, baseRadius + 0.25, 32);
+      const ringMat = new THREE.MeshBasicMaterial({ color: 0xffd43b, side: THREE.DoubleSide, transparent: true, opacity: 0.4 });
+      const ring = new THREE.Mesh(ringGeo, ringMat);
+      mesh.add(ring);
+    }
+
+    // Label sprite
+    const canvas = document.createElement('canvas');
+    canvas.width = 64;
+    canvas.height = 64;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 32px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(el.sym, 32, 28);
+    ctx.font = '14px sans-serif';
+    ctx.fillStyle = '#aaaacc';
+    ctx.fillText(el.z, 32, 50);
+    const texture = new THREE.CanvasTexture(canvas);
+    const spriteMat = new THREE.SpriteMaterial({ map: texture, transparent: true, depthWrite: false });
+    const sprite = new THREE.Sprite(spriteMat);
+    sprite.scale.set(1.5, 1.5, 1);
+    sprite.position.set(0, baseRadius + 0.8, 0);
+    mesh.add(sprite);
+    labelSprites.push(sprite);
+
+    const pos = getStandardPos(el);
+    mesh.position.set(pos.x, pos.y, pos.z);
+    scene.add(mesh);
+    elementMeshes.push(mesh);
+  });
+
+  // Events
+  renderer.domElement.addEventListener('mousemove', onMouseMove, false);
+  renderer.domElement.addEventListener('click', onMouseClick, false);
+  renderer.domElement.addEventListener('touchstart', onTouchStart, false);
+  window.addEventListener('resize', onResize, false);
+  window.addEventListener('keydown', onKeyDown, false);
+
+  updateViewInfo();
+  hideLoading();
+  animate();
+}
+
+function hideLoading() {
+  setTimeout(() => document.getElementById('loading').classList.add('done'), 300);
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+  controls.autoRotate = autoRotate;
+  controls.update();
+
+  // Pulsing glow for hovered element
+  if (hoveredEl) {
+    const t = Date.now() * 0.003;
+    hoveredEl.material.emissiveIntensity = 0.3 + Math.sin(t) * 0.15;
+  }
+
+  renderer.render(scene, camera);
+}
+
+function onResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+// ============================================================
+// MOUSE/TOUCH INTERACTION
+// ============================================================
+function onMouseMove(e) {
+  mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+  raycaster.setFromCamera(mouse, camera);
+  const intersects = raycaster.intersectObjects(elementMeshes);
+
+  // Reset previous hover
+  if (hoveredEl && (!intersects.length || intersects[0].object !== hoveredEl)) {
+    hoveredEl.material.emissiveIntensity = 0.15;
+    hoveredEl.scale.set(1, 1, 1);
+    unhighlightSimilar();
+    hoveredEl = null;
+  }
+
+  const tooltip = document.getElementById('tooltip');
+  if (intersects.length > 0) {
+    const mesh = intersects[0].object;
+    if (mesh.userData && mesh.userData.z) {
+      hoveredEl = mesh;
+      mesh.scale.set(1.2, 1.2, 1.2);
+      highlightSimilar(mesh.userData);
+      const el = mesh.userData;
+      tooltip.querySelector('.tt-symbol').textContent = el.sym;
+      tooltip.querySelector('.tt-name').textContent = lang === 'en' ? el.nameEn : el.nameEs;
+      tooltip.querySelector('.tt-number').textContent = '#' + el.z + ' \u2022 ' + el.mass.toFixed(3) + ' u';
+      tooltip.querySelector('.tt-cat').textContent = t('catNames')[el.cat] || el.cat;
+      tooltip.style.display = 'block';
+      tooltip.style.left = (e.clientX + 15) + 'px';
+      tooltip.style.top = (e.clientY - 10) + 'px';
+      renderer.domElement.style.cursor = 'pointer';
+    }
+  } else {
+    tooltip.style.display = 'none';
+    renderer.domElement.style.cursor = 'default';
+  }
+}
+
+function onMouseClick(e) {
+  raycaster.setFromCamera(mouse, camera);
+  const intersects = raycaster.intersectObjects(elementMeshes);
+  if (intersects.length > 0 && intersects[0].object.userData.z) {
+    selectElement(intersects[0].object.userData);
+  }
+}
+
+function onTouchStart(e) {
+  if (e.touches.length === 1) {
+    const touch = e.touches[0];
+    mouse.x = (touch.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(touch.clientY / window.innerHeight) * 2 + 1;
+    raycaster.setFromCamera(mouse, camera);
+    const intersects = raycaster.intersectObjects(elementMeshes);
+    if (intersects.length > 0 && intersects[0].object.userData.z) {
+      selectElement(intersects[0].object.userData);
+    }
+  }
+}
+
+function highlightSimilar(el) {
+  elementMeshes.forEach(m => {
+    if (m.userData.cat === el.cat && m !== hoveredEl) {
+      m.material.emissiveIntensity = 0.35;
+    }
+  });
+}
+
+function unhighlightSimilar() {
+  elementMeshes.forEach(m => {
+    if (m !== hoveredEl && m !== selectedEl) {
+      m.material.emissiveIntensity = 0.15;
+    }
+  });
+}
+
+// ============================================================
+// ELEMENT SELECTION / DETAIL PANEL
+// ============================================================
+function selectElement(el) {
+  selectedEl = el;
+  const panel = document.getElementById('detail-panel');
+  const color = getColorHex(el);
+  document.getElementById('d-symbol').textContent = el.sym;
+  document.getElementById('d-symbol').style.color = color;
+  document.getElementById('d-name').textContent = lang === 'en' ? el.nameEn : el.nameEs;
+  document.getElementById('d-number').textContent = '#' + el.z;
+  const catBadge = document.getElementById('d-cat');
+  catBadge.textContent = t('catNames')[el.cat] || el.cat;
+  catBadge.style.background = color;
+
+  const props = [
+    [t('mass'), el.mass.toFixed(3) + ' u'],
+    [t('phase'), t('phaseNames')[el.phase] || el.phase],
+    [t('electroneg'), el.en !== null ? el.en.toFixed(2) : t('na')],
+    [t('config'), el.config],
+    [t('densityL'), el.density ? el.density + ' g/cm\u00b3' : t('na')],
+    [t('melt'), el.mp !== null ? el.mp + ' \u00b0C' : t('na')],
+    [t('boil'), el.bp !== null ? el.bp + ' \u00b0C' : t('na')],
+    [t('radius'), el.radius ? el.radius + ' pm' : t('na')],
+    [t('disc'), el.year === -1 ? (lang==='en'?'Ancient':'Antiguo') : (el.year || t('na'))],
+  ];
+  const table = document.getElementById('d-table');
+  table.innerHTML = props.map(([k,v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('');
+
+  const fun = lang === 'en' ? el.funEn : el.funEs;
+  document.getElementById('d-fun').innerHTML = `<strong>${t('funFact')}:</strong> ${fun}`;
+
+  panel.classList.add('open');
+
+  // Zoom camera toward element
+  const mesh = elementMeshes.find(m => m.userData.z === el.z);
+  if (mesh) {
+    const target = mesh.position.clone();
+    const camOffset = new THREE.Vector3(0, 2, 12);
+    const dest = target.clone().add(camOffset);
+    animateCamera(dest, target);
+  }
+}
+
+function closeDetail() {
+  document.getElementById('detail-panel').classList.remove('open');
+  selectedEl = null;
+}
+
+function animateCamera(destPos, destTarget) {
+  const startPos = camera.position.clone();
+  const startTarget = controls.target.clone();
+  const duration = 800;
+  const startTime = Date.now();
+  function step() {
+    const elapsed = Date.now() - startTime;
+    const p = Math.min(1, elapsed / duration);
+    const ease = 1 - Math.pow(1 - p, 3); // ease-out cubic
+    camera.position.lerpVectors(startPos, destPos, ease);
+    controls.target.lerpVectors(startTarget, destTarget, ease);
+    controls.update();
+    if (p < 1) requestAnimationFrame(step);
+  }
+  step();
+}
+
+// ============================================================
+// COLOR
+// ============================================================
+function getColor(el) {
+  switch (currentColor) {
+    case 'category': return CAT_COLORS[el.cat] || 0x868e96;
+    case 'phase': return PHASE_COLORS[el.phase] || 0x868e96;
+    case 'electroneg': return enGradientColor(el.en);
+    case 'era': return ERA_COLORS[getEra(el.year)] || 0x868e96;
+    default: return 0x868e96;
+  }
+}
+
+function getColorHex(el) {
+  return '#' + getColor(el).toString(16).padStart(6, '0');
+}
+
+function switchColor(mode) {
+  currentColor = mode;
+  elementMeshes.forEach(m => {
+    const c = getColor(m.userData);
+    m.material.color.setHex(c);
+    m.material.emissive.setHex(c);
+  });
+}
+
+// ============================================================
+// VIEWS
+// ============================================================
+function getViewPosition(el, view) {
+  switch (view) {
+    case 'standard': return getStandardPos(el);
+    case 'spiral': {
+      const angle = (el.z / 118) * Math.PI * 12;
+      const r = 2 + el.z * 0.12;
+      return { x: Math.cos(angle) * r, y: el.z * 0.15 - 9, z: Math.sin(angle) * r };
+    }
+    case 'electronegativity': {
+      const enVal = el.en || 0;
+      const rad = el.radius || 100;
+      return { x: (el.z - 59) * 0.4, y: enVal * 6 - 6, z: (rad - 120) * 0.08 };
+    }
+    case 'shell': {
+      let col = el.group, row = el.period;
+      if (el.z >= 57 && el.z <= 71) { col = 3 + (el.z - 57); row = 6; }
+      if (el.z >= 89 && el.z <= 103) { col = 3 + (el.z - 89); row = 7; }
+      const ea = el.eaff || 0;
+      return { x: (col - 9.5) * 2.2, y: -(row - 4) * 2.5, z: ea * 0.03 };
+    }
+    case 'density': {
+      const dens = el.density || 0;
+      const mp = el.mp || 0;
+      return { x: Math.log10(Math.max(0.0001, dens)) * 6, y: (mp / 500) * 3, z: (el.z - 59) * 0.2 };
+    }
+    default: return getStandardPos(el);
+  }
+}
+
+function switchView(view) {
+  currentView = view;
+  document.getElementById('view-select').value = view;
+  const duration = 1000;
+  const startTime = Date.now();
+  const starts = elementMeshes.map(m => m.position.clone());
+  const targets = elementMeshes.map(m => {
+    const p = getViewPosition(m.userData, view);
+    return new THREE.Vector3(p.x, p.y, p.z);
+  });
+
+  function step() {
+    const elapsed = Date.now() - startTime;
+    const p = Math.min(1, elapsed / duration);
+    const ease = 1 - Math.pow(1 - p, 3);
+    elementMeshes.forEach((m, i) => {
+      m.position.lerpVectors(starts[i], targets[i], ease);
+    });
+    if (p < 1) requestAnimationFrame(step);
+  }
+  step();
+  updateViewInfo();
+}
+
+function updateViewInfo() {
+  const info = document.getElementById('view-info');
+  const keys = { standard: 'Standard', spiral: 'Spiral', electronegativity: 'EN', shell: 'Shell', density: 'Density' };
+  const key = keys[currentView];
+  const short = t('viewInfo' + key);
+  const long = t('viewInfo' + key + 'Exp');
+  info.className = 'view-info';
+  info.innerHTML = `${short} <span class="learn-more" onclick="this.parentElement.classList.toggle('show-expanded')">${t('learnMore')}</span><div class="expanded">${long}</div>`;
+}
+
+// ============================================================
+// SEARCH
+// ============================================================
+function searchElement(query) {
+  query = query.trim().toLowerCase();
+  elementMeshes.forEach(m => {
+    const el = m.userData;
+    if (!query) {
+      m.material.opacity = 0.9;
+      m.material.emissiveIntensity = 0.15;
+      return;
+    }
+    const nameMatch = (lang === 'en' ? el.nameEn : el.nameEs).toLowerCase();
+    const match = el.sym.toLowerCase() === query || nameMatch.includes(query) || String(el.z) === query;
+    m.material.opacity = match ? 1.0 : 0.1;
+    m.material.emissiveIntensity = match ? 0.4 : 0.05;
+  });
+}
+
+// ============================================================
+// ACTIONS
+// ============================================================
+function randomElement() {
+  const el = ELEMENTS[Math.floor(Math.random() * ELEMENTS.length)];
+  selectElement(el);
+}
+
+function exportPNG() {
+  renderer.render(scene, camera);
+  const link = document.createElement('a');
+  link.download = 'periodic-table-3d.png';
+  link.href = renderer.domElement.toDataURL('image/png');
+  link.click();
+}
+
+function toggleAutoRotate() {
+  autoRotate = !autoRotate;
+  document.getElementById('btn-autorotate').classList.toggle('active', autoRotate);
+}
+
+function togglePanel() {
+  const panel = document.getElementById('control-panel');
+  panel.classList.toggle('collapsed');
+  const toggle = document.getElementById('panel-toggle');
+  toggle.innerHTML = panel.classList.contains('collapsed') ? '&#9654;' : '&#9664;';
+}
+
+// ============================================================
+// KEYBOARD LEGEND
+// ============================================================
+let kbLegendVisible = false;
+let kbLegendFadeTimer = null;
+let tabCycleIdx = -1;
+
+const KB_SHORTCUTS = {
+  en: [
+    ['1-5', 'Switch view modes'],
+    ['C', 'Cycle color coding'],
+    ['N', 'Random element'],
+    ['P', 'Export PNG'],
+    ['/', 'Focus search'],
+    ['Tab', 'Cycle elements'],
+    ['---', ''],
+    ['Space', 'Play/Pause rotation'],
+    ['R', 'Toggle auto-rotate'],
+    ['F', 'Toggle fullscreen'],
+    ['H', 'Show/hide panel'],
+    ['L', 'Toggle language'],
+    ['? / K', 'This legend'],
+    ['Esc', 'Close panels'],
+    ['---', ''],
+    ['Arrows', 'Rotate camera'],
+    ['+ / -', 'Zoom in/out'],
+    ['0', 'Reset camera'],
+  ],
+  es: [
+    ['1-5', 'Cambiar vista'],
+    ['C', 'Cambiar colores'],
+    ['N', 'Elemento aleatorio'],
+    ['P', 'Exportar PNG'],
+    ['/', 'Buscar'],
+    ['Tab', 'Recorrer elementos'],
+    ['---', ''],
+    ['Space', 'Play/Pausa rotacion'],
+    ['R', 'Auto-rotar'],
+    ['F', 'Pantalla completa'],
+    ['H', 'Mostrar/ocultar panel'],
+    ['L', 'Cambiar idioma'],
+    ['? / K', 'Esta leyenda'],
+    ['Esc', 'Cerrar paneles'],
+    ['---', ''],
+    ['Flechas', 'Rotar camara'],
+    ['+ / -', 'Zoom'],
+    ['0', 'Resetear camara'],
+  ]
+};
+
+function buildKbLegend() {
+  const grid = document.getElementById('kb-legend-grid');
+  const shortcuts = KB_SHORTCUTS[lang] || KB_SHORTCUTS.en;
+  document.getElementById('kb-legend-title').textContent = lang === 'es' ? 'Atajos de Teclado' : 'Keyboard Shortcuts';
+  grid.innerHTML = shortcuts.map(([key, desc]) => {
+    if (key === '---') return '<div class="kb-sep"></div>';
+    return `<kbd>${key}</kbd><span class="kb-desc">${desc}</span>`;
+  }).join('');
+}
+
+function toggleKbLegend() {
+  kbLegendVisible = !kbLegendVisible;
+  document.getElementById('kb-legend').classList.toggle('visible', kbLegendVisible);
+}
+
+function toggleMobileMenu() {
+  const panel = document.getElementById('control-panel');
+  const overlay = document.getElementById('mobile-overlay');
+  const isOpen = panel.classList.contains('mobile-open');
+  if (isOpen) { closeMobileMenu(); } else {
+    panel.classList.add('mobile-open');
+    panel.classList.remove('collapsed');
+    overlay.classList.add('active');
+  }
+}
+function closeMobileMenu() {
+  const panel = document.getElementById('control-panel');
+  const overlay = document.getElementById('mobile-overlay');
+  panel.classList.remove('mobile-open');
+  overlay.classList.remove('active');
+}
+
+function initKbLegend() {
+  buildKbLegend();
+  // kb legend starts hidden, toggled with ? or K
+}
+
+function requestFullscreen() {
+  const el = document.documentElement;
+  if (!document.fullscreenElement) {
+    (el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen).call(el);
+  } else {
+    (document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen).call(document);
+  }
+}
+
+function onKeyDown(e) {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
+  const key = e.key;
+  switch (key) {
+    case '1': switchView('standard'); document.getElementById('view-select').value='standard'; break;
+    case '2': switchView('spiral'); document.getElementById('view-select').value='spiral'; break;
+    case '3': switchView('electronegativity'); document.getElementById('view-select').value='electronegativity'; break;
+    case '4': switchView('shell'); document.getElementById('view-select').value='shell'; break;
+    case '5': switchView('density'); document.getElementById('view-select').value='density'; break;
+    case 'r': case 'R': toggleAutoRotate(); break;
+    case ' ':
+      e.preventDefault();
+      toggleAutoRotate();
+      break;
+    case 'Escape':
+      closeDetail();
+      if (kbLegendVisible) { toggleKbLegend(); }
+      break;
+    case '/': e.preventDefault(); document.getElementById('search-input').focus(); break;
+    case 'c': case 'C': {
+      const modes = ['category','phase','electroneg','era'];
+      const idx = (modes.indexOf(currentColor) + 1) % modes.length;
+      switchColor(modes[idx]);
+      document.getElementById('color-select').value = modes[idx];
+      break;
+    }
+    case 'n': case 'N': randomElement(); break;
+    case 'p': case 'P': exportPNG(); break;
+    case 'f': case 'F': requestFullscreen(); break;
+    case 'h': case 'H': togglePanel(); break;
+    case 'l': case 'L': setLang(lang === 'en' ? 'es' : 'en'); break;
+    case '?': case 'k': case 'K': toggleKbLegend(); break;
+    case 'Tab': {
+      e.preventDefault();
+      tabCycleIdx = (tabCycleIdx + 1) % ELEMENTS.length;
+      selectElement(ELEMENTS[tabCycleIdx]);
+      break;
+    }
+    case '0': {
+      camera.position.set(0, 5, 45);
+      controls.target.set(0, 0, 0);
+      controls.update();
+      break;
+    }
+    case 'ArrowLeft':
+      e.preventDefault();
+      controls.target.copy(controls.target); // keep target
+      const aLeft = 0.05;
+      camera.position.applyAxisAngle(new THREE.Vector3(0,1,0), aLeft);
+      controls.update();
+      break;
+    case 'ArrowRight':
+      e.preventDefault();
+      camera.position.applyAxisAngle(new THREE.Vector3(0,1,0), -0.05);
+      controls.update();
+      break;
+    case 'ArrowUp':
+      e.preventDefault();
+      { const right = new THREE.Vector3().crossVectors(camera.getWorldDirection(new THREE.Vector3()), new THREE.Vector3(0,1,0)).normalize();
+        camera.position.applyAxisAngle(right, 0.05);
+        controls.update(); }
+      break;
+    case 'ArrowDown':
+      e.preventDefault();
+      { const right2 = new THREE.Vector3().crossVectors(camera.getWorldDirection(new THREE.Vector3()), new THREE.Vector3(0,1,0)).normalize();
+        camera.position.applyAxisAngle(right2, -0.05);
+        controls.update(); }
+      break;
+    case '+': case '=':
+      camera.position.multiplyScalar(0.95);
+      controls.update();
+      break;
+    case '-': case '_':
+      camera.position.multiplyScalar(1.05);
+      controls.update();
+      break;
+    case '[':
+      camera.position.multiplyScalar(1.05);
+      controls.update();
+      break;
+    case ']':
+      camera.position.multiplyScalar(0.95);
+      controls.update();
+      break;
+  }
+}
+
+// ============================================================
+// LANGUAGE
+// ============================================================
+function setLang(l) {
+  lang = l;
+  document.getElementById('lang-en').classList.toggle('active', l === 'en');
+  document.getElementById('lang-es').classList.toggle('active', l === 'es');
+
+  // Update static i18n elements
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (I18N[lang][key]) el.textContent = I18N[lang][key];
+  });
+  document.querySelectorAll('[data-i18n-ph]').forEach(el => {
+    const key = el.getAttribute('data-i18n-ph');
+    if (I18N[lang][key]) el.placeholder = I18N[lang][key];
+  });
+
+  // Update select options
+  const viewSel = document.getElementById('view-select');
+  Array.from(viewSel.options).forEach(opt => {
+    const key = opt.getAttribute('data-i18n-opt');
+    if (key && I18N[lang][key]) opt.textContent = I18N[lang][key];
+  });
+  const colorSel = document.getElementById('color-select');
+  Array.from(colorSel.options).forEach(opt => {
+    const key = opt.getAttribute('data-i18n-opt');
+    if (key && I18N[lang][key]) opt.textContent = I18N[lang][key];
+  });
+
+  updateViewInfo();
+
+  // Re-render detail if open
+  if (selectedEl) selectElement(selectedEl);
+
+  // Rebuild keyboard legend
+  buildKbLegend();
+}
+
+// ============================================================
+// BOOT
+// ============================================================
+init();
+initKbLegend();
+</script>
+</body>
+</html>

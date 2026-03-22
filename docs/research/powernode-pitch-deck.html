@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PowerNode — Pitch Deck</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0a1a;--panel:#0d0d24;--panel-alt:#0f0f2a;--border:#1a1a3a;
+  --text:#e0e0f0;--text-dim:#8888aa;--text-muted:#555577;
+  --g1:#ec4899;--g2:#9333ea;--g3:#3b82f6;
+  --glow1:rgba(236,72,153,.12);--glow2:rgba(147,51,234,.12);--glow3:rgba(59,130,246,.12);
+}
+html,body{height:100%;overflow:hidden;scrollbar-width:none}
+::-webkit-scrollbar{display:none}
+body{
+  font-family:'Segoe UI',system-ui,-apple-system,'Helvetica Neue',sans-serif;
+  background:var(--bg);color:var(--text);line-height:1.6;
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+}
+
+/* ── Slide Container ── */
+.deck{position:relative;width:100vw;height:100vh;overflow:hidden}
+.slide{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:60px 80px;
+  opacity:0;visibility:hidden;
+  transition:opacity .5s ease,transform .5s ease;
+  transform:translateX(40px);
+  z-index:1;
+}
+.slide.active{opacity:1;visibility:visible;transform:translateX(0);z-index:2}
+.slide.exiting-left{opacity:0;visibility:visible;transform:translateX(-40px);z-index:1}
+.slide.exiting-right{opacity:0;visibility:visible;transform:translateX(40px);z-index:1}
+
+.slide-inner{
+  max-width:1100px;width:100%;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:0;
+}
+
+/* ── Progress Bar ── */
+.progress-bar{
+  position:fixed;bottom:0;left:0;height:3px;z-index:100;
+  background:linear-gradient(90deg,var(--g1),var(--g2),var(--g3));
+  transition:width .4s ease;
+}
+
+/* ── Slide Counter ── */
+.slide-counter{
+  position:fixed;bottom:16px;right:24px;z-index:100;
+  font-size:13px;color:var(--text-muted);font-weight:600;letter-spacing:1px;
+  font-variant-numeric:tabular-nums;
+}
+
+/* ── Fullscreen Hint ── */
+.fs-hint{
+  position:fixed;bottom:16px;left:24px;z-index:100;
+  font-size:12px;color:var(--text-muted);letter-spacing:.5px;
+  opacity:1;transition:opacity 1s ease;
+}
+.fs-hint.hidden{opacity:0;pointer-events:none}
+
+/* ── Gradient text ── */
+.grad{
+  background:linear-gradient(135deg,var(--g1),var(--g2),var(--g3));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+
+/* ── Typography ── */
+.title-huge{font-size:clamp(48px,7vw,96px);font-weight:900;letter-spacing:-2px;line-height:1}
+.title-large{font-size:clamp(32px,4.5vw,56px);font-weight:800;letter-spacing:-1px;line-height:1.1;text-align:center}
+.title-medium{font-size:clamp(24px,3vw,36px);font-weight:700;line-height:1.2;text-align:center}
+.subtitle{font-size:clamp(16px,2vw,22px);color:var(--text-dim);text-align:center;max-width:700px;line-height:1.5}
+.body-text{font-size:clamp(14px,1.4vw,18px);color:var(--text-dim);line-height:1.7;max-width:800px}
+.label{font-size:11px;text-transform:uppercase;letter-spacing:3px;color:var(--g2);font-weight:700}
+.small-text{font-size:13px;color:var(--text-muted);letter-spacing:.3px}
+.confidential{font-size:12px;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;margin-top:8px}
+
+/* ── Stat cards ── */
+.stat-row{display:flex;gap:32px;flex-wrap:wrap;justify-content:center;margin-top:32px}
+.stat-card{
+  background:var(--panel);border:1px solid var(--border);border-radius:16px;
+  padding:28px 36px;text-align:center;min-width:200px;flex:1;max-width:280px;
+  position:relative;overflow:hidden;
+}
+.stat-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--g1),var(--g2),var(--g3));
+}
+.stat-number{font-size:clamp(28px,3.5vw,42px);font-weight:900;line-height:1}
+.stat-label{font-size:13px;color:var(--text-dim);margin-top:8px}
+
+/* ── Icon grid (for app icons) ── */
+.icon-scatter{
+  display:flex;flex-wrap:wrap;gap:16px;justify-content:center;
+  margin:24px 0;
+}
+.app-icon{
+  width:56px;height:56px;border-radius:14px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;color:#fff;text-align:center;
+  line-height:1.1;padding:4px;
+  box-shadow:0 4px 20px rgba(0,0,0,.4);
+  transition:transform .3s;
+}
+.app-icon:hover{transform:scale(1.1) rotate(-3deg)}
+
+/* ── Steps ── */
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:24px;width:100%;margin-top:28px}
+.step{
+  background:var(--panel);border:1px solid var(--border);border-radius:16px;
+  padding:24px;text-align:center;position:relative;
+}
+.step-num{
+  width:36px;height:36px;border-radius:50%;
+  background:linear-gradient(135deg,var(--g1),var(--g2));
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:16px;font-weight:800;color:#fff;margin-bottom:12px;
+}
+.step-title{font-size:15px;font-weight:700;margin-bottom:6px}
+.step-desc{font-size:13px;color:var(--text-dim);line-height:1.5}
+
+/* ── Diagram blocks ── */
+.diagram{
+  display:flex;align-items:center;justify-content:center;gap:16px;
+  flex-wrap:wrap;margin:24px 0;
+}
+.diagram-block{
+  background:var(--panel);border:1px solid var(--border);border-radius:12px;
+  padding:16px 20px;text-align:center;min-width:120px;
+}
+.diagram-block .icon{font-size:28px;margin-bottom:6px}
+.diagram-block .lbl{font-size:12px;font-weight:700;color:var(--text)}
+.diagram-block .sub{font-size:11px;color:var(--text-muted)}
+.diagram-arrow{font-size:24px;color:var(--g2)}
+
+/* ── Feature list ── */
+.feature-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;width:100%;margin-top:24px}
+.feature-item{
+  background:var(--panel);border:1px solid var(--border);border-radius:12px;
+  padding:20px;display:flex;gap:14px;align-items:flex-start;
+}
+.feature-icon{font-size:24px;flex-shrink:0;width:36px;text-align:center}
+.feature-title{font-size:14px;font-weight:700;margin-bottom:4px}
+.feature-desc{font-size:13px;color:var(--text-dim);line-height:1.5}
+
+/* ── Mock app ── */
+.mock-app{
+  background:#080818;border:1px solid var(--border);border-radius:20px;
+  padding:20px;width:100%;max-width:560px;
+  box-shadow:0 20px 60px rgba(0,0,0,.5);
+}
+.mock-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.mock-property-selector{
+  display:flex;gap:6px;
+}
+.mock-prop{
+  padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;
+  background:var(--panel);border:1px solid var(--border);color:var(--text-dim);
+}
+.mock-prop.active{background:linear-gradient(135deg,var(--g1),var(--g2));color:#fff;border-color:transparent}
+.mock-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.mock-device{
+  background:var(--panel);border:1px solid var(--border);border-radius:12px;
+  padding:12px 10px;text-align:center;position:relative;
+}
+.mock-device .dev-icon{font-size:22px;margin-bottom:4px}
+.mock-device .dev-name{font-size:11px;font-weight:600}
+.mock-device .dev-badge{
+  position:absolute;top:6px;right:6px;font-size:8px;padding:2px 5px;
+  border-radius:6px;font-weight:700;color:#fff;
+}
+.mock-scenes{display:flex;gap:8px;justify-content:center}
+.mock-scene{
+  padding:8px 16px;border-radius:20px;font-size:12px;font-weight:700;
+  background:var(--panel);border:1px solid var(--border);color:var(--text-dim);
+}
+
+/* ── Breaker visual ── */
+.breaker-panel{
+  background:#080818;border:1px solid var(--border);border-radius:16px;
+  padding:20px;width:100%;max-width:400px;
+}
+.breaker-row{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:8px 12px;border-bottom:1px solid var(--border);
+  font-size:13px;
+}
+.breaker-row:last-child{border-bottom:none}
+.breaker-label{font-weight:600}
+.breaker-watts{font-weight:800;font-variant-numeric:tabular-nums}
+
+/* ── Tech arch ── */
+.arch-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;width:100%;margin-top:20px}
+.arch-card{
+  background:var(--panel);border:1px solid var(--border);border-radius:14px;
+  padding:20px;
+}
+.arch-card .arch-title{font-size:14px;font-weight:700;margin-bottom:8px}
+.arch-card .arch-detail{font-size:12px;color:var(--text-dim);line-height:1.6}
+
+/* ── TP-Link checklist ── */
+.check-list{list-style:none;padding:0;margin:20px 0;width:100%;max-width:650px}
+.check-list li{
+  padding:12px 16px;border-bottom:1px solid var(--border);
+  display:flex;gap:12px;align-items:center;font-size:15px;
+}
+.check-list .check{color:#22c55e;font-weight:900;font-size:18px;flex-shrink:0}
+.check-list .arrow-lbl{color:var(--text-muted);font-size:13px}
+
+/* ── Offer items ── */
+.offer-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;width:100%;max-width:700px;margin-top:20px}
+.offer-item{
+  background:var(--panel);border:1px solid var(--border);border-radius:10px;
+  padding:14px 16px;font-size:13px;display:flex;gap:10px;align-items:center;
+}
+.offer-item .oi-icon{font-size:18px;flex-shrink:0}
+
+/* ── Platform badges ── */
+.platform-badges{
+  display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:16px;
+}
+.platform-badge{
+  padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;
+  background:var(--panel);border:1px solid var(--border);color:var(--text-dim);
+}
+
+/* ── Animated BG for slide 1 ── */
+.hero-bg{
+  position:absolute;inset:0;z-index:0;overflow:hidden;
+}
+.hero-bg::before{
+  content:'';position:absolute;
+  width:600px;height:600px;border-radius:50%;
+  background:radial-gradient(circle,var(--glow1),transparent 70%);
+  top:-100px;left:-100px;
+  animation:drift1 12s ease-in-out infinite;
+}
+.hero-bg::after{
+  content:'';position:absolute;
+  width:500px;height:500px;border-radius:50%;
+  background:radial-gradient(circle,var(--glow3),transparent 70%);
+  bottom:-100px;right:-100px;
+  animation:drift2 14s ease-in-out infinite;
+}
+@keyframes drift1{0%,100%{transform:translate(0,0)}50%{transform:translate(80px,60px)}}
+@keyframes drift2{0%,100%{transform:translate(0,0)}50%{transform:translate(-60px,-80px)}}
+
+.hero-orb{
+  position:absolute;width:300px;height:300px;border-radius:50%;
+  background:radial-gradient(circle,var(--glow2),transparent 70%);
+  top:50%;left:50%;transform:translate(-50%,-50%);
+  animation:pulse 8s ease-in-out infinite;
+}
+@keyframes pulse{0%,100%{opacity:.3;transform:translate(-50%,-50%) scale(1)}50%{opacity:.6;transform:translate(-50%,-50%) scale(1.2)}}
+
+/* ── Slide content animations ── */
+.slide.active .anim-up{animation:fadeUp .6s ease both}
+.slide.active .anim-up-d1{animation:fadeUp .6s .1s ease both}
+.slide.active .anim-up-d2{animation:fadeUp .6s .2s ease both}
+.slide.active .anim-up-d3{animation:fadeUp .6s .3s ease both}
+.slide.active .anim-up-d4{animation:fadeUp .6s .4s ease both}
+.slide.active .anim-up-d5{animation:fadeUp .6s .5s ease both}
+.slide.active .anim-up-d6{animation:fadeUp .6s .6s ease both}
+.slide.active .anim-up-d7{animation:fadeUp .6s .7s ease both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+
+.slide.active .anim-scale{animation:scaleIn .5s .2s ease both}
+@keyframes scaleIn{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}
+
+/* ── Two column layout ── */
+.two-col{display:flex;gap:40px;align-items:center;width:100%}
+.two-col .col{flex:1}
+@media(max-width:800px){
+  .two-col{flex-direction:column}
+  .slide{padding:40px 24px}
+  .steps{grid-template-columns:1fr 1fr}
+  .mock-grid{grid-template-columns:repeat(2,1fr)}
+  .arch-grid{grid-template-columns:1fr}
+  .feature-grid{grid-template-columns:1fr}
+}
+@media(max-width:500px){
+  .slide{padding:24px 16px}
+  .steps{grid-template-columns:1fr}
+  .stat-row{flex-direction:column;align-items:center}
+}
+
+/* ── Click zones ── */
+.click-zone-left{position:absolute;left:0;top:0;bottom:0;width:15%;z-index:50;cursor:w-resize}
+.click-zone-right{position:absolute;right:0;top:0;bottom:0;width:85%;z-index:50;cursor:e-resize}
+
+/* ── Price highlight ── */
+.price{
+  font-size:clamp(36px,5vw,56px);font-weight:900;
+  background:linear-gradient(135deg,var(--g1),var(--g2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;margin:8px 0;
+}
+.price-note{font-size:14px;color:var(--text-muted);font-style:italic}
+
+/* ── Contact slide ── */
+.contact-block{
+  background:var(--panel);border:1px solid var(--border);border-radius:20px;
+  padding:36px 48px;text-align:center;margin-top:20px;
+  min-width:340px;
+}
+.contact-line{font-size:16px;margin:8px 0;color:var(--text-dim)}
+.contact-line strong{color:var(--text)}
+
+/* ── Print ── */
+@media print{
+  body{background:#fff;color:#111}
+  .slide{
+    position:relative !important;opacity:1 !important;visibility:visible !important;
+    transform:none !important;
+    page-break-after:always;height:100vh;
+    padding:40px;
+  }
+  .progress-bar,.slide-counter,.fs-hint,.click-zone-left,.click-zone-right{display:none}
+  .hero-bg,.hero-orb{display:none}
+  .grad{-webkit-text-fill-color:#6b21a8;color:#6b21a8}
+  .stat-card,.step,.feature-item,.arch-card,.mock-app,.breaker-panel,.contact-block,.offer-item{
+    border:1px solid #ccc;background:#f9f9f9;
+  }
+  .stat-number,.price{-webkit-text-fill-color:#6b21a8;color:#6b21a8}
+  .subtitle,.body-text,.stat-label,.step-desc,.feature-desc,.arch-detail,.small-text,.confidential,.contact-line{color:#444}
+  .label{color:#6b21a8}
+}
+</style>
+</head>
+<body>
+
+<div class="deck" id="deck">
+
+<!-- ═══════════ SLIDE 1: TITLE ═══════════ -->
+<div class="slide active" data-slide="1">
+  <div class="hero-bg"></div>
+  <div class="hero-orb"></div>
+  <div class="slide-inner" style="position:relative;z-index:2">
+    <div class="label anim-up" style="margin-bottom:24px">Confidential &mdash; For [Company] Eyes Only</div>
+    <div class="title-huge grad anim-up-d1">PowerNode</div>
+    <div class="subtitle anim-up-d2" style="margin-top:20px;font-size:clamp(16px,2.2vw,24px);font-weight:500">
+      Portable Encrypted Network Identity<br>+ Unified Smart Home Hub
+    </div>
+    <div style="margin-top:48px" class="anim-up-d4">
+      <span class="small-text" style="letter-spacing:2px">PATENT PENDING</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ SLIDE 2: THE PROBLEM ═══════════ -->
+<div class="slide" data-slide="2">
+  <div class="slide-inner">
+    <div class="label anim-up">The Problem</div>
+    <div class="title-large anim-up-d1" style="margin-top:12px">
+      Your customers use <span class="grad">6+ apps</span> to control their smart home
+    </div>
+    <div class="icon-scatter anim-up-d2">
+      <div class="app-icon" style="background:#1a9fff">Broad<br>link</div>
+      <div class="app-icon" style="background:#ff6b00">eWe<br>Link</div>
+      <div class="app-icon" style="background:#00c2a8">Smart<br>Life</div>
+      <div class="app-icon" style="background:#ffc107">Sci<br>ener</div>
+      <div class="app-icon" style="background:#e53935">EZ<br>VIZ</div>
+      <div class="app-icon" style="background:#546e7a">TT<br>Lock</div>
+      <div class="app-icon" style="background:#00caff">Ale<br>xa</div>
+      <div class="app-icon" style="background:#4285f4">Goo<br>gle</div>
+    </div>
+    <div class="subtitle anim-up-d3" style="margin-top:8px">
+      Every device. Different app. Different login. Different &ldquo;home&rdquo; to switch.<br>
+      <strong style="color:var(--text)">They want ONE screen. You can give it to them.</strong>
+    </div>
+    <div class="stat-row anim-up-d4">
+      <div class="stat-card">
+        <div class="stat-number grad">73%</div>
+        <div class="stat-label">of smart home owners use 3+ apps daily</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number grad">$158B</div>
+        <div class="stat-label">smart home market by 2028 &mdash; Statista</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number grad">4.2&star;</div>
+        <div class="stat-label">avg rating for multi-app frustration on app stores</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ SLIDE 3: THE SOLUTION ═══════════ -->
+<div class="slide" data-slide="3">
+  <div class="slide-inner">
+    <div class="label anim-up">The Solution</div>
+    <div class="title-large anim-up-d1" style="margin-top:12px">
+      <span class="grad">PowerNode</span>
+    </div>
+    <div class="diagram anim-up-d2" style="margin-top:32px">
+      <div class="diagram-block" style="border-color:var(--g1)">
+        <div class="icon">&#9889;</div>
+        <div class="lbl">Hub</div>
+        <div class="sub">Breaker Panel</div>
+      </div>
+      <div class="diagram-arrow">&#8594;</div>
+      <div class="diagram-block" style="border-color:var(--g2)">
+        <div class="icon">&#128268;</div>
+        <div class="lbl">Home Wiring</div>
+        <div class="sub">PLC Backbone</div>
+      </div>
+      <div class="diagram-arrow">&#8594;</div>
+      <div class="diagram-block" style="border-color:var(--g3)">
+        <div class="icon">&#128225;</div>
+        <div class="lbl">Nodes</div>
+        <div class="sub">WiFi + Ethernet</div>
+      </div>
+      <div class="diagram-arrow">&#8594;</div>
+      <div class="diagram-block" style="border-color:#22c55e">
+        <div class="icon">&#128241;</div>
+        <div class="lbl">One Screen</div>
+        <div class="sub">All Devices</div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:16px;align-items:center;margin-top:36px">
+      <div class="title-medium anim-up-d3">Every device. Every platform. <span class="grad">One screen.</span></div>
+      <div class="subtitle anim-up-d4" style="margin:0">Your home wiring <strong style="color:var(--text)">IS</strong> your network.</div>
+      <div class="subtitle anim-up-d5" style="margin:0">Take your network <strong style="color:var(--text)">anywhere.</strong></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ SLIDE 4: HOW IT WORKS ═══════════ -->
+<div class="slide" data-slide="4">
+  <div class="slide-inner">
+    <div class="label anim-up">How It Works</div>
+    <div class="title-large anim-up-d1" style="margin-top:12px">Four steps to <span class="grad">unified control</span></div>
+    <div class="steps anim-up-d2">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-title">Install Hub</div>
+        <div class="step-desc">Mount at breaker panel. Connects to ISP router and monitors electrical circuits via CT clamps.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-title">Auto-Discovery</div>
+        <div class="step-desc">Hub scans and discovers ALL smart devices across ALL platforms automatically. No manual pairing.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-title">Plug In Nodes</div>
+        <div class="step-desc">Plug a PowerNode satellite into any outlet. Instant WiFi 6 + Gigabit Ethernet via powerline.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-title">Take It With You</div>
+        <div class="step-desc">Unplug a node, take it anywhere. Plug in at hotel, office, or store &mdash; encrypted tunnel home.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ SLIDE 5: PORTABLE IDENTITY ═══════════ -->
+<div class="slide" data-slide="5">
+  <div class="slide-inner">
+    <div class="label anim-up">Key Differentiator</div>
+    <div class="title-large anim-up-d1" style="margin-top:12px">
+      Your node is your <span class="grad">network identity</span>
+    </div>
+    <div class="diagram anim-up-d2" style="margin-top:28px">
+      <div class="diagram-block">
+        <div class="icon">&#128100;</div>
+        <div class="lbl">You + Node</div>
+        <div class="sub">Traveling</div>
+      </div>
+      <div class="diagram-arrow">&#8594;</div>
+      <div class="diagram-block">
+        <div class="icon">&#127976;</div>
+        <div class="lbl">Any Outlet</div>
+        <div class="sub">Hotel / Office</div>
+      </div>
+      <div class="diagram-arrow">&#8594;</div>
+      <div class="diagram-block" style="border-color:var(--g1)">
+        <div class="icon">&#128274;</div>
+        <div class="lbl">PKI Auth</div>
+        <div class="sub">X.509 Certificate</div>
+      </div>
+      <div class="diagram-arrow">&#8594;</div>
+      <div class="diagram-block" style="border-color:var(--g2)">
+        <div class="icon">&#128272;</div>
+        <div class="lbl">VPN Tunnel</div>
+        <div class="sub">Encrypted to Home</div>
+      </div>
+      <div class="diagram-arrow">&#8594;</div>
+      <div class="diagram-block" style="border-color:#22c55e">
+        <div class="icon">&#127968;</div>
+        <div class="lbl">Home Hub</div>
+        <div class="sub">Full Access</div>
+      </div>
+    </div>
+    <div class="feature-grid anim-up-d3" style="margin-top:28px">
+      <div class="feature-item">
+        <div class="feature-icon">&#128421;</div>
+        <div>
+          <div class="feature-title">Remote Desktop Built-In</div>
+          <div class="feature-desc">Control any PC or Mac at home as if you were sitting in front of it. RustDesk-style, zero config.</div>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon">&#128176;</div>
+        <div>
+          <div class="feature-title">No Monthly Fees</div>
+          <div class="feature-desc">No subscriptions. No third-party servers. Your hub IS your server. You own your data.</div>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon">&#127760;</div>
+        <div>
+          <div class="feature-title">Works Anywhere</div>
+          <div class="feature-desc">Any country, any outlet, any ISP. The node authenticates and tunnels home automatically.</div>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon">&#128737;</div>
+        <div>
+          <div class="feature-title">Zero Trust Security</div>
+          <div class="feature-desc">Hardware-bound keys. Mutual TLS. Tamper detection. Your identity cannot be cloned or spoofed.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ SLIDE 6: UNIFIED DASHBOARD ═══════════ -->
+<div class="slide" data-slide="6">
+  <div class="slide-inner">
+    <div class="two-col">
+      <div class="col" style="display:flex;flex-direction:column;align-items:flex-start">
+        <div class="label anim-up">Unified Dashboard</div>
+        <div class="title-medium anim-up-d1" style="text-align:left;margin-top:12px">
+          <span class="grad">14+ platforms.</span><br>One screen.
+        </div>
+        <div class="body-text anim-up-d2" style="margin-top:16px">
+          Every smart device in every property, regardless of manufacturer or protocol, controlled from a single interface.
+        </div>
+        <div class="platform-badges anim-up-d3" style="justify-content:flex-start;margin-top:20px">
+          <span class="platform-badge">Tuya</span>
+          <span class="platform-badge">Smart Life</span>
+          <span class="platform-badge">eWeLink</span>
+          <span class="platform-badge">Sonoff</span>
+          <span class="platform-badge">TTLock</span>
+          <span class="platform-badge">Sciener</span>
+          <span class="platform-badge">EZVIZ</span>
+          <span class="platform-badge">Hikvision</span>
+          <span class="platform-badge">Alexa</span>
+          <span class="platform-badge">Google Home</span>
+          <span class="platform-badge">Hubspace</span>
+          <span class="platform-badge">Broadlink</span>
+          <span class="platform-badge">Zigbee</span>
+          <span class="platform-badge">Z-Wave</span>
+          <span class="platform-badge">Matter</span>
+          <span class="platform-badge">MQTT</span>
+        </div>
+      </div>
+      <div class="col anim-scale">
+        <div class="mock-app">
+          <div class="mock-header">
+            <div class="mock-property-selector">
+              <div class="mock-prop active">Casa PV</div>
+              <div class="mock-prop">Tienda Caracol</div>
+              <div class="mock-prop">Depa Cabo</div>
+            </div>
+          </div>
+          <div class="mock-grid">
+            <div class="mock-device">
+              <div class="dev-badge" style="background:#00c2a8">Tuya</div>
+              <div class="dev-icon">&#128161;</div>
+              <div class="dev-name">Sala</div>
+            </div>
+            <div class="mock-device">
+              <div class="dev-badge" style="background:#546e7a">TTLock</div>
+              <div class="dev-icon">&#128274;</div>
+              <div class="dev-name">Puerta</div>
+            </div>
+            <div class="mock-device">
+              <div class="dev-badge" style="background:#e53935">EZVIZ</div>
+              <div class="dev-icon">&#128247;</div>
+              <div class="dev-name">Entrada</div>
+            </div>
+            <div class="mock-device">
+              <div class="dev-badge" style="background:#00caff">Alexa</div>
+              <div class="dev-icon">&#128266;</div>
+              <div class="dev-name">Echo</div>
+            </div>
+            <div class="mock-device">
+              <div class="dev-badge" style="background:#ff6b00">eWeLink</div>
+              <div class="dev-icon">&#128268;</div>
+              <div class="dev-name">Ventilador</div>
+            </div>
+            <div class="mock-device">
+              <div class="dev-badge" style="background:#4285f4">Zigbee</div>
+              <div class="dev-icon">&#127777;</div>
+              <div class="dev-name">Clima</div>
+            </div>
+          </div>
+          <div class="mock-scenes">
+            <div class="mock-scene">&#127969; Llegu&eacute;</div>
+            <div class="mock-scene">&#127769; Buenas Noches</div>
+            <div class="mock-scene">&#128587; Sal&iacute;</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ SLIDE 7: SMART METERING ═══════════ -->
+<div class="slide" data-slide="7">
+  <div class="slide-inner">
+    <div class="two-col">
+      <div class="col anim-scale">
+        <div class="breaker-panel">
+          <div style="text-align:center;font-weight:700;margin-bottom:12px;font-size:14px;color:var(--text-dim)">&#9889; Tablero en Tiempo Real</div>
+          <div class="breaker-row">
+            <span class="breaker-label">&#128161; Iluminaci&oacute;n</span>
+            <span class="breaker-watts" style="color:#22c55e">124 W</span>
+          </div>
+          <div class="breaker-row">
+            <span class="breaker-label">&#10052; A/C Rec&aacute;mara</span>
+            <span class="breaker-watts" style="color:#f59e0b">1,840 W</span>
+          </div>
+          <div class="breaker-row">
+            <span class="breaker-label">&#127859; Cocina</span>
+            <span class="breaker-watts" style="color:#22c55e">310 W</span>
+          </div>
+          <div class="breaker-row">
+            <span class="breaker-label">&#128699; Lavadora</span>
+            <span class="breaker-watts" style="color:#f59e0b">680 W</span>
+          </div>
+          <div class="breaker-row">
+            <span class="breaker-label">&#128187; Oficina</span>
+            <span class="breaker-watts" style="color:#22c55e">95 W</span>
+          </div>
+          <div class="breaker-row">
+            <span class="breaker-label">&#127968; Garage</span>
+            <span class="breaker-watts" style="color:#6b7280">0 W</span>
+          </div>
+          <div class="breaker-row" style="border-top:2px solid var(--g2);margin-top:4px;padding-top:12px">
+            <span class="breaker-label" style="font-weight:800">Total</span>
+            <span class="breaker-watts grad" style="font-size:18px">3,049 W</span>
+          </div>
+        </div>
+      </div>
+      <div class="col" style="display:flex;flex-direction:column;align-items:flex-start">
+        <div class="label anim-up">Energy Intelligence</div>
+        <div class="title-medium anim-up-d1" style="text-align:left;margin-top:12px">
+          Know exactly where your <span class="grad">electricity goes</span>
+        </div>
+        <div class="body-text anim-up-d2" style="margin-top:16px">
+          Per-circuit monitoring via CT clamps at the breaker panel. Daily, weekly, and monthly reports. Anomaly detection alerts.
+        </div>
+        <div style="margin-top:20px;display:flex;flex-direction:column;gap:10px" class="anim-up-d3">
+          <div style="display:flex;gap:10px;align-items:center;font-size:14px">
+            <span style="color:var(--g1);font-weight:800">&#9679;</span> Real-time per-circuit power monitoring
+          </div>
+          <div style="display:flex;gap:10px;align-items:center;font-size:14px">
+            <span style="color:var(--g2);font-weight:800">&#9679;</span> Remote circuit control (Phase 2)
+          </div>
+          <div style="display:flex;gap:10px;align-items:center;font-size:14px">
+            <span style="color:var(--g3);font-weight:800">&#9679;</span> Overload &amp; anomaly alerts
+          </div>
+          <div style="display:flex;gap:10px;align-items:center;font-size:14px">
+            <span style="color:#22c55e;font-weight:800">&#9679;</span> CFE billing estimation
+          </div>
+        </div>
+        <div class="subtitle anim-up-d4" style="margin-top:24px;text-align:left;font-size:15px;font-weight:600;color:var(--text)">
+          First product to combine networking + smart home + energy monitoring in one device.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ SLIDE 8: TECHNICAL ARCHITECTURE ═══════════ -->
+<div class="slide" data-slide="8">
+  <div class="slide-inner">
+    <div class="label anim-up">Technical Architecture</div>
+    <div class="title-large anim-up-d1" style="margin-top:12px">
+      Built for <span class="grad">security, speed, and scale</span>
+    </div>
+    <div class="arch-grid anim-up-d2">
+      <div class="arch-card">
+        <div class="arch-title" style="color:var(--g1)">&#9889; Hub</div>
+        <div class="arch-detail">
+          ESP32-S3 dual-core + PLC modem<br>
+          Zigbee 3.0 coordinator<br>
+          CT clamps (per-circuit metering)<br>
+          Hardware crypto (ATECC608B)<br>
+          16MB flash, 8MB PSRAM
+        </div>
+      </div>
+      <div class="arch-card">
+        <div class="arch-title" style="color:var(--g2)">&#128268; PLC Backbone</div>
+        <div class="arch-detail">
+          HomePlug AV2 compliant<br>
+          OFDM 2&ndash;86 MHz band<br>
+          Up to 600 Mbps PHY rate<br>
+          128-bit AES link encryption<br>
+          Qualcomm QCA7500 chipset
+        </div>
+      </div>
+      <div class="arch-card">
+        <div class="arch-title" style="color:var(--g3)">&#128225; Satellite Nodes</div>
+        <div class="arch-detail">
+          PLC modem + WiFi 6 (AX1800)<br>
+          Gigabit Ethernet port<br>
+          Hardware crypto engine<br>
+          Portable form factor<br>
+          Auto-mesh with hub
+        </div>
+      </div>
+      <div class="arch-card">
+        <div class="arch-title" style="color:#22c55e">&#128274; Security Layer</div>
+        <div class="arch-detail">
+          PKI with X.509 certificates<br>
+          TLS 1.3 all communications<br>
+          Secure boot chain<br>
+          Signed firmware updates<br>
+          Hardware tamper detection
+        </div>
+      </div>
+    </div>
+    <div class="subtitle anim-up-d3" style="margin-top:24px">
+      Full technical design document available &mdash; <strong style="color:var(--text)">120+ pages</strong> covering hardware, firmware, security, and application architecture.
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ SLIDE 9: WHY TP-LINK ═══════════ -->
+<div class="slide" data-slide="9">
+  <div class="slide-inner">
+    <div class="label anim-up">Strategic Fit</div>
+    <div class="title-large anim-up-d1" style="margin-top:12px">
+      You already build the pieces.<br><span class="grad">PowerNode is the convergence.</span>
+    </div>
+    <ul class="check-list anim-up-d2">
+      <li>
+        <span class="check">&#10003;</span>
+        <div>
+          <strong>TL-PA Series</strong> (PLC adapters) <span class="arrow-lbl">&rarr; PowerNode PLC backbone</span>
+        </div>
+      </li>
+      <li>
+        <span class="check">&#10003;</span>
+        <div>
+          <strong>Deco Series</strong> (mesh WiFi) <span class="arrow-lbl">&rarr; PowerNode satellite nodes</span>
+        </div>
+      </li>
+      <li>
+        <span class="check">&#10003;</span>
+        <div>
+          <strong>Kasa / Tapo</strong> (smart home) <span class="arrow-lbl">&rarr; PowerNode integration layer</span>
+        </div>
+      </li>
+      <li>
+        <span class="check">&#10003;</span>
+        <div>
+          <strong>NOM / FCC / CE certifications</strong> <span class="arrow-lbl">&rarr; already in place</span>
+        </div>
+      </li>
+      <li>
+        <span class="check">&#10003;</span>
+        <div>
+          <strong>Manufacturing at scale</strong> <span class="arrow-lbl">&rarr; Shenzhen production lines ready</span>
+        </div>
+      </li>
+      <li>
+        <span class="check">&#10003;</span>
+        <div>
+          <strong>Global distribution</strong> <span class="arrow-lbl">&rarr; 170+ countries, Amazon, retail</span>
+        </div>
+      </li>
+    </ul>
+    <div class="subtitle anim-up-d3" style="margin-top:24px;font-weight:600;color:var(--text)">
+      You&rsquo;re 3 product lines away from owning the smart home.<br>PowerNode unifies them.
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ SLIDE 10: MARKET OPPORTUNITY ═══════════ -->
+<div class="slide" data-slide="10">
+  <div class="slide-inner">
+    <div class="label anim-up">Market Opportunity</div>
+    <div class="title-large anim-up-d1" style="margin-top:12px">
+      Three growing markets. <span class="grad">One product.</span>
+    </div>
+    <div class="stat-row anim-up-d2">
+      <div class="stat-card">
+        <div class="stat-number grad">$158B</div>
+        <div class="stat-label">Smart Home Devices<br>by 2028</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number grad">$12B</div>
+        <div class="stat-label">PLC Networking<br>by 2027</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number grad">$6B</div>
+        <div class="stat-label">Energy Monitoring<br>by 2027</div>
+      </div>
+    </div>
+    <div class="feature-grid anim-up-d3" style="margin-top:32px">
+      <div class="feature-item">
+        <div class="feature-icon">&#127960;</div>
+        <div>
+          <div class="feature-title">Property Managers</div>
+          <div class="feature-desc">Multi-property control from one dashboard. Lock/unlock, cameras, climate &mdash; remotely.</div>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon">&#127968;</div>
+        <div>
+          <div class="feature-title">Airbnb / Vacation Rental Hosts</div>
+          <div class="feature-desc">Guest check-in automation, energy monitoring between stays, remote access.</div>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon">&#127978;</div>
+        <div>
+          <div class="feature-title">Multi-Location Businesses</div>
+          <div class="feature-desc">Retail chains, restaurants, offices. Unified security, climate, and access control.</div>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon">&#127463;&#127480;</div>
+        <div>
+          <div class="feature-title">Beachhead: Mexico New Construction</div>
+          <div class="feature-desc">40K+ units/year in Jalisco + BCS + Nayarit. Pre-install deals with developers.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ SLIDE 11: THE OFFER ═══════════ -->
+<div class="slide" data-slide="11">
+  <div class="slide-inner">
+    <div class="label anim-up">The Offer</div>
+    <div class="title-large anim-up-d1" style="margin-top:12px">
+      Patent-pending technology.<br><span class="grad">Ready to build.</span>
+    </div>
+    <div class="price anim-up-d2">$50,000 USD</div>
+    <div class="small-text anim-up-d2">IP Acquisition &mdash; Complete Package</div>
+    <div class="offer-grid anim-up-d3">
+      <div class="offer-item"><span class="oi-icon">&#128220;</span> Provisional patent (all claims)</div>
+      <div class="offer-item"><span class="oi-icon">&#128196;</span> Full technical design document</div>
+      <div class="offer-item"><span class="oi-icon">&#128204;</span> Hardware schematics &amp; BOM</div>
+      <div class="offer-item"><span class="oi-icon">&#9881;</span> Firmware architecture spec</div>
+      <div class="offer-item"><span class="oi-icon">&#128274;</span> Security architecture</div>
+      <div class="offer-item"><span class="oi-icon">&#128241;</span> App wireframes</div>
+      <div class="offer-item"><span class="oi-icon">&#127912;</span> 3D product visualizations</div>
+      <div class="offer-item"><span class="oi-icon">&#128200;</span> Market research &amp; analysis</div>
+    </div>
+    <div class="price-note anim-up-d4" style="margin-top:20px">
+      Or: licensing agreement with royalty structure (negotiable)
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ SLIDE 12: CONTACT ═══════════ -->
+<div class="slide" data-slide="12">
+  <div class="slide-inner">
+    <div class="hero-orb" style="opacity:.2"></div>
+    <div class="title-large anim-up" style="position:relative;z-index:2">Let&rsquo;s talk.</div>
+    <div class="contact-block anim-up-d2" style="position:relative;z-index:2">
+      <div class="contact-line"><strong>[NAME]</strong></div>
+      <div class="contact-line">[EMAIL]</div>
+      <div class="contact-line">[PHONE]</div>
+    </div>
+    <div style="margin-top:32px;display:flex;flex-direction:column;align-items:center;gap:8px;position:relative;z-index:2">
+      <div class="small-text anim-up-d3" style="letter-spacing:2px">PATENT PENDING &mdash; US PROVISIONAL APPLICATION [NUMBER]</div>
+      <div class="confidential anim-up-d4">Confidential &mdash; Not for distribution</div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /deck -->
+
+<!-- ── UI Overlays ── -->
+<div class="progress-bar" id="progressBar"></div>
+<div class="slide-counter" id="slideCounter">1 / 12</div>
+<div class="fs-hint" id="fsHint">Press <strong>F</strong> for fullscreen &nbsp;&bull;&nbsp; Arrow keys to navigate</div>
+
+<!-- ── Click Zones (injected per slide) ── -->
+
+<script>
+(function(){
+  const deck = document.getElementById('deck');
+  const slides = Array.from(deck.querySelectorAll('.slide'));
+  const total = slides.length;
+  let current = 0;
+  let transitioning = false;
+
+  const progressBar = document.getElementById('progressBar');
+  const slideCounter = document.getElementById('slideCounter');
+  const fsHint = document.getElementById('fsHint');
+
+  // Hide fullscreen hint after 4 seconds
+  setTimeout(() => fsHint.classList.add('hidden'), 4000);
+
+  function updateUI(){
+    progressBar.style.width = ((current + 1) / total * 100) + '%';
+    slideCounter.textContent = (current + 1) + ' / ' + total;
+  }
+
+  function goTo(index){
+    if(index < 0 || index >= total || index === current || transitioning) return;
+    transitioning = true;
+    const dir = index > current ? 'left' : 'right';
+    const oldSlide = slides[current];
+    const newSlide = slides[index];
+
+    oldSlide.classList.remove('active');
+    oldSlide.classList.add(dir === 'left' ? 'exiting-left' : 'exiting-right');
+
+    newSlide.classList.add('active');
+
+    current = index;
+    updateUI();
+
+    setTimeout(() => {
+      oldSlide.classList.remove('exiting-left','exiting-right');
+      transitioning = false;
+    }, 550);
+  }
+
+  function next(){ goTo(current + 1); }
+  function prev(){ goTo(current - 1); }
+
+  // Keyboard
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'ArrowRight' || e.key === ' '){e.preventDefault(); next();}
+    else if(e.key === 'ArrowLeft'){e.preventDefault(); prev();}
+    else if(e.key === 'f' || e.key === 'F'){
+      e.preventDefault();
+      if(!document.fullscreenElement) document.documentElement.requestFullscreen().catch(()=>{});
+      else document.exitFullscreen();
+    }
+    else if(e.key === 'Escape'){
+      if(document.fullscreenElement) document.exitFullscreen();
+    }
+    else if(e.key === 'Home'){e.preventDefault(); goTo(0);}
+    else if(e.key === 'End'){e.preventDefault(); goTo(total - 1);}
+  });
+
+  // Click navigation
+  document.addEventListener('click', function(e){
+    // Ignore clicks on interactive elements
+    if(e.target.closest('a,button,input,select,textarea')) return;
+    const x = e.clientX / window.innerWidth;
+    if(x < 0.15) prev();
+    else next();
+  });
+
+  // Touch swipe
+  let touchStartX = 0;
+  document.addEventListener('touchstart', function(e){ touchStartX = e.changedTouches[0].clientX; }, {passive:true});
+  document.addEventListener('touchend', function(e){
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    if(Math.abs(dx) > 50){
+      if(dx < 0) next(); else prev();
+    }
+  }, {passive:true});
+
+  updateUI();
+})();
+</script>
+</body>
+</html>

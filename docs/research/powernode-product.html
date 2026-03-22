@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PowerNode — Every Device. Every Platform. One Screen.</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;scrollbar-width:none}
+::-webkit-scrollbar{display:none}
+:root{
+  --bg:#0a0a1a;--panel:#0d0d24;--panel-alt:#0f0f2a;--border:#1a1a3a;
+  --text:#e0e0f0;--text-dim:#8888aa;--text-muted:#555577;
+  --g1:#ec4899;--g2:#9333ea;--g3:#3b82f6;
+  --glow1:rgba(236,72,153,.15);--glow2:rgba(147,51,234,.15);--glow3:rgba(59,130,246,.15);
+}
+html{scroll-behavior:smooth;scrollbar-width:none}
+body{
+  font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+  background:var(--bg);color:var(--text);
+  overflow-x:hidden;overflow-y:auto;
+  line-height:1.6;
+}
+
+/* ── Language Toggle ── */
+.lang-toggle{
+  position:fixed;top:16px;right:16px;z-index:1000;
+  display:flex;gap:2px;background:rgba(10,10,26,.85);backdrop-filter:blur(12px);
+  border:1px solid var(--border);border-radius:20px;padding:3px;
+}
+.lang-btn{
+  border:none;background:transparent;color:var(--text-muted);
+  font-size:12px;font-weight:700;padding:5px 14px;border-radius:16px;cursor:pointer;
+  transition:all .2s;letter-spacing:.5px;
+}
+.lang-btn.active{background:linear-gradient(135deg,var(--g1),var(--g2));color:#fff}
+
+/* ── Section base ── */
+.section{
+  min-height:100vh;padding:80px 40px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  position:relative;overflow:hidden;
+}
+.section:nth-child(even){background:var(--panel-alt)}
+.section:nth-child(odd){background:var(--bg)}
+.section-inner{max-width:1100px;width:100%;position:relative;z-index:2}
+
+.section-label{
+  font-size:11px;text-transform:uppercase;letter-spacing:3px;
+  color:var(--g2);font-weight:700;margin-bottom:12px;text-align:center;
+}
+.section-title{
+  font-size:clamp(28px,4vw,44px);font-weight:800;text-align:center;
+  margin-bottom:16px;line-height:1.15;
+}
+.section-title .grad{
+  background:linear-gradient(135deg,var(--g1),var(--g2),var(--g3));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+.section-sub{
+  font-size:16px;color:var(--text-dim);text-align:center;max-width:650px;margin:0 auto 40px;
+}
+
+/* ── Nav dots ── */
+.nav-dots{
+  position:fixed;right:20px;top:50%;transform:translateY(-50%);z-index:999;
+  display:flex;flex-direction:column;gap:12px;
+}
+.nav-dot{
+  width:10px;height:10px;border-radius:50%;border:2px solid var(--text-muted);
+  background:transparent;cursor:pointer;transition:all .3s;
+}
+.nav-dot.active{
+  border-color:var(--g2);background:var(--g2);
+  box-shadow:0 0 8px var(--g2);
+}
+
+/* ══════════════════════════════════════════
+   HERO
+   ══════════════════════════════════════════ */
+#hero{min-height:100vh;justify-content:center;padding-top:0}
+.hero-logo{
+  font-size:clamp(56px,10vw,96px);font-weight:900;letter-spacing:-2px;
+  background:linear-gradient(135deg,var(--g1),var(--g2),var(--g3));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;text-align:center;
+  animation:logoPulse 4s ease-in-out infinite;
+}
+@keyframes logoPulse{
+  0%,100%{filter:brightness(1)}
+  50%{filter:brightness(1.2)}
+}
+.hero-tagline{
+  font-size:clamp(18px,2.5vw,26px);color:var(--text);text-align:center;
+  margin:8px 0 16px;font-weight:300;letter-spacing:.5px;
+}
+.hero-sub{
+  font-size:15px;color:var(--text-dim);text-align:center;
+  margin-bottom:48px;letter-spacing:.3px;max-width:620px;margin-left:auto;margin-right:auto;
+}
+.hero-elevator{
+  font-size:16px;color:var(--text-dim);text-align:center;
+  max-width:640px;margin:0 auto 48px;line-height:1.7;
+}
+
+/* House cutaway */
+.house-container{
+  width:100%;max-width:800px;height:400px;margin:0 auto;position:relative;
+}
+.house-svg{width:100%;height:100%}
+
+@keyframes dataFlow{
+  0%{stroke-dashoffset:40}
+  100%{stroke-dashoffset:0}
+}
+.wire-data{
+  stroke-dasharray:8 12;
+  animation:dataFlow 1.2s linear infinite;
+  filter:drop-shadow(0 0 4px var(--g3));
+}
+.wire-power{stroke:var(--text-muted);stroke-width:2;opacity:.3}
+@keyframes nodePulse{
+  0%,100%{r:6;opacity:.8}
+  50%{r:9;opacity:1}
+}
+.node-dot{animation:nodePulse 2s ease-in-out infinite}
+@keyframes hubGlow{
+  0%,100%{filter:drop-shadow(0 0 6px rgba(147,51,234,.4))}
+  50%{filter:drop-shadow(0 0 16px rgba(147,51,234,.8))}
+}
+.hub-icon{animation:hubGlow 3s ease-in-out infinite}
+
+.scroll-hint{
+  position:absolute;bottom:30px;left:50%;transform:translateX(-50%);
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  animation:scrollBounce 2s ease-in-out infinite;
+}
+.scroll-hint span{font-size:11px;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase}
+.scroll-arrow{
+  width:20px;height:20px;border-right:2px solid var(--text-muted);
+  border-bottom:2px solid var(--text-muted);transform:rotate(45deg);
+}
+@keyframes scrollBounce{
+  0%,100%{transform:translateX(-50%) translateY(0)}
+  50%{transform:translateX(-50%) translateY(8px)}
+}
+
+/* ══════════════════════════════════════════
+   THE PROBLEM
+   ══════════════════════════════════════════ */
+.problem-stack{
+  display:flex;flex-direction:column;align-items:center;gap:24px;margin-top:16px;
+}
+.problem-line{
+  font-size:clamp(18px,2.5vw,28px);font-weight:300;color:var(--text);
+  text-align:center;line-height:1.5;opacity:0;transform:translateY(20px);
+  transition:opacity .6s ease,transform .6s ease;
+}
+.problem-line.visible{opacity:1;transform:translateY(0)}
+.problem-line strong{
+  color:#fff;font-weight:700;
+}
+.problem-line .accent{
+  background:linear-gradient(135deg,var(--g1),var(--g2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;font-weight:700;
+}
+.problem-apps{
+  display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin:8px 0;
+}
+.problem-apps .app-pill{
+  padding:6px 16px;border-radius:20px;font-size:13px;font-weight:600;
+  border:1px solid var(--border);color:var(--text-muted);
+  background:var(--panel);
+}
+.problem-punchline{
+  font-size:clamp(20px,3vw,36px);font-weight:800;text-align:center;
+  margin-top:20px;
+  background:linear-gradient(135deg,var(--g1),var(--g2),var(--g3));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+
+/* ══════════════════════════════════════════
+   THE VISION (cards)
+   ══════════════════════════════════════════ */
+.vision-grid{
+  display:grid;grid-template-columns:repeat(2,1fr);gap:24px;margin-top:24px;
+}
+.vision-card{
+  background:var(--panel);border:1px solid var(--border);border-radius:16px;
+  padding:32px 28px;position:relative;transition:all .3s;
+}
+.vision-card:hover{transform:translateY(-4px);border-color:var(--g2)}
+.vision-card .card-icon{
+  width:56px;height:56px;border-radius:14px;margin-bottom:20px;
+  display:flex;align-items:center;justify-content:center;font-size:26px;
+  background:linear-gradient(135deg,var(--g1),var(--g2));color:#fff;
+}
+.vision-card h3{font-size:18px;font-weight:700;margin-bottom:10px}
+.vision-card p{font-size:14px;color:var(--text-dim);line-height:1.7}
+
+/* ══════════════════════════════════════════
+   HOW IT WORKS
+   ══════════════════════════════════════════ */
+.steps-flow{
+  display:flex;align-items:flex-start;gap:0;margin-top:32px;position:relative;
+}
+.step-item{
+  flex:1;text-align:center;padding:0 16px;position:relative;
+}
+.step-num{
+  width:52px;height:52px;border-radius:50%;margin:0 auto 16px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:22px;font-weight:800;color:#fff;
+  background:linear-gradient(135deg,var(--g1),var(--g2));
+  position:relative;z-index:2;
+}
+.step-item h3{font-size:16px;font-weight:700;margin-bottom:8px}
+.step-item p{font-size:13px;color:var(--text-dim);line-height:1.5}
+.step-connector-line{
+  position:absolute;top:26px;left:calc(50% + 26px);
+  width:calc(100% - 52px);height:2px;
+  background:linear-gradient(90deg,var(--g2),var(--g1));
+  opacity:.4;z-index:1;
+}
+.step-item:last-child .step-connector-line{display:none}
+
+/* Flow diagram */
+.flow-diagram{
+  margin-top:48px;padding:32px;background:var(--panel);border:1px solid var(--border);
+  border-radius:16px;position:relative;overflow:hidden;
+}
+.flow-svg{width:100%;height:120px}
+
+/* ══════════════════════════════════════════
+   DIVE DEEPER
+   ══════════════════════════════════════════ */
+.deeper-grid{
+  display:grid;grid-template-columns:repeat(2,1fr);gap:32px;margin-top:32px;
+}
+.deeper-card{
+  background:var(--panel);border:1px solid var(--border);border-radius:20px;
+  padding:40px 32px;text-align:center;position:relative;transition:all .3s;
+  cursor:pointer;text-decoration:none;display:block;
+}
+.deeper-card:hover{
+  border-color:var(--g2);transform:translateY(-6px);
+  box-shadow:0 20px 60px rgba(147,51,234,.15);
+}
+.deeper-card .card-icon-lg{
+  width:72px;height:72px;border-radius:18px;margin:0 auto 24px;
+  display:flex;align-items:center;justify-content:center;font-size:32px;
+  background:linear-gradient(135deg,var(--g1),var(--g2),var(--g3));color:#fff;
+}
+.deeper-card h3{
+  font-size:20px;font-weight:700;margin-bottom:12px;color:var(--text);
+}
+.deeper-card p{font-size:14px;color:var(--text-dim);line-height:1.7;margin-bottom:20px}
+.deeper-card .card-cta{
+  display:inline-block;padding:10px 28px;border-radius:24px;font-size:13px;font-weight:700;
+  color:#fff;letter-spacing:.5px;
+  background:linear-gradient(135deg,var(--g1),var(--g2));
+  transition:all .2s;
+}
+.deeper-card:hover .card-cta{
+  transform:scale(1.05);
+  box-shadow:0 4px 20px rgba(236,72,153,.3);
+}
+.deeper-card.contact-card .card-cta{
+  background:linear-gradient(135deg,var(--g2),var(--g3));
+}
+.deeper-card.contact-card:hover .card-cta{
+  box-shadow:0 4px 20px rgba(59,130,246,.3);
+}
+
+/* ══════════════════════════════════════════
+   FOOTER
+   ══════════════════════════════════════════ */
+.footer{
+  text-align:center;padding:40px 20px;color:var(--text-muted);font-size:12px;
+  background:var(--panel);
+}
+.footer-brand{
+  background:linear-gradient(90deg,var(--g1),var(--g2),var(--g3));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;font-weight:700;font-size:14px;
+}
+
+/* ══════════════════════════════════════════
+   RESPONSIVE
+   ══════════════════════════════════════════ */
+@media(max-width:900px){
+  .section{padding:60px 20px}
+  .vision-grid{grid-template-columns:1fr}
+  .deeper-grid{grid-template-columns:1fr;max-width:480px;margin-left:auto;margin-right:auto}
+  .steps-flow{flex-direction:column;align-items:center;gap:24px;max-width:400px;margin-left:auto;margin-right:auto}
+  .step-connector-line{display:none!important}
+  .nav-dots{display:none}
+  .house-container{height:280px}
+}
+@media(max-width:600px){
+  .hero-logo{font-size:48px}
+  .section{padding:48px 16px}
+}
+
+/* ── Fade-in on scroll ── */
+.reveal{opacity:0;transform:translateY(30px);transition:opacity .6s ease,transform .6s ease}
+.reveal.visible{opacity:1;transform:translateY(0)}
+</style>
+</head>
+<body>
+
+<!-- Language Toggle -->
+<div class="lang-toggle">
+  <button class="lang-btn active" data-lang="en" onclick="setLang('en')">EN</button>
+  <button class="lang-btn" data-lang="es" onclick="setLang('es')">ES</button>
+</div>
+
+<!-- Nav Dots -->
+<div class="nav-dots" id="navDots"></div>
+
+<!-- ═══════════ SECTION 1: HERO ═══════════ -->
+<section class="section" id="hero" data-section="0">
+  <div class="section-inner" style="text-align:center">
+    <div class="hero-logo">PowerNode</div>
+    <div class="hero-tagline" data-en="Your network. Everywhere." data-es="Tu red. En todas partes.">Your network. Everywhere.</div>
+    <div class="hero-elevator" data-en="One hub at your breaker panel unifies every smart device you own — across every platform, every brand, every protocol. Your electrical wiring becomes your network backbone. Take a node with you, and your entire home network follows." data-es="Un hub en tu tablero el&eacute;ctrico unifica cada dispositivo inteligente que tienes &mdash; de cualquier plataforma, cualquier marca, cualquier protocolo. Tu cableado el&eacute;ctrico se convierte en el backbone de tu red. Lleva un nodo contigo, y toda tu red de casa te sigue.">One hub at your breaker panel unifies every smart device you own — across every platform, every brand, every protocol. Your electrical wiring becomes your network backbone. Take a node with you, and your entire home network follows.</div>
+
+    <div class="house-container">
+      <svg class="house-svg" viewBox="0 0 800 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- House outline -->
+        <path d="M400 40 L720 180 L720 360 L80 360 L80 180 Z" fill="none" stroke="var(--border)" stroke-width="2"/>
+        <!-- Roof -->
+        <path d="M60 180 L400 30 L740 180" fill="none" stroke="var(--text-muted)" stroke-width="2"/>
+        <!-- Walls interior -->
+        <line x1="280" y1="180" x2="280" y2="360" stroke="var(--border)" stroke-width="1.5"/>
+        <line x1="520" y1="180" x2="520" y2="360" stroke="var(--border)" stroke-width="1.5"/>
+        <line x1="280" y1="270" x2="520" y2="270" stroke="var(--border)" stroke-width="1.5"/>
+        <!-- Floor -->
+        <line x1="80" y1="360" x2="720" y2="360" stroke="var(--text-muted)" stroke-width="2"/>
+
+        <!-- Breaker panel (hub) -->
+        <g class="hub-icon">
+          <rect x="90" y="195" width="40" height="60" rx="4" fill="var(--panel)" stroke="var(--g2)" stroke-width="2"/>
+          <text x="110" y="222" text-anchor="middle" font-size="8" font-weight="700" fill="var(--g2)">HUB</text>
+          <line x1="98" y1="235" x2="122" y2="235" stroke="var(--g2)" stroke-width="1" opacity=".5"/>
+          <line x1="98" y1="242" x2="122" y2="242" stroke="var(--g2)" stroke-width="1" opacity=".5"/>
+          <line x1="98" y1="249" x2="122" y2="249" stroke="var(--g2)" stroke-width="1" opacity=".5"/>
+        </g>
+
+        <!-- ISP fiber in -->
+        <line x1="40" y1="225" x2="90" y2="225" stroke="var(--g3)" stroke-width="2" stroke-dasharray="4 3"/>
+        <text x="30" y="218" text-anchor="end" font-size="9" fill="var(--g3)" font-weight="600">ISP</text>
+
+        <!-- Power wires (background) -->
+        <path class="wire-power" d="M130 225 L200 225 L200 310 L180 310"/>
+        <path class="wire-power" d="M130 225 L200 225 L200 180 L400 180 L400 230"/>
+        <path class="wire-power" d="M130 225 L200 225 L200 180 L600 180 L600 230"/>
+        <path class="wire-power" d="M130 225 L200 225 L200 310 L600 310 L600 290"/>
+
+        <!-- Data flowing on wires (animated) -->
+        <path class="wire-data" d="M130 225 L200 225 L200 310 L180 310" stroke="var(--g3)" stroke-width="2" fill="none"/>
+        <path class="wire-data" d="M130 225 L200 225 L200 180 L400 180 L400 230" stroke="var(--g2)" stroke-width="2" fill="none" style="animation-delay:-.3s"/>
+        <path class="wire-data" d="M130 225 L200 225 L200 180 L600 180 L600 230" stroke="var(--g1)" stroke-width="2" fill="none" style="animation-delay:-.6s"/>
+        <path class="wire-data" d="M130 225 L200 225 L200 310 L600 310 L600 290" stroke="var(--g3)" stroke-width="2" fill="none" style="animation-delay:-.9s"/>
+
+        <!-- Node 1: Living Room -->
+        <g>
+          <circle class="node-dot" cx="170" cy="310" r="7" fill="var(--g3)"/>
+          <text x="170" y="335" text-anchor="middle" font-size="9" fill="var(--text-dim)" data-en="Living Room" data-es="Sala">Living Room</text>
+          <path d="M160 300 A14 14 0 0 1 180 300" fill="none" stroke="var(--g3)" stroke-width="1" opacity=".5"/>
+          <path d="M155 294 A20 20 0 0 1 185 294" fill="none" stroke="var(--g3)" stroke-width="1" opacity=".3"/>
+        </g>
+
+        <!-- Node 2: Office -->
+        <g>
+          <circle class="node-dot" cx="400" cy="235" r="7" fill="var(--g2)" style="animation-delay:-.5s"/>
+          <text x="400" y="258" text-anchor="middle" font-size="9" fill="var(--text-dim)" data-en="Office" data-es="Oficina">Office</text>
+          <path d="M390 225 A14 14 0 0 1 410 225" fill="none" stroke="var(--g2)" stroke-width="1" opacity=".5"/>
+          <path d="M385 219 A20 20 0 0 1 415 219" fill="none" stroke="var(--g2)" stroke-width="1" opacity=".3"/>
+        </g>
+
+        <!-- Node 3: Bedroom -->
+        <g>
+          <circle class="node-dot" cx="600" cy="235" r="7" fill="var(--g1)" style="animation-delay:-1s"/>
+          <text x="600" y="258" text-anchor="middle" font-size="9" fill="var(--text-dim)" data-en="Bedroom" data-es="Rec&aacute;mara">Bedroom</text>
+          <path d="M590 225 A14 14 0 0 1 610 225" fill="none" stroke="var(--g1)" stroke-width="1" opacity=".5"/>
+          <path d="M585 219 A20 20 0 0 1 615 219" fill="none" stroke="var(--g1)" stroke-width="1" opacity=".3"/>
+        </g>
+
+        <!-- Node 4: Kitchen -->
+        <g>
+          <circle class="node-dot" cx="600" cy="290" r="7" fill="var(--g3)" style="animation-delay:-1.5s"/>
+          <text x="600" y="280" text-anchor="middle" font-size="9" fill="var(--text-dim)" data-en="Kitchen" data-es="Cocina">Kitchen</text>
+          <path d="M590 300 A14 14 0 0 0 610 300" fill="none" stroke="var(--g3)" stroke-width="1" opacity=".5"/>
+          <path d="M585 306 A20 20 0 0 0 615 306" fill="none" stroke="var(--g3)" stroke-width="1" opacity=".3"/>
+        </g>
+
+        <!-- Room label -->
+        <text x="175" y="195" font-size="10" fill="var(--text-muted)" data-en="Breaker Panel" data-es="Tablero El&eacute;ctrico" font-weight="600">Breaker Panel</text>
+      </svg>
+    </div>
+
+    <div class="scroll-hint">
+      <span data-en="Scroll" data-es="Desliza">Scroll</span>
+      <div class="scroll-arrow"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ SECTION 2: THE PROBLEM ═══════════ -->
+<section class="section" id="problem" data-section="1">
+  <div class="section-inner">
+    <div class="problem-stack">
+      <div class="problem-line reveal" data-en="You have <strong>6 apps</strong> to control your own home." data-es="Tienes <strong>6 apps</strong> para controlar tu propia casa.">You have <strong>6 apps</strong> to control your own home.</div>
+
+      <div class="problem-apps reveal" style="transition-delay:.15s">
+        <span class="app-pill">Broadlink</span>
+        <span class="app-pill">eWeLink</span>
+        <span class="app-pill">Smart Life</span>
+        <span class="app-pill">Sciener</span>
+        <span class="app-pill">EZVIZ</span>
+        <span class="app-pill">Alexa</span>
+      </div>
+
+      <div class="problem-line reveal" style="transition-delay:.3s" data-en="You switch homes. You <strong>re-authenticate</strong>." data-es="Cambias de casa. <strong>Re-autentificas</strong>.">You switch homes. You <strong>re-authenticate</strong>.</div>
+
+      <div class="problem-line reveal" style="transition-delay:.45s" data-en="Every. Single. Time." data-es="Cada. Vez."><strong>Every. Single. Time.</strong></div>
+
+      <div class="problem-line reveal" style="transition-delay:.6s" data-en="You travel with a laptop and pray the hotel WiFi lets your VPN through." data-es="Viajas con tu laptop y rezas que el WiFi del hotel deje pasar tu VPN.">You travel with a laptop and pray the hotel WiFi lets your VPN through.</div>
+
+      <div class="problem-line reveal" style="transition-delay:.75s" data-en="Your home cameras? <span class='accent'>Unreachable.</span> Your NAS? <span class='accent'>Gone.</span> Your smart devices? <span class='accent'>Six different apps you left at home.</span>" data-es="&iquest;Tus c&aacute;maras? <span class='accent'>Inalcanzables.</span> &iquest;Tu NAS? <span class='accent'>Desaparecido.</span> &iquest;Tus dispositivos inteligentes? <span class='accent'>Seis apps diferentes que dejaste en casa.</span>">Your home cameras? <span class="accent">Unreachable.</span> Your NAS? <span class="accent">Gone.</span> Your smart devices? <span class="accent">Six different apps you left at home.</span></div>
+
+      <div class="problem-punchline reveal" style="transition-delay:.9s" data-en="There has to be a better way." data-es="Tiene que haber una mejor forma.">There has to be a better way.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ SECTION 3: THE VISION ═══════════ -->
+<section class="section" id="vision" data-section="2">
+  <div class="section-inner">
+    <div class="section-label" data-en="The Vision" data-es="La Visi&oacute;n">The Vision</div>
+    <div class="section-title"><span class="grad" data-en="One system. Every device. Everywhere." data-es="Un sistema. Cada dispositivo. En todas partes.">One system. Every device. Everywhere.</span></div>
+
+    <div class="vision-grid">
+      <div class="vision-card reveal">
+        <div class="card-icon">&#x1f4f1;</div>
+        <h3 data-en="One Screen, All Devices, All Platforms" data-es="Una Pantalla, Todos los Dispositivos, Todas las Plataformas">One Screen, All Devices, All Platforms</h3>
+        <p data-en="Alexa, Google, Tuya, eWeLink, EZVIZ, Sciener, Broadlink, Zigbee, Matter &mdash; all controlled from a single dashboard. Switch between your house, your store, and your beach condo with one tap. No more app juggling." data-es="Alexa, Google, Tuya, eWeLink, EZVIZ, Sciener, Broadlink, Zigbee, Matter &mdash; todo controlado desde un solo dashboard. Cambia entre tu casa, tu tienda y tu departamento de playa con un toque. Se acab&oacute; el malabarismo de apps.">Alexa, Google, Tuya, eWeLink, EZVIZ, Sciener, Broadlink, Zigbee, Matter — all controlled from a single dashboard. Switch between your house, your store, and your beach condo with one tap. No more app juggling.</p>
+      </div>
+
+      <div class="vision-card reveal" style="transition-delay:.1s">
+        <div class="card-icon">&#x26a1;</div>
+        <h3 data-en="Your Wiring IS Your Network" data-es="Tu Cableado ES Tu Red">Your Wiring IS Your Network</h3>
+        <p data-en="PowerNode uses powerline communication (PLC) to turn your existing electrical wiring into a high-speed data backbone. No new cables. No drilling. Plug a node into any outlet and it joins the network instantly &mdash; WiFi 6 and Gigabit Ethernet everywhere." data-es="PowerNode usa comunicaci&oacute;n por l&iacute;nea el&eacute;ctrica (PLC) para convertir tu cableado existente en un backbone de datos de alta velocidad. Sin cables nuevos. Sin taladrar. Conecta un nodo a cualquier contacto y se une a la red al instante &mdash; WiFi 6 y Gigabit Ethernet en todas partes.">PowerNode uses powerline communication (PLC) to turn your existing electrical wiring into a high-speed data backbone. No new cables. No drilling. Plug a node into any outlet and it joins the network instantly — WiFi 6 and Gigabit Ethernet everywhere.</p>
+      </div>
+
+      <div class="vision-card reveal" style="transition-delay:.2s">
+        <div class="card-icon">&#x1f30d;</div>
+        <h3 data-en="Take Your Network Anywhere" data-es="Lleva Tu Red a Donde Sea">Take Your Network Anywhere</h3>
+        <p data-en="Unplug a node and take it to a hotel, an office, or a friend's house. Plug it in &mdash; it auto-authenticates with your home hub via encrypted VPN. You're on your home network. Same security. Same access. Your cameras, NAS, smart devices &mdash; all reachable." data-es="Desconecta un nodo y ll&eacute;valo a un hotel, una oficina o la casa de un amigo. Con&eacute;ctalo &mdash; se auto-autentifica con tu hub de casa v&iacute;a VPN encriptado. Est&aacute;s en tu red de casa. Misma seguridad. Mismo acceso. Tus c&aacute;maras, NAS, dispositivos inteligentes &mdash; todo alcanzable.">Unplug a node and take it to a hotel, an office, or a friend's house. Plug it in — it auto-authenticates with your home hub via encrypted VPN. You're on your home network. Same security. Same access. Your cameras, NAS, smart devices — all reachable.</p>
+      </div>
+
+      <div class="vision-card reveal" style="transition-delay:.3s">
+        <div class="card-icon">&#x1f5a5;</div>
+        <h3 data-en="Built-in Remote Desktop (PowerDesk)" data-es="Escritorio Remoto Integrado (PowerDesk)">Built-in Remote Desktop (PowerDesk)</h3>
+        <p data-en="Access any PC or Mac on your home network from anywhere &mdash; through your node's encrypted tunnel. Your hub IS the relay server. No monthly fees. No third-party servers. No setup. Just open the app and you're sitting at your desk." data-es="Accede a cualquier PC o Mac en tu red de casa desde cualquier lugar &mdash; a trav&eacute;s del t&uacute;nel encriptado de tu nodo. Tu hub ES el servidor relay. Sin cuotas mensuales. Sin servidores de terceros. Sin configuraci&oacute;n. Solo abre la app y est&aacute;s sentado en tu escritorio.">Access any PC or Mac on your home network from anywhere — through your node's encrypted tunnel. Your hub IS the relay server. No monthly fees. No third-party servers. No setup. Just open the app and you're sitting at your desk.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ SECTION 4: HOW IT WORKS ═══════════ -->
+<section class="section" id="how" data-section="3">
+  <div class="section-inner">
+    <div class="section-label" data-en="How It Works" data-es="C&oacute;mo Funciona">How It Works</div>
+    <div class="section-title"><span class="grad" data-en="Four steps. Done." data-es="Cuatro pasos. Listo.">Four steps. Done.</span></div>
+    <div class="section-sub" data-en="From box to fully connected home in under an hour." data-es="De la caja a un hogar totalmente conectado en menos de una hora.">From box to fully connected home in under an hour.</div>
+
+    <div class="steps-flow">
+      <div class="step-item reveal">
+        <div class="step-num">1</div>
+        <h3 data-en="Install the Hub" data-es="Instala el Hub">Install the Hub</h3>
+        <p data-en="DIN-rail mount at your breaker panel. Connect to your ISP. Power on." data-es="Montaje DIN-rail en tu tablero el&eacute;ctrico. Conecta a tu ISP. Enciende.">DIN-rail mount at your breaker panel. Connect to your ISP. Power on.</p>
+        <div class="step-connector-line"></div>
+      </div>
+      <div class="step-item reveal" style="transition-delay:.12s">
+        <div class="step-num">2</div>
+        <h3 data-en="Auto-Discovery" data-es="Auto-Descubrimiento">Auto-Discovery</h3>
+        <p data-en="The hub finds ALL your smart devices across ALL platforms automatically. Alexa, Google, Tuya, Zigbee, Matter &mdash; all of them." data-es="El hub encuentra TODOS tus dispositivos inteligentes en TODAS las plataformas autom&aacute;ticamente. Alexa, Google, Tuya, Zigbee, Matter &mdash; todos.">The hub finds ALL your smart devices across ALL platforms automatically. Alexa, Google, Tuya, Zigbee, Matter — all of them.</p>
+        <div class="step-connector-line"></div>
+      </div>
+      <div class="step-item reveal" style="transition-delay:.24s">
+        <div class="step-num">3</div>
+        <h3 data-en="Extend with Nodes" data-es="Extiende con Nodos">Extend with Nodes</h3>
+        <p data-en="Plug satellites into any outlet. They join the network over your wiring &mdash; instant WiFi 6 + Ethernet everywhere. Up to 64 per hub." data-es="Conecta sat&eacute;lites a cualquier contacto. Se unen a la red por tu cableado &mdash; WiFi 6 + Ethernet instant&aacute;neo en todas partes. Hasta 64 por hub.">Plug satellites into any outlet. They join the network over your wiring — instant WiFi 6 + Ethernet everywhere. Up to 64 per hub.</p>
+        <div class="step-connector-line"></div>
+      </div>
+      <div class="step-item reveal" style="transition-delay:.36s">
+        <div class="step-num">4</div>
+        <h3 data-en="Take It Anywhere" data-es="Ll&eacute;valo Contigo">Take It Anywhere</h3>
+        <p data-en="Unplug a node and go. Hotel, office, friend's house &mdash; plug in and your entire home network is with you. Encrypted. Automatic." data-es="Desconecta un nodo y vete. Hotel, oficina, casa de un amigo &mdash; con&eacute;ctalo y toda tu red de casa est&aacute; contigo. Encriptado. Autom&aacute;tico.">Unplug a node and go. Hotel, office, friend's house — plug in and your entire home network is with you. Encrypted. Automatic.</p>
+      </div>
+    </div>
+
+    <!-- Visual flow diagram -->
+    <div class="flow-diagram reveal" style="transition-delay:.4s">
+      <svg class="flow-svg" viewBox="0 0 900 120" fill="none">
+        <!-- ISP -->
+        <rect x="10" y="35" width="80" height="50" rx="8" fill="var(--panel)" stroke="var(--g3)" stroke-width="1.5"/>
+        <text x="50" y="60" text-anchor="middle" font-size="11" fill="var(--g3)" font-weight="600">ISP</text>
+        <text x="50" y="73" text-anchor="middle" font-size="8" fill="var(--text-muted)">Fiber/Coax</text>
+
+        <!-- Arrow 1 -->
+        <line x1="95" y1="60" x2="155" y2="60" stroke="var(--g3)" stroke-width="1.5" stroke-dasharray="4 3"/>
+        <polygon points="155,55 165,60 155,65" fill="var(--g3)"/>
+
+        <!-- Hub -->
+        <rect x="170" y="25" width="120" height="70" rx="10" fill="var(--panel)" stroke="var(--g2)" stroke-width="2"/>
+        <text x="230" y="52" text-anchor="middle" font-size="12" fill="var(--g2)" font-weight="700" data-en="PowerNode Hub" data-es="PowerNode Hub">PowerNode Hub</text>
+        <text x="230" y="68" text-anchor="middle" font-size="8" fill="var(--text-muted)" data-en="@ Breaker Panel" data-es="@ Tablero El&eacute;ctrico">@ Breaker Panel</text>
+
+        <!-- Arrow 2 (PLC) -->
+        <path d="M295 60 L405 60" stroke="url(#plcGrad)" stroke-width="3" class="wire-data"/>
+        <defs><linearGradient id="plcGrad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="var(--g2)"/><stop offset="100%" stop-color="var(--g1)"/></linearGradient></defs>
+        <text x="350" y="50" text-anchor="middle" font-size="8" fill="var(--text-dim)" data-en="Existing Wiring" data-es="Cableado Existente">Existing Wiring</text>
+        <text x="350" y="78" text-anchor="middle" font-size="7" fill="var(--text-muted)">PLC / 600 Mbps</text>
+
+        <!-- Nodes -->
+        <g>
+          <rect x="410" y="10" width="100" height="44" rx="8" fill="var(--panel)" stroke="var(--g1)" stroke-width="1.5"/>
+          <text x="460" y="30" text-anchor="middle" font-size="9" fill="var(--g1)" font-weight="600" data-en="Node 1" data-es="Nodo 1">Node 1</text>
+          <text x="460" y="42" text-anchor="middle" font-size="7" fill="var(--text-muted)">WiFi 6 + GbE</text>
+        </g>
+        <g>
+          <rect x="410" y="66" width="100" height="44" rx="8" fill="var(--panel)" stroke="var(--g1)" stroke-width="1.5"/>
+          <text x="460" y="86" text-anchor="middle" font-size="9" fill="var(--g1)" font-weight="600" data-en="Node 2" data-es="Nodo 2">Node 2</text>
+          <text x="460" y="98" text-anchor="middle" font-size="7" fill="var(--text-muted)">WiFi 6 + GbE</text>
+        </g>
+        <g>
+          <rect x="530" y="10" width="100" height="44" rx="8" fill="var(--panel)" stroke="var(--g3)" stroke-width="1.5"/>
+          <text x="580" y="30" text-anchor="middle" font-size="9" fill="var(--g3)" font-weight="600" data-en="Node N" data-es="Nodo N">Node N</text>
+          <text x="580" y="42" text-anchor="middle" font-size="7" fill="var(--text-muted)">WiFi 6 + GbE</text>
+        </g>
+        <g>
+          <rect x="530" y="66" width="100" height="44" rx="8" fill="var(--panel)" stroke="var(--g3)" stroke-width="1.5"/>
+          <text x="580" y="82" text-anchor="middle" font-size="7" fill="var(--g3)" font-weight="600" data-en="Portable Node" data-es="Nodo Port&aacute;til">Portable Node</text>
+          <text x="580" y="98" text-anchor="middle" font-size="7" fill="var(--text-muted)" data-en="@ Hotel / Office" data-es="@ Hotel / Oficina">@ Hotel / Office</text>
+        </g>
+
+        <!-- WiFi icons -->
+        <g>
+          <path d="M650 30 A30 30 0 0 1 680 30" fill="none" stroke="var(--g1)" stroke-width="1" opacity=".4"/>
+          <path d="M645 22 A40 40 0 0 1 685 22" fill="none" stroke="var(--g1)" stroke-width="1" opacity=".25"/>
+          <path d="M650 88 A30 30 0 0 1 680 88" fill="none" stroke="var(--g3)" stroke-width="1" opacity=".4"/>
+          <path d="M645 80 A40 40 0 0 1 685 80" fill="none" stroke="var(--g3)" stroke-width="1" opacity=".25"/>
+        </g>
+
+        <!-- Devices -->
+        <rect x="700" y="18" width="24" height="16" rx="2" fill="none" stroke="var(--text-muted)" stroke-width="1"/>
+        <text x="712" y="30" text-anchor="middle" font-size="6" fill="var(--text-muted)">PC</text>
+        <rect x="740" y="20" width="10" height="16" rx="2" fill="none" stroke="var(--text-muted)" stroke-width="1"/>
+        <rect x="700" y="76" width="24" height="16" rx="2" fill="none" stroke="var(--text-muted)" stroke-width="1"/>
+        <text x="712" y="87" text-anchor="middle" font-size="6" fill="var(--text-muted)">TV</text>
+        <circle cx="748" cy="86" r="7" fill="none" stroke="var(--text-muted)" stroke-width="1"/>
+        <text x="748" y="89" text-anchor="middle" font-size="6" fill="var(--text-muted)">IoT</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ SECTION 5: DIVE DEEPER ═══════════ -->
+<section class="section" id="deeper" data-section="4">
+  <div class="section-inner">
+    <div class="section-label" data-en="Dive Deeper" data-es="Profundiza">Dive Deeper</div>
+    <div class="section-title"><span class="grad" data-en="Ready to see the full picture?" data-es="&iquest;Listo para ver el panorama completo?">Ready to see the full picture?</span></div>
+    <div class="section-sub" data-en="PowerNode is backed by real architecture, real hardware specs, and a provisional patent. Choose how deep you want to go." data-es="PowerNode est&aacute; respaldado por arquitectura real, especificaciones reales de hardware y una patente provisional. Elige qu&eacute; tan profundo quieres ir.">PowerNode is backed by real architecture, real hardware specs, and a provisional patent. Choose how deep you want to go.</div>
+
+    <div class="deeper-grid">
+      <a class="deeper-card reveal" href="powernode-pitch-deck.html">
+        <div class="card-icon-lg">&#x1f4ca;</div>
+        <h3 data-en="Full Technical Pitch" data-es="Pitch T&eacute;cnico Completo">Full Technical Pitch</h3>
+        <p data-en="12-slide interactive presentation covering architecture, system design, security model, BOM analysis, market strategy, and the competitive landscape." data-es="Presentaci&oacute;n interactiva de 12 slides cubriendo arquitectura, dise&ntilde;o del sistema, modelo de seguridad, an&aacute;lisis BOM, estrategia de mercado y el panorama competitivo.">12-slide interactive presentation covering architecture, system design, security model, BOM analysis, market strategy, and the competitive landscape.</p>
+        <span class="card-cta" data-en="View Pitch Deck" data-es="Ver Pitch Deck">View Pitch Deck</span>
+      </a>
+
+      <div class="deeper-card contact-card reveal" style="transition-delay:.12s">
+        <div class="card-icon-lg">&#x1f4d1;</div>
+        <h3 data-en="White Papers &amp; Patent" data-es="Documentos T&eacute;cnicos y Patente">White Papers &amp; Patent</h3>
+        <p data-en="Detailed technical design documentation, provisional patent application (portable network identity via PLC), and full bill-of-materials analysis. Available on request." data-es="Documentaci&oacute;n t&eacute;cnica detallada, solicitud de patente provisional (identidad de red port&aacute;til v&iacute;a PLC) y an&aacute;lisis completo de materiales. Disponible bajo solicitud.">Detailed technical design documentation, provisional patent application (portable network identity via PLC), and full bill-of-materials analysis. Available on request.</p>
+        <span class="card-cta" data-en="Contact for Access" data-es="Contactar para Acceso">Contact for Access</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ FOOTER ═══════════ -->
+<div class="footer">
+  <span class="footer-brand">PowerNode</span>
+  <br><br>
+  <span data-en="A BC Ventures concept. Patent pending architecture." data-es="Un concepto de BC Ventures. Arquitectura con patente pendiente.">A BC Ventures concept. Patent pending architecture.</span>
+  <br>
+  <span style="color:var(--text-muted);margin-top:8px;display:inline-block" data-en="Keys: Arrow &uarr;&darr; scroll sections &middot; L toggles language" data-es="Teclas: Flecha &uarr;&darr; cambia secci&oacute;n &middot; L cambia idioma">Keys: Arrow Up/Down scroll sections &middot; L toggles language</span>
+</div>
+
+<script>
+// ── State ──
+let currentLang = 'en';
+let currentSection = 0;
+const sections = document.querySelectorAll('.section');
+const sectionCount = sections.length;
+
+// ── Language System ──
+function setLang(lang) {
+  currentLang = lang;
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === lang));
+  document.querySelectorAll('[data-' + lang + ']').forEach(el => {
+    const text = el.getAttribute('data-' + lang);
+    if (text) {
+      // Use innerHTML for elements that contain HTML tags (strong, span.accent)
+      if (text.includes('<')) {
+        el.innerHTML = text;
+      } else {
+        el.textContent = text;
+      }
+    }
+  });
+}
+
+// ── Nav Dots ──
+const dotsContainer = document.getElementById('navDots');
+for (let i = 0; i < sectionCount; i++) {
+  const dot = document.createElement('div');
+  dot.className = 'nav-dot' + (i === 0 ? ' active' : '');
+  dot.onclick = () => sections[i].scrollIntoView({ behavior: 'smooth' });
+  dotsContainer.appendChild(dot);
+}
+
+function updateDots() {
+  const scrollY = window.scrollY;
+  const vh = window.innerHeight;
+  let active = 0;
+  sections.forEach((s, i) => {
+    if (scrollY >= s.offsetTop - vh * 0.4) active = i;
+  });
+  currentSection = active;
+  dotsContainer.querySelectorAll('.nav-dot').forEach((d, i) => d.classList.toggle('active', i === active));
+}
+window.addEventListener('scroll', updateDots, { passive: true });
+
+// ── Keyboard Navigation ──
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+    e.preventDefault();
+    const next = Math.min(currentSection + 1, sectionCount - 1);
+    sections[next].scrollIntoView({ behavior: 'smooth' });
+  } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+    e.preventDefault();
+    const prev = Math.max(currentSection - 1, 0);
+    sections[prev].scrollIntoView({ behavior: 'smooth' });
+  } else if (e.key === 'l' || e.key === 'L') {
+    setLang(currentLang === 'en' ? 'es' : 'en');
+  }
+});
+
+// ── Scroll Reveal ──
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.15 });
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+// ── Init ──
+updateDots();
+</script>
+</body>
+</html>
