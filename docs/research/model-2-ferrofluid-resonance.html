@@ -1,0 +1,1653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ferrofluid Resonance Chamber — Interactive 3D Model</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;scrollbar-width:none}
+::-webkit-scrollbar{display:none}
+:root{
+  --bg:#0a0a12;--panel:#12121e;--border:#1e1e3a;--text:#c8c8e0;--accent:#6366f1;
+  --accent2:#a855f7;--glow:#818cf8;--success:#22c55e;--warn:#f59e0b;--danger:#ef4444;
+  --ferrofluid:#1a1a2e;--highlight:#7dd3fc;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;font-size:14px}
+#app{display:grid;grid-template-columns:300px 1fr;grid-template-rows:1fr 220px;height:100vh;gap:1px}
+#controls{grid-row:1/3;background:var(--panel);border-right:1px solid var(--border);overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+#viewport{position:relative;overflow:hidden;background:#000}
+#dashboard{background:var(--panel);border-top:1px solid var(--border);overflow-x:auto;display:flex;gap:1px}
+
+/* Controls */
+.ctrl-section{border:1px solid var(--border);border-radius:8px;padding:12px;background:rgba(255,255,255,.02)}
+.ctrl-section h3{font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--accent);margin-bottom:10px}
+.slider-row{margin-bottom:10px}
+.slider-row label{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px}
+.slider-row label span{color:var(--glow);font-family:monospace}
+input[type=range]{width:100%;-webkit-appearance:none;height:4px;background:var(--border);border-radius:2px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--accent);cursor:pointer;border:2px solid var(--glow)}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:4px 0;font-size:12px}
+.toggle{position:relative;width:36px;height:20px;cursor:pointer}
+.toggle input{opacity:0;width:0;height:0}
+.toggle .track{position:absolute;inset:0;background:var(--border);border-radius:10px;transition:.2s}
+.toggle input:checked+.track{background:var(--accent)}
+.toggle .track::after{content:'';position:absolute;width:16px;height:16px;border-radius:50%;background:#fff;top:2px;left:2px;transition:.2s}
+.toggle input:checked+.track::after{transform:translateX(16px)}
+.btn{padding:8px 16px;border:1px solid var(--border);border-radius:6px;background:var(--panel);color:var(--text);cursor:pointer;font-size:12px;transition:.2s}
+.btn:hover{border-color:var(--accent);background:rgba(99,102,241,.1)}
+.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn-row{display:flex;gap:8px}
+
+/* Sync / Lock */
+.lock-btn{
+  background:none;border:none;cursor:pointer;font-size:14px;padding:0 2px;
+  opacity:.4;transition:opacity .2s,transform .2s;line-height:1;
+}
+.lock-btn:hover{opacity:.7}
+.lock-btn.locked{opacity:1;filter:drop-shadow(0 0 4px goldenrod)}
+.slider-row.param-locked input[type=range]{pointer-events:none;opacity:.5}
+.btn-sync{
+  background:linear-gradient(135deg,#6366f1,#a855f7,#3b82f6);color:#fff;
+  border:none;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;
+  cursor:pointer;transition:filter .15s,box-shadow .3s;letter-spacing:.5px;width:100%;
+}
+.btn-sync:hover{filter:brightness(1.15)}
+.btn-sync.flash{box-shadow:0 0 20px rgba(99,102,241,.6),0 0 40px rgba(168,85,247,.4)}
+@keyframes sync-pulse-m2{0%,100%{box-shadow:0 0 8px rgba(99,102,241,.3),0 0 16px rgba(168,85,247,.2)}50%{box-shadow:0 0 24px rgba(99,102,241,.7),0 0 48px rgba(168,85,247,.5)}}
+.btn-sync.searching{animation:sync-pulse-m2 .8s ease-in-out infinite;pointer-events:none}
+.sync-status{font-size:10px;color:var(--glow);text-align:center;margin-top:6px;min-height:14px;transition:opacity .3s}
+.fitness-bar{width:100%;height:8px;background:#1a1a3a;border-radius:4px;margin-top:6px;overflow:hidden}
+.fitness-bar .fill{height:100%;border-radius:4px;transition:width 50ms linear;background:linear-gradient(90deg,#ef4444,#eab308,#22c55e)}
+.fitness-score{font-size:10px;text-align:center;margin-top:2px;color:var(--glow);font-variant-numeric:tabular-nums}
+
+.resonance-meter{height:8px;border-radius:4px;background:var(--border);overflow:hidden;margin-top:4px}
+.resonance-meter .fill{height:100%;border-radius:4px;transition:width .3s,background .3s}
+.resonance-label{display:flex;justify-content:space-between;font-size:11px;margin-top:2px}
+
+/* Dashboard */
+.dash-col{flex:1;min-width:220px;padding:14px;border-right:1px solid var(--border)}
+.dash-col:last-child{border-right:none}
+.dash-col h4{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--accent2);margin-bottom:10px}
+.metric{display:flex;justify-content:space-between;padding:3px 0;font-size:12px}
+.metric .val{font-family:monospace;color:var(--highlight)}
+.metric .val.resonant{color:var(--success);text-shadow:0 0 8px rgba(34,197,94,.5)}
+#spectrumCanvas{width:100%;height:120px;border-radius:6px;background:#08080f}
+#targetSpecCanvas{width:100%;height:100px;border-radius:6px;background:#050510;border:1px dashed rgba(34,197,94,.3)}
+.spec-label{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:rgba(200,200,224,.5);margin-bottom:2px;font-weight:500}
+#specComparison{display:flex;align-items:center;justify-content:center;gap:16px;padding:4px 0;border-top:1px solid rgba(100,100,150,.15);border-bottom:1px solid rgba(100,100,150,.15)}
+.cmp-metric{font-size:10px;color:rgba(200,200,224,.6);font-variant-numeric:tabular-nums}
+.cmp-metric .cmp-val{font-weight:600}
+.cmp-val.good{color:#22c55e}
+.cmp-val.mid{color:#f59e0b}
+.cmp-val.bad{color:#ef4444}
+
+/* Info panels */
+#infoOverlay{position:absolute;top:0;right:0;bottom:0;width:380px;background:rgba(18,18,30,.95);border-left:1px solid var(--border);transform:translateX(100%);transition:transform .3s;overflow-y:auto;padding:20px;z-index:20}
+#infoOverlay.open{transform:translateX(0)}
+#infoOverlay h2{font-size:18px;color:var(--glow);margin-bottom:12px}
+#infoOverlay h3{font-size:14px;color:var(--accent2);margin:16px 0 8px}
+#infoOverlay p,#infoOverlay li{font-size:13px;line-height:1.6;margin-bottom:8px}
+#infoOverlay ul{padding-left:18px}
+#infoOverlay .close-info{position:absolute;top:12px;right:12px;background:none;border:none;color:var(--text);font-size:20px;cursor:pointer}
+.info-btn{position:absolute;top:12px;right:12px;z-index:10;padding:6px 14px;border-radius:6px;background:rgba(18,18,30,.8);border:1px solid var(--border);color:var(--text);cursor:pointer;font-size:12px;backdrop-filter:blur(4px)}
+.info-btn:hover{border-color:var(--accent)}
+.info-tabs{display:flex;gap:4px;margin-bottom:16px}
+.info-tab{padding:6px 12px;border-radius:4px;background:var(--border);border:none;color:var(--text);cursor:pointer;font-size:11px}
+.info-tab.active{background:var(--accent);color:#fff}
+.tab-content{display:none}
+.tab-content.active{display:block}
+.math-block{background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:6px;padding:12px;font-family:monospace;font-size:12px;line-height:1.8;margin:8px 0;overflow-x:auto;color:var(--highlight)}
+.bom-item{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px}
+
+/* Lang switcher */
+#langSwitch{position:absolute;top:12px;left:12px;z-index:10;display:flex;gap:4px}
+#langSwitch button{padding:4px 10px;border-radius:4px;border:1px solid var(--border);background:var(--panel);color:var(--text);cursor:pointer;font-size:11px}
+#langSwitch button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+/* Title */
+.viewport-title{position:absolute;bottom:12px;left:12px;z-index:10;font-size:11px;color:rgba(200,200,224,.5);pointer-events:none}
+
+/* Keyboard Legend */
+#kb-legend{position:fixed;bottom:12px;right:12px;z-index:50;background:rgba(10,10,18,0.85);border:1px solid var(--border);border-radius:8px;padding:8px;backdrop-filter:blur(10px);max-width:280px;font-size:10px;color:var(--text);pointer-events:auto;display:none}
+#kb-legend.visible{display:block}
+#kb-legend .kb-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+#kb-legend .kb-title span{font-size:11px;font-weight:600;color:var(--glow)}
+#kb-legend .kb-close{background:none;border:none;color:var(--text);cursor:pointer;font-size:14px;padding:0 2px;line-height:1}
+#kb-legend .kb-close:hover{color:#fff}
+#kb-legend .kb-grid{display:grid;grid-template-columns:auto 1fr;gap:1px 8px;align-items:center}
+#kb-legend .kb-grid kbd{display:inline-block;padding:1px 4px;background:rgba(30,30,58,0.8);border:1px solid var(--border);border-radius:3px;font-family:monospace;font-size:9px;color:var(--glow);text-align:center;min-width:18px}
+#kb-legend .kb-grid .kb-desc{font-size:10px}
+#kb-legend .kb-grid .kb-sep{grid-column:1/-1;height:1px;background:var(--border);margin:3px 0}
+
+/* Mobile elements */
+#mobile-menu-btn{display:none;position:fixed;top:10px;left:10px;z-index:25;width:40px;height:40px;border-radius:8px;background:rgba(18,18,30,0.9);border:1px solid var(--border);color:var(--text);font-size:20px;cursor:pointer;align-items:center;justify-content:center;backdrop-filter:blur(8px)}
+#mobile-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:8}
+#dash-strip{display:none;position:fixed;bottom:0;left:0;right:0;height:44px;background:rgba(18,18,30,0.95);border-top:1px solid var(--border);z-index:20;padding:0 12px;align-items:center;justify-content:space-around;backdrop-filter:blur(8px);cursor:pointer}
+#dash-strip .strip-metric{text-align:center}
+#dash-strip .strip-label{font-size:8px;text-transform:uppercase;letter-spacing:0.5px;color:var(--accent2)}
+#dash-strip .strip-val{font-size:14px;font-weight:700;color:var(--highlight)}
+
+/* Desktop: narrower controls */
+@media(min-width:901px){
+  #app{grid-template-columns:240px 1fr;grid-template-rows:1fr 180px}
+}
+
+/* Responsive */
+@media(max-width:900px){
+  #app{display:block;width:100%;height:100vh;overflow:hidden}
+  #controls{position:fixed;top:0;left:0;width:280px;height:100%;z-index:12;transform:translateX(-100%);transition:transform 0.3s;flex-direction:column;border-right:1px solid var(--border);overflow-y:auto}
+  #controls.mobile-open{transform:translateX(0)}
+  #mobile-overlay.active{display:block}
+  #mobile-menu-btn{display:flex}
+  #viewport{width:100%;height:100vh}
+  #dashboard{display:none}
+  #dashboard.mobile-expanded{display:flex;position:fixed;bottom:0;left:0;right:0;max-height:50vh;z-index:30;overflow-y:auto;flex-wrap:wrap}
+  #targetSpecCanvas{height:60px}
+  #specComparison{gap:8px;flex-wrap:wrap}
+  .cmp-metric{font-size:9px}
+  #dash-strip{display:flex}
+  #infoOverlay{width:100%;top:0;right:0;bottom:0}
+  #kb-legend{bottom:54px;left:10px;right:auto;max-width:220px;font-size:9px}
+  #kb-legend .kb-grid kbd{font-size:8px;min-width:16px}
+  body{overflow:hidden}
+}
+
+  /* Slider hover feedback */
+  input[type=range]:hover{filter:brightness(1.3);cursor:grab}
+  input[type=range]:active{cursor:grabbing}
+  input[type=range].wheel-focus{box-shadow:0 0 6px rgba(147,51,234,.4);border-radius:3px}
+</style>
+</head>
+<body>
+<button id="mobile-menu-btn" onclick="toggleMobileMenu()">&#9776;</button>
+<div id="mobile-overlay" onclick="closeMobileMenu()"></div>
+<div id="dash-strip" onclick="toggleMobileDash()"><div class="strip-metric"><div class="strip-label">Freq</div><div class="strip-val" id="stripMFreq">1500 MHz</div></div><div class="strip-metric"><div class="strip-label">Resonance</div><div class="strip-val" id="stripRes">0%</div></div><div class="strip-metric"><div class="strip-label">Power</div><div class="strip-val" id="stripPower">--- dBm</div></div></div>
+<div id="app">
+  <div id="controls">
+    <div style="text-align:center;margin-bottom:4px">
+      <div style="font-size:16px;font-weight:700;color:var(--glow)" data-i18n="title">Ferrofluid Resonance Chamber</div>
+      <div style="font-size:11px;color:var(--accent2)" data-i18n="subtitle">Self-Organizing EM Waveguide</div>
+    </div>
+
+    <div class="ctrl-section">
+      <h3 data-i18n="driving_params">Driving Parameters</h3>
+      <div class="slider-row" id="row-freq">
+        <label><button class="lock-btn" data-param="freq" onclick="toggleLock('freq',this)" title="Lock">&#128275;</button> <span data-i18n="frequency">Frequency</span> <span id="freqVal">1.50 GHz</span></label>
+        <input type="range" id="freqSlider" min="100" max="10000" value="1500" step="1">
+      </div>
+      <div class="slider-row" id="row-field">
+        <label><button class="lock-btn" data-param="field" onclick="toggleLock('field',this)" title="Lock">&#128275;</button> <span data-i18n="field_strength">Field Strength</span> <span id="fieldVal">0.50 T</span></label>
+        <input type="range" id="fieldSlider" min="0" max="100" value="50" step="1">
+      </div>
+      <div class="slider-row" id="row-conc">
+        <label><button class="lock-btn" data-param="conc" onclick="toggleLock('conc',this)" title="Lock">&#128275;</button> <span data-i18n="concentration">Ferrofluid Concentration</span> <span id="concVal">50%</span></label>
+        <input type="range" id="concSlider" min="10" max="100" value="50" step="1">
+      </div>
+    </div>
+
+    <div class="ctrl-section">
+      <h3 data-i18n="sec_sync">Auto-Sync</h3>
+      <button class="btn-sync" id="syncBtn" onclick="runSync()" data-i18n="btn_sync">SYNC</button>
+      <div class="sync-status" id="syncStatus"></div>
+      <div class="fitness-bar" id="fitnessBar" style="display:none"><div class="fill" id="fitnessFill" style="width:0%"></div></div>
+      <div class="fitness-score" id="fitnessScore" style="display:none"></div>
+    </div>
+
+    <div class="ctrl-section">
+      <h3 data-i18n="resonance_match">Resonance Match</h3>
+      <div class="resonance-meter"><div class="fill" id="resMeterFill"></div></div>
+      <div class="resonance-label"><span data-i18n="off_res">Off</span><span id="resPercent">0%</span><span data-i18n="locked">Locked</span></div>
+      <div style="text-align:center;margin-top:6px;font-size:18px;font-weight:700" id="resStatus">---</div>
+    </div>
+
+    <div class="ctrl-section">
+      <h3 data-i18n="visibility">Visibility</h3>
+      <div class="toggle-row"><span data-i18n="field_lines">Field Lines</span><label class="toggle"><input type="checkbox" id="togFieldLines" checked><span class="track"></span></label></div>
+      <div class="toggle-row"><span data-i18n="ferrofluid_spikes">Ferrofluid Spikes</span><label class="toggle"><input type="checkbox" id="togSpikes" checked><span class="track"></span></label></div>
+      <div class="toggle-row"><span data-i18n="em_wavefronts">EM Wavefronts</span><label class="toggle"><input type="checkbox" id="togWavefronts" checked><span class="track"></span></label></div>
+      <div class="toggle-row"><span data-i18n="output_beam">Output Beam</span><label class="toggle"><input type="checkbox" id="togBeam" checked><span class="track"></span></label></div>
+      <div class="toggle-row"><span data-i18n="rodin_coil">Rodin Coil</span><label class="toggle"><input type="checkbox" id="togCoil" checked><span class="track"></span></label></div>
+    </div>
+
+    <div class="ctrl-section">
+      <h3 data-i18n="playback">Playback</h3>
+      <div class="btn-row">
+        <button class="btn primary" id="btnPlay" data-i18n="pause">Pause</button>
+        <button class="btn" id="btnReset" data-i18n="reset">Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="viewport">
+    <div id="langSwitch">
+      <button class="active" data-lang="en">EN</button>
+      <button data-lang="es">ES</button>
+    </div>
+    <button class="info-btn" id="btnInfo" data-i18n="info_btn">Info Panels</button>
+    <div class="viewport-title" data-i18n="vp_title">Ferrofluid Resonance Chamber — Model 2</div>
+
+    <div id="infoOverlay">
+      <button class="close-info" id="closeInfo">&times;</button>
+      <div class="info-tabs">
+        <button class="info-tab active" data-tab="what" data-i18n="tab_what">What Is This?</button>
+        <button class="info-tab" data-tab="science" data-i18n="tab_science">The Science</button>
+        <button class="info-tab" data-tab="build" data-i18n="tab_build">How To Build</button>
+        <button class="info-tab" data-tab="measure" data-i18n="tab_measure">What To Measure</button>
+        <button class="info-tab" data-tab="apps" data-i18n="tab_apps">Applications</button>
+      </div>
+
+      <div class="tab-content active" id="tab-what"></div>
+      <div class="tab-content" id="tab-science"></div>
+      <div class="tab-content" id="tab-build"></div>
+      <div class="tab-content" id="tab-measure"></div>
+      <div class="tab-content" id="tab-apps"></div>
+    </div>
+  </div>
+
+  <div id="dashboard">
+    <div class="dash-col">
+      <h4 data-i18n="physics_calcs">Physics Calculations</h4>
+      <div class="metric"><span data-i18n="current_freq">Current Frequency</span><span class="val" id="mFreq">1500 MHz</span></div>
+      <div class="metric"><span data-i18n="resonant_freq">Resonant Frequency</span><span class="val" id="mResFreq">--- MHz</span></div>
+      <div class="metric"><span data-i18n="freq_offset">Frequency Offset</span><span class="val" id="mOffset">--- MHz</span></div>
+      <div class="metric"><span data-i18n="rosensweig_wl">Rosensweig Wavelength</span><span class="val" id="mRosWL">--- mm</span></div>
+      <div class="metric"><span data-i18n="em_wl">EM Wavelength (in fluid)</span><span class="val" id="mEmWL">--- mm</span></div>
+      <div class="metric"><span data-i18n="coupling_eff">Coupling Efficiency</span><span class="val" id="mCoupling">--- %</span></div>
+      <div class="metric"><span data-i18n="output_power">Predicted Output Power</span><span class="val" id="mPower">--- dBm</span></div>
+    </div>
+    <div class="dash-col">
+      <h4 data-i18n="material_props">Material Properties</h4>
+      <div class="metric"><span data-i18n="susceptibility">Susceptibility (chi)</span><span class="val" id="mChi">---</span></div>
+      <div class="metric"><span data-i18n="permeability">Relative Permeability</span><span class="val" id="mMuR">---</span></div>
+      <div class="metric"><span data-i18n="permittivity">Relative Permittivity</span><span class="val" id="mEpsR">---</span></div>
+      <div class="metric"><span data-i18n="surf_tension">Surface Tension</span><span class="val" id="mSigma">--- N/m</span></div>
+      <div class="metric"><span data-i18n="density">Density</span><span class="val" id="mRho">--- kg/m3</span></div>
+      <div class="metric"><span data-i18n="spike_height">Spike Height</span><span class="val" id="mSpikeH">--- mm</span></div>
+    </div>
+    <div class="dash-col" style="min-width:300px;display:flex;flex-direction:column;gap:2px">
+      <div class="spec-label" data-i18n="target_spectrum">Target Spectrum</div>
+      <canvas id="targetSpecCanvas"></canvas>
+      <div id="specComparison">
+        <span class="cmp-metric"><span data-i18n="cmp_peak_width">Peak width</span>: <span class="cmp-val" id="cmpPeakWidth">---</span></span>
+        <span class="cmp-metric"><span data-i18n="cmp_snr">S/N</span>: <span class="cmp-val" id="cmpSNR">---</span></span>
+        <span class="cmp-metric"><span data-i18n="cmp_coherence">Coherence</span>: <span class="cmp-val" id="cmpCoherence">---</span></span>
+      </div>
+      <div class="spec-label" data-i18n="live_spectrum">Live Spectrum</div>
+      <canvas id="spectrumCanvas"></canvas>
+    </div>
+  </div>
+</div>
+
+<div id="kb-legend">
+  <div class="kb-title"><span id="kb-legend-title">Keyboard Shortcuts</span><button class="kb-close" onclick="toggleKbLegend()">&times;</button></div>
+  <div class="kb-grid" id="kb-legend-grid"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ====================== i18n ======================
+const i18n = {
+en: {
+  title:"Ferrofluid Resonance Chamber",subtitle:"Self-Organizing EM Waveguide",
+  driving_params:"Driving Parameters",frequency:"Frequency",field_strength:"Field Strength",
+  concentration:"Ferrofluid Concentration",resonance_match:"Resonance Match",
+  off_res:"Off",locked:"Locked",visibility:"Visibility",field_lines:"Field Lines",
+  ferrofluid_spikes:"Ferrofluid Spikes",em_wavefronts:"EM Wavefronts",output_beam:"Output Beam",
+  rodin_coil:"Rodin Coil",playback:"Playback",pause:"Pause",play:"Play",reset:"Reset",
+  info_btn:"Info Panels",vp_title:"Ferrofluid Resonance Chamber \u2014 Model 2",
+  tab_what:"What Is This?",tab_science:"The Science",tab_build:"How To Build",tab_measure:"What To Measure",tab_apps:"Applications",
+  physics_calcs:"Physics Calculations",current_freq:"Current Frequency",resonant_freq:"Resonant Frequency",
+  freq_offset:"Frequency Offset",rosensweig_wl:"Rosensweig Wavelength",em_wl:"EM Wavelength (in fluid)",
+  coupling_eff:"Coupling Efficiency",output_power:"Predicted Output Power",material_props:"Material Properties",
+  susceptibility:"Susceptibility (\u03C7)",permeability:"Relative Permeability",permittivity:"Relative Permittivity",
+  surf_tension:"Surface Tension",density:"Density",spike_height:"Spike Height",spectrum:"Output Spectrum",
+  target_spectrum:"Target Spectrum",live_spectrum:"Live Spectrum",
+  cmp_peak_width:"Peak width",cmp_snr:"S/N",cmp_coherence:"Coherence",
+  coherence_thermal:"Thermal",coherence_partial:"Partial",coherence_coherent:"Coherent",
+  res_off:"OFF RESONANCE",res_near:"APPROACHING",res_locked:"RESONANCE LOCKED",
+  sec_sync:"Auto-Sync",btn_sync:"SYNC",
+  sync_searching:"Searching",sync_optimizing:"Optimizing",sync_optimal:"Optimal: resonance lock achieved",
+  sync_freq:"Synced: optimal for frequency",sync_field:"Synced: optimal for field strength",
+  sync_conc:"Synced: optimal for concentration",sync_all:"Synced: resonance lock achieved",
+  tab_what_html:`<h2>What Is This?</h2>
+<p><strong>Ferrofluid</strong> is a magnetic liquid \u2014 tiny iron oxide nanoparticles suspended in carrier oil. When you bring a magnet close, it forms those iconic spikes and patterns.</p>
+<p>This experiment places ferrofluid inside a donut-shaped (toroidal) chamber wrapped with a special coil called a <strong>Rodin coil</strong>. When we pump radio waves through the coil at exactly the right frequency, something remarkable happens:</p>
+<p>The spike pattern in the ferrofluid and the electromagnetic wavelength <em>match</em>. The liquid spontaneously organizes itself into a structure that guides and amplifies the electromagnetic wave \u2014 like a self-assembling antenna.</p>
+<p>At resonance, the chaotic spikes snap into geometric order, the electromagnetic field becomes coherent (organized, like laser light), and a focused beam of microwave energy emerges from the output port.</p>
+<p><strong>In simple terms:</strong> A magnetic liquid that builds its own antenna and generates a coherent microwave beam when driven at the right frequency.</p>`,
+  tab_science_html:`<h2>The Science</h2>
+<h3>Rosensweig Instability</h3>
+<p>When a magnetic field exceeds a critical threshold on a ferrofluid surface, the normal-field instability (Rosensweig instability) creates a regular hexagonal pattern of spikes. The wavelength of these spikes is:</p>
+<div class="math-block">\u03BB_R = 2\u03C0 \u00B7 \u221A(\u03C3 / ((\u03C1\u2081 - \u03C1\u2082) \u00B7 g))<br><br>For EFH1 ferrofluid:<br>\u03C3 \u2248 0.025 N/m (surface tension)<br>\u03C1\u2081 \u2248 1210 kg/m\u00B3 (ferrofluid density)<br>\u03C1\u2082 \u2248 1.2 kg/m\u00B3 (air)<br>g = 9.81 m/s\u00B2<br><br>\u03BB_R \u2248 2\u03C0 \u00B7 \u221A(0.025 / (1208.8 \u00B7 9.81))<br>\u03BB_R \u2248 2\u03C0 \u00B7 1.44 mm \u2248 9.1 mm</div>
+<h3>EM Wavelength Matching</h3>
+<p>The electromagnetic wavelength inside the ferrofluid medium is:</p>
+<div class="math-block">\u03BB_EM = c / (f \u00B7 \u221A(\u03BC_r \u00B7 \u03B5_r))<br><br>For matching: \u03BB_EM = \u03BB_R<br>f = c / (\u03BB_R \u00B7 \u221A(\u03BC_r \u00B7 \u03B5_r))<br><br>With \u03BC_r \u2248 3.0, \u03B5_r \u2248 10:<br>f \u2248 3\u00D710\u2078 / (0.0091 \u00B7 \u221A30)<br>f \u2248 6.02 GHz (adjustable via concentration)</div>
+<h3>Coherent Emission (MASER Analogy)</h3>
+<p>When \u03BB_R = \u03BB_EM, the ferrofluid spike pattern acts as a distributed Bragg reflector for microwaves. Each spike is a sub-wavelength resonator. The periodic structure creates a photonic bandgap with a defect mode that channels energy into coherent emission \u2014 analogous to a MASER (Microwave Amplification by Stimulated Emission of Radiation).</p>
+<h3>The Rodin Coil</h3>
+<p>The Rodin coil uses a winding pattern based on the doubling circuit (1-2-4-8-7-5) from vortex mathematics. This creates a unique electromagnetic field topology with a central vortex. The field lines form nested tori, which couple efficiently to the toroidal ferrofluid chamber and drive the normal-field instability uniformly around the ring.</p>
+<h3>Self-Organizing Metamaterial</h3>
+<p>The key insight: the ferrofluid is not a static structure. It dynamically reorganizes in response to the field it is guiding. This creates a feedback loop where the electromagnetic field shapes the ferrofluid, and the ferrofluid shapes the field. At resonance, this feedback stabilizes into a coherent mode.</p>`,
+  tab_build_html:`<h2>How To Build It</h2>
+<h3>Bill of Materials</h3>
+<div class="bom-item"><span>Ferrofluid (EFH1, 250ml)</span><span>~$80</span></div>
+<div class="bom-item"><span>Toroidal chamber (3D printed, resin)</span><span>~$25</span></div>
+<div class="bom-item"><span>Magnet wire (26 AWG, enamel coated)</span><span>~$15</span></div>
+<div class="bom-item"><span>RF Signal Generator (100MHz-10GHz)</span><span>~$300-2000</span></div>
+<div class="bom-item"><span>SMA connectors + coax cable</span><span>~$30</span></div>
+<div class="bom-item"><span>RF Power Amplifier (1W, freq range)</span><span>~$150</span></div>
+<div class="bom-item"><span>Spectrum Analyzer (or RTL-SDR + software)</span><span>~$30-500</span></div>
+<div class="bom-item"><span>3D printer filament (PETG, clear)</span><span>~$25</span></div>
+<div class="bom-item"><span>Silicone gaskets + epoxy</span><span>~$20</span></div>
+<h3>Rodin Coil Winding Guide</h3>
+<p>1. Mark 12 equally-spaced points around the torus cross-section (like clock positions).</p>
+<p>2. Follow the vortex pattern: wind from position 1\u21922\u21924\u21928\u21927\u21925\u21921 (the doubling circuit mod 9, skipping 3-6-9).</p>
+<p>3. Each winding traverses the full toroidal circumference before crossing to the next position.</p>
+<p>4. The result is a coil with distinctive crossing patterns (not a regular helix) that creates a central vortex field.</p>
+<h3>Chamber Construction</h3>
+<p>3D print the toroidal chamber in two halves using clear PETG or resin. Inner diameter ~40mm, tube diameter ~15mm. Include an output port (SMA-compatible) at one point on the torus. Seal with silicone gasket and epoxy. Fill ~80% with ferrofluid (leave air gap for spike formation).</p>`,
+  tab_apps_html:`<h2>Applications &amp; Feasibility</h2>
+          <h4>Build Difficulty</h4>
+          <p><span style="font-size:18px;letter-spacing:2px">&#9733;&#9733;&#9733;&#9734;&#9734;</span> <strong>Lab-level</strong></p>
+          <p>Estimated cost: <strong>$2,000 - $3,000 USD</strong></p>
+          <h4>Practical Applications</h4>
+          <ul>
+            <li><strong>Self-Tuning Adaptive Antenna</strong> — Ferrofluid physically reconfigures to optimize reception</li>
+            <li><strong>Radar-Absorbing Metamaterial</strong> — Military stealth coating that adapts to incoming frequency</li>
+            <li><strong>Compact Coherent Microwave Source</strong> — Replace magnetrons/klystrons without vacuum tubes</li>
+            <li><strong>Wireless Power at Room Scale</strong> — Coherent beam enables efficient power delivery</li>
+            <li><strong>MRI Contrast Enhancement</strong> — Ferrofluid + resonance = stronger imaging signal</li>
+            <li><strong>Selective EM Shielding</strong> — Blocks specific frequencies while passing others</li>
+          </ul>`,
+  tab_measure_html:`<h2>What To Measure</h2>
+<h3>Equipment Setup</h3>
+<ul>
+<li>Connect spectrum analyzer to the output port SMA connector</li>
+<li>Set span to 100MHz around expected resonance</li>
+<li>RBW (Resolution Bandwidth): 100kHz for initial sweep, 10kHz for fine measurement</li>
+<li>Reference level: -30 dBm, 10 dB/div</li>
+</ul>
+<h3>What Coherent Output Looks Like</h3>
+<ul>
+<li><strong>No resonance:</strong> Broad noise floor, maybe some harmonics from the signal generator</li>
+<li><strong>Near resonance:</strong> A bump appears above the noise floor at the driving frequency. Width ~10-50 MHz.</li>
+<li><strong>At resonance:</strong> A sharp peak emerges. Width narrows to &lt;1 MHz. Power increases 10-30 dB above noise. This is the coherent emission signature.</li>
+<li><strong>Quality metric:</strong> Q-factor = f_center / bandwidth. Q > 100 indicates coherent mode. Q > 1000 is extraordinary.</li>
+</ul>
+<h3>Key Measurements</h3>
+<ul>
+<li>Peak frequency vs driving frequency (should lock)</li>
+<li>Peak width at -3dB (narrower = more coherent)</li>
+<li>Peak power vs field strength (should show threshold behavior)</li>
+<li>Frequency pulling range (how far you can detune before losing lock)</li>
+<li>Visual: photograph/video the ferrofluid pattern at resonance vs off-resonance</li>
+</ul>`
+},
+es: {
+  title:"C\u00e1mara de Resonancia de Ferrofluido",subtitle:"Gu\u00eda de Ondas EM Auto-Organizada",
+  driving_params:"Par\u00e1metros de Excitaci\u00f3n",frequency:"Frecuencia",field_strength:"Intensidad de Campo",
+  concentration:"Concentraci\u00f3n de Ferrofluido",resonance_match:"Coincidencia de Resonancia",
+  off_res:"Lejos",locked:"Enganchado",visibility:"Visibilidad",field_lines:"L\u00edneas de Campo",
+  ferrofluid_spikes:"Puntas de Ferrofluido",em_wavefronts:"Frentes de Onda EM",output_beam:"Haz de Salida",
+  rodin_coil:"Bobina Rodin",playback:"Reproducci\u00f3n",pause:"Pausar",play:"Reproducir",reset:"Reiniciar",
+  info_btn:"Paneles de Info",vp_title:"C\u00e1mara de Resonancia de Ferrofluido \u2014 Modelo 2",
+  tab_what:"\u00bfQu\u00e9 Es Esto?",tab_science:"La Ciencia",tab_build:"C\u00f3mo Construirlo",tab_measure:"Qu\u00e9 Medir",tab_apps:"Aplicaciones",
+  physics_calcs:"C\u00e1lculos F\u00edsicos",current_freq:"Frecuencia Actual",resonant_freq:"Frecuencia Resonante",
+  freq_offset:"Desfase de Frecuencia",rosensweig_wl:"Longitud de Onda Rosensweig",em_wl:"Longitud de Onda EM (en fluido)",
+  coupling_eff:"Eficiencia de Acoplamiento",output_power:"Potencia de Salida Predicha",material_props:"Propiedades del Material",
+  susceptibility:"Susceptibilidad (\u03C7)",permeability:"Permeabilidad Relativa",permittivity:"Permitividad Relativa",
+  surf_tension:"Tensi\u00f3n Superficial",density:"Densidad",spike_height:"Altura de Puntas",spectrum:"Espectro de Salida",
+  target_spectrum:"Espectro Objetivo",live_spectrum:"Espectro en Vivo",
+  cmp_peak_width:"Ancho de pico",cmp_snr:"S/R",cmp_coherence:"Coherencia",
+  coherence_thermal:"T\u00e9rmica",coherence_partial:"Parcial",coherence_coherent:"Coherente",
+  res_off:"FUERA DE RESONANCIA",res_near:"ACERC\u00c1NDOSE",res_locked:"RESONANCIA ENGANCHADA",
+  sec_sync:"Auto-Sincronizar",btn_sync:"SYNC",
+  sync_searching:"Buscando",sync_optimizing:"Optimizando",sync_optimal:"Optimo: resonancia enganchada",
+  sync_freq:"Sincronizado: optimo para frecuencia",sync_field:"Sincronizado: optimo para campo",
+  sync_conc:"Sincronizado: optimo para concentracion",sync_all:"Sincronizado: resonancia enganchada",
+  tab_what_html:`<h2>\u00bfQu\u00e9 Es Esto?</h2>
+<p><strong>El ferrofluido</strong> es un l\u00edquido magn\u00e9tico \u2014 nanopart\u00edculas diminutas de \u00f3xido de hierro suspendidas en aceite. Cuando acercas un im\u00e1n, forma esas ic\u00f3nicas puntas y patrones.</p>
+<p>Este experimento coloca ferrofluido dentro de una c\u00e1mara toroidal (forma de dona) envuelta con una bobina especial llamada <strong>bobina Rodin</strong>. Cuando bombeamos ondas de radio a trav\u00e9s de la bobina a exactamente la frecuencia correcta, algo notable sucede:</p>
+<p>El patr\u00f3n de puntas en el ferrofluido y la longitud de onda electromagn\u00e9tica <em>coinciden</em>. El l\u00edquido se organiza espont\u00e1neamente en una estructura que gu\u00eda y amplifica la onda electromagn\u00e9tica \u2014 como una antena que se auto-ensambla.</p>
+<p>En resonancia, las puntas ca\u00f3ticas se alinean en orden geom\u00e9trico, el campo electromagn\u00e9tico se vuelve coherente (organizado, como la luz l\u00e1ser), y un haz enfocado de energ\u00eda de microondas emerge del puerto de salida.</p>
+<p><strong>En t\u00e9rminos simples:</strong> Un l\u00edquido magn\u00e9tico que construye su propia antena y genera un haz coherente de microondas cuando se excita a la frecuencia correcta.</p>`,
+  tab_science_html:`<h2>La Ciencia</h2>
+<h3>Inestabilidad de Rosensweig</h3>
+<p>Cuando un campo magn\u00e9tico excede un umbral cr\u00edtico en la superficie de un ferrofluido, la inestabilidad de campo normal (inestabilidad de Rosensweig) crea un patr\u00f3n hexagonal regular de puntas. La longitud de onda es:</p>
+<div class="math-block">\u03BB_R = 2\u03C0 \u00B7 \u221A(\u03C3 / ((\u03C1\u2081 - \u03C1\u2082) \u00B7 g))<br><br>Para ferrofluido EFH1:<br>\u03C3 \u2248 0.025 N/m (tensi\u00f3n superficial)<br>\u03C1\u2081 \u2248 1210 kg/m\u00B3 (densidad del ferrofluido)<br>\u03C1\u2082 \u2248 1.2 kg/m\u00B3 (aire)<br>g = 9.81 m/s\u00B2<br><br>\u03BB_R \u2248 9.1 mm</div>
+<h3>Coincidencia de Longitud de Onda EM</h3>
+<div class="math-block">\u03BB_EM = c / (f \u00B7 \u221A(\u03BC_r \u00B7 \u03B5_r))<br><br>Para coincidencia: \u03BB_EM = \u03BB_R<br>f = c / (\u03BB_R \u00B7 \u221A(\u03BC_r \u00B7 \u03B5_r))</div>
+<h3>Emisi\u00f3n Coherente (Analog\u00eda MASER)</h3>
+<p>Cuando \u03BB_R = \u03BB_EM, el patr\u00f3n de puntas act\u00faa como un reflector Bragg distribuido para microondas. Cada punta es un resonador sub-longitud de onda. La estructura peri\u00f3dica crea una banda prohibida fot\u00f3nica con un modo defecto que canaliza energ\u00eda en emisi\u00f3n coherente.</p>
+<h3>La Bobina Rodin</h3>
+<p>La bobina Rodin usa un patr\u00f3n de bobinado basado en el circuito de duplicaci\u00f3n (1-2-4-8-7-5) de matem\u00e1ticas de v\u00f3rtice. Esto crea una topolog\u00eda de campo \u00fanica con un v\u00f3rtice central que se acopla eficientemente a la c\u00e1mara toroidal.</p>
+<h3>Metamaterial Auto-Organizado</h3>
+<p>El ferrofluido se reorganiza din\u00e1micamente en respuesta al campo que est\u00e1 guiando. Esto crea un bucle de retroalimentaci\u00f3n que se estabiliza en un modo coherente en resonancia.</p>`,
+  tab_build_html:`<h2>C\u00f3mo Construirlo</h2>
+<h3>Lista de Materiales</h3>
+<div class="bom-item"><span>Ferrofluido (EFH1, 250ml)</span><span>~$80 USD</span></div>
+<div class="bom-item"><span>C\u00e1mara toroidal (impresi\u00f3n 3D, resina)</span><span>~$25</span></div>
+<div class="bom-item"><span>Alambre magn\u00e9tico (26 AWG, esmaltado)</span><span>~$15</span></div>
+<div class="bom-item"><span>Generador de se\u00f1al RF (100MHz-10GHz)</span><span>~$300-2000</span></div>
+<div class="bom-item"><span>Conectores SMA + cable coaxial</span><span>~$30</span></div>
+<div class="bom-item"><span>Amplificador de potencia RF (1W)</span><span>~$150</span></div>
+<div class="bom-item"><span>Analizador de espectro (o RTL-SDR)</span><span>~$30-500</span></div>
+<h3>Gu\u00eda de Bobinado Rodin</h3>
+<p>1. Marcar 12 puntos equidistantes alrededor de la secci\u00f3n transversal del toro.</p>
+<p>2. Seguir el patr\u00f3n de v\u00f3rtice: bobinar desde posici\u00f3n 1\u21922\u21924\u21928\u21927\u21925\u21921.</p>
+<p>3. Cada bobinado recorre la circunferencia toroidal completa antes de cruzar a la siguiente posici\u00f3n.</p>`,
+  tab_apps_html:`<h2>Aplicaciones y Factibilidad</h2>
+          <h4>Dificultad de Construccion</h4>
+          <p><span style="font-size:18px;letter-spacing:2px">&#9733;&#9733;&#9733;&#9734;&#9734;</span> <strong>Nivel laboratorio</strong></p>
+          <p>Costo estimado: <strong>$2,000 - $3,000 USD</strong></p>
+          <h4>Aplicaciones Practicas</h4>
+          <ul>
+            <li><strong>Antena Adaptativa Auto-Sintonizable</strong> — El ferrofluido se reconfigura para optimizar recepcion</li>
+            <li><strong>Metamaterial Absorbente de Radar</strong> — Recubrimiento stealth que se adapta a la frecuencia entrante</li>
+            <li><strong>Fuente Coherente de Microondas</strong> — Reemplazo de magnetrones sin tubos de vacio</li>
+            <li><strong>Energia Inalambrica a Escala de Habitacion</strong> — Haz coherente permite entrega eficiente</li>
+            <li><strong>Mejora de Contraste MRI</strong> — Ferrofluido + resonancia = senal de imagen mas fuerte</li>
+            <li><strong>Blindaje EM Selectivo</strong> — Bloquea frecuencias especificas mientras pasa otras</li>
+          </ul>`,
+  tab_measure_html:`<h2>Qu\u00e9 Medir</h2>
+<h3>Configuraci\u00f3n del Equipo</h3>
+<ul>
+<li>Conectar analizador de espectro al puerto de salida SMA</li>
+<li>Span de 100MHz alrededor de la resonancia esperada</li>
+<li>RBW: 100kHz para barrido inicial, 10kHz para medici\u00f3n fina</li>
+</ul>
+<h3>C\u00f3mo Se Ve la Salida Coherente</h3>
+<ul>
+<li><strong>Sin resonancia:</strong> Piso de ruido amplio</li>
+<li><strong>Cerca de resonancia:</strong> Aparece un bulto sobre el ruido. Ancho ~10-50 MHz.</li>
+<li><strong>En resonancia:</strong> Pico agudo. Ancho &lt;1 MHz. Potencia 10-30 dB sobre ruido. Esta es la firma de emisi\u00f3n coherente.</li>
+<li><strong>Factor Q:</strong> Q = f_centro / ancho_banda. Q > 100 indica modo coherente.</li>
+</ul>`
+}
+};
+let lang = 'en';
+function setLang(l) {
+  lang = l;
+  document.querySelectorAll('#langSwitch button').forEach(b => b.classList.toggle('active', b.dataset.lang === l));
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.dataset.i18n;
+    if (i18n[l][key]) el.textContent = i18n[l][key];
+  });
+  ['what','science','build','measure','apps'].forEach(t => {
+    const el = document.getElementById('tab-'+t);
+    if (el && i18n[l]['tab_'+t+'_html']) el.innerHTML = i18n[l]['tab_'+t+'_html'];
+  });
+  if (typeof buildKbLegend === 'function') buildKbLegend();
+}
+document.getElementById('langSwitch').addEventListener('click', e => { if(e.target.dataset.lang) setLang(e.target.dataset.lang); });
+
+// Info panel
+const infoOverlay = document.getElementById('infoOverlay');
+document.getElementById('btnInfo').addEventListener('click', () => infoOverlay.classList.toggle('open'));
+document.getElementById('closeInfo').addEventListener('click', () => infoOverlay.classList.remove('open'));
+document.querySelectorAll('.info-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.info-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('tab-'+tab.dataset.tab).classList.add('active');
+  });
+});
+
+// ====================== Physics ======================
+const C = 3e8;
+const g = 9.81;
+const sigma0 = 0.025; // surface tension N/m
+const rho1_0 = 1210; // ferrofluid density kg/m3
+const rho2 = 1.2; // air density
+
+function calcPhysics(freqMHz, fieldT, concPct) {
+  const conc = concPct / 100;
+  const sigma = sigma0 * (0.5 + 0.5 * conc);
+  const rho1 = 1000 + 420 * conc; // density scales with concentration
+  const chi = 2.0 * conc; // magnetic susceptibility
+  const muR = 1 + chi;
+  const epsR = 5 + 10 * conc; // permittivity scales with concentration
+
+  const lambdaR = 2 * Math.PI * Math.sqrt(sigma / ((rho1 - rho2) * g));
+  const f = freqMHz * 1e6;
+  const lambdaEM = C / (f * Math.sqrt(muR * epsR));
+
+  const ratio = Math.min(lambdaR, lambdaEM) / Math.max(lambdaR, lambdaEM);
+  const coupling = Math.pow(ratio, 8) * 100; // sharp resonance
+
+  const fRes = C / (lambdaR * Math.sqrt(muR * epsR)) / 1e6; // resonant freq in MHz
+
+  const spikeH = fieldT > 0.1 ? Math.min(lambdaR * 1000 * 0.8, lambdaR * 1000 * fieldT * 2) : 0;
+
+  const qFactor = coupling > 90 ? 500 + (coupling - 90) * 100 : coupling > 50 ? 50 + (coupling - 50) * 10 : 5;
+  const powerBase = -60 + coupling * 0.5 + fieldT * 20;
+  const power = coupling > 80 ? powerBase + (coupling - 80) * 1.5 : powerBase;
+
+  return {
+    freqMHz, fRes, offset: freqMHz - fRes,
+    lambdaR: lambdaR * 1000, lambdaEM: lambdaEM * 1000,
+    coupling, power, qFactor,
+    chi, muR, epsR, sigma, rho1, spikeH, fieldT, conc
+  };
+}
+
+// ====================== Three.js Scene ======================
+const viewport = document.getElementById('viewport');
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
+camera.position.set(0, 3, 5);
+camera.lookAt(0, 0, 0);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setClearColor(0x0a0a12, 1);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.2;
+viewport.insertBefore(renderer.domElement, viewport.firstChild);
+
+function resize() {
+  const w = viewport.clientWidth, h = viewport.clientHeight;
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+}
+resize();
+window.addEventListener('resize', resize);
+
+// Lights
+scene.add(new THREE.AmbientLight(0x222244, 0.5));
+const keyLight = new THREE.PointLight(0x6366f1, 1.5, 20);
+keyLight.position.set(3, 4, 3);
+scene.add(keyLight);
+const fillLight = new THREE.PointLight(0xa855f7, 0.8, 15);
+fillLight.position.set(-3, 2, -2);
+scene.add(fillLight);
+const rimLight = new THREE.PointLight(0x7dd3fc, 0.6, 15);
+rimLight.position.set(0, -2, 4);
+scene.add(rimLight);
+
+// === Torus Chamber (transparent) ===
+const torusGeo = new THREE.TorusGeometry(1.5, 0.45, 32, 100);
+const torusMat = new THREE.MeshPhysicalMaterial({
+  color: 0x1a1a3e, transparent: true, opacity: 0.15,
+  roughness: 0.1, metalness: 0.0, transmission: 0.8,
+  side: THREE.DoubleSide
+});
+const torusMesh = new THREE.Mesh(torusGeo, torusMat);
+scene.add(torusMesh);
+
+// === Ferrofluid (displaced sphere/torus) ===
+const ffGeo = new THREE.TorusGeometry(1.5, 0.35, 64, 128);
+const ffOrigPos = ffGeo.attributes.position.array.slice();
+const ffMat = new THREE.MeshPhysicalMaterial({
+  color: 0x050510, roughness: 0.2, metalness: 0.9,
+  clearcoat: 1.0, clearcoatRoughness: 0.1,
+  envMapIntensity: 2.0
+});
+const ffMesh = new THREE.Mesh(ffGeo, ffMat);
+scene.add(ffMesh);
+
+// === Rodin Coil ===
+const coilGroup = new THREE.Group();
+scene.add(coilGroup);
+
+function buildRodinCoil() {
+  while(coilGroup.children.length) coilGroup.remove(coilGroup.children[0]);
+
+  const R = 1.5, r = 0.52;
+  const coilMat = new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.3, metalness: 0.8 });
+  // Rodin pattern: 12 positions around cross-section, follow doubling circuit 1-2-4-8-7-5
+  const pattern = [1, 2, 4, 8, 7, 5];
+  const numWindings = 6;
+  const pointsPerWinding = 200;
+  const tubeRadius = 0.018;
+
+  for (let w = 0; w < numWindings; w++) {
+    const startPos = pattern[w] - 1;
+    const endPos = pattern[(w + 1) % numWindings] - 1;
+    const pts = [];
+    for (let i = 0; i <= pointsPerWinding; i++) {
+      const t = i / pointsPerWinding;
+      const theta = t * Math.PI * 2; // around the torus major circle
+      const crossAngle0 = (startPos / 12) * Math.PI * 2;
+      const crossAngle1 = (endPos / 12) * Math.PI * 2;
+      const phi = crossAngle0 + t * (crossAngle1 - crossAngle0 + Math.PI * 2 * 3) ;
+      const x = (R + r * Math.cos(phi)) * Math.cos(theta);
+      const y = r * Math.sin(phi);
+      const z = (R + r * Math.cos(phi)) * Math.sin(theta);
+      pts.push(new THREE.Vector3(x, y, z));
+    }
+    const curve = new THREE.CatmullRomCurve3(pts);
+    const tubeGeo = new THREE.TubeGeometry(curve, pointsPerWinding, tubeRadius, 6, false);
+    coilGroup.add(new THREE.Mesh(tubeGeo, coilMat));
+  }
+  // Second set (mirror / opposite phase)
+  for (let w = 0; w < numWindings; w++) {
+    const startPos = pattern[w] - 1 + 6;
+    const endPos = pattern[(w + 1) % numWindings] - 1 + 6;
+    const pts = [];
+    for (let i = 0; i <= pointsPerWinding; i++) {
+      const t = i / pointsPerWinding;
+      const theta = t * Math.PI * 2;
+      const crossAngle0 = (startPos / 12) * Math.PI * 2;
+      const crossAngle1 = (endPos / 12) * Math.PI * 2;
+      const phi = crossAngle0 + t * (crossAngle1 - crossAngle0 + Math.PI * 2 * 3);
+      const x = (R + r * Math.cos(phi)) * Math.cos(theta);
+      const y = r * Math.sin(phi);
+      const z = (R + r * Math.cos(phi)) * Math.sin(theta);
+      pts.push(new THREE.Vector3(x, y, z));
+    }
+    const curve = new THREE.CatmullRomCurve3(pts);
+    const tubeGeo = new THREE.TubeGeometry(curve, pointsPerWinding, tubeRadius, 6, false);
+    coilGroup.add(new THREE.Mesh(tubeGeo, coilMat));
+  }
+}
+buildRodinCoil();
+
+// === Field Lines ===
+const fieldLinesGroup = new THREE.Group();
+scene.add(fieldLinesGroup);
+
+function buildFieldLines() {
+  while(fieldLinesGroup.children.length) fieldLinesGroup.remove(fieldLinesGroup.children[0]);
+  const R = 1.5;
+  const numLines = 24;
+  const lineMat = new THREE.LineBasicMaterial({ color: 0x6366f1, transparent: true, opacity: 0.4 });
+  for (let i = 0; i < numLines; i++) {
+    const theta = (i / numLines) * Math.PI * 2;
+    const pts = [];
+    for (let j = 0; j <= 60; j++) {
+      const phi = (j / 60) * Math.PI * 2;
+      const rr = 0.25 + 0.1 * Math.sin(phi * 3);
+      const x = (R + rr * Math.cos(phi)) * Math.cos(theta);
+      const y = rr * Math.sin(phi);
+      const z = (R + rr * Math.cos(phi)) * Math.sin(theta);
+      pts.push(new THREE.Vector3(x, y, z));
+    }
+    const geo = new THREE.BufferGeometry().setFromPoints(pts);
+    fieldLinesGroup.add(new THREE.Line(geo, lineMat));
+  }
+}
+buildFieldLines();
+
+// === EM Wavefronts (rings propagating around torus) ===
+const wavefrontGroup = new THREE.Group();
+scene.add(wavefrontGroup);
+const numWavefronts = 8;
+const wavefrontRings = [];
+
+for (let i = 0; i < numWavefronts; i++) {
+  const ringGeo = new THREE.TorusGeometry(0.35, 0.01, 8, 32);
+  const ringMat = new THREE.MeshBasicMaterial({ color: 0x818cf8, transparent: true, opacity: 0.5 });
+  const ring = new THREE.Mesh(ringGeo, ringMat);
+  wavefrontGroup.add(ring);
+  wavefrontRings.push({ mesh: ring, phase: (i / numWavefronts) * Math.PI * 2 });
+}
+
+// === Output Beam ===
+const beamGroup = new THREE.Group();
+scene.add(beamGroup);
+
+const beamGeo = new THREE.CylinderGeometry(0.03, 0.15, 3, 16, 1, true);
+const beamMat = new THREE.MeshBasicMaterial({ color: 0x22c55e, transparent: true, opacity: 0 });
+const beamMesh = new THREE.Mesh(beamGeo, beamMat);
+beamMesh.position.set(1.5, 0, 0);
+beamMesh.rotation.z = -Math.PI / 2;
+beamMesh.position.x = 3;
+beamGroup.add(beamMesh);
+
+// Beam glow particles
+const beamParticles = [];
+const beamParticleGeo = new THREE.SphereGeometry(0.02, 8, 8);
+for (let i = 0; i < 30; i++) {
+  const mat = new THREE.MeshBasicMaterial({ color: 0x22c55e, transparent: true, opacity: 0 });
+  const p = new THREE.Mesh(beamParticleGeo, mat);
+  beamGroup.add(p);
+  beamParticles.push({ mesh: p, t: i / 30 });
+}
+
+// Output port indicator
+const portGeo = new THREE.CylinderGeometry(0.06, 0.06, 0.15, 12);
+const portMat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.9, roughness: 0.2 });
+const portMesh = new THREE.Mesh(portGeo, portMat);
+portMesh.position.set(1.95, 0, 0);
+portMesh.rotation.z = Math.PI / 2;
+scene.add(portMesh);
+
+// ====================== Orbit Controls (manual) ======================
+let isDragging = false, prevMouse = { x: 0, y: 0 };
+let orbitAngleX = 0.5, orbitAngleY = 0.3, orbitDist = 5.5;
+const canvas = renderer.domElement;
+
+canvas.addEventListener('pointerdown', e => { isDragging = true; prevMouse = { x: e.clientX, y: e.clientY }; });
+window.addEventListener('pointerup', () => isDragging = false);
+canvas.addEventListener('pointermove', e => {
+  if (!isDragging) return;
+  orbitAngleX += (e.clientX - prevMouse.x) * 0.005;
+  orbitAngleY = Math.max(-1.2, Math.min(1.2, orbitAngleY + (e.clientY - prevMouse.y) * 0.005));
+  prevMouse = { x: e.clientX, y: e.clientY };
+});
+canvas.addEventListener('wheel', e => { orbitDist = Math.max(2, Math.min(12, orbitDist + e.deltaY * 0.005)); e.preventDefault(); }, { passive: false });
+
+// ====================== Noise function (simplex-like) ======================
+function hash(x, y, z) {
+  let h = x * 374761393 + y * 668265263 + z * 1274126177;
+  h = (h ^ (h >> 13)) * 1274126177;
+  return (h ^ (h >> 16)) / 2147483648;
+}
+function noise3d(x, y, z) {
+  const ix = Math.floor(x), iy = Math.floor(y), iz = Math.floor(z);
+  const fx = x - ix, fy = y - iy, fz = z - iz;
+  const sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy), sz = fz * fz * (3 - 2 * fz);
+  const n000 = hash(ix, iy, iz), n100 = hash(ix+1, iy, iz);
+  const n010 = hash(ix, iy+1, iz), n110 = hash(ix+1, iy+1, iz);
+  const n001 = hash(ix, iy, iz+1), n101 = hash(ix+1, iy, iz+1);
+  const n011 = hash(ix, iy+1, iz+1), n111 = hash(ix+1, iy+1, iz+1);
+  return n000*(1-sx)*(1-sy)*(1-sz) + n100*sx*(1-sy)*(1-sz) +
+         n010*(1-sx)*sy*(1-sz) + n110*sx*sy*(1-sz) +
+         n001*(1-sx)*(1-sy)*sz + n101*sx*(1-sy)*sz +
+         n011*(1-sx)*sy*sz + n111*sx*sy*sz;
+}
+
+// ====================== Spectrum Canvas ======================
+const specCanvas = document.getElementById('spectrumCanvas');
+const specCtx = specCanvas.getContext('2d');
+
+function drawSpectrum(physics) {
+  const dpr = window.devicePixelRatio || 1;
+  const rect = specCanvas.getBoundingClientRect();
+  specCanvas.width = rect.width * dpr;
+  specCanvas.height = rect.height * dpr;
+  specCtx.scale(dpr, dpr);
+  const W = rect.width, H = rect.height;
+
+  specCtx.fillStyle = '#08080f';
+  specCtx.fillRect(0, 0, W, H);
+
+  // Grid
+  specCtx.strokeStyle = 'rgba(99,102,241,0.1)';
+  specCtx.lineWidth = 0.5;
+  for (let i = 1; i < 10; i++) {
+    const y = (i / 10) * H;
+    specCtx.beginPath(); specCtx.moveTo(0, y); specCtx.lineTo(W, y); specCtx.stroke();
+  }
+  for (let i = 1; i < 10; i++) {
+    const x = (i / 10) * W;
+    specCtx.beginPath(); specCtx.moveTo(x, 0); specCtx.lineTo(x, H); specCtx.stroke();
+  }
+
+  // Noise floor
+  specCtx.strokeStyle = 'rgba(99,102,241,0.3)';
+  specCtx.lineWidth = 1;
+  specCtx.beginPath();
+  const noiseLevel = 0.85;
+  for (let x = 0; x < W; x++) {
+    const noiseAmp = 0.05 + (1 - physics.coupling / 100) * 0.1;
+    const ny = noiseLevel + (Math.random() - 0.5) * noiseAmp;
+    const y = ny * H;
+    x === 0 ? specCtx.moveTo(x, y) : specCtx.lineTo(x, y);
+  }
+  specCtx.stroke();
+
+  // Signal peak
+  if (physics.coupling > 10) {
+    const centerX = W * 0.5;
+    const peakWidth = W * (0.4 * (1 - physics.coupling / 100) + 0.005);
+    const peakHeight = H * (physics.coupling / 100) * 0.75;
+
+    const grad = specCtx.createLinearGradient(0, H - peakHeight, 0, H);
+    const alpha = Math.min(1, physics.coupling / 50);
+    if (physics.coupling > 85) {
+      grad.addColorStop(0, `rgba(34,197,94,${alpha})`);
+      grad.addColorStop(1, `rgba(34,197,94,0.05)`);
+    } else {
+      grad.addColorStop(0, `rgba(99,102,241,${alpha})`);
+      grad.addColorStop(1, `rgba(99,102,241,0.05)`);
+    }
+
+    specCtx.fillStyle = grad;
+    specCtx.beginPath();
+    for (let x = 0; x < W; x++) {
+      const dx = (x - centerX) / peakWidth;
+      const lorentz = 1 / (1 + dx * dx);
+      const y = H - peakHeight * lorentz + (Math.random() - 0.5) * 2;
+      x === 0 ? specCtx.moveTo(x, y) : specCtx.lineTo(x, y);
+    }
+    specCtx.lineTo(W, H);
+    specCtx.lineTo(0, H);
+    specCtx.fill();
+
+    // Peak line
+    specCtx.strokeStyle = physics.coupling > 85 ? '#22c55e' : '#6366f1';
+    specCtx.lineWidth = physics.coupling > 85 ? 2 : 1;
+    specCtx.beginPath();
+    for (let x = 0; x < W; x++) {
+      const dx = (x - centerX) / peakWidth;
+      const lorentz = 1 / (1 + dx * dx);
+      const y = H - peakHeight * lorentz + (Math.random() - 0.5) * (physics.coupling > 85 ? 0.5 : 3);
+      x === 0 ? specCtx.moveTo(x, y) : specCtx.lineTo(x, y);
+    }
+    specCtx.stroke();
+  }
+
+  // Labels
+  specCtx.fillStyle = 'rgba(200,200,224,0.5)';
+  specCtx.font = '10px monospace';
+  specCtx.fillText(`${(physics.freqMHz - 200).toFixed(0)}`, 4, H - 4);
+  specCtx.fillText(`${physics.freqMHz.toFixed(0)} MHz`, W / 2 - 20, H - 4);
+  specCtx.fillText(`${(physics.freqMHz + 200).toFixed(0)}`, W - 40, H - 4);
+  specCtx.fillText('0 dBm', 4, 14);
+  specCtx.fillText('-60', 4, H * 0.85);
+}
+
+// ====================== Target Spectrum Canvas ======================
+const tgtCanvas = document.getElementById('targetSpecCanvas');
+const tgtCtx = tgtCanvas.getContext('2d');
+let tgtAnimatedCenterX = 0.5; // normalized 0-1, smoothly interpolated
+let tgtLastFRes = 0;
+
+function drawTargetSpectrum(physics) {
+  const dpr = window.devicePixelRatio || 1;
+  const rect = tgtCanvas.getBoundingClientRect();
+  tgtCanvas.width = rect.width * dpr;
+  tgtCanvas.height = rect.height * dpr;
+  tgtCtx.scale(dpr, dpr);
+  const W = rect.width, H = rect.height;
+  const now = performance.now() / 1000;
+
+  // Smoothly slide peak position when resonant frequency changes
+  if (tgtLastFRes === 0) tgtLastFRes = physics.fRes;
+  tgtLastFRes += (physics.fRes - tgtLastFRes) * 0.08; // smooth interpolation
+
+  // Background
+  tgtCtx.fillStyle = '#050510';
+  tgtCtx.fillRect(0, 0, W, H);
+
+  // Grid (subtle)
+  tgtCtx.strokeStyle = 'rgba(34,197,94,0.07)';
+  tgtCtx.lineWidth = 0.5;
+  for (let i = 1; i < 10; i++) {
+    const y = (i / 10) * H;
+    tgtCtx.beginPath(); tgtCtx.moveTo(0, y); tgtCtx.lineTo(W, y); tgtCtx.stroke();
+  }
+  for (let i = 1; i < 10; i++) {
+    const x = (i / 10) * W;
+    tgtCtx.beginPath(); tgtCtx.moveTo(x, 0); tgtCtx.lineTo(x, H); tgtCtx.stroke();
+  }
+
+  // Noise floor
+  const noiseY = H * 0.85;
+  tgtCtx.strokeStyle = 'rgba(34,197,94,0.2)';
+  tgtCtx.lineWidth = 0.5;
+  tgtCtx.setLineDash([3, 3]);
+  tgtCtx.beginPath(); tgtCtx.moveTo(0, noiseY); tgtCtx.lineTo(W, noiseY); tgtCtx.stroke();
+  tgtCtx.setLineDash([]);
+
+  // Peak center follows the smoothly interpolated resonant frequency
+  const centerX = W * 0.5;
+  const peakWidthPx = W * (10 / 400) * 0.5;
+
+  // Animated shimmer: oscillate peak height and glow
+  const shimmer = 0.92 + 0.08 * Math.sin(now * 3.5);
+  const glowPulse = 0.5 + 0.5 * Math.sin(now * 2.1);
+  const peakTopY = H * (0.10 + 0.02 * (1 - shimmer));
+  const peakHeight = (noiseY - peakTopY) * shimmer;
+
+  // Animated glow halo behind peak
+  const glowRadius = peakWidthPx * (3 + glowPulse * 2);
+  const haloGrad = tgtCtx.createRadialGradient(centerX, peakTopY + 10, 0, centerX, peakTopY + 10, glowRadius);
+  haloGrad.addColorStop(0, `rgba(34,197,94,${0.15 + glowPulse * 0.1})`);
+  haloGrad.addColorStop(1, 'rgba(34,197,94,0)');
+  tgtCtx.fillStyle = haloGrad;
+  tgtCtx.fillRect(centerX - glowRadius, 0, glowRadius * 2, noiseY);
+
+  // Filled peak (green gradient)
+  const grad = tgtCtx.createLinearGradient(0, peakTopY, 0, noiseY);
+  grad.addColorStop(0, `rgba(34,197,94,${0.6 + glowPulse * 0.15})`);
+  grad.addColorStop(0.6, 'rgba(34,197,94,0.2)');
+  grad.addColorStop(1, 'rgba(34,197,94,0.02)');
+  tgtCtx.fillStyle = grad;
+  tgtCtx.beginPath();
+  for (let x = 0; x < W; x++) {
+    const dx = (x - centerX) / peakWidthPx;
+    const lorentz = 1 / (1 + dx * dx);
+    const y = noiseY - peakHeight * lorentz;
+    x === 0 ? tgtCtx.moveTo(x, y) : tgtCtx.lineTo(x, y);
+  }
+  tgtCtx.lineTo(W, noiseY);
+  tgtCtx.lineTo(0, noiseY);
+  tgtCtx.fill();
+
+  // Peak line with animated glow
+  tgtCtx.strokeStyle = '#22c55e';
+  tgtCtx.lineWidth = 1.5;
+  tgtCtx.shadowColor = `rgba(34,197,94,${0.4 + glowPulse * 0.4})`;
+  tgtCtx.shadowBlur = 4 + glowPulse * 6;
+  tgtCtx.beginPath();
+  for (let x = 0; x < W; x++) {
+    const dx = (x - centerX) / peakWidthPx;
+    const lorentz = 1 / (1 + dx * dx);
+    const y = noiseY - peakHeight * lorentz;
+    x === 0 ? tgtCtx.moveTo(x, y) : tgtCtx.lineTo(x, y);
+  }
+  tgtCtx.stroke();
+  tgtCtx.shadowBlur = 0;
+
+  // Annotations
+  tgtCtx.font = '9px monospace';
+  const isEs = lang === 'es';
+
+  tgtCtx.fillStyle = '#22c55e';
+  tgtCtx.textAlign = 'left';
+  tgtCtx.fillText(isEs ? 'Emisi\u00f3n coherente' : 'Coherent emission', centerX + peakWidthPx * 3 + 4, peakTopY + 4);
+  tgtCtx.strokeStyle = 'rgba(34,197,94,0.5)';
+  tgtCtx.lineWidth = 0.5;
+  tgtCtx.beginPath();
+  tgtCtx.moveTo(centerX + peakWidthPx * 3, peakTopY + 2);
+  tgtCtx.lineTo(centerX + peakWidthPx * 1.5, peakTopY + 2);
+  tgtCtx.stroke();
+
+  tgtCtx.fillStyle = 'rgba(200,200,224,0.4)';
+  tgtCtx.textAlign = 'right';
+  tgtCtx.fillText(isEs ? 'Piso de ruido' : 'Noise floor', W - 4, noiseY - 3);
+
+  tgtCtx.fillStyle = 'rgba(34,197,94,0.6)';
+  tgtCtx.textAlign = 'center';
+  tgtCtx.fillText('Q > 1000', centerX, noiseY + 12);
+
+  tgtCtx.fillStyle = 'rgba(34,197,94,0.5)';
+  tgtCtx.textAlign = 'left';
+  tgtCtx.fillText(isEs ? 'Gu\u00eda auto-organizada' : 'Self-organized waveguide', 4, peakTopY + H * 0.2);
+
+  tgtCtx.fillStyle = 'rgba(200,200,224,0.35)';
+  tgtCtx.textAlign = 'left';
+  tgtCtx.fillText('-20 dBm', 4, peakTopY + 10);
+  tgtCtx.fillText('-80 dBm', 4, noiseY + 10);
+
+  // Frequency labels track the smoothly interpolated resonant freq
+  const displayFRes = tgtLastFRes;
+  tgtCtx.textAlign = 'left';
+  tgtCtx.fillText(`${(displayFRes - 200).toFixed(0)}`, 4, H - 3);
+  tgtCtx.textAlign = 'center';
+  tgtCtx.fillText(`${displayFRes.toFixed(0)} MHz`, W / 2, H - 3);
+  tgtCtx.textAlign = 'right';
+  tgtCtx.fillText(`${(displayFRes + 200).toFixed(0)}`, W - 4, H - 3);
+  tgtCtx.textAlign = 'left';
+}
+
+function updateSpecComparison(physics) {
+  // Peak width: live depends on coupling, target is always <10 MHz
+  // Live Q factor maps to bandwidth: BW = fRes / Q
+  const liveBW = physics.qFactor > 0 ? (physics.fRes / physics.qFactor) : 9999;
+  const liveBWMHz = liveBW.toFixed(0);
+  const targetBW = 10;
+
+  const pwEl = document.getElementById('cmpPeakWidth');
+  pwEl.textContent = `${liveBWMHz} MHz (${lang === 'es' ? 'obj' : 'tgt'}: <${targetBW} MHz)`;
+  pwEl.className = 'cmp-val ' + (liveBW <= targetBW ? 'good' : liveBW <= 50 ? 'mid' : 'bad');
+
+  // Signal-to-noise: power above noise floor (-80 dBm)
+  const noiseFloor = -80;
+  const snr = physics.power - noiseFloor;
+  const snrEl = document.getElementById('cmpSNR');
+  snrEl.textContent = `${snr.toFixed(0)} dB`;
+  snrEl.className = 'cmp-val ' + (snr >= 50 ? 'good' : snr >= 20 ? 'mid' : 'bad');
+
+  // Coherence classification
+  const cohEl = document.getElementById('cmpCoherence');
+  let cohText, cohClass;
+  if (physics.coupling > 85) {
+    cohText = i18n[lang].coherence_coherent;
+    cohClass = 'good';
+  } else if (physics.coupling > 40) {
+    cohText = i18n[lang].coherence_partial;
+    cohClass = 'mid';
+  } else {
+    cohText = i18n[lang].coherence_thermal;
+    cohClass = 'bad';
+  }
+  cohEl.textContent = cohText;
+  cohEl.className = 'cmp-val ' + cohClass;
+}
+
+// ====================== Update Loop ======================
+let playing = true;
+let time = 0;
+
+const freqSlider = document.getElementById('freqSlider');
+const fieldSlider = document.getElementById('fieldSlider');
+const concSlider = document.getElementById('concSlider');
+
+// ===== LOCK & SYNC SYSTEM =====
+const locks = { freq: false, field: false, conc: false };
+
+function toggleLock(param, btn) {
+  locks[param] = !locks[param];
+  btn.textContent = locks[param] ? '\u{1F512}' : '\u{1F513}';
+  btn.classList.toggle('locked', locks[param]);
+  const row = document.getElementById('row-' + param);
+  if (row) row.classList.toggle('param-locked', locks[param]);
+}
+
+// ===== ANIMATED SYNC ENGINE =====
+let syncAnimating = false;
+const C_LIGHT = 3e8, g_acc = 9.81, sigma0_st = 0.025, rho2_air = 1.2;
+
+function calcFres(concPct) {
+  const conc = concPct / 100;
+  const sigma_st = sigma0_st * (0.5 + 0.5 * conc);
+  const rho1 = 1000 + 420 * conc;
+  const chi = 2.0 * conc;
+  const muR = 1 + chi;
+  const epsR = 5 + 10 * conc;
+  const lambdaR = 2 * Math.PI * Math.sqrt(sigma_st / ((rho1 - rho2_air) * g_acc));
+  return C_LIGHT / (lambdaR * Math.sqrt(muR * epsR)) / 1e6;
+}
+function calcRosensweigThreshold(concPct) {
+  const conc = concPct / 100;
+  return Math.max(5, Math.min(90, Math.round(15 / Math.max(0.3, conc))));
+}
+
+function calcFitnessM2(freq, field, conc) {
+  // Coupling efficiency: how close freq is to resonant + field above Rosensweig threshold
+  const fRes = calcFres(conc);
+  const freqMatch = 1 - Math.min(1, Math.abs(freq - fRes) / Math.max(1, fRes));
+  const threshold = calcRosensweigThreshold(conc);
+  const fieldScore = field >= threshold ? Math.min(1, field / (threshold * 1.5)) : field / threshold * 0.5;
+  const concScore = conc / 100;
+  return Math.max(0, Math.min(100, freqMatch * 40 + fieldScore * 35 + concScore * 25));
+}
+
+function calcOptimalM2() {
+  const optConc = locks.conc ? parseFloat(concSlider.value) : 100;
+  const fRes = Math.round(calcFres(optConc));
+  const optFreq = locks.freq ? parseFloat(freqSlider.value) : Math.max(100, Math.min(10000, fRes));
+  const optField = locks.field ? parseFloat(fieldSlider.value) : Math.min(100, Math.round(calcRosensweigThreshold(optConc) * 1.5));
+
+  // Re-optimize if freq locked
+  let finalConc = optConc;
+  if (locks.freq && !locks.conc) {
+    let bestConc = 50, bestDiff = Infinity;
+    for (let c = 10; c <= 100; c++) {
+      const diff = Math.abs(calcFres(c) - optFreq);
+      if (diff < bestDiff) { bestDiff = diff; bestConc = c; }
+    }
+    finalConc = bestConc;
+  }
+  return { freq: optFreq, field: locks.field ? optField : Math.min(100, Math.round(calcRosensweigThreshold(finalConc) * 1.5)), conc: finalConc };
+}
+
+function runSync() {
+  if (syncAnimating) return;
+  syncAnimating = true;
+
+  const btn = document.getElementById('syncBtn');
+  const statusEl = document.getElementById('syncStatus');
+  const fitnessBar = document.getElementById('fitnessBar');
+  const fitnessFill = document.getElementById('fitnessFill');
+  const fitnessScoreEl = document.getElementById('fitnessScore');
+
+  btn.classList.add('searching');
+  fitnessBar.style.display = 'block';
+  fitnessScoreEl.style.display = 'block';
+  statusEl.style.opacity = 1;
+
+  document.querySelectorAll('#controls input[type=range]').forEach(s => s.style.pointerEvents = 'none');
+
+  const optimal = calcOptimalM2();
+  const startTime = performance.now();
+  const SEARCH_DUR = 2000, CONVERGE_DUR = 1500, SETTLE_DUR = 500;
+  const TOTAL = SEARCH_DUR + CONVERGE_DUR + SETTLE_DUR;
+  const speeds = [1.0, 1.3, 1.7];
+  let dots = 0, dotTimer = 0;
+
+  // Slider configs: [id, min, max, stateGetter]
+  const sliders = [
+    { id: 'freqSlider', min: 100, max: 10000, locked: locks.freq, target: optimal.freq, labelId: 'freqVal', fmt: v => (v/1000).toFixed(2) + ' GHz', speed: speeds[0] },
+    { id: 'fieldSlider', min: 0, max: 100, locked: locks.field, target: optimal.field, labelId: 'fieldVal', fmt: v => (v/100).toFixed(2) + ' T', speed: speeds[1] },
+    { id: 'concSlider', min: 10, max: 100, locked: locks.conc, target: optimal.conc, labelId: 'concVal', fmt: v => v + '%', speed: speeds[2] },
+  ];
+
+  function animStep(now) {
+    const elapsed = now - startTime;
+
+    if (elapsed < SEARCH_DUR) {
+      const st = elapsed / 1000;
+      dotTimer++;
+      if (dotTimer % 20 === 0) dots = (dots + 1) % 4;
+      statusEl.textContent = i18n[lang].sync_searching + '.'.repeat(dots);
+
+      sliders.forEach(s => {
+        if (s.locked) return;
+        const el = document.getElementById(s.id);
+        const v = Math.round(s.min + (s.max - s.min) * (0.5 + 0.5 * Math.sin(st * s.speed * 2 * Math.PI)));
+        el.value = v;
+        document.getElementById(s.labelId).textContent = s.fmt(v);
+      });
+    } else if (elapsed < SEARCH_DUR + CONVERGE_DUR) {
+      const ct = (elapsed - SEARCH_DUR) / CONVERGE_DUR;
+      const eased = ct < 0.5 ? 2 * ct * ct : -1 + (4 - 2 * ct) * ct;
+      dotTimer++;
+      if (dotTimer % 20 === 0) dots = (dots + 1) % 4;
+      statusEl.textContent = i18n[lang].sync_optimizing + '.'.repeat(dots);
+
+      sliders.forEach(s => {
+        if (s.locked) return;
+        const el = document.getElementById(s.id);
+        const current = parseFloat(el.value);
+        const v = Math.round(current + (s.target - current) * eased);
+        el.value = v;
+        document.getElementById(s.labelId).textContent = s.fmt(v);
+      });
+    } else {
+      // Settle
+      sliders.forEach(s => {
+        if (s.locked) return;
+        const el = document.getElementById(s.id);
+        el.value = s.target;
+        document.getElementById(s.labelId).textContent = s.fmt(s.target);
+      });
+
+      btn.classList.remove('searching');
+      btn.classList.add('flash');
+      setTimeout(() => btn.classList.remove('flash'), 600);
+
+      const finalFit = calcFitnessM2(parseFloat(freqSlider.value), parseFloat(fieldSlider.value), parseFloat(concSlider.value));
+      fitnessFill.style.width = finalFit + '%';
+      fitnessScoreEl.textContent = Math.round(finalFit) + '%';
+      statusEl.textContent = i18n[lang].sync_optimal;
+      setTimeout(() => { statusEl.style.opacity = 0; }, 4000);
+      setTimeout(() => { fitnessBar.style.display = 'none'; fitnessScoreEl.style.display = 'none'; }, 6000);
+
+      document.querySelectorAll('#controls input[type=range]').forEach(s => s.style.pointerEvents = '');
+      syncAnimating = false;
+      return;
+    }
+
+    const fit = calcFitnessM2(parseFloat(freqSlider.value), parseFloat(fieldSlider.value), parseFloat(concSlider.value));
+    fitnessFill.style.width = fit + '%';
+    fitnessScoreEl.textContent = Math.round(fit) + '%';
+    requestAnimationFrame(animStep);
+  }
+  requestAnimationFrame(animStep);
+}
+
+document.getElementById('btnPlay').addEventListener('click', function() {
+  playing = !playing;
+  this.textContent = playing ? i18n[lang].pause : i18n[lang].play;
+});
+document.getElementById('btnReset').addEventListener('click', () => {
+  freqSlider.value = 1500; fieldSlider.value = 50; concSlider.value = 50;
+  orbitAngleX = 0.5; orbitAngleY = 0.3; orbitDist = 5.5;
+  time = 0;
+});
+
+function updateDashboard(p) {
+  document.getElementById('freqVal').textContent = (p.freqMHz / 1000).toFixed(2) + ' GHz';
+  document.getElementById('fieldVal').textContent = p.fieldT.toFixed(2) + ' T';
+  document.getElementById('concVal').textContent = Math.round(p.conc * 100) + '%';
+
+  document.getElementById('mFreq').textContent = p.freqMHz.toFixed(1) + ' MHz';
+  document.getElementById('mResFreq').textContent = p.fRes.toFixed(1) + ' MHz';
+  const offsetEl = document.getElementById('mOffset');
+  offsetEl.textContent = (p.offset > 0 ? '+' : '') + p.offset.toFixed(1) + ' MHz';
+  offsetEl.className = 'val' + (Math.abs(p.offset) < 50 ? ' resonant' : '');
+
+  document.getElementById('mRosWL').textContent = p.lambdaR.toFixed(2) + ' mm';
+  document.getElementById('mEmWL').textContent = p.lambdaEM.toFixed(2) + ' mm';
+
+  const coupEl = document.getElementById('mCoupling');
+  coupEl.textContent = p.coupling.toFixed(1) + '%';
+  coupEl.className = 'val' + (p.coupling > 85 ? ' resonant' : '');
+
+  document.getElementById('mPower').textContent = p.power.toFixed(1) + ' dBm';
+  document.getElementById('mChi').textContent = p.chi.toFixed(2);
+  document.getElementById('mMuR').textContent = p.muR.toFixed(2);
+  document.getElementById('mEpsR').textContent = p.epsR.toFixed(1);
+  document.getElementById('mSigma').textContent = p.sigma.toFixed(4) + ' N/m';
+  document.getElementById('mRho').textContent = p.rho1.toFixed(0) + ' kg/m\u00B3';
+  document.getElementById('mSpikeH').textContent = p.spikeH.toFixed(1) + ' mm';
+
+  // Resonance meter
+  const fill = document.getElementById('resMeterFill');
+  fill.style.width = p.coupling + '%';
+  if (p.coupling > 85) {
+    fill.style.background = 'linear-gradient(90deg, #22c55e, #4ade80)';
+  } else if (p.coupling > 50) {
+    fill.style.background = 'linear-gradient(90deg, #f59e0b, #fbbf24)';
+  } else {
+    fill.style.background = 'linear-gradient(90deg, #6366f1, #818cf8)';
+  }
+  document.getElementById('resPercent').textContent = p.coupling.toFixed(0) + '%';
+
+  const status = document.getElementById('resStatus');
+  if (p.coupling > 85) {
+    status.textContent = i18n[lang].res_locked;
+    status.style.color = '#22c55e';
+    status.style.textShadow = '0 0 20px rgba(34,197,94,0.8)';
+  } else if (p.coupling > 40) {
+    status.textContent = i18n[lang].res_near;
+    status.style.color = '#f59e0b';
+    status.style.textShadow = 'none';
+  } else {
+    status.textContent = i18n[lang].res_off;
+    status.style.color = '#ef4444';
+    status.style.textShadow = 'none';
+  }
+}
+
+function updateFerrofluid(p, t) {
+  const positions = ffGeo.attributes.position;
+  const count = positions.count;
+  const coupling01 = p.coupling / 100;
+  const spikeAmp = p.fieldT * 0.15 * Math.min(1, coupling01 * 1.5 + 0.2);
+
+  // At resonance: regular hexagonal pattern; off resonance: chaotic noise
+  const regularityMix = Math.pow(coupling01, 3); // sharp transition
+
+  for (let i = 0; i < count; i++) {
+    const ox = ffOrigPos[i * 3];
+    const oy = ffOrigPos[i * 3 + 1];
+    const oz = ffOrigPos[i * 3 + 2];
+
+    // Chaotic component
+    const chaotic = noise3d(ox * 4 + t * 2, oy * 4 + t * 1.5, oz * 4 + t * 0.8) * 2 - 1;
+
+    // Regular hexagonal-ish pattern (using quantized angular positions)
+    const angle = Math.atan2(oz, ox);
+    const crossAngle = Math.atan2(oy, Math.sqrt(ox * ox + oz * oz) - 1.5);
+    const hexPattern = Math.cos(angle * 18) * Math.cos(crossAngle * 12);
+    const regular = hexPattern * (0.5 + 0.5 * Math.sin(t * 3));
+
+    const displacement = spikeAmp * (chaotic * (1 - regularityMix) + regular * regularityMix);
+
+    // Direction: radially outward from torus surface
+    const len = Math.sqrt(ox * ox + oz * oz);
+    const torusCx = (len > 0.01) ? ox / len * 1.5 : 0;
+    const torusCz = (len > 0.01) ? oz / len * 1.5 : 0;
+    let nx = ox - torusCx;
+    let ny = oy;
+    let nz = oz - torusCz;
+    const nlen = Math.sqrt(nx * nx + ny * ny + nz * nz);
+    if (nlen > 0.001) { nx /= nlen; ny /= nlen; nz /= nlen; }
+
+    positions.setXYZ(i, ox + nx * displacement, oy + ny * displacement, oz + nz * displacement);
+  }
+  positions.needsUpdate = true;
+  ffGeo.computeVertexNormals();
+}
+
+function updateWavefronts(p, t) {
+  const R = 1.5;
+  const coupling01 = p.coupling / 100;
+  wavefrontRings.forEach((wf, idx) => {
+    const theta = wf.phase + t * 3;
+    const x = R * Math.cos(theta);
+    const z = R * Math.sin(theta);
+    wf.mesh.position.set(x, 0, z);
+    wf.mesh.lookAt(0, 0, 0);
+    // At resonance, rings are evenly spaced and bright; off resonance, jittery
+    const jitter = (1 - coupling01) * 0.3;
+    wf.mesh.position.y = (Math.random() - 0.5) * jitter;
+    wf.mesh.material.opacity = 0.2 + coupling01 * 0.6;
+    wf.mesh.material.color.setHex(coupling01 > 0.85 ? 0x22c55e : 0x818cf8);
+  });
+}
+
+function updateFieldLines(p, t) {
+  const coupling01 = p.coupling / 100;
+  fieldLinesGroup.children.forEach((line, i) => {
+    line.material.opacity = 0.1 + coupling01 * 0.6;
+    line.material.color.setHex(coupling01 > 0.85 ? 0x22c55e : 0x6366f1);
+    // Animate: rotate field lines slightly
+    const positions = line.geometry.attributes.position;
+    const R = 1.5;
+    const theta = (i / fieldLinesGroup.children.length) * Math.PI * 2;
+    for (let j = 0; j <= 60; j++) {
+      const phi = (j / 60) * Math.PI * 2 + t * 0.5;
+      const rr = 0.25 + 0.05 * Math.sin(phi * 3 + t) * (1 - coupling01) + 0.02 * coupling01;
+      const x = (R + rr * Math.cos(phi)) * Math.cos(theta);
+      const y = rr * Math.sin(phi);
+      const z = (R + rr * Math.cos(phi)) * Math.sin(theta);
+      positions.setXYZ(j, x, y, z);
+    }
+    positions.needsUpdate = true;
+  });
+}
+
+function updateBeam(p, t) {
+  const coupling01 = p.coupling / 100;
+  const beamOpacity = coupling01 > 0.8 ? (coupling01 - 0.8) * 5 : 0;
+
+  beamMat.opacity = beamOpacity * 0.6;
+  beamMat.color.setHex(coupling01 > 0.9 ? 0x22c55e : 0x6366f1);
+  beamMesh.position.set(3.0, 0, 0);
+
+  beamParticles.forEach(bp => {
+    bp.t += 0.02;
+    if (bp.t > 1) bp.t = 0;
+    const dist = 1.95 + bp.t * 3;
+    const spread = bp.t * 0.15;
+    bp.mesh.position.set(
+      dist,
+      (Math.random() - 0.5) * spread,
+      (Math.random() - 0.5) * spread
+    );
+    bp.mesh.material.opacity = beamOpacity * (1 - bp.t) * 0.8;
+    bp.mesh.material.color.setHex(coupling01 > 0.9 ? 0x22c55e : 0x818cf8);
+    bp.mesh.scale.setScalar(0.5 + coupling01 * 1.5);
+  });
+}
+
+// Toggle visibility
+const toggles = {
+  togFieldLines: fieldLinesGroup,
+  togSpikes: ffMesh,
+  togWavefronts: wavefrontGroup,
+  togBeam: beamGroup,
+  togCoil: coilGroup
+};
+Object.entries(toggles).forEach(([id, obj]) => {
+  document.getElementById(id).addEventListener('change', function() { obj.visible = this.checked; });
+});
+
+// Iridescent environment (fake env map via color cycling on ferrofluid)
+function updateFerrofluidColor(p, t) {
+  const coupling01 = p.coupling / 100;
+  const hue = coupling01 > 0.85 ? 0.38 : 0.7 + Math.sin(t * 0.5) * 0.1;
+  const sat = 0.1 + coupling01 * 0.3;
+  const light = 0.02 + coupling01 * 0.08;
+  ffMat.color.setHSL(hue, sat, light);
+  ffMat.clearcoatRoughness = 0.3 - coupling01 * 0.25;
+  ffMat.envMapIntensity = 1 + coupling01 * 3;
+}
+
+// ====================== Animation ======================
+let lastTime = performance.now();
+
+function animate(now) {
+  requestAnimationFrame(animate);
+  const dt = Math.min((now - lastTime) / 1000, 0.05);
+  lastTime = now;
+  if (playing) time += dt;
+
+  // Read controls
+  const freqMHz = parseFloat(freqSlider.value);
+  const fieldT = parseFloat(fieldSlider.value) / 100;
+  const concPct = parseFloat(concSlider.value);
+
+  const physics = calcPhysics(freqMHz, fieldT, concPct);
+
+  // Update 3D
+  updateFerrofluid(physics, time);
+  updateFerrofluidColor(physics, time);
+  updateWavefronts(physics, time);
+  updateFieldLines(physics, time);
+  updateBeam(physics, time);
+
+  // Camera orbit
+  camera.position.x = Math.sin(orbitAngleX) * Math.cos(orbitAngleY) * orbitDist;
+  camera.position.y = Math.sin(orbitAngleY) * orbitDist;
+  camera.position.z = Math.cos(orbitAngleX) * Math.cos(orbitAngleY) * orbitDist;
+  camera.lookAt(0, 0, 0);
+
+  // Auto-rotate slowly
+  if (!isDragging && autoRotating) orbitAngleX += dt * 0.1;
+
+  // Coil pulse at resonance
+  const coupling01 = physics.coupling / 100;
+  coilGroup.children.forEach(c => {
+    if (c.material) {
+      const pulse = coupling01 > 0.85 ? 0.5 + 0.5 * Math.sin(time * 10) : 0;
+      c.material.emissive = new THREE.Color(0xd97706).multiplyScalar(pulse * 0.3);
+    }
+  });
+
+  // Key light intensity at resonance
+  keyLight.intensity = 1.5 + coupling01 * 2;
+  keyLight.color.setHex(coupling01 > 0.85 ? 0x22c55e : 0x6366f1);
+
+  renderer.render(scene, camera);
+
+  // Dashboard
+  updateDashboard(physics);
+  drawTargetSpectrum(physics);
+  drawSpectrum(physics);
+  updateSpecComparison(physics);
+}
+
+// ====================== Keyboard Legend ======================
+let kbLegendVisible = false;
+let autoRotating = true; // already auto-rotates in animate loop
+
+const KB_SHORTCUTS = {
+  en: [
+    ['Q / A', 'Frequency +/- 100 MHz'],
+    ['Shift+Q/A', 'Fine freq +/- 10 MHz'],
+    ['W / S', 'Field +/- 0.1T'],
+    ['G', 'Toggle field lines'],
+    ['B', 'Toggle output beam'],
+    ['V', 'Toggle wavefronts'],
+    ['M', 'Jump to resonance'],
+    ['Shift+S', 'Auto-Sync'],
+    ['---', ''],
+    ['Space', 'Play / Pause'],
+    ['R', 'Toggle auto-rotate'],
+    ['F', 'Toggle fullscreen'],
+    ['H', 'Show/hide controls'],
+    ['L', 'Toggle language'],
+    ['? / K', 'This legend'],
+    ['Esc', 'Close panels'],
+    ['---', ''],
+    ['Arrows', 'Rotate camera'],
+    ['+ / -', 'Zoom in/out'],
+    ['0', 'Reset camera'],
+  ],
+  es: [
+    ['Q / A', 'Frecuencia +/- 100 MHz'],
+    ['Shift+Q/A', 'Frec. fina +/- 10 MHz'],
+    ['W / S', 'Campo +/- 0.1T'],
+    ['G', 'Lineas de campo'],
+    ['B', 'Haz de salida'],
+    ['V', 'Frentes de onda'],
+    ['M', 'Saltar a resonancia'],
+    ['Shift+S', 'Auto-Sincronizar'],
+    ['---', ''],
+    ['Space', 'Play / Pausa'],
+    ['R', 'Auto-rotar'],
+    ['F', 'Pantalla completa'],
+    ['H', 'Mostrar/ocultar controles'],
+    ['L', 'Cambiar idioma'],
+    ['? / K', 'Esta leyenda'],
+    ['Esc', 'Cerrar paneles'],
+    ['---', ''],
+    ['Flechas', 'Rotar camara'],
+    ['+ / -', 'Zoom'],
+    ['0', 'Resetear camara'],
+  ]
+};
+
+function buildKbLegend() {
+  const grid = document.getElementById('kb-legend-grid');
+  const shortcuts = KB_SHORTCUTS[lang] || KB_SHORTCUTS.en;
+  document.getElementById('kb-legend-title').textContent = lang === 'es' ? 'Atajos de Teclado' : 'Keyboard Shortcuts';
+  grid.innerHTML = shortcuts.map(([key, desc]) => {
+    if (key === '---') return '<div class="kb-sep"></div>';
+    return `<kbd>${key}</kbd><span class="kb-desc">${desc}</span>`;
+  }).join('');
+}
+
+function toggleKbLegend() {
+  kbLegendVisible = !kbLegendVisible;
+  document.getElementById('kb-legend').classList.toggle('visible', kbLegendVisible);
+}
+
+function toggleMobileMenu() {
+  const c = document.getElementById('controls');
+  const o = document.getElementById('mobile-overlay');
+  if (c.classList.contains('mobile-open')) { closeMobileMenu(); } else {
+    c.classList.add('mobile-open'); o.classList.add('active');
+  }
+}
+function closeMobileMenu() {
+  document.getElementById('controls').classList.remove('mobile-open');
+  document.getElementById('mobile-overlay').classList.remove('active');
+}
+function toggleMobileDash() {
+  const dash = document.getElementById('dashboard');
+  const strip = document.getElementById('dash-strip');
+  dash.classList.toggle('mobile-expanded');
+  strip.style.display = dash.classList.contains('mobile-expanded') ? 'none' : 'flex';
+}
+function updateMobileStrip() {
+  const sf = document.getElementById('stripMFreq');
+  const sr = document.getElementById('stripRes');
+  const sp = document.getElementById('stripPower');
+  if (sf) sf.textContent = document.getElementById('mFreq')?.textContent || '---';
+  if (sr) sr.textContent = document.getElementById('resPercent')?.textContent || '0%';
+  if (sp) sp.textContent = document.getElementById('mPower')?.textContent || '---';
+}
+
+function requestFullscreen() {
+  const el = document.documentElement;
+  if (!document.fullscreenElement) {
+    (el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen).call(el);
+  } else {
+    (document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen).call(document);
+  }
+}
+
+function updateFreqSlider(val) {
+  val = Math.max(100, Math.min(10000, val));
+  freqSlider.value = val;
+  // trigger display update via next animate frame
+}
+
+function updateFieldSlider(val) {
+  val = Math.max(0, Math.min(100, val));
+  fieldSlider.value = val;
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
+  const key = e.key;
+  switch(key) {
+    case 'Q': // Shift+Q = fine +10
+      e.preventDefault();
+      if (e.shiftKey) updateFreqSlider(parseFloat(freqSlider.value) + 10);
+      else updateFreqSlider(parseFloat(freqSlider.value) + 100);
+      break;
+    case 'q':
+      updateFreqSlider(parseFloat(freqSlider.value) + 100);
+      break;
+    case 'A':
+      e.preventDefault();
+      if (e.shiftKey) updateFreqSlider(parseFloat(freqSlider.value) - 10);
+      else updateFreqSlider(parseFloat(freqSlider.value) - 100);
+      break;
+    case 'a':
+      updateFreqSlider(parseFloat(freqSlider.value) - 100);
+      break;
+    case 'w':
+      updateFieldSlider(parseFloat(fieldSlider.value) + 10);
+      break;
+    case 'S':
+      e.preventDefault();
+      runSync();
+      break;
+    case 's':
+      updateFieldSlider(parseFloat(fieldSlider.value) - 10);
+      break;
+    case 'g': case 'G': {
+      const cb = document.getElementById('togFieldLines');
+      cb.checked = !cb.checked;
+      cb.dispatchEvent(new Event('change'));
+      break;
+    }
+    case 'b': case 'B': {
+      const cb = document.getElementById('togBeam');
+      cb.checked = !cb.checked;
+      cb.dispatchEvent(new Event('change'));
+      break;
+    }
+    case 'v': case 'V': {
+      const cb = document.getElementById('togWavefronts');
+      cb.checked = !cb.checked;
+      cb.dispatchEvent(new Event('change'));
+      break;
+    }
+    case 'm': case 'M': {
+      // Jump to resonant frequency - calculate it and set
+      const concPct = parseFloat(concSlider.value);
+      const fieldT = parseFloat(fieldSlider.value) / 100;
+      const p = calcPhysics(1500, fieldT, concPct); // dummy call to get fRes
+      const targetFreq = Math.round(p.fRes);
+      updateFreqSlider(Math.max(100, Math.min(10000, targetFreq)));
+      break;
+    }
+    case ' ':
+      e.preventDefault();
+      playing = !playing;
+      document.getElementById('btnPlay').textContent = playing ? i18n[lang].pause : i18n[lang].play;
+      break;
+    case 'r': case 'R':
+      autoRotating = !autoRotating;
+      break;
+    case 'f': case 'F': requestFullscreen(); break;
+    case 'h': case 'H':
+      document.getElementById('controls').style.display =
+        document.getElementById('controls').style.display === 'none' ? '' : 'none';
+      break;
+    case 'l': case 'L': setLang(lang === 'en' ? 'es' : 'en'); break;
+    case '?': case 'k': case 'K': toggleKbLegend(); break;
+    case 'Escape':
+      if (infoOverlay.classList.contains('open')) infoOverlay.classList.remove('open');
+      else if (kbLegendVisible) toggleKbLegend();
+      break;
+    case '0':
+      orbitAngleX = 0.5; orbitAngleY = 0.3; orbitDist = 5.5;
+      break;
+    case 'ArrowLeft': e.preventDefault(); orbitAngleX -= 0.08; break;
+    case 'ArrowRight': e.preventDefault(); orbitAngleX += 0.08; break;
+    case 'ArrowUp': e.preventDefault(); orbitAngleY = Math.min(1.2, orbitAngleY + 0.08); break;
+    case 'ArrowDown': e.preventDefault(); orbitAngleY = Math.max(-1.2, orbitAngleY - 0.08); break;
+    case '+': case '=': orbitDist = Math.max(2, orbitDist - 0.5); break;
+    case '-': case '_': orbitDist = Math.min(12, orbitDist + 0.5); break;
+    case ']': orbitDist = Math.max(2, orbitDist - 0.5); break;
+    case '[': orbitDist = Math.min(12, orbitDist + 0.5); break;
+  }
+});
+
+// Init language + start
+setLang('en');
+buildKbLegend();
+// kb legend starts hidden, toggled with ? or K
+animate(performance.now());
+
+// ===== SLIDER MOUSE WHEEL =====
+(function() {
+  const WHEEL_CONFIGS = {
+    'freqSlider': { step: 10, min: 100, max: 10000 },  // freq MHz: +/- 10 MHz per tick
+    'fieldSlider': { step: 0.2, min: 0, max: 100 },     // percentage: +/- 0.2%
+    'concSlider': { step: 0.2, min: 10, max: 100 },     // percentage: +/- 0.2%
+  };
+  document.querySelectorAll('input[type=range]').forEach(slider => {
+    slider.addEventListener('mouseenter', () => slider.classList.add('wheel-focus'));
+    slider.addEventListener('mouseleave', () => slider.classList.remove('wheel-focus'));
+    slider.addEventListener('wheel', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      const cfg = WHEEL_CONFIGS[slider.id];
+      const range = parseFloat(slider.max) - parseFloat(slider.min);
+      const step = cfg ? cfg.step : range / 500;
+      const dir = e.deltaY > 0 ? -1 : 1;
+      const newVal = Math.max(parseFloat(slider.min), Math.min(parseFloat(slider.max), parseFloat(slider.value) + step * dir));
+      slider.value = newVal;
+      slider.dispatchEvent(new Event('input', { bubbles: true }));
+    }, { passive: false });
+  });
+})();
+</script>
+</body>
+</html>

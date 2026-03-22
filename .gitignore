@@ -33,3 +33,6 @@ Thumbs.db
 images/
 **/Zone.Identifier
 .superpowers/
+
+# Confidential legal/corporate documents
+docs/consult/

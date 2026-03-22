@@ -1,0 +1,1317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diamond-Anvil Moissanite Phase Transition Transducer</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;scrollbar-width:none}
+::-webkit-scrollbar{display:none}
+:root{
+  --bg:#0a0a1a;--panel:#0d0d24;--border:#1a1a3a;--text:#c0c0d0;
+  --accent:#a0b0c8;--silver:#b8c4d0;
+  --green:#22c55e;--yellow:#eab308;--orange:#f97316;--red:#ef4444;--blue:#3b82f6;
+  --pink:#ec4899;--purple:#9333ea;--gold:#fbbf24;
+  --glow-active:0 0 20px rgba(100,200,255,.4);
+}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;font-size:13px}
+#canvas-container{position:absolute;top:0;left:0;width:100%;height:100%;z-index:0}
+canvas{display:block}
+
+.panel{position:absolute;background:rgba(13,13,36,.92);border:1px solid var(--border);border-radius:10px;backdrop-filter:blur(12px);padding:14px;z-index:10;overflow-y:auto}
+.panel h3{font-size:13px;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent);margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:6px}
+.panel label{display:block;font-size:11px;color:#8888aa;margin-top:8px;margin-bottom:2px}
+input[type=range]{-webkit-appearance:none;width:100%;height:6px;background:#1a1a3a;border-radius:3px;outline:none;margin-top:2px}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--accent);cursor:pointer;transition:.15s}
+input[type=range].transition-zone::-webkit-slider-thumb{background:var(--orange);box-shadow:0 0 12px rgba(249,115,22,.6)}
+.val{float:right;color:var(--silver);font-weight:600;font-size:12px}
+
+#controls{left:12px;top:12px;width:240px;max-height:calc(100vh - 24px)}
+.toggle-row{display:flex;align-items:center;gap:6px;margin-top:6px}
+.toggle-row label{margin:0;flex:1;font-size:11px}
+.toggle-switch{position:relative;width:34px;height:18px;flex-shrink:0}
+.toggle-switch input{opacity:0;width:0;height:0}
+.toggle-switch .slider{position:absolute;inset:0;background:#2a2a4a;border-radius:9px;cursor:pointer;transition:.2s}
+.toggle-switch .slider::before{content:'';position:absolute;width:14px;height:14px;left:2px;top:2px;background:#666;border-radius:50%;transition:.2s}
+.toggle-switch input:checked+.slider{background:var(--blue)}
+.toggle-switch input:checked+.slider::before{transform:translateX(16px);background:#fff}
+
+.btn{display:inline-block;padding:5px 12px;border:1px solid var(--border);border-radius:5px;background:rgba(30,30,60,.7);color:var(--text);cursor:pointer;font-size:11px;margin-top:6px;margin-right:4px;transition:.2s}
+.btn:hover{background:rgba(60,60,100,.7);border-color:var(--accent)}
+.btn.active{background:rgba(59,130,246,.3);border-color:var(--blue)}
+
+/* Lock & Sync */
+.lock-btn{background:none;border:none;cursor:pointer;font-size:12px;padding:0 2px;opacity:.4;transition:opacity .2s;line-height:1}
+.lock-btn:hover{opacity:.7}
+.lock-btn.locked{opacity:1;filter:drop-shadow(0 0 4px goldenrod)}
+.param-locked input[type=range]{pointer-events:none;opacity:.5}
+.btn-sync{display:block;width:100%;background:linear-gradient(135deg,var(--pink),var(--purple),var(--blue));color:#fff;border:none;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;transition:filter .15s,box-shadow .3s;letter-spacing:.5px;margin-top:6px}
+.btn-sync:hover{filter:brightness(1.15)}
+.btn-sync.flash{box-shadow:0 0 20px rgba(236,72,153,.6),0 0 40px rgba(147,51,234,.4)}
+@keyframes sync-pulse-m5{0%,100%{box-shadow:0 0 8px rgba(236,72,153,.3),0 0 16px rgba(147,51,234,.2)}50%{box-shadow:0 0 24px rgba(236,72,153,.7),0 0 48px rgba(147,51,234,.5)}}
+.btn-sync.searching{animation:sync-pulse-m5 .8s ease-in-out infinite;pointer-events:none}
+.sync-status{font-size:10px;color:var(--accent);text-align:center;margin-top:6px;min-height:14px;transition:opacity .3s}
+.fitness-bar{width:100%;height:8px;background:#1a1a3a;border-radius:4px;margin-top:6px;overflow:hidden}
+.fitness-bar .fill{height:100%;border-radius:4px;transition:width 50ms linear;background:linear-gradient(90deg,#ef4444,#eab308,#22c55e)}
+.fitness-score{font-size:10px;text-align:center;margin-top:2px;color:var(--accent);font-variant-numeric:tabular-nums}
+
+/* Status indicator */
+#phase-status{position:absolute;top:12px;left:50%;transform:translateX(-50%);padding:8px 24px;border-radius:20px;font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;z-index:20;transition:.5s;border:2px solid;white-space:nowrap}
+#phase-status.semiconductor{background:rgba(34,197,94,.15);border-color:var(--green);color:var(--green)}
+#phase-status.transition{background:rgba(249,115,22,.15);border-color:var(--orange);color:var(--orange);animation:pulse-orange 0.4s infinite}
+#phase-status.metallic{background:rgba(184,196,208,.15);border-color:var(--silver);color:var(--silver);box-shadow:0 0 30px rgba(184,196,208,.2)}
+@keyframes pulse-orange{0%,100%{opacity:1}50%{opacity:.5}}
+
+/* Phase diagram bottom */
+#phase-diagram{position:absolute;left:260px;bottom:0;right:0;height:160px;background:rgba(13,13,36,.95);border-top:1px solid var(--border);z-index:10;display:flex;flex-direction:column}
+#phase-diagram .pd-header{display:flex;justify-content:space-between;align-items:center;padding:4px 12px;font-size:10px;color:#666}
+#phase-diagram .pd-charts{flex:1;display:flex;gap:0}
+#phase-diagram canvas{width:50%;height:100%}
+#phase-metrics{position:absolute;right:12px;top:4px;text-align:right;font-size:10px;line-height:1.5;z-index:2}
+#phase-metrics .pm-label{color:#666;text-transform:uppercase;letter-spacing:.5px;font-size:8px}
+#phase-metrics .pm-val{font-weight:700;font-size:11px}
+
+/* Info panel */
+#info-panel{right:12px;top:12px;width:300px;max-height:calc(100vh - 24px);overflow-y:auto}
+#info-panel::-webkit-scrollbar{width:4px}
+#info-panel::-webkit-scrollbar-thumb{background:#333;border-radius:2px}
+.info-section{margin-bottom:8px}
+.info-section summary{cursor:pointer;font-size:12px;font-weight:600;color:var(--accent);padding:6px 0;list-style:none;display:flex;align-items:center;gap:6px}
+.info-section summary::before{content:'>';display:inline-block;transition:.2s;font-size:10px}
+.info-section[open] summary::before{transform:rotate(90deg)}
+.info-section .content{font-size:11.5px;line-height:1.6;color:#9999bb;padding:4px 0 8px}
+.info-section .content p{margin-bottom:6px}
+.info-section .content code{background:#1a1a3a;padding:1px 4px;border-radius:3px;font-size:11px;color:var(--silver)}
+.info-section .content ul{padding-left:16px;margin:4px 0}
+.info-section .content li{margin-bottom:3px}
+.math-block{background:#0a0a20;border:1px solid var(--border);border-radius:6px;padding:8px 12px;margin:8px 0;font-family:'Courier New',monospace;font-size:11px;color:var(--silver);line-height:1.8;overflow-x:auto}
+
+/* Language switcher */
+#lang-switch{position:absolute;top:12px;right:324px;z-index:20;display:flex;gap:0;border:1px solid var(--border);border-radius:5px;overflow:hidden}
+#lang-switch button{background:rgba(13,13,36,.9);color:var(--text);border:none;padding:4px 10px;font-size:11px;cursor:pointer}
+#lang-switch button.active{background:var(--blue);color:#fff}
+
+/* Keyboard legend */
+#kb-legend{position:fixed;bottom:170px;right:12px;z-index:50;background:rgba(10,10,26,0.85);border:1px solid var(--border);border-radius:8px;padding:8px;backdrop-filter:blur(10px);max-width:280px;font-size:10px;color:var(--text);display:none}
+#kb-legend.visible{display:block}
+#kb-legend .kb-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+#kb-legend .kb-title span{font-size:11px;font-weight:600;color:var(--accent)}
+#kb-legend .kb-close{background:none;border:none;color:var(--text);cursor:pointer;font-size:14px;padding:0 2px}
+#kb-legend .kb-grid{display:grid;grid-template-columns:auto 1fr;gap:1px 8px;align-items:center}
+#kb-legend .kb-grid kbd{display:inline-block;padding:1px 4px;background:rgba(26,26,58,0.8);border:1px solid var(--border);border-radius:3px;font-family:monospace;font-size:9px;color:var(--silver);text-align:center;min-width:18px}
+
+/* Mobile */
+#mobile-menu-btn{display:none;position:fixed;top:10px;left:10px;z-index:25;width:40px;height:40px;border-radius:8px;background:rgba(13,13,36,0.9);border:1px solid var(--border);color:var(--text);font-size:20px;cursor:pointer;align-items:center;justify-content:center;backdrop-filter:blur(8px)}
+#mobile-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:8}
+#mobile-info-btn{display:none;position:fixed;bottom:170px;left:10px;z-index:25;width:36px;height:36px;border-radius:50%;background:rgba(13,13,36,0.9);border:1px solid var(--border);color:var(--text);font-size:16px;cursor:pointer;align-items:center;justify-content:center;backdrop-filter:blur(8px)}
+#mobile-info-modal{display:none;position:fixed;inset:0;z-index:60;background:rgba(13,13,36,0.97);overflow-y:auto;padding:20px}
+#mobile-info-modal.open{display:block}
+#mobile-info-close{position:fixed;top:12px;right:12px;z-index:61;background:none;border:none;color:var(--text);font-size:24px;cursor:pointer}
+
+@media(min-width:901px){
+  #controls{max-width:240px}
+  #info-panel{max-width:300px}
+}
+@media(max-width:900px){
+  #mobile-menu-btn{display:flex}
+  #mobile-info-btn{display:flex}
+  #controls{position:fixed;top:0;left:0;width:260px;max-height:100%;z-index:12;transform:translateX(-100%);transition:transform .3s;border-radius:0}
+  #controls.mobile-open{transform:translateX(0)}
+  #mobile-overlay.active{display:block}
+  #info-panel{display:none}
+  #phase-diagram{left:0;height:130px}
+  #lang-switch{top:10px;right:10px}
+  #phase-status{font-size:10px;padding:5px 14px}
+  #kb-legend{bottom:140px;left:10px;right:auto;max-width:220px}
+}
+
+  /* Slider hover feedback */
+  input[type=range]:hover{filter:brightness(1.3);cursor:grab}
+  input[type=range]:active{cursor:grabbing}
+  input[type=range].wheel-focus{box-shadow:0 0 6px rgba(147,51,234,.4);border-radius:3px}
+</style>
+</head>
+<body>
+
+<div id="canvas-container"></div>
+
+<!-- Phase status -->
+<div id="phase-status" class="semiconductor"><span data-i18n="status_semi">SEMICONDUCTOR</span></div>
+
+<!-- Language switcher -->
+<div id="lang-switch">
+  <button class="active" onclick="setLang('en')">EN</button>
+  <button onclick="setLang('es')">ES</button>
+</div>
+
+<!-- Mobile buttons -->
+<button id="mobile-menu-btn" onclick="toggleMobileMenu()">&#9776;</button>
+<div id="mobile-overlay" onclick="toggleMobileMenu()"></div>
+<button id="mobile-info-btn" onclick="toggleMobileInfo()">i</button>
+
+<!-- Controls -->
+<div id="controls" class="panel">
+  <h3 data-i18n="ctrl_title">Controls</h3>
+
+  <div id="row-pressure" style="margin-top:4px">
+    <label><button class="lock-btn" onclick="toggleLock('pressure',this)">&#128275;</button> <span data-i18n="lbl_pressure">Pressure (GPa)</span> <span class="val" id="val-pressure">0</span></label>
+    <input type="range" id="sl-pressure" min="0" max="100" value="0" step="0.5">
+  </div>
+
+  <div id="row-freq">
+    <label><button class="lock-btn" onclick="toggleLock('freq',this)">&#128275;</button> <span data-i18n="lbl_freq">EM Frequency (GHz)</span> <span class="val" id="val-freq">50</span></label>
+    <input type="range" id="sl-freq" min="1" max="100" value="50" step="1">
+  </div>
+
+  <div id="row-intensity">
+    <label><button class="lock-btn" onclick="toggleLock('intensity',this)">&#128275;</button> <span data-i18n="lbl_intensity">EM Intensity (V/m)</span> <span class="val" id="val-intensity">500</span></label>
+    <input type="range" id="sl-intensity" min="0" max="1000" value="500" step="10">
+  </div>
+
+  <div id="row-temp">
+    <label><button class="lock-btn" onclick="toggleLock('temp',this)">&#128275;</button> <span data-i18n="lbl_temp">Temperature (K)</span> <span class="val" id="val-temp">300</span></label>
+    <input type="range" id="sl-temp" min="77" max="500" value="300" step="1">
+  </div>
+
+  <button class="btn-sync" id="btn-sync" data-i18n="btn_sync" onclick="runSync()">SYNC</button>
+  <div class="sync-status" id="syncStatus"></div>
+  <div class="fitness-bar" id="fitnessBar" style="display:none"><div class="fill" id="fitnessFill" style="width:0%"></div></div>
+  <div class="fitness-score" id="fitnessScore" style="display:none"></div>
+
+  <h3 style="margin-top:12px" data-i18n="ctrl_viz">Visualization</h3>
+  <div class="toggle-row"><label data-i18n="tog_arrows">Pressure Arrows</label><div class="toggle-switch"><input type="checkbox" id="tog-arrows" checked><span class="slider"></span></div></div>
+  <div class="toggle-row"><label data-i18n="tog_em">EM Field</label><div class="toggle-switch"><input type="checkbox" id="tog-em" checked><span class="slider"></span></div></div>
+  <div class="toggle-row"><label data-i18n="tog_phonon">Phonon Waves</label><div class="toggle-switch"><input type="checkbox" id="tog-phonon" checked><span class="slider"></span></div></div>
+  <div class="toggle-row"><label data-i18n="tog_electron">Electron Current</label><div class="toggle-switch"><input type="checkbox" id="tog-electron" checked><span class="slider"></span></div></div>
+  <div class="toggle-row"><label data-i18n="tog_triple">Triple Coupling</label><div class="toggle-switch"><input type="checkbox" id="tog-triple" checked><span class="slider"></span></div></div>
+
+  <div style="margin-top:10px">
+    <button class="btn" id="btn-play" onclick="togglePlay()" data-i18n="btn_play">&#9654; Play</button>
+    <button class="btn" onclick="resetAll()" data-i18n="btn_reset">Reset</button>
+  </div>
+</div>
+
+<!-- Info panel -->
+<div id="info-panel" class="panel">
+  <h3 data-i18n="info_title">Information</h3>
+
+  <details class="info-section" open>
+    <summary data-i18n="info_what">What Is This?</summary>
+    <div class="content" data-i18n="info_what_body">
+      <p>Imagine squeezing a crystal so hard it can't decide whether it's a crystal or a metal. That's what's happening here.</p>
+      <p>Moissanite (silicon carbide, SiC) is a semiconductor — it conducts electricity poorly, but it vibrates beautifully when hit with electromagnetic energy (piezoelectric effect). Diamond anvils crush it at pressures found deep inside planets.</p>
+      <p>As pressure increases, the bandgap — the energy barrier keeping electrons trapped — shrinks to zero. The crystal wants to become a metal. But the EM field keeps pulling it back to its crystal behavior. At the exact transition boundary (~81.5 GPa), the material oscillates between two identities: piezoelectric crystal and metallic conductor.</p>
+      <p>This oscillation is the transducer effect — converting between mechanical, electromagnetic, and electrical energy simultaneously.</p>
+    </div>
+  </details>
+
+  <details class="info-section">
+    <summary data-i18n="info_science">The Science</summary>
+    <div class="content" data-i18n="info_science_body">
+      <p><strong>Bandgap Engineering:</strong> SiC (4H polytype) has a bandgap of 3.26 eV at ambient pressure. Under hydrostatic compression, the bandgap decreases linearly at ~0.04 eV/GPa due to increased orbital overlap.</p>
+      <div class="math-block">
+E_g(P) = 3.26 eV - 0.04 * P [GPa]<br>
+Transition: E_g -> 0 at P ~ 81.5 GPa<br>
+d_33(P) = d_33_0 * (1 - P/P_c)^0.5<br>
+sigma(P) = sigma_0 * exp(-E_g / 2kT)
+      </div>
+      <p><strong>Phase Transition:</strong> At ~81.5 GPa, the semiconductor-metal transition occurs. This is a continuous (second-order) transition where the density of states at the Fermi level diverges.</p>
+      <p><strong>Piezoelectric-Conductor Paradox:</strong> A piezoelectric material generates voltage from mechanical stress. A conductor shorts that voltage immediately. At the transition boundary, the material rapidly alternates between these mutually exclusive behaviors — generating voltage pulses that are immediately conducted away, creating an AC signal at the transition frequency.</p>
+      <p><strong>Diamond Anvil Cell:</strong> Two gem-quality diamonds with flat culets (tips) compress a sample between them. Diamonds are used because they are the hardest material and transparent to most radiation, allowing in-situ measurement. Pressures above 100 GPa are routine.</p>
+      <p><strong>Triple Coupling:</strong> When phonon frequency (mechanical vibration), EM driving frequency, and electron plasma frequency coincide, energy transfers resonantly between all three modes — phonon, photon, and electron — creating a coupled oscillation with dramatically enhanced transduction efficiency.</p>
+    </div>
+  </details>
+
+  <details class="info-section">
+    <summary data-i18n="info_build">How To Build</summary>
+    <div class="content" data-i18n="info_build_body">
+      <p><strong>Diamond Anvil Cell ($5K-50K):</strong> Symmetric DAC with 300um culets. Sources: Almax easyLab, Diacell, or Boehler-Almax design. Need optical access for EM delivery.</p>
+      <p><strong>SiC Sample:</strong> 4H-SiC single crystal, polished to ~50um thickness, ~100um diameter. Available from Cree/Wolfspeed or MTI Corp. Must be free of polytypic inclusions.</p>
+      <p><strong>Pressure Medium:</strong> Neon or helium loaded cryogenically for quasi-hydrostatic conditions. Ruby fluorescence for pressure calibration (R1 line shift).</p>
+      <p><strong>EM Source:</strong> Microwave/mm-wave source (1-100 GHz). Waveguide coupled through diamond window. Power: 10-1000 mW. Sources: Virginia Diodes, Keysight signal generators + amplifiers.</p>
+      <p><strong>Measurement:</strong> Four-point resistance measurement through gasket-insulated leads. Lock-in amplifier for AC piezo voltage detection. Oscilloscope for transition dynamics. Raman spectroscopy for phase identification.</p>
+      <p><strong>Estimated Budget:</strong> $80K-200K for a complete setup at a university lab. Synchrotron beamtime adds capability but not strictly required.</p>
+    </div>
+  </details>
+
+  <details class="info-section">
+    <summary data-i18n="info_measure">What To Measure</summary>
+    <div class="content" data-i18n="info_measure_body">
+      <p><strong>Resistance vs Pressure:</strong> Four-probe DC resistance. Should drop exponentially as bandgap closes, then discontinuously at transition. Log plot reveals the approach to metallization.</p>
+      <p><strong>Piezo Output vs Pressure:</strong> AC voltage across sample while driving with EM field. Should increase (enhanced piezo response near transition) then collapse to zero at metallization.</p>
+      <p><strong>Transition Dynamics:</strong> At ~81.5 GPa, look for oscillation in resistance/piezo signal. Time-resolved measurement with >1 GHz bandwidth oscilloscope. The material should flicker between states.</p>
+      <p><strong>Triple Coupling Signature:</strong> Sweep EM frequency while at transition pressure. At resonance, expect dramatically enhanced output amplitude — possibly 10-100x the non-resonant signal.</p>
+      <p><strong>Raman Spectrum:</strong> TO/LO phonon peaks shift with pressure and broaden at transition. Metallic phase shows Fano lineshape from electron-phonon coupling.</p>
+    </div>
+  </details>
+
+  <details class="info-section">
+    <summary data-i18n="info_apps">Applications &amp; Feasibility</summary>
+    <div class="content" data-i18n="info_apps_body">
+
+          <h4>Build Difficulty</h4>
+          <p><span style="font-size:18px;letter-spacing:2px">&#9733;&#9733;&#9733;&#9733;&#9733;</span> <strong>Research-lab-level</strong></p>
+          <p>Estimated cost: <strong>$10,000 - $60,000 USD</strong></p>
+          <h4>Practical Applications</h4>
+          <ul>
+            <li><strong>Programmable Material</strong> — Switch between insulator and conductor on demand — transistor replacement</li>
+            <li><strong>Ultra-Fast Electronic Switching</strong> — THz frequency switching, beyond silicon limits</li>
+            <li><strong>Quantum Computing Substrate</strong> — Phase boundary quantum states for novel qubits</li>
+            <li><strong>Piezo-Thermoelectric Hybrid Generator</strong> — Harvest both vibration AND heat simultaneously</li>
+            <li><strong>Pressure-Tunable Optical Filter</strong> — Bandgap shift = color change under pressure</li>
+            <li><strong>Novel Superconductor Discovery</strong> — Phase transition boundaries often hide superconducting states</li>
+            <li><strong>Fundamental Physics Research</strong> — Test phonon-photon-electron triple coupling predictions</li>
+          </ul>
+    </div>
+  </details>
+</div>
+
+<!-- Phase diagram -->
+<div id="phase-diagram" class="panel" style="border-radius:0">
+  <div class="pd-header">
+    <span data-i18n="pd_target">TARGET OUTPUT</span>
+    <div id="phase-metrics">
+      <span class="pm-label" data-i18n="pm_bandgap">Bandgap</span> <span class="pm-val" id="pm-eg" style="color:var(--green)">3.26 eV</span><br>
+      <span class="pm-label" data-i18n="pm_phase">Phase</span> <span class="pm-val" id="pm-phase" style="color:var(--green)">Semiconductor</span><br>
+      <span class="pm-label" data-i18n="pm_coupling">Coupling</span> <span class="pm-val" id="pm-coupling" style="color:#666">None</span>
+    </div>
+  </div>
+  <div class="pd-charts">
+    <canvas id="chart-target"></canvas>
+    <canvas id="chart-live"></canvas>
+  </div>
+</div>
+
+<!-- Mobile info modal -->
+<div id="mobile-info-modal">
+  <button id="mobile-info-close" onclick="toggleMobileInfo()">&#10005;</button>
+  <div id="mobile-info-content"></div>
+</div>
+
+<!-- Keyboard legend -->
+<div id="kb-legend">
+  <div class="kb-title"><span data-i18n="kb_title">Keyboard</span><button class="kb-close" onclick="document.getElementById('kb-legend').classList.remove('visible')">&#10005;</button></div>
+  <div class="kb-grid">
+    <kbd>Q</kbd><span class="kb-desc" data-i18n="kb_pup">Pressure +</span>
+    <kbd>A</kbd><span class="kb-desc" data-i18n="kb_pdn">Pressure -</span>
+    <kbd>W</kbd><span class="kb-desc" data-i18n="kb_fup">Frequency +</span>
+    <kbd>S</kbd><span class="kb-desc" data-i18n="kb_fdn">Frequency -</span>
+    <kbd>E</kbd><span class="kb-desc" data-i18n="kb_iup">Intensity +</span>
+    <kbd>D</kbd><span class="kb-desc" data-i18n="kb_idn">Intensity -</span>
+    <kbd>Space</kbd><span class="kb-desc" data-i18n="kb_play">Play/Pause</span>
+    <kbd>R</kbd><span class="kb-desc" data-i18n="kb_reset">Reset</span>
+    <kbd>Shift+S</kbd><span class="kb-desc" data-i18n="kb_sync">Auto-Sync</span>
+    <kbd>?</kbd><span class="kb-desc" data-i18n="kb_help">This legend</span>
+  </div>
+</div>
+
+<script>
+// ============== I18N ==============
+const i18n = {
+  en: {
+    ctrl_title:'Controls', ctrl_viz:'Visualization',
+    lbl_pressure:'Pressure (GPa)', lbl_freq:'EM Frequency (GHz)', lbl_intensity:'EM Intensity (V/m)', lbl_temp:'Temperature (K)',
+    btn_sync:'SYNC', sync_searching:'Searching', sync_optimizing:'Optimizing', sync_optimal:'Optimal: triple coupling peak',
+    btn_play:'\u25B6 Play', btn_pause:'\u23F8 Pause', btn_reset:'Reset',
+    tog_arrows:'Pressure Arrows', tog_em:'EM Field', tog_phonon:'Phonon Waves', tog_electron:'Electron Current', tog_triple:'Triple Coupling',
+    status_semi:'SEMICONDUCTOR', status_trans:'PHASE TRANSITION', status_metal:'METALLIC',
+    info_title:'Information',
+    info_what:'What Is This?',
+    info_what_body:'<p>Imagine squeezing a crystal so hard it can\'t decide whether it\'s a crystal or a metal. That\'s what\'s happening here.</p><p>Moissanite (silicon carbide, SiC) is a semiconductor \u2014 it conducts electricity poorly, but it vibrates beautifully when hit with electromagnetic energy (piezoelectric effect). Diamond anvils crush it at pressures found deep inside planets.</p><p>As pressure increases, the bandgap \u2014 the energy barrier keeping electrons trapped \u2014 shrinks to zero. The crystal wants to become a metal. But the EM field keeps pulling it back to its crystal behavior. At the exact transition boundary (~81.5 GPa), the material oscillates between two identities: piezoelectric crystal and metallic conductor.</p><p>This oscillation is the transducer effect \u2014 converting between mechanical, electromagnetic, and electrical energy simultaneously.</p>',
+    info_science:'The Science',
+    info_science_body:'<p><strong>Bandgap Engineering:</strong> SiC (4H polytype) has a bandgap of 3.26 eV at ambient pressure. Under hydrostatic compression, the bandgap decreases linearly at ~0.04 eV/GPa.</p><div class="math-block">E_g(P) = 3.26 eV - 0.04 * P [GPa]<br>Transition: E_g \u2192 0 at P \u2248 81.5 GPa<br>d\u2083\u2083(P) = d\u2083\u2083\u2080 \u00D7 (1 - P/Pc)^0.5<br>\u03C3(P) = \u03C3\u2080 \u00D7 exp(-E_g / 2kT)</div><p><strong>Phase Transition:</strong> At ~81.5 GPa, the semiconductor-metal transition occurs. The density of states at the Fermi level diverges.</p><p><strong>Piezoelectric-Conductor Paradox:</strong> A piezoelectric generates voltage from stress. A conductor shorts it. At the boundary, the material alternates between these mutually exclusive behaviors \u2014 generating voltage pulses immediately conducted away, creating AC at the transition frequency.</p><p><strong>Triple Coupling:</strong> When phonon, EM, and electron plasma frequencies coincide, energy transfers resonantly between all three modes with dramatically enhanced transduction efficiency.</p>',
+    info_build:'How To Build',
+    info_build_body:'<p><strong>Diamond Anvil Cell ($5K-50K):</strong> Symmetric DAC with 300\u00B5m culets. Sources: Almax easyLab, Diacell, or Boehler-Almax design.</p><p><strong>SiC Sample:</strong> 4H-SiC single crystal, 50\u00B5m thick, 100\u00B5m diameter. Cree/Wolfspeed or MTI Corp.</p><p><strong>Pressure Medium:</strong> Neon or helium, cryogenically loaded. Ruby fluorescence for calibration.</p><p><strong>EM Source:</strong> 1-100 GHz microwave/mm-wave. Waveguide through diamond window. Virginia Diodes or Keysight.</p><p><strong>Budget:</strong> $80K-200K complete university lab setup.</p>',
+    info_measure:'What To Measure',
+    info_measure_body:'<p><strong>Resistance vs Pressure:</strong> Four-probe DC. Drops exponentially as bandgap closes.</p><p><strong>Piezo Output vs Pressure:</strong> AC voltage under EM drive. Peaks near transition, collapses at metallization.</p><p><strong>Transition Dynamics:</strong> At ~81.5 GPa, look for oscillation. Need >1 GHz bandwidth oscilloscope.</p><p><strong>Triple Coupling:</strong> Sweep EM frequency at transition pressure. Expect 10-100x enhanced output at resonance.</p>',
+    pd_target:'TARGET OUTPUT \u2190 | \u2192 LIVE OUTPUT',
+    pm_bandgap:'Bandgap', pm_phase:'Phase', pm_coupling:'Coupling',
+    info_apps:'Applications &amp; Feasibility',
+    info_apps_body:'<h4>Build Difficulty</h4><p><span style="font-size:18px;letter-spacing:2px">&#9733;&#9733;&#9733;&#9733;&#9733;</span> <strong>Research-lab-level</strong></p><p>Estimated cost: <strong>$10,000 - $60,000 USD</strong></p><h4>Practical Applications</h4><ul><li><strong>Programmable Material</strong> \u2014 Switch between insulator and conductor on demand \u2014 transistor replacement</li><li><strong>Ultra-Fast Electronic Switching</strong> \u2014 THz frequency switching, beyond silicon limits</li><li><strong>Quantum Computing Substrate</strong> \u2014 Phase boundary quantum states for novel qubits</li><li><strong>Piezo-Thermoelectric Hybrid Generator</strong> \u2014 Harvest both vibration AND heat simultaneously</li><li><strong>Pressure-Tunable Optical Filter</strong> \u2014 Bandgap shift = color change under pressure</li><li><strong>Novel Superconductor Discovery</strong> \u2014 Phase transition boundaries often hide superconducting states</li><li><strong>Fundamental Physics Research</strong> \u2014 Test phonon-photon-electron triple coupling predictions</li></ul>',
+    kb_title:'Keyboard Shortcuts', kb_pup:'Pressure +', kb_pdn:'Pressure -', kb_fup:'Frequency +', kb_fdn:'Frequency -', kb_iup:'Intensity +', kb_idn:'Intensity -', kb_play:'Play/Pause', kb_reset:'Reset', kb_sync:'Auto-Sync', kb_help:'This legend'
+  },
+  es: {
+    ctrl_title:'Controles', ctrl_viz:'Visualizaci\u00F3n',
+    lbl_pressure:'Presi\u00F3n (GPa)', lbl_freq:'Frecuencia EM (GHz)', lbl_intensity:'Intensidad EM (V/m)', lbl_temp:'Temperatura (K)',
+    btn_sync:'SINCRONIZAR', sync_searching:'Buscando', sync_optimizing:'Optimizando', sync_optimal:'Optimo: pico de acoplamiento triple',
+    btn_play:'\u25B6 Iniciar', btn_pause:'\u23F8 Pausa', btn_reset:'Reiniciar',
+    tog_arrows:'Flechas de Presi\u00F3n', tog_em:'Campo EM', tog_phonon:'Ondas Fon\u00F3n', tog_electron:'Corriente Electr\u00F3nica', tog_triple:'Acoplamiento Triple',
+    status_semi:'SEMICONDUCTOR', status_trans:'TRANSICI\u00D3N DE FASE', status_metal:'MET\u00C1LICO',
+    info_title:'Informaci\u00F3n',
+    info_what:'\u00BFQu\u00E9 es esto?',
+    info_what_body:'<p>Imagina apretar un cristal tan fuerte que no puede decidir si es un cristal o un metal. Eso es lo que pasa aqu\u00ED.</p><p>La moissanita (carburo de silicio, SiC) es un semiconductor \u2014 conduce mal la electricidad, pero vibra hermosamente cuando la golpeas con energ\u00EDa electromagn\u00E9tica (efecto piezoel\u00E9ctrico). Los yunques de diamante la comprimen a presiones que se encuentran en el interior de planetas.</p><p>Al aumentar la presi\u00F3n, la brecha energ\u00E9tica \u2014 la barrera que mantiene atrapados a los electrones \u2014 se reduce a cero. El cristal quiere convertirse en metal. Pero el campo EM lo devuelve a su comportamiento cristalino. En el l\u00EDmite exacto (~81.5 GPa), el material oscila entre dos identidades.</p><p>Esta oscilaci\u00F3n es el efecto transductor \u2014 convirtiendo entre energ\u00EDa mec\u00E1nica, electromagn\u00E9tica y el\u00E9ctrica simult\u00E1neamente.</p>',
+    info_science:'La Ciencia',
+    info_science_body:'<p><strong>Ingenier\u00EDa de Brecha:</strong> SiC (politipo 4H) tiene una brecha de 3.26 eV a presi\u00F3n ambiente. Bajo compresi\u00F3n hidrost\u00E1tica, disminuye linealmente a ~0.04 eV/GPa.</p><div class="math-block">E_g(P) = 3.26 eV - 0.04 \u00D7 P [GPa]<br>Transici\u00F3n: E_g \u2192 0 en P \u2248 81.5 GPa</div><p><strong>Transici\u00F3n de Fase:</strong> A ~81.5 GPa ocurre la transici\u00F3n semiconductor-metal.</p><p><strong>Paradoja Piezoel\u00E9ctrico-Conductor:</strong> Un piezoel\u00E9ctrico genera voltaje por esfuerzo. Un conductor lo cortocircuita. En el l\u00EDmite, el material alterna entre ambos comportamientos.</p><p><strong>Acoplamiento Triple:</strong> Cuando coinciden las frecuencias de fon\u00F3n, EM y plasma electr\u00F3nico, la energ\u00EDa se transfiere resonantemente entre los tres modos.</p>',
+    info_build:'C\u00F3mo Construirlo',
+    info_build_body:'<p><strong>Celda de Yunque de Diamante ($5K-50K):</strong> DAC sim\u00E9trica con culetas de 300\u00B5m.</p><p><strong>Muestra SiC:</strong> Monocristal 4H-SiC, 50\u00B5m espesor, 100\u00B5m di\u00E1metro.</p><p><strong>Medio de Presi\u00F3n:</strong> Ne\u00F3n o helio, carga criog\u00E9nica. Calibraci\u00F3n por fluorescencia de rub\u00ED.</p><p><strong>Fuente EM:</strong> Microondas 1-100 GHz a trav\u00E9s de ventana de diamante.</p><p><strong>Presupuesto:</strong> $80K-200K instalaci\u00F3n completa en laboratorio universitario.</p>',
+    info_measure:'Qu\u00E9 Medir',
+    info_measure_body:'<p><strong>Resistencia vs Presi\u00F3n:</strong> Cuatro puntas DC. Cae exponencialmente al cerrarse la brecha.</p><p><strong>Salida Piezo vs Presi\u00F3n:</strong> Voltaje AC bajo impulso EM. M\u00E1ximo cerca de transici\u00F3n.</p><p><strong>Din\u00E1mica de Transici\u00F3n:</strong> A ~81.5 GPa, buscar oscilaci\u00F3n. Osciloscopio >1 GHz.</p><p><strong>Acoplamiento Triple:</strong> Barrer frecuencia EM en presi\u00F3n de transici\u00F3n. Esperar se\u00F1al 10-100x amplificada.</p>',
+    pd_target:'SALIDA OBJETIVO \u2190 | \u2192 SALIDA EN VIVO',
+    pm_bandgap:'Brecha', pm_phase:'Fase', pm_coupling:'Acoplamiento',
+    info_apps:'Aplicaciones y Factibilidad',
+    info_apps_body:'<h4>Dificultad de Construccion</h4><p><span style="font-size:18px;letter-spacing:2px">&#9733;&#9733;&#9733;&#9733;&#9733;</span> <strong>Nivel laboratorio de investigacion</strong></p><p>Costo estimado: <strong>$10,000 - $60,000 USD</strong></p><h4>Aplicaciones Practicas</h4><ul><li><strong>Material Programable</strong> \u2014 Cambiar entre aislante y conductor a demanda \u2014 reemplazo del transistor</li><li><strong>Conmutacion Electronica Ultra-Rapida</strong> \u2014 Conmutacion a frecuencia THz, mas alla del silicio</li><li><strong>Sustrato para Computacion Cuantica</strong> \u2014 Estados cuanticos en fronteras de fase</li><li><strong>Generador Hibrido Piezo-Termoelectrico</strong> \u2014 Cosecha vibracion Y calor simultaneamente</li><li><strong>Filtro Optico Ajustable por Presion</strong> \u2014 Cambio de bandgap = cambio de color bajo presion</li><li><strong>Descubrimiento de Superconductores</strong> \u2014 Las fronteras de fase a menudo ocultan estados superconductores</li><li><strong>Investigacion de Fisica Fundamental</strong> \u2014 Probar predicciones de acoplamiento triple fonon-foton-electron</li></ul>',
+    kb_title:'Atajos de Teclado', kb_pup:'Presi\u00F3n +', kb_pdn:'Presi\u00F3n -', kb_fup:'Frecuencia +', kb_fdn:'Frecuencia -', kb_iup:'Intensidad +', kb_idn:'Intensidad -', kb_play:'Iniciar/Pausa', kb_reset:'Reiniciar', kb_sync:'Auto-Sincronizar', kb_help:'Esta leyenda'
+  }
+};
+let lang = 'en';
+function setLang(l) {
+  lang = l;
+  document.querySelectorAll('#lang-switch button').forEach(b => b.classList.toggle('active', b.textContent === l.toUpperCase()));
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.dataset.i18n;
+    if (i18n[l][key]) {
+      if (el.querySelector('p') || key.endsWith('_body')) el.innerHTML = i18n[l][key];
+      else el.textContent = i18n[l][key];
+    }
+  });
+  updatePhaseDisplay();
+}
+
+// ============== STATE ==============
+const state = {
+  pressure: 0, freq: 50, intensity: 500, temp: 300,
+  playing: false, time: 0,
+  locked: { pressure: false, freq: false, intensity: false, temp: false }
+};
+const Pc = 81.5; // critical pressure GPa
+
+function bandgap(P) { return Math.max(0, 3.26 - 0.04 * P); }
+function phaseParam(P, T) {
+  const Eg = bandgap(P);
+  const kT = 8.617e-5 * T; // eV
+  const sharpness = Math.max(0.1, kT * 20); // thermal broadening
+  if (Eg <= 0) return 1.0; // fully metallic
+  if (Eg > sharpness) return 0.0; // fully semiconductor
+  return 1.0 - Eg / sharpness;
+}
+function isTransition(P, T) {
+  const pp = phaseParam(P, T);
+  return pp > 0.05 && pp < 0.95;
+}
+function tripleCoupling(P, T, freq, intensity) {
+  if (!isTransition(P, T)) return 0;
+  const pp = phaseParam(P, T);
+  const resonance = 1.0 - Math.abs(pp - 0.5) * 2;
+  const freqFactor = intensity / 1000;
+  return resonance * freqFactor;
+}
+
+// ============== THREE.JS SCENE ==============
+let scene, camera, renderer, clock;
+let topAnvil, bottomAnvil, moissanite, moissaniteMat;
+let pressureArrows = [], emFieldLines = [], phononRings = [], electronParticles = [];
+let tripleSpirals = [];
+let envMap;
+
+function initScene() {
+  scene = new THREE.Scene();
+  clock = new THREE.Clock();
+
+  camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
+  camera.position.set(4, 3, 5);
+  camera.lookAt(0, 0, 0);
+
+  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.2;
+  document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+  // Lights
+  const ambientLight = new THREE.AmbientLight(0x334455, 0.4);
+  scene.add(ambientLight);
+  const keyLight = new THREE.DirectionalLight(0xffffff, 0.8);
+  keyLight.position.set(5, 8, 5);
+  scene.add(keyLight);
+  const fillLight = new THREE.DirectionalLight(0x6688cc, 0.3);
+  fillLight.position.set(-3, 2, -3);
+  scene.add(fillLight);
+  const pointLight = new THREE.PointLight(0xffffff, 0.5, 15);
+  pointLight.position.set(0, 0, 4);
+  scene.add(pointLight);
+
+  // Create fake cubemap for diamond refraction
+  const cubeRT = new THREE.WebGLCubeRenderTarget(256);
+  const cubeCamera = new THREE.CubeCamera(0.1, 10, cubeRT);
+  // Paint a colorful fake environment
+  const envScene = new THREE.Scene();
+  const envColors = [0xff4488, 0x44ff88, 0x4488ff, 0xffaa22, 0xaa44ff, 0x22ffaa];
+  envColors.forEach((c, i) => {
+    const m = new THREE.Mesh(
+      new THREE.PlaneGeometry(20, 20),
+      new THREE.MeshBasicMaterial({ color: c, side: THREE.DoubleSide })
+    );
+    m.position.set(
+      [5,-5,0,0,0,0][i], [0,0,5,-5,0,0][i], [0,0,0,0,5,-5][i]
+    );
+    m.lookAt(0,0,0);
+    envScene.add(m);
+  });
+  cubeCamera.update(renderer, envScene);
+  envMap = cubeRT.texture;
+
+  createDiamondAnvils();
+  createMoissanite();
+  createPressureArrows();
+  createEMField();
+  createPhononWaves();
+  createElectronCurrent();
+  createTripleCoupling();
+  createStarfield();
+
+  // Orbit-like mouse rotation
+  let isDragging = false, prevMouse = { x: 0, y: 0 };
+  let rotX = 0.5, rotY = 0.3, dist = 7;
+  renderer.domElement.addEventListener('pointerdown', e => { isDragging = true; prevMouse = { x: e.clientX, y: e.clientY }; });
+  renderer.domElement.addEventListener('pointermove', e => {
+    if (!isDragging) return;
+    rotY += (e.clientX - prevMouse.x) * 0.005;
+    rotX += (e.clientY - prevMouse.y) * 0.005;
+    rotX = Math.max(-1.2, Math.min(1.2, rotX));
+    prevMouse = { x: e.clientX, y: e.clientY };
+  });
+  renderer.domElement.addEventListener('pointerup', () => isDragging = false);
+  renderer.domElement.addEventListener('wheel', e => {
+    dist = Math.max(3, Math.min(15, dist + e.deltaY * 0.005));
+    e.preventDefault();
+  }, { passive: false });
+
+  function updateCamera() {
+    camera.position.set(
+      dist * Math.sin(rotY) * Math.cos(rotX),
+      dist * Math.sin(rotX),
+      dist * Math.cos(rotY) * Math.cos(rotX)
+    );
+    camera.lookAt(0, 0, 0);
+  }
+
+  // Animation loop
+  function animate() {
+    requestAnimationFrame(animate);
+    const dt = clock.getDelta();
+    if (state.playing) state.time += dt;
+    updateCamera();
+    updateScene(dt);
+    renderer.render(scene, camera);
+    updateCharts();
+  }
+  animate();
+}
+
+function createDiamondAnvils() {
+  // Brilliant-cut diamond approximation: cone + faceted top
+  const diamondGeo = new THREE.ConeGeometry(1.2, 1.8, 8, 1);
+  const diamondMat = new THREE.MeshPhysicalMaterial({
+    color: 0xffffff,
+    transparent: true,
+    opacity: 0.3,
+    roughness: 0.0,
+    metalness: 0.0,
+    transmission: 0.9,
+    thickness: 1.0,
+    envMap: envMap,
+    envMapIntensity: 2.5,
+    clearcoat: 1.0,
+    clearcoatRoughness: 0.0,
+    ior: 2.42,
+    side: THREE.DoubleSide
+  });
+
+  // Top anvil (point down)
+  topAnvil = new THREE.Mesh(diamondGeo, diamondMat.clone());
+  topAnvil.rotation.x = Math.PI; // point down
+  topAnvil.position.y = 2.0;
+  scene.add(topAnvil);
+
+  // Bottom anvil (point up)
+  bottomAnvil = new THREE.Mesh(diamondGeo.clone(), diamondMat.clone());
+  bottomAnvil.position.y = -2.0;
+  scene.add(bottomAnvil);
+
+  // Diamond edge wireframes for sparkle
+  const edgeMat = new THREE.LineBasicMaterial({ color: 0xaaddff, transparent: true, opacity: 0.3 });
+  const topEdges = new THREE.LineSegments(new THREE.EdgesGeometry(diamondGeo), edgeMat);
+  topEdges.rotation.x = Math.PI;
+  topAnvil.add(topEdges);
+  const bottomEdges = new THREE.LineSegments(new THREE.EdgesGeometry(diamondGeo), edgeMat.clone());
+  bottomAnvil.add(bottomEdges);
+
+  // Prismatic sparkle points on diamonds
+  [topAnvil, bottomAnvil].forEach(anvil => {
+    for (let i = 0; i < 20; i++) {
+      const sparkle = new THREE.Mesh(
+        new THREE.SphereGeometry(0.03, 4, 4),
+        new THREE.MeshBasicMaterial({
+          color: new THREE.Color().setHSL(Math.random(), 1, 0.7),
+          transparent: true, opacity: 0.6
+        })
+      );
+      sparkle.position.set(
+        (Math.random() - 0.5) * 1.5,
+        (Math.random() - 0.5) * 1.2,
+        (Math.random() - 0.5) * 1.5
+      );
+      sparkle.userData.phase = Math.random() * Math.PI * 2;
+      sparkle.userData.isSparkle = true;
+      anvil.add(sparkle);
+    }
+  });
+}
+
+function createMoissanite() {
+  // Hexagonal crystal
+  const hexGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.4, 6);
+  moissaniteMat = new THREE.MeshPhysicalMaterial({
+    color: 0x44cc66,
+    emissive: 0x112211,
+    emissiveIntensity: 0.5,
+    roughness: 0.2,
+    metalness: 0.0,
+    transparent: true,
+    opacity: 0.85,
+    envMap: envMap,
+    envMapIntensity: 1.0,
+    clearcoat: 0.8
+  });
+  moissanite = new THREE.Mesh(hexGeo, moissaniteMat);
+  moissanite.position.y = 0;
+  scene.add(moissanite);
+
+  // Glow shell
+  const glowGeo = new THREE.CylinderGeometry(0.45, 0.45, 0.5, 6);
+  const glowMat = new THREE.MeshBasicMaterial({
+    color: 0x44cc66, transparent: true, opacity: 0.15, side: THREE.BackSide
+  });
+  moissanite.userData.glow = new THREE.Mesh(glowGeo, glowMat);
+  scene.add(moissanite.userData.glow);
+}
+
+function createPressureArrows() {
+  // Arrow helpers pushing toward center
+  const arrowLen = 1.5;
+  const arrowColor = 0xff4444;
+  for (let i = 0; i < 2; i++) {
+    const dir = new THREE.Vector3(0, i === 0 ? -1 : 1, 0);
+    const origin = new THREE.Vector3(0, i === 0 ? 3.5 : -3.5, 0);
+    const arrow = new THREE.ArrowHelper(dir, origin, arrowLen, arrowColor, 0.3, 0.15);
+    arrow.visible = true;
+    pressureArrows.push(arrow);
+    scene.add(arrow);
+  }
+}
+
+function createEMField() {
+  // Sinusoidal wave passing through sample (along X axis)
+  const points = [];
+  for (let i = 0; i <= 100; i++) {
+    points.push(new THREE.Vector3((i - 50) / 12, 0, 0));
+  }
+  const waveMat = new THREE.LineBasicMaterial({ color: 0xffaa22, transparent: true, opacity: 0.7 });
+  for (let w = 0; w < 3; w++) {
+    const geo = new THREE.BufferGeometry().setFromPoints(points);
+    const line = new THREE.Line(geo, waveMat.clone());
+    line.userData.waveIndex = w;
+    emFieldLines.push(line);
+    scene.add(line);
+  }
+}
+
+function createPhononWaves() {
+  // Concentric rings emanating from crystal
+  const ringMat = new THREE.MeshBasicMaterial({ color: 0x22cc55, transparent: true, opacity: 0.4, side: THREE.DoubleSide });
+  for (let i = 0; i < 5; i++) {
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(0.5, 0.55, 32),
+      ringMat.clone()
+    );
+    ring.rotation.x = Math.PI / 2;
+    ring.userData.startRadius = 0.5;
+    ring.userData.phase = i * 0.6;
+    ring.visible = true;
+    phononRings.push(ring);
+    scene.add(ring);
+  }
+}
+
+function createElectronCurrent() {
+  // Particle system flowing through moissanite
+  const particleGeo = new THREE.BufferGeometry();
+  const positions = [];
+  const count = 200;
+  for (let i = 0; i < count; i++) {
+    positions.push(
+      (Math.random() - 0.5) * 0.6,
+      (Math.random() - 0.5) * 0.3,
+      (Math.random() - 0.5) * 0.6
+    );
+  }
+  particleGeo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  const particleMat = new THREE.PointsMaterial({
+    color: 0x4488ff, size: 0.04, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending
+  });
+  const particles = new THREE.Points(particleGeo, particleMat);
+  particles.visible = true;
+  electronParticles.push(particles);
+  scene.add(particles);
+}
+
+function createTripleCoupling() {
+  // Three spiraling streams around the sample
+  const colors = [0x22cc55, 0xffaa22, 0x4488ff]; // phonon green, photon gold, electron blue
+  const labels = ['phonon', 'photon', 'electron'];
+  colors.forEach((c, idx) => {
+    const points = [];
+    for (let i = 0; i <= 200; i++) {
+      const t = i / 200 * Math.PI * 6;
+      const r = 0.6 + idx * 0.08;
+      points.push(new THREE.Vector3(
+        Math.cos(t + idx * 2.094) * r,
+        (i / 200 - 0.5) * 2.5,
+        Math.sin(t + idx * 2.094) * r
+      ));
+    }
+    const geo = new THREE.BufferGeometry().setFromPoints(points);
+    const mat = new THREE.LineBasicMaterial({
+      color: c, transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending
+    });
+    const line = new THREE.Line(geo, mat);
+    line.visible = false;
+    line.userData.label = labels[idx];
+    tripleSpirals.push(line);
+    scene.add(line);
+  });
+}
+
+function createStarfield() {
+  const geo = new THREE.BufferGeometry();
+  const verts = [];
+  for (let i = 0; i < 800; i++) {
+    verts.push((Math.random() - 0.5) * 60, (Math.random() - 0.5) * 60, (Math.random() - 0.5) * 60);
+  }
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+  const mat = new THREE.PointsMaterial({ color: 0x445566, size: 0.08, transparent: true, opacity: 0.5 });
+  scene.add(new THREE.Points(geo, mat));
+}
+
+// ============== UPDATE ==============
+function updateScene(dt) {
+  const P = state.pressure;
+  const T = state.temp;
+  const freq = state.freq;
+  const intensity = state.intensity;
+  const Eg = bandgap(P);
+  const pp = phaseParam(P, T);
+  const inTransition = isTransition(P, T);
+  const tc = tripleCoupling(P, T, freq, intensity);
+  const t = state.time;
+
+  // --- Anvil positions based on pressure ---
+  const squeeze = P / 100 * 1.3; // max 1.3 units closer
+  topAnvil.position.y = 2.0 - squeeze;
+  bottomAnvil.position.y = -2.0 + squeeze;
+
+  // --- Moissanite color shift ---
+  let h, s, l, emH, emI, met;
+  if (pp < 0.05) {
+    // Semiconductor: green
+    const pressureFrac = P / Pc;
+    h = 0.35 - pressureFrac * 0.2; // green -> yellow -> orange
+    s = 0.7; l = 0.5;
+    emH = h; emI = 0.3;
+    met = 0.0;
+  } else if (pp > 0.95) {
+    // Metallic: silver
+    h = 0; s = 0; l = 0.75;
+    emH = 0; emI = 0.1;
+    met = 0.9;
+  } else {
+    // Transition: flicker between green-glow and silver
+    const flicker = Math.sin(t * freq * 0.5) * 0.5 + 0.5;
+    const flickerSharp = flicker > 0.5 ? 1 : 0;
+    if (flickerSharp > 0.5) {
+      // Metallic flash
+      h = 0; s = 0.05; l = 0.8;
+      emH = 0; emI = 0.6;
+      met = 0.8;
+    } else {
+      // Piezo flash (green glow)
+      h = 0.35; s = 0.9; l = 0.55;
+      emH = 0.35; emI = 0.8;
+      met = 0.0;
+    }
+  }
+  const col = new THREE.Color().setHSL(h, s, l);
+  moissaniteMat.color.copy(col);
+  moissaniteMat.emissive.setHSL(emH, s * 0.5, emI * 0.3);
+  moissaniteMat.emissiveIntensity = emI;
+  moissaniteMat.metalness = met;
+  moissaniteMat.roughness = met > 0.5 ? 0.05 : 0.2;
+
+  // Glow
+  const glow = moissanite.userData.glow;
+  glow.material.color.copy(col);
+  glow.material.opacity = inTransition ? 0.25 + Math.sin(t * 20) * 0.15 : 0.1;
+  glow.position.copy(moissanite.position);
+
+  // Crystal scale (compressed)
+  const scaleY = 1.0 - P / 100 * 0.5;
+  const scaleXZ = 1.0 + P / 100 * 0.15;
+  moissanite.scale.set(scaleXZ, scaleY, scaleXZ);
+  glow.scale.set(scaleXZ, scaleY, scaleXZ);
+
+  // --- Diamond sparkles ---
+  [topAnvil, bottomAnvil].forEach(anvil => {
+    anvil.children.forEach(child => {
+      if (child.userData.isSparkle) {
+        child.userData.phase += dt * 3;
+        child.material.opacity = 0.2 + Math.sin(child.userData.phase) * 0.5;
+        child.material.color.setHSL((child.userData.phase * 0.1) % 1, 1, 0.7);
+      }
+    });
+  });
+
+  // --- Pressure arrows ---
+  const showArrows = document.getElementById('tog-arrows').checked;
+  pressureArrows.forEach((arrow, i) => {
+    arrow.visible = showArrows && P > 0;
+    if (arrow.visible) {
+      const scale = 0.5 + P / 100 * 2;
+      const pulse = 1.0 + Math.sin(t * 4) * 0.1;
+      arrow.setLength(scale * pulse, 0.3, 0.15);
+      arrow.position.y = (i === 0 ? 1 : -1) * (2.5 - squeeze * 0.3);
+    }
+  });
+
+  // --- EM field waves ---
+  const showEM = document.getElementById('tog-em').checked;
+  emFieldLines.forEach((line, idx) => {
+    line.visible = showEM && intensity > 0;
+    if (line.visible) {
+      const positions = line.geometry.attributes.position.array;
+      for (let i = 0; i <= 100; i++) {
+        const x = (i - 50) / 12;
+        const phase = t * freq * 0.3 + idx * 2.094;
+        const amp = (intensity / 1000) * 0.5;
+        positions[i * 3 + 1] = Math.sin(x * freq * 0.15 + phase) * amp;
+        positions[i * 3 + 2] = Math.cos(x * freq * 0.15 + phase) * amp * (idx === 1 ? 1 : 0);
+      }
+      line.geometry.attributes.position.needsUpdate = true;
+      line.material.color.setHSL(0.08 + freq / 300, 0.9, 0.6);
+      line.material.opacity = 0.3 + intensity / 2000;
+    }
+  });
+
+  // --- Phonon waves (piezo mode only) ---
+  const showPhonon = document.getElementById('tog-phonon').checked;
+  const phononActive = showPhonon && pp < 0.95 && intensity > 0;
+  phononRings.forEach((ring, i) => {
+    ring.visible = phononActive;
+    if (ring.visible) {
+      const phase = (t * 2 + ring.userData.phase) % 3;
+      const radius = 0.4 + phase * 0.8;
+      ring.scale.set(radius, radius, 1);
+      ring.material.opacity = Math.max(0, 0.4 * (1 - phase / 3)) * (1 - pp);
+      ring.material.color.setHSL(0.35, 0.8, 0.5);
+    }
+  });
+
+  // --- Electron current (metallic mode only) ---
+  const showElectron = document.getElementById('tog-electron').checked;
+  const electronActive = showElectron && pp > 0.05;
+  electronParticles.forEach(pts => {
+    pts.visible = electronActive;
+    if (pts.visible) {
+      const pos = pts.geometry.attributes.position.array;
+      for (let i = 0; i < pos.length; i += 3) {
+        pos[i] += dt * (1 + pp) * 2 * (Math.random() - 0.3); // drift
+        pos[i + 1] += dt * (Math.random() - 0.5) * 0.5;
+        pos[i + 2] += dt * (Math.random() - 0.5) * 2;
+        // Reset particles that drift too far
+        if (Math.abs(pos[i]) > 1.5 || Math.abs(pos[i + 1]) > 0.5 || Math.abs(pos[i + 2]) > 1.5) {
+          pos[i] = (Math.random() - 0.5) * 0.6;
+          pos[i + 1] = (Math.random() - 0.5) * 0.3;
+          pos[i + 2] = (Math.random() - 0.5) * 0.6;
+        }
+      }
+      pts.geometry.attributes.position.needsUpdate = true;
+      pts.material.opacity = pp * 0.8;
+      pts.material.size = 0.03 + pp * 0.04;
+    }
+  });
+
+  // --- Triple coupling spirals ---
+  const showTriple = document.getElementById('tog-triple').checked;
+  const tripleActive = showTriple && tc > 0.2;
+  tripleSpirals.forEach((line, idx) => {
+    line.visible = tripleActive;
+    if (line.visible) {
+      const pos = line.geometry.attributes.position.array;
+      for (let i = 0; i <= 200; i++) {
+        const tt = i / 200 * Math.PI * 6;
+        const r = 0.55 + idx * 0.08 + Math.sin(t * 5 + tt) * 0.05;
+        pos[i * 3] = Math.cos(tt + idx * 2.094 + t * 3) * r;
+        pos[i * 3 + 1] = (i / 200 - 0.5) * 2.5;
+        pos[i * 3 + 2] = Math.sin(tt + idx * 2.094 + t * 3) * r;
+      }
+      line.geometry.attributes.position.needsUpdate = true;
+      line.material.opacity = tc * 0.8;
+    }
+  });
+
+  // --- Phase status ---
+  const statusEl = document.getElementById('phase-status');
+  if (pp < 0.05) {
+    statusEl.className = 'semiconductor';
+    statusEl.querySelector('span').textContent = i18n[lang].status_semi;
+  } else if (pp > 0.95) {
+    statusEl.className = 'metallic';
+    statusEl.querySelector('span').textContent = i18n[lang].status_metal;
+  } else {
+    statusEl.className = 'transition';
+    statusEl.querySelector('span').textContent = i18n[lang].status_trans;
+  }
+
+  // --- Transition zone slider feedback ---
+  const pSlider = document.getElementById('sl-pressure');
+  if (inTransition) pSlider.classList.add('transition-zone');
+  else pSlider.classList.remove('transition-zone');
+
+  // --- Phase metrics ---
+  const egEl = document.getElementById('pm-eg');
+  egEl.textContent = Eg.toFixed(2) + ' eV';
+  egEl.style.color = Eg > 1 ? 'var(--green)' : Eg > 0.3 ? 'var(--yellow)' : Eg > 0 ? 'var(--orange)' : 'var(--silver)';
+
+  const phaseEl = document.getElementById('pm-phase');
+  if (pp < 0.05) { phaseEl.textContent = lang === 'es' ? 'Semiconductor' : 'Semiconductor'; phaseEl.style.color = 'var(--green)'; }
+  else if (pp > 0.95) { phaseEl.textContent = lang === 'es' ? 'Met\u00E1lico' : 'Metallic'; phaseEl.style.color = 'var(--silver)'; }
+  else { phaseEl.textContent = lang === 'es' ? 'Transici\u00F3n' : 'Transition'; phaseEl.style.color = 'var(--orange)'; }
+
+  const coupEl = document.getElementById('pm-coupling');
+  if (tc > 0.6) { coupEl.textContent = 'Triple'; coupEl.style.color = 'var(--gold)'; }
+  else if (tc > 0.2) { coupEl.textContent = lang === 'es' ? 'Parcial' : 'Partial'; coupEl.style.color = 'var(--yellow)'; }
+  else { coupEl.textContent = lang === 'es' ? 'Ninguno' : 'None'; coupEl.style.color = '#666'; }
+}
+
+// ============== CHARTS ==============
+const chartTargetCanvas = document.getElementById('chart-target');
+const chartLiveCanvas = document.getElementById('chart-live');
+const targetCtx = chartTargetCanvas.getContext('2d');
+const liveCtx = chartLiveCanvas.getContext('2d');
+let chartHistory = [];
+const maxHistory = 300;
+
+function updateCharts() {
+  const P = state.pressure;
+  const T = state.temp;
+  const freq = state.freq;
+  const intensity = state.intensity;
+  const pp = phaseParam(P, T);
+  const inTrans = isTransition(P, T);
+  const tc = tripleCoupling(P, T, freq, intensity);
+  const t = state.time;
+
+  // Live data point
+  let liveVal;
+  if (pp < 0.05) {
+    // Semiconductor: small AC piezo voltage
+    liveVal = 0.2 + Math.sin(t * freq * 0.5) * 0.15 * (intensity / 1000);
+  } else if (pp > 0.95) {
+    // Metallic: current flow, no piezo
+    liveVal = -0.5 - Math.sin(t * 2) * 0.05;
+  } else {
+    // Transition: chaotic or periodic switching
+    const switchRate = tc > 0.4 ? freq * 0.3 : freq * 0.1 + Math.random() * 10;
+    const switching = Math.sin(t * switchRate);
+    if (tc > 0.5) {
+      // Clean square wave
+      liveVal = switching > 0 ? 0.8 : -0.8;
+    } else {
+      // Chaotic
+      liveVal = switching * 0.6 + (Math.random() - 0.5) * 0.4 * (1 - tc);
+    }
+  }
+
+  chartHistory.push(liveVal);
+  if (chartHistory.length > maxHistory) chartHistory.shift();
+
+  // Resize canvases
+  resizeChart(chartTargetCanvas);
+  resizeChart(chartLiveCanvas);
+
+  // Draw target chart
+  drawChart(targetCtx, chartTargetCanvas, 'target', pp, tc);
+  // Draw live chart
+  drawChart(liveCtx, chartLiveCanvas, 'live', pp, tc);
+}
+
+function resizeChart(canvas) {
+  const rect = canvas.parentElement.getBoundingClientRect();
+  const w = rect.width / 2;
+  const h = rect.height - 24;
+  if (canvas.width !== w * 2 || canvas.height !== h * 2) {
+    canvas.width = w * 2;
+    canvas.height = h * 2;
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+  }
+}
+
+function drawChart(ctx, canvas, type, pp, tc) {
+  const w = canvas.width;
+  const h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+
+  // Background
+  ctx.fillStyle = 'rgba(10,10,26,0.9)';
+  ctx.fillRect(0, 0, w, h);
+
+  // Grid
+  ctx.strokeStyle = 'rgba(40,40,80,0.5)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, h / 2); ctx.lineTo(w, h / 2);
+  ctx.stroke();
+
+  // Labels
+  ctx.font = '18px monospace';
+  ctx.fillStyle = '#666';
+  if (type === 'target') {
+    ctx.fillText('PIEZO', 8, 30);
+    ctx.fillText('CURRENT', 8, h - 10);
+
+    // Animated square wave at current EM driving frequency
+    const freq = state.freq; // Hz
+    const now = performance.now() / 1000;
+    // Scroll offset based on time and frequency
+    const scrollPx = now * freq * 4; // pixels scrolled
+    // Period in pixels
+    const periodPx = Math.max(20, w / (freq * 0.15));
+
+    ctx.strokeStyle = '#22c55e';
+    ctx.lineWidth = 2;
+    ctx.shadowColor = 'rgba(34,197,94,0.4)';
+    ctx.shadowBlur = 6;
+    ctx.beginPath();
+    for (let i = 0; i < w; i++) {
+      const phase = ((i + scrollPx) % periodPx) / periodPx;
+      const val = phase < 0.5 ? 0.7 : -0.7;
+      const y = h / 2 - val * (h * 0.35);
+      if (i === 0) ctx.moveTo(i, y); else ctx.lineTo(i, y);
+    }
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // Glow layer
+    ctx.strokeStyle = 'rgba(34,197,94,0.12)';
+    ctx.lineWidth = 8;
+    ctx.beginPath();
+    for (let i = 0; i < w; i++) {
+      const phase = ((i + scrollPx) % periodPx) / periodPx;
+      const val = phase < 0.5 ? 0.7 : -0.7;
+      const y = h / 2 - val * (h * 0.35);
+      if (i === 0) ctx.moveTo(i, y); else ctx.lineTo(i, y);
+    }
+    ctx.stroke();
+
+    // State labels on the square wave
+    ctx.font = '14px Segoe UI, sans-serif';
+    ctx.fillStyle = 'rgba(34,197,94,0.6)';
+    const topLabel = lang === 'es' ? 'PIEZO' : 'PIEZO';
+    const botLabel = lang === 'es' ? 'CONDUCTOR' : 'CONDUCTIVE';
+    ctx.fillText(topLabel, w / 2 - 20, h * 0.18);
+    ctx.fillStyle = 'rgba(100,140,200,0.6)';
+    ctx.fillText(botLabel, w / 2 - 30, h * 0.88);
+
+    // Annotations
+    ctx.font = '16px Segoe UI, sans-serif';
+    ctx.fillStyle = 'rgba(34,197,94,0.7)';
+    ctx.fillText(lang === 'es' ? 'Oscilaci\u00F3n en frontera de fase' : 'Phase boundary oscillation', w / 2 - 100, 24);
+    ctx.fillStyle = 'rgba(255,170,34,0.6)';
+    ctx.fillText(lang === 'es' ? 'Acoplamiento triple' : 'Triple coupling', w / 2 - 60, h - 10);
+    ctx.fillStyle = 'rgba(100,140,200,0.5)';
+    ctx.fillText(lang === 'es' ? 'Fon\u00F3n-Fot\u00F3n-Electr\u00F3n' : 'Phonon-Photon-Electron', w / 2 - 80, h / 2 + 6);
+  } else {
+    // Live chart
+    ctx.fillText('PIEZO V', 8, 30);
+    ctx.fillText('I FLOW', 8, h - 10);
+
+    if (chartHistory.length > 1) {
+      // Phase coloring
+      let color;
+      if (pp < 0.05) color = '#22c55e';
+      else if (pp > 0.95) color = '#b8c4d0';
+      else color = tc > 0.5 ? '#fbbf24' : '#f97316';
+
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let i = 0; i < chartHistory.length; i++) {
+        const x = (i / maxHistory) * w;
+        const y = h / 2 - chartHistory[i] * (h * 0.35);
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+
+      // Glow effect in transition
+      if (pp > 0.05 && pp < 0.95) {
+        ctx.strokeStyle = color.replace(')', ',0.2)').replace('rgb', 'rgba');
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        for (let i = 0; i < chartHistory.length; i++) {
+          const x = (i / maxHistory) * w;
+          const y = h / 2 - chartHistory[i] * (h * 0.35);
+          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+    }
+  }
+}
+
+// ============== CONTROLS ==============
+function bindSlider(id, key, valId, fmt) {
+  const sl = document.getElementById(id);
+  const vl = document.getElementById(valId);
+  sl.addEventListener('input', () => {
+    state[key] = parseFloat(sl.value);
+    vl.textContent = fmt ? fmt(state[key]) : state[key];
+  });
+}
+bindSlider('sl-pressure', 'pressure', 'val-pressure');
+bindSlider('sl-freq', 'freq', 'val-freq');
+bindSlider('sl-intensity', 'intensity', 'val-intensity');
+bindSlider('sl-temp', 'temp', 'val-temp');
+
+function togglePlay() {
+  state.playing = !state.playing;
+  const btn = document.getElementById('btn-play');
+  btn.textContent = state.playing ? (lang === 'es' ? '\u23F8 Pausa' : '\u23F8 Pause') : (lang === 'es' ? '\u25B6 Iniciar' : '\u25B6 Play');
+  btn.classList.toggle('active', state.playing);
+}
+
+function resetAll() {
+  state.pressure = 0; state.freq = 50; state.intensity = 500; state.temp = 300;
+  state.playing = false; state.time = 0;
+  document.getElementById('sl-pressure').value = 0; document.getElementById('val-pressure').textContent = '0';
+  document.getElementById('sl-freq').value = 50; document.getElementById('val-freq').textContent = '50';
+  document.getElementById('sl-intensity').value = 500; document.getElementById('val-intensity').textContent = '500';
+  document.getElementById('sl-temp').value = 300; document.getElementById('val-temp').textContent = '300';
+  chartHistory = [];
+  document.getElementById('btn-play').textContent = '\u25B6 Play';
+  document.getElementById('btn-play').classList.remove('active');
+}
+
+function toggleLock(param, btn) {
+  state.locked[param] = !state.locked[param];
+  btn.textContent = state.locked[param] ? '\u{1F512}' : '\u{1F513}';
+  btn.classList.toggle('locked', state.locked[param]);
+  const row = document.getElementById('row-' + param);
+  if (row) row.classList.toggle('param-locked', state.locked[param]);
+}
+
+// ===== ANIMATED SYNC ENGINE =====
+let syncAnimating = false;
+
+function calcFitnessM5(pressure, freq, intensity, temp) {
+  // Triple coupling intensity: maximize overlap of phonon/photon/electron modes at phase transition boundary
+  const pp = phaseParam(pressure, temp);
+  const tc = tripleCoupling(pressure, temp, freq, intensity);
+  const transitionProximity = 1 - Math.abs(pp - 0.5) * 2; // 1 at exact boundary, 0 at extremes
+  const intensityFactor = intensity / 1000;
+  return Math.max(0, Math.min(100, transitionProximity * 50 + tc * 40 + intensityFactor * 10));
+}
+
+function calcOptimalM5() {
+  const optPressure = state.locked.pressure ? state.pressure : Pc; // exactly at phase transition
+  const optIntensity = state.locked.intensity ? state.intensity : 800; // high for good coupling
+  const optFreq = state.locked.freq ? state.freq : 50; // mid-range
+  const optTemp = state.locked.temp ? state.temp : 300; // room temp
+  return { pressure: optPressure, freq: optFreq, intensity: optIntensity, temp: optTemp };
+}
+
+function runSync() {
+  if (syncAnimating) return;
+  syncAnimating = true;
+
+  const btn = document.getElementById('btn-sync');
+  const statusEl = document.getElementById('syncStatus');
+  const fitnessBar = document.getElementById('fitnessBar');
+  const fitnessFill = document.getElementById('fitnessFill');
+  const fitnessScoreEl = document.getElementById('fitnessScore');
+
+  btn.classList.add('searching');
+  fitnessBar.style.display = 'block';
+  fitnessScoreEl.style.display = 'block';
+  statusEl.style.opacity = 1;
+
+  document.querySelectorAll('#controls input[type=range]').forEach(s => s.style.pointerEvents = 'none');
+
+  const optimal = calcOptimalM5();
+  const startTime = performance.now();
+  const SEARCH_DUR = 2000, CONVERGE_DUR = 1500, SETTLE_DUR = 500;
+  const TOTAL = SEARCH_DUR + CONVERGE_DUR + SETTLE_DUR;
+  const speeds = [1.0, 1.3, 1.7, 2.1];
+  let dots = 0, dotTimer = 0;
+
+  const sliders = [
+    { id: 'sl-pressure', min: 0, max: 100, locked: state.locked.pressure, target: optimal.pressure, valId: 'val-pressure', fmt: v => Number.isInteger(v) ? v.toString() : v.toFixed(1), stateKey: 'pressure', speed: speeds[0], step: 0.5 },
+    { id: 'sl-freq', min: 1, max: 100, locked: state.locked.freq, target: optimal.freq, valId: 'val-freq', fmt: v => Math.round(v).toString(), stateKey: 'freq', speed: speeds[1], step: 1 },
+    { id: 'sl-intensity', min: 0, max: 1000, locked: state.locked.intensity, target: optimal.intensity, valId: 'val-intensity', fmt: v => Math.round(v).toString(), stateKey: 'intensity', speed: speeds[2], step: 10 },
+    { id: 'sl-temp', min: 77, max: 500, locked: state.locked.temp, target: optimal.temp, valId: 'val-temp', fmt: v => Math.round(v).toString(), stateKey: 'temp', speed: speeds[3], step: 1 },
+  ];
+
+  function animStep(now) {
+    const elapsed = now - startTime;
+
+    if (elapsed < SEARCH_DUR) {
+      const st = elapsed / 1000;
+      dotTimer++;
+      if (dotTimer % 20 === 0) dots = (dots + 1) % 4;
+      statusEl.textContent = i18n[lang].sync_searching + '.'.repeat(dots);
+
+      sliders.forEach(s => {
+        if (s.locked) return;
+        const el = document.getElementById(s.id);
+        const raw = s.min + (s.max - s.min) * (0.5 + 0.5 * Math.sin(st * s.speed * 2 * Math.PI));
+        const v = Math.round(raw / s.step) * s.step;
+        el.value = v;
+        document.getElementById(s.valId).textContent = s.fmt(v);
+        state[s.stateKey] = v;
+      });
+    } else if (elapsed < SEARCH_DUR + CONVERGE_DUR) {
+      const ct = (elapsed - SEARCH_DUR) / CONVERGE_DUR;
+      const eased = ct < 0.5 ? 2 * ct * ct : -1 + (4 - 2 * ct) * ct;
+      dotTimer++;
+      if (dotTimer % 20 === 0) dots = (dots + 1) % 4;
+      statusEl.textContent = i18n[lang].sync_optimizing + '.'.repeat(dots);
+
+      sliders.forEach(s => {
+        if (s.locked) return;
+        const el = document.getElementById(s.id);
+        const current = parseFloat(el.value);
+        const raw = current + (s.target - current) * eased;
+        const v = Math.round(raw / s.step) * s.step;
+        el.value = v;
+        document.getElementById(s.valId).textContent = s.fmt(v);
+        state[s.stateKey] = v;
+      });
+    } else {
+      // Settle
+      sliders.forEach(s => {
+        if (s.locked) return;
+        const el = document.getElementById(s.id);
+        el.value = s.target;
+        document.getElementById(s.valId).textContent = s.fmt(s.target);
+        state[s.stateKey] = s.target;
+      });
+
+      btn.classList.remove('searching');
+      btn.classList.add('flash');
+      setTimeout(() => btn.classList.remove('flash'), 600);
+
+      const finalFit = calcFitnessM5(state.pressure, state.freq, state.intensity, state.temp);
+      fitnessFill.style.width = finalFit + '%';
+      fitnessScoreEl.textContent = Math.round(finalFit) + '%';
+      statusEl.textContent = i18n[lang].sync_optimal;
+      setTimeout(() => { statusEl.style.opacity = 0; }, 4000);
+      setTimeout(() => { fitnessBar.style.display = 'none'; fitnessScoreEl.style.display = 'none'; }, 6000);
+
+      document.querySelectorAll('#controls input[type=range]').forEach(s => s.style.pointerEvents = '');
+      if (!state.playing) togglePlay();
+      syncAnimating = false;
+      return;
+    }
+
+    const fit = calcFitnessM5(state.pressure, state.freq, state.intensity, state.temp);
+    fitnessFill.style.width = fit + '%';
+    fitnessScoreEl.textContent = Math.round(fit) + '%';
+    requestAnimationFrame(animStep);
+  }
+  requestAnimationFrame(animStep);
+}
+
+function updatePhaseDisplay() {
+  // re-trigger i18n for dynamic elements
+}
+
+// ============== KEYBOARD ==============
+document.addEventListener('keydown', e => {
+  const key = e.key;
+  const step = e.shiftKey ? 5 : 1;
+  if (key === 'S') { e.preventDefault(); runSync(); return; }
+  switch (key.toLowerCase()) {
+    case 'q': if (!state.locked.pressure) adjustSlider('sl-pressure', 'pressure', 'val-pressure', step * 2, 0, 100); break;
+    case 'a': if (!state.locked.pressure) adjustSlider('sl-pressure', 'pressure', 'val-pressure', -step * 2, 0, 100); break;
+    case 'w': if (!state.locked.freq) adjustSlider('sl-freq', 'freq', 'val-freq', step * 2, 1, 100); break;
+    case 's': if (!state.locked.freq) adjustSlider('sl-freq', 'freq', 'val-freq', -step * 2, 1, 100); break;
+    case 'e': if (!state.locked.intensity) adjustSlider('sl-intensity', 'intensity', 'val-intensity', step * 20, 0, 1000); break;
+    case 'd': if (!state.locked.intensity) adjustSlider('sl-intensity', 'intensity', 'val-intensity', -step * 20, 0, 1000); break;
+    case ' ':
+      e.preventDefault();
+      togglePlay();
+      break;
+    case 'r': resetAll(); break;
+    case '?':
+      document.getElementById('kb-legend').classList.toggle('visible');
+      break;
+  }
+});
+
+function adjustSlider(sliderId, stateKey, valId, delta, min, max) {
+  state[stateKey] = Math.max(min, Math.min(max, state[stateKey] + delta));
+  document.getElementById(sliderId).value = state[stateKey];
+  document.getElementById(valId).textContent = Number.isInteger(state[stateKey]) ? state[stateKey] : state[stateKey].toFixed(1);
+}
+
+// ============== MOBILE ==============
+function toggleMobileMenu() {
+  document.getElementById('controls').classList.toggle('mobile-open');
+  document.getElementById('mobile-overlay').classList.toggle('active');
+}
+function toggleMobileInfo() {
+  const modal = document.getElementById('mobile-info-modal');
+  modal.classList.toggle('open');
+  if (modal.classList.contains('open')) {
+    document.getElementById('mobile-info-content').innerHTML = document.getElementById('info-panel').innerHTML;
+  }
+}
+
+// ============== RESIZE ==============
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// ============== INIT ==============
+initScene();
+if (!state.playing) togglePlay();
+
+// ===== SLIDER MOUSE WHEEL =====
+(function() {
+  document.querySelectorAll('input[type=range]').forEach(function(slider) {
+    var CONFIGS = {
+      'sl-pressure': 0.2,    // GPa
+      'sl-freq': 1,          // GHz
+      'sl-intensity': 2,     // V/m
+      'sl-temp': 1,          // K
+    };
+    slider.addEventListener('mouseenter', function() { slider.classList.add('wheel-focus'); });
+    slider.addEventListener('mouseleave', function() { slider.classList.remove('wheel-focus'); });
+    slider.addEventListener('wheel', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      var range = parseFloat(slider.max) - parseFloat(slider.min);
+      var step = CONFIGS[slider.id] || range / 500;
+      var dir = e.deltaY > 0 ? -1 : 1;
+      var newVal = Math.max(parseFloat(slider.min), Math.min(parseFloat(slider.max), parseFloat(slider.value) + step * dir));
+      slider.value = newVal;
+      slider.dispatchEvent(new Event('input', { bubbles: true }));
+    }, { passive: false });
+  });
+})();
+</script>
+</body>
+</html>

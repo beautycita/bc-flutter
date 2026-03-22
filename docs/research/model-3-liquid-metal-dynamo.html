@@ -1,0 +1,1814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Liquid Metal Vortex Dynamo — Interactive 3D Model</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;scrollbar-width:none}
+::-webkit-scrollbar{display:none}
+:root{
+  --bg:#0a0a1a;--panel:#0d0d24;--border:#1a1a3a;--text:#c0c0d0;
+  --accent:#a0b0c8;--silver:#b8c4d0;--copper:#d4956a;
+  --green:#22c55e;--yellow:#eab308;--red:#ef4444;--blue:#3b82f6;
+  --glow-active:0 0 20px rgba(100,200,255,.4);
+}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;font-size:13px}
+#canvas-container{position:absolute;top:0;left:0;width:100%;height:100%;z-index:0}
+canvas{display:block}
+
+/* Panels */
+.panel{position:absolute;background:rgba(13,13,36,.92);border:1px solid var(--border);border-radius:10px;backdrop-filter:blur(12px);padding:14px;z-index:10;overflow-y:auto}
+.panel h3{font-size:13px;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent);margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:6px}
+.panel label{display:block;font-size:11px;color:#8888aa;margin-top:8px;margin-bottom:2px}
+.panel select,.panel input[type=range]{width:100%;margin-top:2px}
+select{background:#111130;color:var(--text);border:1px solid var(--border);border-radius:4px;padding:4px 6px;font-size:12px}
+input[type=range]{-webkit-appearance:none;height:6px;background:#1a1a3a;border-radius:3px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--accent);cursor:pointer}
+.val{float:right;color:var(--silver);font-weight:600;font-size:12px}
+
+/* Control panel left */
+#controls{left:12px;top:12px;width:240px;max-height:calc(100vh - 24px)}
+.toggle-row{display:flex;align-items:center;gap:6px;margin-top:6px}
+.toggle-row label{margin:0;flex:1;font-size:11px}
+.toggle-switch{position:relative;width:34px;height:18px;flex-shrink:0}
+.toggle-switch input{opacity:0;width:0;height:0}
+.toggle-switch .slider{position:absolute;inset:0;background:#2a2a4a;border-radius:9px;cursor:pointer;transition:.2s}
+.toggle-switch .slider::before{content:'';position:absolute;width:14px;height:14px;left:2px;top:2px;background:#666;border-radius:50%;transition:.2s}
+.toggle-switch input:checked+.slider{background:var(--blue)}
+.toggle-switch input:checked+.slider::before{transform:translateX(16px);background:#fff}
+
+.btn{display:inline-block;padding:5px 12px;border:1px solid var(--border);border-radius:5px;background:rgba(30,30,60,.7);color:var(--text);cursor:pointer;font-size:11px;margin-top:6px;margin-right:4px;transition:.2s}
+.btn:hover{background:rgba(60,60,100,.7);border-color:var(--accent)}
+.btn.active{background:rgba(59,130,246,.3);border-color:var(--blue)}
+
+/* Sync / Lock */
+.lock-btn{
+  background:none;border:none;cursor:pointer;font-size:14px;padding:0 2px;
+  opacity:.4;transition:opacity .2s,transform .2s;line-height:1;
+}
+.lock-btn:hover{opacity:.7}
+.lock-btn.locked{opacity:1;filter:drop-shadow(0 0 4px goldenrod)}
+.param-locked input[type=range],.param-locked select{pointer-events:none;opacity:.5}
+.btn-sync{
+  background:linear-gradient(135deg,var(--blue),#6366f1,#a855f7);color:#fff;
+  border:none;padding:6px 14px;border-radius:5px;font-size:11px;font-weight:700;
+  cursor:pointer;transition:filter .15s,box-shadow .3s;letter-spacing:.5px;width:100%;margin-top:8px;
+}
+.btn-sync:hover{filter:brightness(1.15)}
+.btn-sync.flash{box-shadow:0 0 20px rgba(59,130,246,.6),0 0 40px rgba(99,102,241,.4)}
+@keyframes sync-pulse-m3{0%,100%{box-shadow:0 0 8px rgba(59,130,246,.3),0 0 16px rgba(99,102,241,.2)}50%{box-shadow:0 0 24px rgba(59,130,246,.7),0 0 48px rgba(99,102,241,.5)}}
+.btn-sync.searching{animation:sync-pulse-m3 .8s ease-in-out infinite;pointer-events:none}
+.sync-status{font-size:10px;color:var(--accent);text-align:center;margin-top:4px;min-height:14px;transition:opacity .3s}
+.fitness-bar{width:100%;height:8px;background:#1a1a3a;border-radius:4px;margin-top:6px;overflow:hidden}
+.fitness-bar .fill{height:100%;border-radius:4px;transition:width 50ms linear;background:linear-gradient(90deg,#ef4444,#eab308,#22c55e)}
+.fitness-score{font-size:10px;text-align:center;margin-top:2px;color:var(--accent);font-variant-numeric:tabular-nums}
+
+/* Dashboard bottom — compact single row */
+#dashboard{left:260px;bottom:0;right:0;height:50px;display:flex;gap:0;flex-wrap:nowrap;padding:0 12px;align-items:center;border-radius:0}
+.metric{flex:1;text-align:center;min-width:0;padding:0 6px}
+.metric .label{font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:#666;line-height:1;margin-bottom:1px}
+.metric .value{font-size:11px;font-weight:700;color:var(--silver);margin:0;line-height:1.3}
+.metric .unit{font-size:9px;color:#555;line-height:1}
+
+/* Rm gauge — replaced with colored number */
+#rm-gauge-container{flex:0 0 60px;min-width:60px;max-width:60px;display:flex;flex-direction:column;align-items:center}
+#rm-gauge-canvas{display:none}
+
+/* Target Field Growth chart — positioned above dashboard */
+#target-growth{left:260px;right:0;height:80px;display:flex;gap:0;padding:0;overflow:visible;position:absolute;z-index:10;bottom:50px;border-radius:0}
+#target-growth-canvas{width:100%;height:100%;display:block}
+#target-metrics{position:absolute;right:12px;top:4px;text-align:right;font-size:9px;line-height:1.4;color:var(--text)}
+#target-metrics .tg-label{color:#666;text-transform:uppercase;letter-spacing:.5px;font-size:7px}
+#target-metrics .tg-val{font-weight:700;font-size:10px}
+#target-metrics .tg-val.above{color:var(--green)}
+#target-metrics .tg-val.below{color:var(--red)}
+#target-metrics .tg-val.near{color:var(--yellow)}
+@media(max-width:900px){
+  #target-growth{left:0;right:0;height:50px;bottom:auto;position:fixed;top:46px;z-index:18;border-radius:0}
+  #target-metrics{font-size:8px}
+  #target-metrics .tg-val{font-size:9px}
+  #dashboard{left:0;height:40px;padding:0 6px}
+  .metric .label{font-size:8px}
+  .metric .value{font-size:10px}
+  .metric .unit{font-size:8px}
+}
+
+/* Status indicator */
+#dynamo-status{position:absolute;top:12px;left:50%;transform:translateX(-50%);padding:8px 24px;border-radius:20px;font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;z-index:20;transition:.5s;border:2px solid}
+#dynamo-status.subcritical{background:rgba(239,68,68,.15);border-color:var(--red);color:var(--red)}
+#dynamo-status.near-critical{background:rgba(234,179,8,.15);border-color:var(--yellow);color:var(--yellow);animation:pulse-yellow 1.5s infinite}
+#dynamo-status.active{background:rgba(34,197,94,.15);border-color:var(--green);color:var(--green);box-shadow:0 0 30px rgba(34,197,94,.3);animation:pulse-green 1s infinite}
+@keyframes pulse-yellow{0%,100%{opacity:1}50%{opacity:.6}}
+@keyframes pulse-green{0%,100%{opacity:1}50%{opacity:.7}}
+
+/* Info panels right */
+#info-panel{right:12px;top:12px;width:320px;max-height:calc(100vh - 24px);overflow-y:auto}
+#info-panel::-webkit-scrollbar{width:4px}
+#info-panel::-webkit-scrollbar-thumb{background:#333;border-radius:2px}
+.info-section{margin-bottom:8px}
+.info-section summary{cursor:pointer;font-size:12px;font-weight:600;color:var(--accent);padding:6px 0;list-style:none;display:flex;align-items:center;gap:6px}
+.info-section summary::before{content:'>';display:inline-block;transition:.2s;font-size:10px}
+.info-section[open] summary::before{transform:rotate(90deg)}
+.info-section .content{font-size:11.5px;line-height:1.6;color:#9999bb;padding:4px 0 8px}
+.info-section .content p{margin-bottom:6px}
+.info-section .content code{background:#1a1a3a;padding:1px 4px;border-radius:3px;font-size:11px;color:var(--silver)}
+.info-section .content ul{padding-left:16px;margin:4px 0}
+.info-section .content li{margin-bottom:3px}
+.math-block{background:#0a0a20;border:1px solid var(--border);border-radius:6px;padding:8px 12px;margin:8px 0;font-family:'Courier New',monospace;font-size:11px;color:var(--silver);line-height:1.8;overflow-x:auto}
+
+/* Language switcher */
+#lang-switch{position:absolute;top:12px;right:344px;z-index:20;display:flex;gap:0;border:1px solid var(--border);border-radius:5px;overflow:hidden}
+#lang-switch button{background:rgba(13,13,36,.9);color:var(--text);border:none;padding:4px 10px;font-size:11px;cursor:pointer}
+#lang-switch button.active{background:var(--blue);color:#fff}
+
+/* Keyboard Legend */
+#kb-legend{position:fixed;bottom:12px;right:12px;z-index:50;background:rgba(10,10,26,0.85);border:1px solid var(--border);border-radius:8px;padding:8px;backdrop-filter:blur(10px);max-width:280px;font-size:10px;color:var(--text);pointer-events:auto;display:none}
+#kb-legend.visible{display:block}
+#kb-legend .kb-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+#kb-legend .kb-title span{font-size:11px;font-weight:600;color:var(--accent)}
+#kb-legend .kb-close{background:none;border:none;color:var(--text);cursor:pointer;font-size:14px;padding:0 2px;line-height:1}
+#kb-legend .kb-close:hover{color:#fff}
+#kb-legend .kb-grid{display:grid;grid-template-columns:auto 1fr;gap:1px 8px;align-items:center}
+#kb-legend .kb-grid kbd{display:inline-block;padding:1px 4px;background:rgba(26,26,58,0.8);border:1px solid var(--border);border-radius:3px;font-family:monospace;font-size:9px;color:var(--silver);text-align:center;min-width:18px}
+#kb-legend .kb-grid .kb-desc{font-size:10px}
+#kb-legend .kb-grid .kb-sep{grid-column:1/-1;height:1px;background:var(--border);margin:3px 0}
+
+/* Mobile elements */
+#mobile-menu-btn{display:none;position:fixed;top:10px;left:10px;z-index:25;width:40px;height:40px;border-radius:8px;background:rgba(13,13,36,0.9);border:1px solid var(--border);color:var(--text);font-size:20px;cursor:pointer;align-items:center;justify-content:center;backdrop-filter:blur(8px)}
+#mobile-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:8}
+#mobile-info-btn{display:none;position:fixed;bottom:54px;left:10px;z-index:25;width:36px;height:36px;border-radius:50%;background:rgba(13,13,36,0.9);border:1px solid var(--border);color:var(--text);font-size:16px;cursor:pointer;align-items:center;justify-content:center;backdrop-filter:blur(8px)}
+#mobile-info-modal{display:none;position:fixed;inset:0;z-index:60;background:rgba(13,13,36,0.97);overflow-y:auto;padding:20px}
+#mobile-info-modal.open{display:block}
+#mobile-info-close{position:fixed;top:12px;right:12px;z-index:61;background:none;border:none;color:var(--text);font-size:24px;cursor:pointer}
+#dash-strip{display:none;position:fixed;bottom:0;left:0;right:0;height:44px;background:rgba(13,13,36,0.95);border-top:1px solid var(--border);z-index:20;padding:0 8px;align-items:center;justify-content:space-around;backdrop-filter:blur(8px);cursor:pointer}
+#dash-strip .strip-metric{text-align:center}
+#dash-strip .strip-label{font-size:8px;text-transform:uppercase;letter-spacing:0.5px;color:#6666888}
+#dash-strip .strip-val{font-size:14px;font-weight:700;color:var(--silver)}
+
+/* Desktop: narrower controls */
+@media(min-width:901px){
+  #controls{max-width:240px}
+  #info-panel{max-width:280px}
+  #info-panel .info-section:not([open]) .content{display:none}
+}
+
+/* Mobile */
+@media(max-width:900px){
+  #mobile-menu-btn{display:flex}
+  #mobile-info-btn{display:flex}
+  #controls{position:fixed;top:0;left:0;width:260px;max-height:100%;z-index:12;transform:translateX(-100%);transition:transform 0.3s;border-radius:0}
+  #controls.mobile-open{transform:translateX(0)}
+  #mobile-overlay.active{display:block}
+  #info-panel{display:none}
+  #dashboard{display:none}
+  #dashboard.mobile-expanded{display:flex;position:fixed;bottom:0;left:0;right:0;z-index:30;border-radius:10px 10px 0 0;flex-wrap:wrap;padding:10px}
+  #dash-strip{display:flex}
+  #lang-switch{top:10px;right:10px;left:auto}
+  #dynamo-status{font-size:10px;padding:5px 14px;top:10px;left:auto;right:auto;transform:translateX(-50%)}
+  #kb-legend{bottom:54px;left:10px;right:auto;max-width:220px;font-size:9px}
+  #kb-legend .kb-grid kbd{font-size:8px;min-width:16px}
+  body{overflow:hidden}
+}
+@media(max-width:600px){
+  #dynamo-status{font-size:9px;padding:4px 10px}
+}
+
+  /* Slider hover feedback */
+  input[type=range]:hover{filter:brightness(1.3);cursor:grab}
+  input[type=range]:active{cursor:grabbing}
+  input[type=range].wheel-focus{box-shadow:0 0 6px rgba(147,51,234,.4);border-radius:3px}
+</style>
+</head>
+<body>
+<button id="mobile-menu-btn" onclick="toggleMobileMenu()">&#9776;</button>
+<div id="mobile-overlay" onclick="closeMobileMenu()"></div>
+<button id="mobile-info-btn" onclick="openMobileInfo()">&#8505;</button>
+<div id="mobile-info-modal"><button id="mobile-info-close" onclick="closeMobileInfo()">&times;</button><div id="mobile-info-content"></div></div>
+<div id="dash-strip" onclick="toggleMobileDash()"><div class="strip-metric"><div class="strip-label">Rm</div><div class="strip-val" id="stripRm">0.0</div></div><div class="strip-metric"><div class="strip-label">Field</div><div class="strip-val" id="stripField">0.0 G</div></div><div class="strip-metric"><div class="strip-label">Power</div><div class="strip-val" id="stripPwr">0.0 W</div></div></div>
+<div id="canvas-container"></div>
+
+<div id="dynamo-status" class="subcritical">
+  <span data-en="SUBCRITICAL" data-es="SUBCRITICO">SUBCRITICAL</span>
+</div>
+
+<div id="lang-switch">
+  <button class="active" onclick="setLang('en')">EN</button>
+  <button onclick="setLang('es')">ES</button>
+</div>
+
+<!-- LEFT: Controls -->
+<div id="controls" class="panel">
+  <h3 data-en="Controls" data-es="Controles">Controls</h3>
+
+  <div id="row-velocity">
+    <label><button class="lock-btn" data-param="velocity" onclick="toggleLock('velocity',this)" title="Lock">&#128275;</button> <span data-en="Flow Velocity" data-es="Velocidad de Flujo">Flow Velocity</span> <span class="val" id="vel-val">5.0 m/s</span></label>
+    <input type="range" id="velocity" min="0" max="50" step="0.5" value="5">
+  </div>
+
+  <div id="row-metal">
+    <label><button class="lock-btn" data-param="metal" onclick="toggleLock('metal',this)" title="Lock">&#128275;</button> <span data-en="Liquid Metal" data-es="Metal Liquido">Liquid Metal</span></label>
+    <select id="metal">
+      <option value="mercury">Mercury / Mercurio (σ=1.04 MS/m)</option>
+      <option value="gainsn" selected>GaInSn (σ=3.46 MS/m)</option>
+      <option value="sodium">Sodium / Sodio (σ=21.0 MS/m)</option>
+    </select>
+  </div>
+
+  <div id="row-diameter">
+    <label><button class="lock-btn" data-param="diameter" onclick="toggleLock('diameter',this)" title="Lock">&#128275;</button> <span data-en="Torus Diameter" data-es="Diametro del Toro">Torus Diameter</span> <span class="val" id="diam-val">40 cm</span></label>
+    <input type="range" id="diameter" min="10" max="100" step="1" value="40">
+  </div>
+
+  <label><span data-en="Temperature" data-es="Temperatura">Temperature</span> <span class="val" id="temp-val">25 C</span></label>
+  <input type="range" id="temperature" min="10" max="200" step="1" value="25">
+
+  <button class="btn-sync" id="syncBtn" onclick="runSync()" data-en="SYNC" data-es="SYNC">SYNC</button>
+  <div class="sync-status" id="syncStatus"></div>
+  <div class="fitness-bar" id="fitnessBar" style="display:none"><div class="fill" id="fitnessFill" style="width:0%"></div></div>
+  <div class="fitness-score" id="fitnessScore" style="display:none"></div>
+
+  <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:8px">
+    <h3 data-en="Display" data-es="Visualizacion">Display</h3>
+    <div class="toggle-row"><label data-en="Field Lines" data-es="Lineas de Campo">Field Lines</label><label class="toggle-switch"><input type="checkbox" id="show-field" checked><span class="slider"></span></label></div>
+    <div class="toggle-row"><label data-en="Flow Particles" data-es="Particulas de Flujo">Flow Particles</label><label class="toggle-switch"><input type="checkbox" id="show-particles" checked><span class="slider"></span></label></div>
+    <div class="toggle-row"><label data-en="Pickup Coils" data-es="Bobinas Captoras">Pickup Coils</label><label class="toggle-switch"><input type="checkbox" id="show-coils" checked><span class="slider"></span></label></div>
+    <div class="toggle-row"><label data-en="Cutaway View" data-es="Vista en Corte">Cutaway View</label><label class="toggle-switch"><input type="checkbox" id="show-cutaway"><span class="slider"></span></label></div>
+  </div>
+
+  <div style="margin-top:10px">
+    <button class="btn" id="btn-play" data-en="Pause" data-es="Pausa">Pause</button>
+    <button class="btn" id="btn-reset" data-en="Reset" data-es="Reiniciar">Reset</button>
+  </div>
+</div>
+
+<!-- TARGET FIELD GROWTH (above dashboard) -->
+<div id="target-growth" class="panel">
+  <canvas id="target-growth-canvas"></canvas>
+  <div id="target-metrics">
+    <div class="tg-label" data-en="Current Rm" data-es="Rm Actual">Current Rm</div>
+    <div class="tg-val" id="tg-rm">0.0 <span style="font-weight:400;color:#666">(crit: 40)</span></div>
+    <div class="tg-label" data-en="Distance to Ignition" data-es="Distancia a Ignicion">Distance to Ignition</div>
+    <div class="tg-val" id="tg-dist">-- m/s</div>
+    <div class="tg-label" data-en="Predicted Steady-State" data-es="Campo Estable Predicho">Predicted Steady-State</div>
+    <div class="tg-val" id="tg-field">0.0 Gauss</div>
+  </div>
+</div>
+
+<!-- BOTTOM: Dashboard -->
+<div id="dashboard" class="panel">
+  <div class="metric" id="rm-gauge-container">
+    <div class="label">Rm</div>
+    <div class="value" id="rm-value" style="font-size:16px">0.0</div>
+  </div>
+  <div class="metric">
+    <div class="label" data-en="Field" data-es="Campo">Field</div>
+    <div class="value" id="field-value">0.0</div>
+    <div class="unit">Gauss</div>
+  </div>
+  <div class="metric">
+    <div class="label" data-en="Power" data-es="Potencia">Power</div>
+    <div class="value" id="power-value">0.0</div>
+    <div class="unit">W</div>
+  </div>
+  <div class="metric">
+    <div class="label" data-en="Output" data-es="Salida">Output</div>
+    <div class="value" id="coil-value">0.0</div>
+    <div class="unit">mW</div>
+  </div>
+  <div class="metric">
+    <div class="label" data-en="Conductivity" data-es="Conductividad">&sigma;</div>
+    <div class="value" id="sigma-value">3.46</div>
+    <div class="unit">MS/m</div>
+  </div>
+</div>
+
+<!-- RIGHT: Info -->
+<div id="info-panel" class="panel">
+  <h3 data-en="Liquid Metal Vortex Dynamo" data-es="Dinamo de Vortice de Metal Liquido">Liquid Metal Vortex Dynamo</h3>
+
+  <details class="info-section">
+    <summary data-en="What Is This?" data-es="Que Es Esto?">What Is This?</summary>
+    <div class="content" data-en="what-is" data-es="que-es">
+      <p>Deep inside Earth, a river of molten iron flows in complex spirals. That flowing conductor generates our planet's magnetic field through a process called the <strong>dynamo effect</strong>: moving conductive fluid creates electric currents, which create magnetic fields, which push the fluid, amplifying the whole cycle.</p>
+      <p>This model simulates the same physics at desktop scale. A liquid metal alloy (GaInSn — gallium-indium-tin) flows through a toroidal chamber. Above a critical flow speed, the system spontaneously generates its own magnetic field — <em>dynamo ignition</em>.</p>
+      <p>Ancient texts describe mercury placed inside sealed chambers within pyramids. Whatever the original purpose, the physics of flowing liquid metal generating magnetic fields is real and reproducible. This is that experiment.</p>
+    </div>
+  </details>
+
+  <details class="info-section">
+    <summary data-en="The Science" data-es="La Ciencia">The Science</summary>
+    <div class="content" data-en="science" data-es="ciencia">
+      <p><strong>Dynamo Theory:</strong> A conducting fluid moving fast enough through a magnetic field induces currents that regenerate and amplify that field. The key dimensionless number is the <em>Magnetic Reynolds Number</em>:</p>
+      <div class="math-block">Rm = mu_0 * sigma * v * L</div>
+      <p>Where mu_0 = 4pi x 10^-7 H/m (permeability of free space), sigma = electrical conductivity (S/m), v = flow velocity (m/s), L = characteristic length (m).</p>
+      <p><strong>Critical Threshold:</strong> When Rm exceeds ~10-100 (depends on geometry; ~40 for an optimized toroidal vortex), the feedback loop becomes self-sustaining. Below this, any seed field decays. Above it, the field grows exponentially until saturated by back-reaction.</p>
+      <p><strong>The Feedback Loop:</strong></p>
+      <ul>
+        <li>Flowing metal cuts through ambient field lines</li>
+        <li>This induces electric currents (Faraday's law)</li>
+        <li>Currents produce their own magnetic field (Ampere's law)</li>
+        <li>The new field is carried and stretched by the flow</li>
+        <li>If Rm > critical: field grows. If not: field decays.</li>
+      </ul>
+      <p><strong>Liquid Metal Comparison:</strong></p>
+      <ul>
+        <li><strong>Mercury:</strong> sigma = 1.04 MS/m. Classic choice but toxic. Needs very high flow speeds.</li>
+        <li><strong>GaInSn:</strong> sigma = 3.46 MS/m. Non-toxic, liquid at room temp. 3x better than mercury. The practical choice.</li>
+        <li><strong>Sodium:</strong> sigma = 21 MS/m. Best conductor but explosive in air/water. Used in Riga and Karlsruhe experiments.</li>
+      </ul>
+      <p><strong>Saturated Field Estimate:</strong></p>
+      <div class="math-block">B ≈ sqrt(mu_0 * rho * v^2) * (1 - Rm_c/Rm)</div>
+      <p>Once ignited, field strength scales with kinetic energy density of the flow, modulated by how far above critical you are.</p>
+      <p><strong>Connection to Earth:</strong> Earth's core has Rm ~ 200-1000. Liquid iron at ~5000 K, flowing at ~0.5 mm/s over thousands of km. Same physics, vastly different scale.</p>
+      <p><strong>The Pyramid Mercury Hypothesis:</strong> Multiple ancient sources describe mercury in sealed chambers within pyramids. If mercury was made to flow (via thermal convection from geothermal heat or solar heating), it would — given sufficient geometry and speed — create a dynamo. Whether the ancients understood this physics is debated. That the physics works is not.</p>
+    </div>
+  </details>
+
+  <details class="info-section">
+    <summary data-en="How To Build It" data-es="Como Construirlo">How To Build It</summary>
+    <div class="content" data-en="build-it" data-es="construir">
+      <p><strong>Bill of Materials:</strong></p>
+      <ul>
+        <li><strong>Toroidal chamber:</strong> 316L stainless steel or borosilicate glass, ID 2-4cm, OD 30-50cm. Custom glassblowing or CNC machined halves with O-ring seal.</li>
+        <li><strong>GaInSn alloy:</strong> ~500mL-2L depending on torus size. ~$500-2000/kg from Indium Corporation or RotoMetals.</li>
+        <li><strong>Electromagnetic pump:</strong> No moving parts in contact with metal. Lorentz-force pump using external magnets + current. Or: mechanical impeller pump with ceramic bearings.</li>
+        <li><strong>Gaussmeter:</strong> 3-axis Hall probe, 0.01 Gauss resolution minimum. Lakeshore 475 DSP (lab grade) or AlphaLab GM2 (hobby).</li>
+        <li><strong>Pickup coils:</strong> 500-1000 turn copper coils, ~2cm diameter, placed at 3-4 positions around torus.</li>
+        <li><strong>Data acquisition:</strong> Arduino + ADS1115 ADC for coil voltage, or NI DAQ for lab precision.</li>
+        <li><strong>Helmholtz seed coils:</strong> Optional — provides initial field to measure Rm indirectly even below critical.</li>
+        <li><strong>Flow meter:</strong> Ultrasonic Doppler (liquid metals are opaque).</li>
+      </ul>
+      <p><strong>Estimated cost:</strong> $3,000 - $15,000 depending on precision level.</p>
+      <p><strong>Safety:</strong> GaInSn is non-toxic but stains everything. Gallium attacks aluminum — do not use aluminum parts. Keep below 100C (melting point of indium-tin phases).</p>
+    </div>
+  </details>
+
+  <details class="info-section">
+    <summary data-en="What To Measure" data-es="Que Medir">What To Measure</summary>
+    <div class="content" data-en="measure" data-es="medir">
+      <p><strong>Gaussmeter Placement:</strong></p>
+      <ul>
+        <li>Position 1: On the axis of the torus (center of the ring) — strongest dipolar component</li>
+        <li>Position 2: Outside the torus, equatorial plane — quadrupolar component</li>
+        <li>Position 3: Above/below the torus — dipolar vertical component</li>
+      </ul>
+      <p><strong>What Constitutes Dynamo Ignition:</strong></p>
+      <ul>
+        <li>Apply a brief seed field with Helmholtz coils, then turn them off</li>
+        <li>Below critical Rm: field decays exponentially back to zero</li>
+        <li>At critical Rm: field persists (neither grows nor decays)</li>
+        <li>Above critical Rm: field grows exponentially, then saturates</li>
+        <li>The smoking gun: turn off the pump — field persists briefly then decays with magnetic diffusion timescale, NOT the pump-off timescale</li>
+      </ul>
+      <p><strong>Expected Field Ramp-Up:</strong></p>
+      <div class="math-block">B(t) = B_seed * exp(gamma * t)<br>gamma = (Rm/Rm_c - 1) / tau_diff<br>tau_diff = mu_0 * sigma * L^2</div>
+      <p>For GaInSn in a 40cm torus: tau_diff ≈ 70 ms. Growth rate at Rm = 2*Rm_c: gamma ≈ 14/s. Field doubles every ~50ms. Saturation in ~0.5 seconds.</p>
+    </div>
+  </details>
+
+  <details class="info-section">
+    <summary data-en="Key Equations" data-es="Ecuaciones Clave">Key Equations</summary>
+    <div class="content">
+      <div class="math-block">
+Rm = mu_0 * sigma * v * L
+   mu_0 = 4 pi x 10^-7 H/m
+   sigma = conductivity (S/m)
+   v = flow velocity (m/s)
+   L = characteristic length (m)
+
+B_sat ≈ sqrt(mu_0 * rho * v^2) * f(Rm/Rm_c)
+   rho = fluid density (kg/m^3)
+   f = saturation function
+
+P_input = 0.5 * rho * v^2 * A * v
+   A = cross-section area of tube (m^2)
+
+P_coil ≈ (dB/dt)^2 * N^2 * A_coil^2 / R_coil
+   N = turns, A_coil = coil area
+      </div>
+    </div>
+  </details>
+
+  <details class="info-section">
+    <summary data-en="Applications &amp; Feasibility" data-es="Aplicaciones y Factibilidad">Applications &amp; Feasibility</summary>
+    <div class="content" data-en="applications" data-es="aplicaciones">
+          <h4>Build Difficulty</h4>
+          <p><span style="font-size:18px;letter-spacing:2px">&#9733;&#9733;&#9733;&#9734;&#9734;</span> <strong>Lab-level</strong></p>
+          <p>Estimated cost: <strong>$1,500 - $3,000 USD</strong></p>
+          <h4>Practical Applications</h4>
+          <ul>
+            <li><strong>Off-Grid Magnetic Field Generator</strong> — No electricity needed — wind/water powered mechanical spin</li>
+            <li><strong>Tunable Permanent Magnet Replacement</strong> — Adjustable field strength, no rare earth mining</li>
+            <li><strong>Space Propulsion Research</strong> — Magnetic field propulsion concepts at bench scale</li>
+            <li><strong>MRI Without Superconducting Magnets</strong> — Massive cost reduction in medical imaging</li>
+            <li><strong>Magnetic Radiation Shielding</strong> — Protection for spacecraft and nuclear facilities</li>
+            <li><strong>Geophysics Research Instrument</strong> — Study Earth's dynamo mechanism at desktop scale</li>
+            <li><strong>Educational Demonstration</strong> — Planetary magnetic field generation made visible</li>
+          </ul>
+    </div>
+  </details>
+</div>
+
+<!-- Spanish content blocks (hidden, swapped by JS) -->
+<div id="es-content" style="display:none">
+  <div data-target="que-es">
+    <p>En las profundidades de la Tierra, un rio de hierro fundido fluye en espirales complejas. Ese conductor en movimiento genera el campo magnetico de nuestro planeta mediante un proceso llamado <strong>efecto dinamo</strong>: el fluido conductor en movimiento crea corrientes electricas, que crean campos magneticos, que empujan el fluido, amplificando todo el ciclo.</p>
+    <p>Este modelo simula la misma fisica a escala de escritorio. Una aleacion de metal liquido (GaInSn — galio-indio-estano) fluye a traves de una camara toroidal. Por encima de una velocidad critica de flujo, el sistema genera espontaneamente su propio campo magnetico — <em>ignicion de dinamo</em>.</p>
+    <p>Textos antiguos describen mercurio colocado dentro de camaras selladas en piramides. Cualquiera que haya sido el proposito original, la fisica del metal liquido fluyendo que genera campos magneticos es real y reproducible. Este es ese experimento.</p>
+  </div>
+  <div data-target="ciencia">
+    <p><strong>Teoria del Dinamo:</strong> Un fluido conductor moviendose lo suficientemente rapido a traves de un campo magnetico induce corrientes que regeneran y amplifican ese campo. El numero adimensional clave es el <em>Numero de Reynolds Magnetico</em>:</p>
+    <div class="math-block">Rm = mu_0 * sigma * v * L</div>
+    <p>Donde mu_0 = 4pi x 10^-7 H/m, sigma = conductividad electrica (S/m), v = velocidad de flujo (m/s), L = longitud caracteristica (m).</p>
+    <p><strong>Umbral Critico:</strong> Cuando Rm excede ~10-100 (depende de la geometria; ~40 para un vortice toroidal optimizado), el ciclo de retroalimentacion se vuelve autosostenible.</p>
+    <p><strong>Comparacion de Metales Liquidos:</strong></p>
+    <ul>
+      <li><strong>Mercurio:</strong> sigma = 1.04 MS/m. Opcion clasica pero toxica.</li>
+      <li><strong>GaInSn:</strong> sigma = 3.46 MS/m. No toxico, liquido a temperatura ambiente. 3x mejor que el mercurio.</li>
+      <li><strong>Sodio:</strong> sigma = 21 MS/m. Mejor conductor pero explosivo en aire/agua.</li>
+    </ul>
+  </div>
+  <div data-target="construir">
+    <p><strong>Lista de Materiales:</strong></p>
+    <ul>
+      <li><strong>Camara toroidal:</strong> Acero inoxidable 316L o vidrio borosilicato, DI 2-4cm, DE 30-50cm.</li>
+      <li><strong>Aleacion GaInSn:</strong> ~500mL-2L. ~$500-2000/kg.</li>
+      <li><strong>Bomba electromagnetica:</strong> Sin partes moviles en contacto con el metal. Bomba de fuerza de Lorentz.</li>
+      <li><strong>Gaussmetro:</strong> Sonda Hall de 3 ejes, resolucion minima 0.01 Gauss.</li>
+      <li><strong>Bobinas captoras:</strong> 500-1000 vueltas de cobre, ~2cm de diametro.</li>
+    </ul>
+    <p><strong>Costo estimado:</strong> $3,000 - $15,000 dependiendo del nivel de precision.</p>
+  </div>
+  <div data-target="medir">
+    <p><strong>Colocacion del Gaussmetro:</strong></p>
+    <ul>
+      <li>Posicion 1: En el eje del toro (centro del anillo)</li>
+      <li>Posicion 2: Fuera del toro, plano ecuatorial</li>
+      <li>Posicion 3: Arriba/abajo del toro</li>
+    </ul>
+    <p><strong>Que Constituye Ignicion del Dinamo:</strong></p>
+    <ul>
+      <li>Aplique un campo semilla breve, luego apaguelo</li>
+      <li>Debajo del Rm critico: el campo decae exponencialmente</li>
+      <li>En el Rm critico: el campo persiste</li>
+      <li>Arriba del Rm critico: el campo crece exponencialmente, luego se satura</li>
+    </ul>
+  </div>
+  <div data-target="aplicaciones">
+    <h4>Dificultad de Construccion</h4>
+    <p><span style="font-size:18px;letter-spacing:2px">&#9733;&#9733;&#9733;&#9734;&#9734;</span> <strong>Nivel laboratorio</strong></p>
+    <p>Costo estimado: <strong>$1,500 - $3,000 USD</strong></p>
+    <h4>Aplicaciones Practicas</h4>
+    <ul>
+      <li><strong>Generador de Campo Magnetico Autonomo</strong> — Sin electricidad — impulsado por viento/agua</li>
+      <li><strong>Reemplazo de Imanes Permanentes</strong> — Intensidad ajustable, sin mineria de tierras raras</li>
+      <li><strong>Investigacion de Propulsion Espacial</strong> — Conceptos de propulsion magnetica a escala de mesa</li>
+      <li><strong>MRI Sin Imanes Superconductores</strong> — Reduccion masiva de costos en imagenologia medica</li>
+      <li><strong>Blindaje Magnetico contra Radiacion</strong> — Proteccion para naves espaciales e instalaciones nucleares</li>
+      <li><strong>Instrumento de Investigacion Geofisica</strong> — Estudio del dinamo terrestre a escala de escritorio</li>
+      <li><strong>Demostracion Educativa</strong> — Generacion de campo magnetico planetario visible</li>
+    </ul>
+  </div>
+</div>
+
+<div id="kb-legend">
+  <div class="kb-title"><span id="kb-legend-title">Keyboard Shortcuts</span><button class="kb-close" onclick="toggleKbLegend()">&times;</button></div>
+  <div class="kb-grid" id="kb-legend-grid"></div>
+</div>
+
+<script>
+// ============================================================
+// PHYSICS CONSTANTS & STATE
+// ============================================================
+const MU0 = 4 * Math.PI * 1e-7;
+const METALS = {
+  mercury:  { sigma: 1.04e6, rho: 13534, name: 'Mercury',  color: 0xc0c0c8, tempCoeff: -0.0008 },
+  gainsn:   { sigma: 3.46e6, rho: 6440,  name: 'GaInSn',   color: 0xb0b8c4, tempCoeff: -0.001  },
+  sodium:   { sigma: 21.0e6, rho: 968,   name: 'Sodium',    color: 0xd4d0c8, tempCoeff: -0.0015 }
+};
+const RM_CRITICAL = 40;
+
+let state = {
+  velocity: 5, metal: 'gainsn', diameter: 0.40, temperature: 25,
+  showField: true, showParticles: true, showCoils: true, showCutaway: false,
+  playing: true, lang: 'en',
+  // derived
+  rm: 0, bField: 0, power: 0, coilOutput: 0, sigma: 3.46e6,
+  dynamoActive: false, dynamoIntensity: 0,
+  prevDynamoActive: false
+};
+
+function calcPhysics() {
+  const m = METALS[state.metal];
+  const tempFactor = 1 + m.tempCoeff * (state.temperature - 25);
+  state.sigma = m.sigma * Math.max(0.3, tempFactor);
+  const L = state.diameter; // characteristic length = torus diameter
+  const v = state.velocity;
+  const rho = m.rho;
+  const tubeRadius = state.diameter * 0.06; // tube radius ~6% of torus diameter
+  const A = Math.PI * tubeRadius * tubeRadius;
+
+  state.rm = MU0 * state.sigma * v * L;
+  state.prevDynamoActive = state.dynamoActive;
+  state.dynamoActive = state.rm > RM_CRITICAL;
+
+  if (state.dynamoActive) {
+    const supercrit = (state.rm / RM_CRITICAL - 1);
+    const satFactor = Math.min(1, supercrit / 3); // saturates at ~3x critical
+    state.bField = Math.sqrt(MU0 * rho * v * v) * satFactor * 1e4; // Tesla to Gauss
+    state.dynamoIntensity = Math.min(1, state.dynamoIntensity + 0.02);
+  } else {
+    state.bField = 0;
+    state.dynamoIntensity = Math.max(0, state.dynamoIntensity - 0.015);
+  }
+
+  state.power = 0.5 * rho * v * v * A * v; // Watts
+  // Coil output rough estimate: induced EMF from changing B through N-turn coil
+  const Nturns = 500, coilArea = 3e-4, Rcoil = 10;
+  if (state.bField > 0) {
+    // Rough: V ~ N * A * dB/dt, with dB/dt ~ gamma * B
+    const gamma = (state.rm / RM_CRITICAL - 1) / (MU0 * state.sigma * L * L);
+    const Bsi = state.bField * 1e-4;
+    const emf = Nturns * coilArea * gamma * Bsi;
+    state.coilOutput = (emf * emf / Rcoil) * 1000; // mW
+  } else {
+    state.coilOutput = 0;
+  }
+
+  // Ignition event
+  if (state.dynamoActive && !state.prevDynamoActive) {
+    triggerIgnition();
+  }
+}
+
+// ============================================================
+// THREE.JS SCENE
+// ============================================================
+let scene, camera, renderer, clock;
+let torusMesh, torusCutawayMesh, innerFluidMesh;
+let flowParticles, fieldLineGroup, coilGroup;
+let ambientLight, pointLight, dynamoLight;
+let ignitionFlash = 0;
+
+function initScene() {
+  scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x0a0a1a, 0.15);
+  clock = new THREE.Clock();
+
+  camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
+  camera.position.set(2.5, 1.8, 2.5);
+  camera.lookAt(0, 0, 0);
+
+  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.0;
+  document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+  // Lights
+  ambientLight = new THREE.AmbientLight(0x303050, 0.5);
+  scene.add(ambientLight);
+
+  pointLight = new THREE.PointLight(0x8090b0, 1.2, 10);
+  pointLight.position.set(3, 4, 3);
+  scene.add(pointLight);
+
+  const rimLight = new THREE.PointLight(0x4060a0, 0.6, 8);
+  rimLight.position.set(-3, 2, -2);
+  scene.add(rimLight);
+
+  dynamoLight = new THREE.PointLight(0x44ddff, 0, 6);
+  dynamoLight.position.set(0, 0, 0);
+  scene.add(dynamoLight);
+
+  // Grid / ground reference
+  const gridHelper = new THREE.GridHelper(6, 20, 0x111130, 0x111130);
+  gridHelper.position.y = -1.2;
+  scene.add(gridHelper);
+
+  buildTorus();
+  buildFlowParticles();
+  buildFieldLines();
+  buildPickupCoils();
+
+  // Orbit controls (manual)
+  initOrbitControls();
+
+  window.addEventListener('resize', onResize);
+}
+
+// ---- TORUS ----
+function buildTorus() {
+  const R = 1; // major radius in scene units
+  const r = 0.15; // tube radius
+
+  // Glass shell
+  const torusGeo = new THREE.TorusGeometry(R, r, 32, 100);
+  const glassMat = new THREE.MeshPhysicalMaterial({
+    color: 0x4488cc,
+    transparent: true,
+    opacity: 0.18,
+    roughness: 0.05,
+    metalness: 0.1,
+    side: THREE.DoubleSide,
+    depthWrite: false
+  });
+  torusMesh = new THREE.Mesh(torusGeo, glassMat);
+  scene.add(torusMesh);
+
+  // Inner fluid (slightly smaller)
+  const fluidGeo = new THREE.TorusGeometry(R, r * 0.85, 24, 80);
+  const fluidMat = new THREE.MeshStandardMaterial({
+    color: 0xb0b8c4,
+    metalness: 0.95,
+    roughness: 0.15,
+    envMapIntensity: 1.0
+  });
+  innerFluidMesh = new THREE.Mesh(fluidGeo, fluidMat);
+  scene.add(innerFluidMesh);
+
+  // Cutaway version (half torus) — hidden by default
+  const cutawayGeo = new THREE.TorusGeometry(R, r, 32, 100, Math.PI);
+  torusCutawayMesh = new THREE.Mesh(cutawayGeo, glassMat.clone());
+  torusCutawayMesh.visible = false;
+  scene.add(torusCutawayMesh);
+
+  // Env map (simple cube for reflections)
+  const cubeRT = new THREE.WebGLCubeRenderTarget(128);
+  const cubeCamera = new THREE.CubeCamera(0.1, 10, cubeRT);
+  scene.add(cubeCamera);
+  fluidMat.envMap = cubeRT.texture;
+  // Render once for basic env
+  cubeCamera.position.set(0, 0, 0);
+  cubeCamera.update(renderer, scene);
+}
+
+// ---- FLOW PARTICLES ----
+const PARTICLE_COUNT = 2000;
+let particlePositions, particleSpeeds, particlePhases;
+
+function buildFlowParticles() {
+  const geo = new THREE.BufferGeometry();
+  particlePositions = new Float32Array(PARTICLE_COUNT * 3);
+  particleSpeeds = new Float32Array(PARTICLE_COUNT);
+  particlePhases = new Float32Array(PARTICLE_COUNT);
+  const colors = new Float32Array(PARTICLE_COUNT * 3);
+  const sizes = new Float32Array(PARTICLE_COUNT);
+
+  for (let i = 0; i < PARTICLE_COUNT; i++) {
+    particlePhases[i] = Math.random() * Math.PI * 2;
+    particleSpeeds[i] = 0.8 + Math.random() * 0.4;
+    // Helical offset within tube
+    const helixPhase = Math.random() * Math.PI * 2;
+    const helixR = Math.random() * 0.12;
+    // Store helix params in speeds array (reuse)
+    particlePositions[i * 3 + 2] = helixR; // store radius temp
+    sizes[i] = 2 + Math.random() * 3;
+    colors[i * 3] = 0.7 + Math.random() * 0.3;
+    colors[i * 3 + 1] = 0.75 + Math.random() * 0.2;
+    colors[i * 3 + 2] = 0.8 + Math.random() * 0.2;
+  }
+
+  geo.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  geo.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+
+  const mat = new THREE.PointsMaterial({
+    size: 0.02,
+    vertexColors: true,
+    transparent: true,
+    opacity: 0.8,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false
+  });
+
+  flowParticles = new THREE.Points(geo, mat);
+  scene.add(flowParticles);
+}
+
+function updateFlowParticles(dt) {
+  if (!state.showParticles) { flowParticles.visible = false; return; }
+  flowParticles.visible = true;
+
+  const speed = state.velocity / 25; // normalized 0-2
+  const R = 1, r = 0.12;
+  const pos = flowParticles.geometry.attributes.position.array;
+
+  for (let i = 0; i < PARTICLE_COUNT; i++) {
+    particlePhases[i] += dt * speed * particleSpeeds[i] * 2;
+    if (particlePhases[i] > Math.PI * 2) particlePhases[i] -= Math.PI * 2;
+
+    const theta = particlePhases[i]; // angle around torus
+    // Helical motion within tube
+    const helixAngle = theta * 8 + i * 0.3; // 8 helical wraps
+    const hr = r * (0.3 + 0.7 * ((i % 10) / 10));
+
+    const x = (R + hr * Math.cos(helixAngle)) * Math.cos(theta);
+    const y = hr * Math.sin(helixAngle);
+    const z = (R + hr * Math.cos(helixAngle)) * Math.sin(theta);
+
+    pos[i * 3] = x;
+    pos[i * 3 + 1] = y;
+    pos[i * 3 + 2] = z;
+  }
+  flowParticles.geometry.attributes.position.needsUpdate = true;
+
+  // Color shift when dynamo active
+  const cols = flowParticles.geometry.attributes.color.array;
+  const di = state.dynamoIntensity;
+  if (di > 0) {
+    for (let i = 0; i < PARTICLE_COUNT; i++) {
+      cols[i * 3] = 0.7 + di * 0.3;
+      cols[i * 3 + 1] = 0.75 + di * 0.25;
+      cols[i * 3 + 2] = 0.8 + di * 0.2;
+    }
+    flowParticles.geometry.attributes.color.needsUpdate = true;
+  }
+}
+
+// ---- FIELD LINES ----
+const FIELD_LINE_COUNT = 12;
+let fieldLineMeshes = [];
+
+function buildFieldLines() {
+  fieldLineGroup = new THREE.Group();
+  scene.add(fieldLineGroup);
+
+  for (let i = 0; i < FIELD_LINE_COUNT; i++) {
+    const points = [];
+    const segments = 80;
+    const angle = (i / FIELD_LINE_COUNT) * Math.PI * 2;
+
+    // Dipolar field line shape
+    for (let j = 0; j <= segments; j++) {
+      const t = (j / segments) * Math.PI; // 0 to PI for one hemisphere
+      const lat = t - Math.PI / 2;
+      const fieldR = 1.5 * Math.cos(lat) * Math.cos(lat); // dipolar r = cos^2(lat)
+      const x = fieldR * Math.cos(lat) * Math.cos(angle);
+      const y = fieldR * Math.sin(lat) * 1.8;
+      const z = fieldR * Math.cos(lat) * Math.sin(angle);
+      points.push(new THREE.Vector3(x, y, z));
+    }
+
+    const curve = new THREE.CatmullRomCurve3(points);
+    const geo = new THREE.TubeGeometry(curve, 60, 0.008, 4, false);
+    const mat = new THREE.MeshBasicMaterial({
+      color: 0x44aaff,
+      transparent: true,
+      opacity: 0,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+    const mesh = new THREE.Mesh(geo, mat);
+    fieldLineMeshes.push(mesh);
+    fieldLineGroup.add(mesh);
+  }
+
+  // Add some equatorial field lines
+  for (let i = 0; i < 6; i++) {
+    const points = [];
+    const angle = (i / 6) * Math.PI * 2;
+    const segments = 60;
+    for (let j = 0; j <= segments; j++) {
+      const t = (j / segments) * Math.PI * 2;
+      const rr = 1.3 + 0.5 * Math.sin(t * 2);
+      const x = rr * Math.cos(t) * Math.cos(angle) * 0.5 + Math.cos(angle) * 0.8;
+      const y = 0.3 * Math.sin(t);
+      const z = rr * Math.sin(t) * 0.5 + Math.sin(angle) * 0.8;
+      points.push(new THREE.Vector3(x, y, z));
+    }
+    const curve = new THREE.CatmullRomCurve3(points, true);
+    const geo = new THREE.TubeGeometry(curve, 40, 0.006, 4, true);
+    const mat = new THREE.MeshBasicMaterial({
+      color: 0x3388dd,
+      transparent: true,
+      opacity: 0,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+    const mesh = new THREE.Mesh(geo, mat);
+    fieldLineMeshes.push(mesh);
+    fieldLineGroup.add(mesh);
+  }
+}
+
+function updateFieldLines() {
+  if (!state.showField) { fieldLineGroup.visible = false; return; }
+  fieldLineGroup.visible = true;
+
+  const di = state.dynamoIntensity;
+  const t = clock.getElapsedTime();
+
+  fieldLineMeshes.forEach((mesh, i) => {
+    const target = di * 0.7;
+    mesh.material.opacity += (target - mesh.material.opacity) * 0.05;
+    // Pulsing when active
+    if (di > 0.5) {
+      mesh.material.opacity *= 0.85 + 0.15 * Math.sin(t * 2 + i * 0.5);
+    }
+    // Scale field lines outward as dynamo strengthens
+    const scale = 1 + di * 0.5;
+    mesh.scale.set(scale, scale, scale);
+  });
+}
+
+// ---- PICKUP COILS ----
+const COIL_COUNT = 4;
+let coilMeshes = [];
+
+function buildPickupCoils() {
+  coilGroup = new THREE.Group();
+  scene.add(coilGroup);
+
+  for (let i = 0; i < COIL_COUNT; i++) {
+    const angle = (i / COIL_COUNT) * Math.PI * 2;
+    const group = new THREE.Group();
+
+    // Coil ring
+    const coilGeo = new THREE.TorusGeometry(0.22, 0.015, 8, 32);
+    const coilMat = new THREE.MeshStandardMaterial({
+      color: 0xd4956a,
+      metalness: 0.8,
+      roughness: 0.3,
+      emissive: 0x000000,
+      emissiveIntensity: 0
+    });
+    const coil = new THREE.Mesh(coilGeo, coilMat);
+    coilMeshes.push(coil);
+    group.add(coil);
+
+    // Position on torus
+    group.position.set(Math.cos(angle), 0, Math.sin(angle));
+    // Orient to face along torus tangent
+    group.lookAt(0, 0, 0);
+    group.rotateY(Math.PI / 2);
+
+    coilGroup.add(group);
+  }
+}
+
+function updateCoils() {
+  if (!state.showCoils) { coilGroup.visible = false; return; }
+  coilGroup.visible = true;
+
+  const di = state.dynamoIntensity;
+  coilMeshes.forEach((coil, i) => {
+    const glow = di * 0.8;
+    coil.material.emissive.setRGB(glow * 0.9, glow * 0.5, glow * 0.1);
+    coil.material.emissiveIntensity = glow;
+  });
+}
+
+// ---- IGNITION EFFECT ----
+function triggerIgnition() {
+  ignitionFlash = 1.0;
+}
+
+function updateIgnition(dt) {
+  if (ignitionFlash > 0) {
+    ignitionFlash -= dt * 1.5;
+    if (ignitionFlash < 0) ignitionFlash = 0;
+    renderer.toneMappingExposure = 1.0 + ignitionFlash * 2.0;
+  }
+
+  // Dynamo light
+  dynamoLight.intensity = state.dynamoIntensity * 2.0 + ignitionFlash * 5;
+  dynamoLight.color.setHSL(0.55, 0.6, 0.5 + state.dynamoIntensity * 0.3);
+
+  // Torus glow
+  if (torusMesh) {
+    torusMesh.material.opacity = 0.18 + state.dynamoIntensity * 0.15;
+    const c = state.dynamoIntensity;
+    torusMesh.material.color.setRGB(0.27 + c * 0.2, 0.53 + c * 0.2, 0.8 + c * 0.2);
+  }
+
+  // Fluid emissive
+  if (innerFluidMesh) {
+    const di = state.dynamoIntensity;
+    innerFluidMesh.material.emissive = new THREE.Color(di * 0.1, di * 0.15, di * 0.3);
+    innerFluidMesh.material.emissiveIntensity = di;
+  }
+
+  // Cutaway
+  if (torusCutawayMesh) {
+    torusCutawayMesh.visible = state.showCutaway;
+    if (state.showCutaway) {
+      torusMesh.visible = false;
+      innerFluidMesh.material.side = THREE.DoubleSide;
+    } else {
+      torusMesh.visible = true;
+      innerFluidMesh.material.side = THREE.FrontSide;
+    }
+  }
+}
+
+// ---- ORBIT CONTROLS (simple) ----
+let isDragging = false, prevMouse = {x:0,y:0};
+let spherical = { theta: Math.PI/4, phi: Math.PI/6, radius: 4 };
+
+function initOrbitControls() {
+  const el = renderer.domElement;
+  el.addEventListener('mousedown', e => { isDragging=true; prevMouse={x:e.clientX,y:e.clientY}; });
+  el.addEventListener('mousemove', e => {
+    if(!isDragging) return;
+    const dx = e.clientX - prevMouse.x, dy = e.clientY - prevMouse.y;
+    spherical.theta -= dx * 0.005;
+    spherical.phi = Math.max(-Math.PI/2.2, Math.min(Math.PI/2.2, spherical.phi - dy*0.005));
+    prevMouse = {x:e.clientX, y:e.clientY};
+  });
+  el.addEventListener('mouseup', () => isDragging=false);
+  el.addEventListener('mouseleave', () => isDragging=false);
+  el.addEventListener('wheel', e => {
+    spherical.radius = Math.max(2, Math.min(8, spherical.radius + e.deltaY*0.003));
+    e.preventDefault();
+  }, {passive:false});
+  // Touch
+  el.addEventListener('touchstart', e => { if(e.touches.length===1){isDragging=true;prevMouse={x:e.touches[0].clientX,y:e.touches[0].clientY}}}, {passive:true});
+  el.addEventListener('touchmove', e => {
+    if(!isDragging||e.touches.length!==1) return;
+    const dx=e.touches[0].clientX-prevMouse.x, dy=e.touches[0].clientY-prevMouse.y;
+    spherical.theta-=dx*0.005; spherical.phi=Math.max(-Math.PI/2.2,Math.min(Math.PI/2.2,spherical.phi-dy*0.005));
+    prevMouse={x:e.touches[0].clientX,y:e.touches[0].clientY};
+  }, {passive:true});
+  el.addEventListener('touchend', ()=>isDragging=false);
+}
+
+function updateCamera() {
+  camera.position.x = spherical.radius * Math.cos(spherical.phi) * Math.cos(spherical.theta);
+  camera.position.y = spherical.radius * Math.sin(spherical.phi);
+  camera.position.z = spherical.radius * Math.cos(spherical.phi) * Math.sin(spherical.theta);
+  camera.lookAt(0, 0, 0);
+}
+
+function onResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  drawTargetGrowth();
+}
+
+// ============================================================
+// TARGET FIELD GROWTH CHART
+// ============================================================
+let tgGrowthPhase = 0; // animated reveal phase 0-1
+let tgLastRm = -1;
+
+function drawTargetGrowth() {
+  const canvas = document.getElementById('target-growth-canvas');
+  if (!canvas) return;
+  const rect = canvas.parentElement.getBoundingClientRect();
+  const dpr = Math.min(window.devicePixelRatio, 2);
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  canvas.style.width = rect.width + 'px';
+  canvas.style.height = rect.height + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  const W = rect.width, H = rect.height;
+  ctx.clearRect(0, 0, W, H);
+  const now = performance.now() / 1000;
+
+  const pad = { l: 48, r: 150, t: 22, b: 20 };
+  if (W < 500) { pad.r = 110; pad.l = 36; }
+  const pW = W - pad.l - pad.r;
+  const pH = H - pad.t - pad.b;
+
+  const rmMax = 200;
+  const bSatGauss = 850;
+  const rmCrit = RM_CRITICAL;
+
+  // Animate growth phase: when above critical, curve reveals progressively
+  const curRm = Math.min(state.rm, rmMax);
+  if (tgLastRm < rmCrit && curRm >= rmCrit) tgGrowthPhase = 0; // reset animation on crossing
+  if (curRm >= rmCrit) {
+    tgGrowthPhase = Math.min(1, tgGrowthPhase + 0.008);
+  } else {
+    tgGrowthPhase = Math.max(0, tgGrowthPhase - 0.02);
+  }
+  tgLastRm = curRm;
+
+  function fieldNorm(rm) {
+    if (rm <= rmCrit) return 0;
+    return Math.tanh((rm / rmCrit - 1) * 1.5);
+  }
+
+  // Draw axes
+  ctx.strokeStyle = '#2a2a4a';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(pad.l, pad.t);
+  ctx.lineTo(pad.l, pad.t + pH);
+  ctx.lineTo(pad.l + pW, pad.t + pH);
+  ctx.stroke();
+
+  // Grid lines
+  ctx.strokeStyle = '#1a1a30';
+  ctx.lineWidth = 0.5;
+  for (let i = 1; i <= 4; i++) {
+    const y = pad.t + pH - (pH * i / 4);
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(pad.l + pW, y); ctx.stroke();
+  }
+
+  // Critical Rm vertical dashed line
+  const critX = pad.l + (rmCrit / rmMax) * pW;
+  ctx.save();
+  ctx.setLineDash([4, 3]);
+  ctx.strokeStyle = '#ef4444aa';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(critX, pad.t);
+  ctx.lineTo(critX, pad.t + pH);
+  ctx.stroke();
+  ctx.restore();
+
+  ctx.fillStyle = '#ef4444';
+  ctx.font = '9px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Rm=40', critX, pad.t - 4);
+
+  // Animated S-curve: reveal grows from left when above critical
+  const steps = 200;
+  const revealRm = rmCrit + (rmMax - rmCrit) * tgGrowthPhase;
+
+  // Draw subcritical portion (always visible, flat at 0)
+  ctx.beginPath();
+  ctx.strokeStyle = '#22c55e';
+  ctx.lineWidth = 2.5;
+  ctx.shadowColor = '#22c55e';
+  ctx.shadowBlur = 6;
+  for (let i = 0; i <= steps; i++) {
+    const rm = (i / steps) * rmMax;
+    if (rm > revealRm) break;
+    const x = pad.l + (rm / rmMax) * pW;
+    const y = pad.t + pH - fieldNorm(rm) * pH;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // Unrevealed portion as dim dashed line (hint of the full curve)
+  if (tgGrowthPhase < 1) {
+    ctx.save();
+    ctx.setLineDash([2, 4]);
+    ctx.strokeStyle = 'rgba(34,197,94,0.15)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    let started = false;
+    for (let i = 0; i <= steps; i++) {
+      const rm = (i / steps) * rmMax;
+      if (rm <= revealRm) continue;
+      const x = pad.l + (rm / rmMax) * pW;
+      const y = pad.t + pH - fieldNorm(rm) * pH;
+      if (!started) { ctx.moveTo(x, y); started = true; } else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Phase annotations
+  const lang = state.lang || 'en';
+  ctx.font = (W < 500 ? '7' : '9') + 'px sans-serif';
+  ctx.textAlign = 'center';
+
+  const subX = pad.l + (rmCrit * 0.4 / rmMax) * pW;
+  const subY = pad.t + pH - 14;
+  ctx.fillStyle = '#ef444499';
+  ctx.fillText(lang === 'es' ? 'Subcritico' : 'Subcritical', subX, subY);
+  ctx.fillText(lang === 'es' ? '(Rm < 40)' : '(Rm < 40)', subX, subY + 11);
+
+  const ignX = critX + 8;
+  const ignY = pad.t + pH * 0.55;
+  ctx.fillStyle = '#eab308cc';
+  ctx.fillText(lang === 'es' ? 'Ignicion' : 'Ignition', ignX + 20, ignY);
+
+  if (tgGrowthPhase > 0.3) {
+    const expRm = rmCrit * 1.8;
+    const expX = pad.l + (expRm / rmMax) * pW;
+    const expY = pad.t + pH - fieldNorm(expRm) * pH - 10;
+    ctx.fillStyle = `rgba(34,197,94,${Math.min(0.67, tgGrowthPhase)})`;
+    ctx.fillText(lang === 'es' ? 'Crecimiento exp.' : 'Exp. growth', expX, expY);
+  }
+
+  if (tgGrowthPhase > 0.7) {
+    const satRm = rmCrit * 3.5;
+    const satX = pad.l + (satRm / rmMax) * pW;
+    const satY = pad.t + 16;
+    ctx.fillStyle = `rgba(6,182,212,${Math.min(0.8, (tgGrowthPhase - 0.7) * 3.3)})`;
+    ctx.fillText(lang === 'es' ? 'Saturacion (~850 G)' : 'Saturation (~850 G)', satX, satY);
+    ctx.fillText(lang === 'es' ? 'Autosostenible' : 'Self-sustaining', satX, satY + 11);
+  }
+
+  // Title
+  ctx.font = 'bold ' + (W < 500 ? '9' : '11') + 'px sans-serif';
+  ctx.fillStyle = '#a0b0c8';
+  ctx.textAlign = 'left';
+  ctx.fillText(lang === 'es' ? 'Crecimiento de Campo Objetivo' : 'Target Field Growth', pad.l, pad.t - 6);
+
+  // Y-axis labels
+  ctx.font = '8px sans-serif';
+  ctx.fillStyle = '#666';
+  ctx.textAlign = 'right';
+  ctx.fillText('0', pad.l - 4, pad.t + pH + 3);
+  ctx.fillText(bSatGauss + ' G', pad.l - 4, pad.t + 4);
+  ctx.fillText(Math.round(bSatGauss / 2) + '', pad.l - 4, pad.t + pH / 2 + 3);
+
+  // X-axis labels
+  ctx.textAlign = 'center';
+  [0, 50, 100, 150, 200].forEach(v => {
+    const x = pad.l + (v / rmMax) * pW;
+    ctx.fillText(v, x, pad.t + pH + 12);
+  });
+  ctx.fillText('Rm', pad.l + pW + 12, pad.t + pH + 4);
+
+  // Current position dot (orange/amber) with PULSE animation
+  const dotX = pad.l + (curRm / rmMax) * pW;
+  const dotY = pad.t + pH - fieldNorm(curRm) * pH;
+  const pulse = 0.7 + 0.3 * Math.sin(now * 4);
+  const dotRadius = 4 + pulse * 2;
+
+  // Outer glow ring (pulsing)
+  ctx.beginPath();
+  ctx.arc(dotX, dotY, dotRadius + 5, 0, Math.PI * 2);
+  ctx.fillStyle = `rgba(245,158,11,${0.08 + pulse * 0.12})`;
+  ctx.fill();
+
+  // Glow
+  ctx.beginPath();
+  ctx.arc(dotX, dotY, dotRadius + 2, 0, Math.PI * 2);
+  ctx.fillStyle = `rgba(245,158,11,${0.15 + pulse * 0.1})`;
+  ctx.fill();
+
+  // Dot
+  ctx.beginPath();
+  ctx.arc(dotX, dotY, dotRadius, 0, Math.PI * 2);
+  ctx.fillStyle = '#f59e0b';
+  ctx.shadowColor = '#f59e0b';
+  ctx.shadowBlur = 6 + pulse * 6;
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  // Dot border
+  ctx.beginPath();
+  ctx.arc(dotX, dotY, dotRadius, 0, Math.PI * 2);
+  ctx.strokeStyle = `rgba(255,255,255,${0.6 + pulse * 0.4})`;
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  updateTargetMetrics();
+}
+
+function updateTargetMetrics() {
+  const lang = state.lang || 'en';
+  const rmEl = document.getElementById('tg-rm');
+  const distEl = document.getElementById('tg-dist');
+  const fieldEl = document.getElementById('tg-field');
+  if (!rmEl) return;
+
+  // Current Rm
+  const rmClass = state.rm > RM_CRITICAL ? 'tg-val above' : state.rm > RM_CRITICAL * 0.7 ? 'tg-val near' : 'tg-val below';
+  rmEl.className = rmClass;
+  rmEl.innerHTML = state.rm.toFixed(1) + ' <span style="font-weight:400;color:#666">(crit: 40)</span>';
+
+  // Distance to ignition (velocity needed)
+  if (state.rm >= RM_CRITICAL) {
+    distEl.className = 'tg-val above';
+    distEl.textContent = lang === 'es' ? 'Activo' : 'Active';
+  } else {
+    const m = METALS[state.metal];
+    const tempFactor = 1 + m.tempCoeff * (state.temperature - 25);
+    const sigma = m.sigma * Math.max(0.3, tempFactor);
+    const L = state.diameter;
+    const vCrit = RM_CRITICAL / (MU0 * sigma * L);
+    const delta = Math.max(0, vCrit - state.velocity);
+    distEl.className = delta < 3 ? 'tg-val near' : 'tg-val below';
+    distEl.textContent = '+' + delta.toFixed(1) + ' m/s';
+  }
+
+  // Predicted steady-state field
+  if (state.rm >= RM_CRITICAL) {
+    const m = METALS[state.metal];
+    const supercrit = (state.rm / RM_CRITICAL - 1);
+    const satFactor = Math.min(1, supercrit / 3);
+    const bSat = Math.sqrt(MU0 * m.rho * state.velocity * state.velocity) * satFactor * 1e4;
+    fieldEl.className = 'tg-val above';
+    fieldEl.textContent = bSat.toFixed(1) + ' Gauss';
+  } else {
+    fieldEl.className = 'tg-val below';
+    fieldEl.textContent = '0.0 Gauss';
+  }
+}
+
+// ============================================================
+// RM GAUGE
+// ============================================================
+function drawRmGauge(rm) {
+  // Colored number instead of canvas gauge
+  const el = document.getElementById('rm-value');
+  if (!el) return;
+  el.textContent = rm.toFixed(1);
+  if (rm >= RM_CRITICAL) {
+    el.style.color = 'var(--green)';
+    el.style.textShadow = '0 0 8px rgba(34,197,94,.5)';
+  } else if (rm >= RM_CRITICAL * 0.7) {
+    el.style.color = 'var(--yellow)';
+    el.style.textShadow = '0 0 6px rgba(234,179,8,.3)';
+  } else {
+    el.style.color = 'var(--red)';
+    el.style.textShadow = 'none';
+  }
+}
+
+// ============================================================
+// UI BINDINGS
+// ============================================================
+function bindControls() {
+  const velSlider = document.getElementById('velocity');
+  const metalSel = document.getElementById('metal');
+  const diamSlider = document.getElementById('diameter');
+  const tempSlider = document.getElementById('temperature');
+
+  velSlider.addEventListener('input', () => {
+    state.velocity = parseFloat(velSlider.value);
+    document.getElementById('vel-val').textContent = state.velocity.toFixed(1) + ' m/s';
+  });
+  metalSel.addEventListener('change', () => { state.metal = metalSel.value; updateFluidColor(); });
+  diamSlider.addEventListener('input', () => {
+    state.diameter = parseInt(diamSlider.value) / 100;
+    document.getElementById('diam-val').textContent = parseInt(diamSlider.value) + ' cm';
+  });
+  tempSlider.addEventListener('input', () => {
+    state.temperature = parseInt(tempSlider.value);
+    document.getElementById('temp-val').textContent = state.temperature + ' C';
+  });
+
+  document.getElementById('show-field').addEventListener('change', e => state.showField = e.target.checked);
+  document.getElementById('show-particles').addEventListener('change', e => state.showParticles = e.target.checked);
+  document.getElementById('show-coils').addEventListener('change', e => state.showCoils = e.target.checked);
+  document.getElementById('show-cutaway').addEventListener('change', e => state.showCutaway = e.target.checked);
+
+  document.getElementById('btn-play').addEventListener('click', () => {
+    state.playing = !state.playing;
+    const btn = document.getElementById('btn-play');
+    btn.textContent = state.playing ? (state.lang === 'es' ? 'Pausa' : 'Pause') : (state.lang === 'es' ? 'Iniciar' : 'Play');
+  });
+
+  document.getElementById('btn-reset').addEventListener('click', () => {
+    velSlider.value = 5; state.velocity = 5;
+    metalSel.value = 'gainsn'; state.metal = 'gainsn';
+    diamSlider.value = 40; state.diameter = 0.40;
+    tempSlider.value = 25; state.temperature = 25;
+    document.getElementById('vel-val').textContent = '5.0 m/s';
+    document.getElementById('diam-val').textContent = '40 cm';
+    document.getElementById('temp-val').textContent = '25 C';
+    state.dynamoIntensity = 0;
+    updateFluidColor();
+  });
+}
+
+function updateFluidColor() {
+  if (innerFluidMesh) {
+    innerFluidMesh.material.color.set(METALS[state.metal].color);
+  }
+}
+
+function updateDashboard() {
+  document.getElementById('field-value').textContent = state.bField.toFixed(2);
+  document.getElementById('power-value').textContent = state.power < 1000 ? state.power.toFixed(1) : (state.power/1000).toFixed(2) + 'k';
+  document.getElementById('coil-value').textContent = state.coilOutput.toFixed(2);
+  document.getElementById('sigma-value').textContent = (state.sigma / 1e6).toFixed(2);
+
+  drawRmGauge(state.rm);
+  drawTargetGrowth();
+
+  // Status badge
+  const badge = document.getElementById('dynamo-status');
+  const span = badge.querySelector('span');
+  if (state.rm > RM_CRITICAL) {
+    badge.className = 'active';
+    span.textContent = state.lang === 'es' ? 'DINAMO ACTIVO' : 'DYNAMO ACTIVE';
+  } else if (state.rm > RM_CRITICAL * 0.7) {
+    badge.className = 'near-critical';
+    span.textContent = state.lang === 'es' ? 'CASI CRITICO' : 'NEAR CRITICAL';
+  } else {
+    badge.className = 'subcritical';
+    span.textContent = state.lang === 'es' ? 'SUBCRITICO' : 'SUBCRITICAL';
+  }
+}
+
+// ============================================================
+// LANGUAGE
+// ============================================================
+function setLang(lang) {
+  state.lang = lang;
+  document.querySelectorAll('#lang-switch button').forEach(b => b.classList.remove('active'));
+  document.querySelector(`#lang-switch button:${lang === 'en' ? 'first' : 'last'}-child`).classList.add('active');
+
+  // Swap data-en / data-es attributes on labels/headings
+  document.querySelectorAll('[data-en]').forEach(el => {
+    if (el.dataset[lang]) el.textContent = el.dataset[lang];
+  });
+
+  // Update play button
+  const btn = document.getElementById('btn-play');
+  btn.textContent = state.playing ? (lang === 'es' ? 'Pausa' : 'Pause') : (lang === 'es' ? 'Iniciar' : 'Play');
+  document.getElementById('btn-reset').textContent = lang === 'es' ? 'Reiniciar' : 'Reset';
+
+  if (typeof buildKbLegend === 'function') buildKbLegend();
+
+  // Swap info panel content
+  if (lang === 'es') {
+    document.querySelectorAll('#es-content > div[data-target]').forEach(div => {
+      const target = document.querySelector(`.info-section .content[data-es="${div.dataset.target}"]`);
+      if (target) target.innerHTML = div.innerHTML;
+    });
+  } else {
+    // Reload page content (simplest for EN restore)
+    // Store originals on first load
+    if (!window._enContent) return;
+    Object.keys(window._enContent).forEach(key => {
+      const target = document.querySelector(`.info-section .content[data-en="${key}"]`);
+      if (target) target.innerHTML = window._enContent[key];
+    });
+  }
+}
+
+function cacheEnContent() {
+  window._enContent = {};
+  document.querySelectorAll('.info-section .content[data-en]').forEach(el => {
+    window._enContent[el.dataset.en] = el.innerHTML;
+  });
+}
+
+// ============================================================
+// ANIMATION LOOP
+// ============================================================
+function animate() {
+  requestAnimationFrame(animate);
+
+  const dt = Math.min(clock.getDelta(), 0.05);
+
+  if (state.playing) {
+    calcPhysics();
+    updateFlowParticles(dt);
+    updateFieldLines();
+    updateCoils();
+    updateIgnition(dt);
+    updateDashboard();
+  }
+
+  // Animate target growth chart every frame (pulsing dot, growth reveal)
+  drawTargetGrowth();
+
+  // Auto-rotate camera
+  if (autoRotating && !isDragging) spherical.theta += 0.003;
+
+  updateCamera();
+  renderer.render(scene, camera);
+}
+
+// ============================================================
+// KEYBOARD LEGEND
+// ============================================================
+let kbLegendVisible = false;
+let autoRotating = false;
+
+const KB_SHORTCUTS_DATA = {
+  en: [
+    ['Q / A', 'Flow velocity +/- 2 m/s'],
+    ['Shift+Q/A', 'Fine velocity +/- 0.5 m/s'],
+    ['1 / 2 / 3', 'Metal: Hg / GaInSn / Na'],
+    ['G', 'Toggle field lines'],
+    ['V', 'Toggle flow particles'],
+    ['X', 'Toggle cutaway view'],
+    ['I', 'Ignition (set critical Rm)'],
+    ['S', 'Auto-Sync'],
+    ['---', ''],
+    ['Space', 'Play / Pause'],
+    ['R', 'Toggle auto-rotate'],
+    ['F', 'Toggle fullscreen'],
+    ['H', 'Show/hide controls'],
+    ['L', 'Toggle language'],
+    ['? / K', 'This legend'],
+    ['Esc', 'Close legend'],
+    ['---', ''],
+    ['Arrows', 'Rotate camera'],
+    ['+ / -', 'Zoom in/out'],
+    ['0', 'Reset camera'],
+  ],
+  es: [
+    ['Q / A', 'Velocidad +/- 2 m/s'],
+    ['Shift+Q/A', 'Vel. fina +/- 0.5 m/s'],
+    ['1 / 2 / 3', 'Metal: Hg / GaInSn / Na'],
+    ['G', 'Lineas de campo'],
+    ['V', 'Particulas de flujo'],
+    ['X', 'Vista en corte'],
+    ['I', 'Ignicion (Rm critico)'],
+    ['S', 'Auto-Sincronizar'],
+    ['---', ''],
+    ['Space', 'Play / Pausa'],
+    ['R', 'Auto-rotar'],
+    ['F', 'Pantalla completa'],
+    ['H', 'Mostrar/ocultar controles'],
+    ['L', 'Cambiar idioma'],
+    ['? / K', 'Esta leyenda'],
+    ['Esc', 'Cerrar leyenda'],
+    ['---', ''],
+    ['Flechas', 'Rotar camara'],
+    ['+ / -', 'Zoom'],
+    ['0', 'Resetear camara'],
+  ]
+};
+
+function buildKbLegend() {
+  const grid = document.getElementById('kb-legend-grid');
+  const l = state.lang || 'en';
+  const shortcuts = KB_SHORTCUTS_DATA[l] || KB_SHORTCUTS_DATA.en;
+  document.getElementById('kb-legend-title').textContent = l === 'es' ? 'Atajos de Teclado' : 'Keyboard Shortcuts';
+  grid.innerHTML = shortcuts.map(([key, desc]) => {
+    if (key === '---') return '<div class="kb-sep"></div>';
+    return `<kbd>${key}</kbd><span class="kb-desc">${desc}</span>`;
+  }).join('');
+}
+
+function toggleKbLegend() {
+  kbLegendVisible = !kbLegendVisible;
+  document.getElementById('kb-legend').classList.toggle('visible', kbLegendVisible);
+}
+
+function toggleMobileMenu() {
+  const c = document.getElementById('controls');
+  const o = document.getElementById('mobile-overlay');
+  if (c.classList.contains('mobile-open')) { closeMobileMenu(); } else {
+    c.classList.add('mobile-open'); o.classList.add('active');
+  }
+}
+function closeMobileMenu() {
+  document.getElementById('controls').classList.remove('mobile-open');
+  document.getElementById('mobile-overlay').classList.remove('active');
+}
+function openMobileInfo() {
+  const modal = document.getElementById('mobile-info-modal');
+  const content = document.getElementById('mobile-info-content');
+  content.innerHTML = document.getElementById('info-panel').innerHTML;
+  modal.classList.add('open');
+}
+function closeMobileInfo() {
+  document.getElementById('mobile-info-modal').classList.remove('open');
+}
+function toggleMobileDash() {
+  const dash = document.getElementById('dashboard');
+  const strip = document.getElementById('dash-strip');
+  dash.classList.toggle('mobile-expanded');
+  strip.style.display = dash.classList.contains('mobile-expanded') ? 'none' : 'flex';
+}
+function updateMobileStrip() {
+  const sr = document.getElementById('stripRm');
+  const sf = document.getElementById('stripField');
+  const sp = document.getElementById('stripPwr');
+  if (sr) sr.textContent = document.getElementById('rm-value')?.textContent || '0.0';
+  if (sf) sf.textContent = (document.getElementById('field-value')?.textContent || '0.0') + ' G';
+  if (sp) sp.textContent = (document.getElementById('power-value')?.textContent || '0.0') + ' W';
+}
+
+function requestFullscreen() {
+  const el = document.documentElement;
+  if (!document.fullscreenElement) {
+    (el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen).call(el);
+  } else {
+    (document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen).call(document);
+  }
+}
+
+function setVelocityFromKb(v) {
+  v = Math.max(0, Math.min(50, v));
+  state.velocity = v;
+  const velSlider = document.getElementById('velocity');
+  velSlider.value = v;
+  document.getElementById('vel-val').textContent = v.toFixed(1) + ' m/s';
+}
+
+function setMetalFromKb(metalKey) {
+  state.metal = metalKey;
+  document.getElementById('metal').value = metalKey;
+  if (typeof updateFluidColor === 'function') updateFluidColor();
+}
+
+function ignitionShortcut() {
+  // Calculate velocity needed to reach Rm_critical for current metal/diameter
+  const m = METALS[state.metal];
+  const tempFactor = 1 + m.tempCoeff * (state.temperature - 25);
+  const sigma = m.sigma * Math.max(0.3, tempFactor);
+  const L = state.diameter;
+  // Rm = MU0 * sigma * v * L => v = Rm / (MU0 * sigma * L)
+  const vCrit = (RM_CRITICAL * 1.05) / (MU0 * sigma * L); // 5% above critical
+  setVelocityFromKb(Math.min(50, vCrit));
+}
+
+// ===== LOCK & SYNC SYSTEM =====
+const locks = { velocity: false, metal: false, diameter: false };
+
+function toggleLock(param, btn) {
+  locks[param] = !locks[param];
+  btn.textContent = locks[param] ? '\u{1F512}' : '\u{1F513}';
+  btn.classList.toggle('locked', locks[param]);
+  const row = document.getElementById('row-' + param);
+  if (row) row.classList.toggle('param-locked', locks[param]);
+}
+
+// ===== ANIMATED SYNC ENGINE =====
+let syncAnimating = false;
+
+function getSigma(metalKey) {
+  const m = METALS[metalKey];
+  const tempFactor = 1 + m.tempCoeff * (state.temperature - 25);
+  return m.sigma * Math.max(0.3, tempFactor);
+}
+
+function calcVelocityForRm(targetRm, sigma, L) {
+  return targetRm / (MU0 * sigma * L);
+}
+
+function calcFitnessM3(velocity, metalKey, diameterM) {
+  // Score based on Rm / Rm_critical ratio, penalizing excessive input power
+  const sigma = getSigma(metalKey);
+  const Rm = MU0 * sigma * velocity * diameterM;
+  const ratio = Rm / RM_CRITICAL;
+  if (ratio < 1) return Math.max(0, ratio * 50);
+  // Above critical: reward, but diminishing returns at very high Rm
+  const above = Math.min(3, ratio - 1);
+  const powerPenalty = velocity / 100; // higher velocity = more pump power
+  return Math.min(100, 50 + above * 30 - powerPenalty * 10);
+}
+
+function calcOptimalM3() {
+  const metalOrder = ['sodium', 'gainsn', 'mercury'];
+  let optMetal = locks.metal ? state.metal : 'sodium';
+  let optDiam = locks.diameter ? Math.round(state.diameter * 100) : 50;
+  let optV;
+
+  if (!locks.metal) {
+    // Pick best metal for current/default constraints
+    for (const mk of metalOrder) {
+      const sigma = getSigma(mk);
+      const diamM = (locks.diameter ? state.diameter : 0.5);
+      const v = calcVelocityForRm(RM_CRITICAL * 1.5, sigma, diamM);
+      if (v <= 50) { optMetal = mk; optV = v; break; }
+    }
+  }
+  if (!optV) {
+    const sigma = getSigma(optMetal);
+    const diamM = optDiam / 100;
+    optV = Math.min(50, calcVelocityForRm(RM_CRITICAL * 1.5, sigma, diamM));
+  }
+  if (!locks.diameter && !locks.velocity) {
+    // With sodium + 50cm, recalc velocity
+    const sigma = getSigma(optMetal);
+    optV = Math.min(50, calcVelocityForRm(RM_CRITICAL * 1.5, sigma, optDiam / 100));
+  }
+  return { velocity: optV, metal: optMetal, diameter: optDiam };
+}
+
+function runSync() {
+  if (syncAnimating) return;
+  syncAnimating = true;
+
+  const l = state.lang || 'en';
+  const btn = document.getElementById('syncBtn');
+  const statusEl = document.getElementById('syncStatus');
+  const fitnessBar = document.getElementById('fitnessBar');
+  const fitnessFill = document.getElementById('fitnessFill');
+  const fitnessScoreEl = document.getElementById('fitnessScore');
+
+  btn.classList.add('searching');
+  fitnessBar.style.display = 'block';
+  fitnessScoreEl.style.display = 'block';
+  statusEl.style.opacity = 1;
+
+  document.querySelectorAll('#controls input[type=range], #controls select').forEach(s => s.style.pointerEvents = 'none');
+
+  const optimal = calcOptimalM3();
+  const startTime = performance.now();
+  const SEARCH_DUR = 2000, CONVERGE_DUR = 1500, SETTLE_DUR = 500;
+  const TOTAL = SEARCH_DUR + CONVERGE_DUR + SETTLE_DUR;
+  const speeds = [1.0, 2.1]; // velocity and diameter
+  let dots = 0, dotTimer = 0;
+
+  // Cycle through metals during search
+  const metalKeys = Object.keys(METALS);
+  let metalCycleIdx = 0;
+
+  function animStep(now) {
+    const elapsed = now - startTime;
+
+    if (elapsed < SEARCH_DUR) {
+      const st = elapsed / 1000;
+      dotTimer++;
+      if (dotTimer % 20 === 0) dots = (dots + 1) % 4;
+      statusEl.textContent = (l === 'es' ? 'Buscando' : 'Searching') + '.'.repeat(dots);
+
+      if (!locks.velocity) {
+        const v = Math.round((0 + 50 * (0.5 + 0.5 * Math.sin(st * speeds[0] * 2 * Math.PI))) * 10) / 10;
+        document.getElementById('velocity').value = v;
+        document.getElementById('vel-val').textContent = v.toFixed(1) + ' m/s';
+        state.velocity = v;
+      }
+      if (!locks.diameter) {
+        const v = Math.round(10 + 90 * (0.5 + 0.5 * Math.sin(st * speeds[1] * 2 * Math.PI)));
+        document.getElementById('diameter').value = v;
+        document.getElementById('diam-val').textContent = v + ' cm';
+        state.diameter = v / 100;
+      }
+      if (!locks.metal && dotTimer % 30 === 0) {
+        metalCycleIdx = (metalCycleIdx + 1) % metalKeys.length;
+        state.metal = metalKeys[metalCycleIdx];
+        document.getElementById('metal').value = state.metal;
+        if (typeof updateFluidColor === 'function') updateFluidColor();
+      }
+    } else if (elapsed < SEARCH_DUR + CONVERGE_DUR) {
+      const ct = (elapsed - SEARCH_DUR) / CONVERGE_DUR;
+      const eased = ct < 0.5 ? 2 * ct * ct : -1 + (4 - 2 * ct) * ct;
+      dotTimer++;
+      if (dotTimer % 20 === 0) dots = (dots + 1) % 4;
+      statusEl.textContent = (l === 'es' ? 'Optimizando' : 'Optimizing') + '.'.repeat(dots);
+
+      // Set metal early in convergence
+      if (!locks.metal && ct > 0.2 && state.metal !== optimal.metal) {
+        state.metal = optimal.metal;
+        document.getElementById('metal').value = optimal.metal;
+        if (typeof updateFluidColor === 'function') updateFluidColor();
+      }
+
+      if (!locks.velocity) {
+        const current = state.velocity;
+        const v = Math.round((current + (optimal.velocity - current) * eased) * 10) / 10;
+        document.getElementById('velocity').value = v;
+        document.getElementById('vel-val').textContent = v.toFixed(1) + ' m/s';
+        state.velocity = v;
+      }
+      if (!locks.diameter) {
+        const current = Math.round(state.diameter * 100);
+        const v = Math.round(current + (optimal.diameter - current) * eased);
+        document.getElementById('diameter').value = v;
+        document.getElementById('diam-val').textContent = v + ' cm';
+        state.diameter = v / 100;
+      }
+    } else {
+      // Settle
+      if (!locks.metal) {
+        state.metal = optimal.metal;
+        document.getElementById('metal').value = optimal.metal;
+        if (typeof updateFluidColor === 'function') updateFluidColor();
+      }
+      if (!locks.velocity) {
+        state.velocity = optimal.velocity;
+        document.getElementById('velocity').value = optimal.velocity;
+        document.getElementById('vel-val').textContent = optimal.velocity.toFixed(1) + ' m/s';
+      }
+      if (!locks.diameter) {
+        state.diameter = optimal.diameter / 100;
+        document.getElementById('diameter').value = optimal.diameter;
+        document.getElementById('diam-val').textContent = optimal.diameter + ' cm';
+      }
+
+      btn.classList.remove('searching');
+      btn.classList.add('flash');
+      setTimeout(() => btn.classList.remove('flash'), 600);
+
+      const finalFit = calcFitnessM3(state.velocity, state.metal, state.diameter);
+      fitnessFill.style.width = finalFit + '%';
+      fitnessScoreEl.textContent = Math.round(finalFit) + '%';
+      statusEl.textContent = l === 'es' ? 'Optimo: configuracion optima' : 'Optimal: supercritical dynamo';
+      setTimeout(() => { statusEl.style.opacity = 0; }, 4000);
+      setTimeout(() => { fitnessBar.style.display = 'none'; fitnessScoreEl.style.display = 'none'; }, 6000);
+
+      document.querySelectorAll('#controls input[type=range], #controls select').forEach(s => s.style.pointerEvents = '');
+      syncAnimating = false;
+      return;
+    }
+
+    const fit = calcFitnessM3(state.velocity, state.metal, state.diameter);
+    fitnessFill.style.width = fit + '%';
+    fitnessScoreEl.textContent = Math.round(fit) + '%';
+    requestAnimationFrame(animStep);
+  }
+  requestAnimationFrame(animStep);
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
+  const key = e.key;
+  switch(key) {
+    case 'Q':
+      e.preventDefault();
+      if (e.shiftKey) setVelocityFromKb(state.velocity + 0.5);
+      else setVelocityFromKb(state.velocity + 2);
+      break;
+    case 'q':
+      setVelocityFromKb(state.velocity + 2);
+      break;
+    case 'A':
+      e.preventDefault();
+      if (e.shiftKey) setVelocityFromKb(state.velocity - 0.5);
+      else setVelocityFromKb(state.velocity - 2);
+      break;
+    case 'a':
+      setVelocityFromKb(state.velocity - 2);
+      break;
+    case '1': setMetalFromKb('mercury'); break;
+    case '2': setMetalFromKb('gainsn'); break;
+    case '3': setMetalFromKb('sodium'); break;
+    case 'g': case 'G': {
+      const cb = document.getElementById('show-field');
+      cb.checked = !cb.checked;
+      state.showField = cb.checked;
+      break;
+    }
+    case 'v': {
+      const cb = document.getElementById('show-particles');
+      cb.checked = !cb.checked;
+      state.showParticles = cb.checked;
+      break;
+    }
+    case 'x': {
+      const cb = document.getElementById('show-cutaway');
+      cb.checked = !cb.checked;
+      state.showCutaway = cb.checked;
+      break;
+    }
+    case 'i': case 'I': ignitionShortcut(); break;
+    case 'S': e.preventDefault(); runSync(); break;
+    case 's': e.preventDefault(); runSync(); break;
+    case ' ':
+      e.preventDefault();
+      state.playing = !state.playing;
+      const btn = document.getElementById('btn-play');
+      btn.textContent = state.playing ? (state.lang === 'es' ? 'Pausa' : 'Pause') : (state.lang === 'es' ? 'Iniciar' : 'Play');
+      break;
+    case 'r': case 'R':
+      autoRotating = !autoRotating;
+      break;
+    case 'f': case 'F': requestFullscreen(); break;
+    case 'h': case 'H':
+      document.getElementById('controls').style.display =
+        document.getElementById('controls').style.display === 'none' ? '' : 'none';
+      break;
+    case 'l': case 'L': setLang(state.lang === 'en' ? 'es' : 'en'); break;
+    case '?': case 'k': case 'K': toggleKbLegend(); break;
+    case 'Escape':
+      if (kbLegendVisible) toggleKbLegend();
+      break;
+    case '0':
+      spherical.theta = Math.PI/4; spherical.phi = Math.PI/6; spherical.radius = 4;
+      break;
+    case 'ArrowLeft': e.preventDefault(); spherical.theta += 0.08; break;
+    case 'ArrowRight': e.preventDefault(); spherical.theta -= 0.08; break;
+    case 'ArrowUp': e.preventDefault(); spherical.phi = Math.min(Math.PI/2.2, spherical.phi + 0.08); break;
+    case 'ArrowDown': e.preventDefault(); spherical.phi = Math.max(-Math.PI/2.2, spherical.phi - 0.08); break;
+    case '+': case '=': spherical.radius = Math.max(2, spherical.radius - 0.3); break;
+    case '-': case '_': spherical.radius = Math.min(8, spherical.radius + 0.3); break;
+    case ']': spherical.radius = Math.max(2, spherical.radius - 0.3); break;
+    case '[': spherical.radius = Math.min(8, spherical.radius + 0.3); break;
+  }
+});
+
+// ============================================================
+// INIT
+// ============================================================
+window.addEventListener('DOMContentLoaded', () => {
+  cacheEnContent();
+  initScene();
+  bindControls();
+  calcPhysics();
+  updateDashboard();
+  buildKbLegend();
+  // kb legend starts hidden, toggled with ? or K
+  animate();
+});
+
+// ===== SLIDER MOUSE WHEEL =====
+(function() {
+  document.querySelectorAll('input[type=range]').forEach(function(slider) {
+    var CONFIGS = {
+      'velSlider': 0.1,     // velocity m/s
+      'diamSlider': 0.2,    // percentage-like
+    };
+    slider.addEventListener('mouseenter', function() { slider.classList.add('wheel-focus'); });
+    slider.addEventListener('mouseleave', function() { slider.classList.remove('wheel-focus'); });
+    slider.addEventListener('wheel', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      var range = parseFloat(slider.max) - parseFloat(slider.min);
+      var step = CONFIGS[slider.id] || range / 500;
+      var dir = e.deltaY > 0 ? -1 : 1;
+      var newVal = Math.max(parseFloat(slider.min), Math.min(parseFloat(slider.max), parseFloat(slider.value) + step * dir));
+      slider.value = newVal;
+      slider.dispatchEvent(new Event('input', { bubbles: true }));
+    }, { passive: false });
+  });
+})();
+</script>
+</body>
+</html>

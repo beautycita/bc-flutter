@@ -1,0 +1,2076 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Counter-Rotating Bifilar Coil Experiment</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;scrollbar-width:none}
+  ::-webkit-scrollbar{display:none}
+  :root{
+    --bg:#0a0a1a;--panel:#0d0d24;--border:#1a1a3a;
+    --text:#e0e0f0;--text-dim:#8888aa;--accent-copper:#d4864a;
+    --g1:#ec4899;--g2:#9333ea;--g3:#3b82f6;
+  }
+  html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text)}
+
+  /* Layout */
+  #app{display:grid;grid-template-columns:300px 1fr;grid-template-rows:1fr 300px;height:100vh;gap:1px}
+  #controls{grid-row:1/3;background:var(--panel);border-right:1px solid var(--border);overflow-y:auto;padding:0}
+  #viewport{position:relative;overflow:hidden;background:var(--bg)}
+  #bottom{grid-column:2;background:var(--panel);border-top:1px solid var(--border);display:flex}
+
+  /* Header */
+  .ctrl-header{
+    background:linear-gradient(135deg,var(--g1),var(--g2),var(--g3));
+    padding:16px 18px;text-align:center;position:sticky;top:0;z-index:10;
+  }
+  .ctrl-header h1{font-size:15px;font-weight:700;letter-spacing:.5px;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.4)}
+  .ctrl-header .sub{font-size:11px;color:rgba(255,255,255,.8);margin-top:4px}
+
+  /* Language toggle */
+  .lang-toggle{
+    position:absolute;top:12px;right:12px;z-index:100;
+    display:flex;gap:2px;background:rgba(0,0,0,.3);border-radius:12px;padding:2px;
+  }
+  .lang-btn{
+    border:none;background:transparent;color:rgba(255,255,255,.5);
+    font-size:11px;font-weight:600;padding:4px 10px;border-radius:10px;cursor:pointer;
+  }
+  .lang-btn.active{background:rgba(255,255,255,.2);color:#fff}
+
+  /* Control sections */
+  .ctrl-section{padding:14px 18px;border-bottom:1px solid var(--border)}
+  .ctrl-section h3{
+    font-size:11px;text-transform:uppercase;letter-spacing:1.5px;
+    color:var(--g2);margin-bottom:12px;font-weight:600;
+  }
+  .ctrl-row{margin-bottom:12px}
+  .ctrl-row label{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--text-dim);margin-bottom:5px}
+  .ctrl-row label span.val{color:var(--accent-copper);font-weight:600;font-variant-numeric:tabular-nums}
+
+  input[type=range]{
+    -webkit-appearance:none;width:100%;height:4px;border-radius:2px;
+    background:var(--border);outline:none;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;width:14px;height:14px;border-radius:50%;
+    background:linear-gradient(135deg,var(--g1),var(--g2));cursor:pointer;
+    border:2px solid rgba(255,255,255,.3);
+  }
+
+  .toggle-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+  .toggle-row span{font-size:12px;color:var(--text-dim)}
+
+  .switch{position:relative;width:38px;height:20px;cursor:pointer}
+  .switch input{opacity:0;width:0;height:0}
+  .switch .slider{
+    position:absolute;inset:0;background:var(--border);border-radius:10px;transition:.2s;
+  }
+  .switch .slider::before{
+    content:'';position:absolute;width:16px;height:16px;left:2px;bottom:2px;
+    background:#fff;border-radius:50%;transition:.2s;
+  }
+  .switch input:checked+.slider{background:var(--g2)}
+  .switch input:checked+.slider::before{transform:translateX(18px)}
+
+  .dir-toggle{
+    display:flex;gap:0;border:1px solid var(--border);border-radius:6px;overflow:hidden;
+  }
+  .dir-btn{
+    border:none;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;
+    background:transparent;color:var(--text-dim);transition:.15s;
+  }
+  .dir-btn.active{background:var(--g2);color:#fff}
+
+  .pole-select{display:flex;gap:4px}
+  .pole-btn{
+    border:1px solid var(--border);background:transparent;color:var(--text-dim);
+    width:32px;height:28px;border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;transition:.15s;
+  }
+  .pole-btn.active{background:var(--g2);color:#fff;border-color:var(--g2)}
+
+  .action-row{display:flex;gap:8px;margin-top:12px}
+  .action-btn{
+    flex:1;border:none;padding:8px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;transition:.15s;
+  }
+  .btn-play{background:linear-gradient(135deg,var(--g1),var(--g2));color:#fff}
+  .btn-play:hover{filter:brightness(1.15)}
+  .btn-reset{background:var(--border);color:var(--text-dim)}
+  .btn-reset:hover{background:#2a2a4a;color:var(--text)}
+
+  /* Sync / Lock */
+  .lock-btn{
+    background:none;border:none;cursor:pointer;font-size:14px;padding:0 2px;
+    opacity:.4;transition:opacity .2s,transform .2s;line-height:1;
+  }
+  .lock-btn:hover{opacity:.7}
+  .lock-btn.locked{opacity:1;filter:drop-shadow(0 0 4px goldenrod)}
+  .lock-btn.locked+input[type=range]{border:1px solid goldenrod;border-radius:3px}
+  .ctrl-row.param-locked input[type=range]{pointer-events:none;opacity:.5}
+  .ctrl-row.param-locked .pole-select{pointer-events:none;opacity:.5}
+  .btn-sync{
+    background:linear-gradient(135deg,var(--g1),var(--g2),var(--g3));color:#fff;
+    border:none;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;
+    cursor:pointer;transition:filter .15s,box-shadow .3s;letter-spacing:.5px;
+  }
+  .btn-sync:hover{filter:brightness(1.15)}
+  .btn-sync.flash{box-shadow:0 0 20px rgba(236,72,153,.6),0 0 40px rgba(147,51,234,.4)}
+  @keyframes sync-pulse{0%,100%{box-shadow:0 0 8px rgba(236,72,153,.3),0 0 16px rgba(147,51,234,.2)}50%{box-shadow:0 0 24px rgba(236,72,153,.7),0 0 48px rgba(147,51,234,.5)}}
+  .btn-sync.searching{animation:sync-pulse .8s ease-in-out infinite;pointer-events:none}
+  .sync-status{font-size:10px;color:var(--accent-copper);text-align:center;margin-top:6px;min-height:14px;transition:opacity .3s}
+  .fitness-bar{width:100%;height:8px;background:#1a1a3a;border-radius:4px;margin-top:6px;overflow:hidden;position:relative}
+  .fitness-bar .fill{height:100%;border-radius:4px;transition:width 50ms linear;background:linear-gradient(90deg,#ef4444,#eab308,#22c55e)}
+  .fitness-score{font-size:10px;text-align:center;margin-top:2px;color:var(--accent-copper);font-variant-numeric:tabular-nums}
+
+  /* Info tabs */
+  .info-tabs{display:flex;border-bottom:1px solid var(--border);position:sticky;top:74px;background:var(--panel);z-index:9}
+  .info-tab{
+    flex:1;border:none;background:transparent;color:var(--text-dim);
+    font-size:10px;font-weight:600;padding:10px 4px;cursor:pointer;
+    text-transform:uppercase;letter-spacing:.5px;transition:.15s;
+    border-bottom:2px solid transparent;
+  }
+  .info-tab.active{color:var(--g2);border-bottom-color:var(--g2)}
+
+  .info-content{padding:14px 18px;font-size:12.5px;line-height:1.7;color:var(--text-dim)}
+  .info-content p{margin-bottom:10px}
+  .info-content h4{color:var(--accent-copper);font-size:13px;margin:14px 0 6px}
+  .info-content .eq{
+    display:block;background:rgba(255,255,255,.03);border-left:3px solid var(--g2);
+    padding:8px 14px;margin:10px 0;font-family:'Courier New',monospace;font-size:12px;
+    color:var(--text);border-radius:0 4px 4px 0;
+  }
+  .info-content ul{padding-left:20px;margin:8px 0}
+  .info-content li{margin-bottom:4px}
+  .info-content .bom-table{width:100%;border-collapse:collapse;margin:10px 0}
+  .info-content .bom-table th,.info-content .bom-table td{
+    padding:5px 8px;text-align:left;border-bottom:1px solid var(--border);font-size:11px;
+  }
+  .info-content .bom-table th{color:var(--g2);font-weight:600}
+
+  /* Bottom panel */
+  #scope-container{flex:1;padding:8px 12px;display:flex;flex-direction:column;gap:0;min-height:0}
+  .scope-label{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);opacity:.6;margin-bottom:2px;font-weight:500}
+
+  /* Target scope (top) */
+  #target-scope-wrap{position:relative;height:100px;border:1px dashed rgba(34,197,94,.3);border-radius:6px;overflow:hidden;background:#050510;flex-shrink:0}
+  #targetScope{width:100%;height:100%}
+
+  /* Comparison metrics between scopes */
+  #scope-comparison{display:flex;align-items:center;justify-content:center;gap:16px;padding:3px 0;border-top:1px solid rgba(100,100,150,.15);border-bottom:1px solid rgba(100,100,150,.15);flex-shrink:0}
+  .cmp-metric{font-size:10px;color:var(--text-dim);font-variant-numeric:tabular-nums}
+  .cmp-metric .cmp-val{color:#22c55e;font-weight:600}
+  .cmp-metric .cmp-val.warn{color:#f59e0b}
+  .cmp-metric .cmp-val.bad{color:#ef4444}
+
+  /* Live scope (bottom) */
+  #scope-wrap{flex:1;position:relative;border:1px solid var(--border);border-radius:6px;overflow:hidden;background:#050510;min-height:0}
+  #scope{width:100%;height:100%}
+
+  #readings{width:220px;padding:12px 16px;border-left:1px solid var(--border);display:flex;flex-direction:column;gap:8px;justify-content:center}
+  .reading{display:flex;flex-direction:column}
+  .reading .rlabel{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim)}
+  .reading .rval{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;
+    background:linear-gradient(135deg,var(--g1),var(--g2),var(--g3));
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  }
+  .reading .runit{font-size:11px;color:var(--text-dim)}
+
+  /* Viewport overlay */
+  #viewport-label{
+    position:absolute;bottom:12px;left:12px;font-size:10px;color:var(--text-dim);
+    letter-spacing:1px;text-transform:uppercase;pointer-events:none;
+  }
+  #fps-counter{
+    position:absolute;top:8px;right:12px;font-size:10px;color:var(--text-dim);
+    font-variant-numeric:tabular-nums;pointer-events:none;
+  }
+
+  /* Keyboard Legend */
+  #kb-legend{position:fixed;bottom:12px;right:12px;z-index:50;background:rgba(10,10,26,0.85);border:1px solid var(--border);border-radius:8px;padding:8px;backdrop-filter:blur(10px);max-width:280px;font-size:10px;color:var(--text-dim);pointer-events:auto;display:none}
+  #kb-legend.visible{display:block}
+  #kb-legend .kb-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+  #kb-legend .kb-title span{font-size:11px;font-weight:600;color:var(--text)}
+  #kb-legend .kb-close{background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:14px;padding:0 2px;line-height:1}
+  #kb-legend .kb-close:hover{color:var(--text)}
+  #kb-legend .kb-grid{display:grid;grid-template-columns:auto 1fr;gap:1px 8px;align-items:center}
+  #kb-legend .kb-grid kbd{display:inline-block;padding:1px 4px;background:#1a1a3a;border:1px solid var(--border);border-radius:3px;font-family:monospace;font-size:9px;color:var(--text);text-align:center;min-width:18px}
+  #kb-legend .kb-grid .kb-desc{font-size:10px;color:var(--text-dim)}
+  #kb-legend .kb-grid .kb-sep{grid-column:1/-1;height:1px;background:var(--border);margin:3px 0}
+
+  /* Mobile menu button */
+  #mobile-menu-btn{display:none;position:fixed;top:10px;left:10px;z-index:25;width:40px;height:40px;border-radius:8px;background:rgba(13,13,36,0.9);border:1px solid var(--border);color:var(--text);font-size:20px;cursor:pointer;align-items:center;justify-content:center;backdrop-filter:blur(8px)}
+  #mobile-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:8}
+  #mobile-info-btn{display:none;position:fixed;bottom:10px;left:10px;z-index:25;width:36px;height:36px;border-radius:50%;background:rgba(13,13,36,0.9);border:1px solid var(--border);color:var(--text);font-size:16px;cursor:pointer;align-items:center;justify-content:center;backdrop-filter:blur(8px)}
+  #mobile-info-modal{display:none;position:fixed;inset:0;z-index:60;background:rgba(13,13,36,0.97);overflow-y:auto;padding:20px}
+  #mobile-info-modal.open{display:block}
+  #mobile-info-close{position:fixed;top:12px;right:12px;z-index:61;background:none;border:none;color:var(--text);font-size:24px;cursor:pointer}
+  /* Bottom strip collapsed */
+  #bottom-strip{display:none;position:fixed;bottom:0;left:0;right:0;height:44px;background:rgba(13,13,36,0.95);border-top:1px solid var(--border);z-index:20;padding:0 12px;align-items:center;justify-content:space-around;backdrop-filter:blur(8px);cursor:pointer}
+  #bottom-strip .strip-metric{text-align:center}
+  #bottom-strip .strip-label{font-size:8px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim)}
+  #bottom-strip .strip-val{font-size:14px;font-weight:700;background:linear-gradient(135deg,var(--g1),var(--g2),var(--g3));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+
+  /* Desktop: narrower controls */
+  @media(min-width:901px){
+    #app{grid-template-columns:240px 1fr;grid-template-rows:1fr 280px}
+    .info-content{font-size:12px}
+  }
+
+  /* Mobile */
+  @media(max-width:900px){
+    #app{display:block;width:100%;height:100vh;overflow:hidden}
+    #controls{position:fixed;top:0;left:0;width:280px;height:100%;z-index:12;transform:translateX(-100%);transition:transform 0.3s;border-right:1px solid var(--border);overflow-y:auto}
+    #controls.mobile-open{transform:translateX(0)}
+    #mobile-overlay.active{display:block}
+    #mobile-menu-btn{display:flex}
+    #mobile-info-btn{display:flex}
+    #viewport{width:100%;height:100vh}
+    #bottom{display:none}
+    #bottom.mobile-expanded{display:flex;position:fixed;bottom:0;left:0;right:0;height:300px;z-index:30;flex-direction:column}
+    #bottom-strip{display:flex}
+    #kb-legend{bottom:54px;left:10px;right:auto;max-width:220px;font-size:9px}
+    #kb-legend .kb-grid kbd{font-size:8px;min-width:16px}
+    body{overflow:hidden}
+    .info-tabs{display:none}
+    .info-content{display:none}
+    #target-scope-wrap{height:60px}
+    #scope-comparison{gap:8px;padding:2px 0}
+    .cmp-metric{font-size:9px}
+  }
+
+  /* Slider hover feedback */
+  input[type=range]:hover{filter:brightness(1.3);cursor:grab}
+  input[type=range]:active{cursor:grabbing}
+  input[type=range].wheel-focus{box-shadow:0 0 6px rgba(147,51,234,.4);border-radius:3px}
+</style>
+</head>
+<body>
+
+<button id="mobile-menu-btn" onclick="toggleMobileMenu()">&#9776;</button>
+<div id="mobile-overlay" onclick="closeMobileMenu()"></div>
+<button id="mobile-info-btn" onclick="openMobileInfo()">&#8505;</button>
+<div id="mobile-info-modal"><button id="mobile-info-close" onclick="closeMobileInfo()">&times;</button><div id="mobile-info-content"></div></div>
+<div id="bottom-strip" onclick="toggleMobileBottom()"><div class="strip-metric"><div class="strip-label">Freq</div><div class="strip-val" id="stripFreq">10.0 Hz</div></div><div class="strip-metric"><div class="strip-label">V-Peak</div><div class="strip-val" id="stripVpeak">2.4 V</div></div><div class="strip-metric"><div class="strip-label">Pulse</div><div class="strip-val" id="stripPulse">1.2 ms</div></div></div>
+<div id="app">
+  <!-- LEFT: Controls -->
+  <div id="controls">
+    <div class="ctrl-header">
+      <div class="lang-toggle">
+        <button class="lang-btn active" onclick="setLang('en')">EN</button>
+        <button class="lang-btn" onclick="setLang('es')">ES</button>
+      </div>
+      <h1 data-i18n="title">Counter-Rotating Bifilar Coil</h1>
+      <div class="sub" data-i18n="subtitle">Tesla Patent US 512,340 Experiment</div>
+    </div>
+
+    <!-- Rotation Controls -->
+    <div class="ctrl-section">
+      <h3 data-i18n="sec_rotation">Rotation</h3>
+
+      <div class="ctrl-row" id="row-coilSpeed">
+        <label><button class="lock-btn" data-param="coilSpeed" onclick="toggleLock('coilSpeed',this)" title="Lock">&#128275;</button> <span data-i18n="lbl_coil_speed">Coil Speed</span> <span class="val" id="coilSpeedVal">120 RPM</span></label>
+        <input type="range" id="coilSpeed" min="0" max="1000" value="120">
+      </div>
+      <div class="ctrl-row" style="margin-bottom:8px">
+        <label style="margin-bottom:6px"><span data-i18n="lbl_coil_dir">Coil Direction</span></label>
+        <div class="dir-toggle">
+          <button class="dir-btn active" data-dir="cw" onclick="setDir('coil','cw',this)" data-i18n="dir_cw">CW</button>
+          <button class="dir-btn" data-dir="ccw" onclick="setDir('coil','ccw',this)" data-i18n="dir_ccw">CCW</button>
+        </div>
+      </div>
+
+      <div class="ctrl-row" id="row-magSpeed">
+        <label><button class="lock-btn" data-param="magSpeed" onclick="toggleLock('magSpeed',this)" title="Lock">&#128275;</button> <span data-i18n="lbl_mag_speed">Magnet Speed</span> <span class="val" id="magSpeedVal">180 RPM</span></label>
+        <input type="range" id="magSpeed" min="0" max="1000" value="180">
+      </div>
+      <div class="ctrl-row">
+        <label style="margin-bottom:6px"><span data-i18n="lbl_mag_dir">Magnet Direction</span></label>
+        <div class="dir-toggle">
+          <button class="dir-btn" data-dir="cw" onclick="setDir('mag','cw',this)" data-i18n="dir_cw">CW</button>
+          <button class="dir-btn active" data-dir="ccw" onclick="setDir('mag','ccw',this)" data-i18n="dir_ccw">CCW</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Magnet Config -->
+    <div class="ctrl-section">
+      <h3 data-i18n="sec_magnets">Magnets</h3>
+      <div class="ctrl-row" id="row-poles">
+        <label style="margin-bottom:6px"><button class="lock-btn" data-param="poles" onclick="toggleLock('poles',this)" title="Lock">&#128275;</button> <span data-i18n="lbl_poles">Number of Poles</span></label>
+        <div class="pole-select">
+          <button class="pole-btn" onclick="setPoles(2,this)">2</button>
+          <button class="pole-btn active" onclick="setPoles(4,this)">4</button>
+          <button class="pole-btn" onclick="setPoles(6,this)">6</button>
+          <button class="pole-btn" onclick="setPoles(8,this)">8</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Auto-Sync -->
+    <div class="ctrl-section">
+      <h3 data-i18n="sec_sync">Auto-Sync</h3>
+      <div class="action-row">
+        <button class="btn-sync" id="syncBtn" onclick="runSync()" data-i18n="btn_sync">SYNC</button>
+      </div>
+      <div class="sync-status" id="syncStatus"></div>
+      <div class="fitness-bar" id="fitnessBar" style="display:none"><div class="fill" id="fitnessFill" style="width:0%"></div></div>
+      <div class="fitness-score" id="fitnessScore" style="display:none"></div>
+    </div>
+
+    <!-- Visibility -->
+    <div class="ctrl-section">
+      <h3 data-i18n="sec_display">Display</h3>
+      <div class="toggle-row">
+        <span data-i18n="lbl_field_lines">Field Lines</span>
+        <label class="switch"><input type="checkbox" id="showField" checked onchange="toggleVis('field')"><span class="slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <span data-i18n="lbl_efield">Electric Field</span>
+        <label class="switch"><input type="checkbox" id="showEField" checked onchange="toggleVis('efield')"><span class="slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <span data-i18n="lbl_wireframe">Coil Wireframe</span>
+        <label class="switch"><input type="checkbox" id="showWireframe" onchange="toggleVis('wireframe')"><span class="slider"></span></label>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="ctrl-section">
+      <div class="action-row">
+        <button class="action-btn btn-play" id="playBtn" onclick="togglePlay()" data-i18n="btn_pause">Pause</button>
+        <button class="action-btn btn-reset" onclick="resetAll()" data-i18n="btn_reset">Reset</button>
+      </div>
+    </div>
+
+    <!-- Info Tabs -->
+    <div class="info-tabs">
+      <button class="info-tab active" onclick="showTab('what',this)" data-i18n="tab_what">What?</button>
+      <button class="info-tab" onclick="showTab('science',this)" data-i18n="tab_science">Science</button>
+      <button class="info-tab" onclick="showTab('build',this)" data-i18n="tab_build">Build It</button>
+      <button class="info-tab" onclick="showTab('measure',this)" data-i18n="tab_measure">Measure</button>
+      <button class="info-tab" onclick="showTab('apps',this)" data-i18n="tab_apps">Applications</button>
+    </div>
+
+    <div class="info-content" id="infoContent"></div>
+  </div>
+
+  <!-- CENTER: 3D Viewport -->
+  <div id="viewport">
+    <div id="viewport-label" data-i18n="vp_label">Drag to rotate | Scroll to zoom</div>
+    <div id="fps-counter">-- FPS</div>
+  </div>
+
+  <!-- BOTTOM: Oscilloscope -->
+  <div id="bottom">
+    <div id="scope-container">
+      <div class="scope-label" data-i18n="lbl_target_scope">Target Output</div>
+      <div id="target-scope-wrap"><canvas id="targetScope"></canvas></div>
+      <div id="scope-comparison">
+        <span class="cmp-metric"><span data-i18n="cmp_similarity">Similarity</span>: <span class="cmp-val" id="cmpSimilarity">---%</span></span>
+        <span class="cmp-metric"><span data-i18n="cmp_quality">Pulse quality</span>: <span class="cmp-val" id="cmpQuality">---</span></span>
+      </div>
+      <div class="scope-label" data-i18n="lbl_live_scope">Live Output</div>
+      <div id="scope-wrap"><canvas id="scope"></canvas></div>
+    </div>
+    <div id="readings">
+      <div class="reading">
+        <span class="rlabel" data-i18n="rd_freq">Frequency</span>
+        <span class="rval" id="rdFreq">10.0</span>
+        <span class="runit">Hz</span>
+      </div>
+      <div class="reading">
+        <span class="rlabel" data-i18n="rd_vpeak">Peak Voltage</span>
+        <span class="rval" id="rdVpeak">2.4</span>
+        <span class="runit">V (est.)</span>
+      </div>
+      <div class="reading">
+        <span class="rlabel" data-i18n="rd_pulse">Pulse Width</span>
+        <span class="rval" id="rdPulse">1.2</span>
+        <span class="runit">ms</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="kb-legend">
+  <div class="kb-title"><span id="kb-legend-title">Keyboard Shortcuts</span><button class="kb-close" onclick="toggleKbLegend()">&times;</button></div>
+  <div class="kb-grid" id="kb-legend-grid"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ===== INTERNATIONALIZATION =====
+const i18n = {
+  en: {
+    title: "Counter-Rotating Bifilar Coil",
+    subtitle: "Tesla Patent US 512,340 Experiment",
+    sec_rotation: "Rotation",
+    lbl_coil_speed: "Coil Speed",
+    lbl_coil_dir: "Coil Direction",
+    lbl_mag_speed: "Magnet Speed",
+    lbl_mag_dir: "Magnet Direction",
+    dir_cw: "CW", dir_ccw: "CCW",
+    sec_magnets: "Magnets",
+    lbl_poles: "Number of Poles",
+    sec_display: "Display",
+    lbl_field_lines: "Field Lines",
+    lbl_efield: "Electric Field",
+    lbl_wireframe: "Coil Wireframe",
+    btn_pause: "Pause", btn_play: "Play", btn_reset: "Reset",
+    tab_what: "What?", tab_science: "Science", tab_build: "Build It", tab_measure: "Measure", tab_apps: "Applications",
+    vp_label: "Drag to rotate | Scroll to zoom",
+    sec_scope: "Simulated Oscilloscope",
+    lbl_target_scope: "Target Output",
+    lbl_live_scope: "Live Output",
+    cmp_similarity: "Similarity",
+    cmp_quality: "Pulse quality",
+    quality_clean: "Clean",
+    quality_noisy: "Noisy",
+    quality_nosignal: "No signal",
+    ann_risetime: "Rise time < 1\u00b5s",
+    ann_zeroemf: "Zero back-EMF",
+    ann_capdis: "Capacitive discharge",
+    ann_noringing: "No inductive ringing",
+    rd_freq: "Frequency", rd_vpeak: "Peak Voltage", rd_pulse: "Pulse Width",
+    sec_sync: "Auto-Sync", btn_sync: "SYNC",
+    sync_searching: "Searching", sync_optimizing: "Optimizing",
+    sync_optimal: "Optimal: peak pulse sharpness",
+    sync_coil: "Synced: optimal for coil RPM",
+    sync_mag: "Synced: optimal for magnet RPM",
+    sync_poles: "Synced: optimal for pole count",
+    sync_all: "Synced: optimal configuration",
+
+    info_what: `<p>This visualization models a <strong>counter-rotating bifilar coil experiment</strong> based on Nikola Tesla's 1894 patent (US 512,340). A bifilar coil is wound with two parallel wires going in opposite directions. This geometry causes the magnetic fields of the two windings to cancel, driving the coil's inductance toward zero.</p>
+<p>Surrounding the coil is a ring of neodymium magnets spinning in the opposite direction. Because the coil and magnets rotate against each other, the relative angular velocity is the <em>sum</em> of their individual speeds &mdash; doubling the effective rate of change of magnetic flux through the coil.</p>
+<p>With near-zero inductance, the coil behaves more like a pure capacitor than a traditional inductor. Instead of the smooth sinusoidal output of a normal generator, theory predicts sharp, fast capacitive discharge pulses &mdash; a fundamentally different kind of electrical output that standard generator theory does not account for.</p>`,
+
+    info_science: `<h4>Tesla's Bifilar Patent (US 512,340)</h4>
+<p>Tesla's key insight: wind two wires side by side but carry current in opposite directions. Each turn's magnetic field cancels its neighbor's. The result is a coil with near-zero inductance (L &asymp; 0) but significant capacitance between the closely spaced, oppositely-charged conductors.</p>
+<span class="eq">L<sub>bifilar</sub> &asymp; 0 &nbsp;&nbsp;|&nbsp;&nbsp; C<sub>bifilar</sub> = &epsilon;<sub>0</sub>&epsilon;<sub>r</sub>A / d &nbsp; (significant)</span>
+
+<h4>Why Zero Inductance Changes Everything</h4>
+<p>In a normal coil, inductance creates back-EMF that opposes changes in current. This limits how fast current can rise and produces smooth sinusoidal waveforms. Remove inductance and you remove back-EMF. The coil no longer resists current changes. Instead, it responds to flux changes with sharp capacitive discharge pulses.</p>
+<span class="eq">V<sub>normal</sub> = -L(dI/dt) &nbsp;&rarr;&nbsp; large L slows response</span>
+<span class="eq">V<sub>bifilar</sub> = Q/C = (1/C)&int;&epsilon;dt &nbsp;&rarr;&nbsp; L&asymp;0 means instant response</span>
+
+<h4>Counter-Rotation Physics</h4>
+<p>If the coil spins at angular velocity &omega;<sub>c</sub> clockwise and the magnets spin at &omega;<sub>m</sub> counter-clockwise, the relative angular velocity seen by the coil is:</p>
+<span class="eq">&omega;<sub>rel</sub> = &omega;<sub>c</sub> + &omega;<sub>m</sub> &nbsp;&nbsp;(counter-rotation sums the velocities)</span>
+<p>This doubles the rate of flux change compared to a stationary coil with spinning magnets:</p>
+<span class="eq">&epsilon; = -N &middot; d&Phi;/dt &nbsp;&nbsp;where&nbsp; d&Phi;/dt &prop; &omega;<sub>rel</sub> = &omega;<sub>c</sub> + &omega;<sub>m</sub></span>
+
+<h4>Predicted Waveform</h4>
+<p>For a bifilar coil with P magnet poles, the fundamental frequency is:</p>
+<span class="eq">f = (P/2) &middot; (&omega;<sub>c</sub> + &omega;<sub>m</sub>) / (2&pi;)</span>
+<p>The voltage waveform is not sinusoidal. The near-zero inductance and significant capacitance produce narrow discharge pulses at each pole crossing. Peak voltage scales with relative speed:</p>
+<span class="eq">V<sub>peak</sub> &prop; N &middot; B &middot; A &middot; &omega;<sub>rel</sub> / C</span>
+<p>Pulse width narrows as speed increases &mdash; energy concentrates into shorter, sharper spikes. At high counter-rotation speeds, these pulses may enter the microsecond regime.</p>
+
+<h4>Same Direction = Cancellation</h4>
+<p>When both rotate in the same direction at the same speed, &omega;<sub>rel</sub> = 0 and the flux through the coil is static. No changing flux means no induced voltage &mdash; the oscilloscope goes flat. Different same-direction speeds produce a beat frequency at |&omega;<sub>c</sub> - &omega;<sub>m</sub>|.</p>`,
+
+    info_build: `<h4>Bill of Materials</h4>
+<table class="bom-table">
+<tr><th>Item</th><th>Spec</th><th>Qty</th></tr>
+<tr><td>Magnet wire (copper)</td><td>22 AWG enameled, 2 spools</td><td>~50m each</td></tr>
+<tr><td>Coil form</td><td>PVC or 3D-printed cylinder, 80mm OD</td><td>1</td></tr>
+<tr><td>Neodymium magnets</td><td>N52, 20x10x5mm blocks</td><td>4-8</td></tr>
+<tr><td>Magnet ring carrier</td><td>3D-printed or aluminum ring, 120mm ID</td><td>1</td></tr>
+<tr><td>Bearings</td><td>608ZZ (skateboard bearings)</td><td>4</td></tr>
+<tr><td>DC motors</td><td>775 type, 12V, with PWM controllers</td><td>2</td></tr>
+<tr><td>Shaft coupler</td><td>5mm to 8mm flexible coupler</td><td>2</td></tr>
+<tr><td>Frame</td><td>Aluminum extrusion or 3D-printed</td><td>1 set</td></tr>
+<tr><td>Slip rings</td><td>2-channel, rated 10A</td><td>1</td></tr>
+<tr><td>Power supply</td><td>12V 5A bench supply</td><td>1</td></tr>
+</table>
+
+<h4>Construction Notes</h4>
+<ul>
+<li><strong>Winding the bifilar coil:</strong> Tape both wires together side by side. Wind them simultaneously around the form. One wire goes start-to-finish; the other finish-to-start (reverse polarity). Keep tension even.</li>
+<li><strong>Magnet array:</strong> Mount magnets with alternating N/S poles facing inward toward the coil. Equal spacing around the ring is critical &mdash; use a 3D-printed jig.</li>
+<li><strong>Counter-rotation mechanism:</strong> Two concentric shafts: inner drives the coil, outer drives the magnet ring. Bearings isolate them. Belt or gear drive from separate motors.</li>
+<li><strong>Slip rings:</strong> Essential for extracting the electrical signal from the rotating coil. Quality matters &mdash; noisy slip rings corrupt your measurement.</li>
+<li><strong>Balance:</strong> Both rotating assemblies must be dynamically balanced. Vibration at 1000 RPM will destroy bearings and blur your measurements.</li>
+<li><strong>Safety:</strong> N52 magnets at 1000 RPM are dangerous. Use a polycarbonate shield. Secure all magnets with both adhesive and mechanical retention.</li>
+</ul>`,
+
+    info_measure: `<h4>Oscilloscope Setup</h4>
+<ul>
+<li><strong>Probe:</strong> Connect across the bifilar coil output terminals (through slip rings)</li>
+<li><strong>Coupling:</strong> DC coupling to see any DC offset</li>
+<li><strong>Bandwidth:</strong> 100 MHz minimum (pulses may be microsecond-scale)</li>
+<li><strong>Timebase:</strong> Start at 10ms/div, narrow down as you find the signal</li>
+<li><strong>Trigger:</strong> Rising edge, auto level around 50% of expected peak</li>
+<li><strong>Second channel:</strong> Current probe (Rogowski coil) on one lead</li>
+</ul>
+
+<h4>Expected Results</h4>
+<ul>
+<li><strong>Counter-rotation:</strong> Sharp unipolar or bipolar pulses, one per pole crossing. Frequency = (P/2) &times; (RPM<sub>c</sub> + RPM<sub>m</sub>) / 60</li>
+<li><strong>Same direction, same speed:</strong> Flat line (validates the null case)</li>
+<li><strong>Same direction, different speeds:</strong> Lower frequency signal at the beat frequency</li>
+<li><strong>Peak voltage:</strong> Proportional to combined RPM. At 500+500 RPM with 4 poles, expect 1-5V peaks depending on magnet strength and winding turns</li>
+<li><strong>Pulse width:</strong> Inversely proportional to speed. Expect 0.5-5ms range</li>
+</ul>
+
+<h4>What Constitutes Success</h4>
+<ul>
+<li><strong>Primary confirmation:</strong> Non-sinusoidal output (sharp pulses rather than smooth waves) proves the bifilar coil behaves as a capacitive device, not inductive</li>
+<li><strong>Velocity doubling:</strong> Counter-rotation at equal speeds produces the same frequency as a single rotation at 2x speed &mdash; confirming &omega;<sub>rel</sub> = &omega;<sub>c</sub> + &omega;<sub>m</sub></li>
+<li><strong>Null test:</strong> Same direction, same speed gives zero output</li>
+<li><strong>Scaling:</strong> Peak voltage linear with combined RPM (V &prop; &omega;<sub>rel</sub>)</li>
+<li><strong>Anomalous energy:</strong> If output power exceeds input mechanical power after accounting for losses, that would be extraordinary and requires rigorous calorimetric verification</li>
+</ul>
+
+<h4>Common Pitfalls</h4>
+<ul>
+<li>Slip ring noise masquerading as signal &mdash; test with coil stationary first</li>
+<li>Capacitive coupling from motor drive PWM &mdash; use shielded cables</li>
+<li>Ground loops between oscilloscope and motor supply &mdash; use differential probe</li>
+<li>Mechanical resonance creating vibration artifacts &mdash; mount scope probe solidly</li>
+</ul>`,
+
+    info_apps: `
+          <h4>Build Difficulty</h4>
+          <p><span style="font-size:18px;letter-spacing:2px">&#9733;&#9733;&#9734;&#9734;&#9734;</span> <strong>Garage-level</strong></p>
+          <p>Estimated cost: <strong>$200 - $500 USD</strong></p>
+          <h4>Practical Applications</h4>
+          <ul>
+            <li><strong>Pulse Power Supplies</strong> — Industrial welding and plasma cutting power sources</li>
+            <li><strong>EMP-Hardened Generators</strong> — Military/disaster resilience — no semiconductor dependencies</li>
+            <li><strong>Capacitive Energy Storage</strong> — Alternative to battery banks using high-voltage pulse trains</li>
+            <li><strong>Fast-Switching Power Electronics</strong> — Sharp pulses are natural switching signals for inverters</li>
+            <li><strong>Medical Defibrillator Sources</strong> — High-voltage pulse generation without complex circuitry</li>
+            <li><strong>Radar Transmitters</strong> — Pulse generators are the heart of radar systems</li>
+          </ul>`
+  },
+
+  es: {
+    title: "Bobina Bifilar Contra-Rotativa",
+    subtitle: "Experimento Patente Tesla US 512,340",
+    sec_rotation: "Rotaci\u00f3n",
+    lbl_coil_speed: "Velocidad Bobina",
+    lbl_coil_dir: "Direcci\u00f3n Bobina",
+    lbl_mag_speed: "Velocidad Imanes",
+    lbl_mag_dir: "Direcci\u00f3n Imanes",
+    dir_cw: "HOR", dir_ccw: "ANTI",
+    sec_magnets: "Imanes",
+    lbl_poles: "N\u00famero de Polos",
+    sec_display: "Visualizaci\u00f3n",
+    lbl_field_lines: "L\u00edneas de Campo",
+    lbl_efield: "Campo El\u00e9ctrico",
+    lbl_wireframe: "Bobina Alambre",
+    btn_pause: "Pausa", btn_play: "Iniciar", btn_reset: "Reiniciar",
+    tab_what: "\u00bfQu\u00e9?", tab_science: "Ciencia", tab_build: "Construir", tab_measure: "Medir", tab_apps: "Aplicaciones",
+    vp_label: "Arrastra para rotar | Scroll para zoom",
+    sec_scope: "Osciloscopio Simulado",
+    lbl_target_scope: "Resultado Objetivo",
+    lbl_live_scope: "Salida en Vivo",
+    cmp_similarity: "Similitud",
+    cmp_quality: "Calidad de pulso",
+    quality_clean: "Limpio",
+    quality_noisy: "Ruidoso",
+    quality_nosignal: "Sin se\u00f1al",
+    ann_risetime: "Subida < 1\u00b5s",
+    ann_zeroemf: "Cero contra-EMF",
+    ann_capdis: "Descarga capacitiva",
+    ann_noringing: "Sin timbre inductivo",
+    rd_freq: "Frecuencia", rd_vpeak: "Voltaje Pico", rd_pulse: "Ancho de Pulso",
+    sec_sync: "Auto-Sincronizar", btn_sync: "SYNC",
+    sync_searching: "Buscando", sync_optimizing: "Optimizando",
+    sync_optimal: "Optimo: maxima nitidez de pulso",
+    sync_coil: "Sincronizado: optimo para RPM bobina",
+    sync_mag: "Sincronizado: optimo para RPM iman",
+    sync_poles: "Sincronizado: optimo para polos",
+    sync_all: "Sincronizado: configuracion optima",
+
+    info_what: `<p>Esta visualizaci\u00f3n modela un <strong>experimento de bobina bifilar contra-rotativa</strong> basado en la patente de Nikola Tesla de 1894 (US 512,340). Una bobina bifilar se enrolla con dos cables paralelos en direcciones opuestas. Esta geometr\u00eda hace que los campos magn\u00e9ticos de ambos devanados se cancelen, llevando la inductancia de la bobina hacia cero.</p>
+<p>Rodeando la bobina hay un anillo de imanes de neodimio girando en direcci\u00f3n opuesta. Debido a que la bobina y los imanes rotan en contra, la velocidad angular relativa es la <em>suma</em> de sus velocidades individuales &mdash; duplicando la tasa efectiva de cambio de flujo magn\u00e9tico a trav\u00e9s de la bobina.</p>
+<p>Con inductancia cercana a cero, la bobina se comporta m\u00e1s como un capacitor puro que como un inductor tradicional. En lugar de la salida sinusoidal suave de un generador normal, la teor\u00eda predice pulsos de descarga capacitiva agudos y r\u00e1pidos &mdash; un tipo fundamentalmente diferente de salida el\u00e9ctrica.</p>`,
+
+    info_science: `<h4>Patente Bifilar de Tesla (US 512,340)</h4>
+<p>La idea clave de Tesla: enrollar dos cables lado a lado pero conduciendo corriente en direcciones opuestas. El campo magn\u00e9tico de cada vuelta cancela el de su vecina. El resultado es una bobina con inductancia cercana a cero (L &asymp; 0) pero capacitancia significativa entre los conductores cercanos y opuestamente cargados.</p>
+<span class="eq">L<sub>bifilar</sub> &asymp; 0 &nbsp;&nbsp;|&nbsp;&nbsp; C<sub>bifilar</sub> = &epsilon;<sub>0</sub>&epsilon;<sub>r</sub>A / d &nbsp; (significativa)</span>
+
+<h4>Por Qu\u00e9 la Inductancia Cero lo Cambia Todo</h4>
+<p>En una bobina normal, la inductancia crea una fuerza contra-electromotriz que se opone a los cambios de corriente. Esto limita qu\u00e9 tan r\u00e1pido puede subir la corriente y produce formas de onda sinusoidales suaves. Sin inductancia, no hay fuerza contra-electromotriz. La bobina responde a cambios de flujo con pulsos de descarga capacitiva agudos.</p>
+<span class="eq">V<sub>normal</sub> = -L(dI/dt) &nbsp;&rarr;&nbsp; L grande frena la respuesta</span>
+<span class="eq">V<sub>bifilar</sub> = Q/C = (1/C)&int;&epsilon;dt &nbsp;&rarr;&nbsp; L&asymp;0 significa respuesta instant\u00e1nea</span>
+
+<h4>F\u00edsica de la Contra-Rotaci\u00f3n</h4>
+<p>Si la bobina gira a velocidad angular &omega;<sub>c</sub> en sentido horario y los imanes giran a &omega;<sub>m</sub> en sentido anti-horario, la velocidad angular relativa es:</p>
+<span class="eq">&omega;<sub>rel</sub> = &omega;<sub>c</sub> + &omega;<sub>m</sub> &nbsp;&nbsp;(la contra-rotaci\u00f3n suma las velocidades)</span>
+<p>Esto duplica la tasa de cambio de flujo comparado con una bobina estacionaria:</p>
+<span class="eq">&epsilon; = -N &middot; d&Phi;/dt &nbsp;&nbsp;donde&nbsp; d&Phi;/dt &prop; &omega;<sub>rel</sub> = &omega;<sub>c</sub> + &omega;<sub>m</sub></span>
+
+<h4>Forma de Onda Predicha</h4>
+<p>Para una bobina bifilar con P polos magn\u00e9ticos, la frecuencia fundamental es:</p>
+<span class="eq">f = (P/2) &middot; (&omega;<sub>c</sub> + &omega;<sub>m</sub>) / (2&pi;)</span>
+<p>El voltaje no es sinusoidal. La inductancia cercana a cero y capacitancia significativa producen pulsos de descarga estrechos en cada cruce de polo. El voltaje pico escala con la velocidad relativa:</p>
+<span class="eq">V<sub>pico</sub> &prop; N &middot; B &middot; A &middot; &omega;<sub>rel</sub> / C</span>
+
+<h4>Misma Direcci\u00f3n = Cancelaci\u00f3n</h4>
+<p>Cuando ambos rotan en la misma direcci\u00f3n a la misma velocidad, &omega;<sub>rel</sub> = 0 y el flujo es est\u00e1tico. Sin cambio de flujo no hay voltaje inducido &mdash; el osciloscopio queda plano.</p>`,
+
+    info_build: `<h4>Lista de Materiales</h4>
+<table class="bom-table">
+<tr><th>Art\u00edculo</th><th>Especificaci\u00f3n</th><th>Cant.</th></tr>
+<tr><td>Alambre magn\u00e9tico (cobre)</td><td>22 AWG esmaltado, 2 carretes</td><td>~50m c/u</td></tr>
+<tr><td>Forma de bobina</td><td>Cilindro PVC o impreso 3D, 80mm DE</td><td>1</td></tr>
+<tr><td>Imanes de neodimio</td><td>N52, bloques 20x10x5mm</td><td>4-8</td></tr>
+<tr><td>Portador de anillo</td><td>Anillo impreso 3D o aluminio, 120mm DI</td><td>1</td></tr>
+<tr><td>Rodamientos</td><td>608ZZ (de patineta)</td><td>4</td></tr>
+<tr><td>Motores DC</td><td>Tipo 775, 12V, con controladores PWM</td><td>2</td></tr>
+<tr><td>Acoplador de eje</td><td>5mm a 8mm acoplador flexible</td><td>2</td></tr>
+<tr><td>Marco</td><td>Extrusi\u00f3n de aluminio o impreso 3D</td><td>1 juego</td></tr>
+<tr><td>Anillos deslizantes</td><td>2 canales, 10A</td><td>1</td></tr>
+<tr><td>Fuente de poder</td><td>12V 5A fuente de banco</td><td>1</td></tr>
+</table>
+
+<h4>Notas de Construcci\u00f3n</h4>
+<ul>
+<li><strong>Enrollado bifilar:</strong> Pega ambos cables lado a lado con cinta. Enr\u00f3llalos simult\u00e1neamente. Un cable va de inicio a fin; el otro de fin a inicio (polaridad inversa). Mant\u00e9n la tensi\u00f3n uniforme.</li>
+<li><strong>Arreglo de imanes:</strong> Monta los imanes con polos N/S alternados apuntando hacia la bobina. El espaciado uniforme es cr\u00edtico &mdash; usa una gu\u00eda impresa en 3D.</li>
+<li><strong>Mecanismo contra-rotativo:</strong> Dos ejes conc\u00e9ntricos: el interno impulsa la bobina, el externo el anillo de imanes. Los rodamientos los a\u00edslan.</li>
+<li><strong>Anillos deslizantes:</strong> Esenciales para extraer la se\u00f1al el\u00e9ctrica de la bobina giratoria. La calidad importa.</li>
+<li><strong>Balance:</strong> Ambos ensamblajes rotatorios deben estar din\u00e1micamente balanceados.</li>
+<li><strong>Seguridad:</strong> Imanes N52 a 1000 RPM son peligrosos. Usa un escudo de policarbonato.</li>
+</ul>`,
+
+    info_measure: `<h4>Configuraci\u00f3n del Osciloscopio</h4>
+<ul>
+<li><strong>Sonda:</strong> Conectar a las terminales de salida de la bobina (a trav\u00e9s de anillos deslizantes)</li>
+<li><strong>Acoplamiento:</strong> DC para ver cualquier offset</li>
+<li><strong>Ancho de banda:</strong> M\u00ednimo 100 MHz (los pulsos pueden ser de microsegundos)</li>
+<li><strong>Base de tiempo:</strong> Comenzar en 10ms/div, ajustar al encontrar la se\u00f1al</li>
+<li><strong>Trigger:</strong> Flanco ascendente, nivel auto alrededor del 50% del pico esperado</li>
+<li><strong>Segundo canal:</strong> Sonda de corriente (bobina Rogowski) en un conductor</li>
+</ul>
+
+<h4>Resultados Esperados</h4>
+<ul>
+<li><strong>Contra-rotaci\u00f3n:</strong> Pulsos agudos unipolares o bipolares, uno por cruce de polo. Frecuencia = (P/2) &times; (RPM<sub>c</sub> + RPM<sub>m</sub>) / 60</li>
+<li><strong>Misma direcci\u00f3n, misma velocidad:</strong> L\u00ednea plana (valida el caso nulo)</li>
+<li><strong>Misma direcci\u00f3n, diferente velocidad:</strong> Se\u00f1al de menor frecuencia en la frecuencia de batido</li>
+<li><strong>Voltaje pico:</strong> Proporcional a las RPM combinadas. A 500+500 RPM con 4 polos, esperar picos de 1-5V</li>
+<li><strong>Ancho de pulso:</strong> Inversamente proporcional a la velocidad. Esperar rango de 0.5-5ms</li>
+</ul>
+
+<h4>Qu\u00e9 Constituye \u00c9xito</h4>
+<ul>
+<li><strong>Confirmaci\u00f3n primaria:</strong> Salida no sinusoidal (pulsos agudos en lugar de ondas suaves) prueba que la bobina bifilar se comporta como dispositivo capacitivo</li>
+<li><strong>Duplicaci\u00f3n de velocidad:</strong> Contra-rotaci\u00f3n a velocidades iguales produce la misma frecuencia que una sola rotaci\u00f3n al doble de velocidad</li>
+<li><strong>Prueba nula:</strong> Misma direcci\u00f3n, misma velocidad da salida cero</li>
+<li><strong>Escalamiento:</strong> Voltaje pico lineal con RPM combinadas (V &prop; &omega;<sub>rel</sub>)</li>
+<li><strong>Energ\u00eda an\u00f3mala:</strong> Si la potencia de salida excede la potencia mec\u00e1nica de entrada, eso ser\u00eda extraordinario y requiere verificaci\u00f3n calorim\u00e9trica rigurosa</li>
+</ul>`,
+
+    info_apps: `
+          <h4>Dificultad de Construccion</h4>
+          <p><span style="font-size:18px;letter-spacing:2px">&#9733;&#9733;&#9734;&#9734;&#9734;</span> <strong>Nivel garaje</strong></p>
+          <p>Costo estimado: <strong>$200 - $500 USD</strong></p>
+          <h4>Aplicaciones Practicas</h4>
+          <ul>
+            <li><strong>Fuentes de Potencia Pulsada</strong> &mdash; Soldadura industrial y corte por plasma</li>
+            <li><strong>Generadores Anti-EMP</strong> &mdash; Resiliencia militar/desastres &mdash; sin dependencia de semiconductores</li>
+            <li><strong>Almacenamiento Capacitivo</strong> &mdash; Alternativa a bancos de baterias con trenes de pulsos</li>
+            <li><strong>Electronica de Conmutacion</strong> &mdash; Pulsos agudos como senales naturales de conmutacion</li>
+            <li><strong>Fuentes para Desfibriladores</strong> &mdash; Generacion de pulsos de alto voltaje sin circuitos complejos</li>
+            <li><strong>Transmisores de Radar</strong> &mdash; Generadores de pulsos son el corazon de sistemas radar</li>
+          </ul>`
+  }
+};
+
+// ===== STATE =====
+let lang = 'en';
+let playing = true;
+let currentTab = 'what';
+let state = {
+  coilSpeed: 120, coilDir: 1,   // 1=CW, -1=CCW
+  magSpeed: 180, magDir: -1,
+  poles: 4,
+  showField: true, showEField: true, showWireframe: false
+};
+
+// ===== I18N ENGINE =====
+function setLang(l) {
+  lang = l;
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.textContent.trim() === l.toUpperCase()));
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (i18n[lang][key]) {
+      if (el.tagName === 'INPUT' || el.tagName === 'BUTTON') {
+        el.textContent = i18n[lang][key];
+      } else {
+        el.textContent = i18n[lang][key];
+      }
+    }
+  });
+  // Update play button specifically
+  const pb = document.getElementById('playBtn');
+  pb.textContent = playing ? i18n[lang].btn_pause : i18n[lang].btn_play;
+  showTab(currentTab);
+  if (typeof buildKbLegend === 'function') buildKbLegend();
+  if (typeof drawTargetScope === 'function') drawTargetScope();
+}
+
+function showTab(tab, btn) {
+  currentTab = tab;
+  if (btn) document.querySelectorAll('.info-tab').forEach(t => t.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  else {
+    document.querySelectorAll('.info-tab').forEach((t, i) => {
+      t.classList.toggle('active', ['what','science','build','measure','apps'][i] === tab);
+    });
+  }
+  const key = 'info_' + tab;
+  document.getElementById('infoContent').innerHTML = i18n[lang][key] || '';
+}
+
+// ===== UI HANDLERS =====
+function setDir(target, dir, btn) {
+  const toggle = btn.parentElement;
+  toggle.querySelectorAll('.dir-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (target === 'coil') state.coilDir = dir === 'cw' ? 1 : -1;
+  else state.magDir = dir === 'cw' ? 1 : -1;
+}
+
+function setPoles(n, btn) {
+  document.querySelectorAll('.pole-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  state.poles = n;
+  rebuildMagnets();
+  rebuildFieldLines();
+  if (typeof drawTargetScope === 'function') drawTargetScope();
+}
+
+function toggleVis(what) {
+  if (what === 'field') { state.showField = document.getElementById('showField').checked; fieldGroup.visible = state.showField; }
+  if (what === 'efield') { state.showEField = document.getElementById('showEField').checked; efieldGroup.visible = state.showEField; }
+  if (what === 'wireframe') {
+    state.showWireframe = document.getElementById('showWireframe').checked;
+    coilMeshes.forEach(m => { m.material.wireframe = state.showWireframe; });
+  }
+}
+
+function togglePlay() {
+  playing = !playing;
+  document.getElementById('playBtn').textContent = playing ? i18n[lang].btn_pause : i18n[lang].btn_play;
+}
+
+function resetAll() {
+  state.coilSpeed = 120; state.coilDir = 1;
+  state.magSpeed = 180; state.magDir = -1;
+  state.poles = 4;
+  document.getElementById('coilSpeed').value = 120;
+  document.getElementById('magSpeed').value = 180;
+  document.getElementById('coilSpeedVal').textContent = '120 RPM';
+  document.getElementById('magSpeedVal').textContent = '180 RPM';
+  // Reset direction buttons
+  document.querySelectorAll('.dir-toggle').forEach((toggle, i) => {
+    toggle.querySelectorAll('.dir-btn').forEach((b, j) => {
+      if (i === 0) b.classList.toggle('active', j === 0); // coil CW
+      else b.classList.toggle('active', j === 1); // mag CCW
+    });
+  });
+  // Reset poles
+  document.querySelectorAll('.pole-btn').forEach((b, i) => b.classList.toggle('active', i === 1));
+  rebuildMagnets();
+  rebuildFieldLines();
+  coilAngle = 0; magAngle = 0;
+}
+
+// ===== LOCK & SYNC SYSTEM =====
+const locks = { coilSpeed: false, magSpeed: false, poles: false };
+
+function toggleLock(param, btn) {
+  locks[param] = !locks[param];
+  btn.textContent = locks[param] ? '\u{1F512}' : '\u{1F513}';
+  btn.classList.toggle('locked', locks[param]);
+  const row = document.getElementById('row-' + param);
+  if (row) row.classList.toggle('param-locked', locks[param]);
+}
+
+function setDirState(target, dir) {
+  const toggles = document.querySelectorAll('.dir-toggle');
+  const tIdx = target === 'coil' ? 0 : 1;
+  const toggle = toggles[tIdx];
+  if (!toggle) return;
+  toggle.querySelectorAll('.dir-btn').forEach(b => b.classList.remove('active'));
+  const activeBtn = toggle.querySelector('[data-dir="' + dir + '"]');
+  if (activeBtn) activeBtn.classList.add('active');
+  if (target === 'coil') state.coilDir = dir === 'cw' ? 1 : -1;
+  else state.magDir = dir === 'cw' ? 1 : -1;
+}
+
+// ===== ANIMATED SYNC ENGINE =====
+let syncAnimating = false;
+
+function calcFitnessM1(coilRPM, magRPM, poles) {
+  // Fitness: pulse sharpness + consistency. Optimal = counter-rotating, matched speeds, 4 poles, ~300 RPM
+  const relSpeed = Math.abs(coilRPM - magRPM);
+  const speedMatch = 1 - relSpeed / Math.max(1, coilRPM + magRPM);
+  const speedIdeal = 1 - Math.abs(coilRPM - 300) / 1000;
+  const poleIdeal = poles === 4 ? 1.0 : poles === 6 ? 0.85 : poles === 2 ? 0.6 : 0.5;
+  const counterBonus = (state.coilDir !== state.magDir) ? 1.0 : 0.3;
+  return Math.max(0, Math.min(100, (speedMatch * 30 + speedIdeal * 25 + poleIdeal * 25 + counterBonus * 20)));
+}
+
+function calcOptimalM1() {
+  // Pre-calculate optimal values respecting locks
+  let optCoil = locks.coilSpeed ? state.coilSpeed : 300;
+  let optMag = locks.magSpeed ? state.magSpeed : 300;
+  let optPoles = locks.poles ? state.poles : 4;
+
+  if (locks.coilSpeed && !locks.magSpeed) optMag = state.coilSpeed;
+  if (locks.magSpeed && !locks.coilSpeed) optCoil = state.magSpeed;
+  if (locks.poles && !locks.coilSpeed && !locks.magSpeed) {
+    const targetFreq = 30;
+    const targetWrel = targetFreq * 2 * 2 * Math.PI / state.poles;
+    const targetRPM = Math.round(Math.min(1000, Math.max(50, targetWrel * 60 / (2 * Math.PI) / 2)));
+    optCoil = targetRPM; optMag = targetRPM;
+  }
+  return { coilSpeed: optCoil, magSpeed: optMag, poles: optPoles };
+}
+
+function runSync() {
+  if (syncAnimating) return;
+  syncAnimating = true;
+
+  const btn = document.getElementById('syncBtn');
+  const statusEl = document.getElementById('syncStatus');
+  const fitnessBar = document.getElementById('fitnessBar');
+  const fitnessFill = document.getElementById('fitnessFill');
+  const fitnessScoreEl = document.getElementById('fitnessScore');
+
+  btn.classList.add('searching');
+  fitnessBar.style.display = 'block';
+  fitnessScoreEl.style.display = 'block';
+  statusEl.style.opacity = 1;
+
+  // Disable sliders during animation
+  document.querySelectorAll('#controls input[type=range]').forEach(s => s.style.pointerEvents = 'none');
+
+  const optimal = calcOptimalM1();
+  const startCoil = state.coilSpeed, startMag = state.magSpeed;
+  const startTime = performance.now();
+  const SEARCH_DUR = 2000, CONVERGE_DUR = 1500, SETTLE_DUR = 500;
+  const TOTAL = SEARCH_DUR + CONVERGE_DUR + SETTLE_DUR;
+
+  // Speed multipliers (irrational ratios for organic feel)
+  const speeds = [1.0, 1.3, 1.7];
+  let dots = 0, dotTimer = 0;
+
+  function animStep(now) {
+    const elapsed = now - startTime;
+    const t = elapsed / TOTAL;
+
+    if (elapsed < SEARCH_DUR) {
+      // Phase 1: Searching — sinusoidal sweep
+      const st = elapsed / 1000;
+      dotTimer += 1;
+      if (dotTimer % 20 === 0) dots = (dots + 1) % 4;
+      statusEl.textContent = i18n[lang].sync_searching + '.'.repeat(dots);
+
+      if (!locks.coilSpeed) {
+        const v = Math.round(0 + 1000 * (0.5 + 0.5 * Math.sin(st * speeds[0] * 2 * Math.PI)));
+        document.getElementById('coilSpeed').value = v;
+        document.getElementById('coilSpeedVal').textContent = v + ' RPM';
+        state.coilSpeed = v;
+      }
+      if (!locks.magSpeed) {
+        const v = Math.round(0 + 1000 * (0.5 + 0.5 * Math.sin(st * speeds[1] * 2 * Math.PI)));
+        document.getElementById('magSpeed').value = v;
+        document.getElementById('magSpeedVal').textContent = v + ' RPM';
+        state.magSpeed = v;
+      }
+    } else if (elapsed < SEARCH_DUR + CONVERGE_DUR) {
+      // Phase 2: Converging
+      const ct = (elapsed - SEARCH_DUR) / CONVERGE_DUR;
+      const eased = ct < 0.5 ? 2 * ct * ct : -1 + (4 - 2 * ct) * ct;
+      dotTimer += 1;
+      if (dotTimer % 20 === 0) dots = (dots + 1) % 4;
+      statusEl.textContent = i18n[lang].sync_optimizing + '.'.repeat(dots);
+
+      if (!locks.coilSpeed) {
+        const current = parseFloat(document.getElementById('coilSpeed').value);
+        const v = Math.round(current + (optimal.coilSpeed - current) * eased);
+        document.getElementById('coilSpeed').value = v;
+        document.getElementById('coilSpeedVal').textContent = v + ' RPM';
+        state.coilSpeed = v;
+      }
+      if (!locks.magSpeed) {
+        const current = parseFloat(document.getElementById('magSpeed').value);
+        const v = Math.round(current + (optimal.magSpeed - current) * eased);
+        document.getElementById('magSpeed').value = v;
+        document.getElementById('magSpeedVal').textContent = v + ' RPM';
+        state.magSpeed = v;
+      }
+    } else {
+      // Phase 3: Settle — snap to optimal
+      if (!locks.coilSpeed) {
+        document.getElementById('coilSpeed').value = optimal.coilSpeed;
+        document.getElementById('coilSpeedVal').textContent = optimal.coilSpeed + ' RPM';
+        state.coilSpeed = optimal.coilSpeed;
+      }
+      if (!locks.magSpeed) {
+        document.getElementById('magSpeed').value = optimal.magSpeed;
+        document.getElementById('magSpeedVal').textContent = optimal.magSpeed + ' RPM';
+        state.magSpeed = optimal.magSpeed;
+      }
+      if (!locks.poles && state.poles !== optimal.poles) {
+        state.poles = optimal.poles;
+        document.querySelectorAll('.pole-btn').forEach((b, i) => b.classList.toggle('active', [2,4,6,8][i] === optimal.poles));
+        rebuildMagnets(); rebuildFieldLines();
+      }
+      // Set optimal directions
+      setDirState('coil', 'cw');
+      setDirState('mag', 'ccw');
+
+      // Final flash
+      btn.classList.remove('searching');
+      btn.classList.add('flash');
+      setTimeout(() => btn.classList.remove('flash'), 600);
+
+      const finalFit = calcFitnessM1(state.coilSpeed, state.magSpeed, state.poles);
+      fitnessFill.style.width = finalFit + '%';
+      fitnessScoreEl.textContent = Math.round(finalFit) + '%';
+      statusEl.textContent = i18n[lang].sync_optimal;
+      setTimeout(() => { statusEl.style.opacity = 0; }, 4000);
+      setTimeout(() => { fitnessBar.style.display = 'none'; fitnessScoreEl.style.display = 'none'; }, 6000);
+
+      // Re-enable sliders
+      document.querySelectorAll('#controls input[type=range]').forEach(s => s.style.pointerEvents = '');
+      if (typeof drawTargetScope === 'function') drawTargetScope();
+      syncAnimating = false;
+      return;
+    }
+
+    // Live fitness update
+    const fit = calcFitnessM1(state.coilSpeed, state.magSpeed, state.poles);
+    fitnessFill.style.width = fit + '%';
+    fitnessScoreEl.textContent = Math.round(fit) + '%';
+
+    requestAnimationFrame(animStep);
+  }
+  requestAnimationFrame(animStep);
+}
+
+// Slider events
+document.getElementById('coilSpeed').addEventListener('input', e => {
+  state.coilSpeed = +e.target.value;
+  document.getElementById('coilSpeedVal').textContent = state.coilSpeed + ' RPM';
+});
+document.getElementById('magSpeed').addEventListener('input', e => {
+  state.magSpeed = +e.target.value;
+  document.getElementById('magSpeedVal').textContent = state.magSpeed + ' RPM';
+});
+
+// ===== THREE.JS SCENE =====
+const viewport = document.getElementById('viewport');
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x0a0a1a, 0.015);
+
+const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 200);
+camera.position.set(8, 6, 8);
+camera.lookAt(0, 0, 0);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setClearColor(0x0a0a1a);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+viewport.appendChild(renderer.domElement);
+
+// Orbit controls (manual)
+let orbitTheta = Math.PI / 4, orbitPhi = Math.PI / 5, orbitDist = 14;
+let isDragging = false, prevMouse = { x: 0, y: 0 };
+
+renderer.domElement.addEventListener('mousedown', e => { isDragging = true; prevMouse = { x: e.clientX, y: e.clientY }; });
+window.addEventListener('mouseup', () => isDragging = false);
+window.addEventListener('mousemove', e => {
+  if (!isDragging) return;
+  const dx = e.clientX - prevMouse.x, dy = e.clientY - prevMouse.y;
+  orbitTheta -= dx * 0.005;
+  orbitPhi = Math.max(0.1, Math.min(Math.PI / 2 - 0.05, orbitPhi - dy * 0.005));
+  prevMouse = { x: e.clientX, y: e.clientY };
+});
+renderer.domElement.addEventListener('wheel', e => {
+  orbitDist = Math.max(5, Math.min(30, orbitDist + e.deltaY * 0.01));
+  e.preventDefault();
+}, { passive: false });
+// Touch support
+renderer.domElement.addEventListener('touchstart', e => {
+  if (e.touches.length === 1) { isDragging = true; prevMouse = { x: e.touches[0].clientX, y: e.touches[0].clientY }; }
+}, { passive: true });
+renderer.domElement.addEventListener('touchmove', e => {
+  if (!isDragging || e.touches.length !== 1) return;
+  const dx = e.touches[0].clientX - prevMouse.x, dy = e.touches[0].clientY - prevMouse.y;
+  orbitTheta -= dx * 0.005;
+  orbitPhi = Math.max(0.1, Math.min(Math.PI / 2 - 0.05, orbitPhi - dy * 0.005));
+  prevMouse = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+}, { passive: true });
+renderer.domElement.addEventListener('touchend', () => isDragging = false);
+
+function updateCamera() {
+  camera.position.set(
+    orbitDist * Math.sin(orbitTheta) * Math.cos(orbitPhi),
+    orbitDist * Math.sin(orbitPhi),
+    orbitDist * Math.cos(orbitTheta) * Math.cos(orbitPhi)
+  );
+  camera.lookAt(0, 0.5, 0);
+}
+
+// Lights
+const ambLight = new THREE.AmbientLight(0x334466, 0.5);
+scene.add(ambLight);
+const dirLight = new THREE.DirectionalLight(0xffeedd, 1.0);
+dirLight.position.set(5, 10, 5);
+dirLight.castShadow = true;
+dirLight.shadow.mapSize.set(1024, 1024);
+scene.add(dirLight);
+const pointLight = new THREE.PointLight(0x6644ff, 0.6, 20);
+pointLight.position.set(-3, 4, -3);
+scene.add(pointLight);
+const coilGlow = new THREE.PointLight(0xd4864a, 0.5, 8);
+coilGlow.position.set(0, 1, 0);
+scene.add(coilGlow);
+
+// Grid floor
+const gridHelper = new THREE.GridHelper(30, 60, 0x111133, 0x0a0a22);
+gridHelper.position.y = -2;
+scene.add(gridHelper);
+
+// Base platform
+const baseMat = new THREE.MeshStandardMaterial({ color: 0x111125, metalness: 0.8, roughness: 0.4 });
+const baseGeo = new THREE.CylinderGeometry(4.5, 5, 0.3, 64);
+const baseMesh = new THREE.Mesh(baseGeo, baseMat);
+baseMesh.position.y = -1.85;
+baseMesh.receiveShadow = true;
+scene.add(baseMesh);
+
+// Support pillars
+const pillarGeo = new THREE.CylinderGeometry(0.12, 0.12, 3.7, 16);
+const pillarMat = new THREE.MeshStandardMaterial({ color: 0x333355, metalness: 0.9, roughness: 0.3 });
+for (let i = 0; i < 3; i++) {
+  const a = (i / 3) * Math.PI * 2;
+  const p = new THREE.Mesh(pillarGeo, pillarMat);
+  p.position.set(Math.cos(a) * 3.8, 0, Math.sin(a) * 3.8);
+  p.castShadow = true;
+  scene.add(p);
+}
+
+// ===== BIFILAR COIL =====
+const coilGroup = new THREE.Group();
+scene.add(coilGroup);
+const coilMeshes = [];
+
+const copperMat = new THREE.MeshStandardMaterial({
+  color: 0xd4864a, metalness: 0.85, roughness: 0.2, emissive: 0x331800, emissiveIntensity: 0.15
+});
+const copperMat2 = new THREE.MeshStandardMaterial({
+  color: 0xc87840, metalness: 0.85, roughness: 0.2, emissive: 0x2a1500, emissiveIntensity: 0.15
+});
+
+function makeHelixCurve(turns, radius, height, direction, offset) {
+  const pts = [];
+  const steps = turns * 80;
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const angle = t * turns * Math.PI * 2 * direction + offset;
+    const y = (t - 0.5) * height;
+    pts.push(new THREE.Vector3(
+      Math.cos(angle) * radius,
+      y,
+      Math.sin(angle) * radius
+    ));
+  }
+  return new THREE.CatmullRomCurve3(pts);
+}
+
+function buildCoil() {
+  coilMeshes.forEach(m => { coilGroup.remove(m); m.geometry.dispose(); });
+  coilMeshes.length = 0;
+
+  const turns = 12;
+  const radius = 1.2;
+  const height = 3.0;
+  const wireRadius = 0.06;
+
+  // Wire 1 — CW winding
+  const curve1 = makeHelixCurve(turns, radius, height, 1, 0);
+  const tube1 = new THREE.TubeGeometry(curve1, turns * 60, wireRadius, 8, false);
+  const mesh1 = new THREE.Mesh(tube1, copperMat);
+  mesh1.castShadow = true;
+  coilGroup.add(mesh1);
+  coilMeshes.push(mesh1);
+
+  // Wire 2 — CCW winding (interleaved)
+  const curve2 = makeHelixCurve(turns, radius * 1.04, height, -1, Math.PI / turns);
+  const tube2 = new THREE.TubeGeometry(curve2, turns * 60, wireRadius, 8, false);
+  const mesh2 = new THREE.Mesh(tube2, copperMat2);
+  mesh2.castShadow = true;
+  coilGroup.add(mesh2);
+  coilMeshes.push(mesh2);
+
+  // Core (transparent)
+  const coreGeo = new THREE.CylinderGeometry(0.8, 0.8, height * 0.95, 32);
+  const coreMat = new THREE.MeshStandardMaterial({
+    color: 0x222244, metalness: 0.2, roughness: 0.8, transparent: true, opacity: 0.15
+  });
+  const core = new THREE.Mesh(coreGeo, coreMat);
+  coilGroup.add(core);
+  coilMeshes.push(core);
+
+  // Top and bottom caps
+  const capGeo = new THREE.CylinderGeometry(1.5, 1.5, 0.1, 32);
+  const capMat = new THREE.MeshStandardMaterial({ color: 0x222244, metalness: 0.6, roughness: 0.4 });
+  const topCap = new THREE.Mesh(capGeo, capMat);
+  topCap.position.y = height / 2 + 0.05;
+  coilGroup.add(topCap);
+  coilMeshes.push(topCap);
+  const botCap = new THREE.Mesh(capGeo.clone(), capMat);
+  botCap.position.y = -height / 2 - 0.05;
+  coilGroup.add(botCap);
+  coilMeshes.push(botCap);
+}
+buildCoil();
+
+// ===== MAGNET ARRAY =====
+const magnetGroup = new THREE.Group();
+scene.add(magnetGroup);
+let magnetMeshes = [];
+
+const northMat = new THREE.MeshStandardMaterial({ color: 0xcc2222, metalness: 0.9, roughness: 0.15, emissive: 0x440000, emissiveIntensity: 0.2 });
+const southMat = new THREE.MeshStandardMaterial({ color: 0x2244cc, metalness: 0.9, roughness: 0.15, emissive: 0x000044, emissiveIntensity: 0.2 });
+const magnetBodyMat = new THREE.MeshStandardMaterial({ color: 0xaaaacc, metalness: 0.95, roughness: 0.1 });
+
+// Ring carrier
+const ringGeo = new THREE.TorusGeometry(3.0, 0.08, 8, 64);
+const ringMat = new THREE.MeshStandardMaterial({ color: 0x444466, metalness: 0.9, roughness: 0.2 });
+const topRing = new THREE.Mesh(ringGeo, ringMat);
+topRing.position.y = 1.0;
+topRing.rotation.x = Math.PI / 2;
+magnetGroup.add(topRing);
+const botRing = new THREE.Mesh(ringGeo.clone(), ringMat);
+botRing.position.y = -1.0;
+botRing.rotation.x = Math.PI / 2;
+magnetGroup.add(botRing);
+
+function rebuildMagnets() {
+  magnetMeshes.forEach(m => { magnetGroup.remove(m); if (m.geometry) m.geometry.dispose(); });
+  magnetMeshes = [];
+
+  const P = state.poles;
+  const magnetRadius = 3.0;
+
+  for (let i = 0; i < P; i++) {
+    const angle = (i / P) * Math.PI * 2;
+    const isNorth = i % 2 === 0;
+
+    // Magnet body
+    const magGeo = new THREE.BoxGeometry(0.5, 1.8, 0.35);
+    const magMesh = new THREE.Mesh(magGeo, magnetBodyMat.clone());
+    magMesh.position.set(Math.cos(angle) * magnetRadius, 0, Math.sin(angle) * magnetRadius);
+    magMesh.lookAt(0, 0, 0);
+    magMesh.castShadow = true;
+    magnetGroup.add(magMesh);
+    magnetMeshes.push(magMesh);
+
+    // North pole indicator (inner face, top half)
+    const poleGeoN = new THREE.BoxGeometry(0.52, 0.85, 0.05);
+    const poleN = new THREE.Mesh(poleGeoN, isNorth ? northMat : southMat);
+    poleN.position.set(
+      Math.cos(angle) * (magnetRadius - 0.2),
+      0.45,
+      Math.sin(angle) * (magnetRadius - 0.2)
+    );
+    poleN.lookAt(0, 0.45, 0);
+    magnetGroup.add(poleN);
+    magnetMeshes.push(poleN);
+
+    // South pole indicator (inner face, bottom half)
+    const poleS = new THREE.Mesh(poleGeoN.clone(), isNorth ? southMat : northMat);
+    poleS.position.set(
+      Math.cos(angle) * (magnetRadius - 0.2),
+      -0.45,
+      Math.sin(angle) * (magnetRadius - 0.2)
+    );
+    poleS.lookAt(0, -0.45, 0);
+    magnetGroup.add(poleS);
+    magnetMeshes.push(poleS);
+
+    // N/S labels as small spheres
+    const labelGeoTop = new THREE.SphereGeometry(0.08, 8, 8);
+    const labelTop = new THREE.Mesh(labelGeoTop, isNorth ? northMat : southMat);
+    labelTop.position.set(
+      Math.cos(angle) * (magnetRadius + 0.35),
+      0.5,
+      Math.sin(angle) * (magnetRadius + 0.35)
+    );
+    magnetGroup.add(labelTop);
+    magnetMeshes.push(labelTop);
+  }
+}
+rebuildMagnets();
+
+// ===== MAGNETIC FIELD LINES (particles) =====
+const fieldGroup = new THREE.Group();
+scene.add(fieldGroup);
+let fieldParticles = [];
+let fieldPositions = [];
+let fieldVelocities = [];
+
+const fieldMat = new THREE.PointsMaterial({
+  color: 0x4488ff, size: 0.08, transparent: true, opacity: 0.7,
+  blending: THREE.AdditiveBlending, depthWrite: false
+});
+
+function rebuildFieldLines() {
+  fieldGroup.children.forEach(c => { if (c.geometry) c.geometry.dispose(); });
+  fieldGroup.clear();
+  fieldParticles = [];
+  fieldPositions = [];
+  fieldVelocities = [];
+
+  const P = state.poles;
+  const linesPerPole = 30;
+  const total = P * linesPerPole;
+
+  const positions = new Float32Array(total * 3);
+  const colors = new Float32Array(total * 3);
+
+  for (let i = 0; i < P; i++) {
+    const angle = (i / P) * Math.PI * 2;
+    const isNorth = i % 2 === 0;
+    for (let j = 0; j < linesPerPole; j++) {
+      const idx = i * linesPerPole + j;
+      const r = 2.5 + Math.random() * 1.2;
+      const y = (Math.random() - 0.5) * 2.5;
+      const aOff = (Math.random() - 0.5) * (Math.PI / P) * 0.6;
+
+      positions[idx * 3] = Math.cos(angle + aOff) * r;
+      positions[idx * 3 + 1] = y;
+      positions[idx * 3 + 2] = Math.sin(angle + aOff) * r;
+
+      // Blue/white for field lines
+      const bright = 0.5 + Math.random() * 0.5;
+      if (isNorth) {
+        colors[idx * 3] = 0.3 * bright;
+        colors[idx * 3 + 1] = 0.5 * bright;
+        colors[idx * 3 + 2] = 1.0 * bright;
+      } else {
+        colors[idx * 3] = 0.8 * bright;
+        colors[idx * 3 + 1] = 0.8 * bright;
+        colors[idx * 3 + 2] = 1.0 * bright;
+      }
+
+      fieldPositions.push({ angle: angle + aOff, r, y, baseAngle: angle, isNorth, poleIdx: i });
+      fieldVelocities.push({ radial: (isNorth ? -1 : 1) * (0.3 + Math.random() * 0.4), vertical: (Math.random() - 0.5) * 0.3 });
+    }
+  }
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+  const mat = new THREE.PointsMaterial({
+    size: 0.07, vertexColors: true, transparent: true, opacity: 0.8,
+    blending: THREE.AdditiveBlending, depthWrite: false
+  });
+
+  const points = new THREE.Points(geo, mat);
+  fieldGroup.add(points);
+  fieldParticles = [points];
+}
+rebuildFieldLines();
+
+// ===== ELECTRIC FIELD (coil gap glow) =====
+const efieldGroup = new THREE.Group();
+scene.add(efieldGroup);
+
+// Glowing cylinder between the coil windings
+const eGlowGeo = new THREE.CylinderGeometry(1.25, 1.25, 2.8, 32, 1, true);
+const eGlowMat = new THREE.MeshBasicMaterial({
+  color: 0xffcc44, transparent: true, opacity: 0.06, side: THREE.DoubleSide,
+  blending: THREE.AdditiveBlending, depthWrite: false
+});
+const eGlowMesh = new THREE.Mesh(eGlowGeo, eGlowMat);
+efieldGroup.add(eGlowMesh);
+
+// Inner glow
+const eGlowGeo2 = new THREE.CylinderGeometry(1.0, 1.0, 2.5, 32, 1, true);
+const eGlowMat2 = new THREE.MeshBasicMaterial({
+  color: 0xffdd66, transparent: true, opacity: 0.04, side: THREE.DoubleSide,
+  blending: THREE.AdditiveBlending, depthWrite: false
+});
+const eGlowMesh2 = new THREE.Mesh(eGlowGeo2, eGlowMat2);
+efieldGroup.add(eGlowMesh2);
+
+// Spark particles
+const sparkCount = 200;
+const sparkPositions = new Float32Array(sparkCount * 3);
+const sparkColors = new Float32Array(sparkCount * 3);
+const sparkData = [];
+for (let i = 0; i < sparkCount; i++) {
+  const a = Math.random() * Math.PI * 2;
+  const r = 0.9 + Math.random() * 0.4;
+  const y = (Math.random() - 0.5) * 2.5;
+  sparkPositions[i * 3] = Math.cos(a) * r;
+  sparkPositions[i * 3 + 1] = y;
+  sparkPositions[i * 3 + 2] = Math.sin(a) * r;
+  const b = 0.6 + Math.random() * 0.4;
+  sparkColors[i * 3] = 1.0 * b;
+  sparkColors[i * 3 + 1] = 0.85 * b;
+  sparkColors[i * 3 + 2] = 0.2 * b;
+  sparkData.push({ a, r, y, speed: 0.5 + Math.random() * 2, phase: Math.random() * Math.PI * 2 });
+}
+const sparkGeo = new THREE.BufferGeometry();
+sparkGeo.setAttribute('position', new THREE.BufferAttribute(sparkPositions, 3));
+sparkGeo.setAttribute('color', new THREE.BufferAttribute(sparkColors, 3));
+const sparkMat = new THREE.PointsMaterial({
+  size: 0.05, vertexColors: true, transparent: true, opacity: 0.6,
+  blending: THREE.AdditiveBlending, depthWrite: false
+});
+const sparkPoints = new THREE.Points(sparkGeo, sparkMat);
+efieldGroup.add(sparkPoints);
+
+// ===== OSCILLOSCOPE =====
+const scopeCanvas = document.getElementById('scope');
+let scopeCtx;
+const scopeBuffer = [];
+const SCOPE_LEN = 600;
+for (let i = 0; i < SCOPE_LEN; i++) scopeBuffer.push(0);
+
+function resizeScope() {
+  const wrap = document.getElementById('scope-wrap');
+  scopeCanvas.width = wrap.clientWidth;
+  scopeCanvas.height = wrap.clientHeight;
+  scopeCtx = scopeCanvas.getContext('2d');
+}
+
+function computeVoltage(t) {
+  const P = state.poles;
+  const wc = state.coilSpeed * state.coilDir * (2 * Math.PI / 60);
+  const wm = state.magSpeed * state.magDir * (2 * Math.PI / 60);
+  const wrel = wc - wm; // relative angular velocity (counter-rotation adds)
+
+  if (Math.abs(wrel) < 0.01) return 0;
+
+  const freq = Math.abs(wrel) * P / (2 * 2 * Math.PI); // (P/2) * |wrel| / 2pi
+  const phase = freq * 2 * Math.PI * t;
+
+  // Bifilar coil produces sharp capacitive pulses, not sinusoids
+  // Model as narrow Gaussian peaks at each pole crossing
+  const pulseWidth = 0.15 / (1 + Math.abs(wrel) * 0.05); // narrower at higher speeds
+  const amplitude = Math.min(12, Math.abs(wrel) * 0.02 * P);
+
+  let v = 0;
+  for (let p = 0; p < P; p++) {
+    const polePhase = phase + (p / P) * 2 * Math.PI;
+    const frac = ((polePhase % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+    // Gaussian pulse centered at 0
+    const dist = Math.min(frac, 2 * Math.PI - frac);
+    v += amplitude * Math.exp(-(dist * dist) / (2 * pulseWidth * pulseWidth));
+  }
+
+  // Add small noise
+  v += (Math.random() - 0.5) * 0.05 * amplitude;
+
+  return v;
+}
+
+function updateReadings() {
+  const wc = state.coilSpeed * state.coilDir * (2 * Math.PI / 60);
+  const wm = state.magSpeed * state.magDir * (2 * Math.PI / 60);
+  const wrel = wc - wm;
+  const P = state.poles;
+
+  const freq = Math.abs(wrel) * P / (2 * 2 * Math.PI);
+  const vpeak = Math.min(12, Math.abs(wrel) * 0.02 * P);
+  const pulseWidth = Math.abs(wrel) > 0.1 ? (0.15 / (1 + Math.abs(wrel) * 0.05)) * 1000 / (freq > 0 ? freq : 1) : 0;
+
+  document.getElementById('rdFreq').textContent = freq.toFixed(1);
+  document.getElementById('rdVpeak').textContent = vpeak.toFixed(1);
+  document.getElementById('rdPulse').textContent = pulseWidth > 0 ? pulseWidth.toFixed(1) : '---';
+}
+
+function drawScope() {
+  if (!scopeCtx) return;
+  const w = scopeCanvas.width, h = scopeCanvas.height;
+
+  // Background
+  scopeCtx.fillStyle = '#050510';
+  scopeCtx.fillRect(0, 0, w, h);
+
+  // Grid
+  scopeCtx.strokeStyle = 'rgba(50, 50, 100, 0.3)';
+  scopeCtx.lineWidth = 0.5;
+  for (let i = 0; i <= 10; i++) {
+    const x = (i / 10) * w;
+    scopeCtx.beginPath(); scopeCtx.moveTo(x, 0); scopeCtx.lineTo(x, h); scopeCtx.stroke();
+  }
+  for (let i = 0; i <= 8; i++) {
+    const y = (i / 8) * h;
+    scopeCtx.beginPath(); scopeCtx.moveTo(0, y); scopeCtx.lineTo(w, y); scopeCtx.stroke();
+  }
+
+  // Center line
+  scopeCtx.strokeStyle = 'rgba(100, 100, 150, 0.5)';
+  scopeCtx.lineWidth = 1;
+  scopeCtx.beginPath();
+  scopeCtx.moveTo(0, h * 0.75);
+  scopeCtx.lineTo(w, h * 0.75);
+  scopeCtx.stroke();
+
+  // Waveform
+  const grad = scopeCtx.createLinearGradient(0, 0, w, 0);
+  grad.addColorStop(0, '#ec4899');
+  grad.addColorStop(0.5, '#9333ea');
+  grad.addColorStop(1, '#3b82f6');
+  scopeCtx.strokeStyle = grad;
+  scopeCtx.lineWidth = 2;
+  scopeCtx.beginPath();
+
+  const maxV = 14;
+  for (let i = 0; i < SCOPE_LEN; i++) {
+    const x = (i / SCOPE_LEN) * w;
+    const y = h * 0.75 - (scopeBuffer[i] / maxV) * h * 0.65;
+    if (i === 0) scopeCtx.moveTo(x, y);
+    else scopeCtx.lineTo(x, y);
+  }
+  scopeCtx.stroke();
+
+  // Glow effect
+  scopeCtx.strokeStyle = 'rgba(147, 51, 234, 0.3)';
+  scopeCtx.lineWidth = 6;
+  scopeCtx.beginPath();
+  for (let i = 0; i < SCOPE_LEN; i++) {
+    const x = (i / SCOPE_LEN) * w;
+    const y = h * 0.75 - (scopeBuffer[i] / maxV) * h * 0.65;
+    if (i === 0) scopeCtx.moveTo(x, y);
+    else scopeCtx.lineTo(x, y);
+  }
+  scopeCtx.stroke();
+
+  // Labels
+  scopeCtx.fillStyle = 'rgba(150, 150, 200, 0.6)';
+  scopeCtx.font = '10px monospace';
+  scopeCtx.fillText('V', 4, 14);
+  scopeCtx.fillText('t', w - 12, h - 4);
+  scopeCtx.fillText('0V', 4, h * 0.75 - 2);
+}
+
+// ===== TARGET OSCILLOSCOPE =====
+const targetCanvas = document.getElementById('targetScope');
+let targetCtx;
+let targetScrollOffset = 0;
+
+function resizeTargetScope() {
+  const wrap = document.getElementById('target-scope-wrap');
+  targetCanvas.width = wrap.clientWidth;
+  targetCanvas.height = wrap.clientHeight;
+  targetCtx = targetCanvas.getContext('2d');
+}
+
+function drawTargetScope(dt) {
+  if (!targetCtx) return;
+  const w = targetCanvas.width, h = targetCanvas.height;
+  const P = state.poles;
+
+  // Compute scroll speed from combined RPM and poles
+  const wrel = Math.abs(state.coilSpeed * state.coilDir - state.magSpeed * state.magDir) * (2 * Math.PI / 60);
+  const freq = (wrel * P) / (2 * Math.PI); // pulses per second
+  const scrollSpeed = Math.max(20, freq * 8); // pixels per second
+
+  if (typeof dt === 'number' && dt > 0) {
+    targetScrollOffset += scrollSpeed * dt;
+  }
+
+  // Background
+  targetCtx.fillStyle = '#050510';
+  targetCtx.fillRect(0, 0, w, h);
+
+  // Dashed grid (scrolls with waveform)
+  targetCtx.strokeStyle = 'rgba(34, 197, 94, 0.15)';
+  targetCtx.lineWidth = 0.5;
+  targetCtx.setLineDash([4, 4]);
+  const gridSpacingX = w / 10;
+  const gridOff = targetScrollOffset % gridSpacingX;
+  for (let i = -1; i <= 11; i++) {
+    const x = i * gridSpacingX - gridOff;
+    targetCtx.beginPath(); targetCtx.moveTo(x, 0); targetCtx.lineTo(x, h); targetCtx.stroke();
+  }
+  for (let i = 0; i <= 4; i++) {
+    const y = (i / 4) * h;
+    targetCtx.beginPath(); targetCtx.moveTo(0, y); targetCtx.lineTo(w, y); targetCtx.stroke();
+  }
+  targetCtx.setLineDash([]);
+
+  // Baseline at 80% height
+  const baseline = h * 0.82;
+  targetCtx.strokeStyle = 'rgba(34, 197, 94, 0.25)';
+  targetCtx.lineWidth = 0.5;
+  targetCtx.beginPath();
+  targetCtx.moveTo(0, baseline);
+  targetCtx.lineTo(w, baseline);
+  targetCtx.stroke();
+
+  // Pulse spacing in pixels based on frequency
+  const pulseSpacingPx = Math.max(20, w / Math.max(1, P));
+  const pulseWidth = Math.max(3, pulseSpacingPx * 0.06);
+  const peakHeight = h * 0.7;
+
+  // Helper to compute waveform value at a given world-x position
+  function waveVal(worldX) {
+    const phase = ((worldX % pulseSpacingPx) + pulseSpacingPx) % pulseSpacingPx;
+    const center = pulseSpacingPx * 0.5;
+    const dist = phase - center;
+    return Math.exp(-(dist * dist) / (2 * pulseWidth * pulseWidth));
+  }
+
+  // Draw green waveform (scrolling)
+  targetCtx.strokeStyle = '#22c55e';
+  targetCtx.lineWidth = 1.5;
+  targetCtx.beginPath();
+  for (let x = 0; x < w; x++) {
+    const v = waveVal(x + targetScrollOffset);
+    const y = baseline - v * peakHeight;
+    if (x === 0) targetCtx.moveTo(x, y);
+    else targetCtx.lineTo(x, y);
+  }
+  targetCtx.stroke();
+
+  // Glow layer
+  targetCtx.strokeStyle = 'rgba(34, 197, 94, 0.2)';
+  targetCtx.lineWidth = 5;
+  targetCtx.beginPath();
+  for (let x = 0; x < w; x++) {
+    const v = waveVal(x + targetScrollOffset);
+    const y = baseline - v * peakHeight;
+    if (x === 0) targetCtx.moveTo(x, y);
+    else targetCtx.lineTo(x, y);
+  }
+  targetCtx.stroke();
+
+  // Annotations — only draw if wide enough (anchored to visible first pulse)
+  if (w > 300) {
+    targetCtx.font = '9px monospace';
+    const ann = i18n[lang] || i18n.en;
+
+    // Find the first pulse center visible on screen
+    const firstPulseWorld = Math.ceil(targetScrollOffset / pulseSpacingPx) * pulseSpacingPx + pulseSpacingPx * 0.5;
+    const c1 = firstPulseWorld - targetScrollOffset;
+    const peakY = baseline - peakHeight;
+
+    if (c1 > 30 && c1 < w - 100) {
+      targetCtx.fillStyle = 'rgba(34, 197, 94, 0.7)';
+      targetCtx.fillText(ann.ann_capdis, c1 + 4, peakY - 2);
+      targetCtx.strokeStyle = 'rgba(34, 197, 94, 0.35)';
+      targetCtx.lineWidth = 0.5;
+      targetCtx.beginPath();
+      targetCtx.moveTo(c1 + 2, peakY);
+      targetCtx.lineTo(c1, peakY + 4);
+      targetCtx.stroke();
+    }
+
+    const riseX = c1 - pulseWidth * 2.5;
+    const riseY = baseline - peakHeight * 0.3;
+    if (riseX > 50 && riseX < w - 30) {
+      targetCtx.fillStyle = 'rgba(34, 197, 94, 0.7)';
+      targetCtx.fillText(ann.ann_risetime, Math.max(2, riseX - 50), riseY - 6);
+    }
+
+    // "Zero back-EMF" between two visible pulses
+    const nextC = c1 + pulseSpacingPx;
+    if (nextC > 0 && nextC < w) {
+      const betweenX = (c1 + nextC) / 2;
+      if (betweenX > 20 && betweenX < w - 20) {
+        targetCtx.fillStyle = 'rgba(34, 197, 94, 0.7)';
+        targetCtx.fillText(ann.ann_zeroemf, betweenX - 20, baseline - 8);
+      }
+    }
+
+    const decayX = c1 + pulseWidth * 2.5;
+    const decayY = baseline - peakHeight * 0.25;
+    if (decayX + 100 < w && decayX > 0) {
+      targetCtx.fillStyle = 'rgba(34, 197, 94, 0.7)';
+      targetCtx.fillText(ann.ann_noringing, decayX + 4, decayY - 4);
+    }
+  }
+}
+
+// ===== COMPARISON METRICS =====
+function updateComparison() {
+  const wc = state.coilSpeed * state.coilDir * (2 * Math.PI / 60);
+  const wm = state.magSpeed * state.magDir * (2 * Math.PI / 60);
+  const wrel = Math.abs(wc - wm);
+  const P = state.poles;
+  const vpeak = Math.min(12, wrel * 0.02 * P);
+  const ann = i18n[lang] || i18n.en;
+
+  const simEl = document.getElementById('cmpSimilarity');
+  const qualEl = document.getElementById('cmpQuality');
+
+  if (wrel < 0.1) {
+    // No signal
+    simEl.textContent = '0%';
+    simEl.className = 'cmp-val bad';
+    qualEl.textContent = ann.quality_nosignal;
+    qualEl.className = 'cmp-val bad';
+    return;
+  }
+
+  // Evaluate pulse shape quality from the scope buffer
+  // Find peaks and measure sharpness
+  let maxV = 0, minV = Infinity, peakCount = 0;
+  let inPeak = false;
+  const threshold = vpeak * 0.3;
+  let peakHeights = [];
+
+  for (let i = 1; i < scopeBuffer.length - 1; i++) {
+    if (scopeBuffer[i] > maxV) maxV = scopeBuffer[i];
+    if (scopeBuffer[i] < minV) minV = scopeBuffer[i];
+    if (!inPeak && scopeBuffer[i] > threshold) {
+      inPeak = true;
+    } else if (inPeak && scopeBuffer[i] < threshold) {
+      inPeak = false;
+      peakCount++;
+      // Find the max in this peak region
+      let localMax = 0;
+      for (let j = Math.max(0, i - 20); j < i; j++) {
+        if (scopeBuffer[j] > localMax) localMax = scopeBuffer[j];
+      }
+      peakHeights.push(localMax);
+    }
+  }
+
+  // Similarity: based on signal presence, pulse shape (non-sinusoidal), and consistency
+  let similarity = 0;
+
+  // Signal present? +20
+  if (maxV > 0.5) similarity += 20;
+
+  // Pulses detected? +20
+  if (peakCount >= 2) similarity += 20;
+
+  // Pulse consistency (similar peak heights)? +20
+  if (peakHeights.length >= 2) {
+    const avgPeak = peakHeights.reduce((a, b) => a + b, 0) / peakHeights.length;
+    const variance = peakHeights.reduce((a, b) => a + (b - avgPeak) ** 2, 0) / peakHeights.length;
+    const cv = avgPeak > 0 ? Math.sqrt(variance) / avgPeak : 1;
+    similarity += Math.max(0, 20 * (1 - cv * 3));
+  }
+
+  // Clean baseline between pulses? +20
+  const belowThreshold = scopeBuffer.filter(v => v < threshold * 0.5).length;
+  const baselineRatio = belowThreshold / scopeBuffer.length;
+  if (baselineRatio > 0.3) similarity += Math.min(20, baselineRatio * 30);
+
+  // Sharp pulses (not sinusoidal)? +20
+  // Measure how much time is spent near peak vs near baseline
+  const nearPeak = scopeBuffer.filter(v => v > vpeak * 0.7).length;
+  const dutyCycle = nearPeak / scopeBuffer.length;
+  // Ideal is low duty cycle (sharp peaks, mostly baseline)
+  if (dutyCycle < 0.3 && dutyCycle > 0.01) similarity += Math.min(20, (0.3 - dutyCycle) * 80);
+
+  similarity = Math.round(Math.min(100, Math.max(0, similarity)));
+
+  simEl.textContent = similarity + '%';
+  simEl.className = 'cmp-val' + (similarity >= 60 ? '' : similarity >= 30 ? ' warn' : ' bad');
+
+  // Quality assessment
+  let quality, qualClass;
+  if (similarity >= 60) {
+    quality = ann.quality_clean;
+    qualClass = '';
+  } else if (similarity >= 25) {
+    quality = ann.quality_noisy;
+    qualClass = ' warn';
+  } else {
+    quality = ann.quality_nosignal;
+    qualClass = ' bad';
+  }
+  qualEl.textContent = quality;
+  qualEl.className = 'cmp-val' + qualClass;
+}
+
+// ===== ANIMATION =====
+let coilAngle = 0, magAngle = 0;
+let clock = new THREE.Clock();
+let frameCount = 0, lastFPSTime = 0;
+let simTime = 0;
+
+function animate() {
+  requestAnimationFrame(animate);
+
+  const dt = Math.min(clock.getDelta(), 0.05);
+
+  // FPS
+  frameCount++;
+  const now = performance.now();
+  if (now - lastFPSTime > 500) {
+    document.getElementById('fps-counter').textContent = Math.round(frameCount / ((now - lastFPSTime) / 1000)) + ' FPS';
+    frameCount = 0;
+    lastFPSTime = now;
+  }
+
+  if (playing) {
+    simTime += dt;
+
+    // Rotate coil and magnets
+    const coilRad = state.coilSpeed * state.coilDir * (2 * Math.PI / 60) * dt;
+    const magRad = state.magSpeed * state.magDir * (2 * Math.PI / 60) * dt;
+    coilAngle += coilRad;
+    magAngle += magRad;
+
+    coilGroup.rotation.y = coilAngle;
+    magnetGroup.rotation.y = magAngle;
+
+    // Animate field line particles
+    if (fieldParticles.length > 0 && state.showField) {
+      const pts = fieldParticles[0];
+      const pos = pts.geometry.attributes.position.array;
+      const wrel = Math.abs(state.coilSpeed * state.coilDir - state.magSpeed * state.magDir) * (2 * Math.PI / 60);
+      const speed = Math.max(0.5, wrel * 0.3);
+
+      for (let i = 0; i < fieldPositions.length; i++) {
+        const fp = fieldPositions[i];
+        const fv = fieldVelocities[i];
+
+        // Move radially (N to S)
+        fp.r += fv.radial * speed * dt;
+        fp.y += fv.vertical * speed * dt;
+
+        // Wrap around
+        if (fp.r < 1.5) {
+          fp.r = 3.5;
+          fp.y = (Math.random() - 0.5) * 2.5;
+          fv.radial = -Math.abs(fv.radial);
+        } else if (fp.r > 3.6) {
+          fp.r = 1.6;
+          fp.y = (Math.random() - 0.5) * 2.5;
+          fv.radial = Math.abs(fv.radial);
+        }
+        if (Math.abs(fp.y) > 1.8) {
+          fp.y = -fp.y * 0.5;
+        }
+
+        // Rotate with magnet ring
+        fp.angle += magRad;
+
+        pos[i * 3] = Math.cos(fp.angle) * fp.r;
+        pos[i * 3 + 1] = fp.y;
+        pos[i * 3 + 2] = Math.sin(fp.angle) * fp.r;
+      }
+      pts.geometry.attributes.position.needsUpdate = true;
+    }
+
+    // Animate electric field glow
+    if (state.showEField) {
+      const wrel = Math.abs(state.coilSpeed * state.coilDir - state.magSpeed * state.magDir) * (2 * Math.PI / 60);
+      const intensity = Math.min(1, wrel * 0.03);
+      const pulse = 0.5 + 0.5 * Math.sin(simTime * wrel * 0.5);
+      eGlowMat.opacity = 0.03 + intensity * 0.12 * pulse;
+      eGlowMat2.opacity = 0.02 + intensity * 0.08 * pulse;
+      coilGlow.intensity = 0.3 + intensity * 1.5 * pulse;
+      coilGlow.color.setHex(intensity > 0.3 ? 0xffcc44 : 0xd4864a);
+
+      // Spark particles
+      const sparkPos = sparkGeo.attributes.position.array;
+      for (let i = 0; i < sparkCount; i++) {
+        const sd = sparkData[i];
+        sd.a += sd.speed * intensity * dt * 3;
+        sd.y += Math.sin(simTime * sd.speed + sd.phase) * dt * intensity * 2;
+        if (Math.abs(sd.y) > 1.4) sd.y *= -0.8;
+        sparkPos[i * 3] = Math.cos(sd.a) * sd.r;
+        sparkPos[i * 3 + 1] = sd.y;
+        sparkPos[i * 3 + 2] = Math.sin(sd.a) * sd.r;
+      }
+      sparkGeo.attributes.position.needsUpdate = true;
+      sparkMat.opacity = 0.2 + intensity * 0.6;
+    }
+
+    // Update scope
+    scopeBuffer.shift();
+    scopeBuffer.push(computeVoltage(simTime));
+    drawScope();
+
+    // Update readings and comparison every 10 frames
+    if (frameCount % 10 === 0) {
+      updateReadings();
+      updateComparison();
+    }
+  }
+
+  // Animate target scope every frame (scrolling waveform)
+  drawTargetScope(dt);
+
+  // Auto-rotate camera
+  if (autoRotating && !isDragging) orbitTheta += 0.003;
+
+  // Update camera
+  updateCamera();
+
+  // Resize renderer
+  const rect = viewport.getBoundingClientRect();
+  if (renderer.domElement.width !== rect.width || renderer.domElement.height !== rect.height) {
+    renderer.setSize(rect.width, rect.height);
+    camera.aspect = rect.width / rect.height;
+    camera.updateProjectionMatrix();
+  }
+
+  renderer.render(scene, camera);
+}
+
+// ===== KEYBOARD LEGEND =====
+let kbLegendVisible = false;
+let autoRotating = false;
+
+const KB_SHORTCUTS = {
+  en: [
+    ['Q / A', 'Coil RPM +/- 50'],
+    ['W / S', 'Magnet RPM +/- 50'],
+    ['D', 'Toggle coil CW/CCW'],
+    ['E', 'Toggle magnet CW/CCW'],
+    ['1-4', 'Poles (2/4/6/8)'],
+    ['G', 'Toggle field lines'],
+    ['T', 'Toggle electric field'],
+    ['X', 'Toggle wireframe'],
+    ['Shift+S', 'Auto-Sync'],
+    ['---', ''],
+    ['Space', 'Play / Pause'],
+    ['R', 'Toggle auto-rotate'],
+    ['F', 'Toggle fullscreen'],
+    ['H', 'Show/hide panel'],
+    ['L', 'Toggle language'],
+    ['? / K', 'This legend'],
+    ['Esc', 'Close panels'],
+    ['---', ''],
+    ['Arrows', 'Rotate camera'],
+    ['+ / -', 'Zoom in/out'],
+    ['0', 'Reset camera'],
+  ],
+  es: [
+    ['Q / A', 'RPM bobina +/- 50'],
+    ['W / S', 'RPM iman +/- 50'],
+    ['D', 'Direccion bobina CW/CCW'],
+    ['E', 'Direccion iman CW/CCW'],
+    ['1-4', 'Polos (2/4/6/8)'],
+    ['G', 'Lineas de campo'],
+    ['T', 'Campo electrico'],
+    ['X', 'Modo wireframe'],
+    ['Shift+S', 'Auto-Sincronizar'],
+    ['---', ''],
+    ['Space', 'Play / Pausa'],
+    ['R', 'Auto-rotar'],
+    ['F', 'Pantalla completa'],
+    ['H', 'Mostrar/ocultar panel'],
+    ['L', 'Cambiar idioma'],
+    ['? / K', 'Esta leyenda'],
+    ['Esc', 'Cerrar paneles'],
+    ['---', ''],
+    ['Flechas', 'Rotar camara'],
+    ['+ / -', 'Zoom'],
+    ['0', 'Resetear camara'],
+  ]
+};
+
+function buildKbLegend() {
+  const grid = document.getElementById('kb-legend-grid');
+  const shortcuts = KB_SHORTCUTS[lang] || KB_SHORTCUTS.en;
+  document.getElementById('kb-legend-title').textContent = lang === 'es' ? 'Atajos de Teclado' : 'Keyboard Shortcuts';
+  grid.innerHTML = shortcuts.map(([key, desc]) => {
+    if (key === '---') return '<div class="kb-sep"></div>';
+    return `<kbd>${key}</kbd><span class="kb-desc">${desc}</span>`;
+  }).join('');
+}
+
+function toggleKbLegend() {
+  kbLegendVisible = !kbLegendVisible;
+  document.getElementById('kb-legend').classList.toggle('visible', kbLegendVisible);
+}
+
+function toggleMobileMenu() {
+  const c = document.getElementById('controls');
+  const o = document.getElementById('mobile-overlay');
+  if (c.classList.contains('mobile-open')) { closeMobileMenu(); } else {
+    c.classList.add('mobile-open'); o.classList.add('active');
+  }
+}
+function closeMobileMenu() {
+  document.getElementById('controls').classList.remove('mobile-open');
+  document.getElementById('mobile-overlay').classList.remove('active');
+}
+function openMobileInfo() {
+  const modal = document.getElementById('mobile-info-modal');
+  const content = document.getElementById('mobile-info-content');
+  content.innerHTML = document.getElementById('infoContent').innerHTML;
+  modal.classList.add('open');
+}
+function closeMobileInfo() {
+  document.getElementById('mobile-info-modal').classList.remove('open');
+}
+function toggleMobileBottom() {
+  document.getElementById('bottom').classList.toggle('mobile-expanded');
+  document.getElementById('bottom-strip').style.display = document.getElementById('bottom').classList.contains('mobile-expanded') ? 'none' : 'flex';
+}
+function updateMobileStrip() {
+  const sf = document.getElementById('stripFreq');
+  const sv = document.getElementById('stripVpeak');
+  const sp = document.getElementById('stripPulse');
+  if (sf) sf.textContent = document.getElementById('rdFreq').textContent + ' Hz';
+  if (sv) sv.textContent = document.getElementById('rdVpeak').textContent + ' V';
+  if (sp) sp.textContent = document.getElementById('rdPulse').textContent + ' ms';
+}
+
+function requestFullscreen() {
+  const el = document.documentElement;
+  if (!document.fullscreenElement) {
+    (el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen).call(el);
+  } else {
+    (document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen).call(document);
+  }
+}
+
+function updateSliderUI(id, val, labelId, suffix) {
+  document.getElementById(id).value = val;
+  document.getElementById(labelId).textContent = val + suffix;
+}
+
+function clickPoleBtn(n) {
+  const btns = document.querySelectorAll('.pole-btn');
+  const idx = [2,4,6,8].indexOf(n);
+  if (idx >= 0 && btns[idx]) setPoles(n, btns[idx]);
+}
+
+function toggleDir(target) {
+  const toggles = document.querySelectorAll('.dir-toggle');
+  const tIdx = target === 'coil' ? 0 : 1;
+  const toggle = toggles[tIdx];
+  if (!toggle) return;
+  const btns = toggle.querySelectorAll('.dir-btn');
+  const currentDir = target === 'coil' ? state.coilDir : state.magDir;
+  const newDir = currentDir === 1 ? 'ccw' : 'cw';
+  btns.forEach(b => b.classList.remove('active'));
+  const activeBtn = toggle.querySelector(`[data-dir="${newDir}"]`);
+  if (activeBtn) activeBtn.classList.add('active');
+  if (target === 'coil') state.coilDir = newDir === 'cw' ? 1 : -1;
+  else state.magDir = newDir === 'cw' ? 1 : -1;
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
+  const key = e.key;
+  switch(key) {
+    case 'q': case 'Q':
+      state.coilSpeed = Math.min(1000, state.coilSpeed + 50);
+      updateSliderUI('coilSpeed', state.coilSpeed, 'coilSpeedVal', ' RPM');
+      break;
+    case 'a':
+      state.coilSpeed = Math.max(0, state.coilSpeed - 50);
+      updateSliderUI('coilSpeed', state.coilSpeed, 'coilSpeedVal', ' RPM');
+      break;
+    case 'w':
+      state.magSpeed = Math.min(1000, state.magSpeed + 50);
+      updateSliderUI('magSpeed', state.magSpeed, 'magSpeedVal', ' RPM');
+      break;
+    case 'S':
+      e.preventDefault();
+      runSync();
+      break;
+    case 's':
+      state.magSpeed = Math.max(0, state.magSpeed - 50);
+      updateSliderUI('magSpeed', state.magSpeed, 'magSpeedVal', ' RPM');
+      break;
+    case 'd': toggleDir('coil'); break;
+    case 'e': toggleDir('mag'); break;
+    case '1': clickPoleBtn(2); break;
+    case '2': clickPoleBtn(4); break;
+    case '3': clickPoleBtn(6); break;
+    case '4': clickPoleBtn(8); break;
+    case 'g': case 'G':
+      document.getElementById('showField').checked = !document.getElementById('showField').checked;
+      toggleVis('field');
+      break;
+    case 't': case 'T':
+      document.getElementById('showEField').checked = !document.getElementById('showEField').checked;
+      toggleVis('efield');
+      break;
+    case 'x': case 'X':
+      document.getElementById('showWireframe').checked = !document.getElementById('showWireframe').checked;
+      toggleVis('wireframe');
+      break;
+    case ' ':
+      e.preventDefault();
+      togglePlay();
+      break;
+    case 'r': case 'R':
+      autoRotating = !autoRotating;
+      break;
+    case 'f': case 'F': requestFullscreen(); break;
+    case 'h': case 'H':
+      document.getElementById('controls').style.display =
+        document.getElementById('controls').style.display === 'none' ? '' : 'none';
+      break;
+    case 'l': case 'L': setLang(lang === 'en' ? 'es' : 'en'); break;
+    case '?': case 'k': case 'K': toggleKbLegend(); break;
+    case 'Escape':
+      if (kbLegendVisible) toggleKbLegend();
+      break;
+    case '0':
+      orbitTheta = Math.PI / 4; orbitPhi = Math.PI / 5; orbitDist = 14;
+      break;
+    case 'ArrowLeft': e.preventDefault(); orbitTheta += 0.08; break;
+    case 'ArrowRight': e.preventDefault(); orbitTheta -= 0.08; break;
+    case 'ArrowUp': e.preventDefault(); orbitPhi = Math.min(Math.PI/2 - 0.05, orbitPhi + 0.08); break;
+    case 'ArrowDown': e.preventDefault(); orbitPhi = Math.max(0.1, orbitPhi - 0.08); break;
+    case '+': case '=': orbitDist = Math.max(5, orbitDist - 1); break;
+    case '-': case '_': orbitDist = Math.min(30, orbitDist + 1); break;
+    case ']': orbitDist = Math.max(5, orbitDist - 1); break;
+    case '[': orbitDist = Math.min(30, orbitDist + 1); break;
+  }
+});
+
+// ===== INIT =====
+function init() {
+  resizeScope();
+  resizeTargetScope();
+  drawTargetScope();
+  showTab('what');
+  buildKbLegend();
+  // kb legend starts hidden, toggled with ? or K
+  animate();
+}
+
+window.addEventListener('resize', () => { resizeScope(); resizeTargetScope(); drawTargetScope(); });
+init();
+
+// ===== SLIDER MOUSE WHEEL =====
+(function() {
+  const WHEEL_CONFIGS = {
+    'coilSpeed': { step: 2, min: 0, max: 1000 },
+    'magSpeed': { step: 2, min: 0, max: 1000 },
+  };
+  document.querySelectorAll('input[type=range]').forEach(slider => {
+    slider.addEventListener('mouseenter', () => slider.classList.add('wheel-focus'));
+    slider.addEventListener('mouseleave', () => slider.classList.remove('wheel-focus'));
+    slider.addEventListener('wheel', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      const cfg = WHEEL_CONFIGS[slider.id];
+      const range = parseFloat(slider.max) - parseFloat(slider.min);
+      const step = cfg ? cfg.step : range / 500;
+      const dir = e.deltaY > 0 ? -1 : 1;
+      const newVal = Math.max(parseFloat(slider.min), Math.min(parseFloat(slider.max), parseFloat(slider.value) + step * dir));
+      slider.value = newVal;
+      slider.dispatchEvent(new Event('input', { bubbles: true }));
+    }, { passive: false });
+  });
+})();
+</script>
+</body>
+</html>

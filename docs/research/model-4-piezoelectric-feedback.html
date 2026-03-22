@@ -1,0 +1,1691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Piezoelectric Crystal Feedback Loop — Interactive 3D Model</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;scrollbar-width:none}
+::-webkit-scrollbar{display:none}
+:root{
+  --bg:#0a0a1a;--panel:#0d0d24;--border:#1a1a3a;
+  --text:#e0e0f0;--text-dim:#8888aa;--accent-copper:#d4864a;
+  --g1:#ec4899;--g2:#9333ea;--g3:#3b82f6;
+  --green:#22c55e;--yellow:#eab308;--red:#ef4444;--blue:#3b82f6;
+  --crystal-blue:#88ccff;--copper:#d4956a;
+}
+html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text)}
+
+/* Layout */
+#app{display:grid;grid-template-columns:260px 1fr;grid-template-rows:1fr 300px;height:100vh;gap:1px}
+#controls{grid-row:1/3;background:var(--panel);border-right:1px solid var(--border);overflow-y:auto;padding:0}
+#viewport{position:relative;overflow:hidden;background:var(--bg)}
+#bottom{grid-column:2;background:var(--panel);border-top:1px solid var(--border);display:flex}
+
+/* Header */
+.ctrl-header{
+  background:linear-gradient(135deg,var(--g1),var(--g2),var(--g3));
+  padding:16px 18px;text-align:center;position:sticky;top:0;z-index:10;
+}
+.ctrl-header h1{font-size:14px;font-weight:700;letter-spacing:.5px;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.4)}
+.ctrl-header .sub{font-size:10px;color:rgba(255,255,255,.8);margin-top:4px}
+
+/* Language toggle */
+.lang-toggle{
+  position:absolute;top:12px;right:12px;z-index:100;
+  display:flex;gap:2px;background:rgba(0,0,0,.3);border-radius:12px;padding:2px;
+}
+.lang-btn{
+  border:none;background:transparent;color:rgba(255,255,255,.5);
+  font-size:11px;font-weight:600;padding:4px 10px;border-radius:10px;cursor:pointer;
+}
+.lang-btn.active{background:rgba(255,255,255,.2);color:#fff}
+
+/* Control sections */
+.ctrl-section{padding:14px 18px;border-bottom:1px solid var(--border)}
+.ctrl-section h3{
+  font-size:11px;text-transform:uppercase;letter-spacing:1.5px;
+  color:var(--g2);margin-bottom:12px;font-weight:600;
+}
+.ctrl-row{margin-bottom:12px}
+.ctrl-row label{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--text-dim);margin-bottom:5px}
+.ctrl-row label span.val{color:var(--accent-copper);font-weight:600;font-variant-numeric:tabular-nums}
+
+input[type=range]{
+  -webkit-appearance:none;width:100%;height:4px;border-radius:2px;
+  background:var(--border);outline:none;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:14px;height:14px;border-radius:50%;
+  background:linear-gradient(135deg,var(--g1),var(--g2));cursor:pointer;
+  border:2px solid rgba(255,255,255,.3);
+}
+
+.toggle-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.toggle-row span{font-size:12px;color:var(--text-dim)}
+
+.switch{position:relative;width:38px;height:20px;cursor:pointer}
+.switch input{opacity:0;width:0;height:0}
+.switch .slider{position:absolute;inset:0;background:var(--border);border-radius:10px;transition:.2s}
+.switch .slider::before{
+  content:'';position:absolute;width:16px;height:16px;left:2px;bottom:2px;
+  background:#fff;border-radius:50%;transition:.2s;
+}
+.switch input:checked+.slider{background:var(--g2)}
+.switch input:checked+.slider::before{transform:translateX(18px)}
+
+/* Sync / Lock */
+.lock-btn{
+  background:none;border:none;cursor:pointer;font-size:14px;padding:0 2px;
+  opacity:.4;transition:opacity .2s,transform .2s;line-height:1;
+}
+.lock-btn:hover{opacity:.7}
+.lock-btn.locked{opacity:1;filter:drop-shadow(0 0 4px goldenrod)}
+.ctrl-row.param-locked input[type=range]{pointer-events:none;opacity:.5}
+
+.btn-sync{
+  background:linear-gradient(135deg,var(--g1),var(--g2),var(--g3));color:#fff;
+  border:none;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;
+  cursor:pointer;transition:filter .15s,box-shadow .3s;letter-spacing:.5px;width:100%;
+}
+.btn-sync:hover{filter:brightness(1.15)}
+.btn-sync.flash{box-shadow:0 0 20px rgba(236,72,153,.6),0 0 40px rgba(147,51,234,.4)}
+@keyframes sync-pulse-m4{0%,100%{box-shadow:0 0 8px rgba(236,72,153,.3),0 0 16px rgba(147,51,234,.2)}50%{box-shadow:0 0 24px rgba(236,72,153,.7),0 0 48px rgba(147,51,234,.5)}}
+.btn-sync.searching{animation:sync-pulse-m4 .8s ease-in-out infinite;pointer-events:none}
+.sync-status{font-size:10px;color:var(--accent-copper);text-align:center;margin-top:6px;min-height:14px;transition:opacity .3s}
+.fitness-bar{width:100%;height:8px;background:#1a1a3a;border-radius:4px;margin-top:6px;overflow:hidden}
+.fitness-bar .fill{height:100%;border-radius:4px;transition:width 50ms linear;background:linear-gradient(90deg,#ef4444,#eab308,#22c55e)}
+.fitness-score{font-size:10px;text-align:center;margin-top:2px;color:var(--accent-copper);font-variant-numeric:tabular-nums}
+
+.action-row{display:flex;gap:8px;margin-top:12px}
+.action-btn{
+  flex:1;border:none;padding:8px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;transition:.15s;
+}
+.btn-play{background:linear-gradient(135deg,var(--g1),var(--g2));color:#fff}
+.btn-play:hover{filter:brightness(1.15)}
+.btn-reset{background:var(--border);color:var(--text-dim)}
+.btn-reset:hover{background:#2a2a4a;color:var(--text)}
+.btn-kick{background:linear-gradient(135deg,#eab308,#f97316);color:#fff;font-weight:700;letter-spacing:.5px}
+.btn-kick:hover{filter:brightness(1.15)}
+.btn-kick.firing{box-shadow:0 0 30px rgba(234,179,8,.6);animation:kick-pulse .3s ease-out}
+@keyframes kick-pulse{0%{transform:scale(1.08)}100%{transform:scale(1)}}
+
+/* Info tabs */
+.info-tabs{display:flex;border-bottom:1px solid var(--border);position:sticky;top:74px;background:var(--panel);z-index:9}
+.info-tab{
+  flex:1;border:none;background:transparent;color:var(--text-dim);
+  font-size:10px;font-weight:600;padding:10px 4px;cursor:pointer;
+  text-transform:uppercase;letter-spacing:.5px;transition:.15s;
+  border-bottom:2px solid transparent;
+}
+.info-tab.active{color:var(--g2);border-bottom-color:var(--g2)}
+
+.info-content{padding:14px 18px;font-size:12.5px;line-height:1.7;color:var(--text-dim)}
+.info-content p{margin-bottom:10px}
+.info-content h4{color:var(--accent-copper);font-size:13px;margin:14px 0 6px}
+.info-content .eq{
+  display:block;background:rgba(255,255,255,.03);border-left:3px solid var(--g2);
+  padding:8px 14px;margin:10px 0;font-family:'Courier New',monospace;font-size:12px;
+  color:var(--text);border-radius:0 4px 4px 0;
+}
+.info-content ul{padding-left:20px;margin:8px 0}
+.info-content li{margin-bottom:4px}
+.info-content .bom-table{width:100%;border-collapse:collapse;margin:10px 0}
+.info-content .bom-table th,.info-content .bom-table td{
+  padding:5px 8px;text-align:left;border-bottom:1px solid var(--border);font-size:11px;
+}
+.info-content .bom-table th{color:var(--g2);font-weight:600}
+
+/* Bottom panel — scopes */
+#scope-container{flex:1;padding:8px 12px;display:flex;flex-direction:column;gap:0;min-height:0}
+.scope-label{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);opacity:.6;margin-bottom:2px;font-weight:500}
+
+#target-scope-wrap{position:relative;height:100px;border:1px dashed rgba(34,197,94,.3);border-radius:6px;overflow:hidden;background:#050510;flex-shrink:0}
+#targetScope{width:100%;height:100%}
+.scope-annotation{position:absolute;font-size:9px;color:rgba(34,197,94,.7);pointer-events:none;font-weight:600;letter-spacing:.5px}
+.scope-annotation.top-left{top:4px;left:8px}
+.scope-annotation.top-right{top:4px;right:8px}
+.scope-annotation.bottom-right{bottom:4px;right:8px}
+
+#scope-comparison{display:flex;align-items:center;justify-content:center;gap:16px;padding:3px 0;border-top:1px solid rgba(100,100,150,.15);border-bottom:1px solid rgba(100,100,150,.15);flex-shrink:0;flex-wrap:wrap}
+.cmp-metric{font-size:10px;color:var(--text-dim);font-variant-numeric:tabular-nums}
+.cmp-metric .cmp-val{color:var(--green);font-weight:600}
+.cmp-metric .cmp-val.warn{color:var(--yellow)}
+.cmp-metric .cmp-val.bad{color:var(--red)}
+
+#scope-wrap{flex:1;position:relative;border:1px solid var(--border);border-radius:6px;overflow:hidden;background:#050510;min-height:0}
+#liveScope{width:100%;height:100%}
+
+#readings{width:200px;padding:12px 16px;border-left:1px solid var(--border);display:flex;flex-direction:column;gap:8px;justify-content:center}
+.reading{display:flex;flex-direction:column}
+.reading .rlabel{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim)}
+.reading .rval{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;
+  background:linear-gradient(135deg,var(--g1),var(--g2),var(--g3));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+}
+.reading .runit{font-size:11px;color:var(--text-dim)}
+
+/* Viewport overlay */
+#viewport-label{position:absolute;bottom:12px;left:12px;font-size:10px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;pointer-events:none}
+#fps-counter{position:absolute;top:8px;right:12px;font-size:10px;color:var(--text-dim);font-variant-numeric:tabular-nums;pointer-events:none}
+
+/* Status indicator */
+#loop-status{position:absolute;top:12px;left:50%;transform:translateX(-50%);padding:8px 24px;border-radius:20px;font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;z-index:20;transition:.5s;border:2px solid;pointer-events:none}
+#loop-status.decaying{background:rgba(239,68,68,.15);border-color:var(--red);color:var(--red)}
+#loop-status.critical{background:rgba(234,179,8,.15);border-color:var(--yellow);color:var(--yellow);animation:pulse-yellow 1.5s infinite}
+#loop-status.sustained{background:rgba(34,197,94,.15);border-color:var(--green);color:var(--green);box-shadow:0 0 30px rgba(34,197,94,.3);animation:pulse-green 1s infinite}
+#loop-status.idle{background:rgba(100,100,150,.1);border-color:var(--border);color:var(--text-dim)}
+@keyframes pulse-yellow{0%,100%{opacity:1}50%{opacity:.6}}
+@keyframes pulse-green{0%,100%{opacity:1}50%{opacity:.7}}
+
+/* Keyboard Legend */
+#kb-legend{position:fixed;bottom:12px;right:12px;z-index:50;background:rgba(10,10,26,0.85);border:1px solid var(--border);border-radius:8px;padding:8px;backdrop-filter:blur(10px);max-width:280px;font-size:10px;color:var(--text-dim);pointer-events:auto;display:none}
+#kb-legend.visible{display:block}
+#kb-legend .kb-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+#kb-legend .kb-title span{font-size:11px;font-weight:600;color:var(--text)}
+#kb-legend .kb-close{background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:14px;padding:0 2px;line-height:1}
+#kb-legend .kb-close:hover{color:var(--text)}
+#kb-legend .kb-grid{display:grid;grid-template-columns:auto 1fr;gap:1px 8px;align-items:center}
+#kb-legend .kb-grid kbd{display:inline-block;padding:1px 4px;background:#1a1a3a;border:1px solid var(--border);border-radius:3px;font-family:monospace;font-size:9px;color:var(--text);text-align:center;min-width:18px}
+#kb-legend .kb-grid .kb-desc{font-size:10px;color:var(--text-dim)}
+#kb-legend .kb-grid .kb-sep{grid-column:1/-1;height:1px;background:var(--border);margin:3px 0}
+
+/* Mobile elements */
+#mobile-menu-btn{display:none;position:fixed;top:10px;left:10px;z-index:25;width:40px;height:40px;border-radius:8px;background:rgba(13,13,36,0.9);border:1px solid var(--border);color:var(--text);font-size:20px;cursor:pointer;align-items:center;justify-content:center;backdrop-filter:blur(8px)}
+#mobile-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:8}
+#mobile-info-btn{display:none;position:fixed;bottom:10px;left:10px;z-index:25;width:36px;height:36px;border-radius:50%;background:rgba(13,13,36,0.9);border:1px solid var(--border);color:var(--text);font-size:16px;cursor:pointer;align-items:center;justify-content:center;backdrop-filter:blur(8px)}
+#mobile-info-modal{display:none;position:fixed;inset:0;z-index:60;background:rgba(13,13,36,0.97);overflow-y:auto;padding:20px}
+#mobile-info-modal.open{display:block}
+#mobile-info-close{position:fixed;top:12px;right:12px;z-index:61;background:none;border:none;color:var(--text);font-size:24px;cursor:pointer}
+#bottom-strip{display:none;position:fixed;bottom:0;left:0;right:0;height:44px;background:rgba(13,13,36,0.95);border-top:1px solid var(--border);z-index:20;padding:0 12px;align-items:center;justify-content:space-around;backdrop-filter:blur(8px);cursor:pointer}
+#bottom-strip .strip-metric{text-align:center}
+#bottom-strip .strip-label{font-size:8px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim)}
+#bottom-strip .strip-val{font-size:14px;font-weight:700;background:linear-gradient(135deg,var(--g1),var(--g2),var(--g3));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+
+/* Desktop */
+@media(min-width:901px){
+  #app{grid-template-columns:240px 1fr;grid-template-rows:1fr 280px}
+  .info-content{font-size:12px}
+}
+
+/* Mobile */
+@media(max-width:900px){
+  #app{display:block;width:100%;height:100vh;overflow:hidden}
+  #controls{position:fixed;top:0;left:0;width:280px;height:100%;z-index:12;transform:translateX(-100%);transition:transform 0.3s;border-right:1px solid var(--border);overflow-y:auto}
+  #controls.mobile-open{transform:translateX(0)}
+  #mobile-overlay.active{display:block}
+  #mobile-menu-btn{display:flex}
+  #mobile-info-btn{display:flex}
+  #viewport{width:100%;height:100vh}
+  #bottom{display:none}
+  #bottom.mobile-expanded{display:flex;position:fixed;bottom:0;left:0;right:0;height:300px;z-index:30;flex-direction:column}
+  #bottom-strip{display:flex}
+  #kb-legend{bottom:54px;left:10px;right:auto;max-width:220px;font-size:9px}
+  #kb-legend .kb-grid kbd{font-size:8px;min-width:16px}
+  #readings{width:100%;flex-direction:row;flex-wrap:wrap;gap:4px;border-left:none;border-top:1px solid var(--border);padding:8px}
+  .reading .rval{font-size:16px}
+  #loop-status{font-size:10px;padding:5px 14px}
+}
+@media(max-width:600px){
+  #loop-status{font-size:9px;padding:4px 10px}
+}
+
+  /* Slider hover feedback */
+  input[type=range]:hover{filter:brightness(1.3);cursor:grab}
+  input[type=range]:active{cursor:grabbing}
+  input[type=range].wheel-focus{box-shadow:0 0 6px rgba(147,51,234,.4);border-radius:3px}
+</style>
+</head>
+<body>
+<button id="mobile-menu-btn" onclick="toggleMobileMenu()">&#9776;</button>
+<div id="mobile-overlay" onclick="closeMobileMenu()"></div>
+<button id="mobile-info-btn" onclick="openMobileInfo()">&#8505;</button>
+<div id="mobile-info-modal"><button id="mobile-info-close" onclick="closeMobileInfo()">&times;</button><div id="mobile-info-content"></div></div>
+<div id="bottom-strip" onclick="toggleMobileBottom()">
+  <div class="strip-metric"><div class="strip-label">Freq</div><div class="strip-val" id="stripFreq">3.34 MHz</div></div>
+  <div class="strip-metric"><div class="strip-label">Gain</div><div class="strip-val" id="stripGain">0.00</div></div>
+  <div class="strip-metric"><div class="strip-label">Status</div><div class="strip-val" id="stripStatus">IDLE</div></div>
+</div>
+
+<div id="app">
+
+<!-- LEFT: Controls -->
+<div id="controls">
+  <div class="ctrl-header">
+    <div class="lang-toggle">
+      <button class="lang-btn active" onclick="setLang('en')">EN</button>
+      <button class="lang-btn" onclick="setLang('es')">ES</button>
+    </div>
+    <h1 data-i18n="title">Piezoelectric Feedback Loop</h1>
+    <div class="sub" data-i18n="subtitle">Crystal Oscillator + Tesla Bifilar Coil</div>
+  </div>
+
+  <div class="ctrl-section">
+    <h3 data-i18n="h_crystal">Crystal Parameters</h3>
+    <div class="ctrl-row" id="row-thickness">
+      <label><span data-i18n="lbl_thickness">Crystal Thickness</span>
+        <button class="lock-btn" onclick="toggleLock('thickness')">&#x1F512;</button>
+        <span class="val" id="thicknessVal">0.50 mm</span></label>
+      <input type="range" id="thickness" min="0.5" max="5" step="0.01" value="0.5" oninput="onThickness()">
+    </div>
+    <div class="ctrl-row" id="row-coupling">
+      <label><span data-i18n="lbl_coupling">Coupling Efficiency</span>
+        <button class="lock-btn" onclick="toggleLock('coupling')">&#x1F512;</button>
+        <span class="val" id="couplingVal">50%</span></label>
+      <input type="range" id="coupling" min="0" max="100" step="1" value="50" oninput="onCoupling()">
+    </div>
+  </div>
+
+  <div class="ctrl-section">
+    <h3 data-i18n="h_coil">Bifilar Coil</h3>
+    <div class="ctrl-row" id="row-qfactor">
+      <label><span data-i18n="lbl_qfactor">Q Factor</span>
+        <button class="lock-btn" onclick="toggleLock('qfactor')">&#x1F512;</button>
+        <span class="val" id="qfactorVal">50</span></label>
+      <input type="range" id="qfactor" min="1" max="500" step="1" value="50" oninput="onQFactor()">
+    </div>
+  </div>
+
+  <div class="ctrl-section">
+    <h3 data-i18n="h_display">Display</h3>
+    <div class="toggle-row"><span data-i18n="tog_feedback">Feedback Path</span><label class="switch"><input type="checkbox" id="showFeedback" checked onchange="updateVis()"><span class="slider"></span></label></div>
+    <div class="toggle-row"><span data-i18n="tog_standing">Standing Waves</span><label class="switch"><input type="checkbox" id="showStanding" checked onchange="updateVis()"><span class="slider"></span></label></div>
+    <div class="toggle-row"><span data-i18n="tog_efield">Electric Field</span><label class="switch"><input type="checkbox" id="showEField" checked onchange="updateVis()"><span class="slider"></span></label></div>
+    <div class="toggle-row"><span data-i18n="tog_arrows">Energy Arrows</span><label class="switch"><input type="checkbox" id="showArrows" checked onchange="updateVis()"><span class="slider"></span></label></div>
+  </div>
+
+  <div class="ctrl-section">
+    <h3 data-i18n="h_sync">Sync</h3>
+    <button class="btn-sync" id="syncBtn" onclick="runSync()" data-i18n="btn_sync">SYNC</button>
+    <div class="sync-status" id="syncStatus"></div>
+    <div class="fitness-bar" id="fitnessBar" style="display:none"><div class="fill" id="fitnessFill" style="width:0%"></div></div>
+    <div class="fitness-score" id="fitnessScore" style="display:none"></div>
+  </div>
+
+  <div class="ctrl-section">
+    <button class="action-btn btn-kick" id="kickBtn" onclick="kickStart()" data-i18n="btn_kick">KICK START</button>
+    <div class="action-row">
+      <button class="action-btn btn-play" id="playBtn" onclick="togglePlay()" data-i18n="btn_pause">Pause</button>
+      <button class="action-btn btn-reset" onclick="resetSim()" data-i18n="btn_reset">Reset</button>
+    </div>
+  </div>
+
+  <!-- Info tabs -->
+  <div class="info-tabs">
+    <button class="info-tab active" onclick="showTab('what',this)" data-i18n="tab_what">What</button>
+    <button class="info-tab" onclick="showTab('science',this)" data-i18n="tab_science">Science</button>
+    <button class="info-tab" onclick="showTab('build',this)" data-i18n="tab_build">Build</button>
+    <button class="info-tab" onclick="showTab('measure',this)" data-i18n="tab_measure">Measure</button>
+    <button class="info-tab" onclick="showTab('apps',this)" data-i18n="tab_apps">Applications</button>
+  </div>
+  <div class="info-content" id="infoContent"></div>
+</div>
+
+<!-- CENTER: 3D Viewport -->
+<div id="viewport">
+  <div id="loop-status" class="idle"><span data-i18n="status_idle">IDLE</span></div>
+  <div id="viewport-label" data-i18n="vp_label">Piezoelectric Crystal Feedback Loop</div>
+  <div id="fps-counter">60 fps</div>
+</div>
+
+<!-- BOTTOM: Scopes + Readings -->
+<div id="bottom">
+  <div id="scope-container">
+    <div class="scope-label" data-i18n="scope_target">Target: Self-Sustaining Oscillation</div>
+    <div id="target-scope-wrap">
+      <canvas id="targetScope"></canvas>
+      <div class="scope-annotation top-left" data-i18n="ann_self">Self-sustaining</div>
+      <div class="scope-annotation top-right" data-i18n="ann_nopower">No external power</div>
+      <div class="scope-annotation bottom-right" data-i18n="ann_locked">Crystal-locked frequency</div>
+    </div>
+
+    <div id="scope-comparison">
+      <div class="cmp-metric"><span data-i18n="cmp_gain">Loop Gain:</span> <span class="cmp-val" id="cmpGain">0.00</span></div>
+      <div class="cmp-metric"><span data-i18n="cmp_decay">Decay:</span> <span class="cmp-val" id="cmpDecay">--</span></div>
+      <div class="cmp-metric"><span data-i18n="cmp_qthresh">Q threshold:</span> <span class="cmp-val" id="cmpQThresh">20</span></div>
+    </div>
+
+    <div class="scope-label" data-i18n="scope_live">Live Oscillation</div>
+    <div id="scope-wrap">
+      <canvas id="liveScope"></canvas>
+    </div>
+  </div>
+
+  <div id="readings">
+    <div class="reading">
+      <div class="rlabel" data-i18n="r_freq">Frequency</div>
+      <div class="rval" id="rFreq">3.34</div>
+      <div class="runit">MHz</div>
+    </div>
+    <div class="reading">
+      <div class="rlabel" data-i18n="r_gain">Loop Gain</div>
+      <div class="rval" id="rGain">0.00</div>
+      <div class="runit">G = n x k x Q</div>
+    </div>
+    <div class="reading">
+      <div class="rlabel" data-i18n="r_amplitude">Amplitude</div>
+      <div class="rval" id="rAmp">0.00</div>
+      <div class="runit" data-i18n="r_amp_unit">mV</div>
+    </div>
+    <div class="reading">
+      <div class="rlabel" data-i18n="r_status">Status</div>
+      <div class="rval" id="rStatus">IDLE</div>
+      <div class="runit" id="rStatusSub"></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /app -->
+
+<!-- Keyboard Legend -->
+<div id="kb-legend">
+  <div class="kb-title"><span data-i18n="kb_title">Keyboard Shortcuts</span><button class="kb-close" onclick="toggleKbLegend()">&times;</button></div>
+  <div class="kb-grid" id="kbGrid"></div>
+</div>
+
+<script>
+// ===== STATE =====
+let lang = 'en';
+let playing = true;
+let currentTab = 'what';
+let kbLegendVisible = false;
+let autoRotating = true;
+
+const state = {
+  thickness: 0.5,    // mm
+  coupling: 50,      // %
+  qfactor: 50,
+  showFeedback: true,
+  showStanding: true,
+  showEField: true,
+  showArrows: true,
+  locked: { thickness: false, coupling: false, qfactor: false },
+  // Simulation
+  kicked: false,
+  kickTime: 0,
+  amplitude: 0,      // current oscillation amplitude (0-1)
+  simTime: 0,
+  energy: 0,
+};
+
+const K_PIEZO = 0.1;
+
+function resonantFreq() { return 1.67 / state.thickness; } // MHz
+function loopGain() { return (state.coupling / 100) * K_PIEZO * state.qfactor; }
+function qThreshold() {
+  const eta = state.coupling / 100;
+  if (eta < 0.001) return 99999;
+  return 1 / (eta * K_PIEZO);
+}
+
+// ===== I18N =====
+const i18n = {
+  en: {
+    title: 'Piezoelectric Feedback Loop',
+    subtitle: 'Crystal Oscillator + Tesla Bifilar Coil',
+    h_crystal: 'Crystal Parameters',
+    h_coil: 'Bifilar Coil',
+    h_display: 'Display',
+    h_sync: 'Sync',
+    lbl_thickness: 'Crystal Thickness',
+    lbl_coupling: 'Coupling Efficiency',
+    lbl_qfactor: 'Q Factor',
+    tog_feedback: 'Feedback Path',
+    tog_standing: 'Standing Waves',
+    tog_efield: 'Electric Field',
+    tog_arrows: 'Energy Arrows',
+    btn_sync: 'SYNC', sync_searching: 'Searching', sync_optimizing: 'Optimizing', sync_optimal: 'Optimal: self-sustaining loop',
+    btn_kick: 'KICK START',
+    btn_play: 'Play', btn_pause: 'Pause', btn_reset: 'Reset',
+    tab_what: 'What', tab_science: 'Science', tab_build: 'Build', tab_measure: 'Measure', tab_apps: 'Applications',
+    scope_target: 'Target: Self-Sustaining Oscillation',
+    scope_live: 'Live Oscillation',
+    ann_self: 'Self-sustaining', ann_nopower: 'No external power', ann_locked: 'Crystal-locked frequency',
+    cmp_gain: 'Loop Gain:', cmp_decay: 'Decay:', cmp_qthresh: 'Q threshold:',
+    r_freq: 'Frequency', r_gain: 'Loop Gain', r_amplitude: 'Amplitude', r_status: 'Status', r_amp_unit: 'mV',
+    vp_label: 'Piezoelectric Crystal Feedback Loop',
+    kb_title: 'Keyboard Shortcuts',
+    status_idle: 'IDLE', status_decaying: 'DECAYING', status_critical: 'CRITICAL', status_sustained: 'SUSTAINED',
+    sync_ok: 'Parameters synchronized',
+    info_what: `
+      <h4>What Is This?</h4>
+      <p>A quartz crystal wafer mechanically coupled to a Tesla bifilar coil in a closed feedback loop. The question: can the bifilar coil's anomalously high Q factor sustain crystal oscillation <strong>without an external amplifier?</strong></p>
+      <p>In every crystal oscillator ever built, an amplifier sits in the feedback loop to make up for energy losses. The crystal vibrates, produces a tiny voltage, the amplifier boosts it, and that boosted signal drives the crystal again. Remove the amplifier, and the oscillation dies.</p>
+      <p><strong>Unless</strong> the feedback element has enough gain on its own. That's what this tests. Tesla's bifilar coil (counter-wound, cancelling self-inductance while retaining mutual capacitance) has been reported to achieve Q factors far above conventional coils. If Q is high enough, the loop gain exceeds unity, and the system self-oscillates.</p>
+      <p>This would mean: a sealed crystal + coil system that oscillates indefinitely after a single energy impulse. No battery. No amplifier. Just resonance feeding resonance.</p>
+    `,
+    info_science: `
+      <h4>The Physics</h4>
+      <p><strong>Crystal Oscillator Theory:</strong> An AT-cut quartz crystal vibrates mechanically at a frequency determined by its thickness:</p>
+      <span class="eq">f = 1.67 MHz / thickness_mm</span>
+      <p>The piezoelectric effect converts mechanical strain to voltage and vice versa. When the crystal vibrates, electrodes on its faces pick up an AC voltage at the resonant frequency. Feed that voltage back into a mechanical driver, and you have a feedback loop.</p>
+
+      <h4>The Bifilar Q Mystery</h4>
+      <p>Tesla's bifilar coil uses two wires wound in parallel but connected so current flows in opposite directions. This cancels most of the self-inductance while the distributed capacitance between windings stores energy in the electric field.</p>
+      <p>Conventional coils: Q = 50-200. Some bifilar configurations have been reported at Q = 500+. The mechanism is debated: is it reduced radiation loss? Reduced skin effect? Or something else entirely?</p>
+      <p>The Q factor determines how many oscillation cycles the coil can sustain before energy dissipates. Higher Q = longer ring-down = more energy available per cycle for feedback.</p>
+
+      <h4>Self-Oscillation Condition</h4>
+      <span class="eq">Loop Gain G = eta_coupling x k_piezo x Q_bifilar<br>k_piezo (quartz) = 0.1<br>Self-oscillation when G >= 1<br>Q_threshold = 1 / (eta x k_piezo) = 1 / (eta x 0.1)</span>
+      <p>At 50% coupling: Q must exceed 20. At 100% coupling: Q must exceed 10. At 10% coupling: Q must exceed 100.</p>
+
+      <h4>What Self-Oscillation Means</h4>
+      <p>If the loop gain exceeds 1, the system amplifies its own oscillation. In practice, nonlinear effects (crystal stress limits, dielectric breakdown) saturate the amplitude. The system reaches a steady state where energy input from the feedback exactly matches losses.</p>
+      <p>This is not perpetual motion. Energy is stored in the crystal's mechanical vibration and the coil's electric field. The question is whether these two resonant systems, coupled together, lose energy slowly enough that the feedback compensates. If Q is high enough: yes.</p>
+    `,
+    info_build: `
+      <h4>Bill of Materials</h4>
+      <table class="bom-table">
+        <tr><th>Component</th><th>Specification</th><th>Qty</th></tr>
+        <tr><td>AT-cut quartz blank</td><td>10mm dia, 0.5-2mm thick, gold electrodes</td><td>3-5</td></tr>
+        <tr><td>Magnet wire</td><td>30 AWG enameled copper, 50m spool</td><td>2</td></tr>
+        <tr><td>Coil form</td><td>PTFE or ceramic tube, 15mm OD</td><td>1</td></tr>
+        <tr><td>Mounting jig</td><td>3D printed or machined, vibration-isolated</td><td>1</td></tr>
+        <tr><td>Coupling bridge</td><td>Piezo stack or mechanical lever arm</td><td>1</td></tr>
+        <tr><td>Shielding</td><td>Mu-metal can + Faraday cage</td><td>1</td></tr>
+        <tr><td>BNC connectors</td><td>For probe access</td><td>4</td></tr>
+      </table>
+
+      <h4>Bifilar Coil Winding</h4>
+      <ul>
+        <li>Wind two parallel wires simultaneously on the form</li>
+        <li>Connect: start of wire A to end of wire B (counter-series)</li>
+        <li>This cancels net inductance while retaining inter-winding capacitance</li>
+        <li>50-100 turns, tight winding, no gaps between turns</li>
+        <li>Measure Q with network analyzer before coupling</li>
+      </ul>
+
+      <h4>Coupling Method</h4>
+      <ul>
+        <li>Crystal electrodes connect to coil terminals via short leads</li>
+        <li>Mechanical coupling: coil's EM field drives a small piezo actuator bonded to crystal edge</li>
+        <li>Alternatively: purely electrical — coil voltage applied to crystal electrodes drives inverse piezo effect</li>
+        <li>Coupling efficiency depends on impedance matching and physical contact quality</li>
+      </ul>
+      <p><strong>Estimated cost:</strong> $200 - $800 depending on quartz blank quality and measurement equipment.</p>
+    `,
+    info_measure: `
+      <h4>Equipment Needed</h4>
+      <ul>
+        <li><strong>Network analyzer:</strong> Measure bifilar coil Q factor directly (impedance vs frequency sweep). HP 4395A or nanoVNA for budget.</li>
+        <li><strong>Oscilloscope:</strong> 100 MHz+, to observe oscillation waveform and decay/sustain behavior. Rigol DS1054Z is sufficient.</li>
+        <li><strong>Frequency counter:</strong> Verify oscillation locks to crystal frequency (not a harmonic or spurious mode).</li>
+        <li><strong>Signal generator:</strong> For the initial "kick" — one pulse at crystal frequency to start the loop.</li>
+      </ul>
+
+      <h4>Test Protocol</h4>
+      <ol>
+        <li>Measure coil Q independently (network analyzer sweep around expected crystal frequency)</li>
+        <li>Assemble crystal + coil in feedback loop with coupling bridge</li>
+        <li>Apply single impulse to crystal (function generator, one cycle at f_resonant)</li>
+        <li>Disconnect function generator immediately</li>
+        <li>Observe oscilloscope:
+          <ul>
+            <li><strong>Decaying:</strong> Amplitude drops exponentially — loop gain < 1. Measure decay time constant.</li>
+            <li><strong>Sustained:</strong> Amplitude holds constant — loop gain = 1 (critical coupling). This is the target.</li>
+            <li><strong>Growing:</strong> Amplitude increases — loop gain > 1. Will saturate at crystal's mechanical limit.</li>
+          </ul>
+        </li>
+        <li>Record: peak amplitude, decay time (if decaying), steady-state amplitude (if sustained), frequency stability</li>
+      </ol>
+
+      <h4>What Constitutes Success</h4>
+      <ul>
+        <li><strong>Minimum:</strong> Decay time significantly longer than crystal alone (proves coil is feeding energy back)</li>
+        <li><strong>Target:</strong> Sustained oscillation for > 60 seconds after single impulse</li>
+        <li><strong>Breakthrough:</strong> Indefinite oscillation at constant amplitude — true self-sustaining feedback</li>
+      </ul>
+
+      <h4>Failure Modes to Watch</h4>
+      <ul>
+        <li>Parasitic oscillation at non-crystal frequency (coupling path has its own resonance)</li>
+        <li>Thermal drift: crystal frequency shifts as it heats from vibration</li>
+        <li>Mechanical coupling losses dominating the Q advantage</li>
+      </ul>
+    `,
+    info_apps: `
+          <h4>Build Difficulty</h4>
+          <p><span style="font-size:18px;letter-spacing:2px">&#9733;&#9734;&#9734;&#9734;&#9734;</span> <strong>Hobbyist-level</strong></p>
+          <p>Estimated cost: <strong>$100 - $300 USD</strong></p>
+          <h4>Practical Applications</h4>
+          <ul>
+            <li><strong>Zero-Power Frequency Reference</strong> — Timing without batteries — perpetual clock</li>
+            <li><strong>Self-Powered Vibration Sensors</strong> — Structural health monitoring for bridges and buildings</li>
+            <li><strong>Ambient Vibration Energy Harvesting</strong> — Any vibration sustains oscillation if loop gain > 1</li>
+            <li><strong>Ultra-Stable Communications Oscillator</strong> — Crystal-locked, zero drift</li>
+            <li><strong>Self-Powered RFID Tags</strong> — No battery, powered by the crystal feedback loop</li>
+            <li><strong>Autonomous Sensor Networks</strong> — Deploy and forget — no external power source needed</li>
+          </ul>`
+  },
+  es: {
+    title: 'Lazo de Retroalimentacion Piezoelectrico',
+    subtitle: 'Oscilador de Cristal + Bobina Bifilar Tesla',
+    h_crystal: 'Parametros del Cristal',
+    h_coil: 'Bobina Bifilar',
+    h_display: 'Visualizacion',
+    h_sync: 'Sincronizar',
+    lbl_thickness: 'Grosor del Cristal',
+    lbl_coupling: 'Eficiencia de Acoplamiento',
+    lbl_qfactor: 'Factor Q',
+    tog_feedback: 'Ruta de Retroalimentacion',
+    tog_standing: 'Ondas Estacionarias',
+    tog_efield: 'Campo Electrico',
+    tog_arrows: 'Flechas de Energia',
+    btn_sync: 'SINCRONIZAR', sync_searching: 'Buscando', sync_optimizing: 'Optimizando', sync_optimal: 'Optimo: lazo auto-sostenido',
+    btn_kick: 'IMPULSO INICIAL',
+    btn_play: 'Reproducir', btn_pause: 'Pausa', btn_reset: 'Reiniciar',
+    tab_what: 'Que', tab_science: 'Ciencia', tab_build: 'Construir', tab_measure: 'Medir', tab_apps: 'Aplicaciones',
+    scope_target: 'Objetivo: Oscilacion Autosostenida',
+    scope_live: 'Oscilacion en Vivo',
+    ann_self: 'Autosostenida', ann_nopower: 'Sin energia externa', ann_locked: 'Frecuencia fijada al cristal',
+    cmp_gain: 'Ganancia:', cmp_decay: 'Decaimiento:', cmp_qthresh: 'Q umbral:',
+    r_freq: 'Frecuencia', r_gain: 'Ganancia', r_amplitude: 'Amplitud', r_status: 'Estado', r_amp_unit: 'mV',
+    vp_label: 'Lazo de Retroalimentacion Piezoelectrico',
+    kb_title: 'Atajos de Teclado',
+    status_idle: 'INACTIVO', status_decaying: 'DECAYENDO', status_critical: 'CRITICO', status_sustained: 'SOSTENIDO',
+    sync_ok: 'Parametros sincronizados',
+    info_what: `
+      <h4>Que Es Esto?</h4>
+      <p>Una oblea de cristal de cuarzo acoplada mecanicamente a una bobina bifilar Tesla en un lazo de retroalimentacion cerrado. La pregunta: puede el factor Q anomalamente alto de la bobina bifilar sostener la oscilacion del cristal <strong>sin un amplificador externo?</strong></p>
+      <p>En todo oscilador de cristal jamas construido, un amplificador se encuentra en el lazo de retroalimentacion para compensar las perdidas de energia. El cristal vibra, produce un pequeno voltaje, el amplificador lo amplifica, y esa senal amplificada impulsa al cristal de nuevo. Quita el amplificador, y la oscilacion muere.</p>
+      <p><strong>A menos que</strong> el elemento de retroalimentacion tenga suficiente ganancia por si solo. Eso es lo que prueba este experimento. La bobina bifilar de Tesla (bobinado contrario, cancelando auto-inductancia mientras retiene capacitancia mutua) ha reportado factores Q muy superiores a bobinas convencionales. Si Q es suficientemente alto, la ganancia del lazo excede la unidad, y el sistema auto-oscila.</p>
+      <p>Esto significaria: un sistema sellado de cristal + bobina que oscila indefinidamente despues de un solo impulso de energia. Sin bateria. Sin amplificador. Solo resonancia alimentando resonancia.</p>
+    `,
+    info_science: `
+      <h4>La Fisica</h4>
+      <p><strong>Teoria del Oscilador de Cristal:</strong> Un cristal de cuarzo de corte AT vibra mecanicamente a una frecuencia determinada por su grosor:</p>
+      <span class="eq">f = 1.67 MHz / grosor_mm</span>
+      <p>El efecto piezoelectrico convierte deformacion mecanica en voltaje y viceversa. Cuando el cristal vibra, electrodos en sus caras captan un voltaje AC a la frecuencia de resonancia. Retroalimenta ese voltaje a un impulsor mecanico, y tienes un lazo de retroalimentacion.</p>
+
+      <h4>El Misterio del Q Bifilar</h4>
+      <p>La bobina bifilar de Tesla usa dos cables enrollados en paralelo pero conectados para que la corriente fluya en direcciones opuestas. Esto cancela la mayor parte de la auto-inductancia mientras la capacitancia distribuida entre los devanados almacena energia en el campo electrico.</p>
+      <p>Bobinas convencionales: Q = 50-200. Algunas configuraciones bifilares han reportado Q = 500+. El mecanismo es debatido: es perdida de radiacion reducida? Efecto skin reducido? O algo mas?</p>
+
+      <h4>Condicion de Auto-Oscilacion</h4>
+      <span class="eq">Ganancia G = eta_acoplamiento x k_piezo x Q_bifilar<br>k_piezo (cuarzo) = 0.1<br>Auto-oscilacion cuando G >= 1<br>Q_umbral = 1 / (eta x 0.1)</span>
+      <p>Al 50% de acoplamiento: Q debe exceder 20. Al 100%: Q debe exceder 10. Al 10%: Q debe exceder 100.</p>
+    `,
+    info_build: `
+      <h4>Lista de Materiales</h4>
+      <table class="bom-table">
+        <tr><th>Componente</th><th>Especificacion</th><th>Cant</th></tr>
+        <tr><td>Blanco de cuarzo AT</td><td>10mm dia, 0.5-2mm grosor, electrodos de oro</td><td>3-5</td></tr>
+        <tr><td>Alambre magnetico</td><td>30 AWG cobre esmaltado, bobina 50m</td><td>2</td></tr>
+        <tr><td>Forma de bobina</td><td>Tubo PTFE o ceramico, 15mm OD</td><td>1</td></tr>
+        <tr><td>Montaje</td><td>Impreso 3D o maquinado, aislado de vibracion</td><td>1</td></tr>
+        <tr><td>Puente de acoplamiento</td><td>Pila piezo o brazo de palanca mecanico</td><td>1</td></tr>
+        <tr><td>Blindaje</td><td>Lata mu-metal + jaula Faraday</td><td>1</td></tr>
+        <tr><td>Conectores BNC</td><td>Para acceso de sondas</td><td>4</td></tr>
+      </table>
+      <p><strong>Costo estimado:</strong> $200 - $800 dependiendo de calidad del cuarzo y equipo de medicion.</p>
+    `,
+    info_measure: `
+      <h4>Equipo Necesario</h4>
+      <ul>
+        <li><strong>Analizador de redes:</strong> Medir Q de la bobina bifilar directamente. HP 4395A o nanoVNA economico.</li>
+        <li><strong>Osciloscopio:</strong> 100 MHz+, para observar forma de onda y comportamiento de decaimiento/sostenimiento.</li>
+        <li><strong>Contador de frecuencia:</strong> Verificar que la oscilacion se fija a la frecuencia del cristal.</li>
+        <li><strong>Generador de senales:</strong> Para el impulso inicial — un pulso a la frecuencia del cristal.</li>
+      </ul>
+
+      <h4>Protocolo de Prueba</h4>
+      <ol>
+        <li>Medir Q de la bobina independientemente</li>
+        <li>Ensamblar cristal + bobina en lazo de retroalimentacion</li>
+        <li>Aplicar impulso unico al cristal</li>
+        <li>Desconectar generador inmediatamente</li>
+        <li>Observar osciloscopio: decaimiento, sostenimiento, o crecimiento</li>
+        <li>Registrar: amplitud pico, tiempo de decaimiento, amplitud estable, estabilidad de frecuencia</li>
+      </ol>
+
+      <h4>Criterios de Exito</h4>
+      <ul>
+        <li><strong>Minimo:</strong> Tiempo de decaimiento significativamente mayor que el cristal solo</li>
+        <li><strong>Objetivo:</strong> Oscilacion sostenida > 60 segundos despues del impulso</li>
+        <li><strong>Avance:</strong> Oscilacion indefinida a amplitud constante</li>
+      </ul>
+    `,
+    info_apps: `
+          <h4>Dificultad de Construccion</h4>
+          <p><span style="font-size:18px;letter-spacing:2px">&#9733;&#9734;&#9734;&#9734;&#9734;</span> <strong>Nivel aficionado</strong></p>
+          <p>Costo estimado: <strong>$100 - $300 USD</strong></p>
+          <h4>Aplicaciones Practicas</h4>
+          <ul>
+            <li><strong>Referencia de Frecuencia Sin Energia</strong> &mdash; Temporizacion sin baterias &mdash; reloj perpetuo</li>
+            <li><strong>Sensores de Vibracion Auto-Alimentados</strong> &mdash; Monitoreo estructural de puentes y edificios</li>
+            <li><strong>Cosecha de Energia por Vibracion</strong> &mdash; Cualquier vibracion sostiene la oscilacion si G > 1</li>
+            <li><strong>Oscilador Ultra-Estable para Comunicaciones</strong> &mdash; Fijado al cristal, sin deriva</li>
+            <li><strong>Tags RFID Auto-Alimentados</strong> &mdash; Sin bateria, alimentados por el lazo de retroalimentacion</li>
+            <li><strong>Redes de Sensores Autonomas</strong> &mdash; Desplegar y olvidar &mdash; sin fuente de energia externa</li>
+          </ul>`
+  }
+};
+
+function setLang(l) {
+  lang = l;
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.textContent.trim() === l.toUpperCase()));
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (i18n[lang][key]) el.textContent = i18n[lang][key];
+  });
+  const pb = document.getElementById('playBtn');
+  pb.textContent = playing ? i18n[lang].btn_pause : i18n[lang].btn_play;
+  showTab(currentTab);
+  buildKbLegend();
+  drawTargetScope();
+  updateStatus();
+}
+
+function showTab(tab, btn) {
+  currentTab = tab;
+  document.querySelectorAll('.info-tab').forEach((t, i) => {
+    t.classList.toggle('active', ['what','science','build','measure','apps'][i] === tab);
+  });
+  document.getElementById('infoContent').innerHTML = i18n[lang]['info_' + tab] || '';
+}
+
+// ===== UI HANDLERS =====
+function onThickness() {
+  state.thickness = parseFloat(document.getElementById('thickness').value);
+  document.getElementById('thicknessVal').textContent = state.thickness.toFixed(2) + ' mm';
+}
+function onCoupling() {
+  state.coupling = parseInt(document.getElementById('coupling').value);
+  document.getElementById('couplingVal').textContent = state.coupling + '%';
+}
+function onQFactor() {
+  state.qfactor = parseInt(document.getElementById('qfactor').value);
+  document.getElementById('qfactorVal').textContent = state.qfactor;
+}
+
+function toggleLock(param) {
+  state.locked[param] = !state.locked[param];
+  const row = document.getElementById('row-' + param);
+  const btn = row.querySelector('.lock-btn');
+  if (state.locked[param]) {
+    btn.classList.add('locked');
+    row.classList.add('param-locked');
+  } else {
+    btn.classList.remove('locked');
+    row.classList.remove('param-locked');
+  }
+}
+
+// ===== ANIMATED SYNC ENGINE =====
+let syncAnimating = false;
+
+function calcFitnessM4(coupling, qfactor) {
+  // Loop gain G = coupling/100 * K_PIEZO * Q. Optimal is G just above 1 (self-sustaining without runaway)
+  const G = (coupling / 100) * K_PIEZO * qfactor;
+  if (G < 0.5) return G * 40; // far below threshold
+  if (G < 1.0) return 20 + (G - 0.5) * 120; // approaching threshold
+  if (G <= 1.3) return 80 + (1 - Math.abs(G - 1.1) / 0.2) * 20; // sweet spot: just above 1
+  return Math.max(50, 100 - (G - 1.3) * 30); // runaway territory
+}
+
+function calcOptimalM4() {
+  // Goal: G just above 1.0. G = eta * 0.1 * Q
+  // With defaults: if coupling locked, solve for Q. If Q locked, solve for coupling.
+  let optThickness = state.locked.thickness ? state.thickness : 0.5; // thinnest = highest freq
+  let optCoupling, optQ;
+
+  if (state.locked.coupling && state.locked.qfactor) {
+    // Both locked, nothing to optimize
+    optCoupling = state.coupling; optQ = state.qfactor;
+  } else if (state.locked.coupling) {
+    optCoupling = state.coupling;
+    // Q = 1.1 / (eta * K_PIEZO)
+    optQ = Math.round(Math.min(500, Math.max(1, 1.1 / (optCoupling / 100 * K_PIEZO))));
+  } else if (state.locked.qfactor) {
+    optQ = state.qfactor;
+    // eta = 1.1 / (K_PIEZO * Q)
+    optCoupling = Math.round(Math.min(100, Math.max(0, 1.1 / (K_PIEZO * optQ) * 100)));
+  } else {
+    // Nothing locked: high coupling + moderate Q
+    optCoupling = 80;
+    optQ = Math.round(1.1 / (0.8 * K_PIEZO));
+  }
+  return { thickness: optThickness, coupling: optCoupling, qfactor: optQ };
+}
+
+function runSync() {
+  if (syncAnimating) return;
+  syncAnimating = true;
+
+  const btn = document.getElementById('syncBtn');
+  const statusEl = document.getElementById('syncStatus');
+  const fitnessBar = document.getElementById('fitnessBar');
+  const fitnessFill = document.getElementById('fitnessFill');
+  const fitnessScoreEl = document.getElementById('fitnessScore');
+
+  btn.classList.add('searching');
+  fitnessBar.style.display = 'block';
+  fitnessScoreEl.style.display = 'block';
+  statusEl.style.opacity = 1;
+
+  document.querySelectorAll('#controls input[type=range]').forEach(s => s.style.pointerEvents = 'none');
+
+  const optimal = calcOptimalM4();
+  const startTime = performance.now();
+  const SEARCH_DUR = 2000, CONVERGE_DUR = 1500, SETTLE_DUR = 500;
+  const TOTAL = SEARCH_DUR + CONVERGE_DUR + SETTLE_DUR;
+  const speeds = [1.0, 1.3, 1.7];
+  let dots = 0, dotTimer = 0;
+
+  const sliders = [
+    { id: 'thickness', min: 0.5, max: 5, locked: state.locked.thickness, target: optimal.thickness, valId: 'thicknessVal', fmt: v => v.toFixed(2) + ' mm', setter: v => { state.thickness = v; }, speed: speeds[0], step: 0.01 },
+    { id: 'coupling', min: 0, max: 100, locked: state.locked.coupling, target: optimal.coupling, valId: 'couplingVal', fmt: v => Math.round(v) + '%', setter: v => { state.coupling = Math.round(v); }, speed: speeds[1], step: 1 },
+    { id: 'qfactor', min: 1, max: 500, locked: state.locked.qfactor, target: optimal.qfactor, valId: 'qfactorVal', fmt: v => Math.round(v).toString(), setter: v => { state.qfactor = Math.round(v); }, speed: speeds[2], step: 1 },
+  ];
+
+  function animStep(now) {
+    const elapsed = now - startTime;
+
+    if (elapsed < SEARCH_DUR) {
+      const st = elapsed / 1000;
+      dotTimer++;
+      if (dotTimer % 20 === 0) dots = (dots + 1) % 4;
+      statusEl.textContent = i18n[lang].sync_searching + '.'.repeat(dots);
+
+      sliders.forEach(s => {
+        if (s.locked) return;
+        const el = document.getElementById(s.id);
+        const raw = s.min + (s.max - s.min) * (0.5 + 0.5 * Math.sin(st * s.speed * 2 * Math.PI));
+        const v = Math.round(raw / s.step) * s.step;
+        el.value = v;
+        document.getElementById(s.valId).textContent = s.fmt(v);
+        s.setter(v);
+      });
+    } else if (elapsed < SEARCH_DUR + CONVERGE_DUR) {
+      const ct = (elapsed - SEARCH_DUR) / CONVERGE_DUR;
+      const eased = ct < 0.5 ? 2 * ct * ct : -1 + (4 - 2 * ct) * ct;
+      dotTimer++;
+      if (dotTimer % 20 === 0) dots = (dots + 1) % 4;
+      statusEl.textContent = i18n[lang].sync_optimizing + '.'.repeat(dots);
+
+      sliders.forEach(s => {
+        if (s.locked) return;
+        const el = document.getElementById(s.id);
+        const current = parseFloat(el.value);
+        const raw = current + (s.target - current) * eased;
+        const v = Math.round(raw / s.step) * s.step;
+        el.value = v;
+        document.getElementById(s.valId).textContent = s.fmt(v);
+        s.setter(v);
+      });
+    } else {
+      // Settle
+      sliders.forEach(s => {
+        if (s.locked) return;
+        const el = document.getElementById(s.id);
+        el.value = s.target;
+        document.getElementById(s.valId).textContent = s.fmt(s.target);
+        s.setter(s.target);
+      });
+
+      btn.classList.remove('searching');
+      btn.classList.add('flash');
+      setTimeout(() => btn.classList.remove('flash'), 600);
+
+      const finalFit = calcFitnessM4(state.coupling, state.qfactor);
+      fitnessFill.style.width = finalFit + '%';
+      fitnessScoreEl.textContent = Math.round(finalFit) + '%';
+      statusEl.textContent = i18n[lang].sync_optimal;
+      setTimeout(() => { statusEl.style.opacity = 0; }, 4000);
+      setTimeout(() => { fitnessBar.style.display = 'none'; fitnessScoreEl.style.display = 'none'; }, 6000);
+
+      document.querySelectorAll('#controls input[type=range]').forEach(s => s.style.pointerEvents = '');
+      // Auto kick-start if not already kicked
+      if (!state.kicked) kickStart();
+      syncAnimating = false;
+      return;
+    }
+
+    const fit = calcFitnessM4(state.coupling, state.qfactor);
+    fitnessFill.style.width = fit + '%';
+    fitnessScoreEl.textContent = Math.round(fit) + '%';
+    requestAnimationFrame(animStep);
+  }
+  requestAnimationFrame(animStep);
+}
+
+function updateVis() {
+  state.showFeedback = document.getElementById('showFeedback').checked;
+  state.showStanding = document.getElementById('showStanding').checked;
+  state.showEField = document.getElementById('showEField').checked;
+  state.showArrows = document.getElementById('showArrows').checked;
+}
+
+function togglePlay() {
+  playing = !playing;
+  document.getElementById('playBtn').textContent = playing ? i18n[lang].btn_pause : i18n[lang].btn_play;
+}
+
+function resetSim() {
+  state.kicked = false;
+  state.amplitude = 0;
+  state.simTime = 0;
+  state.energy = 0;
+  state.kickTime = 0;
+  scopeData.fill(0);
+  updateStatus();
+}
+
+function kickStart() {
+  state.kicked = true;
+  state.kickTime = state.simTime;
+  state.amplitude = 1.0;
+  state.energy = 1.0;
+  const btn = document.getElementById('kickBtn');
+  btn.classList.add('firing');
+  setTimeout(() => btn.classList.remove('firing'), 300);
+}
+
+// ===== MOBILE =====
+function toggleMobileMenu() {
+  document.getElementById('controls').classList.toggle('mobile-open');
+  document.getElementById('mobile-overlay').classList.toggle('active');
+}
+function closeMobileMenu() {
+  document.getElementById('controls').classList.remove('mobile-open');
+  document.getElementById('mobile-overlay').classList.remove('active');
+}
+function openMobileInfo() {
+  const modal = document.getElementById('mobile-info-modal');
+  modal.classList.add('open');
+  let html = '';
+  ['what','science','build','measure'].forEach(tab => {
+    html += '<div style="margin-bottom:20px">' + (i18n[lang]['info_' + tab] || '') + '</div>';
+  });
+  document.getElementById('mobile-info-content').innerHTML = html;
+}
+function closeMobileInfo() { document.getElementById('mobile-info-modal').classList.remove('open'); }
+function toggleMobileBottom() {
+  document.getElementById('bottom').classList.toggle('mobile-expanded');
+}
+
+// ===== STATUS =====
+function updateStatus() {
+  const G = loopGain();
+  const statusEl = document.getElementById('loop-status');
+  const spanEl = statusEl.querySelector('span');
+  let cls, key;
+  if (!state.kicked || state.amplitude < 0.001) {
+    cls = 'idle'; key = 'status_idle';
+  } else if (G < 0.95) {
+    cls = 'decaying'; key = 'status_decaying';
+  } else if (G < 1.05) {
+    cls = 'critical'; key = 'status_critical';
+  } else {
+    cls = 'sustained'; key = 'status_sustained';
+  }
+  statusEl.className = cls;
+  spanEl.textContent = i18n[lang][key];
+  spanEl.setAttribute('data-i18n', key);
+}
+
+// ===== SCOPE =====
+const SCOPE_LEN = 400;
+const scopeData = new Float32Array(SCOPE_LEN);
+let scopeIdx = 0;
+
+let targetScopeOffset = 0;
+
+function drawTargetScope(dt) {
+  const canvas = document.getElementById('targetScope');
+  const ctx = canvas.getContext('2d');
+  if (canvas.width !== canvas.parentElement.clientWidth || canvas.height !== canvas.parentElement.clientHeight) {
+    canvas.width = canvas.parentElement.clientWidth;
+    canvas.height = canvas.parentElement.clientHeight;
+  }
+  const w = canvas.width, h = canvas.height;
+
+  // Frequency adapts to crystal thickness: f = 1.67 / thickness MHz
+  const fMHz = resonantFreq();
+  // Map MHz to pixels-per-second scroll speed (scale so it looks good)
+  const scrollSpeed = fMHz * 60; // faster frequency = faster scroll
+  // Angular frequency for wave drawing
+  const waveK = fMHz * 0.03; // spatial frequency on canvas
+
+  if (typeof dt === 'number' && dt > 0) {
+    targetScopeOffset += scrollSpeed * dt;
+  }
+
+  ctx.fillStyle = '#050510';
+  ctx.fillRect(0, 0, w, h);
+
+  // Grid (scrolls with the waveform)
+  ctx.strokeStyle = 'rgba(34,197,94,0.1)';
+  ctx.lineWidth = 0.5;
+  for (let y = 0; y < h; y += h/4) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke(); }
+  const gridSpacing = w / 8;
+  const gridOff = targetScopeOffset % gridSpacing;
+  for (let i = -1; i <= 9; i++) {
+    const x = i * gridSpacing - gridOff;
+    ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,h); ctx.stroke();
+  }
+
+  // Center line
+  ctx.strokeStyle = 'rgba(34,197,94,0.15)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0,h/2); ctx.lineTo(w,h/2); ctx.stroke();
+
+  // Perfect scrolling sine wave
+  ctx.strokeStyle = '#22c55e';
+  ctx.lineWidth = 2;
+  ctx.shadowColor = 'rgba(34,197,94,0.4)';
+  ctx.shadowBlur = 8;
+  ctx.beginPath();
+  for (let x = 0; x < w; x++) {
+    const y = h/2 + Math.sin((x + targetScopeOffset) * waveK) * h * 0.35;
+    x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  // Second pass for extra glow
+  ctx.strokeStyle = 'rgba(34,197,94,0.15)';
+  ctx.lineWidth = 6;
+  ctx.beginPath();
+  for (let x = 0; x < w; x++) {
+    const y = h/2 + Math.sin((x + targetScopeOffset) * waveK) * h * 0.35;
+    x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // Frequency label
+  ctx.font = '9px monospace';
+  ctx.fillStyle = 'rgba(34,197,94,0.6)';
+  ctx.fillText(`f = ${fMHz.toFixed(2)} MHz`, 4, 12);
+}
+
+function drawLiveScope() {
+  const canvas = document.getElementById('liveScope');
+  const ctx = canvas.getContext('2d');
+  if (canvas.width !== canvas.parentElement.clientWidth || canvas.height !== canvas.parentElement.clientHeight) {
+    canvas.width = canvas.parentElement.clientWidth;
+    canvas.height = canvas.parentElement.clientHeight;
+  }
+  const w = canvas.width, h = canvas.height;
+  ctx.fillStyle = '#050510';
+  ctx.fillRect(0, 0, w, h);
+
+  // Grid
+  ctx.strokeStyle = 'rgba(100,100,200,0.08)';
+  ctx.lineWidth = 0.5;
+  for (let y = 0; y < h; y += h/4) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke(); }
+  for (let x = 0; x < w; x += w/8) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,h); ctx.stroke(); }
+
+  // Center line
+  ctx.strokeStyle = 'rgba(100,100,200,0.15)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0,h/2); ctx.lineTo(w,h/2); ctx.stroke();
+
+  const G = loopGain();
+  const color = G >= 1 ? 'rgba(34,197,94,0.8)' : G >= 0.95 ? 'rgba(234,179,8,0.8)' : 'rgba(100,150,255,0.7)';
+
+  // Waveform
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  for (let i = 0; i < SCOPE_LEN; i++) {
+    const x = (i / SCOPE_LEN) * w;
+    const y = h/2 - scopeData[(scopeIdx + i) % SCOPE_LEN] * h * 0.4;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  // Envelope (if decaying)
+  if (state.kicked && G < 1 && state.amplitude > 0.001) {
+    ctx.strokeStyle = 'rgba(239,68,68,0.3)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4,4]);
+    // Upper envelope
+    ctx.beginPath();
+    for (let i = 0; i < SCOPE_LEN; i++) {
+      const x = (i / SCOPE_LEN) * w;
+      const env = Math.abs(scopeData[(scopeIdx + i) % SCOPE_LEN]);
+      const y = h/2 - env * h * 0.4;
+      i === 0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+    // Lower
+    ctx.beginPath();
+    for (let i = 0; i < SCOPE_LEN; i++) {
+      const x = (i / SCOPE_LEN) * w;
+      const env = Math.abs(scopeData[(scopeIdx + i) % SCOPE_LEN]);
+      const y = h/2 + env * h * 0.4;
+      i === 0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Glow
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 6;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let i = 0; i < SCOPE_LEN; i++) {
+    const x = (i / SCOPE_LEN) * w;
+    const y = h/2 - scopeData[(scopeIdx + i) % SCOPE_LEN] * h * 0.4;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+}
+
+// ===== KEYBOARD LEGEND =====
+function toggleKbLegend() {
+  kbLegendVisible = !kbLegendVisible;
+  document.getElementById('kb-legend').classList.toggle('visible', kbLegendVisible);
+}
+
+function buildKbLegend() {
+  const isEN = lang === 'en';
+  const keys = [
+    ['Q / A', isEN ? 'Thickness +/-' : 'Grosor +/-'],
+    ['W / S', isEN ? 'Q Factor +/-' : 'Factor Q +/-'],
+    ['E', isEN ? 'Kick Start' : 'Impulso Inicial'],
+    ['Shift+S', isEN ? 'Auto-Sync' : 'Auto-Sincronizar'],
+    ['D / C', isEN ? 'Coupling +/-' : 'Acoplamiento +/-'],
+    ['---'],
+    ['G', isEN ? 'Toggle feedback path' : 'Alternar retroalimentacion'],
+    ['T', isEN ? 'Toggle standing waves' : 'Alternar ondas estacionarias'],
+    ['X', isEN ? 'Toggle electric field' : 'Alternar campo electrico'],
+    ['V', isEN ? 'Toggle energy arrows' : 'Alternar flechas energia'],
+    ['---'],
+    ['Space', isEN ? 'Play / Pause' : 'Reproducir / Pausa'],
+    ['R', isEN ? 'Auto-rotate' : 'Auto-rotar'],
+    ['F', isEN ? 'Fullscreen' : 'Pantalla completa'],
+    ['H', isEN ? 'Hide controls' : 'Ocultar controles'],
+    ['L', isEN ? 'Language EN/ES' : 'Idioma EN/ES'],
+    ['? / K', isEN ? 'This legend' : 'Esta leyenda'],
+    ['---'],
+    ['Arrows', isEN ? 'Orbit camera' : 'Orbitar camara'],
+    ['+ / -', isEN ? 'Zoom' : 'Zoom'],
+    ['0', isEN ? 'Reset camera' : 'Reiniciar camara'],
+  ];
+  let html = '';
+  keys.forEach(k => {
+    if (k[0] === '---') { html += '<div class="kb-sep"></div>'; return; }
+    html += `<kbd>${k[0]}</kbd><span class="kb-desc">${k[1]}</span>`;
+  });
+  document.getElementById('kbGrid').innerHTML = html;
+}
+
+// ===== THREE.JS SCENE =====
+let scene, camera, renderer, clock;
+let crystalGroup, coilGroup, feedbackGroup, arrowGroup, efieldGroup, standingWaveGroup;
+let currentParticles = [];
+let orbitTheta = Math.PI / 4, orbitPhi = Math.PI / 5, orbitDist = 12;
+let crystalGlowMat, coilGlowMat;
+
+function initScene() {
+  const container = document.getElementById('viewport');
+  scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x0a0a1a, 0.02);
+
+  camera = new THREE.PerspectiveCamera(55, container.clientWidth / container.clientHeight, 0.1, 100);
+  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+  renderer.setSize(container.clientWidth, container.clientHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setClearColor(0x0a0a1a);
+  container.appendChild(renderer.domElement);
+
+  clock = new THREE.Clock();
+
+  // Lights
+  const ambient = new THREE.AmbientLight(0x222244, 0.5);
+  scene.add(ambient);
+  const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+  dirLight.position.set(5, 8, 5);
+  scene.add(dirLight);
+  const pointLight = new THREE.PointLight(0x88ccff, 0.8, 20);
+  pointLight.position.set(0, 2, 0);
+  scene.add(pointLight);
+
+  // Ground grid
+  const gridHelper = new THREE.GridHelper(20, 40, 0x111133, 0x0a0a22);
+  gridHelper.position.y = -3;
+  scene.add(gridHelper);
+
+  buildCrystal();
+  buildCoil();
+  buildFeedbackPath();
+  buildEField();
+  buildArrows();
+  buildStandingWaves();
+
+  // Mouse orbit
+  let isDragging = false, lastMX, lastMY;
+  renderer.domElement.addEventListener('pointerdown', e => { isDragging = true; lastMX = e.clientX; lastMY = e.clientY; autoRotating = false; });
+  renderer.domElement.addEventListener('pointerup', () => isDragging = false);
+  renderer.domElement.addEventListener('pointermove', e => {
+    if (!isDragging) return;
+    const dx = e.clientX - lastMX, dy = e.clientY - lastMY;
+    orbitTheta -= dx * 0.005;
+    orbitPhi = Math.max(0.1, Math.min(Math.PI/2 - 0.05, orbitPhi + dy * 0.005));
+    lastMX = e.clientX; lastMY = e.clientY;
+  });
+  renderer.domElement.addEventListener('wheel', e => {
+    e.preventDefault();
+    orbitDist = Math.max(5, Math.min(25, orbitDist + e.deltaY * 0.01));
+  }, { passive: false });
+
+  window.addEventListener('resize', () => {
+    camera.aspect = container.clientWidth / container.clientHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    drawTargetScope();
+  });
+}
+
+function buildCrystal() {
+  crystalGroup = new THREE.Group();
+
+  // AT-cut quartz crystal — flat hexagonal disk
+  const hexShape = new THREE.Shape();
+  const R = 1.5; // radius
+  for (let i = 0; i < 6; i++) {
+    const a = (Math.PI / 3) * i - Math.PI / 6;
+    const x = R * Math.cos(a), y = R * Math.sin(a);
+    i === 0 ? hexShape.moveTo(x, y) : hexShape.lineTo(x, y);
+  }
+  hexShape.closePath();
+
+  const extrudeSettings = { depth: 0.15, bevelEnabled: true, bevelThickness: 0.02, bevelSize: 0.02, bevelSegments: 2 };
+  const crystalGeom = new THREE.ExtrudeGeometry(hexShape, extrudeSettings);
+
+  // Translucent crystal material
+  crystalGlowMat = new THREE.MeshPhysicalMaterial({
+    color: 0x88ccff,
+    transparent: true,
+    opacity: 0.35,
+    roughness: 0.1,
+    metalness: 0.0,
+    transmission: 0.6,
+    thickness: 0.5,
+    emissive: 0x88ccff,
+    emissiveIntensity: 0.0,
+    side: THREE.DoubleSide,
+  });
+  const crystalMesh = new THREE.Mesh(crystalGeom, crystalGlowMat);
+  crystalMesh.rotation.x = Math.PI / 2;
+  crystalMesh.position.y = 0;
+  crystalGroup.add(crystalMesh);
+
+  // Electrodes (gold plates on top and bottom)
+  const elecGeom = new THREE.CylinderGeometry(1.2, 1.2, 0.02, 6);
+  const elecMat = new THREE.MeshStandardMaterial({ color: 0xdaa520, metalness: 0.9, roughness: 0.2 });
+  const topElec = new THREE.Mesh(elecGeom, elecMat);
+  topElec.position.y = 0.1;
+  crystalGroup.add(topElec);
+  const botElec = new THREE.Mesh(elecGeom, elecMat);
+  botElec.position.y = -0.1;
+  crystalGroup.add(botElec);
+
+  // Internal refraction lines
+  for (let i = 0; i < 8; i++) {
+    const lineGeom = new THREE.BufferGeometry();
+    const x1 = (Math.random() - 0.5) * 2, z1 = (Math.random() - 0.5) * 2;
+    const x2 = (Math.random() - 0.5) * 2, z2 = (Math.random() - 0.5) * 2;
+    lineGeom.setAttribute('position', new THREE.Float32BufferAttribute([x1, 0, z1, x2, 0.05, z2], 3));
+    const lineMat = new THREE.LineBasicMaterial({ color: 0xaaddff, transparent: true, opacity: 0.15 });
+    crystalGroup.add(new THREE.Line(lineGeom, lineMat));
+  }
+
+  crystalGroup.position.set(-2.5, 0, 0);
+  scene.add(crystalGroup);
+}
+
+function buildCoil() {
+  coilGroup = new THREE.Group();
+
+  // Coil form (cylinder)
+  const formGeom = new THREE.CylinderGeometry(0.4, 0.4, 2.5, 16);
+  const formMat = new THREE.MeshStandardMaterial({ color: 0x333355, transparent: true, opacity: 0.3 });
+  coilGroup.add(new THREE.Mesh(formGeom, formMat));
+
+  // Two interleaved helical windings
+  const turns = 40;
+  const radius = 0.5;
+  const height = 2.2;
+
+  for (let w = 0; w < 2; w++) {
+    const points = [];
+    const offset = w * Math.PI; // 180 degree offset for bifilar
+    for (let i = 0; i <= turns * 20; i++) {
+      const t = i / (turns * 20);
+      const angle = t * turns * Math.PI * 2 + offset;
+      const x = Math.cos(angle) * radius;
+      const z = Math.sin(angle) * radius;
+      const y = t * height - height / 2;
+      points.push(new THREE.Vector3(x, y, z));
+    }
+    const curve = new THREE.CatmullRomCurve3(points);
+    const tubeGeom = new THREE.TubeGeometry(curve, turns * 20, 0.025, 6, false);
+    const copper = w === 0 ? 0xd4864a : 0xc47a3a;
+    coilGlowMat = new THREE.MeshStandardMaterial({
+      color: copper, metalness: 0.85, roughness: 0.25,
+      emissive: 0xd4864a, emissiveIntensity: 0.0
+    });
+    const coilMesh = new THREE.Mesh(tubeGeom, coilGlowMat);
+    coilGroup.add(coilMesh);
+  }
+
+  coilGroup.position.set(2.5, 0, 0);
+  scene.add(coilGroup);
+}
+
+function buildFeedbackPath() {
+  feedbackGroup = new THREE.Group();
+
+  // Wire paths: crystal top → coil top, coil bottom → crystal bottom
+  const paths = [
+    [ new THREE.Vector3(-2.5, 0.2, 0), new THREE.Vector3(-2.5, 2, 0), new THREE.Vector3(0, 3, 0), new THREE.Vector3(2.5, 2, 0), new THREE.Vector3(2.5, 1.3, 0) ],
+    [ new THREE.Vector3(2.5, -1.3, 0), new THREE.Vector3(2.5, -2, 0), new THREE.Vector3(0, -3, 0), new THREE.Vector3(-2.5, -2, 0), new THREE.Vector3(-2.5, -0.2, 0) ]
+  ];
+
+  paths.forEach((pts, idx) => {
+    const curve = new THREE.CatmullRomCurve3(pts);
+    const tubeGeom = new THREE.TubeGeometry(curve, 40, 0.03, 8, false);
+    const wireMat = new THREE.MeshStandardMaterial({ color: 0x888899, metalness: 0.7, roughness: 0.3 });
+    feedbackGroup.add(new THREE.Mesh(tubeGeom, wireMat));
+
+    // Current flow particles
+    for (let i = 0; i < 12; i++) {
+      const particleGeom = new THREE.SphereGeometry(0.06, 8, 8);
+      const particleMat = new THREE.MeshBasicMaterial({ color: 0xffd700 });
+      const particle = new THREE.Mesh(particleGeom, particleMat);
+      particle.userData = { curve, t: i / 12, speed: 0.15, wireIdx: idx };
+      feedbackGroup.add(particle);
+      currentParticles.push(particle);
+    }
+  });
+
+  // Labels along path
+  scene.add(feedbackGroup);
+}
+
+function buildEField() {
+  efieldGroup = new THREE.Group();
+
+  // Golden glow between coil windings — sprite-based
+  for (let i = 0; i < 20; i++) {
+    const t = i / 20;
+    const y = t * 2.2 - 1.1;
+    const angle = t * Math.PI * 8;
+    const x = Math.cos(angle) * 0.45;
+    const z = Math.sin(angle) * 0.45;
+    const spriteMat = new THREE.SpriteMaterial({
+      color: 0xffd700,
+      transparent: true,
+      opacity: 0.0,
+      blending: THREE.AdditiveBlending
+    });
+    const sprite = new THREE.Sprite(spriteMat);
+    sprite.scale.set(0.3, 0.3, 0.3);
+    sprite.position.set(x, y, z);
+    efieldGroup.add(sprite);
+  }
+
+  efieldGroup.position.copy(coilGroup.position);
+  scene.add(efieldGroup);
+}
+
+function buildArrows() {
+  arrowGroup = new THREE.Group();
+
+  // Energy flow arrows around the feedback loop
+  const arrowPositions = [
+    { pos: new THREE.Vector3(-2.5, 1.5, 0), dir: new THREE.Vector3(1, 0.5, 0).normalize(), label: 'Crystal Output' },
+    { pos: new THREE.Vector3(0, 3.2, 0), dir: new THREE.Vector3(1, 0, 0).normalize(), label: 'To Coil' },
+    { pos: new THREE.Vector3(2.5, 1.5, 0), dir: new THREE.Vector3(0, -1, 0).normalize(), label: 'EM Field' },
+    { pos: new THREE.Vector3(2.5, -1.5, 0), dir: new THREE.Vector3(-1, -0.5, 0).normalize(), label: 'Feedback' },
+    { pos: new THREE.Vector3(0, -3.2, 0), dir: new THREE.Vector3(-1, 0, 0).normalize(), label: 'To Crystal' },
+    { pos: new THREE.Vector3(-2.5, -1.5, 0), dir: new THREE.Vector3(0, 1, 0).normalize(), label: 'Mech. Drive' },
+  ];
+
+  arrowPositions.forEach(a => {
+    const arrowHelper = new THREE.ArrowHelper(a.dir, a.pos, 0.8, 0x22c55e, 0.2, 0.15);
+    arrowGroup.add(arrowHelper);
+  });
+
+  scene.add(arrowGroup);
+}
+
+function buildStandingWaves() {
+  standingWaveGroup = new THREE.Group();
+
+  // Standing wave pattern on crystal surface — concentric ring mesh
+  const ringCount = 6;
+  for (let i = 0; i < ringCount; i++) {
+    const r = 0.3 + (i / ringCount) * 1.1;
+    const ringGeom = new THREE.RingGeometry(r - 0.02, r + 0.02, 32);
+    const ringMat = new THREE.MeshBasicMaterial({
+      color: 0x88ccff,
+      transparent: true,
+      opacity: 0.0,
+      side: THREE.DoubleSide,
+      blending: THREE.AdditiveBlending
+    });
+    const ring = new THREE.Mesh(ringGeom, ringMat);
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = 0.15;
+    standingWaveGroup.add(ring);
+  }
+
+  standingWaveGroup.position.copy(crystalGroup.position);
+  scene.add(standingWaveGroup);
+}
+
+// ===== SIMULATION =====
+function updateSim(dt) {
+  if (!playing) return;
+  state.simTime += dt;
+
+  const G = loopGain();
+  const freq = resonantFreq();
+
+  if (state.kicked) {
+    if (G < 1) {
+      // Decay: amplitude drops exponentially
+      const decayRate = (1 - G) * 5; // faster decay when gain is much less than 1
+      state.amplitude *= Math.exp(-decayRate * dt);
+      if (state.amplitude < 0.001) state.amplitude = 0;
+    } else if (G > 1.05) {
+      // Growing: amplitude increases, saturates at ~1.2
+      const growRate = (G - 1) * 3;
+      state.amplitude += growRate * dt * (1.2 - state.amplitude);
+      state.amplitude = Math.min(1.2, state.amplitude);
+    } else {
+      // Critical: maintain with small fluctuations
+      state.amplitude += (1.0 - state.amplitude) * 0.5 * dt;
+    }
+  }
+
+  // Scope data
+  const phase = state.simTime * freq * 2 * Math.PI * 0.001; // scaled for visual
+  const sample = Math.sin(phase * 15) * state.amplitude; // 15x speed for visible waveform
+  scopeData[scopeIdx % SCOPE_LEN] = sample;
+  scopeIdx++;
+
+  // Crystal glow
+  crystalGlowMat.emissiveIntensity = state.amplitude * 0.5;
+  crystalGlowMat.opacity = 0.35 + state.amplitude * 0.3;
+
+  // Crystal vibration (mechanical oscillation)
+  if (crystalGroup) {
+    const vibAmp = state.amplitude * 0.03;
+    crystalGroup.position.y = Math.sin(state.simTime * 30) * vibAmp;
+    crystalGroup.scale.set(
+      1 + Math.sin(state.simTime * 60) * vibAmp * 0.3,
+      1,
+      1 + Math.cos(state.simTime * 60) * vibAmp * 0.3
+    );
+  }
+
+  // Coil glow
+  coilGroup.children.forEach(child => {
+    if (child.material && child.material.emissive) {
+      child.material.emissiveIntensity = state.amplitude * 0.3;
+    }
+  });
+
+  // Feedback particles
+  currentParticles.forEach(p => {
+    if (state.showFeedback && state.amplitude > 0.01) {
+      p.visible = true;
+      p.userData.t = (p.userData.t + p.userData.speed * dt * (0.5 + state.amplitude)) % 1;
+      const pos = p.userData.curve.getPointAt(p.userData.t);
+      p.position.copy(pos);
+      // Particle glow proportional to amplitude
+      p.material.color.setHSL(0.12, 1, 0.4 + state.amplitude * 0.3);
+      p.scale.setScalar(0.5 + state.amplitude * 0.8);
+    } else {
+      p.visible = false;
+    }
+  });
+
+  // E-field sprites
+  efieldGroup.visible = state.showEField;
+  efieldGroup.children.forEach((sprite, i) => {
+    sprite.material.opacity = state.amplitude * 0.4 * (0.5 + 0.5 * Math.sin(state.simTime * 8 + i * 0.5));
+    const baseScale = 0.2 + state.amplitude * 0.3;
+    sprite.scale.setScalar(baseScale * (0.8 + 0.2 * Math.sin(state.simTime * 5 + i)));
+  });
+
+  // Standing waves
+  standingWaveGroup.visible = state.showStanding;
+  standingWaveGroup.children.forEach((ring, i) => {
+    const phase2 = state.simTime * 10 + i * 1.2;
+    ring.material.opacity = state.amplitude * 0.4 * Math.abs(Math.sin(phase2));
+    const s = 1 + Math.sin(phase2) * 0.05 * state.amplitude;
+    ring.scale.set(s, s, 1);
+  });
+
+  // Arrows
+  arrowGroup.visible = state.showArrows;
+  arrowGroup.children.forEach((arrow, i) => {
+    if (arrow.line) arrow.line.material.opacity = 0.3 + state.amplitude * 0.7;
+    if (arrow.cone) arrow.cone.material.opacity = 0.3 + state.amplitude * 0.7;
+  });
+
+  feedbackGroup.visible = state.showFeedback;
+}
+
+function updateUI() {
+  const G = loopGain();
+  const freq = resonantFreq();
+  const Qt = qThreshold();
+
+  document.getElementById('rFreq').textContent = freq.toFixed(2);
+  document.getElementById('rGain').textContent = G.toFixed(2);
+  document.getElementById('rAmp').textContent = (state.amplitude * 100).toFixed(1);
+
+  const statusKey = !state.kicked || state.amplitude < 0.001 ? 'status_idle'
+    : G < 0.95 ? 'status_decaying'
+    : G < 1.05 ? 'status_critical'
+    : 'status_sustained';
+  document.getElementById('rStatus').textContent = i18n[lang][statusKey];
+
+  // Decay info
+  let decayText;
+  if (!state.kicked || state.amplitude < 0.001) {
+    decayText = '--';
+    document.getElementById('rStatusSub').textContent = '';
+  } else if (G < 1) {
+    const decayRate = (1 - G) * 5;
+    const tau = 1 / decayRate;
+    decayText = (tau * 1000).toFixed(0) + 'ms';
+    document.getElementById('rStatusSub').textContent = 'tau = ' + tau.toFixed(2) + 's';
+  } else {
+    decayText = lang === 'en' ? 'SUSTAINED' : 'SOSTENIDO';
+    document.getElementById('rStatusSub').textContent = G > 1.05 ? (lang === 'en' ? 'Saturating' : 'Saturando') : (lang === 'en' ? 'Critical point' : 'Punto critico');
+  }
+
+  // Comparison metrics
+  const gainEl = document.getElementById('cmpGain');
+  gainEl.textContent = G.toFixed(2);
+  gainEl.className = 'cmp-val' + (G >= 1 ? '' : G >= 0.8 ? ' warn' : ' bad');
+
+  const decayEl = document.getElementById('cmpDecay');
+  decayEl.textContent = decayText;
+  decayEl.className = 'cmp-val' + (G >= 1 ? '' : G >= 0.8 ? ' warn' : ' bad');
+
+  document.getElementById('cmpQThresh').textContent = Qt < 9999 ? Qt.toFixed(0) : '--';
+
+  // Mobile strip
+  document.getElementById('stripFreq').textContent = freq.toFixed(2) + ' MHz';
+  document.getElementById('stripGain').textContent = G.toFixed(2);
+  document.getElementById('stripStatus').textContent = i18n[lang][statusKey];
+
+  updateStatus();
+}
+
+// ===== ANIMATION LOOP =====
+let frameCount = 0, fpsTime = 0;
+
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.05);
+
+  // FPS
+  frameCount++;
+  fpsTime += dt;
+  if (fpsTime >= 0.5) {
+    document.getElementById('fps-counter').textContent = Math.round(frameCount / fpsTime) + ' fps';
+    frameCount = 0; fpsTime = 0;
+  }
+
+  // Auto rotate
+  if (autoRotating) orbitTheta += dt * 0.15;
+
+  // Camera orbit
+  camera.position.set(
+    Math.sin(orbitTheta) * Math.cos(orbitPhi) * orbitDist,
+    Math.sin(orbitPhi) * orbitDist,
+    Math.cos(orbitTheta) * Math.cos(orbitPhi) * orbitDist
+  );
+  camera.lookAt(0, 0, 0);
+
+  updateSim(dt);
+  updateUI();
+  drawTargetScope(dt);
+  drawLiveScope();
+
+  renderer.render(scene, camera);
+}
+
+// ===== KEYBOARD =====
+document.addEventListener('keydown', function(e) {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
+  const key = e.key;
+  switch(key) {
+    case 'q': case 'Q':
+      if (!state.locked.thickness) {
+        state.thickness = Math.min(5, state.thickness + 0.1);
+        document.getElementById('thickness').value = state.thickness;
+        onThickness();
+      }
+      break;
+    case 'a':
+      if (!state.locked.thickness) {
+        state.thickness = Math.max(0.5, state.thickness - 0.1);
+        document.getElementById('thickness').value = state.thickness;
+        onThickness();
+      }
+      break;
+    case 'w':
+      if (!state.locked.qfactor) {
+        state.qfactor = Math.min(500, state.qfactor + 5);
+        document.getElementById('qfactor').value = state.qfactor;
+        onQFactor();
+      }
+      break;
+    case 's':
+      if (!state.locked.qfactor) {
+        state.qfactor = Math.max(1, state.qfactor - 5);
+        document.getElementById('qfactor').value = state.qfactor;
+        onQFactor();
+      }
+      break;
+    case 'S': e.preventDefault(); runSync(); break;
+    case 'e': case 'E': kickStart(); break;
+    case 'd':
+      if (!state.locked.coupling) {
+        state.coupling = Math.min(100, state.coupling + 5);
+        document.getElementById('coupling').value = state.coupling;
+        onCoupling();
+      }
+      break;
+    case 'c':
+      if (!state.locked.coupling) {
+        state.coupling = Math.max(0, state.coupling - 5);
+        document.getElementById('coupling').value = state.coupling;
+        onCoupling();
+      }
+      break;
+    case 'g': case 'G':
+      document.getElementById('showFeedback').checked = !document.getElementById('showFeedback').checked;
+      updateVis();
+      break;
+    case 't': case 'T':
+      document.getElementById('showStanding').checked = !document.getElementById('showStanding').checked;
+      updateVis();
+      break;
+    case 'x': case 'X':
+      document.getElementById('showEField').checked = !document.getElementById('showEField').checked;
+      updateVis();
+      break;
+    case 'v': case 'V':
+      document.getElementById('showArrows').checked = !document.getElementById('showArrows').checked;
+      updateVis();
+      break;
+    case ' ':
+      e.preventDefault();
+      togglePlay();
+      break;
+    case 'r': case 'R':
+      autoRotating = !autoRotating;
+      break;
+    case 'f': case 'F':
+      if (document.fullscreenElement) document.exitFullscreen();
+      else document.documentElement.requestFullscreen();
+      break;
+    case 'h': case 'H':
+      const ctrl = document.getElementById('controls');
+      ctrl.style.display = ctrl.style.display === 'none' ? '' : 'none';
+      break;
+    case 'l': case 'L': setLang(lang === 'en' ? 'es' : 'en'); break;
+    case '?': case 'k': case 'K': toggleKbLegend(); break;
+    case 'Escape':
+      if (kbLegendVisible) toggleKbLegend();
+      break;
+    case '0':
+      orbitTheta = Math.PI / 4; orbitPhi = Math.PI / 5; orbitDist = 12;
+      break;
+    case 'ArrowLeft': e.preventDefault(); orbitTheta += 0.08; break;
+    case 'ArrowRight': e.preventDefault(); orbitTheta -= 0.08; break;
+    case 'ArrowUp': e.preventDefault(); orbitPhi = Math.min(Math.PI/2 - 0.05, orbitPhi + 0.08); break;
+    case 'ArrowDown': e.preventDefault(); orbitPhi = Math.max(0.1, orbitPhi - 0.08); break;
+    case '+': case '=': orbitDist = Math.max(5, orbitDist - 1); break;
+    case '-': case '_': orbitDist = Math.min(25, orbitDist + 1); break;
+  }
+});
+
+// ===== INIT =====
+showTab('what');
+buildKbLegend();
+initScene();
+drawTargetScope();
+animate();
+
+// ===== SLIDER MOUSE WHEEL =====
+(function() {
+  document.querySelectorAll('input[type=range]').forEach(function(slider) {
+    var CONFIGS = {
+      'thickness': 0.01,   // mm
+      'coupling': 0.2,     // percentage
+      'qfactor': 1,        // Q factor
+    };
+    slider.addEventListener('mouseenter', function() { slider.classList.add('wheel-focus'); });
+    slider.addEventListener('mouseleave', function() { slider.classList.remove('wheel-focus'); });
+    slider.addEventListener('wheel', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      var range = parseFloat(slider.max) - parseFloat(slider.min);
+      var step = CONFIGS[slider.id] || range / 500;
+      var dir = e.deltaY > 0 ? -1 : 1;
+      var newVal = Math.max(parseFloat(slider.min), Math.min(parseFloat(slider.max), parseFloat(slider.value) + step * dir));
+      slider.value = newVal;
+      slider.dispatchEvent(new Event('input', { bubbles: true }));
+    }, { passive: false });
+  });
+})();
+</script>
+</body>
+</html>

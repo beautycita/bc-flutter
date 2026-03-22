@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BC Research Lab</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;scrollbar-width:none}
+::-webkit-scrollbar{display:none}
+:root{
+  --bg:#0a0a1a;--panel:#0d0d24;--panel-alt:#0f0f2a;--border:#1a1a3a;
+  --text:#e0e0f0;--text-dim:#8888aa;--text-muted:#555577;
+  --g1:#ec4899;--g2:#9333ea;--g3:#3b82f6;
+  --glow1:rgba(236,72,153,.12);--glow2:rgba(147,51,234,.12);--glow3:rgba(59,130,246,.12);
+}
+html{scroll-behavior:smooth;scrollbar-width:none}
+body{
+  font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+  background:var(--bg);color:var(--text);
+  overflow-x:hidden;overflow-y:auto;
+  line-height:1.7;
+}
+
+/* ── Language Toggle ── */
+.lang-toggle{
+  position:fixed;top:16px;right:16px;z-index:1000;
+  display:flex;gap:2px;background:rgba(10,10,26,.85);backdrop-filter:blur(12px);
+  border:1px solid var(--border);border-radius:20px;padding:3px;
+}
+.lang-btn{
+  border:none;background:transparent;color:var(--text-muted);
+  font-size:12px;font-weight:700;padding:5px 14px;border-radius:16px;cursor:pointer;
+  transition:all .2s;letter-spacing:.5px;
+}
+.lang-btn.active{background:linear-gradient(135deg,var(--g1),var(--g2));color:#fff}
+
+/* ── Nav dots ── */
+.nav-dots{
+  position:fixed;right:20px;top:50%;transform:translateY(-50%);z-index:999;
+  display:flex;flex-direction:column;gap:14px;
+}
+.nav-dot{
+  width:10px;height:10px;border-radius:50%;border:2px solid var(--text-muted);
+  background:transparent;cursor:pointer;transition:all .3s;
+}
+.nav-dot.active{border-color:var(--g2);background:var(--g2);box-shadow:0 0 8px var(--g2)}
+.nav-dot-label{
+  position:absolute;right:22px;top:50%;transform:translateY(-50%);
+  font-size:11px;color:var(--text-dim);white-space:nowrap;opacity:0;
+  transition:opacity .2s;pointer-events:none;
+}
+.nav-dot:hover .nav-dot-label{opacity:1}
+
+/* ── Section base ── */
+.section{
+  min-height:100vh;padding:80px 40px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  position:relative;overflow:hidden;
+}
+.section:nth-child(odd){background:var(--bg)}
+.section:nth-child(even){background:var(--panel-alt)}
+.section-inner{max-width:1000px;width:100%;position:relative;z-index:2}
+
+.section-label{
+  font-size:11px;text-transform:uppercase;letter-spacing:3px;
+  color:var(--g2);font-weight:700;margin-bottom:12px;text-align:center;
+}
+.section-title{
+  font-size:clamp(28px,4vw,48px);font-weight:800;text-align:center;
+  margin-bottom:16px;line-height:1.15;
+}
+.section-title .grad{
+  background:linear-gradient(135deg,var(--g1),var(--g2),var(--g3));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+.section-sub{
+  font-size:17px;color:var(--text-dim);text-align:center;max-width:650px;margin:0 auto 48px;
+  line-height:1.8;
+}
+
+/* ── Hero ── */
+#hero{min-height:100vh;justify-content:center}
+.hero-pretitle{
+  font-size:12px;text-transform:uppercase;letter-spacing:4px;
+  color:var(--g2);font-weight:600;margin-bottom:20px;text-align:center;
+}
+.hero-title{
+  font-size:clamp(36px,5.5vw,64px);font-weight:800;text-align:center;
+  line-height:1.1;margin-bottom:24px;
+}
+.hero-title .grad{
+  background:linear-gradient(135deg,var(--g1),var(--g2),var(--g3));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+.hero-tagline{
+  font-size:clamp(16px,2vw,20px);color:var(--text-dim);text-align:center;
+  max-width:600px;margin:0 auto 40px;line-height:1.7;
+}
+.hero-scroll-hint{
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+  color:var(--text-muted);font-size:12px;letter-spacing:1px;
+  animation:float 2.5s ease-in-out infinite;
+}
+.hero-scroll-hint svg{width:20px;height:20px;stroke:var(--text-muted)}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(8px)}}
+
+/* ── Background decorations ── */
+.bg-orb{
+  position:absolute;border-radius:50%;filter:blur(100px);opacity:.35;
+  pointer-events:none;z-index:0;
+}
+
+/* ── Cards ── */
+.card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px}
+.card{
+  position:relative;
+  background:var(--panel);border:1px solid var(--border);border-radius:16px;
+  padding:28px 24px;cursor:pointer;
+  transition:transform .3s,border-color .3s,box-shadow .3s;
+  text-decoration:none;color:var(--text);display:block;
+  overflow:hidden;
+}
+.card::before{
+  content:'';position:absolute;inset:0;border-radius:16px;
+  background:linear-gradient(135deg,var(--glow1),transparent,var(--glow3));
+  opacity:0;transition:opacity .3s;pointer-events:none;
+}
+.card:hover{
+  transform:translateY(-4px);
+  border-color:var(--g2);
+  box-shadow:0 8px 32px rgba(147,51,234,.15);
+}
+.card:hover::before{opacity:1}
+
+.card-icon{
+  width:48px;height:48px;border-radius:12px;margin-bottom:16px;
+  display:flex;align-items:center;justify-content:center;font-size:22px;
+  background:linear-gradient(135deg,rgba(236,72,153,.15),rgba(147,51,234,.15));
+  border:1px solid rgba(147,51,234,.2);
+}
+.card h3{font-size:16px;font-weight:700;margin-bottom:8px;position:relative;z-index:1}
+.card p{font-size:13px;color:var(--text-dim);line-height:1.6;position:relative;z-index:1}
+
+.card-badge{
+  display:inline-block;margin-top:12px;padding:3px 10px;border-radius:8px;
+  font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;
+  position:relative;z-index:1;
+}
+.badge-high{background:rgba(236,72,153,.15);color:#ec4899;border:1px solid rgba(236,72,153,.3)}
+.badge-med-high{background:rgba(147,51,234,.15);color:#a855f7;border:1px solid rgba(147,51,234,.3)}
+.badge-med{background:rgba(59,130,246,.15);color:#60a5fa;border:1px solid rgba(59,130,246,.3)}
+.badge-low-med{background:rgba(136,136,170,.12);color:var(--text-dim);border:1px solid var(--border)}
+.badge-auth{background:rgba(234,179,8,.1);color:#eab308;border:1px solid rgba(234,179,8,.25)}
+
+.card-arrow{
+  position:absolute;top:24px;right:24px;font-size:18px;color:var(--text-muted);
+  transition:color .3s,transform .3s;
+}
+.card:hover .card-arrow{color:var(--g2);transform:translateX(3px)}
+
+/* ── PowerNode section specifics ── */
+.pn-description{
+  font-size:16px;color:var(--text-dim);text-align:center;max-width:700px;
+  margin:0 auto 40px;line-height:1.8;
+}
+.pn-note{
+  text-align:center;font-size:13px;color:var(--text-muted);margin-top:32px;
+  font-style:italic;
+}
+
+/* ── Research section specifics ── */
+.model-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:20px}
+.model-card{
+  position:relative;
+  background:var(--panel);border:1px solid var(--border);border-radius:14px;
+  padding:24px 22px;cursor:pointer;
+  transition:transform .3s,border-color .3s,box-shadow .3s;
+  text-decoration:none;color:var(--text);display:block;
+  overflow:hidden;
+}
+.model-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background:linear-gradient(90deg,var(--g1),var(--g2),var(--g3));
+  opacity:0;transition:opacity .3s;
+}
+.model-card:hover{
+  transform:translateY(-3px);
+  border-color:rgba(147,51,234,.4);
+  box-shadow:0 6px 24px rgba(147,51,234,.1);
+}
+.model-card:hover::before{opacity:1}
+
+.model-number{
+  font-size:11px;font-weight:700;letter-spacing:2px;color:var(--g2);
+  text-transform:uppercase;margin-bottom:8px;
+}
+.model-card h3{font-size:15px;font-weight:700;margin-bottom:8px;line-height:1.3}
+.model-card p{font-size:12.5px;color:var(--text-dim);line-height:1.6;margin-bottom:12px}
+.model-card .card-arrow{top:20px;right:20px;font-size:16px}
+
+/* special card (3D periodic table) */
+.model-card.special{border-color:rgba(59,130,246,.25)}
+.model-card.special:hover{border-color:rgba(59,130,246,.5);box-shadow:0 6px 24px rgba(59,130,246,.1)}
+.model-card.special .model-number{color:var(--g3)}
+
+/* ── Footer ── */
+.footer{
+  text-align:center;padding:40px 20px;
+  font-size:13px;color:var(--text-muted);
+  border-top:1px solid var(--border);
+}
+
+/* ── Scroll-in animations ── */
+.reveal{opacity:0;transform:translateY(30px);transition:opacity .6s ease,transform .6s ease}
+.reveal.visible{opacity:1;transform:translateY(0)}
+.reveal-delay-1{transition-delay:.1s}
+.reveal-delay-2{transition-delay:.2s}
+.reveal-delay-3{transition-delay:.3s}
+.reveal-delay-4{transition-delay:.4s}
+.reveal-delay-5{transition-delay:.5s}
+
+/* ── Responsive ── */
+@media(max-width:768px){
+  .section{padding:60px 20px}
+  .card-grid,.model-grid{grid-template-columns:1fr}
+  .nav-dots{display:none}
+  .hero-title{margin-bottom:20px}
+}
+@media(max-width:480px){
+  .section{padding:48px 16px}
+  .hero-pretitle{font-size:11px;letter-spacing:3px}
+}
+</style>
+</head>
+<body>
+
+<!-- Language Toggle -->
+<div class="lang-toggle">
+  <button class="lang-btn active" onclick="setLang('en')" id="btn-en">EN</button>
+  <button class="lang-btn" onclick="setLang('es')" id="btn-es">ES</button>
+</div>
+
+<!-- Nav Dots -->
+<div class="nav-dots">
+  <div class="nav-dot active" onclick="scrollTo('#hero')">
+    <span class="nav-dot-label" data-en="Home" data-es="Inicio">Home</span>
+  </div>
+  <div class="nav-dot" onclick="scrollTo('#powernode')">
+    <span class="nav-dot-label" data-en="PowerNode" data-es="PowerNode">PowerNode</span>
+  </div>
+  <div class="nav-dot" onclick="scrollTo('#research')">
+    <span class="nav-dot-label" data-en="Research" data-es="Investigaci&oacute;n">Research</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     HERO
+     ═══════════════════════════════════════════ -->
+<section class="section" id="hero">
+  <div class="bg-orb" style="width:500px;height:500px;background:var(--g2);top:-150px;left:-100px"></div>
+  <div class="bg-orb" style="width:400px;height:400px;background:var(--g3);bottom:-100px;right:-80px"></div>
+  <div class="section-inner" style="display:flex;flex-direction:column;align-items:center">
+    <div class="hero-pretitle reveal" data-en="BC Research Lab" data-es="Laboratorio de Investigaci&oacute;n BC">BC Research Lab</div>
+    <h1 class="hero-title reveal reveal-delay-1">
+      <span data-en="Ideas worth" data-es="Ideas que vale la pena">Ideas worth</span><br>
+      <span class="grad" data-en="building." data-es="construir.">building.</span>
+    </h1>
+    <p class="hero-tagline reveal reveal-delay-2"
+       data-en="A collection of research projects and experimental prototypes exploring the boundaries of what's possible in smart infrastructure and electromagnetic physics."
+       data-es="Una colecci&oacute;n de proyectos de investigaci&oacute;n y prototipos experimentales que exploran los l&iacute;mites de lo posible en infraestructura inteligente y f&iacute;sica electromagn&eacute;tica.">
+      A collection of research projects and experimental prototypes exploring the boundaries of what's possible in smart infrastructure and electromagnetic physics.
+    </p>
+    <div class="hero-scroll-hint reveal reveal-delay-3">
+      <span data-en="Scroll to explore" data-es="Desliza para explorar">Scroll to explore</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     POWERNODE
+     ═══════════════════════════════════════════ -->
+<section class="section" id="powernode">
+  <div class="bg-orb" style="width:350px;height:350px;background:var(--g1);top:10%;right:-80px"></div>
+  <div class="section-inner">
+    <div class="section-label reveal" data-en="Smart Infrastructure" data-es="Infraestructura Inteligente">Smart Infrastructure</div>
+    <h2 class="section-title reveal reveal-delay-1">
+      <span class="grad">PowerNode</span>
+    </h2>
+    <p class="pn-description reveal reveal-delay-2"
+       data-en="A unified platform where every device in a building &mdash; lights, HVAC, access control, entertainment, security &mdash; communicates through a single intelligent mesh. PowerNode bridges consumer smart home simplicity with industrial PLC reliability, all anchored to a portable identity that follows you from room to room, building to building."
+       data-es="Una plataforma unificada donde cada dispositivo en un edificio &mdash; luces, climatizaci&oacute;n, control de acceso, entretenimiento, seguridad &mdash; se comunica a trav&eacute;s de una sola malla inteligente. PowerNode une la simplicidad del hogar inteligente con la fiabilidad PLC industrial, todo anclado a una identidad port&aacute;til que te sigue de habitaci&oacute;n en habitaci&oacute;n, de edificio en edificio.">
+      A unified platform where every device in a building &mdash; lights, HVAC, access control, entertainment, security &mdash; communicates through a single intelligent mesh. PowerNode bridges consumer smart home simplicity with industrial PLC reliability, all anchored to a portable identity that follows you from room to room, building to building.
+    </p>
+
+    <div class="card-grid">
+      <a href="powernode-product.html" class="card reveal reveal-delay-2">
+        <span class="card-arrow">&rarr;</span>
+        <div class="card-icon">&#9881;</div>
+        <h3 data-en="Product Overview" data-es="Visi&oacute;n del Producto">Product Overview</h3>
+        <p data-en="Full system architecture, device profiles, mesh networking, and the portable identity layer that makes PowerNode unique."
+           data-es="Arquitectura completa del sistema, perfiles de dispositivos, red mesh, y la capa de identidad port&aacute;til que hace &uacute;nico a PowerNode.">
+          Full system architecture, device profiles, mesh networking, and the portable identity layer that makes PowerNode unique.
+        </p>
+        <span class="card-badge badge-auth" data-en="Confidential &mdash; Requires Authorization" data-es="Confidencial &mdash; Requiere Autorizaci&oacute;n">Confidential &mdash; Requires Authorization</span>
+      </a>
+
+      <a href="powernode-pitch-deck.html" class="card reveal reveal-delay-3">
+        <span class="card-arrow">&rarr;</span>
+        <div class="card-icon">&#128200;</div>
+        <h3 data-en="Pitch Deck" data-es="Presentaci&oacute;n para Inversores">Pitch Deck</h3>
+        <p data-en="Market opportunity, competitive landscape, go-to-market strategy, and the business case for unified building intelligence."
+           data-es="Oportunidad de mercado, panorama competitivo, estrategia go-to-market, y el caso de negocio para inteligencia unificada de edificios.">
+          Market opportunity, competitive landscape, go-to-market strategy, and the business case for unified building intelligence.
+        </p>
+        <span class="card-badge badge-auth" data-en="Confidential &mdash; Requires Authorization" data-es="Confidencial &mdash; Requiere Autorizaci&oacute;n">Confidential &mdash; Requires Authorization</span>
+      </a>
+    </div>
+
+    <p class="pn-note reveal reveal-delay-4"
+       data-en="Technical white papers available on request."
+       data-es="Documentos t&eacute;cnicos disponibles bajo solicitud.">
+      Technical white papers available on request.
+    </p>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     EXPERIMENTAL PHYSICS RESEARCH
+     ═══════════════════════════════════════════ -->
+<section class="section" id="research">
+  <div class="bg-orb" style="width:450px;height:450px;background:var(--g3);bottom:-120px;left:-100px"></div>
+  <div class="bg-orb" style="width:300px;height:300px;background:var(--g1);top:5%;right:10%"></div>
+  <div class="section-inner">
+    <div class="section-label reveal" data-en="Experimental Physics" data-es="F&iacute;sica Experimental">Experimental Physics</div>
+    <h2 class="section-title reveal reveal-delay-1">
+      <span data-en="Electromagnetic " data-es="Investigaci&oacute;n ">Electromagnetic </span><span class="grad" data-en="Research" data-es="Electromagn&eacute;tica">Research</span>
+    </h2>
+    <p class="section-sub reveal reveal-delay-2"
+       data-en="There are vast regions of electromagnetic variable space that have never been explored &mdash; not because they're impossible, but because nobody had a reason to try those specific combinations. These interactive models simulate configurations inspired by Tesla's lesser-known patents and modern materials science. Each one asks: what happens if we try something nobody has tried?"
+       data-es="Existen vastas regiones del espacio de variables electromagn&eacute;ticas que nunca han sido exploradas &mdash; no porque sean imposibles, sino porque nadie tuvo raz&oacute;n para probar esas combinaciones espec&iacute;ficas. Estos modelos interactivos simulan configuraciones inspiradas en las patentes menos conocidas de Tesla y la ciencia moderna de materiales. Cada uno pregunta: &iquest;qu&eacute; pasa si intentamos algo que nadie ha intentado?">
+      There are vast regions of electromagnetic variable space that have never been explored &mdash; not because they're impossible, but because nobody had a reason to try those specific combinations. These interactive models simulate configurations inspired by Tesla's lesser-known patents and modern materials science. Each one asks: what happens if we try something nobody has tried?
+    </p>
+
+    <div class="model-grid">
+      <a href="model-1-bifilar-coil.html" class="model-card reveal reveal-delay-1">
+        <span class="card-arrow">&rarr;</span>
+        <div class="model-number" data-en="Model 1" data-es="Modelo 1">Model 1</div>
+        <h3 data-en="Counter-Rotating Bifilar Coil" data-es="Bobina Bifilar Contra-Rotante">Counter-Rotating Bifilar Coil</h3>
+        <p data-en="Tesla's zero-inductance coil meets counter-rotating magnets. Explore how opposing magnetic fields interact with bifilar winding geometry."
+           data-es="La bobina de inductancia cero de Tesla se encuentra con imanes contra-rotantes. Explora c&oacute;mo campos magn&eacute;ticos opuestos interact&uacute;an con la geometr&iacute;a del bobinado bifilar.">
+          Tesla's zero-inductance coil meets counter-rotating magnets. Explore how opposing magnetic fields interact with bifilar winding geometry.
+        </p>
+        <span class="card-badge badge-high" data-en="High Probability" data-es="Probabilidad Alta">High Probability</span>
+      </a>
+
+      <a href="model-2-ferrofluid-resonance.html" class="model-card reveal reveal-delay-2">
+        <span class="card-arrow">&rarr;</span>
+        <div class="model-number" data-en="Model 2" data-es="Modelo 2">Model 2</div>
+        <h3 data-en="Ferrofluid Resonance Chamber" data-es="C&aacute;mara de Resonancia de Ferrofluido">Ferrofluid Resonance Chamber</h3>
+        <p data-en="Self-organizing electromagnetic waveguide in ferrofluid. Watch magnetic domains form standing wave patterns in a responsive liquid medium."
+           data-es="Gu&iacute;a de ondas electromagn&eacute;tica autoorganizada en ferrofluido. Observa c&oacute;mo los dominios magn&eacute;ticos forman patrones de ondas estacionarias en un medio l&iacute;quido responsivo.">
+          Self-organizing electromagnetic waveguide in ferrofluid. Watch magnetic domains form standing wave patterns in a responsive liquid medium.
+        </p>
+        <span class="card-badge badge-med-high" data-en="Medium-High Probability" data-es="Probabilidad Media-Alta">Medium-High Probability</span>
+      </a>
+
+      <a href="model-3-liquid-metal-dynamo.html" class="model-card reveal reveal-delay-3">
+        <span class="card-arrow">&rarr;</span>
+        <div class="model-number" data-en="Model 3" data-es="Modelo 3">Model 3</div>
+        <h3 data-en="Liquid Metal Vortex Dynamo" data-es="Dinamo de V&oacute;rtice de Metal L&iacute;quido">Liquid Metal Vortex Dynamo</h3>
+        <p data-en="Desktop-scale self-sustaining magnetic field from flowing metal. Simulate how gallium alloy vortex flow can amplify seed magnetic fields."
+           data-es="Campo magn&eacute;tico autosostenible a escala de escritorio generado por metal fluido. Simula c&oacute;mo el flujo en v&oacute;rtice de aleaci&oacute;n de galio puede amplificar campos magn&eacute;ticos semilla.">
+          Desktop-scale self-sustaining magnetic field from flowing metal. Simulate how gallium alloy vortex flow can amplify seed magnetic fields.
+        </p>
+        <span class="card-badge badge-high" data-en="High Probability" data-es="Probabilidad Alta">High Probability</span>
+      </a>
+
+      <a href="model-4-piezoelectric-feedback.html" class="model-card reveal reveal-delay-4">
+        <span class="card-arrow">&rarr;</span>
+        <div class="model-number" data-en="Model 4" data-es="Modelo 4">Model 4</div>
+        <h3 data-en="Piezoelectric Crystal Feedback" data-es="Retroalimentaci&oacute;n Piezoel&eacute;ctrica">Piezoelectric Crystal Feedback</h3>
+        <p data-en="Self-oscillating crystal without external power. A quartz crystal that sustains mechanical vibration through its own piezoelectric feedback loop."
+           data-es="Cristal auto-oscilante sin energ&iacute;a externa. Un cristal de cuarzo que mantiene vibraci&oacute;n mec&aacute;nica a trav&eacute;s de su propio ciclo de retroalimentaci&oacute;n piezoel&eacute;ctrica.">
+          Self-oscillating crystal without external power. A quartz crystal that sustains mechanical vibration through its own piezoelectric feedback loop.
+        </p>
+        <span class="card-badge badge-med" data-en="Medium Probability" data-es="Probabilidad Media">Medium Probability</span>
+      </a>
+
+      <a href="model-5-moissanite-transducer.html" class="model-card reveal reveal-delay-5">
+        <span class="card-arrow">&rarr;</span>
+        <div class="model-number" data-en="Model 5" data-es="Modelo 5">Model 5</div>
+        <h3 data-en="Diamond-Anvil Moissanite Transducer" data-es="Transductor de Moissanita en Yunque de Diamante">Diamond-Anvil Moissanite Transducer</h3>
+        <p data-en="Phase transition oscillator under extreme pressure. Moissanite's piezoelectric properties pushed to their limits inside a diamond anvil cell."
+           data-es="Oscilador de transici&oacute;n de fase bajo presi&oacute;n extrema. Las propiedades piezoel&eacute;ctricas de la moissanita llevadas al l&iacute;mite dentro de una celda de yunque de diamante.">
+          Phase transition oscillator under extreme pressure. Moissanite's piezoelectric properties pushed to their limits inside a diamond anvil cell.
+        </p>
+        <span class="card-badge badge-low-med" data-en="Low-Medium Probability" data-es="Probabilidad Baja-Media">Low-Medium Probability</span>
+      </a>
+
+      <a href="periodic-table-3d.html" class="model-card special reveal reveal-delay-5">
+        <span class="card-arrow">&rarr;</span>
+        <div class="model-number" data-en="Interactive Tool" data-es="Herramienta Interactiva">Interactive Tool</div>
+        <h3 data-en="3D Periodic Table" data-es="Tabla Peri&oacute;dica 3D">3D Periodic Table</h3>
+        <p data-en="Interactive 3D visualization of all 118 elements. Rotate, zoom, and explore elemental properties in three-dimensional space."
+           data-es="Visualizaci&oacute;n 3D interactiva de los 118 elementos. Rota, haz zoom y explora propiedades elementales en el espacio tridimensional.">
+          Interactive 3D visualization of all 118 elements. Rotate, zoom, and explore elemental properties in three-dimensional space.
+        </p>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     FOOTER
+     ═══════════════════════════════════════════ -->
+<footer class="footer">
+  <span data-en="BC Research Lab &mdash; Puerto Vallarta, MX &mdash; 2026" data-es="Laboratorio de Investigaci&oacute;n BC &mdash; Puerto Vallarta, MX &mdash; 2026">BC Research Lab &mdash; Puerto Vallarta, MX &mdash; 2026</span>
+</footer>
+
+<script>
+/* ── Language ── */
+let lang = 'en';
+function setLang(l) {
+  lang = l;
+  document.getElementById('btn-en').classList.toggle('active', l === 'en');
+  document.getElementById('btn-es').classList.toggle('active', l === 'es');
+  document.querySelectorAll('[data-' + l + ']').forEach(el => {
+    const val = el.getAttribute('data-' + l);
+    if (val) el.innerHTML = val;
+  });
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'l' || e.key === 'L') setLang(lang === 'en' ? 'es' : 'en');
+});
+
+/* ── Scroll to section ── */
+function scrollTo(sel) {
+  document.querySelector(sel).scrollIntoView({ behavior: 'smooth' });
+}
+
+/* ── Nav dot tracking ── */
+const sections = ['#hero', '#powernode', '#research'];
+const dots = document.querySelectorAll('.nav-dot');
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      const idx = sections.indexOf('#' + entry.target.id);
+      if (idx >= 0) {
+        dots.forEach((d, i) => d.classList.toggle('active', i === idx));
+      }
+    }
+  });
+}, { threshold: 0.4 });
+sections.forEach(s => { const el = document.querySelector(s); if (el) observer.observe(el); });
+
+/* ── Scroll reveal ── */
+const revealObserver = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+      revealObserver.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+/* ── Keyboard nav (arrow keys) ── */
+let currentSection = 0;
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowDown' && currentSection < sections.length - 1) {
+    e.preventDefault();
+    currentSection++;
+    scrollTo(sections[currentSection]);
+  } else if (e.key === 'ArrowUp' && currentSection > 0) {
+    e.preventDefault();
+    currentSection--;
+    scrollTo(sections[currentSection]);
+  }
+});
+// Sync currentSection on scroll
+const sectionSync = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      const idx = sections.indexOf('#' + entry.target.id);
+      if (idx >= 0) currentSection = idx;
+    }
+  });
+}, { threshold: 0.5 });
+sections.forEach(s => { const el = document.querySelector(s); if (el) sectionSync.observe(el); });
+</script>
+</body>
+</html>
