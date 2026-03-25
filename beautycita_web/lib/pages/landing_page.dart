@@ -94,6 +94,7 @@ class _LandingPageState extends State<LandingPage>
 
   // Phone input for demo section
   final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _codeController = TextEditingController();
   String? _phoneError;
 
   @override
@@ -171,6 +172,7 @@ class _LandingPageState extends State<LandingPage>
       a.dispose();
     }
     _phoneController.dispose();
+    _codeController.dispose();
     super.dispose();
   }
 
@@ -1098,40 +1100,91 @@ class _LandingPageState extends State<LandingPage>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Phone input row
-        Row(
-          children: [
-            Expanded(
-              child: _DemoPhoneInput(
-                controller: _phoneController,
-                error: _phoneError,
-              ),
-            ),
-            const SizedBox(width: 12),
-            _HoverScaleButton(
-              onTap: _sendingCode || _codeSent ? null : _onSendDemoCode,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                decoration: BoxDecoration(
-                  gradient: _codeSent ? null : _brandGradient,
-                  color: _codeSent ? _checkGreen : null,
-                  borderRadius: BorderRadius.circular(14),
+        if (!_codeSent) ...[
+          // Step 1: Phone input row
+          Row(
+            children: [
+              Expanded(
+                child: _DemoPhoneInput(
+                  controller: _phoneController,
+                  error: _phoneError,
                 ),
-                child: _sendingCode
-                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                    : Text(
-                        _codeSent ? 'Codigo enviado ✓' : 'Enviar codigo',
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16),
-                      ),
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        const Text(
-          'Te enviaremos un codigo por WhatsApp para verificar tu numero. Sin compromiso.',
-          style: TextStyle(fontSize: 14, color: _textHint),
-        ),
+              const SizedBox(width: 12),
+              _HoverScaleButton(
+                onTap: _sendingCode ? null : _onSendDemoCode,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  decoration: BoxDecoration(
+                    gradient: _brandGradient,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: _sendingCode
+                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Text('Enviar codigo', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Te enviaremos un codigo por WhatsApp para verificar tu numero. Sin compromiso.',
+            style: TextStyle(fontSize: 14, color: _textHint),
+          ),
+        ] else ...[
+          // Step 2: Verification code entry
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _codeController,
+                  keyboardType: TextInputType.number,
+                  maxLength: 6,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700, letterSpacing: 8, color: _textPrimary),
+                  decoration: InputDecoration(
+                    counterText: '',
+                    hintText: '000000',
+                    hintStyle: TextStyle(fontSize: 24, fontWeight: FontWeight.w700, letterSpacing: 8, color: _textHint.withValues(alpha: 0.3)),
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: _textHint.withValues(alpha: 0.2))),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: _textHint.withValues(alpha: 0.2))),
+                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: _brandPink, width: 2)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              _HoverScaleButton(
+                onTap: _verifyingCode ? null : _onVerifyCode,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  decoration: BoxDecoration(
+                    gradient: _brandGradient,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: _verifyingCode
+                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Text('Verificar', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              const Icon(Icons.check_circle, color: _checkGreen, size: 16),
+              const SizedBox(width: 6),
+              const Expanded(child: Text('Codigo enviado por WhatsApp. Ingresalo arriba.', style: TextStyle(fontSize: 14, color: _checkGreen, fontWeight: FontWeight.w600))),
+              const SizedBox(width: 12),
+              GestureDetector(
+                onTap: () => setState(() { _codeSent = false; _codeController.clear(); _phoneError = null; }),
+                child: const Text('Cambiar numero', style: TextStyle(fontSize: 13, color: _brandPink, decoration: TextDecoration.underline)),
+              ),
+            ],
+          ),
+        ],
         if (_phoneError != null) ...[
           const SizedBox(height: 8),
           Text(_phoneError!, style: const TextStyle(fontSize: 14, color: _crossRed, fontWeight: FontWeight.w600)),
@@ -1141,18 +1194,18 @@ class _LandingPageState extends State<LandingPage>
         isMobile
             ? Column(
                 children: [
-                  _demoStep('1', 'Ingresa tu numero', 'Tu numero de celular mexicano'),
+                  _demoStep('1', 'Ingresa tu numero', 'Tu numero de celular mexicano', done: _codeSent),
                   const SizedBox(height: 20),
-                  _demoStep('2', 'Verifica por WhatsApp', 'Recibe tu codigo de acceso'),
+                  _demoStep('2', 'Verifica por WhatsApp', 'Recibe tu codigo de acceso', active: _codeSent && !_codeVerified, done: _codeVerified),
                   const SizedBox(height: 20),
                   _demoStep('3', 'Explora el demo completo', 'Accede a todas las herramientas'),
                 ],
               )
             : Row(
                 children: [
-                  Expanded(child: _demoStep('1', 'Ingresa tu numero', 'Tu numero de celular mexicano')),
+                  Expanded(child: _demoStep('1', 'Ingresa tu numero', 'Tu numero de celular mexicano', done: _codeSent)),
                   const SizedBox(width: 24),
-                  Expanded(child: _demoStep('2', 'Verifica por WhatsApp', 'Recibe tu codigo de acceso')),
+                  Expanded(child: _demoStep('2', 'Verifica por WhatsApp', 'Recibe tu codigo de acceso', active: _codeSent && !_codeVerified, done: _codeVerified)),
                   const SizedBox(width: 24),
                   Expanded(child: _demoStep('3', 'Explora el demo completo', 'Accede a todas las herramientas')),
                 ],
@@ -1161,25 +1214,30 @@ class _LandingPageState extends State<LandingPage>
     );
   }
 
-  Widget _demoStep(String num, String title, String subtitle) {
+  Widget _demoStep(String num, String title, String subtitle, {bool done = false, bool active = false}) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
           width: 32,
           height: 32,
-          decoration: const BoxDecoration(
-            gradient: _brandGradient,
+          decoration: BoxDecoration(
+            gradient: done ? null : (active ? _brandGradient : null),
+            color: done ? _checkGreen : (!active ? _textHint.withValues(alpha: 0.2) : null),
             shape: BoxShape.circle,
           ),
-          child: Center(child: Text(num, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700))),
+          child: Center(
+            child: done
+                ? const Icon(Icons.check, color: Colors.white, size: 18)
+                : Text(num, style: TextStyle(color: active ? Colors.white : _textHint, fontSize: 14, fontWeight: FontWeight.w700)),
+          ),
         ),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: _textPrimary)),
+              Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: active ? _textPrimary : (done ? _checkGreen : _textHint))),
               const SizedBox(height: 2),
               Text(subtitle, style: const TextStyle(fontSize: 13, color: _textHint)),
             ],
@@ -1354,6 +1412,9 @@ class _LandingPageState extends State<LandingPage>
 
   bool _sendingCode = false;
   bool _codeSent = false;
+  bool _verifyingCode = false;
+  bool _codeVerified = false;
+  String? _demoPhone;
 
   Future<void> _onSendDemoCode() async {
     final raw = _phoneController.text.replaceAll(RegExp(r'\D'), '');
@@ -1368,6 +1429,7 @@ class _LandingPageState extends State<LandingPage>
 
     try {
       final phone = raw.startsWith('52') ? raw : '52$raw';
+      _demoPhone = phone;
       final response = await Supabase.instance.client.functions.invoke(
         'demo-wa-funnel',
         body: {'action': 'send_code', 'phone': phone},
@@ -1388,6 +1450,48 @@ class _LandingPageState extends State<LandingPage>
     } catch (e) {
       setState(() {
         _sendingCode = false;
+        _phoneError = 'Error de conexion. Intenta de nuevo.';
+      });
+    }
+  }
+
+  Future<void> _onVerifyCode() async {
+    final code = _codeController.text.trim();
+    if (code.length != 6) {
+      setState(() => _phoneError = 'Ingresa el codigo de 6 digitos');
+      return;
+    }
+    setState(() { _phoneError = null; _verifyingCode = true; });
+
+    try {
+      final response = await Supabase.instance.client.functions.invoke(
+        'demo-wa-funnel',
+        body: {'action': 'verify', 'phone': _demoPhone, 'code': code},
+      );
+      final data = response.data as Map<String, dynamic>?;
+      if (data?['verified'] == true) {
+        final token = data?['demo_token'] as String?;
+        setState(() { _codeVerified = true; _verifyingCode = false; });
+        // Notify the edge function that demo was opened
+        if (token != null) {
+          Supabase.instance.client.functions.invoke(
+            'demo-wa-funnel',
+            body: {'action': 'demo_opened', 'demo_token': token},
+          );
+        }
+        // Navigate to demo after brief success animation
+        Future.delayed(const Duration(milliseconds: 800), () {
+          if (mounted) context.go('/demo');
+        });
+      } else {
+        setState(() {
+          _verifyingCode = false;
+          _phoneError = data?['error'] as String? ?? 'Codigo incorrecto';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _verifyingCode = false;
         _phoneError = 'Error de conexion. Intenta de nuevo.';
       });
     }
