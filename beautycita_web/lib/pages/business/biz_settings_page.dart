@@ -7,8 +7,10 @@ import 'package:beautycita_core/theme.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show FileOptions;
 
 import '../../config/breakpoints.dart';
+import '../../config/web_theme.dart';
 import '../../providers/business_portal_provider.dart';
 import '../../providers/demo_providers.dart';
+import '../../widgets/web_design_system.dart';
 
 /// Business settings page — profile, social, operating hours, policies.
 class BizSettingsPage extends ConsumerWidget {
@@ -228,7 +230,12 @@ class _SettingsContentState extends ConsumerState<_SettingsContent> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Configuracion', style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
+                  WebSectionHeader(
+                    label: 'Ajustes',
+                    title: 'Configuracion',
+                    centered: false,
+                    titleSize: 28,
+                  ),
                   const SizedBox(height: 24),
 
                   // Profile
@@ -428,11 +435,10 @@ class _SettingsContentState extends ConsumerState<_SettingsContent> {
                   if (!isDemo)
                     SizedBox(
                       width: double.infinity,
-                      child: ElevatedButton(
+                      child: WebGradientButton(
                         onPressed: _saving ? null : _save,
-                        child: _saving
-                            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                            : const Text('Guardar cambios'),
+                        isLoading: _saving,
+                        child: const Text('Guardar cambios'),
                       ),
                     ),
                   const SizedBox(height: 24),
@@ -624,23 +630,25 @@ class _SectionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colors = theme.colorScheme;
 
-    return Container(
+    return WebCard(
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colors.outlineVariant),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(icon, size: 20, color: colors.primary),
-              const SizedBox(width: 8),
-              Text(title, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: kWebPrimary.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, size: 18, color: kWebPrimary),
+              ),
+              const SizedBox(width: 10),
+              Text(title, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600, color: kWebTextPrimary)),
             ],
           ),
           const SizedBox(height: 16),

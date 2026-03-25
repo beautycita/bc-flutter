@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:beautycita/config/constants.dart';
+import 'package:beautycita/config/theme_extension.dart';
 import 'package:beautycita/providers/security_provider.dart';
 import 'package:beautycita/services/toast_service.dart';
 import 'package:beautycita/services/updater_service.dart';
@@ -15,15 +16,61 @@ class SecurityScreen extends ConsumerStatefulWidget {
   ConsumerState<SecurityScreen> createState() => _SecurityScreenState();
 }
 
-class _SecurityScreenState extends ConsumerState<SecurityScreen> {
+class _SecurityScreenState extends ConsumerState<SecurityScreen>
+    with SingleTickerProviderStateMixin {
   bool _checkingUpdate = false;
+
+  late final AnimationController _entryController;
+  late final List<Animation<double>> _fadeAnims;
+  late final List<Animation<Offset>> _slideAnims;
 
   @override
   void initState() {
     super.initState();
+    _entryController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+    const count = 3; // linked accounts, devices, about
+    _fadeAnims = List.generate(count, (i) {
+      final start = i * 0.12;
+      final end = (start + 0.4).clamp(0.0, 1.0);
+      return CurvedAnimation(
+        parent: _entryController,
+        curve: Interval(start, end, curve: Curves.easeOut),
+      );
+    });
+    _slideAnims = List.generate(count, (i) {
+      final start = i * 0.12;
+      final end = (start + 0.4).clamp(0.0, 1.0);
+      return Tween<Offset>(
+        begin: const Offset(0, 0.05),
+        end: Offset.zero,
+      ).animate(CurvedAnimation(
+        parent: _entryController,
+        curve: Interval(start, end, curve: Curves.easeOut),
+      ));
+    });
+    _entryController.forward();
     Future.microtask(() {
       ref.read(securityProvider.notifier).checkIdentities();
     });
+  }
+
+  @override
+  void dispose() {
+    _entryController.dispose();
+    super.dispose();
+  }
+
+  Widget _animated(int index, Widget child) {
+    return FadeTransition(
+      opacity: _fadeAnims[index],
+      child: SlideTransition(
+        position: _slideAnims[index],
+        child: child,
+      ),
+    );
   }
 
   @override
@@ -43,6 +90,9 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
       }
     });
 
+    final cs = Theme.of(context).colorScheme;
+    final ext = Theme.of(context).extension<BCThemeExtension>()!;
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(title: const Text('Seguridad')),
@@ -53,139 +103,203 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
         ),
         children: [
           // ── Cuentas vinculadas ──
-          const SectionHeader(label: 'Cuentas vinculadas'),
-          const SizedBox(height: AppConstants.paddingXS),
+          _animated(0, Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SectionHeader(label: 'Cuentas vinculadas'),
 
-          // Google
-          SettingsTile(
-            icon: Icons.g_mobiledata_rounded,
-            iconColor: sec.isGoogleLinked ? Colors.green.shade600 : null,
-            label: sec.isGoogleLinked ? 'Google vinculado' : 'Vincular Google',
-            trailing: sec.isLoading
-                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                : sec.isGoogleLinked
-                    ? Icon(Icons.check_circle, color: Colors.green.shade600, size: 20)
-                    : null,
-            onTap: sec.isGoogleLinked ? null : () => ref.read(securityProvider.notifier).linkGoogle(),
-          ),
-
-          // Email
-          SettingsTile(
-            icon: Icons.email_outlined,
-            iconColor: sec.isEmailConfirmed ? Colors.green.shade600 : sec.isEmailAdded ? Colors.orange.shade600 : null,
-            label: sec.isEmailAdded ? (sec.email ?? 'Email agregado') : 'Agregar email',
-            trailing: sec.isEmailConfirmed
-                ? Icon(Icons.check_circle, color: Colors.green.shade600, size: 20)
-                : sec.isEmailAdded
-                    ? Text(
-                        'Pendiente',
-                        style: textTheme.bodySmall?.copyWith(color: Colors.orange.shade600),
-                      )
-                    : null,
-            onTap: sec.isEmailAdded ? null : () => _showEmailSheet(context),
-          ),
-
-          // Password
-          if (sec.hasPassword)
-            SettingsTile(
-              icon: Icons.lock_rounded,
-              iconColor: Colors.green.shade600,
-              label: 'Protegida',
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'cambiar',
-                    style: textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                      fontSize: 11,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Icon(Icons.check_circle, color: Colors.green.shade600, size: 20),
-                ],
-              ),
-              onTap: () => _showPasswordSheet(context),
-            )
-          else
-            SettingsTile(
-              icon: Icons.lock_open_rounded,
-              iconColor: _canAddPassword(sec) ? Colors.orange.shade600 : Colors.red.shade400,
-              label: 'Agregar contrasena',
-              trailing: !_canAddPassword(sec)
-                  ? Text(
-                      sec.isEmailAdded ? 'Confirma email' : 'Requiere email',
-                      style: textTheme.bodySmall?.copyWith(color: Colors.red.shade400, fontSize: 11),
-                    )
-                  : Icon(Icons.chevron_right, size: 20,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)),
-              onTap: _canAddPassword(sec)
-                  ? () => _showPasswordSheet(context)
-                  : () {
-                      ToastService.showWarning(
-                        sec.isEmailAdded
-                            ? 'Confirma tu email primero (revisa tu bandeja)'
-                            : 'Agrega tu email primero',
-                      );
-                    },
+              _buildCard(cs, ext, children: [
+                // Google
+                SettingsTile(
+              icon: Icons.g_mobiledata_outlined,
+              iconColor: sec.isGoogleLinked ? Colors.green.shade600 : null,
+              label: sec.isGoogleLinked ? 'Google vinculado' : 'Vincular Google',
+              trailing: sec.isLoading
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                  : sec.isGoogleLinked
+                      ? Icon(Icons.check_circle_outlined, color: Colors.green.shade600, size: 20)
+                      : null,
+              onTap: sec.isGoogleLinked ? null : () => ref.read(securityProvider.notifier).linkGoogle(),
             ),
+
+            const Divider(height: 1, color: Color(0xFFF5F0EB)),
+
+            // Email
+            SettingsTile(
+              icon: Icons.email_outlined,
+              iconColor: sec.isEmailConfirmed ? Colors.green.shade600 : sec.isEmailAdded ? Colors.orange.shade600 : null,
+              label: sec.isEmailAdded ? (sec.email ?? 'Email agregado') : 'Agregar email',
+              trailing: sec.isEmailConfirmed
+                  ? Icon(Icons.check_circle_outlined, color: Colors.green.shade600, size: 20)
+                  : sec.isEmailAdded
+                      ? Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.shade50,
+                            borderRadius: BorderRadius.circular(AppConstants.radiusXS),
+                          ),
+                          child: Text(
+                            'Verificar',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.orange.shade700,
+                            ),
+                          ),
+                        )
+                      : null,
+              onTap: sec.isEmailAdded ? null : () => _showEmailSheet(context),
+            ),
+
+            const Divider(height: 1, color: Color(0xFFF5F0EB)),
+
+            // Password
+            if (sec.hasPassword)
+              SettingsTile(
+                icon: Icons.lock_outlined,
+                iconColor: Colors.green.shade600,
+                label: 'Protegida',
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'cambiar',
+                      style: textTheme.bodySmall?.copyWith(
+                        color: cs.onSurface.withValues(alpha: 0.5),
+                        fontSize: 11,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Icon(Icons.check_circle_outlined, color: Colors.green.shade600, size: 20),
+                  ],
+                ),
+                onTap: () => _showPasswordSheet(context),
+              )
+            else
+              SettingsTile(
+                icon: Icons.lock_open_outlined,
+                iconColor: _canAddPassword(sec) ? Colors.orange.shade600 : Colors.red.shade400,
+                label: 'Agregar contrasena',
+                trailing: !_canAddPassword(sec)
+                    ? Text(
+                        sec.isEmailAdded ? 'Confirma email' : 'Requiere email',
+                        style: textTheme.bodySmall?.copyWith(color: Colors.red.shade400, fontSize: 11),
+                      )
+                    : Icon(Icons.chevron_right_outlined, size: 20,
+                        color: cs.onSurface.withValues(alpha: 0.3)),
+                onTap: _canAddPassword(sec)
+                    ? () => _showPasswordSheet(context)
+                    : () {
+                        ToastService.showWarning(
+                          sec.isEmailAdded
+                              ? 'Confirma tu email primero (revisa tu bandeja)'
+                              : 'Agrega tu email primero',
+                        );
+                      },
+              ),
+              ]),
+            ],
+          )),
 
           const SizedBox(height: AppConstants.paddingLG),
 
           // ── Dispositivos ──
-          const SectionHeader(label: 'Dispositivos'),
-          const SizedBox(height: AppConstants.paddingXS),
+          _animated(1, Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SectionHeader(label: 'Dispositivos'),
 
-          SettingsTile(
-            icon: Icons.devices_rounded,
-            label: 'Dispositivos conectados',
-            onTap: () => context.push('/devices'),
-          ),
-          SettingsTile(
-            icon: Icons.qr_code_scanner_rounded,
-            label: 'Vincular sesion web',
-            onTap: () => context.push('/qr-scan'),
-          ),
+              _buildCard(cs, ext, children: [
+                SettingsTile(
+                  icon: Icons.devices_outlined,
+                  label: 'Dispositivos conectados',
+                  onTap: () => context.push('/devices'),
+                ),
+                const Divider(height: 1, color: Color(0xFFF5F0EB)),
+                SettingsTile(
+                  icon: Icons.qr_code_scanner_outlined,
+                  label: 'Vincular sesion web',
+                  onTap: () => context.push('/qr-scan'),
+                ),
+              ]),
+            ],
+          )),
 
           const SizedBox(height: AppConstants.paddingLG),
 
           // ── Acerca de ──
-          const SectionHeader(label: 'Acerca de'),
-          const SizedBox(height: AppConstants.paddingXS),
+          _animated(2, Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SectionHeader(label: 'Acerca de'),
 
-          // Update button (only if newer build available)
-          if (UpdaterService.instance.apkUpdateAvailable)
+              _buildCard(cs, ext, children: [
+            // Update button (only if newer build available)
+            if (UpdaterService.instance.apkUpdateAvailable) ...[
+              SettingsTile(
+                icon: Icons.system_update_outlined,
+                iconColor: Colors.blue.shade600,
+                label: 'Actualizar a ${UpdaterService.instance.apkUpdateVersion}',
+                trailing: Icon(Icons.download_outlined, color: Colors.blue.shade600, size: 20),
+                onTap: () => _launchUpdate(),
+              ),
+              const Divider(height: 1, color: Color(0xFFF5F0EB)),
+            ],
+
             SettingsTile(
-              icon: Icons.system_update_rounded,
-              iconColor: Colors.blue.shade600,
-              label: 'Actualizar a ${UpdaterService.instance.apkUpdateVersion}',
-              trailing: Icon(Icons.download_rounded, color: Colors.blue.shade600, size: 20),
-              onTap: () => _launchUpdate(),
-            ),
-
-          SettingsTile(
-            icon: Icons.info_outline_rounded,
-            label: 'Version',
-            trailing: Text(
-              '${AppConstants.version} (${AppConstants.buildNumber})',
-              style: textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+              icon: Icons.info_outlined,
+              label: 'Version',
+              trailing: Text(
+                '${AppConstants.version} (${AppConstants.buildNumber})',
+                style: textTheme.bodySmall?.copyWith(
+                  color: cs.onSurface.withValues(alpha: 0.5),
+                ),
               ),
             ),
-          ),
+            const Divider(height: 1, color: Color(0xFFF5F0EB)),
 
-          SettingsTile(
-            icon: Icons.refresh_rounded,
-            iconColor: Colors.teal,
-            label: 'Buscar actualizaciones',
-            trailing: _checkingUpdate
-                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                : const Icon(Icons.chevron_right, size: 20),
-            onTap: _checkingUpdate ? null : () => _checkForUpdates(),
-          ),
+            SettingsTile(
+              icon: Icons.refresh_outlined,
+              iconColor: Colors.teal,
+              label: 'Buscar actualizaciones',
+              trailing: _checkingUpdate
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                  : Icon(Icons.chevron_right_outlined, size: 20,
+                      color: cs.onSurface.withValues(alpha: 0.3)),
+              onTap: _checkingUpdate ? null : () => _checkForUpdates(),
+            ),
+              ]),
+            ],
+          )),
 
-          const SizedBox(height: AppConstants.paddingLG),
+          const SizedBox(height: AppConstants.paddingXXL),
         ],
+      ),
+    );
+  }
+
+  Widget _buildCard(ColorScheme cs, BCThemeExtension ext, {required List<Widget> children}) {
+    return Container(
+      decoration: BoxDecoration(
+        color: cs.surface,
+        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+        border: Border.all(color: ext.cardBorderColor),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: children,
       ),
     );
   }

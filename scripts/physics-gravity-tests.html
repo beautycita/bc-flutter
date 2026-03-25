@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gravity Experiments — 3D Physics Lab</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a1a;
+  color: #e0e0e0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  overflow: hidden;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* TOP BAR */
+#topBar {
+  display: flex;
+  align-items: center;
+  padding: 8px 20px;
+  background: #111128;
+  border-bottom: 1px solid #2a2a4a;
+  gap: 16px;
+  flex-shrink: 0;
+}
+#topBar h1 {
+  font-size: 18px;
+  color: #8888ff;
+  white-space: nowrap;
+}
+.exp-btn {
+  padding: 6px 14px;
+  border: 1px solid #444;
+  background: #1a1a2e;
+  color: #ccc;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+.exp-btn:hover { background: #2a2a4e; }
+.exp-btn.active { background: #3a3aff; color: #fff; border-color: #5555ff; }
+
+/* MAIN AREA */
+#mainArea {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+/* LEFT PANEL */
+#leftPanel {
+  width: 320px;
+  min-width: 320px;
+  background: #0d0d20;
+  border-right: 1px solid #2a2a4a;
+  overflow-y: auto;
+  padding: 16px;
+  flex-shrink: 0;
+}
+#leftPanel h2 { font-size: 16px; color: #aaaaff; margin-bottom: 10px; }
+#leftPanel h3 { font-size: 13px; color: #8888cc; margin: 12px 0 6px; text-transform: uppercase; letter-spacing: 1px; }
+.control-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+  gap: 8px;
+}
+.control-row label {
+  font-size: 12px;
+  color: #aaa;
+  min-width: 90px;
+}
+.control-row input[type="range"] { flex: 1; }
+.control-row .val { font-size: 12px; color: #8888ff; min-width: 50px; text-align: right; }
+.action-btn {
+  padding: 8px 18px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  margin: 4px 4px 4px 0;
+  transition: all 0.15s;
+}
+.btn-drop { background: #2ecc71; color: #111; }
+.btn-drop:hover { background: #27ae60; }
+.btn-reset { background: #555; color: #fff; }
+.btn-reset:hover { background: #777; }
+.btn-slow { background: #e67e22; color: #fff; }
+.btn-slow:hover { background: #d35400; }
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+}
+.toggle-row label { font-size: 12px; color: #aaa; }
+.toggle-switch {
+  position: relative;
+  width: 40px;
+  height: 20px;
+}
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: #333;
+  border-radius: 20px;
+  transition: 0.3s;
+}
+.toggle-slider:before {
+  content: '';
+  position: absolute;
+  height: 16px; width: 16px;
+  left: 2px; bottom: 2px;
+  background: #fff;
+  border-radius: 50%;
+  transition: 0.3s;
+}
+.toggle-switch input:checked + .toggle-slider { background: #3a3aff; }
+.toggle-switch input:checked + .toggle-slider:before { transform: translateX(20px); }
+#explanation {
+  margin-top: 14px;
+  padding: 10px;
+  background: #111130;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #bbb;
+  border: 1px solid #222244;
+}
+#explanation strong { color: #aaaaff; }
+blockquote {
+  margin: 8px 0;
+  padding: 8px 12px;
+  border-left: 3px solid #5555aa;
+  font-style: italic;
+  color: #999;
+  font-size: 11px;
+}
+
+/* 3D VIEWPORT */
+#viewport {
+  flex: 1;
+  position: relative;
+  min-width: 0;
+}
+#viewport canvas { display: block; }
+
+/* BOTTOM DATA */
+#bottomPanel {
+  height: 110px;
+  min-height: 110px;
+  background: #0d0d20;
+  border-top: 1px solid #2a2a4a;
+  display: flex;
+  padding: 8px 16px;
+  gap: 16px;
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+.data-card {
+  background: #111130;
+  border: 1px solid #222244;
+  border-radius: 6px;
+  padding: 8px 14px;
+  min-width: 180px;
+}
+.data-card h4 {
+  font-size: 11px;
+  color: #8888cc;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+.data-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  margin: 2px 0;
+}
+.data-row .lbl { color: #888; }
+.data-row .num { color: #8888ff; font-family: 'Courier New', monospace; }
+</style>
+</head>
+<body>
+
+<div id="topBar">
+  <h1>Gravity Lab</h1>
+  <button class="exp-btn active" onclick="selectExperiment(0)">1. Heavy vs Light Drop</button>
+  <button class="exp-btn" onclick="selectExperiment(1)">2. Projectile Motion</button>
+  <button class="exp-btn" onclick="selectExperiment(2)">3. DePalma Spinning Launch</button>
+  <button class="exp-btn" onclick="selectExperiment(3)">4. Spinning vs Static Drop</button>
+</div>
+
+<div id="mainArea">
+  <div id="leftPanel"></div>
+  <div id="viewport"></div>
+</div>
+
+<div id="bottomPanel"></div>
+
+<script>
+// ========== GLOBALS ==========
+let scene, camera, renderer, animId;
+let currentExp = 0;
+let simRunning = false;
+let simTime = 0;
+let slowMo = false;
+const G = 9.80665;
+let objects = {};
+let trails = {};
+
+// ========== THREE.JS SETUP ==========
+function initThree() {
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0a0a1a);
+  scene.fog = new THREE.Fog(0x0a0a1a, 30, 80);
+
+  const vp = document.getElementById('viewport');
+  const w = vp.clientWidth, h = vp.clientHeight;
+  camera = new THREE.PerspectiveCamera(50, w / h, 0.1, 200);
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(w, h);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  vp.appendChild(renderer.domElement);
+
+  // Lights
+  const ambient = new THREE.AmbientLight(0x333355, 0.6);
+  scene.add(ambient);
+  const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+  dirLight.position.set(10, 20, 10);
+  dirLight.castShadow = true;
+  dirLight.shadow.mapSize.set(1024, 1024);
+  scene.add(dirLight);
+  const pointLight = new THREE.PointLight(0x4444ff, 0.3, 50);
+  pointLight.position.set(-5, 10, 5);
+  scene.add(pointLight);
+
+  window.addEventListener('resize', () => {
+    const vp = document.getElementById('viewport');
+    const w = vp.clientWidth, h = vp.clientHeight;
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    renderer.setSize(w, h);
+  });
+}
+
+// ========== HELPERS ==========
+function clearScene() {
+  if (animId) cancelAnimationFrame(animId);
+  simRunning = false;
+  simTime = 0;
+  slowMo = false;
+  while (scene.children.length > 0) scene.remove(scene.children[0]);
+  objects = {};
+  trails = {};
+  // Re-add lights
+  scene.add(new THREE.AmbientLight(0x333355, 0.6));
+  const dl = new THREE.DirectionalLight(0xffffff, 0.8);
+  dl.position.set(10, 20, 10);
+  dl.castShadow = true;
+  scene.add(dl);
+  scene.add(new THREE.PointLight(0x4444ff, 0.3, 50));
+}
+
+function makeGround(size = 30) {
+  const geo = new THREE.PlaneGeometry(size, size);
+  const mat = new THREE.MeshStandardMaterial({ color: 0x1a1a2e, roughness: 0.8 });
+  const ground = new THREE.Mesh(geo, mat);
+  ground.rotation.x = -Math.PI / 2;
+  ground.receiveShadow = true;
+  scene.add(ground);
+  // Grid
+  const grid = new THREE.GridHelper(size, size, 0x222244, 0x151530);
+  scene.add(grid);
+}
+
+function makeCheckerTexture(color1, color2, size) {
+  const canvas = document.createElement('canvas');
+  canvas.width = size; canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  const half = size / 2;
+  ctx.fillStyle = color1;
+  ctx.fillRect(0, 0, size, size);
+  ctx.fillStyle = color2;
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      if ((r + c) % 2 === 0) {
+        ctx.fillRect(c * size/8, r * size/8, size/8, size/8);
+      }
+    }
+  }
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  return tex;
+}
+
+function makeSphere(radius, color, position, textured = false) {
+  const geo = new THREE.SphereGeometry(radius, 32, 32);
+  let mat;
+  if (textured) {
+    const tex = makeCheckerTexture(color, '#' + new THREE.Color(color).clone().multiplyScalar(0.5).getHexString(), 128);
+    mat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.4, metalness: 0.3 });
+  } else {
+    mat = new THREE.MeshStandardMaterial({ color, roughness: 0.3, metalness: 0.6 });
+  }
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.copy(position);
+  mesh.castShadow = true;
+  scene.add(mesh);
+  return mesh;
+}
+
+function makeArrow(origin, dir, length, color) {
+  const arrow = new THREE.ArrowHelper(dir.normalize(), origin, length, color, length * 0.2, length * 0.1);
+  scene.add(arrow);
+  return arrow;
+}
+
+function addTrailPoint(name, pos) {
+  if (!trails[name]) {
+    trails[name] = { points: [], line: null, color: null };
+  }
+  trails[name].points.push(pos.clone());
+  if (trails[name].points.length < 2) return;
+  if (trails[name].line) scene.remove(trails[name].line);
+  const geo = new THREE.BufferGeometry().setFromPoints(trails[name].points);
+  const mat = new THREE.LineBasicMaterial({ color: trails[name].color || 0x8888ff });
+  trails[name].line = new THREE.Line(geo, mat);
+  scene.add(trails[name].line);
+}
+
+function setTrailColor(name, color) {
+  if (!trails[name]) trails[name] = { points: [], line: null, color: null };
+  trails[name].color = color;
+}
+
+// ========== EXPERIMENT 0: HEAVY vs LIGHT DROP ==========
+const exp0 = {
+  airRes: false,
+  dropHeight: 10,
+  running: false,
+  heavyBall: null, lightBall: null,
+  heavyV: 0, lightV: 0,
+  heavyY: 0, lightY: 0,
+  heavyTime: 0, lightTime: 0,
+  heavyLanded: false, lightLanded: false,
+  heavyMass: 10, lightMass: 0.1,
+  heavyRadius: 0.5, lightRadius: 0.25,
+  heavyCd: 0.47, lightCd: 0.47,
+  rhoAir: 1.225,
+
+  setup() {
+    clearScene();
+    makeGround(20);
+    camera.position.set(0, 6, 14);
+    camera.lookAt(0, 5, 0);
+    this.dropHeight = 10;
+    this.heavyY = this.dropHeight;
+    this.lightY = this.dropHeight;
+    this.heavyV = 0; this.lightV = 0;
+    this.heavyTime = 0; this.lightTime = 0;
+    this.heavyLanded = false; this.lightLanded = false;
+
+    // Pillars
+    const pillarGeo = new THREE.CylinderGeometry(0.08, 0.08, this.dropHeight);
+    const pillarMat = new THREE.MeshStandardMaterial({ color: 0x444466 });
+    const p1 = new THREE.Mesh(pillarGeo, pillarMat);
+    p1.position.set(-1.5, this.dropHeight / 2, 0);
+    scene.add(p1);
+    const p2 = new THREE.Mesh(pillarGeo, pillarMat);
+    p2.position.set(1.5, this.dropHeight / 2, 0);
+    scene.add(p2);
+    // Cross beam
+    const beam = new THREE.Mesh(
+      new THREE.BoxGeometry(4, 0.1, 0.1),
+      new THREE.MeshStandardMaterial({ color: 0x444466 })
+    );
+    beam.position.set(0, this.dropHeight, 0);
+    scene.add(beam);
+
+    // Balls
+    this.heavyBall = makeSphere(this.heavyRadius, 0x8888cc, new THREE.Vector3(-1.2, this.dropHeight - this.heavyRadius, 0), true);
+    this.lightBall = makeSphere(this.lightRadius, 0x44cc44, new THREE.Vector3(1.2, this.dropHeight - this.lightRadius, 0), true);
+
+    // Labels
+    this.addLabel('Steel 10kg', -1.2, this.dropHeight + 0.8, 0);
+    this.addLabel('Tennis 0.1kg', 1.2, this.dropHeight + 0.8, 0);
+
+    this.updateData();
+    animate();
+  },
+
+  addLabel(text, x, y, z) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256; canvas.height = 64;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#aaaaff';
+    ctx.font = '24px Segoe UI';
+    ctx.textAlign = 'center';
+    ctx.fillText(text, 128, 40);
+    const tex = new THREE.CanvasTexture(canvas);
+    const mat = new THREE.SpriteMaterial({ map: tex, transparent: true });
+    const sprite = new THREE.Sprite(mat);
+    sprite.position.set(x, y, z);
+    sprite.scale.set(2, 0.5, 1);
+    scene.add(sprite);
+  },
+
+  drop() {
+    this.running = true;
+    simRunning = true;
+    simTime = 0;
+    this.heavyV = 0; this.lightV = 0;
+    this.heavyTime = 0; this.lightTime = 0;
+    this.heavyLanded = false; this.lightLanded = false;
+    this.heavyY = this.dropHeight - this.heavyRadius;
+    this.lightY = this.dropHeight - this.lightRadius;
+  },
+
+  update(dt) {
+    if (!this.running) return;
+    const dtSim = slowMo ? dt * 0.1 : dt;
+    simTime += dtSim;
+
+    if (!this.heavyLanded) {
+      let aH = G;
+      if (this.airRes) {
+        const dragH = 0.5 * this.rhoAir * this.heavyCd * Math.PI * this.heavyRadius * this.heavyRadius * this.heavyV * this.heavyV;
+        aH = G - dragH / this.heavyMass;
+      }
+      this.heavyV += aH * dtSim;
+      this.heavyY -= this.heavyV * dtSim;
+      this.heavyTime = simTime;
+      if (this.heavyY <= this.heavyRadius) {
+        this.heavyY = this.heavyRadius;
+        this.heavyLanded = true;
+      }
+      this.heavyBall.position.y = this.heavyY;
+    }
+
+    if (!this.lightLanded) {
+      let aL = G;
+      if (this.airRes) {
+        const dragL = 0.5 * this.rhoAir * this.lightCd * Math.PI * this.lightRadius * this.lightRadius * this.lightV * this.lightV;
+        aL = G - dragL / this.lightMass;
+      }
+      this.lightV += aL * dtSim;
+      this.lightY -= this.lightV * dtSim;
+      this.lightTime = simTime;
+      if (this.lightY <= this.lightRadius) {
+        this.lightY = this.lightRadius;
+        this.lightLanded = true;
+      }
+      this.lightBall.position.y = this.lightY;
+    }
+
+    if (this.heavyLanded && this.lightLanded) {
+      this.running = false;
+      simRunning = false;
+    }
+    this.updateData();
+  },
+
+  updateData() {
+    const bp = document.getElementById('bottomPanel');
+    const theoreticalT = Math.sqrt(2 * (this.dropHeight) / G);
+    bp.innerHTML = `
+      <div class="data-card">
+        <h4>Steel Ball (10 kg)</h4>
+        <div class="data-row"><span class="lbl">Height:</span><span class="num">${this.heavyY.toFixed(3)} m</span></div>
+        <div class="data-row"><span class="lbl">Velocity:</span><span class="num">${this.heavyV.toFixed(3)} m/s</span></div>
+        <div class="data-row"><span class="lbl">Accel:</span><span class="num">${G.toFixed(3)} m/s²</span></div>
+        <div class="data-row"><span class="lbl">Time:</span><span class="num">${this.heavyTime.toFixed(4)} s</span></div>
+      </div>
+      <div class="data-card">
+        <h4>Tennis Ball (0.1 kg)</h4>
+        <div class="data-row"><span class="lbl">Height:</span><span class="num">${this.lightY.toFixed(3)} m</span></div>
+        <div class="data-row"><span class="lbl">Velocity:</span><span class="num">${this.lightV.toFixed(3)} m/s</span></div>
+        <div class="data-row"><span class="lbl">Accel:</span><span class="num">${G.toFixed(3)} m/s²</span></div>
+        <div class="data-row"><span class="lbl">Time:</span><span class="num">${this.lightTime.toFixed(4)} s</span></div>
+      </div>
+      <div class="data-card">
+        <h4>Theory</h4>
+        <div class="data-row"><span class="lbl">h = 1/2 g t²</span><span class="num"></span></div>
+        <div class="data-row"><span class="lbl">Free-fall t:</span><span class="num">${theoreticalT.toFixed(4)} s</span></div>
+        <div class="data-row"><span class="lbl">Impact v:</span><span class="num">${(G * theoreticalT).toFixed(3)} m/s</span></div>
+        <div class="data-row"><span class="lbl">Mode:</span><span class="num">${this.airRes ? 'Air' : 'Vacuum'}</span></div>
+      </div>
+      <div class="data-card">
+        <h4>Time Difference</h4>
+        <div class="data-row"><span class="lbl">Delta t:</span><span class="num">${Math.abs(this.heavyTime - this.lightTime).toFixed(6)} s</span></div>
+        <div class="data-row"><span class="lbl">Result:</span><span class="num">${this.heavyLanded && this.lightLanded ? (Math.abs(this.heavyTime - this.lightTime) < 0.001 ? 'Same time!' : 'Different!') : 'Waiting...'}</span></div>
+      </div>
+    `;
+  },
+
+  buildControls() {
+    const lp = document.getElementById('leftPanel');
+    lp.innerHTML = `
+      <h2>Experiment 1: Heavy vs Light Drop</h2>
+      <h3>Galileo's Gravity Test</h3>
+      <div style="margin: 10px 0;">
+        <button class="action-btn btn-drop" onclick="exp0.drop()">Drop Both</button>
+        <button class="action-btn btn-slow" onclick="slowMo=!slowMo">Slow Motion</button>
+        <button class="action-btn btn-reset" onclick="exp0.setup()">Reset</button>
+      </div>
+      <div class="toggle-row">
+        <label>Vacuum</label>
+        <label class="toggle-switch">
+          <input type="checkbox" id="airToggle" onchange="exp0.airRes=this.checked; exp0.setup()">
+          <span class="toggle-slider"></span>
+        </label>
+        <label>Air Resistance</label>
+      </div>
+      <div id="explanation">
+        <strong>Galileo's Principle:</strong> In a vacuum, all objects fall at the same rate regardless of mass.
+        The acceleration due to gravity (g = 9.81 m/s²) is the same for every object.
+        <br><br>
+        <strong>Free fall equation:</strong> h = ½gt²
+        <br>
+        <strong>Velocity:</strong> v = gt
+        <br>
+        <strong>Terminal velocity:</strong> v_t = sqrt(2mg / ρAC_d)
+        <br><br>
+        With air resistance, the lighter ball reaches terminal velocity sooner and
+        arrives slightly later. The drag force (F_d = ½ρv²C_dA) is the same magnitude
+        but decelerates the lighter ball more (F/m is larger).
+        <br><br>
+        <strong>Real-world proof:</strong> Apollo 15 astronaut David Scott dropped a hammer
+        and a feather on the Moon (1971). Both hit the lunar surface at the same time
+        in the airless environment, confirming Galileo's principle.
+      </div>
+    `;
+  }
+};
+
+// ========== EXPERIMENT 1: PROJECTILE MOTION ==========
+const exp1 = {
+  angle: 45,
+  speed: 15,
+  gravity: 9.81,
+  airRes: false,
+  running: false,
+  heavyBall: null, lightBall: null,
+  hPos: null, lPos: null,
+  hVel: null, lVel: null,
+  hLanded: false, lLanded: false,
+  hTime: 0, lTime: 0,
+  hArrowV: null, hArrowH: null, lArrowV: null, lArrowH: null,
+  heavyMass: 10, lightMass: 0.5,
+  heavyRadius: 0.3, lightRadius: 0.2,
+
+  setup() {
+    clearScene();
+    makeGround(40);
+    camera.position.set(0, 8, 22);
+    camera.lookAt(5, 3, 0);
+
+    this.hPos = new THREE.Vector3(-1, 0.3, 0);
+    this.lPos = new THREE.Vector3(-1, 0.3, 1.5);
+    this.hVel = new THREE.Vector3(0, 0, 0);
+    this.lVel = new THREE.Vector3(0, 0, 0);
+    this.hLanded = false; this.lLanded = false;
+    this.hTime = 0; this.lTime = 0;
+
+    // Launcher base
+    const base = new THREE.Mesh(
+      new THREE.BoxGeometry(1.5, 0.5, 2),
+      new THREE.MeshStandardMaterial({ color: 0x444466 })
+    );
+    base.position.set(-1, 0.25, 0.75);
+    scene.add(base);
+
+    // Barrel
+    const rad = this.angle * Math.PI / 180;
+    const barrel = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.12, 0.15, 2, 16),
+      new THREE.MeshStandardMaterial({ color: 0x666688 })
+    );
+    barrel.position.set(-1 + Math.cos(rad) * 0.8, 0.5 + Math.sin(rad) * 0.8, 0.75);
+    barrel.rotation.z = rad - Math.PI / 2;
+    scene.add(barrel);
+
+    this.heavyBall = makeSphere(this.heavyRadius, 0x8888cc, this.hPos.clone(), true);
+    this.lightBall = makeSphere(this.lightRadius, 0x44cc44, this.lPos.clone(), true);
+
+    setTrailColor('heavy', 0x8888cc);
+    setTrailColor('light', 0x44cc44);
+
+    this.updateData();
+    animate();
+  },
+
+  fire() {
+    this.running = true;
+    simRunning = true;
+    simTime = 0;
+    this.hTime = 0; this.lTime = 0;
+    this.hLanded = false; this.lLanded = false;
+    const rad = this.angle * Math.PI / 180;
+    const vx = this.speed * Math.cos(rad);
+    const vy = this.speed * Math.sin(rad);
+    this.hPos.set(-1, this.heavyRadius, 0);
+    this.lPos.set(-1, this.lightRadius, 1.5);
+    this.hVel = new THREE.Vector3(vx, vy, 0);
+    this.lVel = new THREE.Vector3(vx, vy, 0);
+    trails = {};
+    setTrailColor('heavy', 0x8888cc);
+    setTrailColor('light', 0x44cc44);
+  },
+
+  update(dt) {
+    if (!this.running) return;
+    const dtSim = slowMo ? dt * 0.1 : dt;
+    simTime += dtSim;
+
+    const updateBall = (pos, vel, mass, radius, landed, name) => {
+      if (landed) return [pos, vel, true];
+      let ax = 0, ay = -this.gravity;
+      if (this.airRes) {
+        const speed = vel.length();
+        if (speed > 0) {
+          const area = Math.PI * radius * radius;
+          const dragMag = 0.5 * 1.225 * 0.47 * area * speed * speed;
+          ax -= (dragMag / mass) * (vel.x / speed);
+          ay -= (dragMag / mass) * (vel.y / speed);
+        }
+      }
+      vel.x += ax * dtSim;
+      vel.y += ay * dtSim;
+      pos.x += vel.x * dtSim;
+      pos.y += vel.y * dtSim;
+      addTrailPoint(name, pos);
+      if (pos.y <= radius) {
+        pos.y = radius;
+        return [pos, vel, true];
+      }
+      return [pos, vel, false];
+    };
+
+    [this.hPos, this.hVel, this.hLanded] = updateBall(this.hPos, this.hVel, this.heavyMass, this.heavyRadius, this.hLanded, 'heavy');
+    if (!this.hLanded) this.hTime = simTime;
+    this.heavyBall.position.copy(this.hPos);
+
+    [this.lPos, this.lVel, this.lLanded] = updateBall(this.lPos, this.lVel, this.lightMass, this.lightRadius, this.lLanded, 'light');
+    if (!this.lLanded) this.lTime = simTime;
+    this.lightBall.position.copy(this.lPos);
+
+    // Velocity arrows
+    if (this.hArrowV) { scene.remove(this.hArrowV); scene.remove(this.hArrowH); }
+    if (this.lArrowV) { scene.remove(this.lArrowV); scene.remove(this.lArrowH); }
+    if (!this.hLanded) {
+      this.hArrowV = makeArrow(this.hPos, new THREE.Vector3(0, 1, 0), Math.abs(this.hVel.y) * 0.15, 0xff4444);
+      this.hArrowH = makeArrow(this.hPos, new THREE.Vector3(1, 0, 0), Math.abs(this.hVel.x) * 0.15, 0x44ff44);
+    }
+    if (!this.lLanded) {
+      this.lArrowV = makeArrow(this.lPos, new THREE.Vector3(0, 1, 0), Math.abs(this.lVel.y) * 0.15, 0xff4444);
+      this.lArrowH = makeArrow(this.lPos, new THREE.Vector3(1, 0, 0), Math.abs(this.lVel.x) * 0.15, 0x44ff44);
+    }
+
+    if (this.hLanded && this.lLanded) {
+      this.running = false;
+      simRunning = false;
+    }
+    this.updateData();
+  },
+
+  updateData() {
+    const bp = document.getElementById('bottomPanel');
+    const rad = this.angle * Math.PI / 180;
+    const rangeTheory = (this.speed * this.speed * Math.sin(2 * rad)) / this.gravity;
+    const maxH = (this.speed * Math.sin(rad)) ** 2 / (2 * this.gravity);
+    bp.innerHTML = `
+      <div class="data-card">
+        <h4>Heavy Ball (10 kg)</h4>
+        <div class="data-row"><span class="lbl">X:</span><span class="num">${(this.hPos ? this.hPos.x + 1 : 0).toFixed(2)} m</span></div>
+        <div class="data-row"><span class="lbl">Y:</span><span class="num">${(this.hPos ? this.hPos.y : 0).toFixed(2)} m</span></div>
+        <div class="data-row"><span class="lbl">Vx:</span><span class="num">${(this.hVel ? this.hVel.x : 0).toFixed(2)} m/s</span></div>
+        <div class="data-row"><span class="lbl">Vy:</span><span class="num">${(this.hVel ? this.hVel.y : 0).toFixed(2)} m/s</span></div>
+        <div class="data-row"><span class="lbl">Time:</span><span class="num">${this.hTime.toFixed(4)} s</span></div>
+      </div>
+      <div class="data-card">
+        <h4>Light Ball (0.5 kg)</h4>
+        <div class="data-row"><span class="lbl">X:</span><span class="num">${(this.lPos ? this.lPos.x + 1 : 0).toFixed(2)} m</span></div>
+        <div class="data-row"><span class="lbl">Y:</span><span class="num">${(this.lPos ? this.lPos.y : 0).toFixed(2)} m</span></div>
+        <div class="data-row"><span class="lbl">Vx:</span><span class="num">${(this.lVel ? this.lVel.x : 0).toFixed(2)} m/s</span></div>
+        <div class="data-row"><span class="lbl">Vy:</span><span class="num">${(this.lVel ? this.lVel.y : 0).toFixed(2)} m/s</span></div>
+        <div class="data-row"><span class="lbl">Time:</span><span class="num">${this.lTime.toFixed(4)} s</span></div>
+      </div>
+      <div class="data-card">
+        <h4>Theory (vacuum)</h4>
+        <div class="data-row"><span class="lbl">Range:</span><span class="num">${rangeTheory.toFixed(2)} m</span></div>
+        <div class="data-row"><span class="lbl">Max Height:</span><span class="num">${maxH.toFixed(2)} m</span></div>
+        <div class="data-row"><span class="lbl">Flight time:</span><span class="num">${(2 * this.speed * Math.sin(rad) / this.gravity).toFixed(4)} s</span></div>
+        <div class="data-row"><span class="lbl">Mode:</span><span class="num">${this.airRes ? 'Air' : 'Vacuum'}</span></div>
+      </div>
+      <div class="data-card">
+        <h4>Distance Difference</h4>
+        <div class="data-row"><span class="lbl">Heavy X:</span><span class="num">${this.hLanded ? (this.hPos.x + 1).toFixed(2) + ' m' : '...'}</span></div>
+        <div class="data-row"><span class="lbl">Light X:</span><span class="num">${this.lLanded ? (this.lPos.x + 1).toFixed(2) + ' m' : '...'}</span></div>
+        <div class="data-row"><span class="lbl">Delta:</span><span class="num">${this.hLanded && this.lLanded ? Math.abs((this.hPos.x) - (this.lPos.x)).toFixed(3) + ' m' : '...'}</span></div>
+      </div>
+    `;
+  },
+
+  buildControls() {
+    const lp = document.getElementById('leftPanel');
+    lp.innerHTML = `
+      <h2>Experiment 2: Projectile Motion</h2>
+      <h3>Controls</h3>
+      <div class="control-row">
+        <label>Angle:</label>
+        <input type="range" min="5" max="85" value="${this.angle}" oninput="exp1.angle=+this.value; document.getElementById('angleVal').textContent=this.value+'°'; exp1.setup()">
+        <span class="val" id="angleVal">${this.angle}°</span>
+      </div>
+      <div class="control-row">
+        <label>Speed:</label>
+        <input type="range" min="5" max="30" value="${this.speed}" oninput="exp1.speed=+this.value; document.getElementById('speedVal').textContent=this.value+' m/s'">
+        <span class="val" id="speedVal">${this.speed} m/s</span>
+      </div>
+      <div class="control-row">
+        <label>Gravity:</label>
+        <input type="range" min="1" max="25" step="0.1" value="${this.gravity}" oninput="exp1.gravity=+this.value; document.getElementById('gravVal').textContent=this.value+' m/s²'">
+        <span class="val" id="gravVal">${this.gravity} m/s²</span>
+      </div>
+      <div style="margin: 10px 0;">
+        <button class="action-btn btn-drop" onclick="exp1.fire()">Fire!</button>
+        <button class="action-btn btn-slow" onclick="slowMo=!slowMo">Slow Motion</button>
+        <button class="action-btn btn-reset" onclick="exp1.setup()">Reset</button>
+      </div>
+      <div class="toggle-row">
+        <label>Vacuum</label>
+        <label class="toggle-switch">
+          <input type="checkbox" id="airToggle1" onchange="exp1.airRes=this.checked">
+          <span class="toggle-slider"></span>
+        </label>
+        <label>Air Resistance</label>
+      </div>
+      <div id="explanation">
+        <strong>Projectile Motion:</strong> An object launched at angle θ with speed v follows a parabolic trajectory under gravity.
+        <br><br>
+        <strong>Horizontal:</strong> x = v·cos(θ)·t (constant, no gravity)
+        <br>
+        <strong>Vertical:</strong> y = v·sin(θ)·t - ½gt²
+        <br>
+        <strong>Range:</strong> R = v²·sin(2θ) / g
+        <br>
+        <strong>Max height:</strong> H = (v·sin(θ))² / (2g)
+        <br><br>
+        In vacuum, both balls follow identical parabolas regardless of mass.
+        With air resistance, the heavier ball maintains more momentum and travels farther.
+        <br><br>
+        <strong>Velocity vectors:</strong> Red = vertical component, Green = horizontal component.
+        The horizontal component stays constant in vacuum; the vertical component changes linearly with time.
+      </div>
+    `;
+  }
+};
+
+// ========== EXPERIMENT 2: DEPALMA SPINNING BALL LAUNCH ==========
+const exp2 = {
+  spinRPM: 27000,
+  launchV: 15,
+  running: false,
+  spinBall: null, staticBall: null,
+  spinY: 0, staticY: 0,
+  spinVy: 0, staticVy: 0,
+  spinTime: 0, staticTime: 0,
+  spinMaxH: 0, staticMaxH: 0,
+  spinLanded: false, staticLanded: false,
+  effectScale: 0.0001, // exaggerated for visualization
+
+  setup() {
+    clearScene();
+    makeGround(20);
+    camera.position.set(0, 8, 14);
+    camera.lookAt(0, 6, 0);
+
+    this.spinY = 0.5; this.staticY = 0.5;
+    this.spinVy = 0; this.staticVy = 0;
+    this.spinTime = 0; this.staticTime = 0;
+    this.spinMaxH = 0; this.staticMaxH = 0;
+    this.spinLanded = false; this.staticLanded = false;
+
+    // Platforms
+    const platGeo = new THREE.BoxGeometry(1.5, 0.3, 1.5);
+    const platMat = new THREE.MeshStandardMaterial({ color: 0x333355 });
+    const p1 = new THREE.Mesh(platGeo, platMat);
+    p1.position.set(-2, 0.15, 0);
+    scene.add(p1);
+    const p2 = new THREE.Mesh(platGeo, platMat);
+    p2.position.set(2, 0.15, 0);
+    scene.add(p2);
+
+    this.spinBall = makeSphere(0.4, 0xffaa33, new THREE.Vector3(-2, 0.7, 0), true);
+    this.staticBall = makeSphere(0.4, 0x8888cc, new THREE.Vector3(2, 0.7, 0), true);
+
+    // Labels
+    exp0.addLabel.call(this, 'Spinning', -2, 1.5, 0);
+    exp0.addLabel.call(this, 'Stationary', 2, 1.5, 0);
+
+    setTrailColor('spin', 0xffaa33);
+    setTrailColor('static', 0x8888cc);
+
+    this.updateData();
+    animate();
+  },
+
+  addLabel: exp0.addLabel,
+
+  launch() {
+    this.running = true;
+    simRunning = true;
+    simTime = 0;
+    this.spinY = 0.7; this.staticY = 0.7;
+    this.spinVy = this.launchV; this.staticVy = this.launchV;
+    this.spinTime = 0; this.staticTime = 0;
+    this.spinMaxH = 0; this.staticMaxH = 0;
+    this.spinLanded = false; this.staticLanded = false;
+    trails = {};
+    setTrailColor('spin', 0xffaa33);
+    setTrailColor('static', 0x8888cc);
+  },
+
+  update(dt) {
+    if (!this.running) return;
+    const dtSim = slowMo ? dt * 0.05 : dt;
+    simTime += dtSim;
+
+    // Spinning ball visual rotation
+    if (this.spinBall) {
+      this.spinBall.rotation.y += (this.spinRPM / 60) * 2 * Math.PI * dtSim * 0.01; // scaled for visual
+    }
+
+    // DePalma effect: spinning ball has slightly reduced effective inertia
+    // This means it accelerates more easily — goes higher, falls faster
+    const spinFactor = 1 + this.effectScale * (this.spinRPM / 1000);
+
+    if (!this.staticLanded) {
+      this.staticVy -= G * dtSim;
+      this.staticY += this.staticVy * dtSim;
+      this.staticTime = simTime;
+      if (this.staticY > this.staticMaxH) this.staticMaxH = this.staticY;
+      addTrailPoint('static', new THREE.Vector3(2, this.staticY, 0));
+      if (this.staticY <= 0.4 && this.staticVy < 0) {
+        this.staticY = 0.4;
+        this.staticLanded = true;
+      }
+      this.staticBall.position.y = this.staticY;
+    }
+
+    if (!this.spinLanded) {
+      // Spinning ball: the launch impulse is more effective (goes higher)
+      // and gravity pulls more effectively (falls faster)
+      this.spinVy -= G * spinFactor * dtSim;
+      this.spinY += this.spinVy * dtSim;
+      this.spinTime = simTime;
+      if (this.spinY > this.spinMaxH) this.spinMaxH = this.spinY;
+      addTrailPoint('spin', new THREE.Vector3(-2, this.spinY, 0));
+      if (this.spinY <= 0.4 && this.spinVy < 0) {
+        this.spinY = 0.4;
+        this.spinLanded = true;
+      }
+      this.spinBall.position.y = this.spinY;
+    }
+
+    if (this.spinLanded && this.staticLanded) {
+      this.running = false;
+      simRunning = false;
+    }
+    this.updateData();
+  },
+
+  updateData() {
+    const bp = document.getElementById('bottomPanel');
+    const spinFactor = 1 + this.effectScale * (this.spinRPM / 1000);
+    bp.innerHTML = `
+      <div class="data-card">
+        <h4>Spinning Ball (${this.spinRPM.toLocaleString()} RPM)</h4>
+        <div class="data-row"><span class="lbl">Height:</span><span class="num">${this.spinY.toFixed(3)} m</span></div>
+        <div class="data-row"><span class="lbl">Velocity:</span><span class="num">${this.spinVy.toFixed(3)} m/s</span></div>
+        <div class="data-row"><span class="lbl">Max Height:</span><span class="num">${this.spinMaxH.toFixed(3)} m</span></div>
+        <div class="data-row"><span class="lbl">Flight time:</span><span class="num">${this.spinTime.toFixed(6)} s</span></div>
+      </div>
+      <div class="data-card">
+        <h4>Stationary Ball</h4>
+        <div class="data-row"><span class="lbl">Height:</span><span class="num">${this.staticY.toFixed(3)} m</span></div>
+        <div class="data-row"><span class="lbl">Velocity:</span><span class="num">${this.staticVy.toFixed(3)} m/s</span></div>
+        <div class="data-row"><span class="lbl">Max Height:</span><span class="num">${this.staticMaxH.toFixed(3)} m</span></div>
+        <div class="data-row"><span class="lbl">Flight time:</span><span class="num">${this.staticTime.toFixed(6)} s</span></div>
+      </div>
+      <div class="data-card">
+        <h4>Comparison</h4>
+        <div class="data-row"><span class="lbl">Height diff:</span><span class="num">${(this.spinMaxH - this.staticMaxH).toFixed(4)} m</span></div>
+        <div class="data-row"><span class="lbl">Time diff:</span><span class="num">${Math.abs(this.spinTime - this.staticTime).toFixed(6)} s</span></div>
+        <div class="data-row"><span class="lbl">Spin factor:</span><span class="num">${spinFactor.toFixed(6)}</span></div>
+        <div class="data-row"><span class="lbl">Effect:</span><span class="num">${this.spinLanded && this.staticLanded ? 'Spin goes higher' : 'Running...'}</span></div>
+      </div>
+    `;
+  },
+
+  buildControls() {
+    const lp = document.getElementById('leftPanel');
+    lp.innerHTML = `
+      <h2>Experiment 3: DePalma Spinning Ball</h2>
+      <h3>Controls</h3>
+      <div class="control-row">
+        <label>Spin Rate:</label>
+        <input type="range" min="0" max="27000" step="1000" value="${this.spinRPM}" oninput="exp2.spinRPM=+this.value; document.getElementById('rpmVal').textContent=this.value.toLocaleString()+' RPM'">
+        <span class="val" id="rpmVal">${this.spinRPM.toLocaleString()} RPM</span>
+      </div>
+      <div class="control-row">
+        <label>Launch Speed:</label>
+        <input type="range" min="5" max="25" value="${this.launchV}" oninput="exp2.launchV=+this.value; document.getElementById('launchVal').textContent=this.value+' m/s'">
+        <span class="val" id="launchVal">${this.launchV} m/s</span>
+      </div>
+      <div style="margin: 10px 0;">
+        <button class="action-btn btn-drop" onclick="exp2.launch()">Launch Both</button>
+        <button class="action-btn btn-slow" onclick="slowMo=!slowMo">Slow Motion</button>
+        <button class="action-btn btn-reset" onclick="exp2.setup()">Reset</button>
+      </div>
+      <div id="explanation">
+        <strong>Bruce DePalma's Spinning Ball Experiment (1977)</strong>
+        <br><br>
+        DePalma launched two identical 1-inch steel balls upward with identical force.
+        One ball was pre-spun at 27,000 RPM; the other was stationary.
+        <br><br>
+        <strong>His reported results:</strong>
+        <ul style="margin: 6px 0 6px 16px; font-size: 11px;">
+          <li>The spinning ball went higher</li>
+          <li>The spinning ball fell faster</li>
+          <li>Both effects were measurable and repeatable</li>
+        </ul>
+        DePalma proposed that rotation alters an object's interaction with gravity -
+        that a spinning mass has reduced inertia, making it easier to accelerate
+        in any direction.
+        <br><br>
+        <blockquote>
+        "The spinning ball experiment is the most fundamental experiment in physics.
+        It shows that rotation of a mass in free space alters the inertial properties
+        of that mass." - Bruce DePalma
+        </blockquote>
+        <br>
+        <strong>Mainstream physics view:</strong> These results have not been independently
+        replicated to the standards of peer-reviewed physics. General relativity predicts
+        extremely tiny frame-dragging effects (Lense-Thirring effect) from rotating masses,
+        but these are far too small to explain DePalma's claimed observations.
+        Most physicists consider the experimental methodology insufficient to draw
+        such conclusions. The effect remains outside accepted physics.
+        <br><br>
+        <strong>Note:</strong> This simulation faithfully reproduces DePalma's claimed effect
+        for educational purposes. The effect scale is exaggerated for visibility.
+      </div>
+    `;
+  }
+};
+
+// ========== EXPERIMENT 3: SPINNING vs STATIC DROP ==========
+const exp3 = {
+  spinRPM: 27000,
+  dropHeight: 10,
+  running: false,
+  spinBall: null, staticBall: null,
+  spinY: 0, staticY: 0,
+  spinV: 0, staticV: 0,
+  spinTime: 0, staticTime: 0,
+  spinLanded: false, staticLanded: false,
+  effectScale: 0.00002, // very subtle
+
+  setup() {
+    clearScene();
+    makeGround(20);
+    camera.position.set(0, 6, 14);
+    camera.lookAt(0, 5, 0);
+
+    this.spinY = this.dropHeight;
+    this.staticY = this.dropHeight;
+    this.spinV = 0; this.staticV = 0;
+    this.spinTime = 0; this.staticTime = 0;
+    this.spinLanded = false; this.staticLanded = false;
+
+    // Frame
+    const pillarMat = new THREE.MeshStandardMaterial({ color: 0x444466 });
+    [-2, 2].forEach(x => {
+      const p = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, this.dropHeight), pillarMat);
+      p.position.set(x, this.dropHeight / 2, 0);
+      scene.add(p);
+    });
+    const beam = new THREE.Mesh(new THREE.BoxGeometry(5, 0.1, 0.1), pillarMat);
+    beam.position.set(0, this.dropHeight, 0);
+    scene.add(beam);
+
+    this.spinBall = makeSphere(0.4, 0xffaa33, new THREE.Vector3(-1.5, this.dropHeight - 0.4, 0), true);
+    this.staticBall = makeSphere(0.4, 0x8888cc, new THREE.Vector3(1.5, this.dropHeight - 0.4, 0), true);
+
+    exp0.addLabel('Spinning', -1.5, this.dropHeight + 0.8, 0);
+    exp0.addLabel('Stationary', 1.5, this.dropHeight + 0.8, 0);
+
+    this.updateData();
+    animate();
+  },
+
+  drop() {
+    this.running = true;
+    simRunning = true;
+    simTime = 0;
+    this.spinY = this.dropHeight - 0.4;
+    this.staticY = this.dropHeight - 0.4;
+    this.spinV = 0; this.staticV = 0;
+    this.spinTime = 0; this.staticTime = 0;
+    this.spinLanded = false; this.staticLanded = false;
+  },
+
+  update(dt) {
+    if (!this.running) return;
+    const dtSim = slowMo ? dt * 0.05 : dt;
+    simTime += dtSim;
+
+    // Spin visual
+    if (this.spinBall) {
+      this.spinBall.rotation.y += (this.spinRPM / 60) * 2 * Math.PI * dtSim * 0.01;
+    }
+
+    const spinFactor = 1 + this.effectScale * (this.spinRPM / 1000);
+
+    if (!this.staticLanded) {
+      this.staticV += G * dtSim;
+      this.staticY -= this.staticV * dtSim;
+      this.staticTime = simTime;
+      if (this.staticY <= 0.4) {
+        this.staticY = 0.4;
+        this.staticLanded = true;
+      }
+      this.staticBall.position.y = this.staticY;
+    }
+
+    if (!this.spinLanded) {
+      this.spinV += G * spinFactor * dtSim;
+      this.spinY -= this.spinV * dtSim;
+      this.spinTime = simTime;
+      if (this.spinY <= 0.4) {
+        this.spinY = 0.4;
+        this.spinLanded = true;
+      }
+      this.spinBall.position.y = this.spinY;
+    }
+
+    if (this.spinLanded && this.staticLanded) {
+      this.running = false;
+      simRunning = false;
+    }
+    this.updateData();
+  },
+
+  updateData() {
+    const bp = document.getElementById('bottomPanel');
+    const theoreticalT = Math.sqrt(2 * this.dropHeight / G);
+    const spinFactor = 1 + this.effectScale * (this.spinRPM / 1000);
+    const spinTheoreticalT = Math.sqrt(2 * this.dropHeight / (G * spinFactor));
+    const deltaUs = Math.abs(this.spinTime - this.staticTime) * 1e6;
+    const deltaTTheory = Math.abs(theoreticalT - spinTheoreticalT) * 1e6;
+    bp.innerHTML = `
+      <div class="data-card">
+        <h4>Spinning Ball (${this.spinRPM.toLocaleString()} RPM)</h4>
+        <div class="data-row"><span class="lbl">Height:</span><span class="num">${this.spinY.toFixed(4)} m</span></div>
+        <div class="data-row"><span class="lbl">Velocity:</span><span class="num">${this.spinV.toFixed(4)} m/s</span></div>
+        <div class="data-row"><span class="lbl">Time:</span><span class="num">${this.spinTime.toFixed(6)} s</span></div>
+        <div class="data-row"><span class="lbl">g_eff:</span><span class="num">${(G * spinFactor).toFixed(5)} m/s²</span></div>
+      </div>
+      <div class="data-card">
+        <h4>Stationary Ball</h4>
+        <div class="data-row"><span class="lbl">Height:</span><span class="num">${this.staticY.toFixed(4)} m</span></div>
+        <div class="data-row"><span class="lbl">Velocity:</span><span class="num">${this.staticV.toFixed(4)} m/s</span></div>
+        <div class="data-row"><span class="lbl">Time:</span><span class="num">${this.staticTime.toFixed(6)} s</span></div>
+        <div class="data-row"><span class="lbl">g:</span><span class="num">${G.toFixed(5)} m/s²</span></div>
+      </div>
+      <div class="data-card">
+        <h4>High-Precision Timer</h4>
+        <div class="data-row"><span class="lbl">Delta t:</span><span class="num">${deltaUs.toFixed(1)} us</span></div>
+        <div class="data-row"><span class="lbl">Theory delta:</span><span class="num">${deltaTTheory.toFixed(1)} us</span></div>
+        <div class="data-row"><span class="lbl">Free-fall t:</span><span class="num">${theoreticalT.toFixed(6)} s</span></div>
+        <div class="data-row"><span class="lbl">Spin faster:</span><span class="num">${this.spinLanded && this.staticLanded ? (this.spinTime < this.staticTime ? 'Yes' : 'No') : '...'}</span></div>
+      </div>
+    `;
+  },
+
+  buildControls() {
+    const lp = document.getElementById('leftPanel');
+    lp.innerHTML = `
+      <h2>Experiment 4: Spinning vs Static Drop</h2>
+      <h3>Controls</h3>
+      <div class="control-row">
+        <label>Spin Rate:</label>
+        <input type="range" min="0" max="27000" step="1000" value="${this.spinRPM}" oninput="exp3.spinRPM=+this.value; document.getElementById('rpmVal3').textContent=this.value.toLocaleString()+' RPM'">
+        <span class="val" id="rpmVal3">${this.spinRPM.toLocaleString()} RPM</span>
+      </div>
+      <div class="control-row">
+        <label>Drop Height:</label>
+        <input type="range" min="3" max="20" value="${this.dropHeight}" oninput="exp3.dropHeight=+this.value; document.getElementById('heightVal3').textContent=this.value+' m'; exp3.setup()">
+        <span class="val" id="heightVal3">${this.dropHeight} m</span>
+      </div>
+      <div style="margin: 10px 0;">
+        <button class="action-btn btn-drop" onclick="exp3.drop()">Drop Both</button>
+        <button class="action-btn btn-slow" onclick="slowMo=!slowMo">Slow Motion</button>
+        <button class="action-btn btn-reset" onclick="exp3.setup()">Reset</button>
+      </div>
+      <div id="explanation">
+        <strong>Rotating vs Non-Rotating Drop</strong>
+        <br><br>
+        This is the simpler variant of DePalma's experiment: two identical steel balls
+        dropped from the same height, one spinning and one stationary.
+        <br><br>
+        <strong>DePalma's claim:</strong> The spinning ball falls slightly faster, arriving
+        at the ground microseconds before the stationary ball. The proposed mechanism is
+        a "rotation-inertia coupling" where rotational energy somehow reduces the
+        effective inertial mass of the object, allowing gravity to accelerate it more easily.
+        <br><br>
+        <strong>The time difference is extremely small</strong> — on the order of microseconds
+        for typical drop heights. The high-precision timer below shows this difference.
+        <br><br>
+        <strong>Proposed mechanism:</strong> DePalma theorized that rotating matter interacts
+        differently with the "aether" or space-time fabric. He suggested that angular momentum
+        creates a coupling that effectively reduces inertia, making the object more responsive
+        to gravitational force.
+        <br><br>
+        <strong>Critical note:</strong> Mainstream physics does not support these claims.
+        General relativity does predict frame-dragging (Lense-Thirring effect) where rotating
+        masses drag spacetime, but the effect for laboratory-sized objects is immeasurably small
+        (on the order of 10^-15). The simulation exaggerates the effect for visualization.
+      </div>
+    `;
+  }
+};
+
+// ========== EXPERIMENT SWITCHING ==========
+const experiments = [exp0, exp1, exp2, exp3];
+
+function selectExperiment(idx) {
+  currentExp = idx;
+  document.querySelectorAll('.exp-btn').forEach((btn, i) => {
+    btn.classList.toggle('active', i === idx);
+  });
+  experiments[idx].buildControls();
+  experiments[idx].setup();
+}
+
+// ========== ANIMATION LOOP ==========
+let lastTime = 0;
+function animate(time) {
+  animId = requestAnimationFrame(animate);
+  const dt = Math.min((time - lastTime) / 1000, 0.05) || 0.016;
+  lastTime = time;
+
+  if (simRunning) {
+    experiments[currentExp].update(dt);
+  }
+
+  // Continuous spin for DePalma experiments even when not running
+  if ((currentExp === 2 || currentExp === 3) && !simRunning) {
+    const ball = currentExp === 2 ? exp2.spinBall : exp3.spinBall;
+    const rpm = currentExp === 2 ? exp2.spinRPM : exp3.spinRPM;
+    if (ball && rpm > 0) {
+      ball.rotation.y += (rpm / 60) * 2 * Math.PI * dt * 0.01;
+    }
+  }
+
+  renderer.render(scene, camera);
+}
+
+// ========== INIT ==========
+initThree();
+selectExperiment(0);
+</script>
+</body>
+</html>

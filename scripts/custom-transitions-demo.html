@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BeautyCita — Custom Settings Transitions</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#FFFAF5; font-family:-apple-system,system-ui,sans-serif; color:#1a1a1a; }
+
+.header { text-align:center; padding:24px 20px 8px; }
+.header h1 { font-size:20px; font-weight:800; }
+.header p { font-size:11px; color:#999; margin-top:4px; }
+
+.demos { display:flex; flex-direction:column; gap:32px; max-width:440px; margin:20px auto; padding:0 16px 40px; }
+
+.demo { background:#fff; border-radius:24px; overflow:hidden; border:1px solid #f0ebe6; box-shadow:0 2px 12px rgba(0,0,0,0.04); }
+.demo-label { padding:14px 16px 0; font-size:14px; font-weight:700; }
+.demo-sub { padding:2px 16px 10px; font-size:10px; color:#999; }
+.demo-area { height:480px; position:relative; overflow:hidden; background:#FFFAF5; margin:0 8px 8px; border-radius:18px; }
+
+/* Phone screens */
+.screen {
+  position:absolute; top:0; left:0; width:100%; height:100%;
+  background:#FFFAF5; padding:8px;
+}
+.s-bar { text-align:center; padding:6px 0 8px; font-size:13px; font-weight:700; display:flex; align-items:center; justify-content:center; gap:6px; }
+.s-back { font-size:11px; color:#999; position:absolute; left:12px; }
+.s-hero { background:linear-gradient(135deg,#ec4899,#9333ea,#3b82f6); border-radius:16px; padding:14px; margin:0 4px 8px; color:#fff; }
+.s-hero-sm { font-size:8px; opacity:0.6; letter-spacing:0.8px; }
+.s-hero-lg { font-size:14px; font-weight:800; margin-top:2px; }
+.s-card { background:#fff; border-radius:14px; padding:10px 12px; margin:0 4px 6px; border:1px solid #f0ebe6; box-shadow:0 1px 4px rgba(0,0,0,0.03); }
+.s-row { display:flex; align-items:center; gap:8px; }
+.s-icon { width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:12px; flex-shrink:0; }
+.s-text { font-size:11px; font-weight:600; }
+.s-hint { font-size:8px; color:#aaa; }
+.s-chevron { font-size:10px; color:#ccc; margin-left:auto; }
+.s-divider { height:1px; background:#f5f0eb; margin:6px 0; }
+
+/* Navigation button */
+.nav-btn {
+  position:absolute; bottom:16px; left:50%; transform:translateX(-50%);
+  background:linear-gradient(135deg,#ec4899,#9333ea);
+  color:#fff; border:none; padding:8px 20px; border-radius:12px;
+  font-size:11px; font-weight:700; cursor:pointer; z-index:100;
+  box-shadow:0 2px 8px rgba(236,72,153,0.3);
+  transition: transform 0.15s;
+}
+.nav-btn:active { transform:translateX(-50%) scale(0.95); }
+
+/* ═══ TRANSITION A: Gradient Curtain Pull ═══ */
+.trans-a .screen { transition: none; }
+.trans-a .screen-from { z-index:1; }
+.trans-a .screen-to { z-index:3; clip-path:inset(0 100% 0 0); }
+.trans-a .curtain {
+  position:absolute; z-index:2; top:0; left:0; width:8px; height:100%;
+  background:linear-gradient(180deg, #ec4899, #9333ea, #3b82f6);
+  box-shadow: 4px 0 20px rgba(147,51,234,0.4);
+  opacity:0;
+}
+.trans-a.playing .curtain {
+  animation: curtain-sweep 0.7s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+.trans-a.playing .screen-to {
+  animation: curtain-reveal 0.7s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+@keyframes curtain-sweep {
+  0% { left:0; opacity:1; }
+  100% { left:100%; opacity:0.5; }
+}
+@keyframes curtain-reveal {
+  0% { clip-path:inset(0 100% 0 0); }
+  100% { clip-path:inset(0 0 0 0); }
+}
+
+/* ═══ TRANSITION B: Depth Stack Push ═══ */
+.trans-b .screen { transition: none; }
+.trans-b .screen-from { z-index:2; }
+.trans-b .screen-to { z-index:1; transform:translateX(100%); }
+.trans-b.playing .screen-from {
+  animation: stack-back 0.65s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+}
+.trans-b.playing .screen-to {
+  animation: stack-in 0.65s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+}
+@keyframes stack-back {
+  0% { transform:translateX(0) scale(1); filter:brightness(1); border-radius:0; }
+  100% { transform:translateX(-30%) scale(0.88); filter:brightness(0.7); border-radius:16px; }
+}
+@keyframes stack-in {
+  0% { transform:translateX(100%); box-shadow:none; }
+  100% { transform:translateX(0); box-shadow:-8px 0 30px rgba(0,0,0,0.1); }
+}
+
+/* ═══ TRANSITION C: Content Dissolve ═══ */
+.trans-c .screen { transition: none; }
+.trans-c .screen-from { z-index:2; }
+.trans-c .screen-to { z-index:1; opacity:0; transform:scale(1.03); }
+.trans-c.playing .screen-from {
+  animation: dissolve-out 0.5s ease-out forwards;
+}
+.trans-c.playing .screen-to {
+  animation: dissolve-in 0.5s ease-out 0.15s forwards;
+}
+@keyframes dissolve-out {
+  0% { opacity:1; transform:scale(1); }
+  100% { opacity:0; transform:scale(0.96); filter:blur(4px); }
+}
+@keyframes dissolve-in {
+  0% { opacity:0; transform:scale(1.03); }
+  100% { opacity:1; transform:scale(1); }
+}
+
+/* ═══ TRANSITION D: Iris Wipe ═══ */
+.trans-d .screen-from { z-index:1; }
+.trans-d .screen-to { z-index:2; clip-path:circle(0% at 50% 50%); }
+.trans-d.playing .screen-to {
+  animation: iris-open 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+@keyframes iris-open {
+  0% { clip-path:circle(0% at 50% 50%); }
+  100% { clip-path:circle(75% at 50% 50%); }
+}
+
+/* ═══ TRANSITION E: Accordion Fold ═══ */
+.trans-e { perspective:1200px; }
+.trans-e .screen-from { z-index:2; transform-origin:left center; }
+.trans-e .screen-to { z-index:1; opacity:0.5; transform:translateX(40%); }
+.trans-e.playing .screen-from {
+  animation: fold-away 0.7s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+.trans-e.playing .screen-to {
+  animation: fold-reveal 0.7s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+@keyframes fold-away {
+  0% { transform:rotateY(0); opacity:1; }
+  100% { transform:rotateY(-70deg); opacity:0; }
+}
+@keyframes fold-reveal {
+  0% { transform:translateX(40%); opacity:0.5; }
+  100% { transform:translateX(0); opacity:1; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Custom Settings Transitions</h1>
+  <p>Tap the button on each demo to see the transition. Designed for BeautyCita settings flow.</p>
+</div>
+
+<div class="demos">
+
+<!-- ═══ A: Gradient Curtain Pull ═══ -->
+<div class="demo">
+  <div class="demo-label">Gradient Curtain Pull</div>
+  <div class="demo-sub">A thin gradient line sweeps across, revealing the new screen behind it. The brand gradient acts as the transition element itself.</div>
+  <div class="demo-area trans-a" id="demoA">
+    <div class="screen screen-from">
+      <div class="s-bar">Ajustes</div>
+      <div class="s-card">
+        <div class="s-row"><div class="s-icon" style="background:#fce4ec;">👤</div><div><div class="s-text">Perfil</div><div class="s-hint">strawberryBlonde</div></div><div class="s-chevron">›</div></div>
+        <div class="s-divider"></div>
+        <div class="s-row"><div class="s-icon" style="background:#f3e5f5;">⚙</div><div><div class="s-text">Preferencias</div><div class="s-hint">$$ · Balance · 15km</div></div><div class="s-chevron">›</div></div>
+        <div class="s-divider"></div>
+        <div class="s-row"><div class="s-icon" style="background:#e3f2fd;">🔒</div><div><div class="s-text">Seguridad</div><div class="s-hint">Biometrico activo</div></div><div class="s-chevron">›</div></div>
+        <div class="s-divider"></div>
+        <div class="s-row"><div class="s-icon" style="background:#e8f5e9;">💳</div><div><div class="s-text">Pagos</div><div class="s-hint">Visa ****4589</div></div><div class="s-chevron">›</div></div>
+      </div>
+    </div>
+    <div class="screen screen-to">
+      <div class="s-bar"><span class="s-back">← Ajustes</span>Perfil</div>
+      <div class="s-hero">
+        <div class="s-hero-sm">MI PERFIL</div>
+        <div class="s-hero-lg">strawberryBlonde</div>
+      </div>
+      <div class="s-card">
+        <div class="s-row"><div class="s-icon" style="background:#f3e5f5;">📋</div><div><div class="s-hint">NOMBRE</div><div class="s-text">Kriket</div></div></div>
+        <div class="s-divider"></div>
+        <div class="s-row"><div class="s-icon" style="background:#fce4ec;">📱</div><div><div class="s-hint">TELEFONO</div><div class="s-text">+52 322 142 9800</div></div></div>
+      </div>
+    </div>
+    <div class="curtain"></div>
+    <button class="nav-btn" onclick="playTransition('A')">Ver transicion →</button>
+  </div>
+</div>
+
+<!-- ═══ B: Depth Stack Push ═══ -->
+<div class="demo">
+  <div class="demo-label">Depth Stack Push</div>
+  <div class="demo-sub">Current screen shrinks and darkens (pushed back in Z-space) while the new screen slides in from the right with a shadow edge. Creates a card-stack depth effect.</div>
+  <div class="demo-area trans-b" id="demoB">
+    <div class="screen screen-from">
+      <div class="s-bar">Ajustes</div>
+      <div class="s-card">
+        <div class="s-row"><div class="s-icon" style="background:#fce4ec;">👤</div><div><div class="s-text">Perfil</div></div><div class="s-chevron">›</div></div>
+        <div class="s-divider"></div>
+        <div class="s-row"><div class="s-icon" style="background:#f3e5f5;">⚙</div><div><div class="s-text">Preferencias</div></div><div class="s-chevron">›</div></div>
+        <div class="s-divider"></div>
+        <div class="s-row"><div class="s-icon" style="background:#e3f2fd;">🔒</div><div><div class="s-text">Seguridad</div></div><div class="s-chevron">›</div></div>
+      </div>
+    </div>
+    <div class="screen screen-to">
+      <div class="s-bar"><span class="s-back">← Ajustes</span>Preferencias</div>
+      <div class="s-hero">
+        <div class="s-hero-sm">MI ESTILO</div>
+        <div class="s-hero-lg">Personaliza tu experiencia</div>
+      </div>
+      <div style="display:flex; gap:6px; justify-content:center; margin:0 4px 8px;">
+        <div class="s-card" style="flex:1; margin:0; text-align:center;"><div style="font-size:14px; font-weight:800; color:#ec4899;">$$</div><div class="s-hint">Presupuesto</div></div>
+        <div class="s-card" style="flex:1; margin:0; text-align:center;"><div style="font-size:14px; font-weight:800; color:#9333ea;">Bal</div><div class="s-hint">Calidad</div></div>
+        <div class="s-card" style="flex:1; margin:0; text-align:center;"><div style="font-size:14px; font-weight:800; color:#3b82f6;">Fiel</div><div class="s-hint">Explorar</div></div>
+      </div>
+    </div>
+    <button class="nav-btn" onclick="playTransition('B')">Ver transicion →</button>
+  </div>
+</div>
+
+<!-- ═══ C: Content Dissolve ═══ -->
+<div class="demo">
+  <div class="demo-label">Content Dissolve</div>
+  <div class="demo-sub">Current screen blurs and fades down while the new screen fades up from slightly larger scale. Feels like the content itself is transforming, not sliding.</div>
+  <div class="demo-area trans-c" id="demoC">
+    <div class="screen screen-from">
+      <div class="s-bar">Seguridad</div>
+      <div class="s-card">
+        <div class="s-row"><div class="s-icon" style="background:#fce4ec;">🔒</div><div><div class="s-text">Biometrico</div><div class="s-hint">Face ID activo</div></div></div>
+        <div class="s-divider"></div>
+        <div class="s-row"><div class="s-icon" style="background:#e3f2fd;">📱</div><div><div class="s-text">Dispositivos</div><div class="s-hint">2 dispositivos confiados</div></div></div>
+        <div class="s-divider"></div>
+        <div class="s-row"><div class="s-icon" style="background:#e8f5e9;">✉</div><div><div class="s-text">Email</div><div class="s-hint">beautycita@gmail.com</div></div></div>
+      </div>
+    </div>
+    <div class="screen screen-to">
+      <div class="s-bar"><span class="s-back">←</span>Pagos</div>
+      <div class="s-card">
+        <div class="s-row"><div class="s-icon" style="background:#e8f5e9;">💳</div><div><div class="s-hint">TARJETA</div><div class="s-text">Visa ****4589</div></div></div>
+        <div class="s-divider"></div>
+        <div class="s-row"><div class="s-icon" style="background:#fff3e0;">🏪</div><div><div class="s-hint">EFECTIVO</div><div class="s-text">OXXO / QR</div></div></div>
+      </div>
+      <div class="s-card" style="background:linear-gradient(135deg,#fce4ec,#f3e5f5); border-color:rgba(236,72,153,0.08);">
+        <div class="s-row"><div style="font-size:10px; color:#ec4899; font-weight:700;">Comision: 3.6% + $3 MXN por transaccion</div></div>
+      </div>
+    </div>
+    <button class="nav-btn" onclick="playTransition('C')">Ver transicion →</button>
+  </div>
+</div>
+
+<!-- ═══ D: Iris Wipe ═══ -->
+<div class="demo">
+  <div class="demo-label">Iris Wipe</div>
+  <div class="demo-sub">New screen reveals from the center outward in a circular wipe. Like a camera iris opening. Elegant for detail views.</div>
+  <div class="demo-area trans-d" id="demoD">
+    <div class="screen screen-from">
+      <div class="s-bar">Mis Citas</div>
+      <div class="s-card">
+        <div class="s-row"><div class="s-icon" style="background:#e3f2fd;">📅</div><div><div class="s-text">Corte de cabello</div><div class="s-hint">Salon Luna Bella · Mar 25</div></div></div>
+        <div class="s-divider"></div>
+        <div class="s-row"><div class="s-icon" style="background:#e8f5e9;">💅</div><div><div class="s-text">Manicure gel</div><div class="s-hint">Nails & Co · Mar 28</div></div></div>
+      </div>
+    </div>
+    <div class="screen screen-to">
+      <div class="s-bar"><span class="s-back">← Citas</span>Detalle</div>
+      <div class="s-hero">
+        <div class="s-hero-lg">Corte de cabello</div>
+        <div style="font-size:9px; opacity:0.7; margin-top:4px;">Salon Luna Bella</div>
+      </div>
+      <div class="s-card">
+        <div class="s-row"><div class="s-icon" style="background:#e3f2fd;">📅</div><div><div class="s-hint">FECHA</div><div class="s-text">25 Mar 2026 · 3:00 PM</div></div></div>
+        <div class="s-divider"></div>
+        <div class="s-row"><div class="s-icon" style="background:#e8f5e9;">💰</div><div><div class="s-hint">PRECIO</div><div class="s-text">$350 MXN</div></div></div>
+        <div class="s-divider"></div>
+        <div class="s-row"><div class="s-icon" style="background:#f3e5f5;">✂</div><div><div class="s-hint">ESTILISTA</div><div class="s-text">Maria Lopez</div></div></div>
+      </div>
+    </div>
+    <button class="nav-btn" onclick="playTransition('D')">Ver transicion →</button>
+  </div>
+</div>
+
+<!-- ═══ E: Accordion Fold ═══ -->
+<div class="demo">
+  <div class="demo-label">Accordion Fold Away</div>
+  <div class="demo-sub">Current screen folds away in 3D perspective (like closing a book) while the new screen slides into place. Premium and physical.</div>
+  <div class="demo-area trans-e" id="demoE">
+    <div class="screen screen-from">
+      <div class="s-bar">Terminos</div>
+      <div class="s-card">
+        <div class="s-text">Terminos de Servicio</div>
+        <div class="s-hint" style="margin-top:4px;">BeautyCita S.A. de C.V. opera la plataforma de reservas de servicios de belleza...</div>
+      </div>
+      <div class="s-card">
+        <div class="s-text" style="font-size:9px;">Seccion 1: Uso de la Plataforma</div>
+        <div class="s-hint" style="margin-top:2px;">El usuario acepta que la plataforma facilita la conexion entre...</div>
+      </div>
+    </div>
+    <div class="screen screen-to">
+      <div class="s-bar"><span class="s-back">←</span>Privacidad</div>
+      <div class="s-hero" style="background:linear-gradient(135deg,#3b82f6,#9333ea);">
+        <div class="s-hero-sm">LFPDPPP</div>
+        <div class="s-hero-lg">Politica de Privacidad</div>
+      </div>
+      <div class="s-card">
+        <div class="s-text" style="font-size:9px;">Datos que recopilamos</div>
+        <div class="s-hint" style="margin-top:2px;">Nombre, telefono, ubicacion, historial de reservas, preferencias de servicio...</div>
+      </div>
+    </div>
+    <button class="nav-btn" onclick="playTransition('E')">Ver transicion →</button>
+  </div>
+</div>
+
+</div>
+
+<script>
+function playTransition(id) {
+  const el = document.getElementById('demo' + id);
+  el.classList.remove('playing');
+  // Force reflow
+  void el.offsetWidth;
+  el.classList.add('playing');
+
+  // Reset after animation
+  setTimeout(() => {
+    el.classList.remove('playing');
+    // Reset inline styles on screens
+    const screens = el.querySelectorAll('.screen');
+    screens.forEach(s => { s.style = ''; });
+  }, 1200);
+}
+</script>
+
+<div style="text-align:center; padding:16px 20px 32px; max-width:440px; margin:0 auto;">
+  <div style="font-size:12px; color:#999; line-height:1.6;">
+    <strong style="color:#ec4899;">Recomendacion para BeautyCita:</strong><br>
+    <strong>Depth Stack Push</strong> para navegacion settings → sub-screen (ida).<br>
+    <strong>Content Dissolve</strong> para tab switches (terminos ↔ privacidad).<br>
+    <strong>Iris Wipe</strong> para abrir detalle de cita desde lista.<br>
+    <strong>Gradient Curtain</strong> como signature transition de marca.
+  </div>
+</div>
+
+</body>
+</html>

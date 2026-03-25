@@ -5,9 +5,11 @@ import 'package:intl/intl.dart';
 
 import '../../config/breakpoints.dart';
 import '../../config/router.dart';
+import '../../config/web_theme.dart';
 import '../../providers/business_portal_provider.dart';
 import '../../providers/demo_providers.dart';
 import '../../widgets/kpi_card.dart';
+import '../../widgets/web_design_system.dart';
 
 /// Remap a /negocio route to /demo when inside the demo shell.
 String _demoAware(BuildContext context, String route) {
@@ -100,7 +102,6 @@ class _WelcomeHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colors = theme.colorScheme;
     final now = DateTime.now();
     final dateStr = DateFormat('EEEE, d MMMM yyyy', 'es').format(now);
     final formattedDate = dateStr[0].toUpperCase() + dateStr.substring(1);
@@ -109,17 +110,29 @@ class _WelcomeHeader extends StatelessWidget {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(bizName, style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
+          WebSectionHeader(
+            label: 'Panel de control',
+            title: bizName,
+            centered: false,
+            titleSize: 28,
+          ),
           const SizedBox(height: 4),
-          Text(formattedDate, style: theme.textTheme.bodyMedium?.copyWith(color: colors.onSurface.withValues(alpha: 0.6))),
+          Text(formattedDate, style: theme.textTheme.bodyMedium?.copyWith(color: kWebTextSecondary)),
         ],
       );
     }
 
     return Row(
       children: [
-        Expanded(child: Text(bizName, style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w700))),
-        Text(formattedDate, style: theme.textTheme.bodyLarge?.copyWith(color: colors.onSurface.withValues(alpha: 0.6))),
+        Expanded(
+          child: WebSectionHeader(
+            label: 'Panel de control',
+            title: bizName,
+            centered: false,
+            titleSize: 36,
+          ),
+        ),
+        Text(formattedDate, style: theme.textTheme.bodyLarge?.copyWith(color: kWebTextSecondary)),
       ],
     );
   }
@@ -259,9 +272,11 @@ class _QuickActions extends StatelessWidget {
       children: [
         for (final a in actions)
           ActionChip(
-            avatar: Icon(a.$1, size: 18, color: colors.primary),
+            avatar: Icon(a.$1, size: 18, color: kWebPrimary),
             label: Text(a.$2),
             onPressed: () => context.go(a.$3),
+            side: const BorderSide(color: kWebCardBorder),
+            backgroundColor: kWebSurface,
           ),
       ],
     );
@@ -283,21 +298,23 @@ class _TodayAppointments extends StatelessWidget {
     final range = (start: '${today}T00:00:00', end: '${today}T23:59:59');
     final apptsAsync = ref.watch(businessAppointmentsProvider(range));
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colors.outlineVariant),
-      ),
+    return WebCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.today, size: 20, color: colors.primary),
-              const SizedBox(width: 8),
-              Text('Citas de hoy', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: kWebPrimary.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.today_outlined, size: 18, color: kWebPrimary),
+              ),
+              const SizedBox(width: 10),
+              Text('Citas de hoy', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600, color: kWebTextPrimary)),
             ],
           ),
           const SizedBox(height: 16),
@@ -317,9 +334,17 @@ class _TodayAppointments extends StatelessWidget {
                   child: Center(
                     child: Column(
                       children: [
-                        Icon(Icons.event_available, size: 36, color: colors.onSurface.withValues(alpha: 0.3)),
+                        Container(
+                          width: 56,
+                          height: 56,
+                          decoration: BoxDecoration(
+                            color: kWebPrimary.withValues(alpha: 0.06),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.event_available_outlined, size: 28, color: kWebTextHint),
+                        ),
                         const SizedBox(height: 8),
-                        Text('Sin citas para hoy', style: theme.textTheme.bodySmall?.copyWith(color: colors.onSurface.withValues(alpha: 0.5))),
+                        Text('Sin citas para hoy', style: theme.textTheme.bodySmall?.copyWith(color: kWebTextHint)),
                       ],
                     ),
                   ),
@@ -332,12 +357,12 @@ class _TodayAppointments extends StatelessWidget {
                 children: [
                   for (var i = 0; i < displayed.length; i++) ...[
                     _AppointmentRow(appt: displayed[i]),
-                    if (i < displayed.length - 1) Divider(height: 1, color: colors.outlineVariant.withValues(alpha: 0.5)),
+                    if (i < displayed.length - 1) const Divider(height: 1, color: kWebCardBorder),
                   ],
                   if (appts.length > 10)
                     Padding(
                       padding: const EdgeInsets.only(top: 12),
-                      child: Text('+${appts.length - 10} mas', style: theme.textTheme.bodySmall?.copyWith(color: colors.primary)),
+                      child: Text('+${appts.length - 10} mas', style: theme.textTheme.bodySmall?.copyWith(color: kWebPrimary)),
                     ),
                 ],
               );
@@ -383,7 +408,10 @@ class _AppointmentRow extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           // Status dot
-          Container(width: 8, height: 8, decoration: BoxDecoration(color: statusColor, shape: BoxShape.circle)),
+          Container(
+            width: 8, height: 8,
+            decoration: BoxDecoration(color: statusColor, shape: BoxShape.circle),
+          ),
           const SizedBox(width: 12),
           // Service + customer
           Expanded(
@@ -416,21 +444,23 @@ class _MonthlyChart extends StatelessWidget {
     final colors = theme.colorScheme;
     final chartAsync = ref.watch(businessMonthlyDailyProvider);
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colors.outlineVariant),
-      ),
+    return WebCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.bar_chart, size: 20, color: colors.primary),
-              const SizedBox(width: 8),
-              Text('Tendencia mensual', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: kWebSecondary.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.bar_chart_outlined, size: 18, color: kWebSecondary),
+              ),
+              const SizedBox(width: 10),
+              Text('Tendencia mensual', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600, color: kWebTextPrimary)),
             ],
           ),
           const SizedBox(height: 16),
@@ -498,16 +528,23 @@ class _NoBusiness extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colors = theme.colorScheme;
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.store_outlined, size: 64, color: colors.onSurface.withValues(alpha: 0.3)),
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              color: kWebPrimary.withValues(alpha: 0.06),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.store_outlined, size: 40, color: kWebTextHint),
+          ),
           const SizedBox(height: 16),
-          Text('No tienes un negocio registrado', style: theme.textTheme.titleMedium),
+          Text('No tienes un negocio registrado', style: theme.textTheme.titleMedium?.copyWith(color: kWebTextPrimary)),
           const SizedBox(height: 8),
-          Text('Contacta al administrador para crear tu perfil de negocio.', style: theme.textTheme.bodyMedium?.copyWith(color: colors.onSurface.withValues(alpha: 0.6))),
+          Text('Contacta al administrador para crear tu perfil de negocio.', style: theme.textTheme.bodyMedium?.copyWith(color: kWebTextSecondary)),
         ],
       ),
     );

@@ -9,12 +9,24 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { requireFeature } from "../_shared/check-toggle.ts";
+import { cacheGet, cacheSet } from "../_shared/redis.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+const ALLOWED_ORIGINS = [
+  "https://beautycita.com",
+  "https://www.beautycita.com",
+  "https://debug.beautycita.com",
+];
+
+function corsOrigin(req: Request): string {
+  const o = req.headers.get("origin") ?? "";
+  return ALLOWED_ORIGINS.includes(o) ? o : ALLOWED_ORIGINS[0];
+}
+
+const corsHeaders = (req: Request) => ({
+  "Access-Control-Allow-Origin": corsOrigin(req),
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
-};
+});
 
 // ---------------------------------------------------------------------------
 // Types
@@ -113,7 +125,7 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 min
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...corsHeaders(_req), "Content-Type": "application/json" },
   });
 }
 
@@ -142,9 +154,12 @@ function isToday(isoString: string): boolean {
 // Main handler
 // ---------------------------------------------------------------------------
 
+let _req: Request;
+
 serve(async (req) => {
+  _req = req;
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
 
   // Server-side toggle enforcement
@@ -198,6 +213,13 @@ serve(async (req) => {
         400,
       );
     }
+
+    // --- Redis cache for search results (not bookings) ---
+    const cacheKey = `curate:${location.lat.toFixed(2)}:${location.lng.toFixed(2)}:${service_type}`;
+    try {
+      const cached = await cacheGet(cacheKey);
+      if (cached) return json(JSON.parse(cached));
+    } catch { /* cache miss or error — continue to DB */ }
 
     // ==================================================================
     // STEP 1 — Profile Lookup (<1ms cached)
@@ -286,10 +308,15 @@ serve(async (req) => {
       registeredResults = await buildResponse(supabase, top3, profile, service_type);
     }
 
-    return json({
+    const result = {
       booking_window: windowSummary(window),
       results: registeredResults,
-    });
+    };
+
+    // Cache search results for 5 minutes
+    cacheSet(cacheKey, JSON.stringify(result), 300).catch(() => {});
+
+    return json(result);
   } catch (err) {
     console.error("curate-results error:", err);
     return json({ error: "An internal error occurred" }, 500);

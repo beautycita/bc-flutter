@@ -56,8 +56,9 @@ class UpdaterService {
     }
 
     try {
+      final cacheBuster = DateTime.now().millisecondsSinceEpoch;
       final response = await http
-          .get(Uri.parse(AppConstants.versionCheckUrl))
+          .get(Uri.parse('${AppConstants.versionCheckUrl}?t=$cacheBuster'))
           .timeout(const Duration(seconds: 5));
 
       if (response.statusCode != 200) {

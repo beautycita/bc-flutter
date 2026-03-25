@@ -1,0 +1,1504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Einstein's Relativity - Interactive 3D Physics</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: #0a0a1a;
+  color: #e0e0e0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  overflow: hidden;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+#main {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Left Panel */
+#left-panel {
+  width: 320px;
+  min-width: 320px;
+  background: rgba(15, 15, 35, 0.95);
+  border-right: 1px solid #1a1a3a;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+#left-panel h1 {
+  font-size: 1.3em;
+  color: #88ccff;
+  margin-bottom: 5px;
+  letter-spacing: 1px;
+}
+
+#left-panel .subtitle {
+  font-size: 0.75em;
+  color: #667;
+  margin-bottom: 20px;
+}
+
+.scenario-btn {
+  display: block;
+  width: 100%;
+  padding: 12px 14px;
+  margin-bottom: 6px;
+  background: rgba(30, 30, 60, 0.8);
+  border: 1px solid #2a2a5a;
+  border-radius: 8px;
+  color: #ccc;
+  font-size: 0.85em;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s;
+}
+
+.scenario-btn:hover {
+  background: rgba(50, 50, 100, 0.8);
+  border-color: #4a4aaa;
+}
+
+.scenario-btn.active {
+  background: rgba(40, 60, 120, 0.9);
+  border-color: #5588cc;
+  color: #aaccff;
+}
+
+.scenario-btn .btn-num {
+  display: inline-block;
+  width: 22px;
+  height: 22px;
+  line-height: 22px;
+  text-align: center;
+  background: rgba(80, 120, 200, 0.3);
+  border-radius: 50%;
+  font-size: 0.75em;
+  margin-right: 8px;
+  color: #88aaee;
+}
+
+#explanation {
+  margin-top: 20px;
+  padding: 16px;
+  background: rgba(20, 20, 50, 0.6);
+  border-radius: 8px;
+  border: 1px solid #1a1a3a;
+  flex: 1;
+  overflow-y: auto;
+}
+
+#explanation h2 {
+  font-size: 1.05em;
+  color: #ffcc44;
+  margin-bottom: 10px;
+}
+
+#explanation p {
+  font-size: 0.82em;
+  line-height: 1.6;
+  color: #b0b0c0;
+  margin-bottom: 8px;
+}
+
+#explanation .key-insight {
+  background: rgba(255, 200, 50, 0.08);
+  border-left: 3px solid #ffcc44;
+  padding: 8px 12px;
+  margin: 10px 0;
+  font-size: 0.8em;
+  color: #ddc;
+}
+
+/* Controls area inside left panel */
+#controls {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #1a1a3a;
+}
+
+#controls label {
+  display: block;
+  font-size: 0.78em;
+  color: #889;
+  margin-bottom: 4px;
+}
+
+#controls input[type="range"] {
+  width: 100%;
+  margin-bottom: 10px;
+  accent-color: #5588cc;
+}
+
+#controls .slider-value {
+  font-size: 0.8em;
+  color: #88ccff;
+  float: right;
+}
+
+.toggle-btn {
+  display: inline-block;
+  padding: 8px 16px;
+  margin: 4px 4px 4px 0;
+  background: rgba(30, 30, 60, 0.8);
+  border: 1px solid #3a3a7a;
+  border-radius: 6px;
+  color: #aab;
+  font-size: 0.78em;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.toggle-btn:hover { background: rgba(50, 50, 100, 0.8); }
+
+.toggle-btn.active {
+  background: rgba(50, 80, 160, 0.9);
+  border-color: #5588cc;
+  color: #ccddff;
+}
+
+/* 3D Canvas */
+#canvas-container {
+  flex: 1;
+  position: relative;
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Bottom Panel */
+#bottom-panel {
+  height: 110px;
+  background: rgba(10, 10, 30, 0.95);
+  border-top: 1px solid #1a1a3a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 40px;
+  padding: 0 30px;
+}
+
+.equation-box {
+  text-align: center;
+  padding: 10px 20px;
+  background: rgba(20, 20, 50, 0.6);
+  border: 1px solid #2a2a5a;
+  border-radius: 8px;
+  min-width: 160px;
+}
+
+.equation-box .eq-label {
+  font-size: 0.7em;
+  color: #667;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.equation-box .eq-formula {
+  font-size: 1.2em;
+  color: #ffcc44;
+  font-family: 'Cambria Math', 'Times New Roman', serif;
+  font-style: italic;
+}
+
+.equation-box .eq-value {
+  font-size: 0.85em;
+  color: #88ccff;
+  margin-top: 4px;
+  font-family: monospace;
+}
+
+.eq-sup { font-size: 0.7em; vertical-align: super; }
+.eq-sub { font-size: 0.7em; vertical-align: sub; }
+.eq-frac { display: inline-block; text-align: center; vertical-align: middle; }
+.eq-num { display: block; border-bottom: 1px solid #ffcc44; padding-bottom: 2px; margin-bottom: 2px; }
+.eq-den { display: block; }
+
+/* Playback controls */
+.playback {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.play-btn {
+  padding: 5px 14px;
+  background: rgba(30, 60, 30, 0.8);
+  border: 1px solid #3a7a3a;
+  border-radius: 4px;
+  color: #8c8;
+  font-size: 0.75em;
+  cursor: pointer;
+}
+
+.play-btn:hover { background: rgba(40, 80, 40, 0.8); }
+.play-btn.reset-btn { background: rgba(60, 30, 30, 0.8); border-color: #7a3a3a; color: #c88; }
+.play-btn.reset-btn:hover { background: rgba(80, 40, 40, 0.8); }
+</style>
+</head>
+<body>
+
+<div id="main">
+  <div id="left-panel">
+    <h1>Einstein's Relativity</h1>
+    <div class="subtitle">Interactive Thought Experiments</div>
+
+    <button class="scenario-btn active" onclick="selectScenario(0)">
+      <span class="btn-num">1</span>Train Station (Simultaneity)
+    </button>
+    <button class="scenario-btn" onclick="selectScenario(1)">
+      <span class="btn-num">2</span>Light Clock (Time Dilation)
+    </button>
+    <button class="scenario-btn" onclick="selectScenario(2)">
+      <span class="btn-num">3</span>Elevator (Equivalence)
+    </button>
+    <button class="scenario-btn" onclick="selectScenario(3)">
+      <span class="btn-num">4</span>Length Contraction
+    </button>
+    <button class="scenario-btn" onclick="selectScenario(4)">
+      <span class="btn-num">5</span>Twin Paradox
+    </button>
+
+    <div id="controls"></div>
+    <div id="explanation"></div>
+  </div>
+
+  <div id="canvas-container">
+    <canvas id="scene"></canvas>
+  </div>
+</div>
+
+<div id="bottom-panel">
+  <div class="equation-box" id="eq1">
+    <div class="eq-label">Lorentz Factor</div>
+    <div class="eq-formula">&gamma; = <span class="eq-frac"><span class="eq-num">1</span><span class="eq-den">&radic;(1 - v&sup2;/c&sup2;)</span></span></div>
+    <div class="eq-value" id="eq1-val">&gamma; = 1.000</div>
+  </div>
+  <div class="equation-box" id="eq2">
+    <div class="eq-label">Time Dilation</div>
+    <div class="eq-formula">t' = &gamma; &middot; t</div>
+    <div class="eq-value" id="eq2-val">t' = t</div>
+  </div>
+  <div class="equation-box" id="eq3">
+    <div class="eq-label">Length Contraction</div>
+    <div class="eq-formula">L' = L / &gamma;</div>
+    <div class="eq-value" id="eq3-val">L' = L</div>
+  </div>
+  <div class="equation-box" id="eq4">
+    <div class="eq-label">Energy</div>
+    <div class="eq-formula">E = &gamma;mc&sup2;</div>
+    <div class="eq-value" id="eq4-val">E = mc&sup2;</div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// GLOBAL STATE
+// ============================================================
+let scene, camera, renderer, clock;
+let currentScenario = 0;
+let scenarioObjects = [];
+let animationState = {};
+let isPlaying = true;
+
+// ============================================================
+// THREE.JS SETUP
+// ============================================================
+function initThree() {
+  const container = document.getElementById('canvas-container');
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0a0a1a);
+  scene.fog = new THREE.FogExp2(0x0a0a1a, 0.008);
+
+  camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
+  camera.position.set(0, 8, 20);
+  camera.lookAt(0, 0, 0);
+
+  renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('scene'), antialias: true });
+  renderer.setSize(container.clientWidth, container.clientHeight);
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.shadowMap.enabled = true;
+
+  // Lights
+  const ambient = new THREE.AmbientLight(0x334466, 0.6);
+  scene.add(ambient);
+
+  const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+  dirLight.position.set(10, 20, 10);
+  dirLight.castShadow = true;
+  scene.add(dirLight);
+
+  const pointLight = new THREE.PointLight(0x4488cc, 0.5, 50);
+  pointLight.position.set(0, 10, 0);
+  scene.add(pointLight);
+
+  // Grid
+  const gridHelper = new THREE.GridHelper(60, 60, 0x111133, 0x111133);
+  gridHelper.position.y = -0.01;
+  scene.add(gridHelper);
+
+  clock = new THREE.Clock();
+
+  window.addEventListener('resize', () => {
+    camera.aspect = container.clientWidth / container.clientHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(container.clientWidth, container.clientHeight);
+  });
+}
+
+// ============================================================
+// HELPER: Materials
+// ============================================================
+const mat = {
+  train: new THREE.MeshPhongMaterial({ color: 0x3366aa, flatShading: true, transparent: true, opacity: 0.85 }),
+  trainDark: new THREE.MeshPhongMaterial({ color: 0x224488, flatShading: true }),
+  platform: new THREE.MeshPhongMaterial({ color: 0x444444, flatShading: true }),
+  lightning: new THREE.MeshBasicMaterial({ color: 0xffff44 }),
+  lightBeam: new THREE.MeshBasicMaterial({ color: 0xffee33 }),
+  lightBeamLine: new THREE.LineBasicMaterial({ color: 0xffee33, linewidth: 2 }),
+  person: new THREE.MeshPhongMaterial({ color: 0xcc8855, flatShading: true }),
+  elevator: new THREE.MeshPhongMaterial({ color: 0x555577, flatShading: true, transparent: true, opacity: 0.7 }),
+  ship: new THREE.MeshPhongMaterial({ color: 0x6688cc, flatShading: true }),
+  shipNose: new THREE.MeshPhongMaterial({ color: 0x88aaee, flatShading: true }),
+  clock_face: new THREE.MeshPhongMaterial({ color: 0xcccccc, flatShading: true }),
+  clock_hand: new THREE.MeshBasicMaterial({ color: 0xff4444 }),
+  red: new THREE.MeshBasicMaterial({ color: 0xff4444 }),
+  green: new THREE.MeshBasicMaterial({ color: 0x44ff44 }),
+  blue: new THREE.MeshBasicMaterial({ color: 0x4488ff }),
+  yellow: new THREE.MeshBasicMaterial({ color: 0xffcc00 }),
+  white: new THREE.MeshBasicMaterial({ color: 0xffffff }),
+  orange: new THREE.MeshPhongMaterial({ color: 0xff8844, flatShading: true }),
+  glass: new THREE.MeshPhongMaterial({ color: 0x88bbff, flatShading: true, transparent: true, opacity: 0.3 }),
+  floor: new THREE.MeshPhongMaterial({ color: 0x333344, flatShading: true }),
+  star: new THREE.MeshBasicMaterial({ color: 0xffffff }),
+};
+
+// ============================================================
+// HELPER: Utility
+// ============================================================
+function clearScenario() {
+  scenarioObjects.forEach(obj => scene.remove(obj));
+  scenarioObjects = [];
+  animationState = {};
+}
+
+function addToScene(obj) {
+  scene.add(obj);
+  scenarioObjects.push(obj);
+  return obj;
+}
+
+function makeBox(w, h, d, material) {
+  return new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
+}
+
+function makeSphere(r, material) {
+  return new THREE.Mesh(new THREE.SphereGeometry(r, 12, 8), material);
+}
+
+function makeCylinder(rt, rb, h, material, segs) {
+  return new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, segs || 12), material);
+}
+
+function makePerson(x, y, z, mat_override) {
+  const group = new THREE.Group();
+  const m = mat_override || mat.person;
+  // body
+  group.add(makeBox(0.6, 1.2, 0.4, m));
+  group.children[0].position.y = 0.6;
+  // head
+  const head = makeSphere(0.25, m);
+  head.position.y = 1.45;
+  group.add(head);
+  // legs
+  const legL = makeCylinder(0.1, 0.1, 0.8, m);
+  legL.position.set(-0.15, -0.4, 0);
+  group.add(legL);
+  const legR = makeCylinder(0.1, 0.1, 0.8, m);
+  legR.position.set(0.15, -0.4, 0);
+  group.add(legR);
+  group.position.set(x, y, z);
+  return group;
+}
+
+function makeLightningBolt(x1, y1, z1, x2, y2, z2) {
+  const points = [];
+  const segments = 8;
+  for (let i = 0; i <= segments; i++) {
+    const t = i / segments;
+    const px = x1 + (x2 - x1) * t + (i > 0 && i < segments ? (Math.random() - 0.5) * 0.5 : 0);
+    const py = y1 + (y2 - y1) * t + (i > 0 && i < segments ? (Math.random() - 0.5) * 0.3 : 0);
+    const pz = z1 + (z2 - z1) * t;
+    points.push(new THREE.Vector3(px, py, pz));
+  }
+  const geo = new THREE.BufferGeometry().setFromPoints(points);
+  return new THREE.Line(geo, mat.lightBeamLine);
+}
+
+function lorentzGamma(v) {
+  // v as fraction of c
+  return 1 / Math.sqrt(1 - v * v);
+}
+
+function updateEquations(v) {
+  const gamma = lorentzGamma(v);
+  document.getElementById('eq1-val').textContent = `\u03B3 = ${gamma.toFixed(3)}`;
+  document.getElementById('eq2-val').textContent = `t' = ${gamma.toFixed(3)} \u00B7 t`;
+  document.getElementById('eq3-val').textContent = `L' = ${(1 / gamma).toFixed(3)} \u00B7 L`;
+  document.getElementById('eq4-val').textContent = `E = ${gamma.toFixed(3)} mc\u00B2`;
+}
+
+// ============================================================
+// SCENARIO 0: TRAIN STATION (SIMULTANEITY)
+// ============================================================
+function buildTrainStation() {
+  clearScenario();
+  animationState = {
+    observer: 'station', // or 'train'
+    time: 0,
+    playing: true,
+    lightningFired: false,
+    lightL: null,
+    lightR: null,
+    lightExpand: 0,
+    trainSpeed: 0.5,
+    phase: 'waiting', // waiting, lightning, propagating, done
+  };
+
+  // Platform
+  const platform = makeBox(30, 0.5, 6, mat.platform);
+  platform.position.set(0, -0.25, 4);
+  addToScene(platform);
+
+  // Train tracks
+  for (let z = -1; z <= 1; z += 2) {
+    const rail = makeBox(40, 0.1, 0.1, mat.trainDark);
+    rail.position.set(0, 0, z * 1);
+    addToScene(rail);
+  }
+  // Ties
+  for (let x = -20; x <= 20; x += 1.5) {
+    const tie = makeBox(0.3, 0.05, 2.5, new THREE.MeshPhongMaterial({ color: 0x553322, flatShading: true }));
+    tie.position.set(x, -0.02, 0);
+    addToScene(tie);
+  }
+
+  // Train body
+  const train = new THREE.Group();
+  const body = makeBox(16, 3, 3, mat.train);
+  body.position.y = 1.8;
+  train.add(body);
+  // Windows
+  for (let x = -6; x <= 6; x += 2) {
+    const win = makeBox(1.2, 0.8, 0.1, mat.glass);
+    win.position.set(x, 2.2, 1.51);
+    train.add(win);
+    const win2 = win.clone();
+    win2.position.z = -1.51;
+    train.add(win2);
+  }
+  // Roof
+  const roof = makeBox(16.5, 0.3, 3.3, mat.trainDark);
+  roof.position.y = 3.35;
+  train.add(roof);
+  // Wheels
+  for (let x = -6; x <= 6; x += 4) {
+    for (let z = -1; z <= 1; z += 2) {
+      const wheel = makeCylinder(0.4, 0.4, 0.2, mat.trainDark);
+      wheel.rotation.x = Math.PI / 2;
+      wheel.position.set(x, 0.4, z * 1.2);
+      train.add(wheel);
+    }
+  }
+  animationState.train = addToScene(train);
+  train.position.set(-20, 0, 0);
+
+  // Markers at ends of train
+  const markerL = makeSphere(0.3, mat.red);
+  markerL.position.set(-8, 4.5, 0);
+  train.add(markerL);
+  animationState.markerL = markerL;
+
+  const markerR = makeSphere(0.3, mat.red);
+  markerR.position.set(8, 4.5, 0);
+  train.add(markerR);
+  animationState.markerR = markerR;
+
+  // Station observer
+  const stationObs = makePerson(0, 0.8, 5, mat.orange);
+  addToScene(stationObs);
+  animationState.stationObs = stationObs;
+
+  // Label for observer
+  // (Using a simple sprite approach — flat circle above head)
+  const obsMarker = makeSphere(0.2, mat.yellow);
+  obsMarker.position.set(0, 2.6, 5);
+  addToScene(obsMarker);
+
+  // Train observer
+  const trainObs = makePerson(0, 0.8, 0, mat.blue);
+  train.add(trainObs);
+  animationState.trainObs = trainObs;
+
+  // Camera
+  camera.position.set(0, 10, 18);
+  camera.lookAt(0, 2, 0);
+
+  // Lightning storage
+  animationState.bolts = [];
+  animationState.lightSpheres = [];
+
+  updateEquations(0.5);
+
+  // Controls
+  document.getElementById('controls').innerHTML = `
+    <label>Train Speed: <span class="slider-value" id="train-speed-val">0.50c</span></label>
+    <input type="range" min="10" max="90" value="50" id="train-speed" oninput="animationState.trainSpeed=this.value/100; document.getElementById('train-speed-val').textContent=( this.value/100).toFixed(2)+'c'; updateEquations(this.value/100);">
+    <div>
+      <button class="toggle-btn active" id="obs-station" onclick="setTrainObserver('station')">Station Observer</button>
+      <button class="toggle-btn" id="obs-train" onclick="setTrainObserver('train')">Train Observer</button>
+    </div>
+    <div class="playback">
+      <button class="play-btn" onclick="animationState.playing=!animationState.playing">Play/Pause</button>
+      <button class="play-btn reset-btn" onclick="resetTrainStation()">Reset</button>
+    </div>
+  `;
+
+  document.getElementById('explanation').innerHTML = `
+    <h2>The Train Station: Simultaneity</h2>
+    <p>Einstein's first thought experiment reveals that simultaneity is not absolute. Two events that happen "at the same time" for one observer may happen at different times for another.</p>
+    <p>Watch as lightning strikes both ends of the train. The station observer sees them simultaneously. But the train observer, moving toward one flash and away from the other, sees the front flash first.</p>
+    <div class="key-insight">
+      <strong>Key Insight:</strong> There is no absolute "now." Simultaneity depends on your reference frame. Two observers moving relative to each other will disagree about the order of events that are separated in space.
+    </div>
+    <p>Toggle between observers to see how the same events look different from each frame.</p>
+  `;
+}
+
+function setTrainObserver(who) {
+  animationState.observer = who;
+  document.getElementById('obs-station').classList.toggle('active', who === 'station');
+  document.getElementById('obs-train').classList.toggle('active', who === 'train');
+}
+
+function resetTrainStation() {
+  // Clear lightning bolts
+  animationState.bolts.forEach(b => scene.remove(b));
+  animationState.lightSpheres.forEach(s => scene.remove(s));
+  animationState.bolts = [];
+  animationState.lightSpheres = [];
+  animationState.time = 0;
+  animationState.phase = 'waiting';
+  animationState.lightExpand = 0;
+  animationState.train.position.x = -20;
+  animationState.playing = true;
+  animationState.markerL.material = mat.red;
+  animationState.markerR.material = mat.red;
+}
+
+function updateTrainStation(dt) {
+  if (!animationState.playing) return;
+  const st = animationState;
+  st.time += dt;
+  const speed = st.trainSpeed * 15;
+
+  if (st.phase === 'waiting') {
+    st.train.position.x += speed * dt;
+    if (st.train.position.x >= 0) {
+      st.train.position.x = 0;
+      st.phase = 'lightning';
+      st.lightExpand = 0;
+      // Create lightning bolts
+      const trainPos = st.train.position;
+      for (let i = 0; i < 3; i++) {
+        const boltL = makeLightningBolt(trainPos.x - 8, 8, 0, trainPos.x - 8, 4.5, 0);
+        addToScene(boltL);
+        st.bolts.push(boltL);
+        const boltR = makeLightningBolt(trainPos.x + 8, 8, 0, trainPos.x + 8, 4.5, 0);
+        addToScene(boltR);
+        st.bolts.push(boltR);
+      }
+      // Light expanding spheres at strike points
+      const sphereL = makeSphere(0.5, new THREE.MeshBasicMaterial({ color: 0xffff44, transparent: true, opacity: 0.6 }));
+      sphereL.position.set(trainPos.x - 8, 4.5, 0);
+      addToScene(sphereL);
+      st.lightSpheres.push(sphereL);
+
+      const sphereR = makeSphere(0.5, new THREE.MeshBasicMaterial({ color: 0xffff44, transparent: true, opacity: 0.6 }));
+      sphereR.position.set(trainPos.x + 8, 4.5, 0);
+      addToScene(sphereR);
+      st.lightSpheres.push(sphereR);
+
+      st.markerL.material = mat.yellow;
+      st.markerR.material = mat.yellow;
+    }
+  } else if (st.phase === 'lightning') {
+    st.lightExpand += dt * 8;
+    st.lightSpheres.forEach(s => {
+      s.scale.setScalar(1 + st.lightExpand);
+      s.material.opacity = Math.max(0, 0.6 - st.lightExpand * 0.1);
+    });
+    // Fade bolts
+    if (st.lightExpand > 1) {
+      st.bolts.forEach(b => { b.visible = false; });
+    }
+    if (st.lightExpand > 4) {
+      st.phase = 'propagating';
+    }
+  } else if (st.phase === 'propagating') {
+    // Train continues moving
+    st.train.position.x += speed * dt;
+    if (st.train.position.x > 25) {
+      st.phase = 'done';
+    }
+  }
+
+  // Camera follow
+  if (st.observer === 'station') {
+    camera.position.lerp(new THREE.Vector3(0, 10, 18), 0.03);
+    camera.lookAt(0, 2, 0);
+  } else {
+    const tp = st.train.position;
+    camera.position.lerp(new THREE.Vector3(tp.x, 6, 12), 0.03);
+    camera.lookAt(tp.x, 2, 0);
+  }
+}
+
+// ============================================================
+// SCENARIO 1: LIGHT CLOCK (TIME DILATION)
+// ============================================================
+function buildLightClock() {
+  clearScenario();
+  animationState = {
+    speed: 0.5,
+    time: 0,
+    playing: true,
+    observer: 'station',
+    bouncePhase: 0,
+  };
+
+  // Ground plane
+  const ground = makeBox(40, 0.2, 20, mat.floor);
+  ground.position.y = -0.1;
+  addToScene(ground);
+
+  // Train car (transparent to see inside)
+  const trainGroup = new THREE.Group();
+
+  // Floor
+  const tFloor = makeBox(12, 0.3, 4, mat.trainDark);
+  tFloor.position.y = 0.15;
+  trainGroup.add(tFloor);
+
+  // Ceiling
+  const tCeil = makeBox(12, 0.3, 4, mat.trainDark);
+  tCeil.position.y = 6.15;
+  trainGroup.add(tCeil);
+
+  // Walls (transparent)
+  const wallMat = new THREE.MeshPhongMaterial({ color: 0x4466aa, flatShading: true, transparent: true, opacity: 0.2 });
+  const wallL = makeBox(0.2, 6, 4, wallMat);
+  wallL.position.set(-6, 3.15, 0);
+  trainGroup.add(wallL);
+  const wallR = makeBox(0.2, 6, 4, wallMat);
+  wallR.position.set(6, 3.15, 0);
+  trainGroup.add(wallR);
+  const wallBack = makeBox(12, 6, 0.2, wallMat);
+  wallBack.position.set(0, 3.15, -2);
+  trainGroup.add(wallBack);
+
+  // Mirrors (top and bottom)
+  const mirrorMat = new THREE.MeshPhongMaterial({ color: 0xaaccff, flatShading: true, emissive: 0x223344 });
+  const mirrorBot = makeBox(1.5, 0.1, 1.5, mirrorMat);
+  mirrorBot.position.set(0, 0.35, 0);
+  trainGroup.add(mirrorBot);
+  const mirrorTop = makeBox(1.5, 0.1, 1.5, mirrorMat);
+  mirrorTop.position.set(0, 6.1, 0);
+  trainGroup.add(mirrorTop);
+
+  // Light photon
+  const photon = makeSphere(0.2, mat.yellow);
+  photon.position.set(0, 0.5, 0);
+  trainGroup.add(photon);
+  animationState.photon = photon;
+
+  // Light trail
+  animationState.trailPoints = [];
+  const trailGeo = new THREE.BufferGeometry();
+  const trailLine = new THREE.Line(trailGeo, new THREE.LineBasicMaterial({ color: 0xffee33, transparent: true, opacity: 0.5 }));
+  trainGroup.add(trailLine);
+  animationState.trailLine = trailLine;
+
+  animationState.trainGroup = addToScene(trainGroup);
+  trainGroup.position.set(-15, 0, 0);
+
+  // Station observer
+  const stObs = makePerson(0, 0.3, 8, mat.orange);
+  addToScene(stObs);
+
+  // Station-frame path visualization (diagonal line)
+  animationState.stationPathGroup = new THREE.Group();
+  addToScene(animationState.stationPathGroup);
+
+  camera.position.set(0, 8, 16);
+  camera.lookAt(0, 3, 0);
+
+  updateEquations(0.5);
+
+  document.getElementById('controls').innerHTML = `
+    <label>Train Speed: <span class="slider-value" id="lc-speed-val">0.50c</span></label>
+    <input type="range" min="10" max="90" value="50" id="lc-speed" oninput="animationState.speed=this.value/100; document.getElementById('lc-speed-val').textContent=(this.value/100).toFixed(2)+'c'; updateEquations(this.value/100);">
+    <div>
+      <button class="toggle-btn active" id="lc-obs-station" onclick="setLCObserver('station')">Station Observer</button>
+      <button class="toggle-btn" id="lc-obs-train" onclick="setLCObserver('train')">Train Observer</button>
+    </div>
+    <div class="playback">
+      <button class="play-btn" onclick="animationState.playing=!animationState.playing">Play/Pause</button>
+      <button class="play-btn reset-btn" onclick="buildLightClock()">Reset</button>
+    </div>
+  `;
+
+  document.getElementById('explanation').innerHTML = `
+    <h2>The Light Clock: Time Dilation</h2>
+    <p>A light beam bounces vertically between two mirrors inside a moving train. The train observer sees the light go straight up and down.</p>
+    <p>But the station observer sees the train moving, so the light must travel a <em>diagonal</em> path -- which is longer. Since light speed is constant (c), the longer path means more time between bounces.</p>
+    <div class="key-insight">
+      <strong>Key Insight:</strong> Time passes more slowly for moving objects. At 0.87c, every second on the train takes 2 seconds for the station observer. This is time dilation: t' = &gamma; &middot; t.
+    </div>
+    <p>Adjust the speed slider and watch how the diagonal path stretches. The faster the train, the greater the dilation.</p>
+  `;
+}
+
+function setLCObserver(who) {
+  animationState.observer = who;
+  document.getElementById('lc-obs-station').classList.toggle('active', who === 'station');
+  document.getElementById('lc-obs-train').classList.toggle('active', who === 'train');
+}
+
+function updateLightClock(dt) {
+  if (!animationState.playing) return;
+  const st = animationState;
+  st.time += dt;
+
+  const v = st.speed;
+  const trainSpeed = v * 10;
+  const bounceSpeed = 4;
+
+  // Move train
+  st.trainGroup.position.x += trainSpeed * dt;
+  if (st.trainGroup.position.x > 20) st.trainGroup.position.x = -20;
+
+  // Bounce photon
+  st.bouncePhase += bounceSpeed * dt;
+  const h = 5.6; // mirror gap
+  const cycle = st.bouncePhase % 2;
+  let py;
+  if (cycle < 1) {
+    py = 0.5 + cycle * h;
+  } else {
+    py = 0.5 + (2 - cycle) * h;
+  }
+  st.photon.position.y = py;
+
+  // Trail in station frame
+  const worldPos = new THREE.Vector3();
+  st.photon.getWorldPosition(worldPos);
+  st.trailPoints.push(worldPos.clone());
+  if (st.trailPoints.length > 200) st.trailPoints.shift();
+
+  // Update station path visualization
+  while (st.stationPathGroup.children.length > 0) {
+    st.stationPathGroup.remove(st.stationPathGroup.children[0]);
+  }
+  if (st.trailPoints.length > 2) {
+    const geo = new THREE.BufferGeometry().setFromPoints(st.trailPoints);
+    const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: 0xff8844, transparent: true, opacity: 0.4 }));
+    st.stationPathGroup.add(line);
+  }
+
+  // Camera
+  if (st.observer === 'station') {
+    camera.position.lerp(new THREE.Vector3(0, 8, 16), 0.03);
+    camera.lookAt(0, 3, 0);
+  } else {
+    const tp = st.trainGroup.position;
+    camera.position.lerp(new THREE.Vector3(tp.x, 8, 10), 0.03);
+    camera.lookAt(tp.x, 3, 0);
+  }
+
+  // Update equation display
+  const gamma = lorentzGamma(v);
+  document.getElementById('eq2-val').textContent = `1s on train = ${gamma.toFixed(3)}s for station`;
+}
+
+// ============================================================
+// SCENARIO 2: ELEVATOR (EQUIVALENCE PRINCIPLE)
+// ============================================================
+function buildElevator() {
+  clearScenario();
+  animationState = {
+    mode: 'acceleration', // or 'gravity'
+    time: 0,
+    playing: true,
+    ballDropped: false,
+    ballY: 4.5,
+    ballVelY: 0,
+    lightBeamX: -3,
+    lightBeamY: 3,
+    lightPoints: [],
+  };
+
+  // Stars background
+  for (let i = 0; i < 100; i++) {
+    const star = makeSphere(0.05 + Math.random() * 0.08, mat.star);
+    star.position.set(
+      (Math.random() - 0.5) * 60,
+      (Math.random() - 0.5) * 40 + 10,
+      -15 - Math.random() * 20
+    );
+    addToScene(star);
+  }
+
+  // Elevator
+  const elevator = new THREE.Group();
+
+  // Floor
+  const eFloor = makeBox(6, 0.4, 4, mat.elevator);
+  eFloor.position.y = 0;
+  elevator.add(eFloor);
+
+  // Ceiling
+  const eCeil = makeBox(6, 0.3, 4, mat.elevator);
+  eCeil.position.y = 6;
+  elevator.add(eCeil);
+
+  // Left wall
+  const eLeft = makeBox(0.3, 6, 4, mat.elevator);
+  eLeft.position.set(-3, 3, 0);
+  elevator.add(eLeft);
+
+  // Right wall
+  const eRight = makeBox(0.3, 6, 4, mat.elevator);
+  eRight.position.set(3, 3, 0);
+  elevator.add(eRight);
+
+  // Back wall
+  const eBack = makeBox(6, 6, 0.3, new THREE.MeshPhongMaterial({ color: 0x555577, flatShading: true, transparent: true, opacity: 0.4 }));
+  eBack.position.set(0, 3, -2);
+  elevator.add(eBack);
+
+  // Person inside
+  const person = makePerson(0, 0.5, 0.5, mat.person);
+  elevator.add(person);
+
+  // Ball
+  const ball = makeSphere(0.3, mat.orange);
+  ball.position.set(1.5, 4.5, 0.5);
+  elevator.add(ball);
+  animationState.ball = ball;
+
+  // Light beam entry point (left wall hole indicator)
+  const lightEntry = makeSphere(0.15, mat.yellow);
+  lightEntry.position.set(-3, 3, 0.5);
+  elevator.add(lightEntry);
+
+  // Acceleration arrows (or gravity indicator)
+  animationState.arrows = [];
+  for (let x = -2; x <= 2; x += 2) {
+    const arrow = makeCylinder(0.08, 0.08, 1.5, mat.green);
+    arrow.position.set(x, -1.2, 0);
+    elevator.add(arrow);
+    animationState.arrows.push(arrow);
+
+    const arrowHead = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.4, 8), mat.green);
+    arrowHead.position.set(x, -0.35, 0);
+    elevator.add(arrowHead);
+    animationState.arrows.push(arrowHead);
+  }
+
+  animationState.elevator = addToScene(elevator);
+  elevator.position.set(0, 2, 0);
+
+  // Ground (for gravity mode)
+  animationState.ground = makeBox(30, 0.5, 20, new THREE.MeshPhongMaterial({ color: 0x334422, flatShading: true }));
+  animationState.ground.position.y = -5;
+  animationState.ground.visible = false;
+  addToScene(animationState.ground);
+
+  // Earth (for gravity mode)
+  animationState.earth = makeSphere(8, new THREE.MeshPhongMaterial({ color: 0x2244aa, flatShading: true, transparent: true, opacity: 0.3 }));
+  animationState.earth.position.y = -12;
+  animationState.earth.visible = false;
+  addToScene(animationState.earth);
+
+  // Light beam trail group
+  animationState.lightTrailGroup = new THREE.Group();
+  elevator.add(animationState.lightTrailGroup);
+
+  camera.position.set(8, 8, 14);
+  camera.lookAt(0, 4, 0);
+
+  updateEquations(0);
+
+  document.getElementById('controls').innerHTML = `
+    <div>
+      <button class="toggle-btn active" id="elev-accel" onclick="setElevatorMode('acceleration')">Accelerating in Space</button>
+      <button class="toggle-btn" id="elev-grav" onclick="setElevatorMode('gravity')">Stationary in Gravity</button>
+    </div>
+    <div class="playback" style="margin-top:10px">
+      <button class="play-btn" onclick="dropElevatorBall()">Drop Ball</button>
+      <button class="play-btn" onclick="animationState.playing=!animationState.playing">Play/Pause</button>
+      <button class="play-btn reset-btn" onclick="buildElevator()">Reset</button>
+    </div>
+  `;
+
+  document.getElementById('explanation').innerHTML = `
+    <h2>The Elevator: Equivalence Principle</h2>
+    <p>Imagine you're sealed inside an elevator with no windows. A ball floats beside you, and you release it.</p>
+    <p><strong>Scenario A:</strong> The elevator accelerates upward in empty space. The floor rushes up to meet the ball -- it "falls."</p>
+    <p><strong>Scenario B:</strong> The elevator sits stationary on Earth. Gravity pulls the ball down -- it falls identically.</p>
+    <div class="key-insight">
+      <strong>Key Insight:</strong> No experiment performed inside the elevator can distinguish between gravitational acceleration and mechanical acceleration. Gravity and acceleration are fundamentally equivalent. This is the foundation of General Relativity.
+    </div>
+    <p>Notice the light beam entering from the left: in both scenarios, it curves downward. Gravity bends light!</p>
+  `;
+}
+
+function setElevatorMode(mode) {
+  animationState.mode = mode;
+  document.getElementById('elev-accel').classList.toggle('active', mode === 'acceleration');
+  document.getElementById('elev-grav').classList.toggle('active', mode === 'gravity');
+
+  // Toggle visual elements
+  const isGrav = mode === 'gravity';
+  animationState.ground.visible = isGrav;
+  animationState.earth.visible = isGrav;
+
+  // Change arrow colors
+  const arrowMat = isGrav ? mat.red : mat.green;
+  animationState.arrows.forEach(a => { a.material = arrowMat; });
+
+  // Reset ball
+  animationState.ball.position.y = 4.5;
+  animationState.ballY = 4.5;
+  animationState.ballVelY = 0;
+  animationState.ballDropped = false;
+  animationState.lightBeamX = -3;
+  animationState.lightBeamY = 3;
+  animationState.lightPoints = [];
+  while (animationState.lightTrailGroup.children.length > 0) {
+    animationState.lightTrailGroup.remove(animationState.lightTrailGroup.children[0]);
+  }
+}
+
+function dropElevatorBall() {
+  animationState.ballDropped = true;
+  animationState.ballVelY = 0;
+  animationState.lightBeamX = -3;
+  animationState.lightBeamY = 3;
+  animationState.lightPoints = [];
+  while (animationState.lightTrailGroup.children.length > 0) {
+    animationState.lightTrailGroup.remove(animationState.lightTrailGroup.children[0]);
+  }
+}
+
+function updateElevator(dt) {
+  if (!animationState.playing) return;
+  const st = animationState;
+  st.time += dt;
+
+  const g = 3; // acceleration / gravity
+
+  if (st.ballDropped) {
+    st.ballVelY -= g * dt;
+    st.ballY += st.ballVelY * dt;
+    if (st.ballY < 0.5) {
+      st.ballY = 0.5;
+      st.ballVelY = 0;
+      st.ballDropped = false;
+    }
+    st.ball.position.y = st.ballY;
+  }
+
+  // Light beam (curves downward in both modes)
+  st.lightBeamX += 4 * dt;
+  // Light bends downward due to equivalence
+  const bendAmount = 0.3;
+  const dx = st.lightBeamX + 3; // distance traveled
+  st.lightBeamY = 3 - bendAmount * (dx * dx) * 0.05;
+
+  if (st.lightBeamX < 3 && st.lightBeamX > -3) {
+    st.lightPoints.push(new THREE.Vector3(st.lightBeamX, st.lightBeamY, 0.5));
+    // Redraw trail
+    while (st.lightTrailGroup.children.length > 0) {
+      st.lightTrailGroup.remove(st.lightTrailGroup.children[0]);
+    }
+    if (st.lightPoints.length > 1) {
+      const geo = new THREE.BufferGeometry().setFromPoints(st.lightPoints);
+      const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: 0xffee33 }));
+      st.lightTrailGroup.add(line);
+      // Photon dot
+      const dot = makeSphere(0.12, mat.yellow);
+      dot.position.copy(st.lightPoints[st.lightPoints.length - 1]);
+      st.lightTrailGroup.add(dot);
+    }
+  }
+  if (st.lightBeamX > 4) {
+    st.lightBeamX = -3;
+    st.lightBeamY = 3;
+    st.lightPoints = [];
+  }
+
+  // Subtle elevator motion
+  if (st.mode === 'acceleration') {
+    st.elevator.position.y = 2 + Math.sin(st.time * 0.5) * 0.3;
+  } else {
+    st.elevator.position.y = 2;
+  }
+
+  camera.position.lerp(new THREE.Vector3(8, 8, 14), 0.02);
+  camera.lookAt(0, 4, 0);
+}
+
+// ============================================================
+// SCENARIO 3: LENGTH CONTRACTION
+// ============================================================
+function buildLengthContraction() {
+  clearScenario();
+  animationState = {
+    speed: 0.5,
+    time: 0,
+    playing: true,
+  };
+
+  // Stars
+  for (let i = 0; i < 80; i++) {
+    const star = makeSphere(0.05 + Math.random() * 0.06, mat.star);
+    star.position.set(
+      (Math.random() - 0.5) * 50,
+      (Math.random() - 0.5) * 30 + 5,
+      -10 - Math.random() * 15
+    );
+    addToScene(star);
+  }
+
+  // Observer (stationary)
+  const obs = makePerson(0, 0.3, 8, mat.orange);
+  addToScene(obs);
+
+  // Reference grid lines
+  for (let x = -15; x <= 15; x += 3) {
+    const line = makeBox(0.02, 0.02, 30, new THREE.MeshBasicMaterial({ color: 0x222244 }));
+    line.position.set(x, 0, 0);
+    addToScene(line);
+  }
+
+  // Spaceship
+  const ship = new THREE.Group();
+
+  // Main body
+  const body = makeCylinder(0.8, 0.8, 8, mat.ship, 8);
+  body.rotation.z = Math.PI / 2;
+  ship.add(body);
+
+  // Nose cone
+  const nose = new THREE.Mesh(new THREE.ConeGeometry(0.8, 2, 8), mat.shipNose);
+  nose.rotation.z = -Math.PI / 2;
+  nose.position.x = 5;
+  ship.add(nose);
+
+  // Engine
+  const engine = makeCylinder(1, 0.8, 1.5, mat.trainDark, 8);
+  engine.rotation.z = Math.PI / 2;
+  engine.position.x = -4.5;
+  ship.add(engine);
+
+  // Engine glow
+  const glow = makeSphere(0.6, new THREE.MeshBasicMaterial({ color: 0xff4400, transparent: true, opacity: 0.6 }));
+  glow.position.x = -5.5;
+  ship.add(glow);
+  animationState.engineGlow = glow;
+
+  // Wings
+  for (let z = -1; z <= 1; z += 2) {
+    const wing = makeBox(3, 0.1, 2, mat.ship);
+    wing.position.set(-1, 0, z * 1.8);
+    ship.add(wing);
+  }
+
+  // Rest-length marker
+  const restMarkerL = makeBox(0.1, 2, 0.1, mat.green);
+  restMarkerL.position.set(-5.2, 0, 0);
+  ship.add(restMarkerL);
+  const restMarkerR = makeBox(0.1, 2, 0.1, mat.green);
+  restMarkerR.position.set(6, 0, 0);
+  ship.add(restMarkerR);
+
+  ship.position.set(0, 3, 0);
+  animationState.ship = addToScene(ship);
+  animationState.restLength = 11.2; // nose to engine end
+
+  // Ghost ship (rest frame reference)
+  const ghostShip = ship.clone();
+  ghostShip.traverse(child => {
+    if (child.isMesh) {
+      child.material = new THREE.MeshBasicMaterial({ color: 0x334466, transparent: true, opacity: 0.15, wireframe: true });
+    }
+  });
+  ghostShip.position.set(0, 3, -4);
+  animationState.ghostShip = addToScene(ghostShip);
+
+  camera.position.set(0, 6, 18);
+  camera.lookAt(0, 3, 0);
+
+  updateEquations(0.5);
+
+  document.getElementById('controls').innerHTML = `
+    <label>Ship Speed: <span class="slider-value" id="lc2-speed-val">0.50c</span></label>
+    <input type="range" min="0" max="99" value="50" id="lc2-speed" oninput="updateShipSpeed(this.value)">
+    <p style="font-size:0.75em; color:#778; margin-top:10px;">Wireframe = rest length<br>Solid = contracted length</p>
+    <div class="playback" style="margin-top:10px">
+      <button class="play-btn" onclick="animationState.playing=!animationState.playing">Play/Pause</button>
+    </div>
+  `;
+
+  document.getElementById('explanation').innerHTML = `
+    <h2>Length Contraction</h2>
+    <p>As an object moves faster relative to an observer, it appears shorter in the direction of motion. This is not an optical illusion -- the object genuinely occupies less space in the observer's reference frame.</p>
+    <p>The solid ship shows what the observer measures. The wireframe ghost shows the ship's "rest length" -- its length when stationary.</p>
+    <div class="key-insight">
+      <strong>Key Insight:</strong> At 0.87c, the ship is compressed to half its rest length. At 0.99c, it's just 14% of its original length. The contraction is real and measurable: L' = L / &gamma;.
+    </div>
+    <p>This effect is only significant at speeds close to the speed of light. At everyday speeds, the contraction is immeasurably tiny.</p>
+  `;
+}
+
+function updateShipSpeed(val) {
+  const v = val / 100;
+  animationState.speed = v;
+  document.getElementById('lc2-speed-val').textContent = v.toFixed(2) + 'c';
+  updateEquations(v);
+
+  // Contract the ship
+  const gamma = lorentzGamma(Math.min(v, 0.999));
+  const contraction = 1 / gamma;
+  animationState.ship.scale.x = contraction;
+
+  // Engine glow intensity
+  if (animationState.engineGlow) {
+    animationState.engineGlow.material.opacity = 0.2 + v * 0.8;
+    animationState.engineGlow.scale.setScalar(0.5 + v * 1.5);
+  }
+}
+
+function updateLengthContraction(dt) {
+  if (!animationState.playing) return;
+  const st = animationState;
+  st.time += dt;
+
+  // Gentle bob
+  st.ship.position.y = 3 + Math.sin(st.time * 1.5) * 0.15;
+  st.ship.rotation.z = Math.sin(st.time * 0.7) * 0.02;
+
+  // Engine glow pulse
+  if (st.engineGlow) {
+    const pulse = 0.9 + Math.sin(st.time * 8) * 0.1;
+    st.engineGlow.scale.setScalar((0.5 + st.speed * 1.5) * pulse);
+  }
+
+  // Move stars for speed feel
+  scenarioObjects.forEach(obj => {
+    if (obj.material === mat.star) {
+      obj.position.x -= st.speed * 5 * dt;
+      if (obj.position.x < -25) obj.position.x = 25;
+    }
+  });
+
+  camera.position.lerp(new THREE.Vector3(0, 6, 18), 0.02);
+  camera.lookAt(0, 3, 0);
+
+  // Update contraction display
+  const gamma = lorentzGamma(Math.min(st.speed, 0.999));
+  document.getElementById('eq3-val').textContent = `L' = ${(1 / gamma * 100).toFixed(1)}% of rest length`;
+}
+
+// ============================================================
+// SCENARIO 4: TWIN PARADOX
+// ============================================================
+function buildTwinParadox() {
+  clearScenario();
+  animationState = {
+    speed: 0.8,
+    time: 0,
+    playing: true,
+    phase: 'outbound', // outbound, turnaround, inbound, reunion
+    journeyTime: 0,
+    stayClockAngle: 0,
+    travelClockAngle: 0,
+    travelX: 0,
+    maxDistance: 12,
+  };
+
+  // Stars
+  for (let i = 0; i < 60; i++) {
+    const star = makeSphere(0.04 + Math.random() * 0.05, mat.star);
+    star.position.set(
+      (Math.random() - 0.5) * 50,
+      (Math.random() - 0.5) * 25 + 8,
+      -8 - Math.random() * 15
+    );
+    addToScene(star);
+  }
+
+  // Ground
+  const ground = makeBox(40, 0.2, 15, mat.floor);
+  ground.position.y = -0.1;
+  addToScene(ground);
+
+  // Earth base
+  const base = makeBox(5, 0.5, 3, mat.platform);
+  base.position.set(-8, 0.25, 0);
+  addToScene(base);
+
+  // Stay-at-home twin
+  const stayTwin = makePerson(-8, 0.8, 0, mat.orange);
+  addToScene(stayTwin);
+  animationState.stayTwin = stayTwin;
+
+  // Stay clock
+  const stayClock = new THREE.Group();
+  const stayFace = makeCylinder(1.2, 1.2, 0.2, mat.clock_face, 24);
+  stayFace.rotation.x = Math.PI / 2;
+  stayClock.add(stayFace);
+  const stayRim = new THREE.Mesh(
+    new THREE.TorusGeometry(1.2, 0.08, 8, 24),
+    new THREE.MeshPhongMaterial({ color: 0x888888, flatShading: true })
+  );
+  stayClock.add(stayRim);
+  // Hour marks
+  for (let i = 0; i < 12; i++) {
+    const mark = makeBox(0.08, 0.2, 0.05, mat.trainDark);
+    const angle = (i / 12) * Math.PI * 2;
+    mark.position.set(Math.sin(angle) * 1, Math.cos(angle) * 1, 0.12);
+    stayClock.add(mark);
+  }
+  // Hand
+  const stayHand = makeBox(0.06, 0.9, 0.05, mat.clock_hand);
+  stayHand.position.set(0, 0.45, 0.15);
+  stayHand.geometry.translate(0, -0.45, 0); // pivot at bottom
+  stayClock.add(stayHand);
+  animationState.stayHand = stayHand;
+
+  stayClock.position.set(-8, 4.5, 0);
+  addToScene(stayClock);
+
+  // Traveling twin
+  const travelTwin = makePerson(0, 0.8, 0, mat.blue);
+  addToScene(travelTwin);
+  animationState.travelTwin = travelTwin;
+  travelTwin.position.set(-6, 0.8, 0);
+
+  // Travel clock
+  const travelClock = new THREE.Group();
+  const travelFace = makeCylinder(1.2, 1.2, 0.2, mat.clock_face, 24);
+  travelFace.rotation.x = Math.PI / 2;
+  travelClock.add(travelFace);
+  const travelRim = new THREE.Mesh(
+    new THREE.TorusGeometry(1.2, 0.08, 8, 24),
+    new THREE.MeshPhongMaterial({ color: 0x4488cc, flatShading: true })
+  );
+  travelClock.add(travelRim);
+  for (let i = 0; i < 12; i++) {
+    const mark = makeBox(0.08, 0.2, 0.05, mat.trainDark);
+    const angle = (i / 12) * Math.PI * 2;
+    mark.position.set(Math.sin(angle) * 1, Math.cos(angle) * 1, 0.12);
+    travelClock.add(mark);
+  }
+  const travelHand = makeBox(0.06, 0.9, 0.05, mat.clock_hand);
+  travelHand.position.set(0, 0.45, 0.15);
+  travelHand.geometry.translate(0, -0.45, 0);
+  travelClock.add(travelHand);
+  animationState.travelHand = travelHand;
+  animationState.travelClock = travelClock;
+
+  travelClock.position.set(-6, 4.5, 0);
+  addToScene(travelClock);
+
+  // Rocket for traveling twin
+  const rocket = new THREE.Group();
+  const rBody = makeCylinder(0.5, 0.5, 3, mat.ship, 8);
+  rocket.add(rBody);
+  const rNose = new THREE.Mesh(new THREE.ConeGeometry(0.5, 1, 8), mat.shipNose);
+  rNose.position.y = 2;
+  rocket.add(rNose);
+  const rEngine = makeCylinder(0.6, 0.5, 0.5, mat.trainDark, 8);
+  rEngine.position.y = -1.7;
+  rocket.add(rEngine);
+  // Flame
+  const flame = new THREE.Mesh(new THREE.ConeGeometry(0.4, 1.5, 8), new THREE.MeshBasicMaterial({ color: 0xff6600, transparent: true, opacity: 0.7 }));
+  flame.position.y = -2.7;
+  flame.rotation.x = Math.PI;
+  rocket.add(flame);
+  animationState.flame = flame;
+
+  rocket.position.set(-6, 2, -2);
+  rocket.rotation.z = -Math.PI / 6;
+  animationState.rocket = addToScene(rocket);
+
+  // Destination marker
+  const dest = makeSphere(0.5, mat.red);
+  dest.position.set(animationState.maxDistance, 1, 0);
+  addToScene(dest);
+
+  // Path trail
+  animationState.pathPoints = [];
+  animationState.pathGroup = new THREE.Group();
+  addToScene(animationState.pathGroup);
+
+  camera.position.set(0, 8, 18);
+  camera.lookAt(0, 3, 0);
+
+  updateEquations(0.8);
+
+  document.getElementById('controls').innerHTML = `
+    <label>Journey Speed: <span class="slider-value" id="tp-speed-val">0.80c</span></label>
+    <input type="range" min="10" max="99" value="80" id="tp-speed" oninput="animationState.speed=this.value/100; document.getElementById('tp-speed-val').textContent=(this.value/100).toFixed(2)+'c'; updateEquations(this.value/100);">
+    <div class="playback" style="margin-top:10px">
+      <button class="play-btn" onclick="animationState.playing=!animationState.playing">Play/Pause</button>
+      <button class="play-btn reset-btn" onclick="buildTwinParadox()">Reset</button>
+    </div>
+  `;
+
+  document.getElementById('explanation').innerHTML = `
+    <h2>The Twin Paradox</h2>
+    <p>Two twins start together. One stays on Earth; the other rockets away at high speed, then returns. When they reunite, the traveling twin is younger.</p>
+    <p>Watch the clocks: the stay-at-home clock ticks at normal rate, while the traveling clock ticks slower (time dilation). When the traveler returns, less time has elapsed on their clock.</p>
+    <div class="key-insight">
+      <strong>Key Insight:</strong> "But isn't motion relative? Why doesn't the stay-at-home twin age less?" The asymmetry is the acceleration. The traveler must accelerate to turn around -- they change reference frames. The stay-at-home twin remains in a single inertial frame throughout. This breaks the symmetry.
+    </div>
+    <p>At 0.8c, the traveling twin ages only 60% as much as the stay-at-home twin. At 0.99c, they age only 14%.</p>
+  `;
+}
+
+function updateTwinParadox(dt) {
+  if (!animationState.playing) return;
+  const st = animationState;
+  st.time += dt;
+
+  const v = st.speed;
+  const gamma = lorentzGamma(Math.min(v, 0.999));
+  const moveSpeed = v * 6;
+
+  // Stay clock always ticks at rate 1
+  st.stayClockAngle -= dt * 0.8;
+  st.stayHand.rotation.z = st.stayClockAngle;
+
+  // Travel clock ticks slower by 1/gamma
+  st.travelClockAngle -= dt * 0.8 / gamma;
+  st.travelHand.rotation.z = st.travelClockAngle;
+
+  const startX = -6;
+  const maxDist = st.maxDistance;
+
+  if (st.phase === 'outbound') {
+    st.travelX += moveSpeed * dt;
+    if (st.travelX >= maxDist) {
+      st.travelX = maxDist;
+      st.phase = 'turnaround';
+      st.journeyTime = st.time;
+    }
+    st.travelTwin.position.x = startX + st.travelX;
+    st.travelClock.position.x = startX + st.travelX;
+    st.rocket.position.x = startX + st.travelX;
+    st.rocket.rotation.z = -Math.PI / 6;
+    st.flame.visible = true;
+  } else if (st.phase === 'turnaround') {
+    // Brief pause at turnaround
+    st.rocket.rotation.z += dt * 3;
+    if (st.rocket.rotation.z >= Math.PI / 6) {
+      st.rocket.rotation.z = Math.PI / 6;
+      st.phase = 'inbound';
+    }
+  } else if (st.phase === 'inbound') {
+    st.travelX -= moveSpeed * dt;
+    if (st.travelX <= 0) {
+      st.travelX = 0;
+      st.phase = 'reunion';
+      st.flame.visible = false;
+    }
+    st.travelTwin.position.x = startX + st.travelX;
+    st.travelClock.position.x = startX + st.travelX;
+    st.rocket.position.x = startX + st.travelX;
+  } else if (st.phase === 'reunion') {
+    st.flame.visible = false;
+    // Clocks keep ticking to show the difference
+  }
+
+  // Flame flicker
+  if (st.flame.visible) {
+    st.flame.scale.y = 0.8 + Math.random() * 0.4;
+    st.flame.scale.x = 0.8 + Math.random() * 0.2;
+  }
+
+  // Update equations
+  const stayAge = Math.abs(st.stayClockAngle) / (Math.PI * 2) * 10;
+  const travelAge = Math.abs(st.travelClockAngle) / (Math.PI * 2) * 10;
+  document.getElementById('eq2-val').textContent = `Stay: ${stayAge.toFixed(1)}yr  Travel: ${travelAge.toFixed(1)}yr`;
+  document.getElementById('eq4-val').textContent = `Age diff: ${(stayAge - travelAge).toFixed(1)} years`;
+
+  camera.position.lerp(new THREE.Vector3(2, 8, 18), 0.02);
+  camera.lookAt(0, 3, 0);
+}
+
+// ============================================================
+// SCENARIO MANAGEMENT
+// ============================================================
+const scenarios = [
+  { build: buildTrainStation, update: updateTrainStation },
+  { build: buildLightClock, update: updateLightClock },
+  { build: buildElevator, update: updateElevator },
+  { build: buildLengthContraction, update: updateLengthContraction },
+  { build: buildTwinParadox, update: updateTwinParadox },
+];
+
+function selectScenario(idx) {
+  currentScenario = idx;
+  document.querySelectorAll('.scenario-btn').forEach((btn, i) => {
+    btn.classList.toggle('active', i === idx);
+  });
+  scenarios[idx].build();
+}
+
+// ============================================================
+// ANIMATION LOOP
+// ============================================================
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  scenarios[currentScenario].update(dt);
+  renderer.render(scene, camera);
+}
+
+// ============================================================
+// INIT
+// ============================================================
+initThree();
+buildTrainStation();
+animate();
+</script>
+</body>
+</html>

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../config/breakpoints.dart';
 import '../config/router.dart';
+import '../config/web_theme.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/business_sidebar.dart';
 
@@ -131,33 +132,62 @@ class _BusinessShellState extends ConsumerState<BusinessShell> {
   /// Mobile: Scaffold with hamburger + drawer.
   Widget _buildMobileLayout() {
     final theme = Theme.of(context);
-    final colors = theme.colorScheme;
 
     return Scaffold(
       key: _scaffoldKey,
+      backgroundColor: kWebBackground,
       appBar: AppBar(
+        backgroundColor: kWebSurface,
+        elevation: 0,
+        scrolledUnderElevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.menu),
+          icon: const Icon(Icons.menu_outlined, color: kWebTextPrimary),
           onPressed: () => _scaffoldKey.currentState?.openDrawer(),
           tooltip: 'Menu',
         ),
-        title: Text(
-          'BeautyCita Negocio',
-          style: theme.textTheme.titleMedium?.copyWith(
-            color: colors.primary,
-            fontWeight: FontWeight.bold,
-          ),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Beauty',
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: kWebTextPrimary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            ShaderMask(
+              shaderCallback: (bounds) =>
+                  kWebBrandGradient.createShader(bounds),
+              child: Text(
+                'Cita',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            Text(
+              ' Negocio',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: kWebTextHint,
+              ),
+            ),
+          ],
+        ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(height: 1, color: kWebCardBorder),
         ),
         actions: [
-          // Search placeholder
           IconButton(
-            icon: const Icon(Icons.search),
+            icon: const Icon(Icons.search_outlined, color: kWebTextSecondary),
             onPressed: () => _searchFocusNode.requestFocus(),
             tooltip: 'Buscar',
           ),
         ],
       ),
       drawer: Drawer(
+        backgroundColor: kWebSurface,
         child: SafeArea(
           child: BusinessSidebar(
             isExpanded: true,
@@ -178,11 +208,9 @@ class _BusinessShellState extends ConsumerState<BusinessShell> {
     required bool showToggle,
     required bool isTablet,
   }) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-
     return Scaffold(
       key: _scaffoldKey,
+      backgroundColor: kWebBackground,
       body: Row(
         children: [
           // -- Sidebar --
@@ -197,12 +225,6 @@ class _BusinessShellState extends ConsumerState<BusinessShell> {
               },
               onSignOut: _signOut,
             ),
-          ),
-          // -- Vertical divider --
-          VerticalDivider(
-            width: 1,
-            thickness: 1,
-            color: colors.outlineVariant,
           ),
           // -- Content area --
           Expanded(
@@ -238,20 +260,19 @@ class _TopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colors = theme.colorScheme;
 
     return Container(
       height: 56,
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      decoration: BoxDecoration(
-        color: colors.surface,
+      decoration: const BoxDecoration(
+        color: kWebSurface,
         border: Border(
-          bottom: BorderSide(color: colors.outlineVariant, width: 1),
+          bottom: BorderSide(color: kWebCardBorder, width: 1),
         ),
       ),
       child: Row(
         children: [
-          // Search field placeholder
+          // Search field with subtle bg and focus glow
           SizedBox(
             width: isTablet ? 200 : 280,
             height: 36,
@@ -260,37 +281,40 @@ class _TopBar extends StatelessWidget {
               decoration: InputDecoration(
                 hintText: 'Buscar... ( / )',
                 hintStyle: theme.textTheme.bodySmall?.copyWith(
-                  color: colors.onSurface.withValues(alpha: 0.4),
+                  color: kWebTextHint,
                 ),
-                prefixIcon: Icon(
-                  Icons.search,
+                prefixIcon: const Icon(
+                  Icons.search_outlined,
                   size: 18,
-                  color: colors.onSurface.withValues(alpha: 0.4),
+                  color: kWebTextHint,
                 ),
                 filled: true,
-                fillColor: colors.surfaceContainerHighest.withValues(alpha: 0.5),
-                contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
+                fillColor: kWebBackground,
+                contentPadding:
+                    const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide.none,
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: kWebCardBorder),
                 ),
                 enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide.none,
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: kWebCardBorder),
                 ),
                 focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(color: colors.primary, width: 1.5),
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: kWebPrimary, width: 1.5),
                 ),
               ),
-              style: theme.textTheme.bodySmall,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: kWebTextPrimary,
+              ),
             ),
           ),
           const Spacer(),
           IconButton(
-            icon: Icon(
+            icon: const Icon(
               Icons.notifications_outlined,
-              color: colors.onSurface.withValues(alpha: 0.6),
+              color: kWebTextSecondary,
               size: 22,
             ),
             onPressed: () {

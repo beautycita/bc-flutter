@@ -42,6 +42,7 @@ class ThemeNotifier extends StateNotifier<ThemeState> {
   ThemeMode _themeMode = ThemeMode.system;
   double? _customHue;
   double? _customSat;
+  List<Color>? _customGradientColors;
 
   // Pre-cached category color offsets — computed once per palette, not per drag tick.
   double _basePrimaryHue = 0;
@@ -165,6 +166,18 @@ class ThemeNotifier extends StateNotifier<ThemeState> {
   void setCustomColorLive(double hue, double sat) {
     _customHue = hue;
     _customSat = sat;
+    _customGradientColors = null; // Clear multi-color gradient
+    _rebuild(state.palette);
+  }
+
+  /// Set a full custom gradient with any number of color stops.
+  /// Used by avatar style selector for multi-color gradients.
+  void setCustomGradient(List<Color> colors) {
+    _customGradientColors = colors;
+    // Also update hue/sat from first color for consistency
+    final hsl = HSLColor.fromColor(colors.first);
+    _customHue = hsl.hue;
+    _customSat = hsl.saturation;
     _rebuild(state.palette);
   }
 
@@ -274,12 +287,14 @@ class ThemeNotifier extends StateNotifier<ThemeState> {
       warning: base.warning,
       info: base.info,
       primaryGradient: LinearGradient(
-        colors: [primary, gradEnd],
+        colors: _customGradientColors ?? [primary, gradEnd],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
       ),
       accentGradient: LinearGradient(
-        colors: [secondary, gradEnd],
+        colors: _customGradientColors != null && _customGradientColors!.length >= 2
+            ? [_customGradientColors![(_customGradientColors!.length * 0.3).round()], _customGradientColors!.last]
+            : [secondary, gradEnd],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
       ),

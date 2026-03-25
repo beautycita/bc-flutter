@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../config/router.dart';
+import '../config/web_theme.dart';
 
 /// A navigation entry in the business sidebar.
 class _NavItem {
@@ -65,12 +66,15 @@ class BusinessSidebar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
     final currentLocation = GoRouterState.of(context).matchedLocation;
 
-    return ColoredBox(
-      color: colors.surface,
+    return Container(
+      decoration: const BoxDecoration(
+        color: kWebSurface,
+        border: Border(
+          right: BorderSide(color: kWebCardBorder, width: 1),
+        ),
+      ),
       child: Column(
         children: [
           // -- Logo --
@@ -85,12 +89,12 @@ class BusinessSidebar extends StatelessWidget {
               children: [
                 for (final item in _navItems)
                   if (item is _NavDivider)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8),
                       child: Divider(
                         height: 1,
                         thickness: 1,
-                        color: colors.outlineVariant,
+                        color: kWebCardBorder,
                       ),
                     )
                   else
@@ -111,7 +115,7 @@ class BusinessSidebar extends StatelessWidget {
           ),
 
           // -- Bottom section: user + collapse toggle --
-          const Divider(height: 1),
+          const Divider(height: 1, thickness: 1, color: kWebCardBorder),
           _UserSection(
             isExpanded: isExpanded,
             onSignOut: onSignOut,
@@ -149,21 +153,21 @@ class _Logo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colors = theme.colorScheme;
 
     if (!isExpanded) {
+      // Collapsed: gradient "BC" pill
       return Container(
         width: 36,
         height: 36,
         decoration: BoxDecoration(
-          color: colors.primary,
+          gradient: kWebBrandGradient,
           borderRadius: BorderRadius.circular(8),
         ),
         alignment: Alignment.center,
         child: Text(
           'BC',
           style: theme.textTheme.labelLarge?.copyWith(
-            color: colors.onPrimary,
+            color: Colors.white,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -172,36 +176,52 @@ class _Logo extends StatelessWidget {
 
     return Column(
       children: [
+        // Gradient logo box
         Container(
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: colors.primary,
+            gradient: kWebBrandGradient,
             borderRadius: BorderRadius.circular(10),
           ),
           alignment: Alignment.center,
           child: Text(
             'BC',
             style: theme.textTheme.titleMedium?.copyWith(
-              color: colors.onPrimary,
+              color: Colors.white,
               fontWeight: FontWeight.bold,
             ),
           ),
         ),
         const SizedBox(height: 8),
-        Text(
-          'BeautyCita',
-          style: theme.textTheme.titleMedium?.copyWith(
-            color: colors.primary,
-            fontWeight: FontWeight.bold,
-          ),
+        // "Beauty" in dark + "Cita" in gradient
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Beauty',
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: kWebTextPrimary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            ShaderMask(
+              shaderCallback: (bounds) =>
+                  kWebBrandGradient.createShader(bounds),
+              child: Text(
+                'Cita',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: Colors.white, // masked by shader
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
         ),
         Text(
           isDemo ? 'Demo' : 'Negocio',
           style: theme.textTheme.bodySmall?.copyWith(
-            color: isDemo
-                ? colors.tertiary
-                : colors.onSurface.withValues(alpha: 0.5),
+            color: isDemo ? kWebTertiary : kWebTextHint,
             fontWeight: isDemo ? FontWeight.w600 : null,
           ),
         ),
@@ -235,16 +255,17 @@ class _SidebarNavTileState extends State<_SidebarNavTile> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colors = theme.colorScheme;
 
     final isActive = widget.isActive;
     final bgColor = isActive
-        ? colors.primary.withValues(alpha: 0.12)
+        ? kWebPrimary.withValues(alpha: 0.08)
         : _hovering
-            ? colors.primary.withValues(alpha: 0.06)
+            ? kWebPrimary.withValues(alpha: 0.04)
             : Colors.transparent;
-    final iconColor = isActive ? colors.primary : colors.onSurface.withValues(alpha: 0.7);
-    final textColor = isActive ? colors.primary : colors.onSurface.withValues(alpha: 0.85);
+    final iconColor =
+        isActive ? kWebPrimary : kWebTextSecondary;
+    final textColor =
+        isActive ? kWebTextPrimary : kWebTextSecondary;
 
     final tile = MouseRegion(
       onEnter: (_) => setState(() => _hovering = true),
@@ -255,18 +276,43 @@ class _SidebarNavTileState extends State<_SidebarNavTile> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
           padding: EdgeInsets.symmetric(
-            horizontal: widget.isExpanded ? 12 : 0,
-            vertical: 10,
+            horizontal: widget.isExpanded ? 8 : 0,
+            vertical: 8,
           ),
           decoration: BoxDecoration(
             color: bgColor,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(10),
           ),
           child: widget.isExpanded
               ? Row(
                   children: [
-                    Icon(widget.item.icon, size: 22, color: iconColor),
-                    const SizedBox(width: 12),
+                    // Gradient left accent bar for active item
+                    if (isActive)
+                      Container(
+                        width: 3,
+                        height: 24,
+                        margin: const EdgeInsets.only(right: 8),
+                        decoration: BoxDecoration(
+                          gradient: kWebBrandGradient,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      )
+                    else
+                      const SizedBox(width: 11), // 3 + 8 spacing match
+                    // 34x34 icon box
+                    Container(
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
+                        color: isActive
+                            ? kWebPrimary.withValues(alpha: 0.08)
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      alignment: Alignment.center,
+                      child: Icon(widget.item.icon, size: 20, color: iconColor),
+                    ),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: Text(
                         widget.item.label,
@@ -281,7 +327,19 @@ class _SidebarNavTileState extends State<_SidebarNavTile> {
                   ],
                 )
               : Center(
-                  child: Icon(widget.item.icon, size: 22, color: iconColor),
+                  // 34x34 icon box in collapsed mode
+                  child: Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: isActive
+                          ? kWebPrimary.withValues(alpha: 0.08)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    alignment: Alignment.center,
+                    child: Icon(widget.item.icon, size: 20, color: iconColor),
+                  ),
                 ),
         ),
       ),
@@ -327,7 +385,6 @@ class _UserSectionState extends State<_UserSection> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colors = theme.colorScheme;
 
     return MouseRegion(
       onEnter: (_) => setState(() => _hovering = true),
@@ -341,17 +398,19 @@ class _UserSectionState extends State<_UserSection> {
             horizontal: widget.isExpanded ? 16 : 8,
             vertical: 12,
           ),
-          color: _hovering ? colors.primary.withValues(alpha: 0.04) : Colors.transparent,
+          color: _hovering
+              ? kWebPrimary.withValues(alpha: 0.04)
+              : Colors.transparent,
           child: widget.isExpanded
               ? Row(
                   children: [
                     CircleAvatar(
                       radius: 16,
-                      backgroundColor: colors.primary.withValues(alpha: 0.15),
+                      backgroundColor: kWebPrimary.withValues(alpha: 0.10),
                       child: Icon(
                         Icons.storefront_outlined,
                         size: 18,
-                        color: colors.primary,
+                        color: kWebPrimary,
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -363,6 +422,7 @@ class _UserSectionState extends State<_UserSection> {
                           Text(
                             widget.isDemo ? 'Salon de Vallarta' : 'Mi Negocio',
                             style: theme.textTheme.bodySmall?.copyWith(
+                              color: kWebTextPrimary,
                               fontWeight: FontWeight.w600,
                             ),
                             maxLines: 1,
@@ -373,7 +433,7 @@ class _UserSectionState extends State<_UserSection> {
                                 ? 'Salir del demo'
                                 : 'Cerrar sesion',
                             style: theme.textTheme.labelSmall?.copyWith(
-                              color: colors.onSurface.withValues(alpha: 0.5),
+                              color: kWebTextHint,
                             ),
                           ),
                         ],
@@ -382,7 +442,7 @@ class _UserSectionState extends State<_UserSection> {
                     Icon(
                       Icons.logout_outlined,
                       size: 18,
-                      color: colors.onSurface.withValues(alpha: 0.5),
+                      color: kWebTextHint,
                     ),
                   ],
                 )
@@ -391,11 +451,11 @@ class _UserSectionState extends State<_UserSection> {
                     message: widget.isDemo ? 'Salir del demo' : 'Cerrar sesion',
                     child: CircleAvatar(
                       radius: 16,
-                      backgroundColor: colors.primary.withValues(alpha: 0.15),
+                      backgroundColor: kWebPrimary.withValues(alpha: 0.10),
                       child: Icon(
                         Icons.storefront_outlined,
                         size: 18,
-                        color: colors.primary,
+                        color: kWebPrimary,
                       ),
                     ),
                   ),
@@ -422,8 +482,6 @@ class _CollapseToggleState extends State<_CollapseToggle> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-
     return MouseRegion(
       onEnter: (_) => setState(() => _hovering = true),
       onExit: (_) => setState(() => _hovering = false),
@@ -433,15 +491,17 @@ class _CollapseToggleState extends State<_CollapseToggle> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
           padding: const EdgeInsets.symmetric(vertical: 8),
-          color: _hovering ? colors.primary.withValues(alpha: 0.06) : Colors.transparent,
+          color: _hovering
+              ? kWebPrimary.withValues(alpha: 0.04)
+              : Colors.transparent,
           child: Center(
             child: AnimatedRotation(
               turns: widget.isExpanded ? 0 : 0.5,
               duration: const Duration(milliseconds: 200),
               child: Icon(
-                Icons.chevron_left,
+                Icons.chevron_left_outlined,
                 size: 20,
-                color: colors.onSurface.withValues(alpha: 0.5),
+                color: kWebTextHint,
               ),
             ),
           ),

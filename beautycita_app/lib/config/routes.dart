@@ -43,6 +43,7 @@ import 'package:beautycita/screens/help_screen.dart';
 import 'package:beautycita/screens/press_screen.dart';
 import 'package:beautycita/screens/system_status_screen.dart';
 import 'package:beautycita/screens/report_problem_screen.dart';
+import 'app_transitions.dart';
 
 
 class AppRoutes {
@@ -98,6 +99,7 @@ class AppRoutes {
     initialLocation: splash,
     debugLogDiagnostics: false,
     routes: [
+      // ── Splash: keep fade ──
       GoRoute(
         path: splash,
         name: 'splash',
@@ -109,6 +111,7 @@ class AppRoutes {
           },
         ),
       ),
+      // ── Auth: keep as-is ──
       GoRoute(
         path: auth,
         name: 'auth',
@@ -125,20 +128,13 @@ class AppRoutes {
           },
         ),
       ),
+      // ── Main navigation: BC sweep transition ──
       GoRoute(
         path: home,
         name: 'home',
-        pageBuilder: (context, state) => CustomTransitionPage(
+        pageBuilder: (context, state) => bcSweepPage(
           key: state.pageKey,
           child: const HomeScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            final tween = Tween(begin: const Offset(0.0, 1.0), end: Offset.zero)
-                .chain(CurveTween(curve: Curves.easeInOutCubic));
-            return SlideTransition(
-              position: animation.drive(tween),
-              child: FadeTransition(opacity: animation, child: child),
-            );
-          },
         ),
       ),
       GoRoute(
@@ -151,21 +147,13 @@ class AppRoutes {
           final color = colorValue != null
               ? Color(int.parse(colorValue))
               : const Color(0xFF660033);
-          return CustomTransitionPage(
+          return bcSweepPage(
             key: state.pageKey,
             child: ProviderListScreen(
               category: category,
               subcategory: subcategory,
               categoryColor: color,
             ),
-            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-              final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
-                  .chain(CurveTween(curve: Curves.easeInOutCubic));
-              return SlideTransition(
-                position: animation.drive(tween),
-                child: child,
-              );
-            },
           );
         },
       ),
@@ -174,17 +162,9 @@ class AppRoutes {
         name: 'provider-detail',
         pageBuilder: (context, state) {
           final id = state.pathParameters['id']!;
-          return CustomTransitionPage(
+          return bcSweepPage(
             key: state.pageKey,
             child: ProviderDetailScreen(providerId: id),
-            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-              final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
-                  .chain(CurveTween(curve: Curves.easeInOutCubic));
-              return SlideTransition(
-                position: animation.drive(tween),
-                child: child,
-              );
-            },
           );
         },
       ),
@@ -194,20 +174,12 @@ class AppRoutes {
         pageBuilder: (context, state) {
           final providerId = state.pathParameters['providerId']!;
           final serviceId = state.pathParameters['serviceId'];
-          return CustomTransitionPage(
+          return bcSweepPage(
             key: state.pageKey,
             child: BookingScreen(
               providerId: providerId,
               serviceId: serviceId,
             ),
-            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-              final tween = Tween(begin: const Offset(0.0, 1.0), end: Offset.zero)
-                  .chain(CurveTween(curve: Curves.easeInOutCubic));
-              return SlideTransition(
-                position: animation.drive(tween),
-                child: child,
-              );
-            },
           );
         },
       ),
@@ -216,51 +188,27 @@ class AppRoutes {
         name: 'booking-no-service',
         pageBuilder: (context, state) {
           final providerId = state.pathParameters['providerId']!;
-          return CustomTransitionPage(
+          return bcSweepPage(
             key: state.pageKey,
             child: BookingScreen(providerId: providerId),
-            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-              final tween = Tween(begin: const Offset(0.0, 1.0), end: Offset.zero)
-                  .chain(CurveTween(curve: Curves.easeInOutCubic));
-              return SlideTransition(
-                position: animation.drive(tween),
-                child: child,
-              );
-            },
           );
         },
       ),
       GoRoute(
         path: '/book',
         name: 'book',
-        pageBuilder: (context, state) => CustomTransitionPage(
+        pageBuilder: (context, state) => bcSweepPage(
           key: state.pageKey,
           child: const BookingFlowScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            final tween = Tween(begin: const Offset(0.0, 1.0), end: Offset.zero)
-                .chain(CurveTween(curve: Curves.easeInOutCubic));
-            return SlideTransition(
-              position: animation.drive(tween),
-              child: child,
-            );
-          },
         ),
       ),
       GoRoute(
         path: '/my-bookings',
         name: 'my-bookings',
         pageBuilder: (context, state) {
-          return CustomTransitionPage(
+          return bcSweepPage(
             key: state.pageKey,
             child: const MyBookingsScreen(),
-            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-              final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
-                  .chain(CurveTween(curve: Curves.easeInOutCubic));
-              return SlideTransition(
-                position: animation.drive(tween),
-                child: child,
-              );
-            },
           );
         },
       ),
@@ -269,50 +217,26 @@ class AppRoutes {
         name: 'appointment-detail',
         pageBuilder: (context, state) {
           final id = state.pathParameters['id']!;
-          return CustomTransitionPage(
+          return bcSweepPage(
             key: state.pageKey,
             child: BookingDetailScreen(bookingId: id),
-            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-              final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
-                  .chain(CurveTween(curve: Curves.easeInOutCubic));
-              return SlideTransition(
-                position: animation.drive(tween),
-                child: child,
-              );
-            },
           );
         },
       ),
       GoRoute(
         path: admin,
         name: 'admin',
-        pageBuilder: (context, state) => CustomTransitionPage(
+        pageBuilder: (context, state) => bcSweepPage(
           key: state.pageKey,
           child: const AdminShellScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
-                .chain(CurveTween(curve: Curves.easeInOutCubic));
-            return SlideTransition(
-              position: animation.drive(tween),
-              child: child,
-            );
-          },
         ),
       ),
       GoRoute(
         path: rp,
         name: 'rp',
-        pageBuilder: (context, state) => CustomTransitionPage(
+        pageBuilder: (context, state) => bcSweepPage(
           key: state.pageKey,
           child: const RPShellScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
-                .chain(CurveTween(curve: Curves.easeInOutCubic));
-            return SlideTransition(
-              position: animation.drive(tween),
-              child: child,
-            );
-          },
         ),
       ),
       GoRoute(
@@ -320,14 +244,9 @@ class AppRoutes {
         name: 'rp-centro',
         pageBuilder: (context, state) {
           final salon = state.extra as Map<String, dynamic>;
-          return CustomTransitionPage(
+          return bcSweepPage(
             key: state.pageKey,
             child: RPCentroScreen(salon: salon),
-            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-              final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
-                  .chain(CurveTween(curve: Curves.easeInOutCubic));
-              return SlideTransition(position: animation.drive(tween), child: child);
-            },
           );
         },
       ),
@@ -336,34 +255,21 @@ class AppRoutes {
         name: 'rp-chat',
         pageBuilder: (context, state) {
           final args = state.extra as Map<String, dynamic>;
-          return CustomTransitionPage(
+          return bcSweepPage(
             key: state.pageKey,
             child: RPChatScreen(
               salon: args['salon'] as Map<String, dynamic>,
               channel: args['channel'] as String,
             ),
-            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-              final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
-                  .chain(CurveTween(curve: Curves.easeInOutCubic));
-              return SlideTransition(position: animation.drive(tween), child: child);
-            },
           );
         },
       ),
       GoRoute(
         path: business,
         name: 'business',
-        pageBuilder: (context, state) => CustomTransitionPage(
+        pageBuilder: (context, state) => bcSweepPage(
           key: state.pageKey,
           child: const BusinessShellScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            final tween = Tween(begin: const Offset(-1.0, 0.0), end: Offset.zero)
-                .chain(CurveTween(curve: Curves.easeInOutCubic));
-            return SlideTransition(
-              position: animation.drive(tween),
-              child: child,
-            );
-          },
         ),
       ),
       GoRoute(
@@ -371,116 +277,60 @@ class AppRoutes {
         name: 'invite',
         pageBuilder: (context, state) {
           final serviceType = state.extra as String?;
-          return CustomTransitionPage(
+          return bcSweepPage(
             key: state.pageKey,
             child: InviteExperienceScreen(serviceType: serviceType),
-            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-              final tween = Tween(begin: const Offset(0.0, 1.0), end: Offset.zero)
-                  .chain(CurveTween(curve: Curves.easeInOutCubic));
-              return SlideTransition(
-                position: animation.drive(tween),
-                child: child,
-              );
-            },
           );
         },
       ),
       GoRoute(
         path: '/invite/detail',
         name: 'invite-detail',
-        pageBuilder: (context, state) => CustomTransitionPage(
+        pageBuilder: (context, state) => bcSweepPage(
           key: state.pageKey,
           child: const InviteSalonDetailScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
-                .chain(CurveTween(curve: Curves.easeInOutCubic));
-            return SlideTransition(
-              position: animation.drive(tween),
-              child: child,
-            );
-          },
         ),
       ),
       GoRoute(
         path: settings,
         name: 'settings',
-        pageBuilder: (context, state) => CustomTransitionPage(
+        pageBuilder: (context, state) => bcSweepPage(
           key: state.pageKey,
           child: const SettingsScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
-                .chain(CurveTween(curve: Curves.easeInOutCubic));
-            return SlideTransition(
-              position: animation.drive(tween),
-              child: child,
-            );
-          },
         ),
       ),
       GoRoute(
         path: '/qr-scan',
         name: 'qr-scan',
-        pageBuilder: (context, state) => CustomTransitionPage(
+        pageBuilder: (context, state) => bcSweepPage(
           key: state.pageKey,
           child: const QrScanScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return SlideTransition(
-              position: Tween(begin: const Offset(0.0, 1.0), end: Offset.zero)
-                  .chain(CurveTween(curve: Curves.easeInOutCubic))
-                  .animate(animation),
-              child: child,
-            );
-          },
         ),
       ),
       GoRoute(
         path: salonOnboarding,
         name: 'registro',
-        pageBuilder: (context, state) => CustomTransitionPage(
+        pageBuilder: (context, state) => bcSweepPage(
           key: state.pageKey,
           child: SalonOnboardingScreen(
             refCode: state.uri.queryParameters['ref'],
           ),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            final tween = Tween(begin: const Offset(0.0, 1.0), end: Offset.zero)
-                .chain(CurveTween(curve: Curves.easeInOutCubic));
-            return SlideTransition(
-              position: animation.drive(tween),
-              child: child,
-            );
-          },
         ),
       ),
       GoRoute(
         path: chat,
         name: 'chat',
-        pageBuilder: (context, state) => CustomTransitionPage(
+        pageBuilder: (context, state) => bcSweepPage(
           key: state.pageKey,
           child: const ChatRouterScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
-                .chain(CurveTween(curve: Curves.easeInOutCubic));
-            return SlideTransition(
-              position: animation.drive(tween),
-              child: child,
-            );
-          },
         ),
       ),
       GoRoute(
         path: chatList,
         name: 'chat-list',
-        pageBuilder: (context, state) => CustomTransitionPage(
+        pageBuilder: (context, state) => bcSweepPage(
           key: state.pageKey,
           child: const ChatListScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
-                .chain(CurveTween(curve: Curves.easeInOutCubic));
-            return SlideTransition(
-              position: animation.drive(tween),
-              child: child,
-            );
-          },
         ),
       ),
       GoRoute(
@@ -488,17 +338,9 @@ class AppRoutes {
         name: 'chat-conversation',
         pageBuilder: (context, state) {
           final threadId = state.pathParameters['threadId']!;
-          return CustomTransitionPage(
+          return bcSweepPage(
             key: state.pageKey,
             child: ChatConversationScreen(threadId: threadId),
-            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-              final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
-                  .chain(CurveTween(curve: Curves.easeInOutCubic));
-              return SlideTransition(
-                position: animation.drive(tween),
-                child: child,
-              );
-            },
           );
         },
       ),
@@ -509,17 +351,9 @@ class AppRoutes {
           final tabParam = state.uri.queryParameters['tab'];
           const tabIds = ['hair_color', 'hairstyle', 'headshot', 'look_swap'];
           final initialTab = tabParam != null ? tabIds.indexOf(tabParam).clamp(0, 3) : 0;
-          return CustomTransitionPage(
+          return bcSweepPage(
             key: state.pageKey,
             child: VirtualStudioScreen(initialTab: initialTab),
-            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-              final tween = Tween(begin: const Offset(0.0, 1.0), end: Offset.zero)
-                  .chain(CurveTween(curve: Curves.easeInOutCubic));
-              return SlideTransition(
-                position: animation.drive(tween),
-                child: child,
-              );
-            },
           );
         },
       ),
@@ -528,98 +362,50 @@ class AppRoutes {
         name: 'discovered-salon',
         pageBuilder: (context, state) {
           final salon = state.extra as DiscoveredSalon;
-          return CustomTransitionPage(
+          return bcSweepPage(
             key: state.pageKey,
             child: DiscoveredSalonDetailScreen(salon: salon),
-            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-              final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
-                  .chain(CurveTween(curve: Curves.easeInOutCubic));
-              return SlideTransition(
-                position: animation.drive(tween),
-                child: child,
-              );
-            },
           );
         },
       ),
       GoRoute(
         path: devices,
         name: 'devices',
-        pageBuilder: (context, state) => CustomTransitionPage(
+        pageBuilder: (context, state) => bcSweepPage(
           key: state.pageKey,
           child: const DeviceManagerScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
-                .chain(CurveTween(curve: Curves.easeInOutCubic));
-            return SlideTransition(
-              position: animation.drive(tween),
-              child: child,
-            );
-          },
         ),
       ),
       GoRoute(
         path: preferences,
         name: 'preferences',
-        pageBuilder: (context, state) => CustomTransitionPage(
+        pageBuilder: (context, state) => bcSweepPage(
           key: state.pageKey,
           child: const PreferencesScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
-                .chain(CurveTween(curve: Curves.easeInOutCubic));
-            return SlideTransition(
-              position: animation.drive(tween),
-              child: child,
-            );
-          },
         ),
       ),
       GoRoute(
         path: profile,
         name: 'profile',
-        pageBuilder: (context, state) => CustomTransitionPage(
+        pageBuilder: (context, state) => bcSweepPage(
           key: state.pageKey,
           child: const ProfileScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
-                .chain(CurveTween(curve: Curves.easeInOutCubic));
-            return SlideTransition(
-              position: animation.drive(tween),
-              child: child,
-            );
-          },
         ),
       ),
       GoRoute(
         path: paymentMethods,
         name: 'payment-methods',
-        pageBuilder: (context, state) => CustomTransitionPage(
+        pageBuilder: (context, state) => bcSweepPage(
           key: state.pageKey,
           child: const PaymentMethodsScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
-                .chain(CurveTween(curve: Curves.easeInOutCubic));
-            return SlideTransition(
-              position: animation.drive(tween),
-              child: child,
-            );
-          },
         ),
       ),
       GoRoute(
         path: security,
         name: 'security',
-        pageBuilder: (context, state) => CustomTransitionPage(
+        pageBuilder: (context, state) => bcSweepPage(
           key: state.pageKey,
           child: const SecurityScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
-                .chain(CurveTween(curve: Curves.easeInOutCubic));
-            return SlideTransition(
-              position: animation.drive(tween),
-              child: child,
-            );
-          },
         ),
       ),
       GoRoute(
@@ -627,31 +413,18 @@ class AppRoutes {
         name: 'cash-payment',
         pageBuilder: (context, state) {
           final data = state.extra as CashPaymentData?;
-          return CustomTransitionPage(
+          return bcSweepPage(
             key: state.pageKey,
             child: CashPaymentScreen(data: data),
-            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-              final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
-                  .chain(CurveTween(curve: Curves.easeInOutCubic));
-              return SlideTransition(
-                position: animation.drive(tween),
-                child: child,
-              );
-            },
           );
         },
       ),
       GoRoute(
         path: legal,
         name: 'legal',
-        pageBuilder: (context, state) => CustomTransitionPage(
+        pageBuilder: (context, state) => bcSweepPage(
           key: state.pageKey,
           child: const TermsAndPolicyScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
-                .chain(CurveTween(curve: Curves.easeInOutCubic));
-            return SlideTransition(position: animation.drive(tween), child: child);
-          },
         ),
       ),
       GoRoute(
@@ -659,17 +432,9 @@ class AppRoutes {
         name: 'cita-express',
         pageBuilder: (context, state) {
           final businessId = state.pathParameters['businessId']!;
-          return CustomTransitionPage(
+          return bcSweepPage(
             key: state.pageKey,
             child: CitaExpressScreen(businessId: businessId),
-            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-              final tween = Tween(begin: const Offset(0.0, 1.0), end: Offset.zero)
-                  .chain(CurveTween(curve: Curves.easeInOutCubic));
-              return SlideTransition(
-                position: animation.drive(tween),
-                child: child,
-              );
-            },
           );
         },
       ),
@@ -678,20 +443,13 @@ class AppRoutes {
         name: 'discovered-salon-confirm',
         pageBuilder: (context, state) {
           final salonData = state.extra as Map<String, dynamic>;
-          return CustomTransitionPage(
+          return bcSweepPage(
             key: state.pageKey,
             child: DiscoveredSalonConfirmScreen(salonData: salonData),
-            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-              final tween = Tween(begin: const Offset(0.0, 1.0), end: Offset.zero)
-                  .chain(CurveTween(curve: Curves.easeInOutCubic));
-              return SlideTransition(
-                position: animation.drive(tween),
-                child: child,
-              );
-            },
           );
         },
       ),
+      // ── Post-registration: keep fade ──
       GoRoute(
         path: postRegistration,
         name: 'post-registration',
@@ -706,47 +464,26 @@ class AppRoutes {
       GoRoute(
         path: feed,
         name: 'feed',
-        pageBuilder: (context, state) => CustomTransitionPage(
+        pageBuilder: (context, state) => bcSweepPage(
           key: state.pageKey,
           child: const FeedScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
-                .chain(CurveTween(curve: Curves.easeInOutCubic));
-            return SlideTransition(
-              position: animation.drive(tween),
-              child: child,
-            );
-          },
         ),
       ),
       GoRoute(
         path: feedSaved,
         name: 'feed-saved',
-        pageBuilder: (context, state) => CustomTransitionPage(
+        pageBuilder: (context, state) => bcSweepPage(
           key: state.pageKey,
           child: const SavedScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
-                .chain(CurveTween(curve: Curves.easeInOutCubic));
-            return SlideTransition(
-              position: animation.drive(tween),
-              child: child,
-            );
-          },
         ),
       ),
       // ── Informational screens (built, not yet linked in navigation) ──
       GoRoute(
         path: about,
         name: 'about',
-        pageBuilder: (context, state) => CustomTransitionPage(
+        pageBuilder: (context, state) => bcSweepPage(
           key: state.pageKey,
           child: const AboutScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
-                .chain(CurveTween(curve: Curves.easeInOutCubic));
-            return SlideTransition(position: animation.drive(tween), child: child);
-          },
         ),
       ),
       GoRoute(
@@ -757,53 +494,33 @@ class AppRoutes {
       GoRoute(
         path: help,
         name: 'help',
-        pageBuilder: (context, state) => CustomTransitionPage(
+        pageBuilder: (context, state) => bcSweepPage(
           key: state.pageKey,
           child: const HelpScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
-                .chain(CurveTween(curve: Curves.easeInOutCubic));
-            return SlideTransition(position: animation.drive(tween), child: child);
-          },
         ),
       ),
       GoRoute(
         path: press,
         name: 'press',
-        pageBuilder: (context, state) => CustomTransitionPage(
+        pageBuilder: (context, state) => bcSweepPage(
           key: state.pageKey,
           child: const PressScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
-                .chain(CurveTween(curve: Curves.easeInOutCubic));
-            return SlideTransition(position: animation.drive(tween), child: child);
-          },
         ),
       ),
       GoRoute(
         path: systemStatus,
         name: 'system-status',
-        pageBuilder: (context, state) => CustomTransitionPage(
+        pageBuilder: (context, state) => bcSweepPage(
           key: state.pageKey,
           child: const SystemStatusScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            final tween = Tween(begin: const Offset(1.0, 0.0), end: Offset.zero)
-                .chain(CurveTween(curve: Curves.easeInOutCubic));
-            return SlideTransition(position: animation.drive(tween), child: child);
-          },
         ),
       ),
       GoRoute(
         path: reportProblem,
         name: 'report-problem',
-        pageBuilder: (context, state) => CustomTransitionPage(
+        pageBuilder: (context, state) => bcSweepPage(
           key: state.pageKey,
           child: const ReportProblemScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            final tween = Tween(begin: const Offset(0.0, 1.0), end: Offset.zero)
-                .chain(CurveTween(curve: Curves.easeInOutCubic));
-            return SlideTransition(position: animation.drive(tween), child: child);
-          },
         ),
       ),
     ],

@@ -10,8 +10,10 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/breakpoints.dart';
 import '../../config/router.dart';
+import '../../config/web_theme.dart';
 import '../../providers/client_bookings_provider.dart';
 import '../../widgets/empty_state.dart';
+import '../../widgets/web_design_system.dart';
 
 // ── Main page ────────────────────────────────────────────────────────────────
 
@@ -116,41 +118,28 @@ class _MisCitasPageState extends ConsumerState<MisCitasPage>
                   child: _EmptyTab(tab: state.activeTab),
                 )
               else
-                SliverPadding(
-                  padding: EdgeInsets.fromLTRB(
-                    horizontalPadding.clamp(16.0, double.infinity),
-                    BCSpacing.md,
-                    horizontalPadding.clamp(16.0, double.infinity),
-                    BCSpacing.xxl,
-                  ),
-                  sliver: SliverList.builder(
-                    itemCount: state.activeList.length,
-                    itemBuilder: (context, index) {
-                      final booking = state.activeList[index];
-                      return Padding(
-                        padding:
-                            const EdgeInsets.only(bottom: BCSpacing.sm),
-                        child: _BookingCard(
-                          booking: booking,
-                          isUpcoming:
-                              state.activeTab == BookingsTab.upcoming,
-                          onCancel: () =>
-                              _showCancelDialog(context, booking),
-                        ),
-                      )
-                          .animate()
-                          .fadeIn(
-                            delay: Duration(milliseconds: 50 * index),
-                            duration: const Duration(milliseconds: 300),
-                          )
-                          .slideY(
-                            begin: 0.05,
-                            end: 0,
-                            delay: Duration(milliseconds: 50 * index),
-                            duration: const Duration(milliseconds: 300),
-                            curve: Curves.easeOut,
-                          );
-                    },
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      horizontalPadding.clamp(16.0, double.infinity),
+                      BCSpacing.md,
+                      horizontalPadding.clamp(16.0, double.infinity),
+                      BCSpacing.xxl,
+                    ),
+                    child: StaggeredFadeIn(
+                      staggerDelay: const Duration(milliseconds: 80),
+                      spacing: BCSpacing.sm,
+                      children: [
+                        for (final booking in state.activeList)
+                          _BookingCard(
+                            booking: booking,
+                            isUpcoming:
+                                state.activeTab == BookingsTab.upcoming,
+                            onCancel: () =>
+                                _showCancelDialog(context, booking),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
             ],
@@ -213,29 +202,47 @@ class _MisCitasPageState extends ConsumerState<MisCitasPage>
 class _AuthGate extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(BCSpacing.xl),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.lock_outline,
-              size: BCSpacing.iconXl,
-              color: theme.colorScheme.primary.withValues(alpha: 0.5),
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: kWebPrimary.withValues(alpha: 0.08),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.lock_outlined,
+                size: 36,
+                color: kWebTextHint,
+              ),
             ),
             const SizedBox(height: BCSpacing.lg),
-            Text(
-              'Inicia sesión para ver tus citas',
-              style: theme.textTheme.titleMedium,
+            const Text(
+              'Inicia sesion para ver tus citas',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: kWebTextPrimary,
+                fontFamily: 'system-ui',
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: BCSpacing.lg),
-            FilledButton.icon(
+            WebGradientButton(
               onPressed: () => context.go(WebRoutes.auth),
-              icon: const Icon(Icons.login),
-              label: const Text('Iniciar sesión'),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.login_outlined, size: 18, color: Colors.white),
+                  const SizedBox(width: 8),
+                  const Text('Iniciar sesion'),
+                ],
+              ),
             ),
           ],
         ),
@@ -249,22 +256,28 @@ class _AuthGate extends StatelessWidget {
 class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: BCSpacing.md),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            'Mis Citas',
-            style: theme.textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+          const WebSectionHeader(
+            label: 'Mis Citas',
+            title: 'Mis Citas',
+            centered: false,
+            titleSize: 32,
           ),
-          FilledButton.icon(
+          WebGradientButton(
             onPressed: () => context.go(WebRoutes.reservar),
-            icon: const Icon(Icons.add, size: 18),
-            label: const Text('Nueva Reservación'),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.add_outlined, size: 18, color: Colors.white),
+                const SizedBox(width: 8),
+                const Text('Nueva Reservacion'),
+              ],
+            ),
           ),
         ],
       ),
@@ -285,34 +298,50 @@ class _TabBarSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return TabBar(
       controller: controller,
-      labelColor: theme.colorScheme.primary,
-      unselectedLabelColor: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-      indicatorColor: theme.colorScheme.primary,
+      labelColor: kWebPrimary,
+      unselectedLabelColor: kWebTextSecondary,
+      indicatorColor: kWebPrimary,
+      indicatorWeight: 3,
+      indicatorSize: TabBarIndicatorSize.label,
+      labelStyle: const TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+        fontFamily: 'system-ui',
+      ),
+      unselectedLabelStyle: const TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w500,
+        fontFamily: 'system-ui',
+      ),
+      dividerColor: kWebCardBorder,
       tabs: [
         Tab(
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('Próximas'),
+              const Icon(Icons.event_outlined, size: 16),
+              const SizedBox(width: 6),
+              const Text('Proximas'),
               if (upcomingCount > 0) ...[
                 const SizedBox(width: 6),
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 7,
+                    horizontal: 8,
                     vertical: 2,
                   ),
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.primary,
-                    borderRadius: BorderRadius.circular(BCSpacing.radiusFull),
+                    gradient: kWebBrandGradient,
+                    borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
                     '$upcomingCount',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: theme.colorScheme.onPrimary,
-                      fontWeight: FontWeight.w600,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      fontFamily: 'system-ui',
                     ),
                   ),
                 ),
@@ -320,8 +349,26 @@ class _TabBarSection extends StatelessWidget {
             ],
           ),
         ),
-        const Tab(text: 'Pasadas'),
-        const Tab(text: 'Canceladas'),
+        const Tab(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.history_outlined, size: 16),
+              SizedBox(width: 6),
+              Text('Pasadas'),
+            ],
+          ),
+        ),
+        const Tab(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.cancel_outlined, size: 16),
+              SizedBox(width: 6),
+              Text('Canceladas'),
+            ],
+          ),
+        ),
       ],
     );
   }
@@ -345,144 +392,112 @@ class _BookingCard extends StatefulWidget {
 }
 
 class _BookingCardState extends State<_BookingCard> {
-  bool _hovered = false;
-
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final b = widget.booking;
     final dateFormat = DateFormat("EEE d 'de' MMM, yyyy", 'es');
     final timeFormat = DateFormat('h:mm a', 'es');
 
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        child: Card(
-          elevation: _hovered ? BCSpacing.elevationMedium : BCSpacing.elevationLow,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(BCSpacing.radiusSm),
+    return WebCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Row 1: Service name + status badge
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  b.serviceName,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: kWebTextPrimary,
+                    fontFamily: 'system-ui',
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              _StatusBadge(status: b.status),
+            ],
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(BCSpacing.md),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          const SizedBox(height: 16),
+
+          // Row 2: Salon name
+          if (b.providerName != null)
+            WebInfoRow(
+              icon: Icons.storefront_outlined,
+              iconColor: kWebSecondary,
+              label: 'Salon',
+              value: b.providerName!,
+            ),
+          if (b.providerName != null) const SizedBox(height: 12),
+
+          // Row 3: Date, time, duration
+          WebInfoRow(
+            icon: Icons.calendar_today_outlined,
+            iconColor: kWebTertiary,
+            label: 'Fecha y hora',
+            value: '${dateFormat.format(b.scheduledAt)} \u00b7 '
+                '${timeFormat.format(b.scheduledAt)} \u00b7 '
+                '${b.durationMinutes} min',
+          ),
+
+          // Row 4: Price + payment status
+          if (b.price != null && b.price! > 0) ...[
+            const SizedBox(height: 12),
+            WebInfoRow(
+              icon: Icons.payments_outlined,
+              iconColor: kWebPrimary,
+              label: 'Precio',
+              value: '\$${b.price!.toStringAsFixed(0)} MXN',
+              trailing: b.paymentStatus != null
+                  ? _PaymentStatusText(status: b.paymentStatus!)
+                  : null,
+            ),
+          ],
+
+          // Action buttons
+          if (widget.isUpcoming &&
+              (b.status == 'pending' || b.status == 'confirmed')) ...[
+            const SizedBox(height: 16),
+            Divider(height: 1, color: kWebCardBorder),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                // Row 1: Service name + status badge
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        b.serviceName,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    _StatusBadge(status: b.status),
-                  ],
-                ),
-                const SizedBox(height: BCSpacing.xs),
-
-                // Row 2: Salon name
                 if (b.providerName != null)
-                  Row(
-                    children: [
-                      Icon(Icons.store_outlined,
-                          size: 16,
-                          color: theme.colorScheme.onSurface
-                              .withValues(alpha: 0.6)),
-                      const SizedBox(width: 6),
-                      Text(
-                        b.providerName!,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurface
-                              .withValues(alpha: 0.7),
-                        ),
-                      ),
-                    ],
-                  ),
-                const SizedBox(height: BCSpacing.xs),
-
-                // Row 3: Date, time, duration
-                Row(
-                  children: [
-                    Icon(Icons.calendar_today_outlined,
-                        size: 16,
-                        color: theme.colorScheme.onSurface
-                            .withValues(alpha: 0.6)),
-                    const SizedBox(width: 6),
-                    Text(
-                      '${dateFormat.format(b.scheduledAt)} · '
-                      '${timeFormat.format(b.scheduledAt)} · '
-                      '${b.durationMinutes} min',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurface
-                            .withValues(alpha: 0.7),
-                      ),
-                    ),
-                  ],
-                ),
-
-                // Row 4: Price + payment status
-                if (b.price != null && b.price! > 0) ...[
-                  const SizedBox(height: BCSpacing.xs),
-                  Row(
-                    children: [
-                      Icon(Icons.payments_outlined,
-                          size: 16,
-                          color: theme.colorScheme.onSurface
-                              .withValues(alpha: 0.6)),
-                      const SizedBox(width: 6),
-                      Text(
-                        '\$${b.price!.toStringAsFixed(0)} MXN',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      if (b.paymentStatus != null) ...[
-                        const SizedBox(width: BCSpacing.sm),
-                        _PaymentStatusText(status: b.paymentStatus!),
+                  WebOutlinedButton(
+                    onPressed: () => _contactSalon(b),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 10),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.chat_outlined,
+                            size: 16, color: kWebPrimary),
+                        const SizedBox(width: 6),
+                        const Text('Contactar Salon'),
                       ],
-                    ],
+                    ),
                   ),
-                ],
-
-                // Action buttons
-                if (widget.isUpcoming &&
-                    (b.status == 'pending' || b.status == 'confirmed')) ...[
-                  const SizedBox(height: BCSpacing.md),
-                  const Divider(height: 1),
-                  const SizedBox(height: BCSpacing.sm),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      if (b.providerName != null)
-                        TextButton.icon(
-                          onPressed: () => _contactSalon(b),
-                          icon: const Icon(Icons.chat_outlined, size: 18),
-                          label: const Text('Contactar Salón'),
-                        ),
-                      const SizedBox(width: BCSpacing.sm),
-                      TextButton.icon(
-                        onPressed: widget.onCancel,
-                        icon: Icon(Icons.cancel_outlined,
-                            size: 18,
-                            color: theme.colorScheme.error),
-                        label: Text(
-                          'Cancelar',
-                          style: TextStyle(color: theme.colorScheme.error),
-                        ),
-                      ),
-                    ],
+                const SizedBox(width: BCSpacing.sm),
+                TextButton.icon(
+                  onPressed: widget.onCancel,
+                  icon: Icon(Icons.cancel_outlined,
+                      size: 16, color: Colors.red.shade600),
+                  label: Text(
+                    'Cancelar',
+                    style: TextStyle(
+                      color: Colors.red.shade600,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
-                ],
+                ),
               ],
             ),
-          ),
-        ),
+          ],
+        ],
       ),
     );
   }
@@ -510,12 +525,13 @@ class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (label, color) = _statusInfo(status, Theme.of(context).colorScheme);
+    final (label, color) = _statusInfo(status);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(BCSpacing.radiusFull),
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.25), width: 1),
       ),
       child: Text(
         label,
@@ -523,19 +539,20 @@ class _StatusBadge extends StatelessWidget {
           color: color,
           fontSize: 12,
           fontWeight: FontWeight.w600,
+          fontFamily: 'system-ui',
         ),
       ),
     );
   }
 
-  static (String, Color) _statusInfo(String status, ColorScheme colors) {
+  static (String, Color) _statusInfo(String status) {
     return switch (status) {
       'pending' => ('Pendiente', Colors.amber.shade700),
-      'confirmed' => ('Confirmada', colors.primary),
-      'completed' => ('Completada', Colors.green.shade600),
-      'cancelled_customer' => ('Cancelada', colors.error),
-      'cancelled_business' => ('Cancelada por salón', colors.error),
-      'no_show' => ('No asistió', Colors.grey),
+      'confirmed' => ('Confirmada', const Color(0xFF22C55E)),
+      'completed' => ('Completada', const Color(0xFF22C55E)),
+      'cancelled_customer' => ('Cancelada', const Color(0xFFEF4444)),
+      'cancelled_business' => ('Cancelada por salon', const Color(0xFFEF4444)),
+      'no_show' => ('No asistio', Colors.grey),
       _ => (status, Colors.grey),
     };
   }
@@ -698,23 +715,44 @@ class _ErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(BCSpacing.xl),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.error_outline,
-                size: BCSpacing.iconXl,
-                color: theme.colorScheme.error.withValues(alpha: 0.6)),
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: const Color(0xFFEF4444).withValues(alpha: 0.08),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.error_outlined,
+                  size: 36,
+                  color: const Color(0xFFEF4444).withValues(alpha: 0.6)),
+            ),
             const SizedBox(height: BCSpacing.md),
-            Text(message, style: theme.textTheme.bodyLarge),
+            Text(
+              message,
+              style: const TextStyle(
+                fontSize: 16,
+                color: kWebTextPrimary,
+                fontFamily: 'system-ui',
+              ),
+            ),
             const SizedBox(height: BCSpacing.md),
-            OutlinedButton.icon(
+            WebOutlinedButton(
               onPressed: onRetry,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Reintentar'),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.refresh_outlined, size: 16, color: kWebPrimary),
+                  const SizedBox(width: 6),
+                  const Text('Reintentar'),
+                ],
+              ),
             ),
           ],
         ),

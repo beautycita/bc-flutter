@@ -5,10 +5,12 @@ import 'package:beautycita_core/theme.dart';
 import 'package:beautycita_core/models.dart';
 
 import '../../config/breakpoints.dart';
+import '../../config/web_theme.dart';
 import '../../data/categories.dart';
 import '../../providers/business_portal_provider.dart';
 import '../../providers/demo_providers.dart';
 import '../../widgets/aphrodite_copy_field.dart';
+import '../../widgets/web_design_system.dart';
 
 /// Selected service for detail panel.
 final selectedServiceProvider =
@@ -114,32 +116,48 @@ class _ServicesList extends ConsumerWidget {
         Container(
           height: 56,
           padding: const EdgeInsets.symmetric(horizontal: 20),
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
               border:
-                  Border(bottom: BorderSide(color: colors.outlineVariant))),
+                  Border(bottom: BorderSide(color: kWebCardBorder))),
           child: Row(
             children: [
               Text('Servicios',
                   style: theme.textTheme.titleMedium
-                      ?.copyWith(fontWeight: FontWeight.w600)),
+                      ?.copyWith(fontWeight: FontWeight.w600, color: kWebTextPrimary)),
               const SizedBox(width: 8),
               Chip(
                   label: Text('${services.length}'),
-                  visualDensity: VisualDensity.compact),
+                  visualDensity: VisualDensity.compact,
+                  side: const BorderSide(color: kWebCardBorder),
+                  backgroundColor: kWebSurface),
               const Spacer(),
               if (!isDemo) ...[
-                OutlinedButton.icon(
+                WebOutlinedButton(
                   onPressed: () => _showBatchAddDialog(context, ref, bizId),
-                  icon: const Icon(Icons.playlist_add, size: 18),
-                  label: const Text('Agregar varios'),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.playlist_add_outlined, size: 18, color: kWebPrimary),
+                      SizedBox(width: 6),
+                      Text('Agregar varios'),
+                    ],
+                  ),
                 ),
                 const SizedBox(width: 8),
-                ElevatedButton.icon(
+                WebGradientButton(
                   onPressed: () => ref
                       .read(selectedServiceProvider.notifier)
                       .state = {'_new': true, 'business_id': bizId},
-                  icon: const Icon(Icons.add, size: 18),
-                  label: const Text('Agregar'),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.add, size: 18, color: Colors.white),
+                      SizedBox(width: 6),
+                      Text('Agregar'),
+                    ],
+                  ),
                 ),
               ],
             ],
@@ -152,14 +170,19 @@ class _ServicesList extends ConsumerWidget {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.spa_outlined,
-                          size: 48,
-                          color: colors.onSurface.withValues(alpha: 0.3)),
+                      Container(
+                        width: 64,
+                        height: 64,
+                        decoration: BoxDecoration(
+                          color: kWebPrimary.withValues(alpha: 0.06),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.spa_outlined, size: 32, color: kWebTextHint),
+                      ),
                       const SizedBox(height: 12),
                       Text('Sin servicios registrados',
                           style: theme.textTheme.bodyMedium?.copyWith(
-                              color:
-                                  colors.onSurface.withValues(alpha: 0.5))),
+                              color: kWebTextHint)),
                       if (!isDemo) ...[
                         const SizedBox(height: 16),
                         ElevatedButton.icon(
@@ -295,12 +318,12 @@ class _ServiceCardState extends ConsumerState<_ServiceCard> {
           duration: const Duration(milliseconds: 150),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: colors.surface,
-            borderRadius: BorderRadius.circular(10),
+            color: kWebSurface,
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(
                 color: _hovering
-                    ? colors.primary.withValues(alpha: 0.3)
-                    : colors.outlineVariant),
+                    ? kWebPrimary.withValues(alpha: 0.3)
+                    : kWebCardBorder),
             boxShadow: _hovering
                 ? [
                     BoxShadow(

@@ -8,18 +8,32 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { requireFeature } from "../_shared/check-toggle.ts";
+import { cacheGet, cacheSet } from "../_shared/redis.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+const ALLOWED_ORIGINS = [
+  "https://beautycita.com",
+  "https://www.beautycita.com",
+  "https://debug.beautycita.com",
+];
+
+function corsOrigin(req: Request): string {
+  const o = req.headers.get("origin") ?? "";
+  return ALLOWED_ORIGINS.includes(o) ? o : ALLOWED_ORIGINS[0];
+}
+
+const corsHeaders = (req: Request) => ({
+  "Access-Control-Allow-Origin": corsOrigin(req),
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
-};
+});
+
+let _req: Request;
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
-      ...corsHeaders,
+      ...corsHeaders(_req),
       "Content-Type": "application/json",
       "Cache-Control": "public, max-age=60",
     },
@@ -121,10 +135,11 @@ function scoreItem(
 // ---------------------------------------------------------------------------
 
 Deno.serve(async (req: Request) => {
+  _req = req;
   if (req.method === "OPTIONS") {
     return new Response(null, {
       headers: {
-        ...corsHeaders,
+        ...corsHeaders(req),
         "Access-Control-Allow-Methods": "GET",
       },
     });
@@ -161,6 +176,16 @@ Deno.serve(async (req: Request) => {
     const category = url.searchParams.get("category") ?? null;
     const userLat = parseFloat(url.searchParams.get("lat") ?? "") || null;
     const userLng = parseFloat(url.searchParams.get("lng") ?? "") || null;
+
+    // --- Redis cache (anonymous requests only) ---
+    const cacheKey = `feed:${page}:${category}:${userLat}:${userLng}`;
+    const authHeader0 = req.headers.get("authorization") ?? "";
+    if (!authHeader0 || authHeader0 === "Bearer ") {
+      try {
+        const cached = await cacheGet(cacheKey);
+        if (cached) return json(JSON.parse(cached));
+      } catch { /* cache miss or error — continue to DB */ }
+    }
 
     // --- Optional auth: resolve user for is_saved ---
     let userId: string | null = null;
@@ -405,12 +430,19 @@ Deno.serve(async (req: Request) => {
     // Strip internal _score from response
     const response = paged.map(({ _score, ...rest }) => rest);
 
-    return json({
+    const result = {
       page,
       limit,
       total: scored.length,
       items: response,
-    });
+    };
+
+    // Cache anonymous feed results for 60 seconds
+    if (!userId) {
+      cacheSet(cacheKey, JSON.stringify(result), 60).catch(() => {});
+    }
+
+    return json(result);
   } catch (err) {
     console.error("feed-public error:", err);
     return json({ error: "An internal error occurred" }, 500);

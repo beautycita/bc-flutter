@@ -10,8 +10,10 @@ import 'package:beautycita_core/supabase.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../config/breakpoints.dart';
+import '../../config/web_theme.dart';
 import '../../providers/business_portal_provider.dart';
 import '../../providers/demo_providers.dart';
+import '../../widgets/web_design_system.dart';
 
 /// Business QR Walk-in page — displays/downloads the salon's walk-in QR code.
 class BizQrPage extends ConsumerWidget {
@@ -128,17 +130,12 @@ class _QrContentState extends ConsumerState<_QrContent> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'QR Walk-in',
-                    style: theme.textTheme.headlineSmall
-                        ?.copyWith(fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Los clientes escanean este codigo para reservar directamente contigo.',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: colors.onSurface.withValues(alpha: 0.6),
-                    ),
+                  WebSectionHeader(
+                    label: 'Reserva directa',
+                    title: 'QR Walk-in',
+                    subtitle: 'Los clientes escanean este codigo para reservar directamente contigo.',
+                    centered: false,
+                    titleSize: 28,
                   ),
                   const SizedBox(height: 24),
 
@@ -149,9 +146,21 @@ class _QrContentState extends ConsumerState<_QrContent> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(32),
                       decoration: BoxDecoration(
-                        color: colors.surface,
+                        color: kWebSurface,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: colors.outlineVariant),
+                        border: Border.all(color: kWebCardBorder),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.03),
+                            blurRadius: 10,
+                            offset: const Offset(0, 2),
+                          ),
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.02),
+                            blurRadius: 20,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
                       child: Column(
                         children: [
@@ -237,42 +246,43 @@ class _QrContentState extends ConsumerState<_QrContent> {
                   // Download button
                   SizedBox(
                     width: double.infinity,
-                    child: ElevatedButton.icon(
+                    child: WebGradientButton(
                       onPressed: _saving ? null : _downloadQr,
-                      icon: _saving
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                  strokeWidth: 2),
-                            )
-                          : const Icon(Icons.download_rounded, size: 20),
-                      label: Text(_saving ? 'Descargando...' : 'Descargar QR'),
+                      isLoading: _saving,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          if (!_saving) const Icon(Icons.download_outlined, size: 20, color: Colors.white),
+                          if (!_saving) const SizedBox(width: 8),
+                          Text(_saving ? 'Descargando...' : 'Descargar QR'),
+                        ],
+                      ),
                     ),
                   ),
                   const SizedBox(height: 24),
 
                   // Walk-in toggle — hidden in demo mode
                   if (!isDemo) ...[
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: colors.surface,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: colors.outlineVariant),
-                      ),
+                    WebCard(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
                             children: [
-                              Icon(Icons.qr_code_2_outlined,
-                                  size: 20, color: colors.primary),
-                              const SizedBox(width: 8),
+                              Container(
+                                width: 34,
+                                height: 34,
+                                decoration: BoxDecoration(
+                                  color: kWebPrimary.withValues(alpha: 0.08),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(Icons.qr_code_2_outlined, size: 18, color: kWebPrimary),
+                              ),
+                              const SizedBox(width: 10),
                               Text(
                                 'Walk-in',
                                 style: theme.textTheme.titleSmall
-                                    ?.copyWith(fontWeight: FontWeight.w600),
+                                    ?.copyWith(fontWeight: FontWeight.w600, color: kWebTextPrimary),
                               ),
                             ],
                           ),
@@ -296,14 +306,15 @@ class _QrContentState extends ConsumerState<_QrContent> {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: colors.primary.withValues(alpha: 0.06),
+                      color: kWebPrimary.withValues(alpha: 0.06),
                       borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: kWebPrimary.withValues(alpha: 0.12)),
                     ),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.info_outline_rounded,
-                            size: 20, color: colors.primary),
+                        const Icon(Icons.info_outline_rounded,
+                            size: 20, color: kWebPrimary),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(

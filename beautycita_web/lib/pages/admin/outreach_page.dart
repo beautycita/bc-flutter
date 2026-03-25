@@ -7,10 +7,12 @@ import 'package:intl/intl.dart';
 import 'package:beautycita_core/supabase.dart';
 
 import '../../config/breakpoints.dart';
+import '../../config/web_theme.dart';
 import '../../providers/admin_outreach_provider.dart';
 import '../../providers/admin_salons_provider.dart' as salons_provider;
 import '../../providers/rp_centro_provider.dart';
 import '../../widgets/contact_panel.dart';
+import '../../widgets/web_design_system.dart';
 
 /// Outreach pipeline page — `/app/admin/outreach`
 ///
@@ -143,29 +145,37 @@ class _OutreachPageState extends ConsumerState<OutreachPage> {
 
   Widget _emptyState(BuildContext context) {
     final theme = Theme.of(context);
-    final colors = theme.colorScheme;
 
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            Icons.campaign_outlined,
-            size: 48,
-            color: colors.onSurface.withValues(alpha: 0.3),
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: kWebPrimary.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(
+              Icons.campaign_outlined,
+              size: 32,
+              color: kWebPrimary.withValues(alpha: 0.5),
+            ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           Text(
             'Sin salones en el pipeline',
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: colors.onSurface.withValues(alpha: 0.5),
+              color: kWebTextSecondary,
+              fontWeight: FontWeight.w600,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             'Selecciona salones desde la pagina de Salones para iniciar outreach.',
             style: theme.textTheme.bodySmall?.copyWith(
-              color: colors.onSurface.withValues(alpha: 0.4),
+              color: kWebTextHint,
             ),
             textAlign: TextAlign.center,
           ),
@@ -207,14 +217,14 @@ class _Header extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: Text(
-                  'Pipeline de Outreach',
-                  style: (isMobile
-                          ? theme.textTheme.titleMedium
-                          : theme.textTheme.headlineSmall)
-                      ?.copyWith(fontWeight: FontWeight.w700),
+                child: WebSectionHeader(
+                  label: 'Marketing',
+                  title: 'Pipeline de Outreach',
+                  centered: false,
+                  titleSize: isMobile ? 22 : 28,
                 ),
               ),
               // Discovered count (from scraper)
@@ -374,9 +384,16 @@ class _EnrichmentMonitorCardState extends State<_EnrichmentMonitorCard> {
         margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          border: Border.all(color: colors.outlineVariant),
-          borderRadius: BorderRadius.circular(10),
-          color: colors.surfaceContainerHighest.withValues(alpha: 0.2),
+          border: Border.all(color: kWebCardBorder),
+          borderRadius: BorderRadius.circular(12),
+          color: kWebSurface,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Row(
           children: [
@@ -505,8 +522,8 @@ class _StageChipState extends State<_StageChip> {
         transformAlignment: Alignment.center,
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
-          color: _color.withValues(alpha: _hovering ? 0.15 : 0.1),
-          borderRadius: BorderRadius.circular(16),
+          color: _color.withValues(alpha: _hovering ? 0.15 : 0.10),
+          borderRadius: BorderRadius.circular(999),
           border: Border.all(color: _color.withValues(alpha: 0.3)),
         ),
         child: Text(
@@ -630,26 +647,47 @@ class _KanbanColumn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colors = theme.colorScheme;
 
     return Container(
       width: width,
       decoration: BoxDecoration(
-        color: colors.surfaceContainerHighest.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colors.outlineVariant),
+        color: kWebSurface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: kWebCardBorder),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 20,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Column header
+          // Column header with gradient accent
           Container(
             padding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
-              color: _headerColor.withValues(alpha: 0.08),
+              gradient: LinearGradient(
+                colors: [
+                  _headerColor.withValues(alpha: 0.06),
+                  _headerColor.withValues(alpha: 0.02),
+                ],
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+              ),
               borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(11),
+                top: Radius.circular(15),
+              ),
+              border: Border(
+                bottom: BorderSide(color: kWebCardBorder),
               ),
             ),
             child: Row(
@@ -666,16 +704,17 @@ class _KanbanColumn extends StatelessWidget {
                 Text(
                   stage.label,
                   style: theme.textTheme.labelLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w700,
+                    color: kWebTextPrimary,
                   ),
                 ),
                 const Spacer(),
                 Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 6, vertical: 1),
+                      horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
-                    color: _headerColor.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(10),
+                    color: _headerColor.withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
                     '${salons.length}',
@@ -696,7 +735,7 @@ class _KanbanColumn extends StatelessWidget {
               child: Text(
                 'Sin salones',
                 style: theme.textTheme.bodySmall?.copyWith(
-                  color: colors.onSurface.withValues(alpha: 0.4),
+                  color: kWebTextHint,
                 ),
               ),
             )

@@ -21,11 +21,24 @@ const MAX_ATTEMPTS = 3;
 const SENTINEL_USER_ID = "00000000-0000-0000-0000-000000000000";
 const APK_URL = "https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/apk/beautycita.apk";
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
+const ALLOWED_ORIGINS = [
+  "https://beautycita.com",
+  "https://www.beautycita.com",
+  "https://debug.beautycita.com",
+];
+
+function corsOrigin(req: Request): string {
+  const o = req.headers.get("origin") ?? "";
+  return ALLOWED_ORIGINS.includes(o) ? o : ALLOWED_ORIGINS[0];
+}
+
+let _req: Request;
+
+const CORS_HEADERS_FOR = (req: Request) => ({
+  "Access-Control-Allow-Origin": corsOrigin(req),
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Headers": "content-type",
-};
+});
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -34,14 +47,14 @@ const CORS_HEADERS = {
 function htmlResp(body: string, status = 200) {
   return new Response(body, {
     status,
-    headers: { "Content-Type": "text/html; charset=utf-8", ...CORS_HEADERS },
+    headers: { "Content-Type": "text/html; charset=utf-8", ...CORS_HEADERS_FOR(_req) },
   });
 }
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "Content-Type": "application/json", ...CORS_HEADERS },
+    headers: { "Content-Type": "application/json", ...CORS_HEADERS_FOR(_req) },
   });
 }
 
@@ -737,8 +750,9 @@ function registrationPage(ref: string | null, salon: SalonData): string {
 // ---------------------------------------------------------------------------
 
 Deno.serve(async (req: Request) => {
+  _req = req;
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: CORS_HEADERS });
+    return new Response(null, { headers: CORS_HEADERS_FOR(req) });
   }
 
   const url = new URL(req.url);

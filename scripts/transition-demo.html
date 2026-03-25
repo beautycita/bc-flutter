@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BeautyCita — Transition Showcase</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#FFFAF5; font-family:-apple-system,system-ui,sans-serif; color:#1a1a1a; overflow-x:hidden; }
+
+.header { text-align:center; padding:24px 20px 16px; }
+.header h1 { font-size:22px; font-weight:800; }
+.header p { font-size:12px; color:#999; margin-top:4px; }
+
+.grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:20px; padding:0 20px 40px; max-width:1200px; margin:0 auto; }
+
+.demo-card {
+  background:#fff; border-radius:20px; overflow:hidden; cursor:pointer;
+  border:1px solid #f0ebe6;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.03);
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+.demo-card:hover { transform:translateY(-4px); box-shadow: 0 4px 12px rgba(0,0,0,0.06), 0 12px 32px rgba(0,0,0,0.05); }
+.demo-card:active { transform:scale(0.98); }
+
+.demo-preview {
+  height:280px; position:relative; overflow:hidden;
+  background:linear-gradient(135deg, #fce4ec, #f3e5f5, #e3f2fd);
+}
+.demo-info { padding:14px 16px; }
+.demo-name { font-size:15px; font-weight:700; }
+.demo-desc { font-size:11px; color:#999; margin-top:3px; }
+.demo-tag { display:inline-block; font-size:9px; font-weight:700; padding:2px 8px; border-radius:8px; margin-top:6px; }
+.tag-advanced { background:linear-gradient(135deg,#ec4899,#9333ea); color:#fff; }
+.tag-hero { background:linear-gradient(135deg,#3b82f6,#06b6d4); color:#fff; }
+.tag-physics { background:linear-gradient(135deg,#10b981,#059669); color:#fff; }
+.tag-shader { background:linear-gradient(135deg,#f59e0b,#ef4444); color:#fff; }
+.tag-3d { background:linear-gradient(135deg,#8b5cf6,#6366f1); color:#fff; }
+
+/* ═══ Phone frame inside preview ═══ */
+.phone-frame {
+  width:160px; height:240px; border-radius:20px; position:absolute;
+  background:#FFFAF5; border:2px solid #e8e3de; overflow:hidden;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  font-size:8px;
+}
+.phone-bar { height:14px; background:#fff; display:flex; align-items:center; justify-content:center; font-size:6px; color:#999; font-weight:700; }
+.phone-hero { height:40px; background:linear-gradient(135deg,#ec4899,#9333ea,#3b82f6); border-radius:0 0 10px 10px; display:flex; align-items:center; padding:0 8px; }
+.phone-hero-text { color:#fff; font-size:7px; font-weight:700; }
+.phone-card { margin:4px 6px; padding:6px; background:#fff; border-radius:8px; border:1px solid #f0ebe6; }
+.phone-card-row { display:flex; align-items:center; gap:4px; }
+.phone-icon { width:14px; height:14px; border-radius:4px; display:flex; align-items:center; justify-content:center; font-size:6px; }
+.phone-text { font-size:6px; color:#1a1a1a; font-weight:600; }
+.phone-sub { font-size:5px; color:#aaa; }
+
+/* ═══ TRANSITION 1: Shared Element Morph ═══ */
+.t1 .phone-frame.from { top:20px; left:20px; }
+.t1 .phone-frame.to { top:20px; right:20px; opacity:0; }
+.t1 .shared-element {
+  position:absolute; width:30px; height:30px; border-radius:50%;
+  background:linear-gradient(135deg,#ec4899,#9333ea);
+  top:70px; left:85px; z-index:10;
+  animation: morph-fly 2.5s ease-in-out infinite;
+}
+@keyframes morph-fly {
+  0% { top:70px; left:85px; width:30px; height:30px; border-radius:50%; }
+  40% { top:40px; left:140px; width:50px; height:50px; border-radius:50%; }
+  50% { top:30px; left:195px; width:60px; height:30px; border-radius:12px; }
+  60% { top:30px; right:30px; left:auto; width:140px; height:30px; border-radius:8px; }
+  100% { top:70px; left:85px; width:30px; height:30px; border-radius:50%; }
+}
+.t1:hover .phone-frame.to { opacity:1; transition: opacity 0.5s 0.3s; }
+
+/* ═══ TRANSITION 2: Circular Reveal ═══ */
+.t2 .phone-frame { top:20px; left:50%; transform:translateX(-50%); }
+.t2 .reveal-circle {
+  position:absolute; width:0; height:0; border-radius:50%;
+  background:linear-gradient(135deg,#3b82f6,#06b6d4);
+  top:120px; left:80px; z-index:5; opacity:0.9;
+  animation: circle-reveal 3s ease-in-out infinite;
+}
+@keyframes circle-reveal {
+  0% { width:0; height:0; top:120px; left:80px; opacity:0.9; }
+  50% { width:400px; height:400px; top:-80px; left:-120px; opacity:0.85; }
+  51% { opacity:0; }
+  100% { width:0; height:0; top:120px; left:80px; opacity:0; }
+}
+
+/* ═══ TRANSITION 3: 3D Page Flip ═══ */
+.t3 { perspective:800px; }
+.t3 .phone-frame.from { top:20px; left:30px; animation: flip-out 3s ease-in-out infinite; transform-origin:right center; }
+.t3 .phone-frame.to { top:20px; right:30px; animation: flip-in 3s ease-in-out infinite; transform-origin:left center; }
+@keyframes flip-out {
+  0% { transform:rotateY(0); opacity:1; }
+  40% { transform:rotateY(-90deg); opacity:0; }
+  100% { transform:rotateY(0); opacity:1; }
+}
+@keyframes flip-in {
+  0% { transform:rotateY(90deg); opacity:0; }
+  40% { transform:rotateY(90deg); opacity:0; }
+  80% { transform:rotateY(0); opacity:1; }
+  100% { transform:rotateY(0); opacity:1; }
+}
+
+/* ═══ TRANSITION 4: Parallax Depth Slide ═══ */
+.t4 .phone-frame.from { top:20px; left:20px; animation:parallax-out 3.5s ease-in-out infinite; }
+.t4 .phone-frame.to { top:20px; right:-160px; animation:parallax-in 3.5s ease-in-out infinite; }
+.t4 .parallax-bg {
+  position:absolute; top:0; left:0; right:0; bottom:0;
+  background: linear-gradient(135deg, #fce4ec, #f3e5f5, #e3f2fd);
+  animation: parallax-bg 3.5s ease-in-out infinite;
+}
+@keyframes parallax-out {
+  0% { transform:translateX(0) scale(1); opacity:1; }
+  40% { transform:translateX(-40px) scale(0.85); opacity:0.5; filter:blur(2px); }
+  100% { transform:translateX(0) scale(1); opacity:1; }
+}
+@keyframes parallax-in {
+  0% { transform:translateX(0); opacity:0; }
+  30% { transform:translateX(0); opacity:0; }
+  70% { transform:translateX(-200px); opacity:1; }
+  100% { transform:translateX(0); opacity:0; }
+}
+@keyframes parallax-bg { 0%,100%{transform:translateX(0);} 50%{transform:translateX(-20px);} }
+
+/* ═══ TRANSITION 5: Liquid Wave ═══ */
+.t5 .phone-frame { top:20px; left:50%; transform:translateX(-50%); }
+.t5 .wave-overlay {
+  position:absolute; bottom:0; left:-10%; width:120%; height:0;
+  background:linear-gradient(180deg, rgba(236,72,153,0.9), rgba(147,51,234,0.9));
+  border-radius:100% 100% 0 0 / 30px;
+  animation: wave-up 3s ease-in-out infinite;
+  z-index:5;
+}
+@keyframes wave-up {
+  0% { height:0; border-radius:100% 100% 0 0 / 30px; }
+  45% { height:100%; border-radius:0; }
+  55% { height:100%; border-radius:0; }
+  100% { height:0; border-radius:100% 100% 0 0 / 30px; }
+}
+
+/* ═══ TRANSITION 6: Staggered Card Cascade ═══ */
+.t6 .phone-frame { top:10px; left:50%; transform:translateX(-50%); width:180px; height:250px; }
+.t6 .cascade-card {
+  position:absolute; left:16px; right:16px; height:28px;
+  background:#fff; border-radius:8px; border:1px solid #f0ebe6;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  display:flex; align-items:center; padding:0 8px; font-size:6px; gap:4px;
+}
+.t6 .c1 { top:60px; animation: cascade 2.5s ease-out infinite; animation-delay:0s; }
+.t6 .c2 { top:94px; animation: cascade 2.5s ease-out infinite; animation-delay:0.1s; }
+.t6 .c3 { top:128px; animation: cascade 2.5s ease-out infinite; animation-delay:0.2s; }
+.t6 .c4 { top:162px; animation: cascade 2.5s ease-out infinite; animation-delay:0.3s; }
+.t6 .c5 { top:196px; animation: cascade 2.5s ease-out infinite; animation-delay:0.4s; }
+@keyframes cascade {
+  0% { transform:translateY(20px); opacity:0; }
+  15% { transform:translateY(0); opacity:1; }
+  85% { transform:translateY(0); opacity:1; }
+  100% { transform:translateY(-10px); opacity:0; }
+}
+
+/* ═══ TRANSITION 7: Spring Bounce ═══ */
+.t7 .phone-frame { top:20px; left:50%; transform:translateX(-50%); }
+.t7 .bounce-card {
+  position:absolute; z-index:5;
+  width:140px; height:80px; border-radius:14px;
+  background:#fff; border:1px solid #f0ebe6;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+  top:80px; left:50%; transform:translateX(-50%);
+  animation: spring-in 2s cubic-bezier(0.34, 1.56, 0.64, 1) infinite;
+  display:flex; align-items:center; justify-content:center; flex-direction:column;
+  font-size:8px; font-weight:700; color:#ec4899;
+}
+@keyframes spring-in {
+  0% { transform:translateX(-50%) scale(0); opacity:0; }
+  20% { transform:translateX(-50%) scale(1.15); opacity:1; }
+  35% { transform:translateX(-50%) scale(0.95); }
+  45% { transform:translateX(-50%) scale(1.02); }
+  55% { transform:translateX(-50%) scale(1); }
+  85% { transform:translateX(-50%) scale(1); opacity:1; }
+  100% { transform:translateX(-50%) scale(0.8); opacity:0; }
+}
+
+/* ═══ TRANSITION 8: Fade Through (Material) ═══ */
+.t8 .phone-frame.from { top:20px; left:50%; transform:translateX(-50%); animation:fade-through-out 3s ease infinite; z-index:2; }
+.t8 .phone-frame.to { top:20px; left:50%; transform:translateX(-50%); animation:fade-through-in 3s ease infinite; z-index:1; }
+@keyframes fade-through-out {
+  0% { opacity:1; transform:translateX(-50%) scale(1); }
+  30% { opacity:0; transform:translateX(-50%) scale(0.92); }
+  70% { opacity:0; }
+  100% { opacity:1; transform:translateX(-50%) scale(1); }
+}
+@keyframes fade-through-in {
+  0% { opacity:0; transform:translateX(-50%) scale(1.08); }
+  30% { opacity:0; }
+  60% { opacity:1; transform:translateX(-50%) scale(1); }
+  100% { opacity:1; transform:translateX(-50%) scale(1); }
+}
+
+/* ═══ TRANSITION 9: Zoom to Detail ═══ */
+.t9 .phone-frame { top:10px; left:50%; transform:translateX(-50%); }
+.t9 .zoom-target {
+  position:absolute; top:100px; left:50%; transform:translateX(-50%);
+  width:30px; height:30px; border-radius:10px;
+  background:linear-gradient(135deg,#ec4899,#9333ea);
+  z-index:10;
+  animation: zoom-expand 3s ease-in-out infinite;
+}
+@keyframes zoom-expand {
+  0% { width:30px; height:30px; border-radius:10px; top:100px; }
+  40% { width:160px; height:240px; border-radius:20px; top:10px; }
+  60% { width:160px; height:240px; border-radius:20px; top:10px; }
+  100% { width:30px; height:30px; border-radius:10px; top:100px; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>BeautyCita Transition Showcase</h1>
+  <p>9 transition styles — each animating continuously. Hover for details.</p>
+</div>
+
+<div class="grid">
+
+  <!-- 1: Shared Element Morph -->
+  <div class="demo-card">
+    <div class="demo-preview t1">
+      <div class="phone-frame from">
+        <div class="phone-bar">Perfil</div>
+        <div class="phone-hero"><span class="phone-hero-text">strawberryBlonde</span></div>
+        <div class="phone-card"><div class="phone-card-row"><div class="phone-icon" style="background:#f3e5f5;">📋</div><div><div class="phone-text">Kriket</div></div></div></div>
+        <div class="phone-card"><div class="phone-card-row"><div class="phone-icon" style="background:#fce4ec;">📱</div><div><div class="phone-text">+52 322...</div></div></div></div>
+      </div>
+      <div class="phone-frame to">
+        <div class="phone-bar">Preferencias</div>
+        <div style="height:40px; background:linear-gradient(135deg,#ec4899,#9333ea); border-radius:0 0 10px 10px; display:flex; align-items:flex-end; padding:4px 8px;"><span style="color:#fff; font-size:6px;">MI ESTILO</span></div>
+        <div class="phone-card"><div class="phone-text" style="text-align:center;">$$ · Bal · Fiel · 15km</div></div>
+      </div>
+      <div class="shared-element"></div>
+    </div>
+    <div class="demo-info">
+      <div class="demo-name">Shared Element Morph</div>
+      <div class="demo-desc">El avatar se transforma en el hero banner al navegar entre pantallas. Morphing de forma + posicion.</div>
+      <span class="demo-tag tag-hero">HERO</span>
+    </div>
+  </div>
+
+  <!-- 2: Circular Reveal -->
+  <div class="demo-card">
+    <div class="demo-preview t2">
+      <div class="phone-frame">
+        <div class="phone-bar">Mis Citas</div>
+        <div class="phone-card"><div class="phone-card-row"><div class="phone-icon" style="background:#e3f2fd;">📅</div><div><div class="phone-text">Corte de cabello</div><div class="phone-sub">Mar 25 · 3:00 PM</div></div></div></div>
+        <div class="phone-card"><div class="phone-card-row"><div class="phone-icon" style="background:#e8f5e9;">✂</div><div><div class="phone-text">Manicure</div><div class="phone-sub">Mar 28 · 11:00 AM</div></div></div></div>
+      </div>
+      <div class="reveal-circle"></div>
+    </div>
+    <div class="demo-info">
+      <div class="demo-name">Circular Reveal</div>
+      <div class="demo-desc">La pantalla nueva se revela desde el punto de tap con un circulo que se expande. Material Design 3.</div>
+      <span class="demo-tag tag-advanced">ADVANCED</span>
+    </div>
+  </div>
+
+  <!-- 3: 3D Page Flip -->
+  <div class="demo-card">
+    <div class="demo-preview t3">
+      <div class="phone-frame from">
+        <div class="phone-bar">Seguridad</div>
+        <div class="phone-card"><div class="phone-card-row"><div class="phone-icon" style="background:#fce4ec;">🔒</div><div><div class="phone-text">Biometrico</div></div></div></div>
+        <div class="phone-card"><div class="phone-card-row"><div class="phone-icon" style="background:#e3f2fd;">📱</div><div><div class="phone-text">Dispositivos</div></div></div></div>
+      </div>
+      <div class="phone-frame to">
+        <div class="phone-bar">Pagos</div>
+        <div class="phone-card"><div class="phone-card-row"><div class="phone-icon" style="background:#e8f5e9;">💳</div><div><div class="phone-text">**** 4589</div></div></div></div>
+        <div class="phone-card"><div class="phone-card-row"><div class="phone-icon" style="background:#fff3e0;">🏪</div><div><div class="phone-text">OXXO</div></div></div></div>
+      </div>
+    </div>
+    <div class="demo-info">
+      <div class="demo-name">3D Page Flip</div>
+      <div class="demo-desc">La pantalla gira en 3D como una pagina de libro. Perspectiva y rotacion Y con sombra dinamica.</div>
+      <span class="demo-tag tag-3d">3D</span>
+    </div>
+  </div>
+
+  <!-- 4: Parallax Depth -->
+  <div class="demo-card">
+    <div class="demo-preview t4">
+      <div class="parallax-bg"></div>
+      <div class="phone-frame from">
+        <div class="phone-bar">Home</div>
+        <div class="phone-hero"><span class="phone-hero-text">BeautyCita</span></div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:3px; padding:4px 6px;">
+          <div class="phone-card" style="margin:0; text-align:center;"><div style="font-size:10px;">💇‍♀</div><div class="phone-sub">Cabello</div></div>
+          <div class="phone-card" style="margin:0; text-align:center;"><div style="font-size:10px;">💅</div><div class="phone-sub">Unas</div></div>
+        </div>
+      </div>
+      <div class="phone-frame to">
+        <div class="phone-bar">Perfil</div>
+        <div class="phone-hero"><span class="phone-hero-text">Mi Perfil</span></div>
+        <div class="phone-card"><div class="phone-text">strawberryBlonde</div></div>
+      </div>
+    </div>
+    <div class="demo-info">
+      <div class="demo-name">Parallax Depth Slide</div>
+      <div class="demo-desc">La pantalla actual se aleja con blur mientras la nueva entra deslizandose. Efecto de profundidad con capas.</div>
+      <span class="demo-tag tag-advanced">ADVANCED</span>
+    </div>
+  </div>
+
+  <!-- 5: Liquid Wave -->
+  <div class="demo-card">
+    <div class="demo-preview t5">
+      <div class="phone-frame">
+        <div class="phone-bar">Preferencias</div>
+        <div class="phone-card"><div class="phone-text" style="text-align:center;">$$ · Balance</div></div>
+        <div class="phone-card"><div class="phone-card-row"><div class="phone-icon" style="background:#e8f5e9;">📍</div><div><div class="phone-text">Puerto Vallarta</div></div></div></div>
+        <div class="phone-card"><div class="phone-card-row"><div class="phone-icon" style="background:#f3e5f5;">🔔</div><div><div class="phone-text">Notificaciones</div></div></div></div>
+      </div>
+      <div class="wave-overlay"></div>
+    </div>
+    <div class="demo-info">
+      <div class="demo-name">Liquid Wave</div>
+      <div class="demo-desc">Una ola de color sube cubriendo la pantalla actual, revelando la nueva por debajo. Organico y fluido.</div>
+      <span class="demo-tag tag-shader">SHADER</span>
+    </div>
+  </div>
+
+  <!-- 6: Staggered Cascade -->
+  <div class="demo-card">
+    <div class="demo-preview t6">
+      <div class="phone-frame">
+        <div class="phone-bar">Mis Citas</div>
+        <div style="height:35px; background:linear-gradient(135deg,#ec4899,#9333ea,#3b82f6); border-radius:0 0 10px 10px;"></div>
+      </div>
+      <div class="cascade-card c1"><div class="phone-icon" style="background:#fce4ec; width:12px; height:12px;">📅</div><span class="phone-text">Corte · Mar 25</span></div>
+      <div class="cascade-card c2"><div class="phone-icon" style="background:#e8f5e9; width:12px; height:12px;">💅</div><span class="phone-text">Manicure · Mar 28</span></div>
+      <div class="cascade-card c3"><div class="phone-icon" style="background:#e3f2fd; width:12px; height:12px;">💆</div><span class="phone-text">Facial · Abr 2</span></div>
+      <div class="cascade-card c4"><div class="phone-icon" style="background:#f3e5f5; width:12px; height:12px;">💇</div><span class="phone-text">Tinte · Abr 10</span></div>
+      <div class="cascade-card c5"><div class="phone-icon" style="background:#fff3e0; width:12px; height:12px;">✨</div><span class="phone-text">Keratina · Abr 15</span></div>
+    </div>
+    <div class="demo-info">
+      <div class="demo-name">Staggered Card Cascade</div>
+      <div class="demo-desc">Cada tarjeta entra con un delay incremental (100ms). Slide up + fade in. Efecto de cascada natural.</div>
+      <span class="demo-tag tag-hero">STAGGER</span>
+    </div>
+  </div>
+
+  <!-- 7: Spring Bounce -->
+  <div class="demo-card">
+    <div class="demo-preview t7">
+      <div class="phone-frame">
+        <div class="phone-bar">Reservar</div>
+        <div class="phone-card"><div class="phone-text" style="text-align:center;">Salon Luna Bella</div><div class="phone-sub" style="text-align:center;">Corte + Tinte</div></div>
+        <div class="phone-card" style="text-align:center;"><div class="phone-sub">Mar 25 · 3:00 PM</div></div>
+      </div>
+      <div class="bounce-card">
+        <div style="font-size:20px; margin-bottom:4px;">✓</div>
+        <div>Reservado!</div>
+        <div style="font-size:6px; color:#999; font-weight:400;">Confirmacion enviada</div>
+      </div>
+    </div>
+    <div class="demo-info">
+      <div class="demo-name">Spring Bounce Confirm</div>
+      <div class="demo-desc">Dialogo de confirmacion entra con physics spring — sobrepasa y rebota. Sensacion elastica satisfactoria.</div>
+      <span class="demo-tag tag-physics">PHYSICS</span>
+    </div>
+  </div>
+
+  <!-- 8: Fade Through -->
+  <div class="demo-card">
+    <div class="demo-preview t8">
+      <div class="phone-frame from">
+        <div class="phone-bar">Terminos</div>
+        <div class="phone-card"><div class="phone-text">Terminos de Servicio</div><div class="phone-sub" style="margin-top:2px;">BeautyCita S.A. de C.V. opera como intermediario...</div></div>
+      </div>
+      <div class="phone-frame to">
+        <div class="phone-bar">Privacidad</div>
+        <div class="phone-card"><div class="phone-text">Politica de Privacidad</div><div class="phone-sub" style="margin-top:2px;">Tus datos personales son protegidos...</div></div>
+      </div>
+    </div>
+    <div class="demo-info">
+      <div class="demo-name">Fade Through (Material Motion)</div>
+      <div class="demo-desc">La pantalla actual se desvanece con scale down, la nueva aparece con scale up. Transicion oficial Material 3.</div>
+      <span class="demo-tag tag-advanced">MATERIAL</span>
+    </div>
+  </div>
+
+  <!-- 9: Zoom to Detail -->
+  <div class="demo-card">
+    <div class="demo-preview t9">
+      <div class="phone-frame">
+        <div class="phone-bar">Feed</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:3px; padding:4px 6px;">
+          <div class="phone-card" style="margin:0; height:40px;"></div>
+          <div class="phone-card" style="margin:0; height:40px;"></div>
+          <div class="phone-card" style="margin:0; height:40px;"></div>
+          <div class="phone-card" style="margin:0; height:40px;"></div>
+        </div>
+      </div>
+      <div class="zoom-target"></div>
+    </div>
+    <div class="demo-info">
+      <div class="demo-name">Zoom to Detail</div>
+      <div class="demo-desc">La tarjeta del feed se expande hasta llenar la pantalla, transformandose en la vista de detalle. Inmersivo.</div>
+      <span class="demo-tag tag-hero">HERO+ZOOM</span>
+    </div>
+  </div>
+
+</div>
+
+<div style="text-align:center; padding:20px; color:#aaa; font-size:11px;">
+  Todas las transiciones son implementables en Flutter con AnimationController, CustomPainter, y Transform.<br>
+  Cross-platform: Android, iOS, Web, Linux, macOS.
+</div>
+
+</body>
+</html>

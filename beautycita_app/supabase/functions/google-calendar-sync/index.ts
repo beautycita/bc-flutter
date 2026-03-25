@@ -16,16 +16,44 @@ const GOOGLE_CLIENT_SECRET = Deno.env.get("GOOGLE_CLIENT_SECRET") ?? "";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GOOGLE_CALENDAR_API = "https://www.googleapis.com/calendar/v3";
 
+const ALLOWED_ORIGINS = [
+  "https://beautycita.com",
+  "https://www.beautycita.com",
+  "https://debug.beautycita.com",
+];
+
+function corsOrigin(req: Request): string {
+  const o = req.headers.get("origin") ?? "";
+  return ALLOWED_ORIGINS.includes(o) ? o : ALLOWED_ORIGINS[0];
+}
+
+let _req: Request;
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
       "Content-Type": "application/json",
-      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Origin": corsOrigin(_req),
       "Access-Control-Allow-Headers":
         "authorization, content-type, x-client-info, apikey",
     },
   });
+}
+
+// Rate limiting
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+
+function checkRateLimit(key: string, limit: number, windowMs: number): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(key);
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(key, { count: 1, resetAt: now + windowMs });
+    return true;
+  }
+  if (entry.count >= limit) return false;
+  entry.count++;
+  return true;
 }
 
 // Refresh Google OAuth tokens
@@ -213,10 +241,11 @@ function parseEventToAppointment(
 }
 
 Deno.serve(async (req: Request) => {
+  _req = req;
   if (req.method === "OPTIONS") {
     return new Response(null, {
       headers: {
-        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Origin": corsOrigin(req),
         "Access-Control-Allow-Methods": "POST",
         "Access-Control-Allow-Headers":
           "authorization, content-type, x-client-info, apikey",
@@ -248,6 +277,12 @@ Deno.serve(async (req: Request) => {
 
   if (authError || !user) {
     return json({ error: "Unauthorized" }, 401);
+  }
+
+  // Rate limit: 10 requests per minute
+  const rateLimitKey = user?.id || authHeader.slice(-16) || "anon";
+  if (!checkRateLimit(rateLimitKey, 10, 60_000)) {
+    return json({ error: "Rate limit exceeded" }, 429);
   }
 
   try {

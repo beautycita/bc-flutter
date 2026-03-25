@@ -9,12 +9,23 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { requireFeature } from "../_shared/check-toggle.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+const ALLOWED_ORIGINS = [
+  "https://beautycita.com",
+  "https://www.beautycita.com",
+  "https://debug.beautycita.com",
+];
+
+function corsOrigin(req: Request): string {
+  const o = req.headers.get("origin") ?? "";
+  return ALLOWED_ORIGINS.includes(o) ? o : ALLOWED_ORIGINS[0];
+}
+
+const corsHeaders = (req: Request) => ({
+  "Access-Control-Allow-Origin": corsOrigin(req),
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+});
 
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY")!;
 
@@ -233,10 +244,12 @@ async function getUserIdFromToken(
 // Helpers
 // ---------------------------------------------------------------------------
 
+let _req: Request;
+
 function json(body: Record<string, unknown>, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...corsHeaders(_req), "Content-Type": "application/json" },
   });
 }
 
@@ -245,8 +258,9 @@ function json(body: Record<string, unknown>, status = 200) {
 // ---------------------------------------------------------------------------
 
 Deno.serve(async (req) => {
+  _req = req;
   if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
+    return new Response(null, { status: 204, headers: corsHeaders(req) });
   }
   if (req.method !== "POST") {
     return json({ error: "Method not allowed" }, 405);
@@ -262,7 +276,15 @@ Deno.serve(async (req) => {
     );
 
     const authHeader = req.headers.get("authorization");
-    const userId = await getUserIdFromToken(authHeader, supabase);
+    let userId: string;
+    try {
+      userId = await getUserIdFromToken(authHeader, supabase);
+    } catch (_) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders(_req), "Content-Type": "application/json" } },
+      );
+    }
 
     const body: ChatRequest = await req.json();
     const { action } = body;
@@ -348,7 +370,7 @@ Deno.serve(async (req) => {
         .limit(50);
 
       if (error) {
-        return json({ error: error.message }, 500);
+        return json({ error: "An internal error occurred" }, 500);
       }
 
       return json({ messages: messages || [], thread_id: threadId });
@@ -358,6 +380,6 @@ Deno.serve(async (req) => {
   } catch (err) {
     const message = err instanceof Error ? err.message : "Internal error";
     console.error("eros-chat error:", message);
-    return json({ error: message }, 500);
+    return json({ error: "An internal error occurred" }, 500);
   }
 });

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../config/web_theme.dart';
 
 /// Reusable KPI card for the admin dashboard.
 ///
@@ -55,25 +56,30 @@ class _KpiCardState extends State<KpiCard> {
       onExit: (_) => setState(() => _hovering = false),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+        transform: Matrix4.translationValues(0, _hovering ? -4 : 0, 0),
         padding: EdgeInsets.all(isMobile ? 14 : 20),
         decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: BorderRadius.circular(12),
+          color: kWebSurface,
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: _hovering
                 ? effectiveIconColor.withValues(alpha: 0.3)
-                : colors.outlineVariant,
+                : kWebCardBorder,
             width: 1,
           ),
-          boxShadow: _hovering
-              ? [
-                  BoxShadow(
-                    color: effectiveIconColor.withValues(alpha: 0.08),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ]
-              : null,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: _hovering ? 0.06 : 0.03),
+              blurRadius: _hovering ? 16 : 10,
+              offset: Offset(0, _hovering ? 6 : 2),
+            ),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: _hovering ? 0.04 : 0.02),
+              blurRadius: _hovering ? 30 : 20,
+              offset: Offset(0, _hovering ? 10 : 4),
+            ),
+          ],
         ),
         child: isMobile
             ? _buildMobileLayout(theme, colors, effectiveIconColor)
@@ -93,8 +99,8 @@ class _KpiCardState extends State<KpiCard> {
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: effectiveIconColor.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(10),
+            color: effectiveIconColor.withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(icon, size: 20, color: effectiveIconColor),
         ),
@@ -108,7 +114,7 @@ class _KpiCardState extends State<KpiCard> {
                 '${widget.prefix}${widget.value}',
                 style: theme.textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.w700,
-                  color: colors.onSurface,
+                  color: kWebTextPrimary,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -116,7 +122,7 @@ class _KpiCardState extends State<KpiCard> {
               Text(
                 widget.label,
                 style: theme.textTheme.bodySmall?.copyWith(
-                  color: colors.onSurface.withValues(alpha: 0.6),
+                  color: kWebTextSecondary,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -139,17 +145,17 @@ class _KpiCardState extends State<KpiCard> {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Icon with colored background
+        // Icon with gradient-style colored background
         Row(
           children: [
             Container(
-              width: 44,
-              height: 44,
+              width: 48,
+              height: 48,
               decoration: BoxDecoration(
-                color: effectiveIconColor.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(10),
+                color: effectiveIconColor.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, size: 22, color: effectiveIconColor),
+              child: Icon(icon, size: 24, color: effectiveIconColor),
             ),
             const Spacer(),
             // Change indicator
@@ -158,12 +164,12 @@ class _KpiCardState extends State<KpiCard> {
           ],
         ),
         const SizedBox(height: 16),
-        // Value
+        // Large metric number
         Text(
           '${widget.prefix}${widget.value}',
           style: theme.textTheme.headlineMedium?.copyWith(
-            fontWeight: FontWeight.w700,
-            color: colors.onSurface,
+            fontWeight: FontWeight.w800,
+            color: kWebTextPrimary,
           ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
@@ -189,7 +195,7 @@ class _KpiCardState extends State<KpiCard> {
         Text(
           widget.label,
           style: theme.textTheme.bodySmall?.copyWith(
-            color: colors.onSurface.withValues(alpha: 0.6),
+            color: kWebTextSecondary,
           ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,

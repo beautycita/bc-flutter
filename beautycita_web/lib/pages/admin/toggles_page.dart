@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../config/breakpoints.dart';
+import '../../config/web_theme.dart';
 import '../../providers/admin_config_provider.dart';
+import '../../widgets/web_design_system.dart';
 
 /// Feature toggles page — `/app/admin/toggles`
 ///
@@ -118,27 +120,12 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Feature Toggles',
-          style: (isMobile
-                  ? theme.textTheme.headlineSmall
-                  : theme.textTheme.headlineMedium)
-              ?.copyWith(fontWeight: FontWeight.w700),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'Activa o desactiva funciones de la aplicacion. Los cambios afectan ambas apps inmediatamente.',
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: colors.onSurface.withValues(alpha: 0.6),
-          ),
-        ),
-      ],
+    return WebSectionHeader(
+      label: 'Configuracion',
+      title: 'Feature Toggles',
+      subtitle: 'Activa o desactiva funciones de la aplicacion. Los cambios afectan ambas apps inmediatamente.',
+      centered: false,
+      titleSize: isMobile ? 28 : 36,
     );
   }
 }
@@ -151,22 +138,30 @@ class _ImmediateEffectBanner extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: const Color(0xFFFF9800).withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: const Color(0xFFFF9800).withValues(alpha: 0.3),
         ),
       ),
       child: Row(
         children: [
-          const Icon(
-            Icons.info_outline,
-            size: 18,
-            color: Color(0xFFFF9800),
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: const Color(0xFFFF9800).withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(
+              Icons.info_outlined,
+              size: 18,
+              color: Color(0xFFFF9800),
+            ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(
               'Los toggles tienen efecto inmediato. Ambas apps (mobile y web) leen estos valores en tiempo real.',
@@ -277,7 +272,6 @@ class _ToggleCardState extends State<_ToggleCard> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colors = theme.colorScheme;
     final isEnabled = widget.toggle.enabled;
 
     return MouseRegion(
@@ -285,42 +279,47 @@ class _ToggleCardState extends State<_ToggleCard> {
       onExit: (_) => setState(() => _hovering = false),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+        transform: Matrix4.translationValues(0, _hovering ? -2 : 0, 0),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: BorderRadius.circular(12),
+          color: kWebSurface,
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: _hovering
                 ? _accentColor.withValues(alpha: 0.3)
-                : colors.outlineVariant,
+                : kWebCardBorder,
           ),
-          boxShadow: _hovering
-              ? [
-                  BoxShadow(
-                    color: _accentColor.withValues(alpha: 0.06),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : null,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: _hovering ? 0.06 : 0.03),
+              blurRadius: _hovering ? 16 : 10,
+              offset: Offset(0, _hovering ? 6 : 2),
+            ),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: _hovering ? 0.04 : 0.02),
+              blurRadius: _hovering ? 30 : 20,
+              offset: Offset(0, _hovering ? 10 : 4),
+            ),
+          ],
         ),
         child: Row(
           children: [
-            // Icon
+            // Icon box
             Container(
-              width: 44,
-              height: 44,
+              width: 48,
+              height: 48,
               decoration: BoxDecoration(
-                color: (isEnabled ? _accentColor : colors.onSurface)
-                    .withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10),
+                color: (isEnabled ? _accentColor : kWebTextHint)
+                    .withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
                 _icon,
-                size: 22,
+                size: 24,
                 color: isEnabled
                     ? _accentColor
-                    : colors.onSurface.withValues(alpha: 0.3),
+                    : kWebTextHint,
               ),
             ),
             const SizedBox(width: 16),
@@ -335,15 +334,15 @@ class _ToggleCardState extends State<_ToggleCard> {
                     style: theme.textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                       color: isEnabled
-                          ? null
-                          : colors.onSurface.withValues(alpha: 0.5),
+                          ? kWebTextPrimary
+                          : kWebTextHint,
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     widget.toggle.description,
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: colors.onSurface.withValues(alpha: 0.5),
+                      color: kWebTextSecondary,
                     ),
                   ),
                 ],
@@ -351,18 +350,21 @@ class _ToggleCardState extends State<_ToggleCard> {
             ),
             const SizedBox(width: 12),
 
-            // Switch or loading
+            // Switch or loading — accent color kWebPrimary
             if (widget.isSaving)
-              const SizedBox(
+              SizedBox(
                 width: 24,
                 height: 24,
-                child: CircularProgressIndicator(strokeWidth: 2),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: kWebPrimary,
+                ),
               )
             else
               Switch(
                 value: isEnabled,
                 onChanged: widget.onToggle,
-                activeTrackColor: _accentColor,
+                activeTrackColor: kWebPrimary,
               ),
           ],
         ),

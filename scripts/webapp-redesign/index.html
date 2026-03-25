@@ -1,0 +1,1379 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BeautyCita — Tu salon merece mas clientes</title>
+<style>
+/* ========== RESET & BASE ========== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background: #FFFAF5;
+  color: #1a1a1a;
+  line-height: 1.7;
+  font-size: 16px;
+  overflow-x: hidden;
+}
+a { text-decoration: none; color: inherit; }
+ul { list-style: none; }
+img { max-width: 100%; }
+
+/* ========== UTILITY ========== */
+.container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+.gradient-text {
+  background: linear-gradient(135deg, #ec4899, #9333ea, #3b82f6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.btn-gradient {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, #ec4899, #9333ea, #3b82f6);
+  color: #fff; border: none; border-radius: 16px;
+  padding: 14px 32px; font-size: 16px; font-weight: 700;
+  cursor: pointer; transition: transform 0.2s, box-shadow 0.3s;
+  text-decoration: none;
+}
+.btn-gradient:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 24px rgba(147, 51, 234, 0.35);
+}
+.btn-outline {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: transparent; color: #9333ea;
+  border: 2px solid #9333ea; border-radius: 16px;
+  padding: 12px 32px; font-size: 16px; font-weight: 700;
+  cursor: pointer; transition: transform 0.2s, background 0.3s, color 0.3s;
+  text-decoration: none;
+}
+.btn-outline:hover {
+  background: #9333ea; color: #fff; transform: scale(1.02);
+}
+.section-title {
+  font-size: 42px; font-weight: 800; text-align: center;
+  margin-bottom: 16px; color: #1a1a1a;
+}
+.section-subtitle {
+  font-size: 18px; color: #666; text-align: center;
+  margin-bottom: 56px; max-width: 640px; margin-left: auto; margin-right: auto;
+}
+.fade-in {
+  opacity: 0; transform: translateY(32px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+.fade-in.visible { opacity: 1; transform: translateY(0); }
+
+/* ========== NAVIGATION ========== */
+.navbar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+  background: rgba(255, 250, 245, 0.92); backdrop-filter: blur(12px);
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+.navbar.scrolled {
+  border-bottom-color: #f0ebe6;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.05);
+}
+.navbar .container {
+  display: flex; align-items: center; justify-content: space-between;
+  height: 72px;
+}
+.nav-logo {
+  display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 22px;
+}
+.nav-logo-icon {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: linear-gradient(135deg, #ec4899, #9333ea, #3b82f6);
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 18px; font-weight: 900;
+}
+.nav-links { display: flex; align-items: center; gap: 28px; }
+.nav-links a {
+  font-size: 15px; font-weight: 500; color: #666;
+  transition: color 0.2s;
+}
+.nav-links a:hover { color: #9333ea; }
+.nav-right { display: flex; align-items: center; gap: 16px; }
+.lang-toggle {
+  display: flex; border: 1px solid #e0dbd6; border-radius: 8px; overflow: hidden;
+  font-size: 13px;
+}
+.lang-toggle button {
+  padding: 6px 12px; border: none; background: transparent;
+  cursor: pointer; font-weight: 600; font-size: 13px; color: #666;
+  transition: background 0.2s, color 0.2s;
+}
+.lang-toggle button.active {
+  background: linear-gradient(135deg, #ec4899, #9333ea);
+  color: #fff;
+}
+.nav-cta {
+  padding: 10px 22px !important; font-size: 14px !important; border-radius: 12px !important;
+}
+.mobile-menu-btn {
+  display: none; background: none; border: none; cursor: pointer;
+  width: 32px; height: 32px; position: relative;
+}
+.mobile-menu-btn span {
+  display: block; width: 24px; height: 2px; background: #1a1a1a;
+  position: absolute; left: 4px; transition: transform 0.3s, opacity 0.3s;
+}
+.mobile-menu-btn span:nth-child(1) { top: 8px; }
+.mobile-menu-btn span:nth-child(2) { top: 15px; }
+.mobile-menu-btn span:nth-child(3) { top: 22px; }
+.mobile-menu-btn.open span:nth-child(1) { top: 15px; transform: rotate(45deg); }
+.mobile-menu-btn.open span:nth-child(2) { opacity: 0; }
+.mobile-menu-btn.open span:nth-child(3) { top: 15px; transform: rotate(-45deg); }
+.mobile-nav {
+  display: none; position: fixed; top: 72px; left: 0; right: 0; bottom: 0;
+  background: rgba(255,250,245,0.98); z-index: 999; padding: 32px 24px;
+  flex-direction: column; gap: 24px;
+}
+.mobile-nav.open { display: flex; }
+.mobile-nav a { font-size: 20px; font-weight: 600; color: #1a1a1a; }
+
+/* ========== HERO ========== */
+.hero {
+  min-height: 100vh; display: flex; align-items: center;
+  padding-top: 72px;
+}
+.hero .container {
+  display: grid; grid-template-columns: 1.4fr 1fr; gap: 60px; align-items: center;
+}
+.hero-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, rgba(236,72,153,0.1), rgba(147,51,234,0.1));
+  border: 1px solid rgba(147,51,234,0.2);
+  padding: 8px 20px; border-radius: 50px;
+  font-size: 14px; font-weight: 600; color: #9333ea;
+  margin-bottom: 24px;
+}
+.hero h1 {
+  font-size: 52px; font-weight: 800; line-height: 1.15;
+  margin-bottom: 20px; color: #1a1a1a;
+}
+.hero-subtitle {
+  font-size: 19px; color: #666; line-height: 1.7;
+  margin-bottom: 36px; max-width: 520px;
+}
+.hero-ctas { display: flex; gap: 16px; margin-bottom: 48px; flex-wrap: wrap; }
+.trust-badges { display: flex; gap: 32px; flex-wrap: wrap; }
+.trust-badge {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 14px; font-weight: 600; color: #666;
+}
+.trust-badge-icon {
+  width: 20px; height: 20px; border-radius: 50%;
+  background: linear-gradient(135deg, #ec4899, #9333ea);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; color: #fff;
+}
+.hero-phone {
+  display: flex; justify-content: center; align-items: center;
+  position: relative;
+}
+.phone-mockup {
+  width: 280px; height: 560px;
+  background: #1a1a1a; border-radius: 36px;
+  padding: 12px; box-shadow: 0 24px 60px rgba(0,0,0,0.15);
+  animation: float 6s ease-in-out infinite;
+  position: relative; overflow: hidden;
+}
+.phone-screen {
+  width: 100%; height: 100%;
+  background: #fff; border-radius: 26px; overflow: hidden;
+  display: flex; flex-direction: column;
+}
+.phone-statusbar {
+  height: 32px; background: linear-gradient(135deg, #ec4899, #9333ea);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; color: rgba(255,255,255,0.8); font-weight: 600;
+}
+.phone-header {
+  padding: 16px; background: #fff;
+  border-bottom: 1px solid #f0ebe6;
+}
+.phone-header-title { font-size: 18px; font-weight: 700; color: #1a1a1a; }
+.phone-header-sub { font-size: 12px; color: #999; margin-top: 2px; }
+.phone-content { flex: 1; padding: 12px; overflow: hidden; }
+.phone-category-grid {
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+.phone-cat-item {
+  background: #FFFAF5; border-radius: 12px; padding: 10px 6px;
+  text-align: center; font-size: 10px; font-weight: 600; color: #666;
+}
+.phone-cat-icon {
+  width: 32px; height: 32px; border-radius: 10px;
+  background: linear-gradient(135deg, rgba(236,72,153,0.15), rgba(147,51,234,0.15));
+  margin: 0 auto 6px; display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+}
+.phone-bottom-bar {
+  height: 48px; background: #fff;
+  border-top: 1px solid #f0ebe6;
+  display: flex; align-items: center; justify-content: space-around;
+  padding: 0 16px;
+}
+.phone-tab {
+  width: 24px; height: 24px; border-radius: 6px;
+  background: #f0ebe6;
+}
+.phone-tab.active { background: linear-gradient(135deg, #ec4899, #9333ea); }
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-16px); }
+}
+
+/* ========== COMPARISON ========== */
+.comparison { padding: 100px 0; }
+.comparison-table-wrap {
+  overflow-x: auto; border-radius: 20px;
+  box-shadow: 0 2px 20px rgba(0,0,0,0.05);
+}
+.comparison-table {
+  width: 100%; border-collapse: collapse;
+  background: #fff; min-width: 700px;
+}
+.comparison-table thead th {
+  padding: 24px 20px; font-size: 16px; font-weight: 700;
+  text-align: center; border-bottom: 2px solid #f0ebe6;
+  background: #FFFAF5;
+}
+.comparison-table thead th:first-child { text-align: left; }
+.comparison-table thead th.highlight {
+  background: linear-gradient(135deg, rgba(236,72,153,0.08), rgba(147,51,234,0.08));
+  position: relative;
+}
+.recommended-badge {
+  position: absolute; top: -14px; left: 50%; transform: translateX(-50%);
+  background: linear-gradient(135deg, #ec4899, #9333ea);
+  color: #fff; font-size: 11px; font-weight: 700;
+  padding: 4px 14px; border-radius: 50px; white-space: nowrap;
+}
+.comparison-table tbody td {
+  padding: 16px 20px; text-align: center;
+  border-bottom: 1px solid #f0ebe6; font-size: 14px; color: #666;
+  transition: background 0.2s;
+}
+.comparison-table tbody td:first-child {
+  text-align: left; font-weight: 600; color: #1a1a1a;
+}
+.comparison-table tbody td.highlight {
+  background: rgba(147,51,234,0.03);
+  border-left: 2px solid rgba(147,51,234,0.15);
+  border-right: 2px solid rgba(147,51,234,0.15);
+}
+.comparison-table tbody tr:hover td { background: rgba(147,51,234,0.03); }
+.comparison-table tbody tr:hover td.highlight { background: rgba(147,51,234,0.07); }
+.check { color: #16a34a; font-weight: 700; font-size: 18px; }
+.cross { color: #ef4444; font-weight: 600; }
+.warn { color: #f59e0b; font-weight: 600; font-size: 13px; }
+.free-label {
+  display: inline-block;
+  background: linear-gradient(135deg, rgba(22,163,106,0.1), rgba(22,163,106,0.05));
+  color: #16a34a; padding: 2px 10px; border-radius: 6px;
+  font-weight: 700; font-size: 13px;
+}
+
+/* ========== FOR SALONS ========== */
+.for-salons {
+  padding: 100px 0;
+  background: linear-gradient(180deg, #FFFAF5 0%, rgba(236,72,153,0.04) 30%, rgba(147,51,234,0.04) 70%, #FFFAF5 100%);
+}
+.features-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px;
+}
+.feature-card {
+  background: #fff; border: 1px solid #f0ebe6; border-radius: 20px;
+  padding: 32px 24px; transition: transform 0.3s, box-shadow 0.3s;
+  cursor: default;
+}
+.feature-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.06);
+}
+.feature-icon {
+  width: 48px; height: 48px; border-radius: 14px;
+  background: linear-gradient(135deg, rgba(236,72,153,0.1), rgba(147,51,234,0.1));
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 16px;
+}
+.feature-icon svg { width: 24px; height: 24px; stroke: #9333ea; fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.feature-card h3 {
+  font-size: 16px; font-weight: 700; margin-bottom: 8px; color: #1a1a1a;
+}
+.feature-card p { font-size: 14px; color: #666; line-height: 1.6; }
+
+/* ========== DEMO ========== */
+.demo { padding: 100px 0; }
+.demo-content {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center;
+}
+.demo-input-wrap {
+  display: flex; gap: 12px; margin-bottom: 24px;
+}
+.demo-input {
+  flex: 1; padding: 16px 20px;
+  border: 2px solid #f0ebe6; border-radius: 14px;
+  font-size: 16px; background: #fff; color: #1a1a1a;
+  transition: border-color 0.3s, box-shadow 0.3s;
+  outline: none;
+}
+.demo-input:focus {
+  border-color: #9333ea;
+  box-shadow: 0 0 0 4px rgba(147,51,234,0.1);
+}
+.demo-input::placeholder { color: #bbb; }
+.demo-steps {
+  display: flex; gap: 24px; margin-top: 40px;
+}
+.demo-step {
+  display: flex; align-items: flex-start; gap: 12px; flex: 1;
+}
+.demo-step-num {
+  width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+  background: linear-gradient(135deg, #ec4899, #9333ea);
+  color: #fff; display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 700;
+}
+.demo-step-text h4 { font-size: 14px; font-weight: 700; margin-bottom: 2px; }
+.demo-step-text p { font-size: 13px; color: #999; }
+.demo-preview {
+  background: #fff; border: 1px solid #f0ebe6; border-radius: 20px;
+  overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.05);
+}
+.demo-preview-header {
+  padding: 16px 24px;
+  background: linear-gradient(135deg, rgba(236,72,153,0.06), rgba(147,51,234,0.06));
+  border-bottom: 1px solid #f0ebe6;
+  display: flex; align-items: center; gap: 10px;
+}
+.demo-dot { width: 10px; height: 10px; border-radius: 50%; }
+.demo-dot.r { background: #ef4444; }
+.demo-dot.y { background: #f59e0b; }
+.demo-dot.g { background: #16a34a; }
+.demo-preview-body { padding: 24px; min-height: 320px; }
+.demo-preview-sidebar {
+  display: flex; gap: 16px;
+}
+.demo-sidebar-items {
+  width: 180px; display: flex; flex-direction: column; gap: 6px;
+}
+.demo-sidebar-item {
+  padding: 10px 14px; border-radius: 10px; font-size: 13px; font-weight: 600;
+  color: #666; cursor: default; transition: background 0.2s;
+}
+.demo-sidebar-item.active {
+  background: linear-gradient(135deg, rgba(236,72,153,0.1), rgba(147,51,234,0.1));
+  color: #9333ea;
+}
+.demo-main-area {
+  flex: 1; display: flex; flex-direction: column; gap: 12px;
+}
+.demo-stat-cards { display: flex; gap: 12px; }
+.demo-stat-card {
+  flex: 1; background: #FFFAF5; border-radius: 12px; padding: 16px;
+}
+.demo-stat-val { font-size: 24px; font-weight: 800; }
+.demo-stat-label { font-size: 11px; color: #999; margin-top: 2px; }
+.demo-chart-placeholder {
+  flex: 1; background: #FFFAF5; border-radius: 12px; padding: 16px;
+  display: flex; align-items: flex-end; gap: 8px; min-height: 120px;
+}
+.demo-bar {
+  flex: 1; border-radius: 6px 6px 0 0;
+  background: linear-gradient(to top, rgba(236,72,153,0.3), rgba(147,51,234,0.3));
+}
+
+/* ========== FOR CLIENTS ========== */
+.for-clients { padding: 100px 0; }
+.client-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; margin-bottom: 60px; }
+.client-card {
+  background: #fff; border: 1px solid #f0ebe6; border-radius: 20px;
+  padding: 40px 28px; text-align: center;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+.client-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.06);
+}
+.client-card-icon {
+  width: 64px; height: 64px; border-radius: 18px;
+  background: linear-gradient(135deg, rgba(236,72,153,0.1), rgba(147,51,234,0.1));
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 20px;
+}
+.client-card-icon svg { width: 28px; height: 28px; stroke: #9333ea; fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.client-card h3 { font-size: 20px; font-weight: 700; margin-bottom: 12px; }
+.client-card p { font-size: 15px; color: #666; line-height: 1.7; }
+.client-download {
+  display: flex; align-items: center; justify-content: center; gap: 48px;
+  flex-wrap: wrap;
+}
+.client-download-text { text-align: center; }
+.client-download-text h3 { font-size: 28px; font-weight: 800; margin-bottom: 12px; }
+.client-download-text p { color: #666; margin-bottom: 24px; }
+
+/* ========== TESTIMONIALS ========== */
+.testimonials {
+  padding: 100px 0;
+  background: linear-gradient(180deg, #FFFAF5 0%, rgba(236,72,153,0.03) 50%, #FFFAF5 100%);
+}
+.testimonial-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; margin-bottom: 60px; }
+.testimonial-card {
+  background: #fff; border: 1px solid #f0ebe6; border-radius: 20px;
+  padding: 32px; transition: transform 0.3s;
+}
+.testimonial-card:hover { transform: translateY(-2px); }
+.testimonial-stars { color: #f59e0b; font-size: 16px; margin-bottom: 16px; letter-spacing: 2px; }
+.testimonial-text { font-size: 15px; color: #444; line-height: 1.7; margin-bottom: 20px; font-style: italic; }
+.testimonial-author { display: flex; align-items: center; gap: 12px; }
+.testimonial-avatar {
+  width: 44px; height: 44px; border-radius: 50%;
+  background: linear-gradient(135deg, rgba(236,72,153,0.2), rgba(147,51,234,0.2));
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; color: #9333ea; font-size: 16px;
+}
+.testimonial-name { font-weight: 700; font-size: 14px; }
+.testimonial-role { font-size: 13px; color: #999; }
+.trust-metrics {
+  display: flex; justify-content: center; gap: 48px; flex-wrap: wrap;
+  padding: 32px; background: #fff; border-radius: 16px;
+  border: 1px solid #f0ebe6;
+}
+.trust-metric { text-align: center; }
+.trust-metric-val { font-size: 28px; font-weight: 800; }
+.trust-metric-label { font-size: 13px; color: #999; margin-top: 4px; }
+
+/* ========== PRICING ========== */
+.pricing { padding: 100px 0; }
+.pricing-card {
+  max-width: 480px; margin: 0 auto;
+  background: #fff; border-radius: 24px;
+  padding: 48px 40px;
+  border: 2px solid transparent;
+  background-image: linear-gradient(#fff, #fff), linear-gradient(135deg, #ec4899, #9333ea, #3b82f6);
+  background-origin: padding-box, border-box;
+  background-clip: padding-box, border-box;
+  box-shadow: 0 8px 40px rgba(147,51,234,0.1);
+  text-align: center;
+}
+.pricing-title { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+.pricing-price { font-size: 56px; font-weight: 800; margin-bottom: 4px; }
+.pricing-price span { font-size: 20px; font-weight: 500; color: #999; }
+.pricing-compare {
+  font-size: 14px; color: #999; text-decoration: line-through;
+  margin-bottom: 32px;
+}
+.pricing-features { text-align: left; margin-bottom: 32px; }
+.pricing-feature {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 0; font-size: 15px; color: #444;
+  border-bottom: 1px solid #f9f4ef;
+}
+.pricing-feature-check {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: rgba(22,163,106,0.1); color: #16a34a;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; flex-shrink: 0;
+}
+.pricing-note {
+  font-size: 13px; color: #999; margin-bottom: 28px; line-height: 1.6;
+}
+
+/* ========== DOWNLOAD CTA ========== */
+.download-cta {
+  padding: 100px 0;
+  background: linear-gradient(135deg, #ec4899, #9333ea, #3b82f6);
+  color: #fff; text-align: center;
+}
+.download-cta h2 { font-size: 42px; font-weight: 800; margin-bottom: 16px; }
+.download-cta p { font-size: 18px; opacity: 0.85; margin-bottom: 40px; }
+.download-buttons { display: flex; justify-content: center; gap: 16px; margin-bottom: 40px; flex-wrap: wrap; }
+.download-btn {
+  display: inline-flex; align-items: center; gap: 12px;
+  background: rgba(255,255,255,0.15); border: 2px solid rgba(255,255,255,0.3);
+  border-radius: 16px; padding: 16px 28px; color: #fff;
+  font-size: 16px; font-weight: 600; cursor: pointer;
+  transition: background 0.3s, transform 0.2s;
+  text-decoration: none;
+}
+.download-btn:hover { background: rgba(255,255,255,0.25); transform: scale(1.02); }
+.download-btn svg { width: 24px; height: 24px; fill: #fff; }
+.qr-placeholder {
+  width: 140px; height: 140px; background: #fff; border-radius: 16px;
+  margin: 0 auto 24px;
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 6px;
+}
+.qr-grid {
+  display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px;
+  width: 100px; height: 100px;
+}
+.qr-cell { background: #1a1a1a; border-radius: 1px; }
+.qr-cell.w { background: #fff; }
+.viral-cta {
+  font-size: 15px; opacity: 0.8;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+
+/* ========== FOOTER ========== */
+.footer {
+  padding: 60px 0 40px; background: #1a1a1a; color: #fff;
+}
+.footer .container {
+  display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 40px;
+  align-items: start;
+}
+.footer-logo { font-size: 22px; font-weight: 800; margin-bottom: 12px; }
+.footer-desc { font-size: 14px; color: #888; line-height: 1.6; }
+.footer-links-grid { display: flex; gap: 60px; }
+.footer-col h4 { font-size: 14px; font-weight: 700; margin-bottom: 16px; color: #fff; }
+.footer-col a {
+  display: block; font-size: 14px; color: #888; margin-bottom: 10px;
+  transition: color 0.2s;
+}
+.footer-col a:hover { color: #ec4899; }
+.footer-social { display: flex; gap: 12px; margin-top: 16px; }
+.footer-social a {
+  width: 40px; height: 40px; border-radius: 10px;
+  background: rgba(255,255,255,0.08); display: flex;
+  align-items: center; justify-content: center;
+  font-size: 14px; color: #888; transition: background 0.3s, color 0.3s;
+  margin-bottom: 0;
+}
+.footer-social a:hover { background: rgba(236,72,153,0.2); color: #ec4899; }
+.footer-bottom {
+  border-top: 1px solid rgba(255,255,255,0.08);
+  margin-top: 40px; padding-top: 24px;
+  display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+  font-size: 13px; color: #666;
+}
+
+/* ========== RESPONSIVE ========== */
+@media (max-width: 1024px) {
+  .features-grid { grid-template-columns: repeat(3, 1fr); }
+  .hero .container { grid-template-columns: 1fr; text-align: center; }
+  .hero-subtitle { margin-left: auto; margin-right: auto; }
+  .hero-ctas { justify-content: center; }
+  .trust-badges { justify-content: center; }
+  .hero-phone { margin-top: 40px; }
+  .demo-content { grid-template-columns: 1fr; }
+  .footer .container { grid-template-columns: 1fr; }
+  .footer-links-grid { flex-wrap: wrap; gap: 32px; }
+}
+@media (max-width: 768px) {
+  .nav-links { display: none; }
+  .nav-cta { display: none !important; }
+  .mobile-menu-btn { display: block; }
+  .hero h1 { font-size: 36px; }
+  .section-title { font-size: 32px; }
+  .features-grid { grid-template-columns: repeat(2, 1fr); }
+  .client-cards { grid-template-columns: 1fr; }
+  .testimonial-cards { grid-template-columns: 1fr; }
+  .demo-steps { flex-direction: column; }
+  .trust-metrics { gap: 24px; }
+  .pricing-card { padding: 32px 24px; }
+  .download-cta h2 { font-size: 28px; }
+  .footer-bottom { flex-direction: column; text-align: center; }
+}
+@media (max-width: 480px) {
+  .features-grid { grid-template-columns: 1fr; }
+  .hero h1 { font-size: 28px; }
+  .hero-ctas { flex-direction: column; align-items: center; }
+  .demo-stat-cards { flex-direction: column; }
+  .comparison-table { font-size: 13px; }
+  .trust-badges { flex-direction: column; align-items: center; }
+}
+</style>
+</head>
+<body>
+
+<!-- ==================== NAVIGATION ==================== -->
+<nav class="navbar" id="navbar">
+  <div class="container">
+    <a href="#" class="nav-logo">
+      <div class="nav-logo-icon">B</div>
+      <span>Beauty<span class="gradient-text">Cita</span></span>
+    </a>
+    <div class="nav-links">
+      <a href="#hero">Inicio</a>
+      <a href="#for-salons">Para Salones</a>
+      <a href="#for-clients">Para Clientes</a>
+      <a href="#demo">Demo</a>
+      <a href="#pricing">Precios</a>
+      <a href="#download">Descargar</a>
+    </div>
+    <div class="nav-right">
+      <div class="lang-toggle">
+        <button class="active" onclick="setLang('es')">ES</button>
+        <button onclick="setLang('en')">EN</button>
+      </div>
+      <a href="#demo" class="btn-gradient nav-cta">Registra tu Salon</a>
+      <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </div>
+</nav>
+<div class="mobile-nav" id="mobileNav">
+  <a href="#hero" onclick="closeMobile()">Inicio</a>
+  <a href="#for-salons" onclick="closeMobile()">Para Salones</a>
+  <a href="#for-clients" onclick="closeMobile()">Para Clientes</a>
+  <a href="#demo" onclick="closeMobile()">Demo</a>
+  <a href="#pricing" onclick="closeMobile()">Precios</a>
+  <a href="#download" onclick="closeMobile()">Descargar</a>
+  <a href="#demo" class="btn-gradient" onclick="closeMobile()" style="text-align:center; margin-top: 12px;">Registra tu Salon</a>
+</div>
+
+<!-- ==================== HERO ==================== -->
+<section class="hero" id="hero">
+  <div class="container">
+    <div class="hero-left fade-in">
+      <div class="hero-badge">La plataforma #1 para salones en Mexico</div>
+      <h1>Tu salon merece mas clientes.<br><span class="gradient-text">Nosotros te los traemos.</span></h1>
+      <p class="hero-subtitle">La unica plataforma con motor de busqueda inteligente que conecta clientes con el salon perfecto. Sin cuota mensual. Sin comisiones ocultas.</p>
+      <div class="hero-ctas">
+        <a href="#demo" class="btn-gradient">Prueba el Demo Gratis</a>
+        <a href="#comparison" class="btn-outline">Ver como funciona</a>
+      </div>
+      <div class="trust-badges">
+        <div class="trust-badge">
+          <div class="trust-badge-icon">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M9 12l2 2 4-4"/></svg>
+          </div>
+          64,000+ salones descubiertos
+        </div>
+        <div class="trust-badge">
+          <div class="trust-badge-icon">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M9 12l2 2 4-4"/></svg>
+          </div>
+          100% compatible SAT
+        </div>
+        <div class="trust-badge">
+          <div class="trust-badge-icon">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M9 12l2 2 4-4"/></svg>
+          </div>
+          $0 cuota mensual
+        </div>
+      </div>
+    </div>
+    <div class="hero-phone fade-in">
+      <div class="phone-mockup">
+        <div class="phone-screen">
+          <div class="phone-statusbar">BeautyCita</div>
+          <div class="phone-header">
+            <div class="phone-header-title">Hola, bienvenida</div>
+            <div class="phone-header-sub">Que servicio buscas hoy?</div>
+          </div>
+          <div class="phone-content">
+            <div class="phone-category-grid">
+              <div class="phone-cat-item">
+                <div class="phone-cat-icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9333ea" stroke-width="1.5"><circle cx="12" cy="8" r="5"/><path d="M3 21v-2a7 7 0 0114 0v2"/></svg>
+                </div>
+                Corte
+              </div>
+              <div class="phone-cat-item">
+                <div class="phone-cat-icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ec4899" stroke-width="1.5"><path d="M12 3c-1.5 0-3 1-3 3s1 3 3 3 3-1 3-3-1.5-3-3-3z"/><path d="M7 21l2-8h6l2 8"/></svg>
+                </div>
+                Color
+              </div>
+              <div class="phone-cat-item">
+                <div class="phone-cat-icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M12 2v4m0 12v4m-7-10H1m22 0h-4"/></svg>
+                </div>
+                Unas
+              </div>
+              <div class="phone-cat-item">
+                <div class="phone-cat-icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9333ea" stroke-width="1.5"><path d="M4 12c0-4 4-8 8-8s8 4 8 8"/><circle cx="12" cy="16" r="4"/></svg>
+                </div>
+                Pestanas
+              </div>
+              <div class="phone-cat-item">
+                <div class="phone-cat-icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ec4899" stroke-width="1.5"><path d="M12 3l2 6h6l-5 4 2 6-5-4-5 4 2-6-5-4h6z"/></svg>
+                </div>
+                Facial
+              </div>
+              <div class="phone-cat-item">
+                <div class="phone-cat-icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="1.5"><path d="M12 2a10 10 0 100 20 10 10 0 000-20z"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/></svg>
+                </div>
+                Maquillaje
+              </div>
+            </div>
+          </div>
+          <div class="phone-bottom-bar">
+            <div class="phone-tab active"></div>
+            <div class="phone-tab"></div>
+            <div class="phone-tab"></div>
+            <div class="phone-tab"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== COMPARISON ==================== -->
+<section class="comparison" id="comparison">
+  <div class="container">
+    <h2 class="section-title fade-in">Compara y decide</h2>
+    <p class="section-subtitle fade-in">Por que BeautyCita es la mejor opcion para tu salon</p>
+    <div class="comparison-table-wrap fade-in">
+      <table class="comparison-table">
+        <thead>
+          <tr>
+            <th>Caracteristica</th>
+            <th class="highlight">
+              <div class="recommended-badge">RECOMENDADO</div>
+              BeautyCita
+            </th>
+            <th>AgendaPro</th>
+            <th>Booksy</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Cuota mensual</td>
+            <td class="highlight"><span class="free-label">GRATIS</span></td>
+            <td class="warn">$299 - $4,500/mes</td>
+            <td class="warn">$350 - $1,200/mes</td>
+          </tr>
+          <tr>
+            <td>Staff ilimitado</td>
+            <td class="highlight"><span class="check">&#10003;</span></td>
+            <td class="warn">1-20 (segun plan)</td>
+            <td class="warn">1-5</td>
+          </tr>
+          <tr>
+            <td>Mensajes WhatsApp</td>
+            <td class="highlight"><span class="free-label">ILIMITADOS GRATIS</span></td>
+            <td class="warn">$100/50 msgs</td>
+            <td class="cross">No incluido</td>
+          </tr>
+          <tr>
+            <td>Pagina portfolio</td>
+            <td class="highlight"><span class="check">&#10003;</span> 5 temas</td>
+            <td>Pagina basica</td>
+            <td class="cross">No incluido</td>
+          </tr>
+          <tr>
+            <td>Punto de venta</td>
+            <td class="highlight"><span class="free-label">GRATIS (10% comision)</span></td>
+            <td class="warn">$250/mes</td>
+            <td class="cross">No incluido</td>
+          </tr>
+          <tr>
+            <td>Cumplimiento SAT</td>
+            <td class="highlight"><span class="check">&#10003;</span> Automatico</td>
+            <td>Solo autofacturacion</td>
+            <td class="cross">No</td>
+          </tr>
+          <tr>
+            <td>Calendario drag &amp; drop</td>
+            <td class="highlight"><span class="check">&#10003;</span></td>
+            <td class="cross">No</td>
+            <td class="cross">No</td>
+          </tr>
+          <tr>
+            <td>Sync Google Calendar</td>
+            <td class="highlight"><span class="free-label">GRATIS</span></td>
+            <td class="warn">Solo Premium</td>
+            <td class="warn">Solo Pro</td>
+          </tr>
+          <tr>
+            <td>Motor inteligente</td>
+            <td class="highlight"><span class="check">&#10003;</span> Busca clientes PARA ti</td>
+            <td>Directorio pasivo</td>
+            <td>Directorio pasivo</td>
+          </tr>
+          <tr>
+            <td>App nativa</td>
+            <td class="highlight"><span class="check">&#10003;</span> Flutter (rapida)</td>
+            <td class="warn">Ionic (lenta)</td>
+            <td>React Native</td>
+          </tr>
+          <tr>
+            <td>Soporte en cash/OXXO</td>
+            <td class="highlight"><span class="check">&#10003;</span></td>
+            <td class="cross">No</td>
+            <td class="cross">No</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== FOR SALONS ==================== -->
+<section class="for-salons" id="for-salons">
+  <div class="container">
+    <h2 class="section-title fade-in">Todo lo que tu salon necesita. <span class="gradient-text">Gratis.</span></h2>
+    <p class="section-subtitle fade-in">Herramientas profesionales para hacer crecer tu negocio sin pagar mensualidades</p>
+    <div class="features-grid">
+
+      <div class="feature-card fade-in">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 2a7 7 0 017 7c0 5-7 13-7 13S5 14 5 9a7 7 0 017-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+        </div>
+        <h3>Motor Inteligente</h3>
+        <p>Nuestro AI encuentra clientes para tu salon, no al reves</p>
+      </div>
+
+      <div class="feature-card fade-in">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        </div>
+        <h3>Staff Ilimitado</h3>
+        <p>Agrega todo tu equipo sin pagar mas</p>
+      </div>
+
+      <div class="feature-card fade-in">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        </div>
+        <h3>Calendario Inteligente</h3>
+        <p>Arrastra y suelta para reagendar. Sync con Google Calendar</p>
+      </div>
+
+      <div class="feature-card fade-in">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        </div>
+        <h3>Portfolio Web</h3>
+        <p>Tu pagina profesional en beautycita.com/p/tu-salon</p>
+      </div>
+
+      <div class="feature-card fade-in">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>
+        </div>
+        <h3>WhatsApp Gratis</h3>
+        <p>Recordatorios y alertas ilimitadas sin costo extra</p>
+      </div>
+
+      <div class="feature-card fade-in">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+        </div>
+        <h3>Punto de Venta</h3>
+        <p>Vende productos de belleza. Solo 10% comision, sin mensualidad</p>
+      </div>
+
+      <div class="feature-card fade-in">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        </div>
+        <h3>Analiticas</h3>
+        <p>Productividad por empleado, ingresos, tendencias</p>
+      </div>
+
+      <div class="feature-card fade-in">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        </div>
+        <h3>SAT Compliant</h3>
+        <p>Cumplimiento fiscal automatico para todas las transacciones</p>
+      </div>
+
+      <div class="feature-card fade-in">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        </div>
+        <h3>Import de Datos</h3>
+        <p>Migra desde Vagaro, Fresha o Booksy en minutos</p>
+      </div>
+
+      <div class="feature-card fade-in">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+        </div>
+        <h3>Prestamos</h3>
+        <p>Creditos para hacer crecer tu negocio (proximamente)</p>
+      </div>
+
+      <div class="feature-card fade-in">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        </div>
+        <h3>Fotos Antes/Despues</h3>
+        <p>Gestion de portfolio visual para cada servicio</p>
+      </div>
+
+      <div class="feature-card fade-in">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        </div>
+        <h3>Cita Express</h3>
+        <p>Widget embebible para tu sitio web existente</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ==================== DEMO ==================== -->
+<section class="demo" id="demo">
+  <div class="container">
+    <h2 class="section-title fade-in">Prueba BeautyCita en <span class="gradient-text">30 segundos</span></h2>
+    <p class="section-subtitle fade-in">Ingresa tu numero y explora todas las herramientas</p>
+    <div class="demo-content">
+      <div class="fade-in">
+        <div class="demo-input-wrap">
+          <input type="tel" class="demo-input" placeholder="+52 (___) ___-____" id="demoPhone">
+          <button class="btn-gradient" onclick="sendDemoCode()">Enviar codigo</button>
+        </div>
+        <p style="font-size: 14px; color: #999; margin-bottom: 8px;">Te enviaremos un codigo por WhatsApp para verificar tu numero. Sin compromiso.</p>
+        <div id="demoFeedback" style="font-size:14px; color:#16a34a; font-weight:600; margin-bottom:12px; min-height:20px;"></div>
+        <div class="demo-steps">
+          <div class="demo-step">
+            <div class="demo-step-num">1</div>
+            <div class="demo-step-text">
+              <h4>Ingresa tu numero</h4>
+              <p>Tu numero de celular mexicano</p>
+            </div>
+          </div>
+          <div class="demo-step">
+            <div class="demo-step-num">2</div>
+            <div class="demo-step-text">
+              <h4>Verifica por WhatsApp</h4>
+              <p>Recibe tu codigo de acceso</p>
+            </div>
+          </div>
+          <div class="demo-step">
+            <div class="demo-step-num">3</div>
+            <div class="demo-step-text">
+              <h4>Explora el demo completo</h4>
+              <p>Accede a todas las herramientas</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="demo-preview fade-in">
+        <div class="demo-preview-header">
+          <div class="demo-dot r"></div>
+          <div class="demo-dot y"></div>
+          <div class="demo-dot g"></div>
+          <span style="margin-left:12px; font-size:13px; color:#999;">beautycita.com/dashboard</span>
+        </div>
+        <div class="demo-preview-body">
+          <div class="demo-preview-sidebar">
+            <div class="demo-sidebar-items">
+              <div class="demo-sidebar-item active">Dashboard</div>
+              <div class="demo-sidebar-item">Calendario</div>
+              <div class="demo-sidebar-item">Clientes</div>
+              <div class="demo-sidebar-item">Servicios</div>
+              <div class="demo-sidebar-item">Staff</div>
+              <div class="demo-sidebar-item">Analiticas</div>
+              <div class="demo-sidebar-item">Portfolio</div>
+            </div>
+            <div class="demo-main-area">
+              <div class="demo-stat-cards">
+                <div class="demo-stat-card">
+                  <div class="demo-stat-val gradient-text">142</div>
+                  <div class="demo-stat-label">Citas este mes</div>
+                </div>
+                <div class="demo-stat-card">
+                  <div class="demo-stat-val gradient-text">$47.2k</div>
+                  <div class="demo-stat-label">Ingresos</div>
+                </div>
+                <div class="demo-stat-card">
+                  <div class="demo-stat-val gradient-text">96%</div>
+                  <div class="demo-stat-label">Satisfaccion</div>
+                </div>
+              </div>
+              <div class="demo-chart-placeholder">
+                <div class="demo-bar" style="height:40%"></div>
+                <div class="demo-bar" style="height:65%"></div>
+                <div class="demo-bar" style="height:45%"></div>
+                <div class="demo-bar" style="height:80%"></div>
+                <div class="demo-bar" style="height:55%"></div>
+                <div class="demo-bar" style="height:90%"></div>
+                <div class="demo-bar" style="height:70%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== FOR CLIENTS ==================== -->
+<section class="for-clients" id="for-clients">
+  <div class="container">
+    <h2 class="section-title fade-in">La mejor experiencia de <span class="gradient-text">reserva</span></h2>
+    <p class="section-subtitle fade-in">Para los que buscan el salon perfecto, sin sorpresas</p>
+    <div class="client-cards">
+      <div class="client-card fade-in">
+        <div class="client-card-icon">
+          <svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+        </div>
+        <h3>Mejores Precios</h3>
+        <p>Nuestra comision baja significa que los salones no inflan sus precios. Tu pagas lo justo.</p>
+      </div>
+      <div class="client-card fade-in">
+        <div class="client-card-icon">
+          <svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        </div>
+        <h3>Salones Responsables</h3>
+        <p>Todos nuestros salones cumplen con el SAT. Apoyas negocios que contribuyen a Mexico.</p>
+      </div>
+      <div class="client-card fade-in">
+        <div class="client-card-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <h3>Garantia de Calidad</h3>
+        <p>Si no quedas satisfecho, te devolvemos tu dinero. Sin preguntas.</p>
+      </div>
+    </div>
+    <div class="client-download">
+      <div class="client-download-text">
+        <h3>Descarga la app y reserva en <span class="gradient-text">30 segundos</span></h3>
+        <p>Sin cuentas, sin passwords. Solo tu huella o tu cara.</p>
+        <a href="#download" class="btn-gradient">Descargar ahora</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== TESTIMONIALS ==================== -->
+<section class="testimonials" id="testimonials">
+  <div class="container">
+    <h2 class="section-title fade-in">Lo que dicen nuestros <span class="gradient-text">usuarios</span></h2>
+    <p class="section-subtitle fade-in">Salones y clientes que ya confian en BeautyCita</p>
+    <div class="testimonial-cards">
+      <div class="testimonial-card fade-in">
+        <div class="testimonial-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        <p class="testimonial-text">"Antes usaba AgendaPro y pagaba $2,500 al mes. Con BeautyCita tengo las mismas funciones y no pago nada. Mis clientas reciben recordatorio por WhatsApp gratis. Es increible."</p>
+        <div class="testimonial-author">
+          <div class="testimonial-avatar">MC</div>
+          <div>
+            <div class="testimonial-name">Maria Carmen R.</div>
+            <div class="testimonial-role">Salon Glamour, Puerto Vallarta</div>
+          </div>
+        </div>
+      </div>
+      <div class="testimonial-card fade-in">
+        <div class="testimonial-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        <p class="testimonial-text">"El motor inteligente me trae clientes nuevos cada semana. No tengo que estar publicando en redes como loca. La plataforma trabaja para mi."</p>
+        <div class="testimonial-author">
+          <div class="testimonial-avatar">LS</div>
+          <div>
+            <div class="testimonial-name">Lupita Sanchez</div>
+            <div class="testimonial-role">Studio Lash &amp; Brow, Guadalajara</div>
+          </div>
+        </div>
+      </div>
+      <div class="testimonial-card fade-in">
+        <div class="testimonial-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        <p class="testimonial-text">"Como clienta, me encanta que solo necesito mi huella para reservar. En 30 segundos ya tengo mi cita. Y los precios son justos porque el salon no paga comisiones absurdas."</p>
+        <div class="testimonial-author">
+          <div class="testimonial-avatar">AF</div>
+          <div>
+            <div class="testimonial-name">Ana Fernandez</div>
+            <div class="testimonial-role">Clienta frecuente, CDMX</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="trust-metrics fade-in">
+      <div class="trust-metric">
+        <div class="trust-metric-val gradient-text">64,024</div>
+        <div class="trust-metric-label">Salones descubiertos</div>
+      </div>
+      <div class="trust-metric">
+        <div class="trust-metric-val gradient-text">20+</div>
+        <div class="trust-metric-label">Ciudades</div>
+      </div>
+      <div class="trust-metric">
+        <div class="trust-metric-val gradient-text">100%</div>
+        <div class="trust-metric-label">Uptime</div>
+      </div>
+      <div class="trust-metric">
+        <div class="trust-metric-val gradient-text">4.9</div>
+        <div class="trust-metric-label">Calificacion promedio</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== PRICING ==================== -->
+<section class="pricing" id="pricing">
+  <div class="container">
+    <h2 class="section-title fade-in">Nuestros precios <span class="gradient-text">(spoiler: es gratis)</span></h2>
+    <p class="section-subtitle fade-in">Sin trucos, sin letras chiquitas. Tu salon crece, tu bolsillo tambien.</p>
+    <div class="pricing-card fade-in">
+      <div class="pricing-title">Plan Profesional</div>
+      <div class="pricing-price">$0 <span>MXN / mes</span></div>
+      <div class="pricing-compare">Otros cobran $299 - $4,500/mes</div>
+      <div class="pricing-features">
+        <div class="pricing-feature">
+          <div class="pricing-feature-check">&#10003;</div>
+          Staff ilimitado
+        </div>
+        <div class="pricing-feature">
+          <div class="pricing-feature-check">&#10003;</div>
+          Calendario inteligente con drag &amp; drop
+        </div>
+        <div class="pricing-feature">
+          <div class="pricing-feature-check">&#10003;</div>
+          WhatsApp ilimitado (recordatorios + alertas)
+        </div>
+        <div class="pricing-feature">
+          <div class="pricing-feature-check">&#10003;</div>
+          Pagina portfolio con 5 temas
+        </div>
+        <div class="pricing-feature">
+          <div class="pricing-feature-check">&#10003;</div>
+          Sync Google Calendar
+        </div>
+        <div class="pricing-feature">
+          <div class="pricing-feature-check">&#10003;</div>
+          Motor inteligente de clientes
+        </div>
+        <div class="pricing-feature">
+          <div class="pricing-feature-check">&#10003;</div>
+          Punto de venta integrado
+        </div>
+        <div class="pricing-feature">
+          <div class="pricing-feature-check">&#10003;</div>
+          Analiticas y reportes
+        </div>
+        <div class="pricing-feature">
+          <div class="pricing-feature-check">&#10003;</div>
+          Cumplimiento SAT automatico
+        </div>
+        <div class="pricing-feature">
+          <div class="pricing-feature-check">&#10003;</div>
+          Pagos cash, OXXO, y tarjeta
+        </div>
+      </div>
+      <p class="pricing-note">Solo cobramos 3% por transaccion con tarjeta.<br>Pagos en efectivo y OXXO: 0% comision.</p>
+      <a href="#demo" class="btn-gradient" style="width:100%;">Comienza ahora</a>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== DOWNLOAD CTA ==================== -->
+<section class="download-cta" id="download">
+  <div class="container">
+    <h2 class="fade-in">Descarga <span style="opacity:0.9">BeautyCita</span></h2>
+    <p class="fade-in">Disponible para Android. iOS proximamente.</p>
+    <div class="download-buttons fade-in">
+      <a href="#" class="download-btn">
+        <svg viewBox="0 0 24 24"><path d="M3 3.5l8.5 8.5L3 20.5V3.5zm1.4 0L12 11l2.6-2.3L5.4 3.5zM14.6 8.7L12 11l2.6 2.3 4-2.3-4-2.3zM5.4 20.5L12 13l2.6 2.3-9.2 5.2z"/></svg>
+        Google Play (proximamente)
+      </a>
+      <a href="#" class="download-btn">
+        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Descarga APK directa
+      </a>
+    </div>
+    <div class="qr-placeholder fade-in">
+      <svg width="100" height="100" viewBox="0 0 100 100">
+        <!-- QR-like pattern -->
+        <rect x="5" y="5" width="25" height="25" rx="3" fill="#1a1a1a"/>
+        <rect x="10" y="10" width="15" height="15" rx="2" fill="#fff"/>
+        <rect x="13" y="13" width="9" height="9" rx="1" fill="#1a1a1a"/>
+        <rect x="70" y="5" width="25" height="25" rx="3" fill="#1a1a1a"/>
+        <rect x="75" y="10" width="15" height="15" rx="2" fill="#fff"/>
+        <rect x="78" y="13" width="9" height="9" rx="1" fill="#1a1a1a"/>
+        <rect x="5" y="70" width="25" height="25" rx="3" fill="#1a1a1a"/>
+        <rect x="10" y="75" width="15" height="15" rx="2" fill="#fff"/>
+        <rect x="13" y="78" width="9" height="9" rx="1" fill="#1a1a1a"/>
+        <!-- Data pattern -->
+        <rect x="35" y="8" width="6" height="6" rx="1" fill="#1a1a1a"/>
+        <rect x="45" y="8" width="6" height="6" rx="1" fill="#1a1a1a"/>
+        <rect x="55" y="8" width="6" height="6" rx="1" fill="#1a1a1a"/>
+        <rect x="35" y="18" width="6" height="6" rx="1" fill="#1a1a1a"/>
+        <rect x="55" y="18" width="6" height="6" rx="1" fill="#1a1a1a"/>
+        <rect x="8" y="35" width="6" height="6" rx="1" fill="#1a1a1a"/>
+        <rect x="18" y="35" width="6" height="6" rx="1" fill="#1a1a1a"/>
+        <rect x="8" y="45" width="6" height="6" rx="1" fill="#1a1a1a"/>
+        <rect x="18" y="55" width="6" height="6" rx="1" fill="#1a1a1a"/>
+        <rect x="35" y="35" width="6" height="6" rx="1" fill="#1a1a1a"/>
+        <rect x="45" y="35" width="6" height="6" rx="1" fill="#1a1a1a"/>
+        <rect x="55" y="35" width="6" height="6" rx="1" fill="#1a1a1a"/>
+        <rect x="35" y="45" width="6" height="6" rx="1" fill="#1a1a1a"/>
+        <rect x="55" y="45" width="6" height="6" rx="1" fill="#1a1a1a"/>
+        <rect x="35" y="55" width="6" height="6" rx="1" fill="#1a1a1a"/>
+        <rect x="45" y="55" width="6" height="6" rx="1" fill="#1a1a1a"/>
+        <rect x="55" y="55" width="6" height="6" rx="1" fill="#1a1a1a"/>
+        <rect x="70" y="35" width="6" height="6" rx="1" fill="#1a1a1a"/>
+        <rect x="80" y="35" width="6" height="6" rx="1" fill="#1a1a1a"/>
+        <rect x="70" y="45" width="6" height="6" rx="1" fill="#1a1a1a"/>
+        <rect x="80" y="55" width="6" height="6" rx="1" fill="#1a1a1a"/>
+        <rect x="45" y="70" width="6" height="6" rx="1" fill="#1a1a1a"/>
+        <rect x="55" y="70" width="6" height="6" rx="1" fill="#1a1a1a"/>
+        <rect x="70" y="70" width="6" height="6" rx="1" fill="#1a1a1a"/>
+        <rect x="45" y="80" width="6" height="6" rx="1" fill="#1a1a1a"/>
+        <rect x="70" y="80" width="6" height="6" rx="1" fill="#1a1a1a"/>
+        <rect x="80" y="80" width="6" height="6" rx="1" fill="#1a1a1a"/>
+        <rect x="35" y="80" width="6" height="6" rx="1" fill="#1a1a1a"/>
+        <rect x="80" y="70" width="6" height="6" rx="1" fill="#1a1a1a"/>
+        <rect x="55" y="80" width="6" height="6" rx="1" fill="#1a1a1a"/>
+        <rect x="65" y="55" width="6" height="6" rx="1" fill="#1a1a1a"/>
+        <rect x="45" y="45" width="6" height="6" rx="1" fill="#1a1a1a"/>
+        <rect x="65" y="45" width="6" height="6" rx="1" fill="#1a1a1a"/>
+        <rect x="28" y="45" width="6" height="6" rx="1" fill="#1a1a1a"/>
+        <rect x="45" y="28" width="6" height="6" rx="1" fill="#1a1a1a"/>
+        <rect x="65" y="28" width="6" height="6" rx="1" fill="#1a1a1a"/>
+        <rect x="80" y="45" width="6" height="6" rx="1" fill="#1a1a1a"/>
+        <rect x="90" y="45" width="6" height="6" rx="1" fill="#1a1a1a"/>
+        <rect x="90" y="55" width="6" height="6" rx="1" fill="#1a1a1a"/>
+        <rect x="90" y="70" width="6" height="6" rx="1" fill="#1a1a1a"/>
+      </svg>
+    </div>
+    <div class="viral-cta fade-in">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+      Reenvia este mensaje a un amigo que tenga salon
+    </div>
+  </div>
+</section>
+
+<!-- ==================== FOOTER ==================== -->
+<footer class="footer">
+  <div class="container">
+    <div>
+      <div class="footer-logo">Beauty<span style="color:#ec4899">Cita</span></div>
+      <p class="footer-desc">La plataforma inteligente que conecta clientes con el salon perfecto. Hecha en Mexico, para Mexico.</p>
+      <div class="footer-social">
+        <a href="#" aria-label="Instagram">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+        </a>
+        <a href="#" aria-label="Facebook">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/></svg>
+        </a>
+        <a href="#" aria-label="TikTok">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12a4 4 0 104 4V4a5 5 0 005 5"/></svg>
+        </a>
+      </div>
+    </div>
+    <div class="footer-links-grid">
+      <div class="footer-col">
+        <h4>Plataforma</h4>
+        <a href="#for-salons">Para Salones</a>
+        <a href="#for-clients">Para Clientes</a>
+        <a href="#pricing">Precios</a>
+        <a href="#demo">Demo</a>
+      </div>
+      <div class="footer-col">
+        <h4>Empresa</h4>
+        <a href="#">Sobre nosotros</a>
+        <a href="#">Terminos</a>
+        <a href="#">Privacidad</a>
+        <a href="#">Contacto</a>
+      </div>
+      <div class="footer-col">
+        <h4>Soporte</h4>
+        <a href="#">Centro de ayuda</a>
+        <a href="#">WhatsApp</a>
+        <a href="#">soporte@beautycita.com</a>
+      </div>
+    </div>
+    <div>
+      <p style="font-size:14px; color:#888; margin-bottom:8px;">Contacto</p>
+      <p style="font-size:15px; color:#ccc; font-weight:600;">+52 (720) 677-7800</p>
+    </div>
+  </div>
+  <div class="container">
+    <div class="footer-bottom">
+      <span>BeautyCita S.A. de C.V. -- Puerto Vallarta, Jalisco, Mexico</span>
+      <span>2026 BeautyCita. Todos los derechos reservados.</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+/* ========== NAVBAR SCROLL ========== */
+const navbar = document.getElementById('navbar');
+let lastScroll = 0;
+window.addEventListener('scroll', () => {
+  navbar.classList.toggle('scrolled', window.scrollY > 10);
+});
+
+/* ========== MOBILE MENU ========== */
+const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+const mobileNav = document.getElementById('mobileNav');
+mobileMenuBtn.addEventListener('click', () => {
+  mobileMenuBtn.classList.toggle('open');
+  mobileNav.classList.toggle('open');
+  document.body.style.overflow = mobileNav.classList.contains('open') ? 'hidden' : '';
+});
+function closeMobile() {
+  mobileMenuBtn.classList.remove('open');
+  mobileNav.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+/* ========== LANGUAGE TOGGLE ========== */
+function setLang(lang) {
+  document.querySelectorAll('.lang-toggle button').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+}
+
+/* ========== DEMO PHONE INPUT ========== */
+const demoPhone = document.getElementById('demoPhone');
+demoPhone.addEventListener('input', (e) => {
+  let v = e.target.value.replace(/\D/g, '');
+  if (v.startsWith('52')) v = v.substring(2);
+  if (v.length > 10) v = v.substring(0, 10);
+  let formatted = '+52 ';
+  if (v.length > 0) formatted += '(' + v.substring(0, 3);
+  if (v.length >= 3) formatted += ') ' + v.substring(3, 6);
+  if (v.length >= 6) formatted += '-' + v.substring(6, 10);
+  e.target.value = formatted;
+});
+
+function sendDemoCode() {
+  const phone = demoPhone.value.replace(/\D/g, '');
+  const feedback = document.getElementById('demoFeedback');
+  if (phone.length < 12) {
+    feedback.style.color = '#ef4444';
+    feedback.textContent = 'Por favor ingresa un numero valido de 10 digitos.';
+    return;
+  }
+  feedback.style.color = '#16a34a';
+  feedback.textContent = 'Codigo enviado por WhatsApp. Revisa tu telefono.';
+  setTimeout(() => { feedback.textContent = ''; }, 5000);
+}
+
+/* ========== INTERSECTION OBSERVER (fade-in) ========== */
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+    }
+  });
+}, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+/* ========== SMOOTH SCROLL FOR NAV LINKS ========== */
+document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+  anchor.addEventListener('click', function(e) {
+    const href = this.getAttribute('href');
+    if (href === '#') return;
+    e.preventDefault();
+    const target = document.querySelector(href);
+    if (target) {
+      const offset = 80;
+      const top = target.getBoundingClientRect().top + window.pageYOffset - offset;
+      window.scrollTo({ top, behavior: 'smooth' });
+    }
+  });
+});
+
+/* ========== COMPARISON TABLE ROW HOVER (handled by CSS) ========== */
+</script>
+</body>
+</html>

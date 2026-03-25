@@ -5,8 +5,10 @@ import 'package:beautycita_core/supabase.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/breakpoints.dart';
+import '../../config/web_theme.dart';
 import '../../providers/business_portal_provider.dart';
 import '../../providers/demo_providers.dart';
+import '../../widgets/web_design_system.dart';
 
 /// Date range filter for payments.
 enum _DateRange { thisWeek, thisMonth, allTime }
@@ -59,30 +61,42 @@ class _PaymentsContent extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Pagos', style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
+              WebSectionHeader(
+                label: 'Finanzas',
+                title: 'Pagos',
+                centered: false,
+                titleSize: 28,
+              ),
               const SizedBox(height: 24),
 
               // Revenue summary
               statsAsync.when(
                 loading: () => const SizedBox.shrink(),
                 error: (_, __) => const SizedBox.shrink(),
-                data: (stats) => Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: colors.primary.withValues(alpha: 0.06),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: colors.primary.withValues(alpha: 0.15)),
-                  ),
+                data: (stats) => WebCard(
                   child: Row(
                     children: [
-                      Icon(Icons.payments_outlined, size: 32, color: colors.primary),
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          gradient: kWebBrandGradient,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.payments_outlined, size: 24, color: Colors.white),
+                      ),
                       const SizedBox(width: 16),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Ingresos del mes', style: theme.textTheme.bodySmall?.copyWith(color: colors.onSurface.withValues(alpha: 0.6))),
-                          Text('\$${stats.revenueMonth.toStringAsFixed(0)} MXN', style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w700, color: colors.primary)),
+                          Text('Ingresos del mes', style: theme.textTheme.bodySmall?.copyWith(color: kWebTextSecondary)),
+                          ShaderMask(
+                            shaderCallback: (bounds) => kWebBrandGradient.createShader(bounds),
+                            child: Text(
+                              '\$${stats.revenueMonth.toStringAsFixed(0)} MXN',
+                              style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w700, color: Colors.white),
+                            ),
+                          ),
                         ],
                       ),
                     ],
@@ -96,7 +110,12 @@ class _PaymentsContent extends ConsumerWidget {
               const SizedBox(height: 24),
 
               // Filters
-              Text('Transacciones', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+              WebSectionHeader(
+                label: 'Historial',
+                title: 'Transacciones',
+                centered: false,
+                titleSize: 20,
+              ),
               const SizedBox(height: 12),
               Wrap(
                 spacing: 8,
@@ -156,24 +175,31 @@ class _PaymentsContent extends ConsumerWidget {
                         padding: const EdgeInsets.all(32),
                         child: Column(
                           children: [
-                            Icon(Icons.receipt_long_outlined, size: 48, color: colors.onSurface.withValues(alpha: 0.3)),
+                            Container(
+                              width: 64,
+                              height: 64,
+                              decoration: BoxDecoration(
+                                color: kWebPrimary.withValues(alpha: 0.06),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.receipt_long_outlined, size: 32, color: kWebTextHint),
+                            ),
                             const SizedBox(height: 12),
-                            Text('Sin transacciones', style: theme.textTheme.bodyMedium?.copyWith(color: colors.onSurface.withValues(alpha: 0.5))),
+                            Text('Sin transacciones', style: theme.textTheme.bodyMedium?.copyWith(color: kWebTextHint)),
                           ],
                         ),
                       ),
                     );
                   }
 
-                  return Container(
-                    decoration: BoxDecoration(
-                      color: colors.surface,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: colors.outlineVariant),
+                  return WebCard(
+                    padding: EdgeInsets.zero,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: isMobile
+                          ? Column(children: [for (final p in filtered) _PaymentMobileRow(payment: p)])
+                          : _PaymentsTable(payments: filtered),
                     ),
-                    child: isMobile
-                        ? Column(children: [for (final p in filtered) _PaymentMobileRow(payment: p)])
-                        : _PaymentsTable(payments: filtered),
                   );
                 },
               ),
@@ -346,7 +372,7 @@ class _PaymentsTable extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
 
     return DataTable(
-      headingRowColor: WidgetStateProperty.all(colors.surfaceContainerHighest.withValues(alpha: 0.3)),
+      headingRowColor: WidgetStateProperty.all(kWebBackground),
       columns: const [
         DataColumn(label: Text('Fecha')),
         DataColumn(label: Text('Metodo')),
@@ -386,8 +412,8 @@ class _PaymentsTable extends StatelessWidget {
       DataCell(Text(methodLabel)),
       DataCell(
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-          decoration: BoxDecoration(color: statusColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+          decoration: BoxDecoration(color: statusColor.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(999)),
           child: Text(status, style: TextStyle(fontSize: 12, color: statusColor, fontWeight: FontWeight.w600)),
         ),
       ),
@@ -421,7 +447,7 @@ class _PaymentMobileRow extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(border: Border(bottom: BorderSide(color: colors.outlineVariant.withValues(alpha: 0.3)))),
+      decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: kWebCardBorder))),
       child: Row(
         children: [
           Expanded(

@@ -8,8 +8,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:beautycita_core/supabase.dart';
 
 import '../../config/breakpoints.dart';
+import '../../config/web_theme.dart';
 import '../../providers/business_portal_provider.dart';
 import '../../providers/demo_providers.dart';
+import '../../widgets/web_design_system.dart';
 
 /// Business portal page for managing external calendar connections,
 /// ICS export/import, and sync settings.
@@ -229,9 +231,6 @@ class _Content extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-
     return LayoutBuilder(builder: (context, constraints) {
       final isDesktop = WebBreakpoints.isDesktop(constraints.maxWidth);
       final hPad = isDesktop ? 40.0 : 20.0;
@@ -242,18 +241,12 @@ class _Content extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header
-            Text(
-              'Calendario Externo',
-              style: theme.textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Conecta, importa y exporta tu calendario. Compatible con Google Calendar, Apple Calendar, Outlook y cualquier app que soporte formato ICS.',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: colors.onSurface.withValues(alpha: 0.6),
-              ),
+            WebSectionHeader(
+              label: 'Integraciones',
+              title: 'Calendario Externo',
+              subtitle: 'Conecta, importa y exporta tu calendario. Compatible con Google Calendar, Apple Calendar, Outlook y cualquier app que soporte formato ICS.',
+              centered: false,
+              titleSize: 28,
             ),
             const SizedBox(height: 32),
 
@@ -280,11 +273,11 @@ class _Content extends StatelessWidget {
             const SizedBox(height: 32),
 
             // Connected calendars section
-            Text(
-              'Calendarios conectados',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+            WebSectionHeader(
+              label: 'Conexiones',
+              title: 'Calendarios conectados',
+              centered: false,
+              titleSize: 22,
             ),
             const SizedBox(height: 16),
 
@@ -327,52 +320,57 @@ class _ExportCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colors = theme.colorScheme;
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.download_rounded, color: colors.primary),
-                const SizedBox(width: 8),
-                Text(
-                  'Exportar ICS',
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+    return WebCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: kWebPrimary.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-              ],
+                child: const Icon(Icons.download_outlined, size: 18, color: kWebPrimary),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'Exportar ICS',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: kWebTextPrimary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Descarga tu calendario de citas en formato .ics. Compatible con Google Calendar, Apple Calendar, Outlook y mas.',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: kWebTextSecondary,
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Descarga tu calendario de citas en formato .ics. Compatible con Google Calendar, Apple Calendar, Outlook y mas.',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: colors.onSurface.withValues(alpha: 0.6),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: WebGradientButton(
+              onPressed: parent.isExporting ? null : parent.onExport,
+              isLoading: parent.isExporting,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (!parent.isExporting) const Icon(Icons.download_outlined, size: 18, color: Colors.white),
+                  if (!parent.isExporting) const SizedBox(width: 8),
+                  Text(parent.isExporting ? 'Exportando...' : 'Descargar .ics'),
+                ],
               ),
             ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: parent.isExporting ? null : parent.onExport,
-                icon: parent.isExporting
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child:
-                            CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.download_rounded, size: 18),
-                label: Text(
-                    parent.isExporting ? 'Exportando...' : 'Descargar .ics'),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -387,52 +385,57 @@ class _ImportCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colors = theme.colorScheme;
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.upload_file_rounded, color: colors.tertiary),
-                const SizedBox(width: 8),
-                Text(
-                  'Importar ICS',
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+    return WebCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: kWebTertiary.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-              ],
+                child: const Icon(Icons.upload_file_outlined, size: 18, color: kWebTertiary),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'Importar ICS',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: kWebTextPrimary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Sube un archivo .ics para importar eventos de otro calendario. Los eventos se muestran como bloques de ocupado.',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: kWebTextSecondary,
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Sube un archivo .ics para importar eventos de otro calendario. Los eventos se muestran como bloques de ocupado.',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: colors.onSurface.withValues(alpha: 0.6),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: WebOutlinedButton(
+              onPressed: parent.isImporting ? null : parent.onImport,
+              isLoading: parent.isImporting,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (!parent.isImporting) const Icon(Icons.upload_file_outlined, size: 18, color: kWebPrimary),
+                  if (!parent.isImporting) const SizedBox(width: 8),
+                  Text(parent.isImporting ? 'Importando...' : 'Subir archivo .ics'),
+                ],
               ),
             ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: parent.isImporting ? null : parent.onImport,
-                icon: parent.isImporting
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child:
-                            CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.upload_file_rounded, size: 18),
-                label: Text(
-                    parent.isImporting ? 'Importando...' : 'Subir archivo .ics'),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -447,51 +450,56 @@ class _FeedCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colors = theme.colorScheme;
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.rss_feed_rounded, color: colors.secondary),
-                const SizedBox(width: 8),
-                Text(
-                  'Feed ICS',
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+    return WebCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: kWebSecondary.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'URL publica que se actualiza automaticamente. Suscribete desde Google Calendar, Apple Calendar o Outlook.',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: colors.onSurface.withValues(alpha: 0.6),
+                child: const Icon(Icons.rss_feed_outlined, size: 18, color: kWebSecondary),
               ),
-            ),
-            const SizedBox(height: 16),
-            if (parent.feedUrl != null) ...[
-              _CopyField(label: 'Mi calendario', url: parent.feedUrl!),
-              if (parent.bizFeedUrl != null) ...[
-                const SizedBox(height: 8),
-                _CopyField(label: 'Salon completo', url: parent.bizFeedUrl!),
-              ],
-            ] else
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: parent.onGetFeedUrl,
-                  icon: const Icon(Icons.link_rounded, size: 18),
-                  label: const Text('Obtener URL de feed'),
+              const SizedBox(width: 10),
+              Text(
+                'Feed ICS',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: kWebTextPrimary,
                 ),
               ),
-          ],
-        ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'URL publica que se actualiza automaticamente. Suscribete desde Google Calendar, Apple Calendar o Outlook.',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: kWebTextSecondary,
+            ),
+          ),
+          const SizedBox(height: 16),
+          if (parent.feedUrl != null) ...[
+            _CopyField(label: 'Mi calendario', url: parent.feedUrl!),
+            if (parent.bizFeedUrl != null) ...[
+              const SizedBox(height: 8),
+              _CopyField(label: 'Salon completo', url: parent.bizFeedUrl!),
+            ],
+          ] else
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: parent.onGetFeedUrl,
+                icon: const Icon(Icons.link_outlined, size: 18),
+                label: const Text('Obtener URL de feed'),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -562,79 +570,39 @@ class _GoogleCalendarCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colors = theme.colorScheme;
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    return WebCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          WebInfoRow(
+            icon: Icons.g_mobiledata_outlined,
+            iconColor: const Color(0xFF4285F4),
+            label: 'Sincronizacion bidireccional via OAuth',
+            value: 'Google Calendar',
+          ),
+          const SizedBox(height: 16),
+          if (!parent.isDemo) ...[
             Row(
               children: [
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF4285F4).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Center(
-                    child: Text(
-                      'G',
-                      style: TextStyle(
-                        color: Color(0xFF4285F4),
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Google Calendar',
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      Text(
-                        'Sincronizacion bidireccional via OAuth',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: colors.onSurface.withValues(alpha: 0.5),
-                        ),
-                      ),
-                    ],
+                  child: OutlinedButton.icon(
+                    onPressed: parent.onSyncGoogle,
+                    icon: parent.isSyncing
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.sync_outlined, size: 18),
+                    label: Text(parent.isSyncing ? 'Sincronizando...' : 'Sincronizar'),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            if (!parent.isDemo) ...[
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: parent.onSyncGoogle,
-                      icon: parent.isSyncing
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.sync_rounded, size: 18),
-                      label: Text(parent.isSyncing ? 'Sincronizando...' : 'Sincronizar'),
-                    ),
-                  ),
-                ],
-              ),
-            ] else
-              _DemoBadge(),
-          ],
-        ),
+          ] else
+            _DemoBadge(),
+        ],
       ),
     );
   }
@@ -649,64 +617,27 @@ class _AppleCalendarCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colors = theme.colorScheme;
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: colors.onSurface.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Center(
-                    child: Icon(
-                      Icons.apple_rounded,
-                      size: 20,
-                      color: colors.onSurface,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Apple Calendar',
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      Text(
-                        'Via CalDAV o suscripcion ICS',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: colors.onSurface.withValues(alpha: 0.5),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+    return WebCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          WebInfoRow(
+            icon: Icons.apple_outlined,
+            iconColor: kWebTextPrimary,
+            label: 'Via CalDAV o suscripcion ICS',
+            value: 'Apple Calendar',
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Usa el Feed ICS de arriba para suscribirte desde Apple Calendar. Tu calendario se actualiza automaticamente.',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: kWebTextSecondary,
             ),
-            const SizedBox(height: 12),
-            Text(
-              'Usa el Feed ICS de arriba para suscribirte desde Apple Calendar. Tu calendario se actualiza automaticamente.',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: colors.onSurface.withValues(alpha: 0.6),
-              ),
-            ),
-            const SizedBox(height: 8),
-            _CompatBadge(label: 'Compatible via ICS'),
-          ],
-        ),
+          ),
+          const SizedBox(height: 8),
+          _CompatBadge(label: 'Compatible via ICS'),
+        ],
       ),
     );
   }
@@ -721,67 +652,27 @@ class _OutlookCalendarCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colors = theme.colorScheme;
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF0078D4).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Center(
-                    child: Text(
-                      'O',
-                      style: TextStyle(
-                        color: Color(0xFF0078D4),
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Outlook / Microsoft 365',
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      Text(
-                        'Via Microsoft Graph o suscripcion ICS',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: colors.onSurface.withValues(alpha: 0.5),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+    return WebCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          WebInfoRow(
+            icon: Icons.mail_outlined,
+            iconColor: const Color(0xFF0078D4),
+            label: 'Via Microsoft Graph o suscripcion ICS',
+            value: 'Outlook / Microsoft 365',
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Suscribete al Feed ICS desde Outlook para sincronizar automaticamente. O importa/exporta archivos .ics manualmente.',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: kWebTextSecondary,
             ),
-            const SizedBox(height: 12),
-            Text(
-              'Suscribete al Feed ICS desde Outlook para sincronizar automaticamente. O importa/exporta archivos .ics manualmente.',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: colors.onSurface.withValues(alpha: 0.6),
-              ),
-            ),
-            const SizedBox(height: 8),
-            _CompatBadge(label: 'Compatible via ICS'),
-          ],
-        ),
+          ),
+          const SizedBox(height: 8),
+          _CompatBadge(label: 'Compatible via ICS'),
+        ],
       ),
     );
   }
@@ -795,9 +686,6 @@ class _HowItWorks extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-
     final steps = [
       (Icons.download_rounded, 'Exportar', 'Descarga tus citas como .ics e importalo en cualquier app de calendario.'),
       (Icons.upload_file_rounded, 'Importar', 'Sube un .ics de otro calendario. Los eventos bloquean disponibilidad automaticamente.'),
@@ -805,20 +693,15 @@ class _HowItWorks extends StatelessWidget {
       (Icons.sync_rounded, 'Sync OAuth', 'Conecta Google Calendar con un clic. Sincronizacion automatica bidireccional.'),
     ];
 
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: colors.surfaceContainerHighest.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(12),
-      ),
+    return WebCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Como funciona',
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
+          WebSectionHeader(
+            label: 'Guia',
+            title: 'Como funciona',
+            centered: false,
+            titleSize: 20,
           ),
           const SizedBox(height: 16),
           if (isDesktop)
@@ -862,12 +745,19 @@ class _StepItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colors = theme.colorScheme;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 20, color: colors.primary),
+        Container(
+          width: 34,
+          height: 34,
+          decoration: BoxDecoration(
+            color: kWebPrimary.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, size: 18, color: kWebPrimary),
+        ),
         const SizedBox(width: 8),
         Expanded(
           child: Column(
@@ -883,7 +773,7 @@ class _StepItem extends StatelessWidget {
               Text(
                 desc,
                 style: theme.textTheme.bodySmall?.copyWith(
-                  color: colors.onSurface.withValues(alpha: 0.6),
+                  color: kWebTextSecondary,
                 ),
               ),
             ],
@@ -922,21 +812,23 @@ class _CompatBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final green = const Color(0xFF22C55E);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
       decoration: BoxDecoration(
-        color: Colors.green.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(6),
+        color: green.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(999),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.check_circle_outlined, size: 14, color: Colors.green.shade700),
+          Icon(Icons.check_circle_outlined, size: 14, color: green),
           const SizedBox(width: 4),
           Text(
             label,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: Colors.green.shade700,
+              color: green,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],

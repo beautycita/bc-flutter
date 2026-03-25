@@ -1,11 +1,12 @@
-import 'package:beautycita_core/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 
 import '../../config/breakpoints.dart';
+import '../../config/web_theme.dart';
 import '../../providers/admin_operations_provider.dart';
+import '../../widgets/web_design_system.dart';
 
 /// CEO Operations Dashboard — system health, business activity, and logs.
 ///
@@ -72,58 +73,16 @@ class _PageHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final now = DateTime.now();
     final dateStr = DateFormat('EEEE, d MMMM yyyy', 'es').format(now);
     final formattedDate = dateStr[0].toUpperCase() + dateStr.substring(1);
     final timeStr = DateFormat('HH:mm').format(now);
 
-    if (isMobile) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.monitor_heart_outlined,
-                  size: 24, color: theme.colorScheme.primary),
-              const SizedBox(width: BCSpacing.sm),
-              Text(
-                'Centro de Operaciones',
-                style: theme.textTheme.headlineSmall
-                    ?.copyWith(fontWeight: FontWeight.w700),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            '$formattedDate  $timeStr',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-            ),
-          ),
-        ],
-      );
-    }
-
-    return Row(
-      children: [
-        Icon(Icons.monitor_heart_outlined,
-            size: 28, color: theme.colorScheme.primary),
-        const SizedBox(width: BCSpacing.sm),
-        Expanded(
-          child: Text(
-            'Centro de Operaciones',
-            style: theme.textTheme.headlineMedium
-                ?.copyWith(fontWeight: FontWeight.w700),
-          ),
-        ),
-        Text(
-          '$formattedDate  $timeStr',
-          style: theme.textTheme.bodyLarge?.copyWith(
-            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-          ),
-        ),
-      ],
+    return WebSectionHeader(
+      label: '$formattedDate  $timeStr',
+      title: 'Centro de Operaciones',
+      centered: false,
+      titleSize: isMobile ? 28 : 36,
     );
   }
 }
@@ -137,27 +96,28 @@ class _SystemHealthColumn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colors = theme.colorScheme;
     final healthAsync = ref.watch(systemHealthProvider);
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colors.outlineVariant),
-      ),
+    return WebCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.dns_outlined, size: 20, color: colors.primary),
-              const SizedBox(width: 8),
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: kWebPrimary.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.dns_outlined, size: 18, color: kWebPrimary),
+              ),
+              const SizedBox(width: 10),
               Text(
                 'Salud del Sistema',
                 style: theme.textTheme.titleSmall
-                    ?.copyWith(fontWeight: FontWeight.w600),
+                    ?.copyWith(fontWeight: FontWeight.w700, color: kWebTextPrimary),
               ),
             ],
           ),
@@ -230,15 +190,19 @@ class _SystemHealthColumn extends StatelessWidget {
         const SizedBox(height: 24),
 
         // Grafana dashboards link
-        OutlinedButton.icon(
-          icon: const Icon(Icons.open_in_new, size: 18),
-          label: const Text('Abrir Grafana'),
-          style: OutlinedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-          ),
+        WebOutlinedButton(
           onPressed: () {
             launchUrlString('https://beautycita.com/grafana/');
           },
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.open_in_new_outlined, size: 18, color: kWebPrimary),
+              const SizedBox(width: 8),
+              const Text('Abrir Grafana'),
+            ],
+          ),
         ),
       ],
     );
@@ -267,7 +231,6 @@ class _StatusIndicator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colors = theme.colorScheme;
 
     final (Color dotColor, Color bgColor) = switch (status) {
       _HealthStatus.green => (
@@ -288,7 +251,8 @@ class _StatusIndicator extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: kWebCardBorder),
       ),
       child: Row(
         children: [
@@ -311,13 +275,13 @@ class _StatusIndicator extends StatelessWidget {
             child: Text(
               label,
               style: theme.textTheme.bodySmall
-                  ?.copyWith(fontWeight: FontWeight.w600),
+                  ?.copyWith(fontWeight: FontWeight.w600, color: kWebTextPrimary),
             ),
           ),
           Text(
             detail,
             style: theme.textTheme.labelSmall?.copyWith(
-              color: colors.onSurface.withValues(alpha: 0.6),
+              color: kWebTextSecondary,
             ),
           ),
         ],
@@ -335,27 +299,28 @@ class _BusinessActivityColumn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colors = theme.colorScheme;
     final activityAsync = ref.watch(businessActivityProvider);
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colors.outlineVariant),
-      ),
+    return WebCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.trending_up, size: 20, color: colors.primary),
-              const SizedBox(width: 8),
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: kWebSecondary.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.trending_up_outlined, size: 18, color: kWebSecondary),
+              ),
+              const SizedBox(width: 10),
               Text(
                 'Actividad del Negocio',
                 style: theme.textTheme.titleSmall
-                    ?.copyWith(fontWeight: FontWeight.w600),
+                    ?.copyWith(fontWeight: FontWeight.w700, color: kWebTextPrimary),
               ),
             ],
           ),
@@ -381,7 +346,6 @@ class _BusinessActivityColumn extends StatelessWidget {
   Widget _buildActivityContent(
       BuildContext context, BusinessActivity activity) {
     final theme = Theme.of(context);
-    final colors = theme.colorScheme;
 
     return Column(
       children: [
@@ -389,8 +353,9 @@ class _BusinessActivityColumn extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: colors.primary.withValues(alpha: 0.06),
-            borderRadius: BorderRadius.circular(10),
+            color: kWebPrimary.withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: kWebCardBorder),
           ),
           child: Column(
             children: [
@@ -398,14 +363,14 @@ class _BusinessActivityColumn extends StatelessWidget {
                 '${activity.totalBookingsToday}',
                 style: theme.textTheme.displaySmall?.copyWith(
                   fontWeight: FontWeight.w800,
-                  color: colors.primary,
+                  color: kWebPrimary,
                 ),
               ),
               const SizedBox(height: 4),
               Text(
                 'Reservas hoy',
                 style: theme.textTheme.bodySmall?.copyWith(
-                  color: colors.onSurface.withValues(alpha: 0.6),
+                  color: kWebTextSecondary,
                 ),
               ),
               const SizedBox(height: 12),
@@ -537,27 +502,28 @@ class _ActivityMetric extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colors = theme.colorScheme;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: highlight
             ? iconColor.withValues(alpha: 0.06)
-            : colors.surfaceContainerHighest.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(8),
-        border: highlight
-            ? Border.all(color: iconColor.withValues(alpha: 0.2))
-            : null,
+            : kWebBackground,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: highlight
+              ? iconColor.withValues(alpha: 0.2)
+              : kWebCardBorder,
+        ),
       ),
       child: Row(
         children: [
           Container(
-            width: 36,
-            height: 36,
+            width: 34,
+            height: 34,
             decoration: BoxDecoration(
-              color: iconColor.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(8),
+              color: iconColor.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icon, size: 18, color: iconColor),
           ),
@@ -566,14 +532,14 @@ class _ActivityMetric extends StatelessWidget {
             child: Text(
               label,
               style: theme.textTheme.bodySmall
-                  ?.copyWith(fontWeight: FontWeight.w500),
+                  ?.copyWith(fontWeight: FontWeight.w500, color: kWebTextPrimary),
             ),
           ),
           Text(
             value,
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w700,
-              color: highlight ? iconColor : null,
+              color: highlight ? iconColor : kWebTextPrimary,
             ),
           ),
         ],
@@ -591,27 +557,28 @@ class _AlertsLogsColumn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colors = theme.colorScheme;
     final logsAsync = ref.watch(opsLogsProvider);
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colors.outlineVariant),
-      ),
+    return WebCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.history, size: 20, color: colors.primary),
-              const SizedBox(width: 8),
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: kWebTertiary.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.history_outlined, size: 18, color: kWebTertiary),
+              ),
+              const SizedBox(width: 10),
               Text(
                 'Alertas y Registro',
                 style: theme.textTheme.titleSmall
-                    ?.copyWith(fontWeight: FontWeight.w600),
+                    ?.copyWith(fontWeight: FontWeight.w700, color: kWebTextPrimary),
               ),
             ],
           ),
@@ -642,8 +609,7 @@ class _AlertsLogsColumn extends StatelessWidget {
                         Text(
                           'Sin eventos recientes',
                           style: theme.textTheme.bodySmall?.copyWith(
-                            color:
-                                colors.onSurface.withValues(alpha: 0.4),
+                            color: kWebTextHint,
                           ),
                         ),
                       ],
@@ -695,8 +661,8 @@ class _AlertsLogsColumn extends StatelessWidget {
                     // Show all mixed if no typed entries
                     _LogSection(
                       title: 'Registro de actividad',
-                      icon: Icons.list_alt,
-                      color: colors.primary,
+                      icon: Icons.list_alt_outlined,
+                      color: kWebPrimary,
                       entries: logs.take(15).toList(),
                     ),
                 ],
@@ -724,7 +690,6 @@ class _LogSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colors = theme.colorScheme;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -748,7 +713,7 @@ class _LogSection extends StatelessWidget {
           if (i < entries.length - 1)
             Divider(
               height: 1,
-              color: colors.outlineVariant.withValues(alpha: 0.5),
+              color: kWebCardBorder.withValues(alpha: 0.5),
             ),
         ],
       ],
@@ -763,16 +728,15 @@ class _LogRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colors = theme.colorScheme;
 
     final (IconData icon, Color color) = switch (entry.type) {
-      'failed_payment' => (Icons.error_outline, const Color(0xFFE53935)),
-      'toggle_change' => (Icons.toggle_on, const Color(0xFFFF9800)),
+      'failed_payment' => (Icons.error_outlined, const Color(0xFFE53935)),
+      'toggle_change' => (Icons.toggle_on_outlined, const Color(0xFFFF9800)),
       'admin_action' => (
           Icons.admin_panel_settings_outlined,
           const Color(0xFF2196F3)
         ),
-      _ => (Icons.info_outline, colors.primary),
+      _ => (Icons.info_outlined, kWebPrimary),
     };
 
     return Padding(
@@ -781,13 +745,13 @@ class _LogRow extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 28,
-            height: 28,
+            width: 34,
+            height: 34,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(6),
+              color: color.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, size: 14, color: color),
+            child: Icon(icon, size: 18, color: color),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -803,7 +767,7 @@ class _LogRow extends StatelessWidget {
                 Text(
                   _formatTimeAgo(entry.timestamp),
                   style: theme.textTheme.labelSmall?.copyWith(
-                    color: colors.onSurface.withValues(alpha: 0.4),
+                    color: kWebTextHint,
                     fontSize: 10,
                   ),
                 ),

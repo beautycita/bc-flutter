@@ -1,0 +1,1384 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BEAUTYCITA — GUÍA DE EMERGENCIA</title>
+<style>
+/* ===== RESET & BASE ===== */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  line-height: 1.6;
+  font-size: 18px;
+}
+a { color: #64b5f6; text-decoration: underline; }
+a:hover { color: #90caf9; }
+
+/* ===== PULSING RED DOT ===== */
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(255, 50, 50, 0.7); }
+  70% { box-shadow: 0 0 0 14px rgba(255, 50, 50, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 50, 50, 0); }
+}
+.pulse-dot {
+  display: inline-block;
+  width: 16px; height: 16px;
+  background: #ff3232;
+  border-radius: 50%;
+  animation: pulse 1.5s infinite;
+  vertical-align: middle;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+.pulse-dot-lg {
+  width: 24px; height: 24px;
+  animation: pulse 1.2s infinite;
+}
+
+/* ===== LAYOUT ===== */
+.wrapper {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* ===== HEADER ===== */
+.header {
+  text-align: center;
+  padding: 50px 20px 40px;
+  border-bottom: 3px solid #ff3232;
+  margin-bottom: 40px;
+}
+.header-logo {
+  font-size: 42px;
+  font-weight: 900;
+  letter-spacing: 4px;
+  color: #ffffff;
+  margin-bottom: 10px;
+}
+.header-logo span { color: #ff6b9d; }
+.header-subtitle {
+  font-size: 28px;
+  font-weight: 700;
+  color: #ff3232;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+.header-msg {
+  font-size: 20px;
+  color: #ccc;
+  max-width: 700px;
+  margin: 0 auto 20px;
+  line-height: 1.5;
+}
+.header-meta {
+  font-size: 14px;
+  color: #888;
+  margin-top: 16px;
+}
+
+/* ===== SECTION HEADERS ===== */
+.section-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px; height: 48px;
+  background: #ff3232;
+  color: #fff;
+  font-weight: 900;
+  font-size: 24px;
+  border-radius: 50%;
+  margin-right: 16px;
+  flex-shrink: 0;
+}
+.section-title {
+  font-size: 28px;
+  font-weight: 800;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-top: 40px;
+}
+
+/* ===== COLOR BOXES ===== */
+.box-red {
+  background: rgba(255, 50, 50, 0.15);
+  border: 2px solid #ff3232;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+.box-yellow {
+  background: rgba(255, 193, 7, 0.12);
+  border: 2px solid #ffc107;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+.box-green {
+  background: rgba(76, 175, 80, 0.12);
+  border: 2px solid #4caf50;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+.box-blue {
+  background: rgba(100, 181, 246, 0.12);
+  border: 2px solid #64b5f6;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+/* ===== CARD GRID ===== */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  margin-bottom: 24px;
+}
+.card {
+  background: #16213e;
+  border: 1px solid #333;
+  border-radius: 12px;
+  padding: 24px;
+  transition: transform 0.2s;
+}
+.card:hover { transform: translateY(-2px); }
+.card-icon {
+  font-size: 36px;
+  margin-bottom: 12px;
+  display: block;
+}
+.card-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 8px;
+}
+.card-desc {
+  font-size: 15px;
+  color: #aaa;
+}
+.card-value {
+  font-family: 'Courier New', monospace;
+  background: #0d1117;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #4caf50;
+  margin-top: 8px;
+  display: inline-block;
+  word-break: break-all;
+}
+
+/* ===== STEP CARDS ===== */
+.step-card {
+  background: #16213e;
+  border-radius: 16px;
+  padding: 32px;
+  margin-bottom: 28px;
+  border-left: 6px solid #64b5f6;
+  position: relative;
+}
+.step-card.critical { border-left-color: #ff3232; }
+.step-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.step-num {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px; height: 56px;
+  background: #64b5f6;
+  color: #1a1a2e;
+  font-weight: 900;
+  font-size: 26px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.step-card.critical .step-num { background: #ff3232; color: #fff; }
+.step-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #fff;
+}
+.step-time {
+  font-size: 14px;
+  color: #4caf50;
+  font-weight: 600;
+  background: rgba(76,175,80,0.15);
+  padding: 4px 12px;
+  border-radius: 20px;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+/* ===== CODE BLOCKS ===== */
+.code-block {
+  position: relative;
+  background: #0d1117;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 16px 50px 16px 16px;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  color: #c9d1d9;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin: 12px 0;
+  line-height: 1.7;
+}
+.copy-btn {
+  position: absolute;
+  top: 8px; right: 8px;
+  background: #333;
+  color: #ccc;
+  border: 1px solid #555;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.copy-btn:hover { background: #4caf50; color: #fff; border-color: #4caf50; }
+
+/* ===== ACCORDION (CSS-only) ===== */
+.accordion-toggle { display: none; }
+.accordion-label {
+  display: flex;
+  align-items: center;
+  background: #16213e;
+  border: 1px solid #333;
+  border-radius: 12px;
+  padding: 20px 24px;
+  cursor: pointer;
+  margin-bottom: 4px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
+  transition: background 0.2s;
+  user-select: none;
+}
+.accordion-label:hover { background: #1e2a4a; }
+.accordion-label::after {
+  content: '▸';
+  margin-left: auto;
+  font-size: 24px;
+  transition: transform 0.3s;
+  color: #64b5f6;
+}
+.accordion-toggle:checked + .accordion-label::after { transform: rotate(90deg); }
+.accordion-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.4s ease;
+  margin-bottom: 16px;
+}
+.accordion-toggle:checked ~ .accordion-content {
+  max-height: 5000px;
+}
+.accordion-inner {
+  padding: 24px;
+  background: #111827;
+  border: 1px solid #333;
+  border-top: none;
+  border-radius: 0 0 12px 12px;
+}
+
+/* ===== TABLE ===== */
+.inv-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+  margin: 16px 0;
+}
+.inv-table th {
+  background: #1e2a4a;
+  color: #64b5f6;
+  padding: 14px 16px;
+  text-align: left;
+  font-weight: 700;
+  border-bottom: 2px solid #333;
+}
+.inv-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #222;
+  color: #ccc;
+}
+.inv-table tr:hover td { background: rgba(100,181,246,0.05); }
+.inv-table code {
+  font-family: 'Courier New', monospace;
+  background: #0d1117;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 13px;
+  color: #4caf50;
+}
+.badge-yes {
+  background: #ff3232;
+  color: #fff;
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.badge-no {
+  background: #333;
+  color: #888;
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+}
+
+/* ===== CREDENTIALS TABLE ===== */
+.cred-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+}
+.cred-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid #222;
+}
+.cred-table td:first-child {
+  color: #aaa;
+  font-weight: 600;
+  width: 35%;
+}
+.cred-table td:last-child {
+  font-family: 'Courier New', monospace;
+  color: #4caf50;
+  font-size: 14px;
+  word-break: break-all;
+}
+
+/* ===== PROGRESS SIDEBAR ===== */
+.progress-bar {
+  position: fixed;
+  top: 0; left: 0;
+  width: 60px;
+  height: 100vh;
+  background: #0f0f23;
+  border-right: 1px solid #333;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 0;
+  gap: 6px;
+  z-index: 100;
+}
+.prog-dot {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: #333;
+  color: #888;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+.prog-dot:hover { background: #64b5f6; color: #1a1a2e; }
+.prog-dot.active { background: #ff3232; color: #fff; }
+.prog-label {
+  font-size: 9px;
+  color: #555;
+  text-align: center;
+  writing-mode: vertical-rl;
+  margin-top: 8px;
+  letter-spacing: 1px;
+}
+
+/* Push content for sidebar */
+.main-content { margin-left: 70px; }
+
+/* ===== CONTACT CARD ===== */
+.contact-card {
+  background: #16213e;
+  border: 1px solid #333;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.contact-icon {
+  font-size: 32px;
+  width: 50px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.contact-info { flex: 1; }
+.contact-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 4px;
+}
+.contact-detail {
+  font-size: 14px;
+  color: #aaa;
+}
+
+/* ===== ORDERED SOURCE LIST ===== */
+.source-list {
+  list-style: none;
+  counter-reset: source;
+  padding: 0;
+}
+.source-list li {
+  counter-increment: source;
+  padding: 16px 16px 16px 60px;
+  position: relative;
+  margin-bottom: 12px;
+  background: #0d1117;
+  border-radius: 8px;
+  border: 1px solid #333;
+}
+.source-list li::before {
+  content: counter(source);
+  position: absolute;
+  left: 16px; top: 14px;
+  width: 32px; height: 32px;
+  background: #64b5f6;
+  color: #1a1a2e;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 16px;
+}
+.source-list li strong { color: #fff; }
+
+/* ===== DIVIDER ===== */
+.divider {
+  border: none;
+  border-top: 1px solid #333;
+  margin: 40px 0;
+}
+
+/* ===== FOOTER ===== */
+.footer {
+  text-align: center;
+  padding: 40px 20px;
+  border-top: 1px solid #333;
+  margin-top: 60px;
+}
+.footer-logo {
+  font-size: 24px;
+  font-weight: 900;
+  color: #ff6b9d;
+  letter-spacing: 2px;
+  margin-bottom: 16px;
+}
+.footer p {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 8px;
+}
+.footer .badge-ok {
+  display: inline-block;
+  background: rgba(76,175,80,0.15);
+  border: 1px solid #4caf50;
+  color: #4caf50;
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
+  margin-top: 8px;
+}
+
+/* ===== PRINT ===== */
+@media print {
+  body { background: #fff; color: #111; font-size: 12pt; }
+  .progress-bar { display: none; }
+  .main-content { margin-left: 0; }
+  .header { border-bottom-color: #cc0000; }
+  .header-logo, .header-subtitle, .section-title, .step-title, .card-title, .contact-name, .accordion-label { color: #111 !important; }
+  .pulse-dot { animation: none; background: #cc0000; }
+  .box-red { border-color: #cc0000; background: #fff0f0; }
+  .box-yellow { border-color: #cc8800; background: #fffde0; }
+  .box-green { border-color: #228800; background: #f0fff0; }
+  .box-blue { border-color: #2266cc; background: #f0f4ff; }
+  .card, .step-card, .accordion-label, .accordion-inner, .contact-card { background: #f8f8f8; border-color: #ccc; }
+  .code-block { background: #f0f0f0; color: #111; border-color: #ccc; }
+  .copy-btn { display: none; }
+  .inv-table th { background: #e0e0e0; color: #111; }
+  .accordion-content { max-height: none !important; }
+  .card-value { background: #eee; color: #111; }
+  .cred-table td:last-child { color: #111; }
+  a { color: #2266cc; }
+  .footer { border-top-color: #ccc; }
+  .prog-dot { display: none; }
+}
+
+/* ===== MOBILE ===== */
+@media (max-width: 768px) {
+  .progress-bar { display: none; }
+  .main-content { margin-left: 0; }
+  body { font-size: 16px; }
+  .header-logo { font-size: 28px; }
+  .header-subtitle { font-size: 20px; }
+  .section-title { font-size: 22px; }
+  .card-grid { grid-template-columns: 1fr; }
+  .step-header { flex-wrap: wrap; }
+  .step-time { margin-left: 0; margin-top: 8px; }
+  .wrapper { padding: 12px; }
+  .code-block { font-size: 12px; padding: 12px 40px 12px 12px; }
+  .inv-table { font-size: 13px; }
+  .inv-table th, .inv-table td { padding: 8px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ===== PROGRESS SIDEBAR ===== -->
+<nav class="progress-bar" aria-label="Progreso de restauración">
+  <a href="#header" class="prog-dot active" title="Inicio">&#9650;</a>
+  <a href="#sec1" class="prog-dot" title="Antes de empezar">1</a>
+  <a href="#sec2" class="prog-dot" title="Lo que necesitas">2</a>
+  <a href="#sec3" class="prog-dot" title="Contactos">3</a>
+  <a href="#sec4" class="prog-dot" title="Restauración">4</a>
+  <a href="#sec5" class="prog-dot" title="Inventario">5</a>
+  <a href="#sec6" class="prog-dot" title="Credenciales">6</a>
+  <span class="prog-label">RESTAURAR</span>
+</nav>
+
+<div class="main-content">
+<div class="wrapper">
+
+<!-- ===== HEADER ===== -->
+<header class="header" id="header">
+  <!-- Inline SVG alert icon -->
+  <div style="margin-bottom: 20px;">
+    <svg width="80" height="80" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 0 20px rgba(255,50,50,0.5));">
+      <circle cx="40" cy="40" r="38" fill="none" stroke="#ff3232" stroke-width="3">
+        <animate attributeName="r" values="34;38;34" dur="1.5s" repeatCount="indefinite"/>
+        <animate attributeName="opacity" values="0.5;1;0.5" dur="1.5s" repeatCount="indefinite"/>
+      </circle>
+      <polygon points="40,18 56,54 24,54" fill="none" stroke="#ff3232" stroke-width="3" stroke-linejoin="round"/>
+      <line x1="40" y1="30" x2="40" y2="42" stroke="#ff3232" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="40" cy="48" r="2" fill="#ff3232"/>
+    </svg>
+  </div>
+  <div class="header-logo">BEAUTY<span>CITA</span></div>
+  <div class="header-subtitle">
+    <span class="pulse-dot pulse-dot-lg"></span>
+    GUÍA DE EMERGENCIA
+    <span class="pulse-dot pulse-dot-lg"></span>
+  </div>
+  <p class="header-msg">
+    Si estás leyendo esto, algo salió mal.<br>
+    Esta guía te ayudará a restaurar todo.<br>
+    <strong style="color:#fff;">No entres en pánico. Todo tiene solución.</strong>
+  </p>
+  <div class="header-meta">
+    Generado: 23 de marzo, 2026 &nbsp;|&nbsp; Versión del respaldo: v3.2
+  </div>
+</header>
+
+<!-- ======================================================================= -->
+<!-- PRIORITY: DOWNLOAD YOUR BACKUP -->
+<!-- ======================================================================= -->
+<section id="sec0" style="margin-bottom:40px;">
+  <div style="background: linear-gradient(135deg, #1b5e20, #2e7d32); border: 3px solid #4caf50; border-radius: 16px; padding: 32px; text-align: center; position: relative; overflow: hidden;">
+
+    <!-- Animated background pulse -->
+    <div style="position:absolute; top:50%; left:50%; width:300px; height:300px; background: rgba(76,175,80,0.15); border-radius:50%; transform:translate(-50%,-50%); animation: pulse 3s infinite;"></div>
+
+    <div style="position:relative; z-index:1;">
+      <div style="font-size:48px; margin-bottom:8px;">📦</div>
+      <h2 style="color:#fff; font-size:32px; font-weight:800; margin-bottom:8px; letter-spacing:1px;">
+        PASO CERO — DESCARGA TU RESPALDO
+      </h2>
+      <p style="color:#c8e6c9; font-size:18px; margin-bottom:24px;">
+        Antes de hacer CUALQUIER otra cosa, descarga el respaldo completo.
+      </p>
+
+      <!-- Big download button -->
+      <a href="https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/apk/beautycita.apk"
+         style="display:none;"><!-- hidden, just to show the domain pattern --></a>
+
+      <div style="margin-bottom:24px;">
+        <a href="https://dash.cloudflare.com/?account=beautycita/r2/beautycita-backups"
+           target="_blank"
+           style="display:inline-block; background:#4caf50; color:#fff; text-decoration:none; font-size:24px; font-weight:800; padding:20px 48px; border-radius:12px; box-shadow: 0 4px 20px rgba(76,175,80,0.5); transition: transform 0.2s; margin-bottom:8px;"
+           onmouseover="this.style.transform='scale(1.05)'"
+           onmouseout="this.style.transform='scale(1)'">
+          ⬇️ ABRIR CLOUDFLARE R2 — DESCARGAR RESPALDO
+        </a>
+        <div style="color:#a5d6a7; font-size:14px;">
+          Login: beautycita@gmail.com → R2 → beautycita-backups → daily → carpeta más reciente → descargar todos los archivos
+        </div>
+      </div>
+
+      <p style="color:#a5d6a7; font-size:14px; margin-bottom:20px;">
+        Si el botón no funciona, usa este comando en terminal:
+      </p>
+      <div style="background:rgba(0,0,0,0.4); border-radius:8px; padding:16px; text-align:left; font-family:monospace; font-size:14px; color:#4caf50; margin-bottom:20px; position:relative;">
+        <code>rclone copy r2:beautycita-backups/daily/LATEST/ ./restaurar/</code>
+        <button onclick="navigator.clipboard.writeText('rclone copy r2:beautycita-backups/daily/LATEST/ ./restaurar/').then(()=>this.textContent='✓ Copiado')"
+                style="position:absolute; right:8px; top:8px; background:#333; color:#4caf50; border:1px solid #4caf50; padding:4px 12px; border-radius:4px; cursor:pointer; font-size:12px;">
+          Copiar
+        </button>
+      </div>
+
+      <!-- What's in the backup - visual cards -->
+      <h3 style="color:#fff; font-size:20px; margin-bottom:16px; text-align:left;">¿Qué contiene el respaldo?</h3>
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px; text-align:left;">
+
+        <div style="background:rgba(0,0,0,0.3); border-radius:10px; padding:16px; border-left:4px solid #f44336;">
+          <div style="font-size:28px; margin-bottom:4px;">🗄️</div>
+          <div style="color:#fff; font-weight:700; font-size:16px;">Base de Datos</div>
+          <div style="color:#aaa; font-size:13px;">Todos los usuarios, salones, citas, pagos. El corazón del sistema.</div>
+          <div style="color:#f44336; font-weight:700; font-size:12px; margin-top:8px;">⚠️ PUEDE ESTAR VACÍA EN PRE-LANZAMIENTO</div>
+        </div>
+
+        <div style="background:rgba(0,0,0,0.3); border-radius:10px; padding:16px; border-left:4px solid #2196f3;">
+          <div style="font-size:28px; margin-bottom:4px;">⚙️</div>
+          <div style="color:#fff; font-weight:700; font-size:16px;">52 Funciones</div>
+          <div style="color:#aaa; font-size:13px;">El código del servidor: pagos, chat, reservas, notificaciones, AI.</div>
+        </div>
+
+        <div style="background:rgba(0,0,0,0.3); border-radius:10px; padding:16px; border-left:4px solid #ff9800;">
+          <div style="font-size:28px; margin-bottom:4px;">🔐</div>
+          <div style="color:#fff; font-weight:700; font-size:16px;">Credenciales</div>
+          <div style="color:#aaa; font-size:13px;">Todas las contraseñas y claves API. Cifrado AES-256.</div>
+          <div style="color:#ff9800; font-weight:700; font-size:12px; margin-top:8px;">🔑 Contraseña: Dv4801431a.</div>
+        </div>
+
+        <div style="background:rgba(0,0,0,0.3); border-radius:10px; padding:16px; border-left:4px solid #9c27b0;">
+          <div style="font-size:28px; margin-bottom:4px;">🌐</div>
+          <div style="color:#fff; font-weight:700; font-size:16px;">Configuración</div>
+          <div style="color:#aaa; font-size:13px;">Docker, Nginx, SSL, monitoreo. Todo lo necesario para el servidor.</div>
+        </div>
+
+        <div style="background:rgba(0,0,0,0.3); border-radius:10px; padding:16px; border-left:4px solid #4caf50;">
+          <div style="font-size:28px; margin-bottom:4px;">📋</div>
+          <div style="color:#fff; font-weight:700; font-size:16px;">Scripts</div>
+          <div style="color:#aaa; font-size:13px;">Respaldos automáticos, monitoreo, verificación. El mantenimiento.</div>
+        </div>
+
+        <div style="background:rgba(0,0,0,0.3); border-radius:10px; padding:16px; border-left:4px solid #00bcd4;">
+          <div style="font-size:28px; margin-bottom:4px;">🛡️</div>
+          <div style="color:#fff; font-weight:700; font-size:16px;">Certificado SSL</div>
+          <div style="color:#aaa; font-size:13px;">El candado verde de beautycita.com. Se puede renovar si expira.</div>
+        </div>
+      </div>
+
+      <!-- Why each piece matters -->
+      <div style="margin-top:24px; background:rgba(0,0,0,0.3); border-radius:10px; padding:20px; text-align:left;">
+        <h3 style="color:#fff; font-size:18px; margin-bottom:12px;">🧩 ¿Por qué importa cada pieza?</h3>
+        <table style="width:100%; border-collapse:collapse; font-size:14px;">
+          <tr style="border-bottom:1px solid #333;">
+            <td style="padding:8px; color:#fff; font-weight:700;">Sin la base de datos</td>
+            <td style="padding:8px; color:#ef5350;">Se pierden todos los datos de usuarios y salones</td>
+            <td style="padding:8px; color:#ff9800;">Pero la plataforma funciona vacía — se reconstruye</td>
+          </tr>
+          <tr style="border-bottom:1px solid #333;">
+            <td style="padding:8px; color:#fff; font-weight:700;">Sin las funciones</td>
+            <td style="padding:8px; color:#ef5350;">El servidor no procesa nada (reservas, pagos, chat)</td>
+            <td style="padding:8px; color:#4caf50;">Se pueden re-descargar de GitHub</td>
+          </tr>
+          <tr style="border-bottom:1px solid #333;">
+            <td style="padding:8px; color:#fff; font-weight:700;">Sin las credenciales</td>
+            <td style="padding:8px; color:#ef5350;">No hay acceso a Stripe, email, WhatsApp</td>
+            <td style="padding:8px; color:#ff9800;">Se pueden regenerar desde cada servicio</td>
+          </tr>
+          <tr>
+            <td style="padding:8px; color:#fff; font-weight:700;">Sin Docker config</td>
+            <td style="padding:8px; color:#ef5350;">No se puede levantar el servidor</td>
+            <td style="padding:8px; color:#4caf50;">Plantilla base en GitHub</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================= -->
+<!-- SECTION 1: ANTES DE EMPEZAR -->
+<!-- ======================================================================= -->
+<section id="sec1">
+  <div class="section-title">
+    <span class="section-num">1</span>
+    ANTES DE EMPEZAR
+  </div>
+
+  <div class="box-red">
+    <p style="font-size:20px; font-weight:700; color:#ff6b6b; margin-bottom:12px; display:flex; align-items:center; gap:8px;">
+      <span class="pulse-dot"></span> IMPORTANTE — LEE ESTO PRIMERO
+    </p>
+    <p style="margin-bottom:16px;">
+      La base de datos en el respaldo puede estar <strong style="color:#fff;">vacía de contenido real</strong> si BC no tenía usuarios/salones activos al momento del último respaldo. Esto es <strong style="color:#4caf50;">NORMAL</strong> para una plataforma en pre-lanzamiento.
+    </p>
+    <p style="margin-bottom:16px;">
+      El script de restauración intentará obtener la base de datos de estas fuentes <strong style="color:#fff;">(en orden de prioridad):</strong>
+    </p>
+    <ol class="source-list">
+      <li>
+        <strong>R2 Cloudflare (respaldo externo)</strong><br>
+        <code style="color:#4caf50; font-size:14px;">rclone copy r2:beautycita-backups/daily/LATEST/ /restore/</code>
+      </li>
+      <li>
+        <strong>Respaldo local del servidor</strong><br>
+        <code style="color:#4caf50; font-size:14px;">/var/www/backups/daily/</code>
+      </li>
+      <li>
+        <strong>GitHub Actions artifact</strong> (si está disponible)<br>
+        <span style="color:#aaa; font-size:14px;">Descargar desde github.com/beautycita — sección Actions</span>
+      </li>
+    </ol>
+    <div class="box-green" style="margin-bottom:0; margin-top:16px;">
+      <p style="color:#4caf50; font-weight:700;">
+        Si TODAS las fuentes fallan, la plataforma se puede reconstruir desde cero usando el código fuente en GitHub. No se pierde nada permanentemente.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================= -->
+<!-- SECTION 2: LO QUE NECESITAS -->
+<!-- ======================================================================= -->
+<section id="sec2">
+  <div class="section-title">
+    <span class="section-num">2</span>
+    LO QUE NECESITAS
+  </div>
+
+  <div class="card-grid">
+    <div class="card">
+      <span class="card-icon">&#128421;</span>
+      <div class="card-title">Un Servidor VPS</div>
+      <div class="card-desc">Ubuntu 24.04 LTS, mínimo 8 cores, 16GB RAM</div>
+      <div class="card-value">Recomendado: ionos.mx</div>
+    </div>
+    <div class="card">
+      <span class="card-icon">&#128273;</span>
+      <div class="card-title">Contraseña de Respaldo</div>
+      <div class="card-desc">Para descifrar archivos sensibles (AES-256)</div>
+      <div class="card-value">Dv4801431a.</div>
+    </div>
+    <div class="card">
+      <span class="card-icon">&#127760;</span>
+      <div class="card-title">Cloudflare (DNS)</div>
+      <div class="card-desc">Control de dominio beautycita.com</div>
+      <div class="card-value">beautycita@gmail.com</div>
+    </div>
+    <div class="card">
+      <span class="card-icon">&#128179;</span>
+      <div class="card-title">Stripe (Pagos)</div>
+      <div class="card-desc">Panel de cobros y suscripciones</div>
+      <div class="card-value">dashboard.stripe.com</div>
+    </div>
+    <div class="card">
+      <span class="card-icon">&#128187;</span>
+      <div class="card-title">GitHub (Código)</div>
+      <div class="card-desc">Código fuente completo del proyecto</div>
+      <div class="card-value">github.com/beautycita</div>
+    </div>
+    <div class="card">
+      <span class="card-icon">&#128231;</span>
+      <div class="card-title">Correo IONOS</div>
+      <div class="card-desc">SMTP para notificaciones</div>
+      <div class="card-value">Ver .env en secrets.enc</div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================= -->
+<!-- SECTION 3: CONTACTOS DE EMERGENCIA -->
+<!-- ======================================================================= -->
+<section id="sec3">
+  <div class="section-title">
+    <span class="section-num">3</span>
+    CONTACTOS DE EMERGENCIA
+  </div>
+
+  <div class="box-blue" style="margin-bottom:24px;">
+    <p style="font-size:18px; color:#64b5f6; font-weight:700; margin-bottom:8px;">
+      Si no puedes hacerlo tú misma, busca a un ingeniero de sistemas. Muéstrale esta guía completa.
+    </p>
+  </div>
+
+  <div class="contact-card">
+    <div class="contact-icon">&#127968;</div>
+    <div class="contact-info">
+      <div class="contact-name">IONOS Hosting</div>
+      <div class="contact-detail">ionos.mx &nbsp;|&nbsp; Cuenta: beautycita@gmail.com</div>
+    </div>
+  </div>
+  <div class="contact-card">
+    <div class="contact-icon">&#9729;&#65039;</div>
+    <div class="contact-info">
+      <div class="contact-name">Cloudflare DNS</div>
+      <div class="contact-detail">dash.cloudflare.com &nbsp;|&nbsp; Cuenta: beautycita@gmail.com</div>
+    </div>
+  </div>
+  <div class="contact-card">
+    <div class="contact-icon">&#128179;</div>
+    <div class="contact-info">
+      <div class="contact-name">Stripe (Pagos)</div>
+      <div class="contact-detail">dashboard.stripe.com</div>
+    </div>
+  </div>
+  <div class="contact-card">
+    <div class="contact-icon">&#128008;</div>
+    <div class="contact-info">
+      <div class="contact-name">GitHub (Código Fuente)</div>
+      <div class="contact-detail">github.com/beautycita</div>
+    </div>
+  </div>
+  <div class="contact-card" style="border-color:#ffc107;">
+    <div class="contact-icon">&#9878;&#65039;</div>
+    <div class="contact-info">
+      <div class="contact-name">Abogado</div>
+      <div class="contact-detail" style="color:#ffc107;">[ BC: llena este campo con datos de tu abogado ]</div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================= -->
+<!-- SECTION 4: RESTAURACIÓN PASO A PASO -->
+<!-- ======================================================================= -->
+<section id="sec4">
+  <div class="section-title">
+    <span class="section-num">4</span>
+    RESTAURACIÓN PASO A PASO
+  </div>
+
+  <div class="box-green" style="margin-bottom:32px;">
+    <p style="color:#4caf50; font-weight:700; font-size:20px; margin-bottom:8px;">
+      Tiempo total estimado: ~62 minutos
+    </p>
+    <p>Sigue cada paso en orden. No te saltes ninguno.</p>
+  </div>
+
+  <!-- PASO 1 -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num">1</div>
+      <div class="step-title">Servidor Nuevo</div>
+      <div class="step-time">~15 min</div>
+    </div>
+    <p style="margin-bottom:12px;">Compra un servidor VPS. Necesitas Ubuntu 24.04 LTS con al menos 8 cores y 16GB de RAM.</p>
+    <div class="box-blue" style="margin-bottom:0;">
+      <p><strong>Proveedores recomendados:</strong></p>
+      <p>1. <a href="https://ionos.mx" target="_blank">IONOS.mx</a> (cuenta existente: beautycita@gmail.com)</p>
+      <p>2. <a href="https://hetzner.com" target="_blank">Hetzner</a> (alternativa económica)</p>
+      <p style="margin-top:12px; color:#ffc107;"><strong>Anota la dirección IP del servidor. La necesitarás en cada paso siguiente.</strong></p>
+    </div>
+  </div>
+
+  <!-- PASO 2 -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num">2</div>
+      <div class="step-title">Conectar al Servidor</div>
+      <div class="step-time">~5 min</div>
+    </div>
+    <p style="margin-bottom:12px;">Abre una terminal y conéctate al servidor. Reemplaza <code style="color:#ff6b6b;">IP_DEL_SERVIDOR</code> con la IP que anotaste.</p>
+    <div class="code-block" id="code-step2">ssh root@IP_DEL_SERVIDOR
+<button class="copy-btn" onclick="copyCode('code-step2')">Copiar</button></div>
+    <div class="box-yellow" style="margin-bottom:0; margin-top:12px;">
+      <p style="color:#ffc107;"><strong>Si no sabes usar una terminal:</strong> busca a alguien técnico y muéstrale esta guía.</p>
+    </div>
+  </div>
+
+  <!-- PASO 3 -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num">3</div>
+      <div class="step-title">Instalar Software</div>
+      <div class="step-time">~10 min</div>
+    </div>
+    <p style="margin-bottom:12px;">Ejecuta este comando para instalar todo el software necesario:</p>
+    <div class="code-block" id="code-step3">apt update && apt install -y docker.io docker-compose-v2 nginx certbot python3-certbot-nginx rclone
+<button class="copy-btn" onclick="copyCode('code-step3')">Copiar</button></div>
+  </div>
+
+  <!-- PASO 4 -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num">4</div>
+      <div class="step-title">Descargar Respaldo de R2</div>
+      <div class="step-time">~5 min</div>
+    </div>
+    <p style="margin-bottom:12px;">Configura rclone para conectar con Cloudflare R2 y descarga el respaldo:</p>
+    <div class="code-block" id="code-step4a"># Configurar rclone para R2
+rclone config
+# Cuando pregunte:
+#   Tipo: s3
+#   Provider: Cloudflare
+#   Access Key y Secret: están en el panel de Cloudflare R2
+<button class="copy-btn" onclick="copyCode('code-step4a')">Copiar</button></div>
+    <div class="code-block" id="code-step4b">mkdir -p /var/www/restore
+rclone copy r2:beautycita-backups/daily/LATEST/ /var/www/restore/
+<button class="copy-btn" onclick="copyCode('code-step4b')">Copiar</button></div>
+    <div class="box-yellow" style="margin-bottom:0; margin-top:12px;">
+      <p style="color:#ffc107;"><strong>Si R2 no funciona</strong>, intenta copiar desde el respaldo local del servidor anterior:</p>
+      <code style="color:#4caf50; font-size:14px;">scp -r www-data@SERVIDOR_ANTERIOR:/var/www/backups/daily/LATEST/* /var/www/restore/</code>
+    </div>
+  </div>
+
+  <!-- PASO 5 -->
+  <div class="step-card critical">
+    <div class="step-header">
+      <div class="step-num">5</div>
+      <div class="step-title">Descifrar Archivos Sensibles</div>
+      <div class="step-time">~2 min</div>
+    </div>
+    <p style="margin-bottom:12px; display:flex; align-items:center; gap:8px;">
+      <span class="pulse-dot"></span>
+      <strong style="color:#ff6b6b;">Este paso requiere la contraseña maestra.</strong>
+    </p>
+    <div class="code-block" id="code-step5">cd /var/www/restore
+openssl enc -d -aes-256-cbc -pbkdf2 -in secrets.enc -out secrets.tar.gz
+# Cuando pida contraseña, escribe: Dv4801431a.
+tar xzf secrets.tar.gz
+<button class="copy-btn" onclick="copyCode('code-step5')">Copiar</button></div>
+    <div class="box-red" style="margin-bottom:0; margin-top:12px;">
+      <p style="color:#ff6b6b;"><strong>Contraseña:</strong> <code style="font-size:18px; color:#fff; background:#333; padding:4px 12px; border-radius:4px;">Dv4801431a.</code></p>
+      <p style="margin-top:8px; font-size:14px;">Incluye el punto al final. Es parte de la contraseña.</p>
+    </div>
+  </div>
+
+  <!-- PASO 6 -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num">6</div>
+      <div class="step-title">Restaurar Docker</div>
+      <div class="step-time">~10 min</div>
+    </div>
+    <p style="margin-bottom:12px;">Extrae los archivos de configuración y levanta los servicios:</p>
+    <div class="code-block" id="code-step6">cd /var/www/restore
+tar xzf docker-config.tar.gz
+tar xzf env-files.tar.gz
+tar xzf edge-functions.tar.gz
+
+# Crear estructura del proyecto
+mkdir -p /var/www/beautycita.com/bc-flutter/supabase-docker/volumes/
+
+# Copiar funciones del servidor
+cp -r functions/ /var/www/beautycita.com/bc-flutter/supabase-docker/volumes/
+
+# Copiar configuración de Docker
+cp docker-compose.yml /var/www/beautycita.com/bc-flutter/supabase-docker/
+cp .env /var/www/beautycita.com/bc-flutter/supabase-docker/
+
+# Levantar servicios
+cd /var/www/beautycita.com/bc-flutter/supabase-docker/
+docker compose up -d
+<button class="copy-btn" onclick="copyCode('code-step6')">Copiar</button></div>
+  </div>
+
+  <!-- PASO 7 -->
+  <div class="step-card critical">
+    <div class="step-header">
+      <div class="step-num">7</div>
+      <div class="step-title">Restaurar Base de Datos</div>
+      <div class="step-time">~5 min</div>
+    </div>
+    <p style="margin-bottom:12px; display:flex; align-items:center; gap:8px;">
+      <span class="pulse-dot"></span>
+      <strong style="color:#ff6b6b;">Espera 30 segundos después del paso anterior antes de ejecutar esto.</strong>
+    </p>
+    <div class="code-block" id="code-step7"># Esperar a que PostgreSQL inicie completamente
+sleep 30
+
+# Restaurar la base de datos
+cd /var/www/restore
+docker exec -i supabase-db pg_restore -U postgres -d postgres --no-owner --no-acl &lt; database.custom
+<button class="copy-btn" onclick="copyCode('code-step7')">Copiar</button></div>
+    <div class="box-yellow" style="margin-bottom:0; margin-top:12px;">
+      <p style="color:#ffc107;">Si ves errores como "already exists", es normal. Lo importante es que no diga "FATAL" o "connection refused".</p>
+    </div>
+  </div>
+
+  <!-- PASO 8 -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num">8</div>
+      <div class="step-title">Restaurar Nginx</div>
+      <div class="step-time">~5 min</div>
+    </div>
+    <div class="code-block" id="code-step8">cd /var/www/restore
+tar xzf nginx-full.tar.gz -C /
+tar xzf ssl-certs.tar.gz -C /
+
+# Si el certificado SSL expiró, renovarlo:
+certbot renew
+
+# Reiniciar el servidor web
+systemctl restart nginx
+<button class="copy-btn" onclick="copyCode('code-step8')">Copiar</button></div>
+  </div>
+
+  <!-- PASO 9 -->
+  <div class="step-card" style="border-left-color:#4caf50;">
+    <div class="step-header">
+      <div class="step-num" style="background:#4caf50;">9</div>
+      <div class="step-title">Verificar</div>
+      <div class="step-time">~5 min</div>
+    </div>
+    <p style="margin-bottom:12px;">Abre tu navegador y visita:</p>
+    <div class="code-block" id="code-step9">https://beautycita.com
+<button class="copy-btn" onclick="copyCode('code-step9')">Copiar</button></div>
+    <div class="box-green" style="margin-bottom:0;">
+      <p style="color:#4caf50; font-weight:700; font-size:18px;">Si ves la página de BeautyCita, todo está restaurado correctamente.</p>
+      <p style="margin-top:8px;">También verifica:</p>
+      <ul style="margin-top:8px; margin-left:20px;">
+        <li><code style="color:#4caf50;">beautycita.com/supabase/studio</code> — Panel de base de datos</li>
+        <li><code style="color:#4caf50;">beautycita.com/grafana/</code> — Monitoreo</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- PASO 10 -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num">10</div>
+      <div class="step-title">DNS (solo si cambió el servidor)</div>
+      <div class="step-time">~5 min</div>
+    </div>
+    <p style="margin-bottom:12px;">Si usaste un servidor nuevo con IP diferente, actualiza el DNS en Cloudflare:</p>
+    <div class="box-blue" style="margin-bottom:0;">
+      <ol style="margin-left:20px; line-height:2;">
+        <li>Ir a <a href="https://dash.cloudflare.com" target="_blank">dash.cloudflare.com</a></li>
+        <li>Iniciar sesión con: <strong style="color:#fff;">beautycita@gmail.com</strong></li>
+        <li>Seleccionar el dominio <strong style="color:#fff;">beautycita.com</strong></li>
+        <li>Ir a <strong style="color:#fff;">DNS &gt; Records</strong></li>
+        <li>Editar el registro <strong style="color:#fff;">A</strong> y cambiar la IP a la del servidor nuevo</li>
+        <li>Los cambios tardan entre 1 y 5 minutos en propagarse</li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================= -->
+<!-- SECTION 5: INVENTARIO DEL RESPALDO -->
+<!-- ======================================================================= -->
+<section id="sec5">
+  <div class="section-title">
+    <span class="section-num">5</span>
+    INVENTARIO DEL RESPALDO
+  </div>
+
+  <input type="checkbox" class="accordion-toggle" id="acc-inv">
+  <label class="accordion-label" for="acc-inv">
+    Ver tabla completa de archivos del respaldo
+  </label>
+  <div class="accordion-content">
+    <div class="accordion-inner">
+      <div style="overflow-x:auto;">
+        <table class="inv-table">
+          <thead>
+            <tr>
+              <th>Archivo</th>
+              <th>Contenido</th>
+              <th>Tamaño</th>
+              <th>Cifrado</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>database.custom</code></td>
+              <td>Base de datos completa (PostgreSQL)</td>
+              <td>~48 MB</td>
+              <td><span class="badge-no">No</span></td>
+            </tr>
+            <tr>
+              <td><code>edge-functions.tar.gz</code></td>
+              <td>52 funciones del servidor</td>
+              <td>~146 KB</td>
+              <td><span class="badge-no">No</span></td>
+            </tr>
+            <tr>
+              <td><code>env-files.tar.gz</code></td>
+              <td>Contraseñas y claves API</td>
+              <td>~9 KB</td>
+              <td><span class="badge-yes">En secrets.enc</span></td>
+            </tr>
+            <tr>
+              <td><code>docker-config.tar.gz</code></td>
+              <td>Configuración de Docker</td>
+              <td>~15 KB</td>
+              <td><span class="badge-yes">En secrets.enc</span></td>
+            </tr>
+            <tr>
+              <td><code>ssl-certs.tar.gz</code></td>
+              <td>Certificado SSL del dominio</td>
+              <td>~400 B</td>
+              <td><span class="badge-yes">En secrets.enc</span></td>
+            </tr>
+            <tr>
+              <td><code>secrets.enc</code></td>
+              <td>Archivos sensibles cifrados (AES-256)</td>
+              <td>~25 KB</td>
+              <td><span class="badge-yes">AES-256</span></td>
+            </tr>
+            <tr>
+              <td><code>nginx-full.tar.gz</code></td>
+              <td>Configuración del servidor web</td>
+              <td>~8 KB</td>
+              <td><span class="badge-no">No</span></td>
+            </tr>
+            <tr>
+              <td><code>monitoring.tar.gz</code></td>
+              <td>Grafana, Prometheus, alertas</td>
+              <td>~23 KB</td>
+              <td><span class="badge-no">No</span></td>
+            </tr>
+            <tr>
+              <td><code>scripts.tar.gz</code></td>
+              <td>Scripts de respaldo y mantenimiento</td>
+              <td>~708 KB</td>
+              <td><span class="badge-no">No</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================= -->
+<!-- SECTION 6: CREDENCIALES MAESTRAS -->
+<!-- ======================================================================= -->
+<section id="sec6">
+  <div class="section-title">
+    <span class="section-num">6</span>
+    CREDENCIALES MAESTRAS
+  </div>
+
+  <div class="box-yellow" style="margin-bottom:28px;">
+    <p style="font-size:20px; font-weight:700; color:#ffc107; margin-bottom:8px; display:flex; align-items:center; gap:8px;">
+      <span class="pulse-dot" style="background:#ffc107; animation-name:pulse-yellow;"></span>
+      ADVERTENCIA
+    </p>
+    <p>Estas credenciales también están en el archivo <code style="color:#fff;">env-files.tar.gz</code> dentro de <code style="color:#fff;">secrets.enc</code>. Si tienes acceso al respaldo descifrado, no necesitas esta sección.</p>
+  </div>
+
+  <style>
+    @keyframes pulse-yellow {
+      0% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.7); }
+      70% { box-shadow: 0 0 0 14px rgba(255, 193, 7, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0); }
+    }
+  </style>
+
+  <!-- Accordion: Server -->
+  <input type="checkbox" class="accordion-toggle" id="acc-cred1">
+  <label class="accordion-label" for="acc-cred1">
+    <span class="pulse-dot" style="margin-right:12px;"></span>
+    Servidor SSH
+  </label>
+  <div class="accordion-content">
+    <div class="accordion-inner">
+      <table class="cred-table">
+        <tr><td>Usuario</td><td>www-data@[IP del servidor]</td></tr>
+        <tr><td>Sudo password</td><td>JUs3f2m3Fa</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- Accordion: DB -->
+  <input type="checkbox" class="accordion-toggle" id="acc-cred2">
+  <label class="accordion-label" for="acc-cred2">
+    <span class="pulse-dot" style="margin-right:12px;"></span>
+    Base de Datos PostgreSQL
+  </label>
+  <div class="accordion-content">
+    <div class="accordion-inner">
+      <table class="cred-table">
+        <tr><td>Usuario admin</td><td>postgres</td></tr>
+        <tr><td>Password admin</td><td>G9wEEH1DDiklRYSQDmMViBwj</td></tr>
+        <tr><td>Usuario app</td><td>beautycita_app</td></tr>
+        <tr><td>Password app</td><td>qGXA1CR3FVnsq4fp78Z6h31ROzzU2DJsSF0lX1Aq7Uk=</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- Accordion: Supabase -->
+  <input type="checkbox" class="accordion-toggle" id="acc-cred3">
+  <label class="accordion-label" for="acc-cred3">
+    Supabase (Panel de Admin)
+  </label>
+  <div class="accordion-content">
+    <div class="accordion-inner">
+      <table class="cred-table">
+        <tr><td>Studio URL</td><td>beautycita.com/supabase/studio</td></tr>
+        <tr><td>Nota</td><td style="color:#aaa; font-family:inherit;">Acceso vía Nginx reverse proxy, sin password adicional</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- Accordion: Monitoring -->
+  <input type="checkbox" class="accordion-toggle" id="acc-cred4">
+  <label class="accordion-label" for="acc-cred4">
+    Grafana (Monitoreo)
+  </label>
+  <div class="accordion-content">
+    <div class="accordion-inner">
+      <table class="cred-table">
+        <tr><td>URL</td><td>beautycita.com/grafana/</td></tr>
+        <tr><td>Acceso</td><td style="color:#4caf50; font-family:inherit;">Acceso anónimo habilitado (no necesita login)</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- Accordion: Cloudflare -->
+  <input type="checkbox" class="accordion-toggle" id="acc-cred5">
+  <label class="accordion-label" for="acc-cred5">
+    Cloudflare R2 (Respaldos Externos)
+  </label>
+  <div class="accordion-content">
+    <div class="accordion-inner">
+      <table class="cred-table">
+        <tr><td>Dashboard</td><td>dash.cloudflare.com</td></tr>
+        <tr><td>Email</td><td>beautycita@gmail.com</td></tr>
+        <tr><td>Access keys</td><td style="color:#ffc107; font-family:inherit;">Ver archivo .env dentro de secrets.enc</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- Accordion: Stripe -->
+  <input type="checkbox" class="accordion-toggle" id="acc-cred6">
+  <label class="accordion-label" for="acc-cred6">
+    Stripe (Pagos)
+  </label>
+  <div class="accordion-content">
+    <div class="accordion-inner">
+      <table class="cred-table">
+        <tr><td>Dashboard</td><td>dashboard.stripe.com</td></tr>
+        <tr><td>API keys</td><td style="color:#ffc107; font-family:inherit;">Ver archivo .env dentro de secrets.enc</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- Accordion: SMTP -->
+  <input type="checkbox" class="accordion-toggle" id="acc-cred7">
+  <label class="accordion-label" for="acc-cred7">
+    SMTP (Correo Electrónico)
+  </label>
+  <div class="accordion-content">
+    <div class="accordion-inner">
+      <table class="cred-table">
+        <tr><td>Proveedor</td><td>IONOS</td></tr>
+        <tr><td>Credenciales</td><td style="color:#ffc107; font-family:inherit;">Ver archivo .env dentro de secrets.enc</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- Accordion: Backup passphrase -->
+  <input type="checkbox" class="accordion-toggle" id="acc-cred8">
+  <label class="accordion-label" for="acc-cred8">
+    <span class="pulse-dot" style="margin-right:12px;"></span>
+    Contraseña de Cifrado (Respaldos)
+  </label>
+  <div class="accordion-content">
+    <div class="accordion-inner">
+      <table class="cred-table">
+        <tr><td>Algoritmo</td><td>AES-256-CBC con PBKDF2</td></tr>
+        <tr><td>Contraseña</td><td style="font-size:20px; color:#ff6b6b;">Dv4801431a.</td></tr>
+        <tr><td>Nota</td><td style="color:#ffc107; font-family:inherit;">El punto final ES parte de la contraseña</td></tr>
+      </table>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ======================================================================= -->
+<!-- FOOTER -->
+<!-- ======================================================================= -->
+<footer class="footer">
+  <div class="footer-logo">BEAUTY<span style="color:#ff6b9d;">CITA</span></div>
+  <p>Esta guía fue generada automáticamente el <strong style="color:#ccc;">23 de marzo, 2026</strong></p>
+  <p>Última verificación de respaldo: <span class="badge-ok">20/20 pruebas pasaron</span></p>
+  <p style="margin-top:16px;">El código fuente completo está en GitHub — BeautyCita puede reconstruirse desde cero.</p>
+  <div style="margin-top:24px;">
+    <svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="20" cy="20" r="18" fill="none" stroke="#ff6b9d" stroke-width="2"/>
+      <text x="20" y="26" text-anchor="middle" fill="#ff6b9d" font-size="18" font-weight="900" font-family="Arial">B</text>
+    </svg>
+  </div>
+</footer>
+
+</div><!-- .wrapper -->
+</div><!-- .main-content -->
+
+<!-- ===== JAVASCRIPT: Copy to Clipboard ===== -->
+<script>
+function copyCode(elementId) {
+  var el = document.getElementById(elementId);
+  if (!el) return;
+  // Get text content excluding the button text
+  var text = '';
+  var children = el.childNodes;
+  for (var i = 0; i < children.length; i++) {
+    if (children[i].nodeType === 3) { // text node
+      text += children[i].textContent;
+    }
+  }
+  text = text.trim();
+  // Replace HTML entities
+  text = text.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function() {
+      showCopied(elementId);
+    });
+  } else {
+    // Fallback
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); showCopied(elementId); } catch(e) {}
+    document.body.removeChild(ta);
+  }
+}
+
+function showCopied(elementId) {
+  var el = document.getElementById(elementId);
+  if (!el) return;
+  var btn = el.querySelector('.copy-btn');
+  if (!btn) return;
+  var orig = btn.textContent;
+  btn.textContent = 'Copiado!';
+  btn.style.background = '#4caf50';
+  btn.style.borderColor = '#4caf50';
+  btn.style.color = '#fff';
+  setTimeout(function() {
+    btn.textContent = orig;
+    btn.style.background = '';
+    btn.style.borderColor = '';
+    btn.style.color = '';
+  }, 2000);
+}
+</script>
+
+</body>
+</html>

@@ -423,8 +423,8 @@ class _BookingStatusChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(BCSpacing.radiusFull),
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
         label,
@@ -455,8 +455,8 @@ class _PaymentChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(BCSpacing.radiusFull),
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
         label,

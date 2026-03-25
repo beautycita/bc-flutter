@@ -542,8 +542,11 @@ class _HeroColorPickerState extends ConsumerState<_HeroColorPicker> {
       // During picker drag, show live preview
       (grad1, grad2) = _gradientPair(liveHue, liveSat);
     } else {
-      // Locked home gradient: magenta → indigo (BC's chosen look)
-      (grad1, grad2) = _gradientPair(310.0, 0.80);
+      // Use saved custom color if set, otherwise default
+      final notifier = ref.read(themeProvider.notifier);
+      final savedHue = notifier.customHue ?? 310.0;
+      final savedSat = notifier.customSat ?? 0.80;
+      (grad1, grad2) = _gradientPair(savedHue, savedSat);
     }
 
     return Listener(

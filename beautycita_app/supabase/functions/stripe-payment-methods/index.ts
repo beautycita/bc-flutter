@@ -70,6 +70,21 @@ async function stripeDelete(path: string) {
   return data;
 }
 
+// Rate limiting
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+
+function checkRateLimit(key: string, limit: number, windowMs: number): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(key);
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(key, { count: 1, resetAt: now + windowMs });
+    return true;
+  }
+  if (entry.count >= limit) return false;
+  entry.count++;
+  return true;
+}
+
 // Get or create Stripe customer for a user
 async function ensureCustomer(
   supabase: ReturnType<typeof createClient>,
@@ -141,6 +156,12 @@ Deno.serve(async (req: Request) => {
 
   if (authError || !user) {
     return json({ error: "Unauthorized" }, 401);
+  }
+
+  // Rate limit: 20 requests per minute
+  const rateLimitKey = user?.id || authHeader.slice(-16) || "anon";
+  if (!checkRateLimit(rateLimitKey, 20, 60_000)) {
+    return json({ error: "Rate limit exceeded" }, 429);
   }
 
   try {

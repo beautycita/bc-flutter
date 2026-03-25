@@ -1,0 +1,1573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Double Slit Experiment - Quantum Mechanics</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: #0a0a1a;
+  color: #e0e0e0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  overflow: hidden;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+#main {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Left Panel */
+#left-panel {
+  width: 320px;
+  min-width: 320px;
+  background: rgba(15, 15, 35, 0.95);
+  border-right: 1px solid #1a1a3a;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+#left-panel::-webkit-scrollbar { width: 6px; }
+#left-panel::-webkit-scrollbar-track { background: transparent; }
+#left-panel::-webkit-scrollbar-thumb { background: #2a2a5a; border-radius: 3px; }
+
+#left-panel h1 {
+  font-size: 1.3em;
+  color: #88ccff;
+  margin-bottom: 5px;
+  letter-spacing: 1px;
+}
+
+#left-panel .subtitle {
+  font-size: 0.75em;
+  color: #667;
+  margin-bottom: 15px;
+}
+
+.quote-box {
+  background: rgba(40, 20, 60, 0.6);
+  border-left: 3px solid #9966cc;
+  padding: 10px 12px;
+  margin-bottom: 18px;
+  font-style: italic;
+  font-size: 0.78em;
+  color: #bb99dd;
+  line-height: 1.4;
+}
+.quote-box .author {
+  display: block;
+  margin-top: 6px;
+  font-style: normal;
+  color: #8866aa;
+  font-size: 0.9em;
+}
+
+/* Mode tabs */
+.mode-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 14px;
+}
+
+.mode-tab {
+  flex: 1;
+  padding: 8px 4px;
+  background: rgba(30, 30, 60, 0.8);
+  border: 1px solid #2a2a5a;
+  border-radius: 6px;
+  color: #999;
+  font-size: 0.7em;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s;
+  line-height: 1.3;
+}
+.mode-tab:hover {
+  background: rgba(50, 50, 100, 0.8);
+  border-color: #4a4aaa;
+}
+.mode-tab.active {
+  background: rgba(40, 60, 120, 0.9);
+  border-color: #5588cc;
+  color: #aaccff;
+}
+.mode-tab .tab-num {
+  display: block;
+  font-size: 1.3em;
+  font-weight: bold;
+  margin-bottom: 2px;
+}
+
+/* Controls */
+.control-section {
+  margin-bottom: 14px;
+}
+.control-section h3 {
+  font-size: 0.8em;
+  color: #6688aa;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.control-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 6px;
+  gap: 8px;
+}
+.control-row label {
+  font-size: 0.78em;
+  color: #aaa;
+  min-width: 90px;
+}
+.control-row input[type="range"] {
+  flex: 1;
+  accent-color: #5588cc;
+  height: 4px;
+}
+.control-row .val {
+  font-size: 0.75em;
+  color: #88aacc;
+  min-width: 40px;
+  text-align: right;
+}
+
+.btn {
+  display: inline-block;
+  padding: 8px 14px;
+  margin: 3px 2px;
+  background: rgba(30, 30, 60, 0.8);
+  border: 1px solid #2a2a5a;
+  border-radius: 6px;
+  color: #ccc;
+  font-size: 0.78em;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn:hover {
+  background: rgba(50, 50, 100, 0.8);
+  border-color: #5588cc;
+  color: #aaccff;
+}
+.btn.primary {
+  background: rgba(40, 60, 120, 0.9);
+  border-color: #5588cc;
+  color: #aaccff;
+}
+.btn.fire {
+  background: rgba(120, 40, 40, 0.9);
+  border-color: #cc5555;
+  color: #ffaaaa;
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 6px;
+  gap: 8px;
+}
+.toggle-row label {
+  font-size: 0.78em;
+  color: #aaa;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.toggle-row input[type="checkbox"] {
+  accent-color: #5588cc;
+}
+
+/* Stats */
+.stats-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.stat-box {
+  flex: 1;
+  background: rgba(20, 20, 50, 0.8);
+  border: 1px solid #1a1a3a;
+  border-radius: 6px;
+  padding: 8px;
+  text-align: center;
+}
+.stat-box .stat-val {
+  font-size: 1.4em;
+  font-weight: bold;
+  color: #88ccff;
+}
+.stat-box .stat-label {
+  font-size: 0.65em;
+  color: #667;
+  text-transform: uppercase;
+}
+
+/* Explanation sections */
+.explanation {
+  margin-top: 10px;
+}
+.exp-section {
+  margin-bottom: 2px;
+}
+.exp-header {
+  display: flex;
+  align-items: center;
+  padding: 8px 10px;
+  background: rgba(20, 20, 50, 0.6);
+  border: 1px solid #1a1a3a;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.78em;
+  color: #aaa;
+  transition: all 0.2s;
+  gap: 8px;
+}
+.exp-header:hover {
+  background: rgba(30, 30, 60, 0.8);
+  color: #ccc;
+}
+.exp-header .arrow {
+  transition: transform 0.2s;
+  font-size: 0.7em;
+}
+.exp-header.open .arrow {
+  transform: rotate(90deg);
+}
+.exp-body {
+  display: none;
+  padding: 8px 12px;
+  font-size: 0.75em;
+  color: #999;
+  line-height: 1.5;
+  border-left: 2px solid #1a1a3a;
+  margin-left: 10px;
+  margin-bottom: 4px;
+}
+.exp-body.open {
+  display: block;
+}
+.exp-body strong {
+  color: #88aacc;
+}
+
+/* 3D viewport */
+#viewport {
+  flex: 1;
+  position: relative;
+  min-width: 0;
+}
+#viewport canvas {
+  display: block;
+}
+
+/* Mode label overlay */
+#mode-label {
+  position: absolute;
+  top: 15px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(10, 10, 30, 0.85);
+  border: 1px solid #2a2a5a;
+  border-radius: 8px;
+  padding: 8px 20px;
+  font-size: 0.85em;
+  color: #88ccff;
+  pointer-events: none;
+  text-align: center;
+  z-index: 10;
+}
+#mode-label .mode-sub {
+  font-size: 0.8em;
+  color: #667;
+  margin-top: 2px;
+}
+
+/* Bottom panel */
+#bottom-panel {
+  height: 120px;
+  background: rgba(15, 15, 35, 0.95);
+  border-top: 1px solid #1a1a3a;
+  display: flex;
+  align-items: center;
+  padding: 10px 20px;
+  gap: 20px;
+}
+
+#pattern-canvas {
+  height: 100px;
+  flex: 1;
+  border: 1px solid #1a1a3a;
+  border-radius: 6px;
+  background: #050510;
+}
+
+#comparison-canvas {
+  height: 100px;
+  width: 300px;
+  border: 1px solid #1a1a3a;
+  border-radius: 6px;
+  background: #050510;
+}
+
+.bottom-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 160px;
+}
+.bottom-stat {
+  font-size: 0.72em;
+  color: #888;
+}
+.bottom-stat span {
+  color: #88ccff;
+  font-weight: bold;
+}
+</style>
+</head>
+<body>
+
+<div id="main">
+  <!-- Left Panel -->
+  <div id="left-panel">
+    <h1>The Double Slit Experiment</h1>
+    <div class="subtitle">The Most Important Experiment in Quantum Mechanics</div>
+
+    <div class="quote-box">
+      "If you think you understand quantum mechanics, you don't understand quantum mechanics."
+      <span class="author">-- Richard Feynman</span>
+    </div>
+
+    <!-- Mode Tabs -->
+    <div class="mode-tabs">
+      <div class="mode-tab active" data-mode="classical" onclick="setMode('classical')">
+        <span class="tab-num">1</span>Classical
+      </div>
+      <div class="mode-tab" data-mode="unobserved" onclick="setMode('unobserved')">
+        <span class="tab-num">2</span>Unobserved
+      </div>
+      <div class="mode-tab" data-mode="observed" onclick="setMode('observed')">
+        <span class="tab-num">3</span>Observed
+      </div>
+    </div>
+
+    <!-- Mode description -->
+    <div id="mode-desc" style="font-size:0.76em; color:#999; margin-bottom:14px; line-height:1.4; min-height:50px;">
+      Particles behave as expected — two bands on the screen, like throwing balls through two doors.
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-box">
+        <div class="stat-val" id="particle-count">0</div>
+        <div class="stat-label">Particles</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val" id="hits-count">0</div>
+        <div class="stat-label">Screen Hits</div>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="control-section">
+      <h3>Controls</h3>
+      <div style="margin-bottom:8px;">
+        <button class="btn fire" onclick="fireSingle()">Fire Single Particle</button>
+        <button class="btn primary" id="rapid-btn" onclick="toggleRapid()">Rapid Fire</button>
+        <button class="btn" onclick="resetScreen()">Reset Screen</button>
+      </div>
+
+      <div class="control-row">
+        <label>Fire Rate</label>
+        <input type="range" id="fire-rate" min="1" max="100" value="10" oninput="updateFireRate()">
+        <span class="val" id="fire-rate-val">10/s</span>
+      </div>
+      <div class="control-row">
+        <label>Slit Width</label>
+        <input type="range" id="slit-width" min="1" max="50" value="15" oninput="updateSlitParams()">
+        <span class="val" id="slit-width-val">15</span>
+      </div>
+      <div class="control-row">
+        <label>Slit Separation</label>
+        <input type="range" id="slit-sep" min="5" max="150" value="40" oninput="updateSlitParams()">
+        <span class="val" id="slit-sep-val">40</span>
+      </div>
+    </div>
+
+    <div class="control-section">
+      <h3>Observer</h3>
+      <div class="toggle-row" style="background:rgba(255,50,50,0.08); padding:8px 10px; border-radius:8px; border:1px solid rgba(255,50,50,0.15); margin-bottom:8px;">
+        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:700; color:#ff6b6b;">
+          <input type="checkbox" id="observer-toggle" onchange="toggleObserver()" style="width:16px; height:16px; accent-color:#ff3333;">
+          <span>OBSERVING THE SLITS</span>
+        </label>
+        <div id="observer-status" style="font-size:10px; color:#888; margin-top:4px; margin-left:24px;">
+          Detector OFF — particles behave as waves
+        </div>
+      </div>
+      <p style="font-size:10px; color:#666; line-height:1.5; margin-bottom:10px;">
+        Toggle observation without resetting the pattern. Watch the interference fringes appear and disappear in real-time as particles "know" they're being watched.
+      </p>
+    </div>
+
+    <div class="control-section">
+      <h3>Display</h3>
+      <div class="toggle-row">
+        <label><input type="checkbox" id="show-waves" onchange="toggleWaves()"> Show wave function overlay</label>
+      </div>
+      <div class="toggle-row">
+        <label><input type="checkbox" id="show-prob" checked onchange="toggleProb()"> Show probability distribution</label>
+      </div>
+      <div class="toggle-row">
+        <label><input type="checkbox" id="show-compare" onchange="toggleCompare()"> Side-by-side comparison</label>
+      </div>
+    </div>
+
+    <!-- Explanations -->
+    <div class="explanation" style="line-height:1.7;">
+
+      <div style="background:rgba(136,204,255,0.08); border:1px solid rgba(136,204,255,0.15); border-radius:8px; padding:12px; margin-bottom:16px; text-align:center;">
+        <div style="font-size:11px; color:#88ccff; font-style:italic; line-height:1.5;">
+          "If you think you understand quantum mechanics,<br>you don't understand quantum mechanics."<br>
+          <span style="color:#666;">— Richard Feynman</span>
+        </div>
+      </div>
+
+      <div class="exp-section">
+        <div class="exp-header" onclick="toggleExp(this)"><span class="arrow">&#9654;</span> 1. The Setup</div>
+        <div class="exp-body" style="padding:10px 12px;">
+          An electron gun fires particles <strong>one at a time</strong> toward a barrier with two narrow slits. Behind the barrier, a detection screen records where each particle lands.<br><br>
+          Each electron is a single, indivisible particle. It can only go through one slit... right?<br><br>
+          <strong>The question:</strong> When we fire thousands of individual electrons, what pattern builds up on the screen?
+        </div>
+      </div>
+
+      <div class="exp-section">
+        <div class="exp-header" onclick="toggleExp(this)"><span class="arrow">&#9654;</span> 2. Classical Expectation</div>
+        <div class="exp-body" style="padding:10px 12px;">
+          If electrons are particles (tiny bullets), each one goes through one slit or the other. We'd expect <strong>two bands</strong> — one behind each slit.<br><br>
+          Think of it this way: throw a thousand tennis balls at a wall with two doorways. You get two piles on the other side. Nothing in between. Nothing weird.<br><br>
+          <strong>Try it:</strong> Select "Classical" mode above and fire. Two bands. Makes sense.
+        </div>
+      </div>
+
+      <div class="exp-section">
+        <div class="exp-header" onclick="toggleExp(this)"><span class="arrow">&#9654;</span> 3. The Shocking Result</div>
+        <div class="exp-body" style="padding:10px 12px;">
+          Switch to "Unobserved" mode. Fire one electron at a time. Each one hits the screen at a seemingly random spot.<br><br>
+          But after hundreds of electrons... <strong>an interference pattern appears</strong>. Alternating bright and dark bands. This is what <em>waves</em> do — not particles.<br><br>
+          <strong>The implication is staggering:</strong> Each individual electron somehow went through <em>both</em> slits simultaneously and <em>interfered with itself</em>. A single particle behaved like a wave.<br><br>
+          This is not a statistical effect. It's not about electrons interacting with each other (they're fired one at a time). Each electron, individually, is a wave spread across both slits until it hits the screen.
+        </div>
+      </div>
+
+      <div class="exp-section">
+        <div class="exp-header" onclick="toggleExp(this)"><span class="arrow">&#9654;</span> 4. The Observer Effect</div>
+        <div class="exp-body" style="padding:10px 12px;">
+          Now use the <strong style="color:#ff6b6b;">OBSERVER TOGGLE</strong> above. Turn it ON while particles are firing. Don't reset — just flip the switch.<br><br>
+          <strong>The interference pattern stops forming.</strong> New particles land in two simple bands. The electron now behaves like a particle, going through one slit or the other.<br><br>
+          <strong>Turn observation OFF again.</strong> The interference pattern starts building back up. The electron "knows" when it's being watched.<br><br>
+          This is not a metaphor. This is what physically happens. The mere presence of a detector — even one that could theoretically detect without disturbing the electron — destroys the wave behavior.<br><br>
+          <strong>The act of gaining information about which slit changed reality itself.</strong>
+        </div>
+      </div>
+
+      <div class="exp-section">
+        <div class="exp-header" onclick="toggleExp(this)"><span class="arrow">&#9654;</span> 5. What Does This Mean?</div>
+        <div class="exp-body" style="padding:10px 12px;">
+          Before measurement, the particle exists in <strong>superposition</strong> — it is in all possible states simultaneously. It doesn't have a definite position. It isn't at slit A or slit B. It's at both. And neither.<br><br>
+          Observation forces it to "choose." The wave function <strong>collapses</strong> into a single definite state.<br><br>
+          <strong>This raises the deepest question in physics:</strong> What counts as an "observation"? Does it require consciousness? A machine? Any interaction with matter?<br><br>
+          After a century of debate, physicists still disagree.
+        </div>
+      </div>
+
+      <div class="exp-section">
+        <div class="exp-header" onclick="toggleExp(this)"><span class="arrow">&#9654;</span> 6. The Wave Function</div>
+        <div class="exp-body" style="padding:10px 12px;">
+          The wave function <strong>&psi;</strong> (psi) describes the probability amplitude of a quantum system.<br><br>
+          <strong>Probability = |&psi;(x)|&sup2;</strong><br><br>
+          For the double slit:<br>
+          <strong>&psi; = A&middot;sin(kr&#8321; - &omega;t) + A&middot;sin(kr&#8322; - &omega;t)</strong><br><br>
+          where r&#8321; and r&#8322; are the distances from each slit to point x on the screen.<br><br>
+          <strong>Constructive interference:</strong> Waves align → |&psi;|&sup2; is large → bright band<br>
+          <strong>Destructive interference:</strong> Waves cancel → |&psi;|&sup2; is zero → dark band<br><br>
+          Toggle "Show wave function" above to see the ripples from each slit.
+        </div>
+      </div>
+
+      <div class="exp-section">
+        <div class="exp-header" onclick="toggleExp(this)"><span class="arrow">&#9654;</span> 7. Interpretations</div>
+        <div class="exp-body" style="padding:10px 12px;">
+          <strong style="color:#88ccff;">Copenhagen (Bohr, 1927):</strong><br>
+          The wave function is real. It collapses on measurement. Reality is fundamentally probabilistic. "Don't ask what the electron is doing between measurements — the question has no meaning."<br><br>
+
+          <strong style="color:#88ccff;">Many-Worlds (Everett, 1957):</strong><br>
+          The wave function never collapses. Every measurement splits the universe. The electron goes through both slits — in different branches of reality. All outcomes happen.<br><br>
+
+          <strong style="color:#88ccff;">Pilot Wave (de Broglie-Bohm):</strong><br>
+          The particle IS a particle — always. But it's guided by a real physical wave. The wave goes through both slits; the particle follows the wave. Deterministic, but nonlocal.<br><br>
+
+          <strong style="color:#88ccff;">Consciousness Causes Collapse (Wigner, von Neumann):</strong><br>
+          Only a conscious observer collapses the wave function. Controversial. Most physicists now favor decoherence — interaction with any macroscopic system is sufficient.
+        </div>
+      </div>
+
+      <div class="exp-section">
+        <div class="exp-header" onclick="toggleExp(this)"><span class="arrow">&#9654;</span> 8. Real Experiments</div>
+        <div class="exp-body" style="padding:10px 12px;">
+          <strong>1801 — Thomas Young:</strong> Light through two slits produces interference bands. Proves light is a wave.<br><br>
+          <strong>1927 — Davisson &amp; Germer:</strong> Electrons diffract off a crystal. Confirms de Broglie: matter has wave properties.<br><br>
+          <strong>1961 — Claus Jönsson:</strong> First true double-slit with electrons. Interference pattern confirmed.<br><br>
+          <strong>1989 — Akira Tonomura:</strong> Single electrons fired one at a time. The interference pattern builds up dot by dot. Voted "the most beautiful experiment in physics."<br><br>
+          <strong>1999 — Markus Arndt:</strong> Buckminsterfullerene molecules (C&#8326;&#8320;, 720 atoms!) show interference. Even "large" objects are waves.<br><br>
+          <strong>2019 — Fein et al.:</strong> Molecules of 2,000 atoms showed interference. The boundary between quantum and classical keeps moving.
+        </div>
+      </div>
+
+      <div class="exp-section">
+        <div class="exp-header" onclick="toggleExp(this)"><span class="arrow">&#9654;</span> 9. The Delayed Choice</div>
+        <div class="exp-body" style="padding:10px 12px;">
+          <strong>Wheeler's delayed-choice experiment (1978, confirmed 2007):</strong><br><br>
+          You can decide whether to observe <strong>after</strong> the particle has already passed through the slits. The result still matches your choice.<br><br>
+          If you choose to look: particle behavior. If you choose not to look: wave behavior. Even though the particle already "decided" at the slits.<br><br>
+          <strong>The particle's past behavior seems to change based on a future decision.</strong><br><br>
+          This doesn't mean you can send messages backward in time. But it does mean that the concept of "what happened" at the slits has no meaning until the measurement is complete.<br><br>
+          <em style="color:#88ccff;">"The past has no existence except as recorded in the present."</em><br>
+          <span style="color:#666;">— John Archibald Wheeler</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3D Viewport -->
+  <div id="viewport">
+    <div id="mode-label">
+      <div id="mode-title">Classical Expectation</div>
+      <div class="mode-sub" id="mode-subtitle">What we EXPECT if particles are just particles</div>
+    </div>
+  </div>
+</div>
+
+<!-- Bottom Panel -->
+<div id="bottom-panel">
+  <div class="bottom-stats">
+    <div class="bottom-stat">Particles fired: <span id="bs-fired">0</span></div>
+    <div class="bottom-stat">Screen hits: <span id="bs-hits">0</span></div>
+    <div class="bottom-stat">Through slit 1: <span id="bs-slit1">0</span></div>
+    <div class="bottom-stat">Through slit 2: <span id="bs-slit2">0</span></div>
+    <div class="bottom-stat">Pattern type: <span id="bs-pattern">--</span></div>
+    <div class="bottom-stat">Visibility: <span id="bs-visibility">--</span></div>
+  </div>
+  <canvas id="pattern-canvas"></canvas>
+  <canvas id="comparison-canvas"></canvas>
+</div>
+
+<script>
+// ============================================================
+// DOUBLE SLIT EXPERIMENT — Three.js Interactive Simulation
+// ============================================================
+
+// --- State ---
+let currentMode = 'classical'; // classical | unobserved | observed
+let rapidFiring = false;
+let fireRate = 10;
+let showWaves = false;
+let showProb = true;
+let showCompare = false;
+
+let particlesFired = 0;
+let screenHits = 0;
+let slit1Count = 0;
+let slit2Count = 0;
+
+// Slit parameters (in scene units)
+let slitWidth = 0.3;
+let slitSep = 0.8;
+
+// Detection screen histogram (200 bins)
+const NUM_BINS = 200;
+let histogram = new Float32Array(NUM_BINS);
+let histogramClassical = new Float32Array(NUM_BINS);
+let histogramWave = new Float32Array(NUM_BINS);
+let histogramObserved = new Float32Array(NUM_BINS);
+
+// Scene dimensions
+const GUN_X = -6;
+const BARRIER_X = 0;
+const SCREEN_X = 6;
+const SCREEN_HEIGHT = 6;
+
+// Particles in flight
+let particles = [];
+
+// --- Three.js setup ---
+const viewport = document.getElementById('viewport');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0a0a1a);
+scene.fog = new THREE.FogExp2(0x0a0a1a, 0.02);
+
+const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 100);
+camera.position.set(0, 4, 12);
+camera.lookAt(0, 0, 0);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(window.devicePixelRatio);
+viewport.appendChild(renderer.domElement);
+
+// Lights
+const ambientLight = new THREE.AmbientLight(0x334466, 0.6);
+scene.add(ambientLight);
+const dirLight = new THREE.DirectionalLight(0x6688cc, 0.8);
+dirLight.position.set(5, 10, 5);
+scene.add(dirLight);
+const pointLight = new THREE.PointLight(0x4466aa, 0.5, 30);
+pointLight.position.set(GUN_X, 2, 0);
+scene.add(pointLight);
+
+// --- Build experiment apparatus ---
+
+// Floor grid
+const gridHelper = new THREE.GridHelper(20, 40, 0x111133, 0x0a0a22);
+gridHelper.position.y = -3.2;
+scene.add(gridHelper);
+
+// Electron gun
+const gunGroup = new THREE.Group();
+const gunBody = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.3, 0.4, 1.5, 16),
+  new THREE.MeshPhongMaterial({ color: 0x334455, emissive: 0x112233, metalness: 0.8 })
+);
+gunBody.rotation.z = Math.PI / 2;
+gunGroup.add(gunBody);
+
+const gunNozzle = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.15, 0.2, 0.5, 16),
+  new THREE.MeshPhongMaterial({ color: 0x556677, emissive: 0x223344 })
+);
+gunNozzle.rotation.z = Math.PI / 2;
+gunNozzle.position.x = 0.9;
+gunGroup.add(gunNozzle);
+
+const gunGlow = new THREE.PointLight(0x4488ff, 0.8, 3);
+gunGlow.position.x = 1.2;
+gunGroup.add(gunGlow);
+
+gunGroup.position.set(GUN_X, 0, 0);
+scene.add(gunGroup);
+
+// Gun label
+const gunLabel = makeTextSprite("Electron Gun", 0.4, '#88aacc');
+gunLabel.position.set(GUN_X, 1.5, 0);
+scene.add(gunLabel);
+
+// Barrier wall
+let barrierGroup = new THREE.Group();
+scene.add(barrierGroup);
+
+function buildBarrier() {
+  while (barrierGroup.children.length) {
+    const c = barrierGroup.children[0];
+    barrierGroup.remove(c);
+    if (c.geometry) c.geometry.dispose();
+    if (c.material) c.material.dispose();
+  }
+
+  const barrierMat = new THREE.MeshPhongMaterial({
+    color: 0x222244,
+    emissive: 0x0a0a22,
+    transparent: true,
+    opacity: 0.85,
+  });
+
+  const halfSep = slitSep / 2;
+  const halfW = slitWidth / 2;
+  const wallH = SCREEN_HEIGHT;
+  const wallThick = 0.12;
+
+  // Top section (above top slit)
+  const topH = wallH / 2 - halfSep - halfW;
+  if (topH > 0) {
+    const top = new THREE.Mesh(new THREE.BoxGeometry(wallThick, topH, 0.8), barrierMat);
+    top.position.set(BARRIER_X, halfSep + halfW + topH / 2, 0);
+    barrierGroup.add(top);
+  }
+
+  // Middle section (between slits)
+  const midH = slitSep - slitWidth;
+  if (midH > 0) {
+    const mid = new THREE.Mesh(new THREE.BoxGeometry(wallThick, midH, 0.8), barrierMat);
+    mid.position.set(BARRIER_X, 0, 0);
+    barrierGroup.add(mid);
+  }
+
+  // Bottom section (below bottom slit)
+  if (topH > 0) {
+    const bot = new THREE.Mesh(new THREE.BoxGeometry(wallThick, topH, 0.8), barrierMat);
+    bot.position.set(BARRIER_X, -(halfSep + halfW + topH / 2), 0);
+    barrierGroup.add(bot);
+  }
+
+  // Slit edge glow
+  const edgeMat = new THREE.MeshBasicMaterial({ color: 0x3355aa, transparent: true, opacity: 0.3 });
+  const edgeGeo = new THREE.BoxGeometry(0.02, slitWidth, 0.82);
+  [halfSep, -halfSep].forEach(y => {
+    const e1 = new THREE.Mesh(edgeGeo, edgeMat);
+    e1.position.set(BARRIER_X, y, 0);
+    barrierGroup.add(e1);
+  });
+}
+buildBarrier();
+
+const barrierLabel = makeTextSprite("Barrier with Two Slits", 0.35, '#7788aa');
+barrierLabel.position.set(BARRIER_X, SCREEN_HEIGHT / 2 + 0.3, 0);
+scene.add(barrierLabel);
+
+// Detection screen
+const screenGeo = new THREE.PlaneGeometry(0.1, SCREEN_HEIGHT, 1, NUM_BINS);
+const screenMat = new THREE.MeshPhongMaterial({
+  color: 0x111122,
+  emissive: 0x050510,
+  side: THREE.DoubleSide,
+});
+const detScreen = new THREE.Mesh(screenGeo, screenMat);
+detScreen.position.set(SCREEN_X, 0, 0);
+detScreen.rotation.y = Math.PI / 2;
+scene.add(detScreen);
+
+// Screen backing (visual)
+const screenBacking = new THREE.Mesh(
+  new THREE.BoxGeometry(0.08, SCREEN_HEIGHT, 0.6),
+  new THREE.MeshPhongMaterial({ color: 0x181830, emissive: 0x080818 })
+);
+screenBacking.position.set(SCREEN_X + 0.1, 0, 0);
+scene.add(screenBacking);
+
+const screenLabel = makeTextSprite("Detection Screen", 0.35, '#7788aa');
+screenLabel.position.set(SCREEN_X, SCREEN_HEIGHT / 2 + 0.3, 0);
+scene.add(screenLabel);
+
+// Screen hit dots group
+let hitDotsGroup = new THREE.Group();
+scene.add(hitDotsGroup);
+
+// Detector (for observed mode)
+let detectorGroup = new THREE.Group();
+detectorGroup.visible = false;
+
+const detectorBody1 = new THREE.Mesh(
+  new THREE.BoxGeometry(0.3, 0.4, 0.4),
+  new THREE.MeshPhongMaterial({ color: 0x882222, emissive: 0x441111 })
+);
+detectorBody1.position.set(BARRIER_X + 0.3, slitSep / 2, 0);
+detectorGroup.add(detectorBody1);
+
+const detectorBody2 = new THREE.Mesh(
+  new THREE.BoxGeometry(0.3, 0.4, 0.4),
+  new THREE.MeshPhongMaterial({ color: 0x882222, emissive: 0x441111 })
+);
+detectorBody2.position.set(BARRIER_X + 0.3, -slitSep / 2, 0);
+detectorGroup.add(detectorBody2);
+
+const detectorLight1 = new THREE.PointLight(0xff3333, 0, 2);
+detectorLight1.position.set(BARRIER_X + 0.3, slitSep / 2, 0);
+detectorGroup.add(detectorLight1);
+
+const detectorLight2 = new THREE.PointLight(0xff3333, 0, 2);
+detectorLight2.position.set(BARRIER_X + 0.3, -slitSep / 2, 0);
+detectorGroup.add(detectorLight2);
+
+// Detector beam lines
+const beamMat = new THREE.MeshBasicMaterial({ color: 0xff2222, transparent: true, opacity: 0.15 });
+const beam1 = new THREE.Mesh(new THREE.PlaneGeometry(0.5, slitWidth * 1.5), beamMat);
+beam1.position.set(BARRIER_X + 0.15, slitSep / 2, 0);
+beam1.rotation.y = Math.PI / 2;
+detectorGroup.add(beam1);
+const beam2 = new THREE.Mesh(new THREE.PlaneGeometry(0.5, slitWidth * 1.5), beamMat);
+beam2.position.set(BARRIER_X + 0.15, -slitSep / 2, 0);
+beam2.rotation.y = Math.PI / 2;
+detectorGroup.add(beam2);
+
+const detLabel = makeTextSprite("DETECTOR", 0.3, '#ff6666');
+detLabel.position.set(BARRIER_X + 0.3, slitSep / 2 + 0.5, 0);
+detectorGroup.add(detLabel);
+
+scene.add(detectorGroup);
+
+// Wave function visualization
+let waveGroup = new THREE.Group();
+waveGroup.visible = false;
+scene.add(waveGroup);
+
+let waveMeshes = [];
+function buildWaveRings() {
+  waveMeshes.forEach(m => { waveGroup.remove(m); m.geometry.dispose(); m.material.dispose(); });
+  waveMeshes = [];
+  const ringCount = 12;
+  for (let s = 0; s < 2; s++) {
+    const sy = s === 0 ? slitSep / 2 : -slitSep / 2;
+    for (let i = 0; i < ringCount; i++) {
+      const r = 0.3 + i * 0.5;
+      const ring = new THREE.Mesh(
+        new THREE.RingGeometry(r, r + 0.03, 64),
+        new THREE.MeshBasicMaterial({
+          color: s === 0 ? 0x4466cc : 0x6644cc,
+          transparent: true,
+          opacity: 0.15,
+          side: THREE.DoubleSide,
+        })
+      );
+      ring.position.set(BARRIER_X + 0.1, sy, 0);
+      ring.rotation.y = Math.PI / 2;
+      ring.userData = { baseRadius: r, slit: s, index: i };
+      waveGroup.add(ring);
+      waveMeshes.push(ring);
+    }
+  }
+}
+buildWaveRings();
+
+// Probability distribution bars (3D, on side of screen)
+let probGroup = new THREE.Group();
+scene.add(probGroup);
+let probBars = [];
+
+function buildProbBars() {
+  probBars.forEach(b => { probGroup.remove(b); b.geometry.dispose(); b.material.dispose(); });
+  probBars = [];
+  const barCount = 50;
+  const barH = SCREEN_HEIGHT / barCount;
+  for (let i = 0; i < barCount; i++) {
+    const bar = new THREE.Mesh(
+      new THREE.BoxGeometry(0.01, barH * 0.85, 0.01),
+      new THREE.MeshBasicMaterial({ color: 0x88ccff, transparent: true, opacity: 0.6 })
+    );
+    const y = (i / barCount - 0.5) * SCREEN_HEIGHT + barH / 2;
+    bar.position.set(SCREEN_X + 0.3, y, 0.4);
+    probGroup.add(bar);
+    probBars.push(bar);
+  }
+}
+buildProbBars();
+
+// --- Particle system ---
+const particleGeo = new THREE.SphereGeometry(0.06, 8, 8);
+const particleMat = new THREE.MeshBasicMaterial({ color: 0x66aaff });
+
+function fireParticle() {
+  const p = new THREE.Mesh(particleGeo, particleMat.clone());
+  p.position.set(GUN_X + 1.2, 0, 0);
+
+  const pLight = new THREE.PointLight(0x4488ff, 0.4, 1.5);
+  p.add(pLight);
+
+  const halfSep = slitSep / 2;
+  const halfW = slitWidth / 2;
+
+  // Decide which slit (or both conceptually)
+  let targetSlit;
+  if (currentMode === 'classical' || currentMode === 'observed') {
+    targetSlit = Math.random() < 0.5 ? 1 : -1;
+  } else {
+    targetSlit = Math.random() < 0.5 ? 1 : -1; // visually goes through one, but pattern is wave
+  }
+
+  const slitY = targetSlit * halfSep + (Math.random() - 0.5) * slitWidth * 0.8;
+
+  // Compute screen Y based on mode
+  let screenY;
+  if (currentMode === 'unobserved') {
+    screenY = sampleWavePattern();
+  } else {
+    // Classical / observed: two-band pattern
+    screenY = sampleClassicalPattern(targetSlit);
+  }
+
+  // Clamp
+  screenY = Math.max(-SCREEN_HEIGHT / 2 + 0.05, Math.min(SCREEN_HEIGHT / 2 - 0.05, screenY));
+
+  p.userData = {
+    phase: 'toBarrier', // toBarrier -> throughSlit -> toScreen -> hit
+    slitY: slitY,
+    screenY: screenY,
+    targetSlit: targetSlit,
+    speed: 4 + Math.random() * 2,
+    t: 0,
+  };
+
+  scene.add(p);
+  particles.push(p);
+  particlesFired++;
+  if (targetSlit > 0) slit1Count++; else slit2Count++;
+  updateStats();
+}
+
+function sampleWavePattern() {
+  // Interference pattern: probability ~ cos^2(pi * d * y / (lambda * L))
+  // We sample from this distribution using rejection sampling
+  const lambda = 0.8; // effective wavelength
+  const d = slitSep;
+  const L = SCREEN_X - BARRIER_X;
+  const maxY = SCREEN_HEIGHT / 2;
+
+  // Single slit envelope: sinc^2(pi * a * y / (lambda * L))
+  const a = slitWidth;
+
+  for (let attempt = 0; attempt < 100; attempt++) {
+    const y = (Math.random() - 0.5) * SCREEN_HEIGHT;
+    const thetaD = Math.PI * d * y / (lambda * L);
+    const thetaA = Math.PI * a * y / (lambda * L);
+    const envelope = thetaA === 0 ? 1 : Math.pow(Math.sin(thetaA) / thetaA, 2);
+    const interference = Math.pow(Math.cos(thetaD), 2);
+    const prob = envelope * interference;
+    if (Math.random() < prob) return y;
+  }
+  return (Math.random() - 0.5) * 0.5;
+}
+
+function sampleClassicalPattern(slit) {
+  // Gaussian centered on slit position
+  const center = slit * slitSep / 2;
+  const sigma = slitWidth * 1.2 + 0.15;
+  return center + gaussRandom() * sigma;
+}
+
+function gaussRandom() {
+  let u = 0, v = 0;
+  while (u === 0) u = Math.random();
+  while (v === 0) v = Math.random();
+  return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+}
+
+function updateParticles(dt) {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    const d = p.userData;
+    d.t += dt;
+
+    if (d.phase === 'toBarrier') {
+      p.position.x += d.speed * dt;
+      // Slight drift toward slit
+      const targetY = d.slitY;
+      p.position.y += (targetY - p.position.y) * 2 * dt;
+
+      if (p.position.x >= BARRIER_X - 0.05) {
+        d.phase = 'throughSlit';
+        p.position.x = BARRIER_X;
+        p.position.y = d.slitY;
+
+        // Flash detector in observed mode
+        if (currentMode === 'observed') {
+          flashDetector(d.targetSlit);
+        }
+      }
+    } else if (d.phase === 'throughSlit') {
+      p.position.x += d.speed * dt;
+      // Curve toward final screen Y
+      const progress = (p.position.x - BARRIER_X) / (SCREEN_X - BARRIER_X);
+      const targetY = d.slitY + (d.screenY - d.slitY) * progress;
+      p.position.y += (targetY - p.position.y) * 4 * dt;
+
+      // Slight z wobble for visual interest
+      p.position.z = Math.sin(d.t * 10) * 0.02;
+
+      if (p.position.x >= SCREEN_X - 0.1) {
+        d.phase = 'hit';
+        p.position.x = SCREEN_X - 0.05;
+        p.position.y = d.screenY;
+        registerHit(d.screenY);
+        addHitDot(d.screenY);
+
+        // Fade out
+        d.fadeTimer = 0.3;
+      }
+    } else if (d.phase === 'hit') {
+      d.fadeTimer -= dt;
+      if (p.children[0]) p.children[0].intensity = Math.max(0, d.fadeTimer * 2);
+      p.material.opacity = Math.max(0, d.fadeTimer * 3);
+      p.material.transparent = true;
+      if (d.fadeTimer <= 0) {
+        scene.remove(p);
+        if (p.children[0]) p.children[0].dispose && p.children[0].dispose();
+        p.geometry.dispose && p.geometry.dispose();
+        p.material.dispose && p.material.dispose();
+        particles.splice(i, 1);
+      }
+    }
+  }
+}
+
+function registerHit(y) {
+  screenHits++;
+  const bin = Math.floor(((y / SCREEN_HEIGHT) + 0.5) * NUM_BINS);
+  const clampedBin = Math.max(0, Math.min(NUM_BINS - 1, bin));
+  histogram[clampedBin]++;
+
+  if (currentMode === 'classical') histogramClassical[clampedBin]++;
+  else if (currentMode === 'unobserved') histogramWave[clampedBin]++;
+  else histogramObserved[clampedBin]++;
+
+  updateStats();
+}
+
+function addHitDot(y) {
+  // Small persistent dot on the screen
+  const dotGeo = new THREE.SphereGeometry(0.025, 6, 6);
+
+  // Color based on mode
+  let color;
+  if (currentMode === 'unobserved') {
+    color = new THREE.Color().setHSL(0.75 + Math.random() * 0.1, 0.8, 0.6);
+  } else {
+    color = new THREE.Color().setHSL(0.55 + Math.random() * 0.05, 0.7, 0.6);
+  }
+
+  const dotMat = new THREE.MeshBasicMaterial({ color: color });
+  const dot = new THREE.Mesh(dotGeo, dotMat);
+  dot.position.set(SCREEN_X - 0.05, y, (Math.random() - 0.5) * 0.3);
+  hitDotsGroup.add(dot);
+
+  // Limit total dots rendered
+  if (hitDotsGroup.children.length > 2000) {
+    const old = hitDotsGroup.children[0];
+    hitDotsGroup.remove(old);
+    old.geometry.dispose();
+    old.material.dispose();
+  }
+}
+
+function flashDetector(slit) {
+  const light = slit > 0 ? detectorLight1 : detectorLight2;
+  const body = slit > 0 ? detectorBody1 : detectorBody2;
+  light.intensity = 2;
+  body.material.emissive.setHex(0xff3333);
+  setTimeout(() => {
+    light.intensity = 0.1;
+    body.material.emissive.setHex(0x441111);
+  }, 100);
+}
+
+// --- Fire rate / rapid fire ---
+let fireInterval = null;
+
+function updateFireRate() {
+  fireRate = parseInt(document.getElementById('fire-rate').value);
+  document.getElementById('fire-rate-val').textContent = fireRate + '/s';
+  if (rapidFiring) {
+    clearInterval(fireInterval);
+    fireInterval = setInterval(fireParticle, 1000 / fireRate);
+  }
+}
+
+function fireSingle() {
+  fireParticle();
+}
+
+function toggleRapid() {
+  rapidFiring = !rapidFiring;
+  const btn = document.getElementById('rapid-btn');
+  if (rapidFiring) {
+    btn.textContent = 'Stop Firing';
+    btn.classList.add('fire');
+    fireInterval = setInterval(fireParticle, 1000 / fireRate);
+  } else {
+    btn.textContent = 'Rapid Fire';
+    btn.classList.remove('fire');
+    clearInterval(fireInterval);
+  }
+}
+
+function resetScreen() {
+  // Clear hits
+  while (hitDotsGroup.children.length) {
+    const c = hitDotsGroup.children[0];
+    hitDotsGroup.remove(c);
+    c.geometry.dispose();
+    c.material.dispose();
+  }
+  histogram.fill(0);
+  histogramClassical.fill(0);
+  histogramWave.fill(0);
+  histogramObserved.fill(0);
+  screenHits = 0;
+  particlesFired = 0;
+  slit1Count = 0;
+  slit2Count = 0;
+
+  // Clear in-flight
+  particles.forEach(p => {
+    scene.remove(p);
+    p.geometry && p.geometry.dispose();
+    p.material && p.material.dispose();
+  });
+  particles = [];
+
+  updateStats();
+}
+
+// --- Mode switching ---
+const modeDescriptions = {
+  classical: 'Particles behave as expected — two bands on the screen, like throwing balls through two doors. Each particle goes through one slit only.',
+  unobserved: 'Particles are fired one at a time. No detector watches the slits. Somehow, an interference pattern emerges — each particle went through BOTH slits as a wave.',
+  observed: 'A detector watches which slit each particle passes through. The interference pattern VANISHES. The act of observing changed the result.',
+};
+
+const modeTitles = {
+  classical: 'Classical Expectation',
+  unobserved: 'Unobserved — Wave Behavior',
+  observed: 'Observed — Particle Behavior',
+};
+
+const modeSubtitles = {
+  classical: 'What we EXPECT if particles are just particles',
+  unobserved: 'What ACTUALLY happens when we don\'t watch',
+  observed: 'What happens when we WATCH which slit they use',
+};
+
+function setMode(mode) {
+  currentMode = mode;
+
+  // Update tabs
+  document.querySelectorAll('.mode-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.mode === mode);
+  });
+
+  // Update description
+  document.getElementById('mode-desc').textContent = modeDescriptions[mode];
+  document.getElementById('mode-title').textContent = modeTitles[mode];
+  document.getElementById('mode-subtitle').textContent = modeSubtitles[mode];
+
+  // Detector visibility
+  detectorGroup.visible = (mode === 'observed');
+
+  // Wave function visibility
+  if (mode === 'unobserved' && showWaves) {
+    waveGroup.visible = true;
+  } else if (mode !== 'unobserved') {
+    waveGroup.visible = false;
+  }
+
+  // DO NOT reset screen — let the pattern persist so the user can see
+  // the interference pattern change in real-time when toggling observation.
+  // The new particles will follow the new mode's distribution while
+  // old hits remain visible, showing the transition.
+}
+
+// --- Slit parameters ---
+function updateSlitParams() {
+  const wVal = parseInt(document.getElementById('slit-width').value);
+  const sVal = parseInt(document.getElementById('slit-sep').value);
+  document.getElementById('slit-width-val').textContent = wVal;
+  document.getElementById('slit-sep-val').textContent = sVal;
+
+  slitWidth = wVal / 50;
+  slitSep = sVal / 50;
+
+  buildBarrier();
+  buildWaveRings();
+  updateDetectorPositions();
+  resetScreen();
+}
+
+function updateDetectorPositions() {
+  detectorBody1.position.y = slitSep / 2;
+  detectorBody2.position.y = -slitSep / 2;
+  detectorLight1.position.y = slitSep / 2;
+  detectorLight2.position.y = -slitSep / 2;
+  beam1.position.y = slitSep / 2;
+  beam2.position.y = -slitSep / 2;
+}
+
+// --- Observer toggle (no reset) ---
+function toggleObserver() {
+  const observing = document.getElementById('observer-toggle').checked;
+  const statusEl = document.getElementById('observer-status');
+
+  if (observing) {
+    currentMode = 'observed';
+    detectorGroup.visible = true;
+    waveGroup.visible = false;
+    statusEl.textContent = 'Detector ON — particles behave as particles';
+    statusEl.style.color = '#ff6b6b';
+  } else {
+    currentMode = 'unobserved';
+    detectorGroup.visible = false;
+    if (showWaves) waveGroup.visible = true;
+    statusEl.textContent = 'Detector OFF — particles behave as waves';
+    statusEl.style.color = '#88ccff';
+  }
+
+  // Update mode tabs to match
+  document.querySelectorAll('.mode-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.mode === currentMode);
+  });
+  document.getElementById('mode-desc').textContent = modeDescriptions[currentMode];
+  document.getElementById('mode-title').textContent = modeTitles[currentMode];
+  document.getElementById('mode-subtitle').textContent = modeSubtitles[currentMode];
+
+  // NO resetScreen() — pattern persists, new particles follow new distribution
+}
+
+// --- Toggles ---
+function toggleWaves() {
+  showWaves = document.getElementById('show-waves').checked;
+  waveGroup.visible = showWaves && currentMode === 'unobserved';
+}
+
+function toggleProb() {
+  showProb = document.getElementById('show-prob').checked;
+  probGroup.visible = showProb;
+}
+
+function toggleCompare() {
+  showCompare = document.getElementById('show-compare').checked;
+  document.getElementById('comparison-canvas').style.display = showCompare ? 'block' : 'none';
+}
+
+// --- Stats ---
+function updateStats() {
+  document.getElementById('particle-count').textContent = particlesFired;
+  document.getElementById('hits-count').textContent = screenHits;
+  document.getElementById('bs-fired').textContent = particlesFired;
+  document.getElementById('bs-hits').textContent = screenHits;
+  document.getElementById('bs-slit1').textContent = slit1Count;
+  document.getElementById('bs-slit2').textContent = slit2Count;
+  document.getElementById('bs-pattern').textContent =
+    currentMode === 'unobserved' ? 'Interference' : 'Two-band';
+
+  // Calculate fringe visibility
+  if (screenHits > 20) {
+    const maxH = Math.max(...histogram);
+    // Find first minimum after center
+    let minH = maxH;
+    const center = NUM_BINS / 2;
+    for (let i = Math.floor(center); i < Math.floor(center + NUM_BINS / 4); i++) {
+      if (histogram[i] < minH && histogram[i] > 0) minH = histogram[i];
+    }
+    const V = maxH > 0 ? ((maxH - minH) / (maxH + minH) * 100).toFixed(0) : 0;
+    document.getElementById('bs-visibility').textContent = V + '%';
+  }
+}
+
+// --- Explanation toggles ---
+function toggleExp(el) {
+  const body = el.nextElementSibling;
+  el.classList.toggle('open');
+  body.classList.toggle('open');
+}
+
+// --- Text sprite helper ---
+function makeTextSprite(text, scale, color) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 64;
+  const ctx = canvas.getContext('2d');
+  ctx.font = '28px Segoe UI, sans-serif';
+  ctx.fillStyle = color || '#88aacc';
+  ctx.textAlign = 'center';
+  ctx.fillText(text, 256, 40);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.minFilter = THREE.LinearFilter;
+  const mat = new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false });
+  const sprite = new THREE.Sprite(mat);
+  sprite.scale.set(scale * 4, scale * 0.5, 1);
+  return sprite;
+}
+
+// --- 2D Canvas: Pattern graph ---
+const patternCanvas = document.getElementById('pattern-canvas');
+const patternCtx = patternCanvas.getContext('2d');
+
+const comparisonCanvas = document.getElementById('comparison-canvas');
+const compCtx = comparisonCanvas.getContext('2d');
+comparisonCanvas.style.display = 'none';
+
+function resizeCanvases() {
+  patternCanvas.width = patternCanvas.clientWidth;
+  patternCanvas.height = patternCanvas.clientHeight;
+  comparisonCanvas.width = comparisonCanvas.clientWidth;
+  comparisonCanvas.height = comparisonCanvas.clientHeight;
+}
+
+function drawPatternGraph() {
+  const w = patternCanvas.width;
+  const h = patternCanvas.height;
+  patternCtx.clearRect(0, 0, w, h);
+
+  // Background
+  patternCtx.fillStyle = '#050510';
+  patternCtx.fillRect(0, 0, w, h);
+
+  // Grid lines
+  patternCtx.strokeStyle = '#111133';
+  patternCtx.lineWidth = 0.5;
+  for (let i = 0; i < 5; i++) {
+    const y = (i / 4) * h;
+    patternCtx.beginPath();
+    patternCtx.moveTo(0, y);
+    patternCtx.lineTo(w, y);
+    patternCtx.stroke();
+  }
+
+  const maxVal = Math.max(1, ...histogram);
+
+  // Draw histogram
+  const barW = w / NUM_BINS;
+  const color = currentMode === 'unobserved' ? [140, 100, 220] : [80, 150, 220];
+
+  for (let i = 0; i < NUM_BINS; i++) {
+    const val = histogram[i] / maxVal;
+    const barH = val * (h - 10);
+    const alpha = 0.3 + val * 0.7;
+    patternCtx.fillStyle = `rgba(${color[0]},${color[1]},${color[2]},${alpha})`;
+    patternCtx.fillRect(i * barW, h - barH, barW - 0.5, barH);
+  }
+
+  // Theoretical curve overlay
+  patternCtx.strokeStyle = currentMode === 'unobserved' ? '#bb88ff' : '#66aaee';
+  patternCtx.lineWidth = 1.5;
+  patternCtx.globalAlpha = 0.5;
+  patternCtx.beginPath();
+
+  const lambda = 0.8;
+  const d = slitSep;
+  const a = slitWidth;
+  const L = SCREEN_X - BARRIER_X;
+
+  for (let px = 0; px < w; px++) {
+    const y = ((px / w) - 0.5) * SCREEN_HEIGHT;
+    let prob;
+    if (currentMode === 'unobserved') {
+      const thetaD = Math.PI * d * y / (lambda * L);
+      const thetaA = Math.PI * a * y / (lambda * L);
+      const envelope = thetaA === 0 ? 1 : Math.pow(Math.sin(thetaA) / thetaA, 2);
+      prob = envelope * Math.pow(Math.cos(thetaD), 2);
+    } else {
+      // Two gaussians
+      const s = slitWidth * 1.2 + 0.15;
+      const g1 = Math.exp(-0.5 * Math.pow((y - slitSep / 2) / s, 2));
+      const g2 = Math.exp(-0.5 * Math.pow((y + slitSep / 2) / s, 2));
+      prob = (g1 + g2) / 2;
+    }
+    const plotY = h - prob * (h - 10);
+    if (px === 0) patternCtx.moveTo(px, plotY);
+    else patternCtx.lineTo(px, plotY);
+  }
+  patternCtx.stroke();
+  patternCtx.globalAlpha = 1;
+
+  // Labels
+  patternCtx.fillStyle = '#556';
+  patternCtx.font = '10px sans-serif';
+  patternCtx.fillText('Detection Screen Position', w / 2 - 60, h - 2);
+  patternCtx.fillText('Hits', 5, 12);
+
+  // Mode label
+  patternCtx.fillStyle = currentMode === 'unobserved' ? '#9966cc' : '#5588aa';
+  patternCtx.font = 'bold 11px sans-serif';
+  const patLabel = currentMode === 'unobserved' ? 'INTERFERENCE PATTERN' :
+    currentMode === 'observed' ? 'TWO-BAND PATTERN (observed)' : 'TWO-BAND PATTERN (classical)';
+  patternCtx.fillText(patLabel, w / 2 - 70, 14);
+}
+
+function drawComparisonGraph() {
+  if (!showCompare) return;
+  const w = comparisonCanvas.width;
+  const h = comparisonCanvas.height;
+  compCtx.clearRect(0, 0, w, h);
+  compCtx.fillStyle = '#050510';
+  compCtx.fillRect(0, 0, w, h);
+
+  const lambda = 0.8;
+  const d = slitSep;
+  const a = slitWidth;
+  const L = SCREEN_X - BARRIER_X;
+  const s = slitWidth * 1.2 + 0.15;
+
+  // Unobserved (wave)
+  compCtx.strokeStyle = '#9966cc';
+  compCtx.lineWidth = 1.5;
+  compCtx.beginPath();
+  for (let px = 0; px < w; px++) {
+    const y = ((px / w) - 0.5) * SCREEN_HEIGHT;
+    const thetaD = Math.PI * d * y / (lambda * L);
+    const thetaA = Math.PI * a * y / (lambda * L);
+    const envelope = thetaA === 0 ? 1 : Math.pow(Math.sin(thetaA) / thetaA, 2);
+    const prob = envelope * Math.pow(Math.cos(thetaD), 2);
+    const plotY = h - prob * (h - 20);
+    if (px === 0) compCtx.moveTo(px, plotY); else compCtx.lineTo(px, plotY);
+  }
+  compCtx.stroke();
+
+  // Observed (classical)
+  compCtx.strokeStyle = '#5588aa';
+  compCtx.lineWidth = 1.5;
+  compCtx.beginPath();
+  for (let px = 0; px < w; px++) {
+    const y = ((px / w) - 0.5) * SCREEN_HEIGHT;
+    const g1 = Math.exp(-0.5 * Math.pow((y - slitSep / 2) / s, 2));
+    const g2 = Math.exp(-0.5 * Math.pow((y + slitSep / 2) / s, 2));
+    const prob = (g1 + g2) / 2;
+    const plotY = h - prob * (h - 20);
+    if (px === 0) compCtx.moveTo(px, plotY); else compCtx.lineTo(px, plotY);
+  }
+  compCtx.stroke();
+
+  // Legend
+  compCtx.fillStyle = '#9966cc';
+  compCtx.font = 'bold 10px sans-serif';
+  compCtx.fillText('Unobserved (wave)', 5, 12);
+  compCtx.fillStyle = '#5588aa';
+  compCtx.fillText('Observed (particle)', 5, 24);
+  compCtx.fillStyle = '#444';
+  compCtx.font = '9px sans-serif';
+  compCtx.fillText('COMPARISON', w / 2 - 30, h - 3);
+}
+
+// --- Update probability bars ---
+function updateProbBars() {
+  if (!showProb) return;
+  const barCount = probBars.length;
+  const maxVal = Math.max(1, ...histogram);
+
+  for (let i = 0; i < barCount; i++) {
+    // Map bar index to histogram bins
+    const binStart = Math.floor((i / barCount) * NUM_BINS);
+    const binEnd = Math.floor(((i + 1) / barCount) * NUM_BINS);
+    let sum = 0;
+    for (let b = binStart; b < binEnd; b++) sum += histogram[b];
+    const avg = sum / Math.max(1, binEnd - binStart);
+    const norm = avg / maxVal;
+
+    const scaleX = 0.05 + norm * 2.5;
+    probBars[i].scale.x = scaleX;
+    probBars[i].position.x = SCREEN_X + 0.3 + scaleX / 2;
+
+    // Color
+    const hue = currentMode === 'unobserved' ? 0.75 : 0.55;
+    probBars[i].material.color.setHSL(hue, 0.6, 0.3 + norm * 0.5);
+    probBars[i].material.opacity = 0.3 + norm * 0.5;
+  }
+}
+
+// --- Animate wave rings ---
+let waveTime = 0;
+function animateWaves(dt) {
+  if (!waveGroup.visible) return;
+  waveTime += dt;
+
+  waveMeshes.forEach(m => {
+    const d = m.userData;
+    const phase = waveTime * 2 + d.index * 0.5;
+    const pulse = 0.5 + 0.5 * Math.sin(phase);
+    m.material.opacity = 0.04 + pulse * 0.12;
+    const scale = 1 + 0.05 * Math.sin(phase * 0.5);
+    m.scale.set(scale, scale, scale);
+  });
+}
+
+// --- Camera orbit ---
+let cameraAngle = 0;
+let cameraDragging = false;
+let cameraStartX = 0, cameraStartAngle = 0;
+let cameraElevation = 0.3;
+let cameraDistance = 12;
+
+viewport.addEventListener('mousedown', e => {
+  cameraDragging = true;
+  cameraStartX = e.clientX;
+  cameraStartAngle = cameraAngle;
+});
+window.addEventListener('mousemove', e => {
+  if (!cameraDragging) return;
+  cameraAngle = cameraStartAngle + (e.clientX - cameraStartX) * 0.005;
+});
+window.addEventListener('mouseup', () => { cameraDragging = false; });
+
+viewport.addEventListener('wheel', e => {
+  cameraDistance = Math.max(5, Math.min(25, cameraDistance + e.deltaY * 0.01));
+  e.preventDefault();
+}, { passive: false });
+
+function updateCamera() {
+  camera.position.x = Math.sin(cameraAngle) * cameraDistance;
+  camera.position.z = Math.cos(cameraAngle) * cameraDistance;
+  camera.position.y = 2 + cameraElevation * cameraDistance * 0.3;
+  camera.lookAt(0, 0, 0);
+}
+
+// --- Resize ---
+function onResize() {
+  const w = viewport.clientWidth;
+  const h = viewport.clientHeight;
+  if (w === 0 || h === 0) return;
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+  resizeCanvases();
+}
+window.addEventListener('resize', onResize);
+
+// --- Animation loop ---
+let lastTime = 0;
+let graphUpdateTimer = 0;
+
+function animate(time) {
+  requestAnimationFrame(animate);
+  const dt = Math.min(0.05, (time - lastTime) / 1000);
+  lastTime = time;
+
+  updateParticles(dt);
+  animateWaves(dt);
+  updateCamera();
+
+  // Gun nozzle glow pulse
+  gunGlow.intensity = 0.5 + 0.3 * Math.sin(time * 0.003);
+
+  // Detector idle glow
+  if (currentMode === 'observed') {
+    const pulse = 0.1 + 0.05 * Math.sin(time * 0.005);
+    detectorLight1.intensity = Math.max(detectorLight1.intensity, pulse);
+    detectorLight2.intensity = Math.max(detectorLight2.intensity, pulse);
+  }
+
+  renderer.render(scene, camera);
+
+  // Update 2D graphs at lower rate
+  graphUpdateTimer += dt;
+  if (graphUpdateTimer > 0.1) {
+    graphUpdateTimer = 0;
+    drawPatternGraph();
+    drawComparisonGraph();
+    updateProbBars();
+  }
+}
+
+// --- Init ---
+onResize();
+resizeCanvases();
+animate(0);
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  if (e.key === ' ' || e.key === 'Space') { e.preventDefault(); fireSingle(); }
+  if (e.key === '1') setMode('classical');
+  if (e.key === '2') setMode('unobserved');
+  if (e.key === '3') setMode('observed');
+  if (e.key === 'r' || e.key === 'R') toggleRapid();
+});
+</script>
+</body>
+</html>

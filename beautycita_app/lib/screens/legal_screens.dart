@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../config/constants.dart';
 import '../config/theme_extension.dart';
 import '../providers/chat_provider.dart';
@@ -43,30 +42,20 @@ class _TermsAndPolicyScreenState extends State<TermsAndPolicyScreen>
     final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: colors.surface,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: Text(
-          'Terminos y Politicas',
-          style: GoogleFonts.poppins(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-            color: Colors.white,
-          ),
-        ),
-        backgroundColor: colors.primary,
-        foregroundColor: Colors.white,
-        elevation: 0,
+        title: const Text('Terminos y Politicas'),
         bottom: TabBar(
           controller: _tabCtrl,
-          indicatorColor: Colors.white,
-          indicatorWeight: 3,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white.withValues(alpha: 0.55),
-          labelStyle: GoogleFonts.poppins(
+          indicatorColor: colors.primary,
+          indicatorWeight: 2.5,
+          labelColor: colors.primary,
+          unselectedLabelColor: colors.onSurface.withValues(alpha: 0.45),
+          labelStyle: const TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w600,
           ),
-          unselectedLabelStyle: GoogleFonts.poppins(
+          unselectedLabelStyle: const TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w500,
           ),
@@ -121,7 +110,7 @@ class CookiesPolicyScreen extends TermsAndPolicyScreen {
 // Single tab content — scrollable sections + contact footer
 // ---------------------------------------------------------------------------
 
-class _LegalTab extends StatelessWidget {
+class _LegalTab extends StatefulWidget {
   final IconData icon;
   final String subtitle;
   final String lastUpdated;
@@ -135,17 +124,86 @@ class _LegalTab extends StatelessWidget {
   });
 
   @override
+  State<_LegalTab> createState() => _LegalTabState();
+}
+
+class _LegalTabState extends State<_LegalTab>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _entryController;
+  late final List<Animation<double>> _fadeAnims;
+  late final List<Animation<Offset>> _slideAnims;
+
+  @override
+  void initState() {
+    super.initState();
+    _entryController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+    const count = 4; // hero banner, sections card, contact section, footer
+    _fadeAnims = List.generate(count, (i) {
+      final start = i * 0.12;
+      final end = (start + 0.4).clamp(0.0, 1.0);
+      return CurvedAnimation(
+        parent: _entryController,
+        curve: Interval(start, end, curve: Curves.easeOut),
+      );
+    });
+    _slideAnims = List.generate(count, (i) {
+      final start = i * 0.12;
+      final end = (start + 0.4).clamp(0.0, 1.0);
+      return Tween<Offset>(
+        begin: const Offset(0, 0.05),
+        end: Offset.zero,
+      ).animate(CurvedAnimation(
+        parent: _entryController,
+        curve: Interval(start, end, curve: Curves.easeOut),
+      ));
+    });
+    _entryController.forward();
+  }
+
+  @override
+  void dispose() {
+    _entryController.dispose();
+    super.dispose();
+  }
+
+  Widget _animated(int index, Widget child) {
+    return FadeTransition(
+      opacity: _fadeAnims[index],
+      child: SlideTransition(
+        position: _slideAnims[index],
+        child: child,
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final ext = Theme.of(context).extension<BCThemeExtension>()!;
 
     return ListView(
-      padding: EdgeInsets.zero,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppConstants.screenPaddingHorizontal,
+        vertical: AppConstants.paddingMD,
+      ),
       children: [
-        // ── Gradient sub-header ──
-        Container(
-          decoration: BoxDecoration(gradient: ext.primaryGradient),
-          padding: const EdgeInsets.fromLTRB(24, 14, 24, 18),
+        // ── Hero banner (rounded card inside page) ──
+        _animated(0, Container(
+          decoration: BoxDecoration(
+            gradient: ext.primaryGradient,
+            borderRadius: BorderRadius.circular(AppConstants.radiusLG),
+            boxShadow: [
+              BoxShadow(
+                color: colors.primary.withValues(alpha: 0.15),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.all(AppConstants.paddingLG),
           child: Row(
             children: [
               Container(
@@ -154,66 +212,85 @@ class _LegalTab extends StatelessWidget {
                   color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(icon, color: Colors.white, size: 20),
+                child: Icon(widget.icon, color: Colors.white, size: 20),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: Text(
-                  subtitle,
-                  style: GoogleFonts.nunito(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white.withValues(alpha: 0.9),
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.subtitle,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Actualizado: ${widget.lastUpdated}',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white.withValues(alpha: 0.7),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
-        ),
+        )),
 
-        // ── Content ──
-        Padding(
-          padding: const EdgeInsets.all(AppConstants.paddingLG),
+        const SizedBox(height: AppConstants.paddingLG),
+
+        // ── Sections in approved card style ──
+        _animated(1, Container(
+          decoration: BoxDecoration(
+            color: colors.surface,
+            borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+            border: Border.all(color: ext.cardBorderColor),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.02),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.all(AppConstants.paddingMD),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Last updated badge
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: colors.primary.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  'Actualizado: $lastUpdated',
-                  style: GoogleFonts.nunito(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: colors.primary,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // Sections
-              for (final section in sections) ...[
-                if (section.heading != null) ...[
+              for (int i = 0; i < widget.sections.length; i++) ...[
+                if (i > 0) ...[
+                  const SizedBox(height: AppConstants.paddingSM),
+                  const Divider(height: 1, color: Color(0xFFF5F0EB)),
+                  const SizedBox(height: AppConstants.paddingSM),
+                ],
+                if (widget.sections[i].heading != null) ...[
                   Row(
                     children: [
                       Container(
                         width: 3,
-                        height: 20,
+                        height: 18,
                         decoration: BoxDecoration(
-                          gradient: ext.primaryGradient,
+                          color: colors.primary,
                           borderRadius: BorderRadius.circular(2),
                         ),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          section.heading!,
-                          style: GoogleFonts.poppins(
-                            fontSize: 15,
+                          widget.sections[i].heading!,
+                          style: TextStyle(
+                            fontSize: 13,
                             fontWeight: FontWeight.w700,
                             color: colors.onSurface,
                           ),
@@ -221,56 +298,52 @@ class _LegalTab extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
                 ],
                 Text(
-                  section.body,
-                  style: GoogleFonts.nunito(
-                    fontSize: 13.5,
+                  widget.sections[i].body,
+                  style: TextStyle(
+                    fontSize: 13,
                     height: 1.65,
-                    color: colors.onSurface.withValues(alpha: 0.72),
+                    color: colors.onSurface.withValues(alpha: 0.68),
                   ),
                 ),
-                const SizedBox(height: 18),
               ],
-
-              // ── Divider ──
-              const SizedBox(height: 12),
-              Divider(color: colors.onSurface.withValues(alpha: 0.08)),
-              const SizedBox(height: 24),
-
-              // ── Contact section ──
-              const _ContactSection(),
-
-              const SizedBox(height: 32),
-
-              // ── Footer ──
-              Center(
-                child: Column(
-                  children: [
-                    Text(
-                      'BeautyCita',
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: colors.primary.withValues(alpha: 0.3),
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Puerto Vallarta, Jalisco, Mexico',
-                      style: GoogleFonts.nunito(
-                        fontSize: 11,
-                        color: colors.onSurface.withValues(alpha: 0.25),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
             ],
           ),
-        ),
+        )),
+
+        const SizedBox(height: AppConstants.paddingLG),
+
+        // ── Contact section ──
+        _animated(2, const _ContactSection()),
+
+        const SizedBox(height: AppConstants.paddingLG),
+
+        // ── Footer ──
+        _animated(3, Center(
+          child: Column(
+            children: [
+              Text(
+                'BeautyCita',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: colors.primary.withValues(alpha: 0.3),
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                'Puerto Vallarta, Jalisco, Mexico',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: colors.onSurface.withValues(alpha: 0.25),
+                ),
+              ),
+            ],
+          ),
+        )),
+        const SizedBox(height: AppConstants.paddingXXL),
       ],
     );
   }
@@ -292,193 +365,162 @@ class _ContactSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).colorScheme;
+    final ext = Theme.of(context).extension<BCThemeExtension>()!;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Contacto y soporte',
-          style: GoogleFonts.poppins(
-            fontSize: 18, fontWeight: FontWeight.w700, color: colors.onSurface,
+        // Section header style
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 0, 0, 6),
+          child: Text(
+            'CONTACTO Y SOPORTE',
+            style: TextStyle(
+              fontSize: 9,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.2,
+              color: colors.primary,
+            ),
           ),
         ),
-        const SizedBox(height: 4),
-        Text(
-          'Estamos para ayudarte. Elige como prefieras comunicarte.',
-          style: GoogleFonts.nunito(
-            fontSize: 13, color: colors.onSurface.withValues(alpha: 0.55),
-          ),
-        ),
-        const SizedBox(height: 20),
+        const SizedBox(height: AppConstants.paddingSM),
 
-        // ── Eros AI support card ──
-        GestureDetector(
-          onTap: () async {
-            final thread = await ref.read(erosThreadProvider.future);
-            if (thread != null && context.mounted) {
-              context.push('/chat/${thread.id}');
-            }
-          },
-          child: Container(
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF1565C0), Color(0xFF42A5F5)],
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
+        // ── Support cards in approved card container ──
+        Container(
+          decoration: BoxDecoration(
+            color: colors.surface,
+            borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+            border: Border.all(color: ext.cardBorderColor),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
               ),
-              borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF42A5F5).withValues(alpha: 0.3),
-                  blurRadius: 16,
-                  offset: const Offset(0, 6),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Text('🏹', style: TextStyle(fontSize: 24)),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Chat con Eros',
-                        style: GoogleFonts.poppins(
-                          fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white,
-                        ),
-                      ),
-                      Text(
-                        'Soporte inteligente — respuesta instantanea',
-                        style: GoogleFonts.nunito(
-                          fontSize: 12, color: Colors.white.withValues(alpha: 0.85),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    'AI',
-                    style: GoogleFonts.poppins(
-                      fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 14),
-
-        // ── Human support card ──
-        GestureDetector(
-          onTap: () async {
-            final thread = await ref.read(supportThreadProvider.future);
-            if (thread != null && context.mounted) {
-              context.push('/chat/${thread.id}');
-            }
-          },
-          child: Container(
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF7B1038), Color(0xFFC2185B)],
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.02),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
               ),
-              borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFFC2185B).withValues(alpha: 0.3),
-                  blurRadius: 16,
-                  offset: const Offset(0, 6),
+            ],
+          ),
+          child: Column(
+            children: [
+              // ── Eros AI support row ──
+              InkWell(
+                onTap: () async {
+                  final thread = await ref.read(erosThreadProvider.future);
+                  if (thread != null && context.mounted) {
+                    context.push('/chat/${thread.id}');
+                  }
+                },
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(AppConstants.radiusMD),
                 ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(Icons.support_agent_rounded, color: Colors.white, size: 24),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Soporte humano',
-                        style: GoogleFonts.poppins(
-                          fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white,
-                        ),
-                      ),
-                      Text(
-                        'Habla con una persona de nuestro equipo',
-                        style: GoogleFonts.nunito(
-                          fontSize: 12, color: Colors.white.withValues(alpha: 0.85),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
+                child: Padding(
+                  padding: const EdgeInsets.all(AppConstants.paddingMD),
                   child: Row(
-                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Container(
-                        width: 8, height: 8,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF90EE90),
-                          shape: BoxShape.circle,
+                        width: 34,
+                        height: 34,
+                        decoration: BoxDecoration(
+                          color: colors.secondary.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(Icons.smart_toy_outlined, size: 20, color: colors.secondary),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Chat con Eros',
+                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF1a1a1a)),
+                            ),
+                            Text(
+                              'Soporte inteligente — respuesta instantanea',
+                              style: TextStyle(fontSize: 9, color: colors.onSurface.withValues(alpha: 0.5)),
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'LIVE',
-                        style: GoogleFonts.nunito(
-                          fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white,
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: colors.secondary.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(AppConstants.radiusXS),
+                        ),
+                        child: Text(
+                          'AI',
+                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: colors.secondary),
                         ),
                       ),
                     ],
                   ),
                 ),
-              ],
-            ),
+              ),
+
+              const Divider(height: 1, color: Color(0xFFF5F0EB)),
+
+              // ── Human support row ──
+              InkWell(
+                onTap: () async {
+                  final thread = await ref.read(supportThreadProvider.future);
+                  if (thread != null && context.mounted) {
+                    context.push('/chat/${thread.id}');
+                  }
+                },
+                borderRadius: const BorderRadius.vertical(
+                  bottom: Radius.circular(AppConstants.radiusMD),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(AppConstants.paddingMD),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 34,
+                        height: 34,
+                        decoration: BoxDecoration(
+                          color: colors.primary.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(Icons.support_agent_outlined, size: 20, color: colors.primary),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Soporte humano',
+                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF1a1a1a)),
+                            ),
+                            Text(
+                              'Habla con una persona de nuestro equipo',
+                              style: TextStyle(fontSize: 9, color: colors.onSurface.withValues(alpha: 0.5)),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(Icons.chevron_right_outlined, size: 20, color: colors.onSurface.withValues(alpha: 0.3)),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
 
-        const SizedBox(height: 16),
+        const SizedBox(height: AppConstants.paddingSM),
 
         Center(
           child: Text(
             'O escribe a ${AppConstants.supportEmail}',
-            style: GoogleFonts.nunito(
-              fontSize: 12, color: colors.onSurface.withValues(alpha: 0.35),
+            style: TextStyle(
+              fontSize: 11,
+              color: colors.onSurface.withValues(alpha: 0.35),
             ),
           ),
         ),

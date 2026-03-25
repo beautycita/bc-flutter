@@ -11,12 +11,25 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+const ALLOWED_ORIGINS = [
+  "https://beautycita.com",
+  "https://www.beautycita.com",
+  "https://debug.beautycita.com",
+];
+
+function corsOrigin(req: Request): string {
+  const o = req.headers.get("origin") ?? "";
+  return ALLOWED_ORIGINS.includes(o) ? o : ALLOWED_ORIGINS[0];
+}
+
+let _req: Request;
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
       "Content-Type": "application/json",
-      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Origin": corsOrigin(_req),
       "Access-Control-Allow-Headers":
         "authorization, content-type, x-client-info, apikey",
     },
@@ -28,7 +41,7 @@ function icsResponse(ics: string, filename: string) {
     headers: {
       "Content-Type": "text/calendar; charset=utf-8",
       "Content-Disposition": `attachment; filename="${filename}"`,
-      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Origin": corsOrigin(_req),
     },
   });
 }
@@ -186,10 +199,11 @@ function parseICS(icsContent: string): ParsedEvent[] {
 // ── Main handler ────────────────────────────────────────────────────────────
 
 Deno.serve(async (req: Request) => {
+  _req = req;
   if (req.method === "OPTIONS") {
     return new Response(null, {
       headers: {
-        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Origin": corsOrigin(req),
         "Access-Control-Allow-Methods": "GET, POST",
         "Access-Control-Allow-Headers":
           "authorization, content-type, x-client-info, apikey",

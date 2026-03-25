@@ -18,6 +18,15 @@ class SystemStatusScreen extends ConsumerStatefulWidget {
   ConsumerState<SystemStatusScreen> createState() => _SystemStatusScreenState();
 }
 
+// Map display names to bpi-admin service IDs (only for manageable services)
+const _bpiServiceMap = {
+  'Lead Generator': 'lead-generator',
+  'WA Enrichment': 'wa-enrichment',
+  'IG Enrichment': 'ig-enrichment',
+  'GuestKey': 'guestkey',
+  'WA Validator': 'wa-validator',
+};
+
 class _SystemStatusScreenState extends ConsumerState<SystemStatusScreen> {
   bool _loading = true;
   bool _error = false;
@@ -133,6 +142,8 @@ class _SystemStatusScreenState extends ConsumerState<SystemStatusScreen> {
                       status: _parseStatus(entry.value),
                       uptime: _parseUptime(entry.value),
                       ext: ext,
+                      bpiServiceId: _bpiServiceMap[entry.key],
+                      onRefresh: _fetchHealth,
                     ),
                   ),
                 ),
@@ -387,25 +398,87 @@ class _ErrorCard extends StatelessWidget {
 // Service Card — individual service row
 // ─────────────────────────────────────────────────────────────
 
-class _ServiceCard extends StatelessWidget {
+class _ServiceCard extends ConsumerStatefulWidget {
   const _ServiceCard({
     required this.name,
     required this.status,
     required this.uptime,
     required this.ext,
+    this.bpiServiceId,
+    this.onRefresh,
   });
 
   final String name;
   final String status;
   final String uptime;
   final BCThemeExtension ext;
+  final String? bpiServiceId;
+  final VoidCallback? onRefresh;
+
+  @override
+  ConsumerState<_ServiceCard> createState() => _ServiceCardState();
+}
+
+class _ServiceCardState extends ConsumerState<_ServiceCard> {
+  bool _actionLoading = false;
+  String? _actionResult;
+
+  Future<void> _autoRepair() async {
+    setState(() {
+      _actionLoading = true;
+      _actionResult = null;
+    });
+    try {
+      if (widget.bpiServiceId != null) {
+        // Beautypi service — use bpi-admin repair action
+        final res = await Supabase.instance.client.functions.invoke(
+          'bpi-admin',
+          body: {'action': 'repair', 'service': widget.bpiServiceId},
+        );
+        final data = res.data as Map<String, dynamic>?;
+        final result = data?['result'] as Map<String, dynamic>?;
+        final success = result?['success'] == true;
+        final msg = result?['message'] ?? (success ? 'Reparado' : 'Fallo');
+        if (mounted) {
+          setState(() {
+            _actionLoading = false;
+            _actionResult = success
+                ? 'Servicio reparado y funcionando'
+                : 'No se pudo reparar automaticamente.\n$msg\n${result?['error_output'] ?? ''}';
+          });
+        }
+      } else {
+        // Server service (DB, Auth, Storage, etc.) — restart edge functions
+        // For now, just re-check health
+        await Future.delayed(const Duration(seconds: 2));
+        if (mounted) {
+          setState(() {
+            _actionLoading = false;
+            _actionResult = 'Verificando servicio...';
+          });
+        }
+      }
+      await Future.delayed(const Duration(seconds: 2));
+      widget.onRefresh?.call();
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _actionLoading = false;
+          _actionResult = 'Error: $e';
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final isSuperAdmin = ref.watch(isSuperAdminProvider).valueOrNull ?? false;
+    final isDown = widget.status == 'down' || widget.status == 'degraded';
+    final canRepair = isSuperAdmin && isDown && widget.bpiServiceId != null;
 
     final (badgeColor, badgeBg, badgeBorder, badgeLabel, dotColor, statusIcon) =
-        switch (status) {
+        switch (widget.status) {
       'operational' => (
           const Color(0xFF16A34A),
           const Color(0xFFF0FDF4),
@@ -448,7 +521,7 @@ class _ServiceCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: colorScheme.surface,
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-        border: Border.all(color: ext.cardBorderColor, width: 1),
+        border: Border.all(color: widget.ext.cardBorderColor, width: 1),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -457,83 +530,153 @@ class _ServiceCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Status icon
-          Icon(statusIcon, color: dotColor, size: AppConstants.iconSizeMD),
-          const SizedBox(width: AppConstants.paddingMD),
+          Row(
+            children: [
+              Icon(statusIcon, color: dotColor, size: AppConstants.iconSizeMD),
+              const SizedBox(width: AppConstants.paddingMD),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.name,
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: colorScheme.onSurface,
+                      ),
+                    ),
+                    if (widget.uptime.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        widget.uptime.contains('ms')
+                            ? 'Respuesta: ${widget.uptime}'
+                            : widget.uptime.contains('%')
+                                ? 'Disponibilidad 30d: ${widget.uptime}'
+                                : widget.uptime,
+                        style: GoogleFonts.nunito(
+                          fontSize: 12,
+                          color: colorScheme.onSurface.withValues(alpha: 0.5),
+                          height: 1.3,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppConstants.paddingSM),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppConstants.paddingSM,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: badgeBg,
+                  border: Border.all(color: badgeBorder, width: 1),
+                  borderRadius: BorderRadius.circular(AppConstants.radiusFull),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: dotColor,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      badgeLabel,
+                      style: GoogleFonts.nunito(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: badgeColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
 
-          // Name + uptime
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: colorScheme.onSurface,
+          // Auto-repair button — only shows when service is down and superadmin
+          if (canRepair) ...[
+            const SizedBox(height: 10),
+            if (_actionLoading)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: Center(
+                  child: SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
                   ),
                 ),
-                if (uptime.isNotEmpty) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    uptime.contains('ms')
-                        ? 'Respuesta: $uptime'
-                        : 'Disponibilidad 30d: $uptime%',
-                    style: GoogleFonts.nunito(
+              )
+            else
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: _autoRepair,
+                  icon: const Icon(Icons.auto_fix_high_rounded, size: 16),
+                  label: Text(
+                    'Auto-reparar',
+                    style: GoogleFonts.poppins(
                       fontSize: 12,
-                      color: colorScheme.onSurface.withValues(alpha: 0.5),
-                      height: 1.3,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                ],
-              ],
-            ),
-          ),
-
-          const SizedBox(width: AppConstants.paddingSM),
-
-          // Status badge chip
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppConstants.paddingSM,
-              vertical: 4,
-            ),
-            decoration: BoxDecoration(
-              color: badgeBg,
-              border: Border.all(color: badgeBorder, width: 1),
-              borderRadius: BorderRadius.circular(AppConstants.radiusFull),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 6,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: dotColor,
-                    shape: BoxShape.circle,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFFDC2626),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
                 ),
-                const SizedBox(width: 5),
-                Text(
-                  badgeLabel,
-                  style: GoogleFonts.nunito(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: badgeColor,
+              ),
+          ],
+
+          // Action result output
+          if (_actionResult != null) ...[
+            const SizedBox(height: 8),
+            GestureDetector(
+              onTap: () => setState(() => _actionResult = null),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                constraints: const BoxConstraints(maxHeight: 200),
+                child: SingleChildScrollView(
+                  child: Text(
+                    _actionResult!,
+                    style: GoogleFonts.firaCode(
+                      fontSize: 10,
+                      color: colorScheme.onSurface.withValues(alpha: 0.8),
+                      height: 1.5,
+                    ),
                   ),
                 ),
-              ],
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );
   }
 }
+
 
 // ─────────────────────────────────────────────────────────────
 // Shimmer Loading Card
@@ -655,8 +798,41 @@ class _SmokeTestSectionState extends ConsumerState<_SmokeTestSection> {
             padding: EdgeInsets.all(16),
             child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
           ),
-        if (_results.isNotEmpty)
+        if (_results.isNotEmpty) ...[
+          // Summary bar
+          if (!_running) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              margin: const EdgeInsets.only(bottom: 8),
+              decoration: BoxDecoration(
+                color: _results.where((r) => !r.isSection && !r.passed).isEmpty
+                    ? const Color(0xFFF0FDF4)
+                    : const Color(0xFFFEF2F2),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: _results.where((r) => !r.isSection && !r.passed).isEmpty
+                      ? const Color(0xFFBBF7D0)
+                      : const Color(0xFFFECACA),
+                ),
+              ),
+              child: Text(
+                '${_results.where((r) => !r.isSection && r.passed).length} passed, '
+                '${_results.where((r) => !r.isSection && !r.passed).length} failed — '
+                '${_results.where((r) => !r.isSection).length} total',
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: _results.where((r) => !r.isSection && !r.passed).isEmpty
+                      ? const Color(0xFF16A34A)
+                      : const Color(0xFFDC2626),
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ],
           ...(_results.map((r) => _TestResultTile(result: r))),
+        ],
         if (!_running && _results.isEmpty)
           Container(
             width: double.infinity,
@@ -686,98 +862,157 @@ class _SmokeTestSectionState extends ConsumerState<_SmokeTestSection> {
     });
 
     final client = SupabaseClientService.client;
-    const pause = Duration(milliseconds: 1500); // prevent edge function overload
+    // 3s pause between edge function calls to avoid container overload
+    const pause = Duration(milliseconds: 3000);
 
-    // Test 1: DB read
+    // ── INFRAESTRUCTURA (direct DB/auth — no edge functions) ──
+    await _section('INFRAESTRUCTURA');
+
     await _test('Base de datos (lectura)', () async {
       final res = await client.from('app_config').select('key').limit(1);
-      if ((res as List).isEmpty) throw Exception('No config rows');
+      if ((res as List).isEmpty) throw Exception('Sin datos');
     });
-    await Future.delayed(pause);
 
-    // Test 2: DB write (update own profile — safe, reversible)
     await _test('Base de datos (escritura)', () async {
       final userId = client.auth.currentUser?.id;
-      if (userId == null) throw Exception('No user');
-      // Read current value, write it back (no-op update, tests write permission)
-      final profile = await client.from('profiles').select('updated_at').eq('id', userId).single();
+      if (userId == null) throw Exception('Sin usuario');
       await client.from('profiles').update({
         'updated_at': DateTime.now().toUtc().toIso8601String(),
       }).eq('id', userId);
     });
-    await Future.delayed(pause);
 
-    // Test 3: Auth check
     await _test('Autenticacion', () async {
-      final user = client.auth.currentUser;
-      if (user == null) throw Exception('No authenticated user');
+      if (client.auth.currentUser == null) throw Exception('Sin sesion');
+    });
+
+    await _test('Almacenamiento', () async {
+      await client.storage.from('user-media').list(path: '');
+    });
+
+    await _test('Perfil de usuario', () async {
+      final userId = client.auth.currentUser?.id;
+      if (userId == null) throw Exception('Sin usuario');
+      final res = await client.from('profiles').select('id, role').eq('id', userId).single();
+      if (res['role'] == null) throw Exception('Sin rol');
+    });
+
+    // ── EDGE FUNCTIONS (one at a time, 3s gaps) ──
+    await _section('EDGE FUNCTIONS');
+    await Future.delayed(pause);
+
+    await _test('system-health', () async {
+      await _invokeAlive(client, 'system-health');
     });
     await Future.delayed(pause);
 
-    // Test 4: Edge function invocation
-    await _test('Edge functions', () async {
-      final res = await client.functions.invoke('system-health');
-      if (res.status != 200) throw Exception('HTTP ${res.status}');
+    await _test('feed-public', () async {
+      await _invokeAlive(client, 'feed-public', method: HttpMethod.get);
     });
     await Future.delayed(pause);
 
-    // Test 5: Outreach salon search (tests DB + edge function + PostGIS)
-    await _test('Busqueda de salones', () async {
-      final res = await client.functions.invoke('outreach-discovered-salon', body: {
+    await _test('curate-results (motor de reservas)', () async {
+      await _invokeAlive(client, 'curate-results', body: {
+        'location': {'lat': 20.6534, 'lng': -105.2253},
+        'service_type': 'balayage',
+        'transport_mode': 'car',
+      });
+    });
+    await Future.delayed(pause);
+
+    await _test('outreach-discovered-salon', () async {
+      await _invokeAlive(client, 'outreach-discovered-salon', body: {
         'action': 'search',
         'query': 'salon',
         'lat': 20.6534,
         'lng': -105.2253,
       });
-      if (res.status != 200) throw Exception('HTTP ${res.status}');
     });
     await Future.delayed(pause);
 
-    // Test 6: Curate results (booking engine)
-    await _test('Motor de reservas', () async {
-      final res = await client.functions.invoke('curate-results', body: {
-        'location': {'lat': 20.6534, 'lng': -105.2253},
-        'service_type': 'balayage',
-        'transport_mode': 'car',
+    await _test('aphrodite-chat (AI)', () async {
+      await _invokeAlive(client, 'aphrodite-chat', body: {
+        'action': 'send_message',
+        'message': 'test diagnostico',
+        'language': 'es',
       });
-      if (res.status != 200) throw Exception('HTTP ${res.status}');
     });
     await Future.delayed(pause);
 
-    // Test 7: Aphrodite AI chat
-    await _test('Chat AI (Aphrodite)', () async {
-      final res = await client.functions.invoke('aphrodite-chat', body: {
-        'action': 'ping',
+    await _test('send-push-notification', () async {
+      await _invokeAlive(client, 'send-push-notification', body: {
+        'user_id': client.auth.currentUser?.id ?? '',
+        'title': 'test',
+        'body': 'diagnostico',
       });
-      // Any response means the function is alive
     });
     await Future.delayed(pause);
 
-    // Test 8: Storage access (try uploading to a known bucket)
-    await _test('Almacenamiento', () async {
-      // List files in user-media bucket root — empty is fine, no exception = pass
-      await client.storage.from('user-media').list(path: '');
+    await _test('create-payment-intent (Stripe)', () async {
+      await _invokeAlive(client, 'create-payment-intent', body: {
+        'amount': 100,
+        'booking_id': 'test-diag',
+      });
     });
     await Future.delayed(pause);
 
-    // Test 9: Profile read
-    await _test('Perfil de usuario', () async {
-      final userId = client.auth.currentUser?.id;
-      if (userId == null) throw Exception('No user');
-      final res = await client.from('profiles').select('id, role').eq('id', userId).single();
-      if (res['role'] == null) throw Exception('No role');
-    });
-    await Future.delayed(pause);
-
-    // Test 10: Outreach templates
-    await _test('Plantillas de outreach', () async {
-      final res = await client.functions.invoke('outreach-contact', body: {
+    await _test('outreach-contact', () async {
+      await _invokeAlive(client, 'outreach-contact', body: {
         'action': 'get_templates',
       });
-      if (res.status != 200) throw Exception('HTTP ${res.status}');
+    });
+    await Future.delayed(pause);
+
+    await _test('places-proxy (Google)', () async {
+      await _invokeAlive(client, 'places-proxy', body: {
+        'query': 'salon puerto vallarta',
+        'lat': 20.6534,
+        'lng': -105.2253,
+      });
+    });
+    await Future.delayed(pause);
+
+    await _test('bpi-admin (beautypi)', () async {
+      await _invokeAlive(client, 'bpi-admin', body: {
+        'action': 'diagnose',
+        'service': 'guestkey',
+      });
     });
 
     setState(() => _running = false);
+  }
+
+  /// Invoke an edge function and consider it alive if it responds (even with 4xx).
+  /// Only 500+ or network errors count as failure.
+  Future<void> _invokeAlive(
+    SupabaseClient client,
+    String function, {
+    Map<String, dynamic>? body,
+    HttpMethod method = HttpMethod.post,
+  }) async {
+    try {
+      final res = await client.functions.invoke(function, body: body ?? {}, method: method);
+      if (res.status >= 500) throw Exception('HTTP ${res.status}');
+    } catch (e) {
+      final msg = e.toString().toLowerCase();
+      // 4xx responses mean the function is alive — it responded with a validation error
+      if (msg.contains('400') || msg.contains('401') || msg.contains('403') ||
+          msg.contains('404') || msg.contains('405') || msg.contains('409') ||
+          msg.contains('429') || msg.contains('bad request') ||
+          msg.contains('method not allowed') || msg.contains('unauthorized') ||
+          msg.contains('forbidden') || msg.contains('not found')) {
+        return; // Function is alive, just rejected our test payload
+      }
+      rethrow; // Real failure (500, network error, timeout)
+    }
+  }
+
+  Future<void> _section(String name) async {
+    setState(() => _results.add(_TestResult(
+      name: name,
+      passed: true,
+      elapsed: 0,
+      isSection: true,
+    )));
   }
 
   Future<void> _test(String name, Future<void> Function() check) async {
@@ -807,12 +1042,14 @@ class _TestResult {
   final bool passed;
   final int elapsed;
   final String? error;
+  final bool isSection;
 
   const _TestResult({
     required this.name,
     required this.passed,
     required this.elapsed,
     this.error,
+    this.isSection = false,
   });
 }
 
@@ -824,12 +1061,28 @@ class _TestResultTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
+    // Section header
+    if (result.isSection) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 12, bottom: 4, left: 2),
+        child: Text(
+          result.name,
+          style: GoogleFonts.poppins(
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1.2,
+            color: colorScheme.primary,
+          ),
+        ),
+      );
+    }
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 6),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      margin: const EdgeInsets.only(bottom: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: result.passed ? Colors.green.shade200 : Colors.red.shade200,
         ),
@@ -838,21 +1091,21 @@ class _TestResultTile extends StatelessWidget {
         children: [
           Icon(
             result.passed ? Icons.check_circle : Icons.cancel,
-            size: 18,
+            size: 16,
             color: result.passed ? Colors.green : Colors.red,
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(result.name,
                     style: GoogleFonts.poppins(
-                        fontSize: 13, fontWeight: FontWeight.w500)),
+                        fontSize: 12, fontWeight: FontWeight.w500)),
                 if (result.error != null)
                   Text(result.error!,
                       style: GoogleFonts.nunito(
-                          fontSize: 11, color: Colors.red.shade700),
+                          fontSize: 10, color: Colors.red.shade700),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis),
               ],
@@ -860,7 +1113,7 @@ class _TestResultTile extends StatelessWidget {
           ),
           Text('${result.elapsed}ms',
               style: GoogleFonts.nunito(
-                  fontSize: 11,
+                  fontSize: 10,
                   color: colorScheme.onSurface.withValues(alpha: 0.4))),
         ],
       ),

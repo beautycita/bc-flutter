@@ -3,549 +3,1279 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../config/breakpoints.dart';
-import '../config/router.dart';
 
-/// Public landing page — what visitors see at beautycita.com.
-class LandingPage extends StatelessWidget {
+// ── Design Tokens ────────────────────────────────────────────────────────────
+
+const _bgColor = Color(0xFFFFFAF5);
+const _cardBorder = Color(0xFFF0EBE6);
+const _textPrimary = Color(0xFF1A1A1A);
+const _textSecondary = Color(0xFF666666);
+const _textHint = Color(0xFF999999);
+const _brandGradient = LinearGradient(
+  begin: Alignment.topLeft,
+  end: Alignment.bottomRight,
+  colors: [Color(0xFFEC4899), Color(0xFF9333EA), Color(0xFF3B82F6)],
+);
+const _brandPink = Color(0xFFEC4899);
+const _brandPurple = Color(0xFF9333EA);
+const _brandBlue = Color(0xFF3B82F6);
+const _checkGreen = Color(0xFF16A34A);
+const _crossRed = Color(0xFFEF4444);
+const _warnAmber = Color(0xFFF59E0B);
+
+const _maxWidth = 1200.0;
+
+BoxShadow _cardShadow = BoxShadow(
+  color: Colors.black.withValues(alpha: 0.04),
+  blurRadius: 10,
+  offset: const Offset(0, 3),
+);
+
+BoxShadow _cardShadowHover = BoxShadow(
+  color: Colors.black.withValues(alpha: 0.08),
+  blurRadius: 32,
+  offset: const Offset(0, 8),
+);
+
+const _apkUrl =
+    'https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/apk/beautycita.apk';
+
+// ── Gradient Text Helper ─────────────────────────────────────────────────────
+
+class _GradientText extends StatelessWidget {
+  final String text;
+  final TextStyle? style;
+  const _GradientText(this.text, {this.style});
+  @override
+  Widget build(BuildContext context) {
+    return ShaderMask(
+      shaderCallback: (bounds) => _brandGradient.createShader(bounds),
+      child: Text(text, style: (style ?? const TextStyle()).copyWith(color: Colors.white)),
+    );
+  }
+}
+
+// ── Section Keys for Scroll Navigation ───────────────────────────────────────
+
+final _heroKey = GlobalKey();
+final _comparisonKey = GlobalKey();
+final _forSalonsKey = GlobalKey();
+final _forClientsKey = GlobalKey();
+final _demoKey = GlobalKey();
+final _pricingKey = GlobalKey();
+final _downloadKey = GlobalKey();
+
+// ── Landing Page ─────────────────────────────────────────────────────────────
+
+class LandingPage extends StatefulWidget {
   const LandingPage({super.key});
+  @override
+  State<LandingPage> createState() => _LandingPageState();
+}
 
-  static const _apkUrl =
-      'https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/apk/beautycita.apk';
+class _LandingPageState extends State<LandingPage>
+    with TickerProviderStateMixin {
+  final ScrollController _scrollController = ScrollController();
+  bool _navScrolled = false;
+  bool _mobileMenuOpen = false;
 
-  static const _deepRose = Color(0xFF990033);
-  static const _lightRose = Color(0xFFC2185B);
-  static const _gold = Color(0xFFFFB300);
-  static const _cream = Color(0xFFFFF8F0);
+  // Animation controllers for staggered fade-in
+  late final AnimationController _heroAnim;
+  late final AnimationController _comparisonAnim;
+  late final AnimationController _salonsAnim;
+  late final AnimationController _demoAnim;
+  late final AnimationController _clientsAnim;
+  late final AnimationController _testimonialsAnim;
+  late final AnimationController _pricingAnim;
+  late final AnimationController _downloadAnim;
+
+  final List<AnimationController> _sectionAnims = [];
+
+  // Phone input for demo section
+  final TextEditingController _phoneController = TextEditingController();
+  String? _phoneError;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+
+    _heroAnim = _createAnim(800);
+    _comparisonAnim = _createAnim(700);
+    _salonsAnim = _createAnim(700);
+    _demoAnim = _createAnim(700);
+    _clientsAnim = _createAnim(700);
+    _testimonialsAnim = _createAnim(700);
+    _pricingAnim = _createAnim(700);
+    _downloadAnim = _createAnim(700);
+
+    _sectionAnims.addAll([
+      _heroAnim,
+      _comparisonAnim,
+      _salonsAnim,
+      _demoAnim,
+      _clientsAnim,
+      _testimonialsAnim,
+      _pricingAnim,
+      _downloadAnim,
+    ]);
+
+    // Start hero animation immediately
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (mounted) _heroAnim.forward();
+    });
+  }
+
+  AnimationController _createAnim(int ms) {
+    return AnimationController(
+      vsync: this,
+      duration: Duration(milliseconds: ms),
+    );
+  }
+
+  void _onScroll() {
+    final scrolled = _scrollController.offset > 10;
+    if (scrolled != _navScrolled) {
+      setState(() => _navScrolled = scrolled);
+    }
+    _checkSectionVisibility();
+  }
+
+  void _checkSectionVisibility() {
+    final anims = [
+      _comparisonAnim,
+      _salonsAnim,
+      _demoAnim,
+      _clientsAnim,
+      _testimonialsAnim,
+      _pricingAnim,
+      _downloadAnim,
+    ];
+
+    for (var i = 0; i < anims.length; i++) {
+      if (!anims[i].isCompleted) {
+        // Trigger when scroll reaches roughly the section area
+        final triggerOffset = (i + 1) * 400.0;
+        if (_scrollController.offset > triggerOffset - 600) {
+          anims[i].forward();
+        }
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    for (final a in _sectionAnims) {
+      a.dispose();
+    }
+    _phoneController.dispose();
+    super.dispose();
+  }
+
+  void _scrollToSection(GlobalKey key) {
+    final ctx = key.currentContext;
+    if (ctx != null) {
+      Scrollable.ensureVisible(ctx,
+          duration: const Duration(milliseconds: 600),
+          curve: Curves.easeInOut);
+    }
+    if (_mobileMenuOpen) {
+      setState(() => _mobileMenuOpen = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: _bgColor,
       body: LayoutBuilder(
         builder: (context, constraints) {
           final w = constraints.maxWidth;
           final isDesktop = WebBreakpoints.isDesktop(w);
-          final isMobile = w < 600;
-          // Horizontal padding scales: 16 mobile, 32 tablet, 80 desktop
-          final hPad = isMobile ? 16.0 : (isDesktop ? 80.0 : 32.0);
-          return SingleChildScrollView(
-            child: Column(
-              children: [
-                _buildNav(context, isDesktop, isMobile, hPad),
-                _buildHero(context, isDesktop, isMobile, hPad),
-                _buildHowItWorks(context, isDesktop, isMobile, hPad),
-                _buildAppPreview(context, isDesktop, isMobile, hPad),
-                _buildStats(context, isDesktop, isMobile, hPad, w),
-                _buildCta(context, isDesktop, isMobile, hPad),
-                _buildFooter(context, isMobile),
-              ],
-            ),
+          final isTablet = WebBreakpoints.isTablet(w);
+          final isMobile = WebBreakpoints.isMobile(w);
+
+          return Stack(
+            children: [
+              SingleChildScrollView(
+                controller: _scrollController,
+                child: Column(
+                  children: [
+                    const SizedBox(height: 72), // space for fixed nav
+                    _buildHero(isDesktop, isMobile),
+                    _buildComparison(isDesktop, isMobile),
+                    _buildForSalons(isDesktop, isMobile, isTablet),
+                    _buildDemo(isDesktop, isMobile),
+                    _buildForClients(isDesktop, isMobile),
+                    _buildTestimonials(isDesktop, isMobile),
+                    _buildPricing(isDesktop, isMobile),
+                    _buildDownload(isDesktop, isMobile),
+                    _buildFooter(isDesktop, isMobile),
+                  ],
+                ),
+              ),
+              // Sticky nav on top
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: _buildNavBar(isDesktop, isMobile),
+              ),
+              // Mobile menu overlay
+              if (_mobileMenuOpen)
+                Positioned(
+                  top: 72,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: _buildMobileMenu(),
+                ),
+            ],
           );
         },
       ),
     );
   }
 
-  // ── Top navigation bar ──────────────────────────────────────────────────────
+  // ── NavBar ─────────────────────────────────────────────────────────────────
 
-  Widget _buildNav(
-      BuildContext context, bool isDesktop, bool isMobile, double hPad) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: hPad, vertical: 12),
-      color: Colors.white,
-      child: Row(
-        children: [
-          ShaderMask(
-            shaderCallback: (bounds) => const LinearGradient(
-              colors: [_deepRose, _lightRose],
-            ).createShader(bounds),
-            child: Text(
-              'BeautyCita',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: isMobile ? 18 : null,
-                  ),
+  Widget _buildNavBar(bool isDesktop, bool isMobile) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      height: 72,
+      decoration: BoxDecoration(
+        color: _bgColor.withValues(alpha: 0.92),
+        border: Border(
+          bottom: BorderSide(
+            color: _navScrolled ? _cardBorder : Colors.transparent,
+          ),
+        ),
+        boxShadow: _navScrolled
+            ? [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 16, offset: const Offset(0, 2))]
+            : [],
+      ),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: _maxWidth),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Row(
+              children: [
+                // Logo
+                MouseRegion(
+                      cursor: SystemMouseCursors.click,
+                      child: GestureDetector(
+                        onTap: () => _scrollToSection(_heroKey),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                gradient: _brandGradient,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Center(
+                                child: Text('B', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 18)),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Text.rich(
+                              TextSpan(children: [
+                                const TextSpan(text: 'Beauty', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 22, color: _textPrimary)),
+                                TextSpan(text: 'Cita', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 22, foreground: Paint()..shader = _brandGradient.createShader(const Rect.fromLTWH(0, 0, 60, 30)))),
+                              ]),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const Spacer(),
+                    // Desktop nav links
+                    if (isDesktop) ...[
+                      _navLink('Inicio', _heroKey),
+                      const SizedBox(width: 28),
+                      _navLink('Para Salones', _forSalonsKey),
+                      const SizedBox(width: 28),
+                      _navLink('Para Clientes', _forClientsKey),
+                      const SizedBox(width: 28),
+                      _navLink('Demo', _demoKey),
+                      const SizedBox(width: 28),
+                      _navLink('Precios', _pricingKey),
+                      const SizedBox(width: 28),
+                      _navLink('Descargar', _downloadKey),
+                      const SizedBox(width: 28),
+                    ],
+                    // Booking CTA
+                    if (!isMobile) ...[
+                      _HoverScaleButton(
+                        onTap: () => context.go('/reservar'),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: _brandPink, width: 2),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Text('Reserva tu cita', style: TextStyle(color: _brandPink, fontWeight: FontWeight.w700, fontSize: 14)),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      // Salon CTA
+                      _HoverScaleButton(
+                        onTap: () => _scrollToSection(_demoKey),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                          decoration: BoxDecoration(
+                            gradient: _brandGradient,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Text('Registra tu Salon', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
+                        ),
+                      ),
+                    ],
+                    // Mobile hamburger
+                    if (isMobile)
+                      IconButton(
+                        icon: Icon(_mobileMenuOpen ? Icons.close : Icons.menu, color: _textPrimary),
+                        onPressed: () => setState(() => _mobileMenuOpen = !_mobileMenuOpen),
+                      ),
+                  ],
+                ),
+              ),
             ),
           ),
-          const Spacer(),
-          if (isDesktop) ...[
-            TextButton(
-              onPressed: () => context.go(WebRoutes.demo),
-              child: const Text('Para salones'),
+    );
+  }
+
+  Widget _navLink(String label, GlobalKey key) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: () => _scrollToSection(key),
+        child: Text(label, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: _textSecondary)),
+      ),
+    );
+  }
+
+  Widget _buildMobileMenu() {
+    return Container(
+      color: _bgColor.withValues(alpha: 0.98),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _mobileNavItem('Inicio', _heroKey),
+          _mobileNavItem('Para Salones', _forSalonsKey),
+          _mobileNavItem('Para Clientes', _forClientsKey),
+          _mobileNavItem('Demo', _demoKey),
+          _mobileNavItem('Precios', _pricingKey),
+          _mobileNavItem('Descargar', _downloadKey),
+          const SizedBox(height: 16),
+          _HoverScaleButton(
+            onTap: () {
+              setState(() => _mobileMenuOpen = false);
+              context.go('/reservar');
+            },
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              decoration: BoxDecoration(
+                border: Border.all(color: _brandPink, width: 2),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Center(
+                child: Text('Reserva tu cita', style: TextStyle(color: _brandPink, fontWeight: FontWeight.w700, fontSize: 16)),
+              ),
             ),
-            const SizedBox(width: 8),
-          ],
-          OutlinedButton(
-            onPressed: () => context.go(WebRoutes.auth),
-            style: isMobile
-                ? OutlinedButton.styleFrom(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    textStyle: const TextStyle(fontSize: 13),
-                  )
-                : null,
-            child: const Text('Iniciar sesion'),
+          ),
+          const SizedBox(height: 10),
+          _HoverScaleButton(
+            onTap: () {
+              setState(() => _mobileMenuOpen = false);
+              _scrollToSection(_demoKey);
+            },
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              decoration: BoxDecoration(
+                gradient: _brandGradient,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Center(
+                child: Text('Registra tu Salon', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16)),
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  // ── Hero section ────────────────────────────────────────────────────────────
-
-  Widget _buildHero(
-      BuildContext context, bool isDesktop, bool isMobile, double hPad) {
-    final theme = Theme.of(context);
-
-    return Container(
-      width: double.infinity,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFF660033), _deepRose, _lightRose],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+  Widget _mobileNavItem(String label, GlobalKey key) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 24),
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          onTap: () => _scrollToSection(key),
+          child: Text(label, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: _textPrimary)),
         ),
-      ),
-      child: Padding(
-        padding: EdgeInsets.symmetric(
-          horizontal: hPad,
-          vertical: isDesktop ? 100 : (isMobile ? 32 : 60),
-        ),
-        child: isDesktop
-            ? Row(
-                children: [
-                  Expanded(
-                      child: _heroText(context, theme, isDesktop, isMobile)),
-                  const SizedBox(width: 60),
-                  Expanded(child: _heroVisual(context, isMobile)),
-                ],
-              )
-            : Column(
-                children: [
-                  _heroText(context, theme, isDesktop, isMobile),
-                  const SizedBox(height: 32),
-                  _heroVisual(context, isMobile),
-                ],
-              ),
       ),
     );
   }
 
-  Widget _heroText(
-      BuildContext context, ThemeData theme, bool isDesktop, bool isMobile) {
-    return Column(
-      crossAxisAlignment:
-          isDesktop ? CrossAxisAlignment.start : CrossAxisAlignment.center,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          'Tu agente inteligente de belleza',
-          textAlign: isDesktop ? TextAlign.start : TextAlign.center,
-          style: isMobile
-              ? theme.textTheme.headlineSmall?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  height: 1.2,
-                )
-              : theme.textTheme.displaySmall?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  height: 1.2,
-                ),
+  // ── Hero Section ───────────────────────────────────────────────────────────
+
+  Widget _buildHero(bool isDesktop, bool isMobile) {
+    return Container(
+      key: _heroKey,
+      width: double.infinity,
+      constraints: BoxConstraints(minHeight: isMobile ? 0 : 600),
+      padding: EdgeInsets.symmetric(vertical: isDesktop ? 80 : 48),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: _maxWidth),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: FadeTransition(
+              opacity: CurvedAnimation(parent: _heroAnim, curve: Curves.easeOut),
+              child: SlideTransition(
+                position: Tween<Offset>(begin: const Offset(0, 0.06), end: Offset.zero)
+                    .animate(CurvedAnimation(parent: _heroAnim, curve: Curves.easeOut)),
+                child: isDesktop
+                    ? Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(flex: 14, child: _heroLeft(isDesktop, isMobile)),
+                          const SizedBox(width: 60),
+                          Expanded(flex: 10, child: _heroPhone()),
+                        ],
+                      )
+                    : Column(
+                        children: [
+                          _heroLeft(isDesktop, isMobile),
+                          const SizedBox(height: 40),
+                          SizedBox(
+                            width: isMobile ? 260 : 300,
+                            child: _heroPhone(),
+                          ),
+                        ],
+                      ),
+              ),
+            ),
+          ),
         ),
-        const SizedBox(height: 16),
-        Text(
-          'Selecciona el servicio que quieres. BeautyCita encuentra los mejores salones cerca de ti, elige el horario perfecto, y te da 3 opciones para reservar con un solo toque.',
-          textAlign: isDesktop ? TextAlign.start : TextAlign.center,
-          style: theme.textTheme.bodyLarge?.copyWith(
-            color: Colors.white.withValues(alpha: 0.85),
-            height: 1.5,
-            fontSize: isMobile ? 14 : null,
+      ),
+    );
+  }
+
+  Widget _heroLeft(bool isDesktop, bool isMobile) {
+    final align = isDesktop ? CrossAxisAlignment.start : CrossAxisAlignment.center;
+    final textAlign = isDesktop ? TextAlign.start : TextAlign.center;
+
+    return Column(
+      crossAxisAlignment: align,
+      children: [
+        // Badge pill
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [_brandPink.withValues(alpha: 0.1), _brandPurple.withValues(alpha: 0.1)],
+            ),
+            border: Border.all(color: _brandPurple.withValues(alpha: 0.2)),
+            borderRadius: BorderRadius.circular(50),
+          ),
+          child: const Text(
+            'La plataforma #1 para salones en Mexico',
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: _brandPurple),
           ),
         ),
         const SizedBox(height: 24),
+        // Headline
+        Text.rich(
+          TextSpan(children: [
+            TextSpan(
+              text: 'Tu salon merece mas clientes.\n',
+              style: TextStyle(fontSize: isMobile ? 32 : 52, fontWeight: FontWeight.w800, height: 1.15, color: _textPrimary),
+            ),
+          ]),
+          textAlign: textAlign,
+        ),
+        // Gradient part of headline
+        _GradientText(
+          'Nosotros te los traemos.',
+          style: TextStyle(fontSize: isMobile ? 32 : 52, fontWeight: FontWeight.w800, height: 1.15),
+        ),
+        const SizedBox(height: 20),
+        // Subtitle
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 520),
+          child: Text(
+            'La unica plataforma con motor de busqueda inteligente que conecta clientes con el salon perfecto. Sin cuota mensual. Sin comisiones ocultas.',
+            textAlign: textAlign,
+            style: const TextStyle(fontSize: 19, color: _textSecondary, height: 1.7),
+          ),
+        ),
+        const SizedBox(height: 36),
+        // CTAs
         Wrap(
-          spacing: 12,
-          runSpacing: 10,
+          spacing: 16,
+          runSpacing: 12,
           alignment: isDesktop ? WrapAlignment.start : WrapAlignment.center,
           children: [
-            ElevatedButton.icon(
-              onPressed: () => _launchUrl(_apkUrl),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _gold,
-                foregroundColor: Colors.black87,
-                padding: EdgeInsets.symmetric(
-                  horizontal: isMobile ? 20 : 28,
-                  vertical: isMobile ? 12 : 16,
+            _HoverScaleButton(
+              onTap: () => _scrollToSection(_demoKey),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+                decoration: BoxDecoration(
+                  gradient: _brandGradient,
+                  borderRadius: BorderRadius.circular(16),
                 ),
+                child: const Text('Prueba el Demo Gratis', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16)),
               ),
-              icon: const Icon(Icons.download_rounded, size: 20),
-              label: const Text('Descarga la App'),
             ),
-            OutlinedButton(
-              onPressed: () => context.go(WebRoutes.auth),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.white,
-                side: const BorderSide(color: Colors.white70),
-                padding: EdgeInsets.symmetric(
-                  horizontal: isMobile ? 20 : 28,
-                  vertical: isMobile ? 12 : 16,
+            _HoverScaleButton(
+              onTap: () => context.go('/reservar'),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                decoration: BoxDecoration(
+                  border: Border.all(color: _brandPurple, width: 2),
+                  borderRadius: BorderRadius.circular(16),
                 ),
+                child: const Text('Buscar un salon', style: TextStyle(color: _brandPurple, fontWeight: FontWeight.w700, fontSize: 16)),
               ),
-              child: const Text('Iniciar sesion'),
             ),
           ],
         ),
-        const SizedBox(height: 16),
-        Row(
-          mainAxisSize: MainAxisSize.min,
+        const SizedBox(height: 48),
+        // Trust badges
+        Wrap(
+          spacing: 32,
+          runSpacing: 12,
+          alignment: isDesktop ? WrapAlignment.start : WrapAlignment.center,
           children: [
-            Icon(Icons.touch_app,
-                color: _gold.withValues(alpha: 0.8), size: 16),
-            const SizedBox(width: 6),
-            Flexible(
-              child: Text(
-                '4 toques. 30 segundos. Cero teclado.',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: Colors.white.withValues(alpha: 0.7),
-                  fontStyle: FontStyle.italic,
-                ),
-              ),
-            ),
+            _trustBadge('64,000+ salones descubiertos'),
+            _trustBadge('100% compatible SAT'),
+            _trustBadge('\$0 cuota mensual'),
           ],
         ),
       ],
     );
   }
 
-  Widget _heroVisual(BuildContext context, bool isMobile) {
+  Widget _trustBadge(String text) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 20,
+          height: 20,
+          decoration: const BoxDecoration(
+            gradient: _brandGradient,
+            shape: BoxShape.circle,
+          ),
+          child: const Center(
+            child: Icon(Icons.check, color: Colors.white, size: 12),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(text, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: _textSecondary)),
+      ],
+    );
+  }
+
+  Widget _heroPhone() {
+    return _PhoneFloating(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: Image.network(
+          'img/01_home.png',
+          fit: BoxFit.cover,
+          width: double.infinity,
+          height: double.infinity,
+          errorBuilder: (_, __, ___) => _phoneContent(),
+        ),
+      ),
+    );
+  }
+
+  Widget _phoneContent() {
+    return Column(
+      children: [
+        // Status bar
+        Container(
+          height: 32,
+          decoration: const BoxDecoration(
+            gradient: _brandGradient,
+          ),
+          child: const Center(
+            child: Text('BeautyCita', style: TextStyle(fontSize: 11, color: Colors.white70, fontWeight: FontWeight.w600)),
+          ),
+        ),
+        // Header
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            border: Border(bottom: BorderSide(color: _cardBorder)),
+          ),
+          child: const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Hola, bienvenida', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: _textPrimary)),
+              SizedBox(height: 2),
+              Text('Que servicio buscas hoy?', style: TextStyle(fontSize: 12, color: _textHint)),
+            ],
+          ),
+        ),
+        // Category grid
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            child: GridView.count(
+              crossAxisCount: 3,
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 8,
+              physics: const NeverScrollableScrollPhysics(),
+              children: [
+                _phoneCat(Icons.content_cut, 'Corte', _brandPurple),
+                _phoneCat(Icons.palette_outlined, 'Color', _brandPink),
+                _phoneCat(Icons.brush_outlined, 'Unas', _brandBlue),
+                _phoneCat(Icons.visibility_outlined, 'Pestanas', _brandPurple),
+                _phoneCat(Icons.star_outline, 'Facial', _brandPink),
+                _phoneCat(Icons.face_outlined, 'Maquillaje', _brandBlue),
+              ],
+            ),
+          ),
+        ),
+        // Bottom bar
+        Container(
+          height: 48,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            border: Border(top: BorderSide(color: _cardBorder)),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              Container(width: 24, height: 24, decoration: BoxDecoration(gradient: _brandGradient, borderRadius: BorderRadius.circular(6))),
+              Container(width: 24, height: 24, decoration: BoxDecoration(color: _cardBorder, borderRadius: BorderRadius.circular(6))),
+              Container(width: 24, height: 24, decoration: BoxDecoration(color: _cardBorder, borderRadius: BorderRadius.circular(6))),
+              Container(width: 24, height: 24, decoration: BoxDecoration(color: _cardBorder, borderRadius: BorderRadius.circular(6))),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _phoneCat(IconData icon, String label, Color color) {
     return Container(
-      width: double.infinity,
-      padding: EdgeInsets.all(isMobile ? 16 : 32),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+        color: _bgColor,
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          _flowStep(context, '1', 'Elige tu servicio', Icons.content_cut,
-              isMobile),
-          const SizedBox(height: 12),
-          Icon(Icons.arrow_downward_rounded,
-              color: Colors.white.withValues(alpha: 0.4), size: 18),
-          const SizedBox(height: 12),
-          _flowStep(context, '2', 'BeautyCita busca por ti',
-              Icons.auto_awesome, isMobile),
-          const SizedBox(height: 12),
-          Icon(Icons.arrow_downward_rounded,
-              color: Colors.white.withValues(alpha: 0.4), size: 18),
-          const SizedBox(height: 12),
-          _flowStep(context, '3', 'Reserva con un toque',
-              Icons.check_circle_outline, isMobile),
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [_brandPink.withValues(alpha: 0.15), _brandPurple.withValues(alpha: 0.15)],
+              ),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, size: 16, color: color),
+          ),
+          const SizedBox(height: 6),
+          Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: _textSecondary)),
         ],
       ),
     );
   }
 
-  Widget _flowStep(BuildContext context, String number, String label,
-      IconData icon, bool isMobile) {
-    return Row(
-      children: [
-        Container(
-          width: isMobile ? 30 : 36,
-          height: isMobile ? 30 : 36,
-          decoration: BoxDecoration(
-            color: _gold,
-            borderRadius: BorderRadius.circular(8),
+  // ── Comparison Table ───────────────────────────────────────────────────────
+
+  Widget _buildComparison(bool isDesktop, bool isMobile) {
+    return _SectionWrapper(
+      sectionKey: _comparisonKey,
+      anim: _comparisonAnim,
+      child: Column(
+        children: [
+          _sectionHeader(
+            'Compara y decide',
+            'Por que BeautyCita es la mejor opcion para tu salon',
           ),
-          child: Center(
-            child: Text(
-              number,
-              style: TextStyle(
-                color: Colors.black87,
-                fontWeight: FontWeight.bold,
-                fontSize: isMobile ? 14 : 16,
-              ),
+          const SizedBox(height: 40),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 20, offset: const Offset(0, 2))],
             ),
+            clipBehavior: Clip.antiAlias,
+            child: isMobile
+                ? SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: _comparisonTable(),
+                  )
+                : _comparisonTable(),
           ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(
-            label,
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w500,
-                  fontSize: isMobile ? 14 : null,
-                ),
-          ),
-        ),
-        Icon(icon,
-            color: Colors.white.withValues(alpha: 0.6),
-            size: isMobile ? 22 : 28),
-      ],
+        ],
+      ),
     );
   }
 
-  // ── How it works section ────────────────────────────────────────────────────
+  Widget _comparisonTable() {
+    final rows = [
+      _CompRow('Cuota mensual', 'GRATIS', '\$299 - \$4,500/mes', '\$350 - \$1,200/mes', bcType: _CellType.free, col2Type: _CellType.warn, col3Type: _CellType.warn),
+      _CompRow('Staff ilimitado', null, '1-20 (segun plan)', '1-5', bcType: _CellType.check, col2Type: _CellType.warn, col3Type: _CellType.warn),
+      _CompRow('Mensajes WhatsApp', 'ILIMITADOS GRATIS', '\$100/50 msgs', 'No incluido', bcType: _CellType.free, col2Type: _CellType.warn, col3Type: _CellType.cross),
+      _CompRow('Pagina portfolio', '5 temas', 'Pagina basica', 'No incluido', bcType: _CellType.checkText, col2Type: _CellType.plain, col3Type: _CellType.cross),
+      _CompRow('Punto de venta', 'GRATIS (10% comision)', '\$250/mes', 'No incluido', bcType: _CellType.free, col2Type: _CellType.warn, col3Type: _CellType.cross),
+      _CompRow('Cumplimiento SAT', 'Automatico', 'Solo autofacturacion', 'No', bcType: _CellType.checkText, col2Type: _CellType.plain, col3Type: _CellType.cross),
+      _CompRow('Calendario drag & drop', null, 'No', 'No', bcType: _CellType.check, col2Type: _CellType.cross, col3Type: _CellType.cross),
+      _CompRow('Sync Google Calendar', 'GRATIS', 'Solo Premium', 'Solo Pro', bcType: _CellType.free, col2Type: _CellType.warn, col3Type: _CellType.warn),
+      _CompRow('Motor inteligente', 'Busca clientes PARA ti', 'Directorio pasivo', 'Directorio pasivo', bcType: _CellType.checkText, col2Type: _CellType.plain, col3Type: _CellType.plain),
+      _CompRow('App nativa', 'Flutter (rapida)', 'Ionic (lenta)', 'React Native', bcType: _CellType.checkText, col2Type: _CellType.warn, col3Type: _CellType.plain),
+      _CompRow('Soporte en cash/OXXO', null, 'No', 'No', bcType: _CellType.check, col2Type: _CellType.cross, col3Type: _CellType.cross),
+    ];
 
-  Widget _buildHowItWorks(
-      BuildContext context, bool isDesktop, bool isMobile, double hPad) {
-    final theme = Theme.of(context);
-    final items = [
-      _FeatureItem(
-        icon: Icons.spa_outlined,
-        title: 'Empieza por el servicio',
-        description:
-            'Corte, color, unas, pestanas, facial... cada servicio tiene su propia inteligencia para encontrar el mejor resultado.',
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minWidth: 700),
+      child: Column(
+        children: [
+          // Header row
+          Row(
+              children: [
+                _tableHeaderCell('Caracteristica', flex: 3, align: Alignment.centerLeft),
+                _tableHeaderCellBC('BeautyCita', flex: 2),
+                _tableHeaderCell('AgendaPro', flex: 2),
+                _tableHeaderCell('Booksy', flex: 2),
+              ],
+          ),
+          Divider(height: 1, thickness: 1, color: _cardBorder.withValues(alpha: 0.5)),
+          // Data rows
+          ...rows.asMap().entries.map((entry) {
+            final i = entry.key;
+            final row = entry.value;
+            return _ComparisonRow(row: row, isEven: i.isEven);
+          }),
+        ],
       ),
-      _FeatureItem(
-        icon: Icons.psychology_outlined,
-        title: 'Inteligencia que aprende',
-        description:
-            'El motor analiza ubicacion, trafico, horarios, calificaciones y tus preferencias para darte las 3 mejores opciones.',
+    );
+  }
+
+  Widget _tableHeaderCell(String text, {int flex = 1, Alignment align = Alignment.center}) {
+    return Expanded(
+      flex: flex,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        child: Align(
+          alignment: align,
+          child: Text(text, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: _textPrimary)),
+        ),
       ),
-      _FeatureItem(
-        icon: Icons.bolt_outlined,
-        title: 'Reserva instantanea',
-        description:
-            'Sin buscar. Sin comparar. Sin calendario. Un toque y tu cita queda confirmada con el salon perfecto.',
+    );
+  }
+
+  Widget _tableHeaderCellBC(String text, {int flex = 1}) {
+    return Expanded(
+      flex: flex,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+              decoration: BoxDecoration(
+                gradient: _brandGradient,
+                borderRadius: BorderRadius.circular(50),
+              ),
+              child: const Text('RECOMENDADO', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: 0.5)),
+            ),
+            const SizedBox(height: 6),
+            _GradientText(text, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+          ],
+        ),
       ),
-      _FeatureItem(
-        icon: Icons.local_taxi_outlined,
-        title: 'Transporte incluido',
-        description:
-            'Elige entre manejar, Uber o transporte publico. En modo Uber, se agenda ida y vuelta automaticamente.',
+    );
+  }
+
+  // ── Feature Detail Popup ───────────────────────────────────────────────────
+
+  void _showFeatureDetail(BuildContext context, _Feature feature, Offset tapPosition) {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Feature Detail',
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 500),
+      pageBuilder: (context, anim, secondaryAnim) {
+        return _FeatureDetailPopup(
+          feature: feature,
+          onDemo: () {
+            Navigator.of(context).pop();
+            _scrollToSection(_demoKey);
+          },
+        );
+      },
+      transitionBuilder: (context, anim, secondaryAnim, child) {
+        final screenSize = MediaQuery.of(context).size;
+        final maxRadius = (screenSize.width > screenSize.height
+            ? screenSize.width
+            : screenSize.height) * 1.5;
+        final radius = anim.value * maxRadius;
+
+        return ClipPath(
+          clipper: _CircleClipper(center: tapPosition, radius: radius),
+          child: child,
+        );
+      },
+    );
+  }
+
+  // ── For Salons (Feature Grid) ──────────────────────────────────────────────
+
+  Widget _buildForSalons(bool isDesktop, bool isMobile, bool isTablet) {
+    final features = [
+      _Feature(Icons.location_on_outlined, 'Motor Inteligente',
+        'Nuestro AI encuentra clientes para tu salon, no al reves',
+        detailTitle: 'Motor de Busqueda Inteligente',
+        detailBullets: [
+          'Pipeline de 6 pasos que analiza ubicacion, horario, especialidad, precio y calificaciones',
+          'Cada tipo de servicio tiene su propio perfil de ranking — corte \u2260 extensiones \u2260 novia',
+          'Devuelve los 3 mejores salones con el mejor horario disponible en menos de 400ms',
+          'Los clientes no buscan — el motor los conecta contigo automaticamente',
+          'Tu salon aparece cuando un cliente busca tu tipo de servicio en tu zona',
+        ],
+      ),
+      _Feature(Icons.people_outline, 'Staff Ilimitado',
+        'Agrega todo tu equipo sin pagar mas',
+        detailTitle: 'Gestion de Equipo Sin Limites',
+        detailBullets: [
+          'Agrega estilistas, recepcionistas y asistentes sin costo adicional',
+          'Cada miembro tiene su propio perfil con foto, bio y especialidades',
+          'Asigna servicios especificos a cada estilista',
+          'Analiticas de productividad por empleado',
+          'AgendaPro cobra por profesional. Nosotros no.',
+        ],
+      ),
+      _Feature(Icons.calendar_today_outlined, 'Calendario Inteligente',
+        'Drag & drop para reagendar. Auto-sync. Alertas automaticas.',
+        detailTitle: 'Calendario con Superpoderes',
+        detailBullets: [
+          'Arrastra y suelta para reagendar o reasignar citas a otro estilista',
+          'Sincronizacion automatica en tiempo real con Google Calendar',
+          'Alertas automaticas al cliente y estilista cuando hay cambios',
+          'Si el salon modifica una cita, el cliente puede cancelar gratis y recibir reembolso completo en saldo',
+          'BeautyCita solo retiene el 3% — el cliente recupera el 97% restante',
+          'Politica de cancelacion configurable por salon (default 24 horas)',
+        ],
+        detailNote: 'El cliente siempre tiene la opcion de modificar o cancelar sin penalizacion cuando el salon inicia el cambio.',
+      ),
+      _Feature(Icons.desktop_mac_outlined, 'Portfolio Web',
+        'Tu pagina profesional en beautycita.com/p/tu-salon',
+        detailTitle: 'Tu Sitio Web Profesional — Gratis',
+        detailBullets: [
+          '5 temas profesionales: portfolio, team-builder, storefront, gallery, local',
+          'Se construye automaticamente con los datos de tu salon',
+          'URL personalizada: beautycita.com/p/tu-salon',
+          'Fotos de servicios, equipo, horarios, ubicacion — todo incluido',
+          'Ideal si no tienes sitio web — o como complemento al que ya tienes',
+          'Los motores de busqueda indexan tu pagina — mas visibilidad gratis',
+        ],
+      ),
+      _Feature(Icons.notifications_active_outlined, 'Alertas Automaticas',
+        'Recordatorios y notificaciones a tus clientes — sin costo',
+        detailTitle: 'Sistema de Alertas Inteligente',
+        detailBullets: [
+          'Recordatorio automatico 24 horas antes de la cita',
+          'Segundo recordatorio 1 hora antes',
+          'Alerta inmediata si hay cambios en la reservacion',
+          'Confirmacion de reserva al momento de agendar',
+          'Todo esto sin costo — AgendaPro cobra \$100 por 50 mensajes',
+          'Tu no envias nada manualmente — nosotros nos encargamos',
+        ],
+        detailNote: 'Todas las alertas son automaticas. El salon no tiene que hacer nada.',
+      ),
+      _Feature(Icons.storefront_outlined, 'Punto de Venta',
+        'Vende productos de belleza. Solo 10% comision, sin mensualidad',
+        detailTitle: 'Vende Productos Sin Costo de Entrada',
+        detailBullets: [
+          '10 categorias de productos (los mas vendidos en TikTok y redes)',
+          'Catalogo con fotos, precios, y estado de inventario',
+          'Publica productos en el feed de inspiracion — miles de ojos',
+          'Pedidos con seguimiento: push + email \u2192 recordatorio 3 dias \u2192 escalamiento 7 dias \u2192 reembolso 14 dias',
+          'Solo 10% comision via Stripe Connect. Sin mensualidad. Sin setup.',
+          'AgendaPro cobra \$250/mes por su terminal de pago',
+        ],
+      ),
+      _Feature(Icons.bar_chart_outlined, 'Analiticas',
+        'Productividad por empleado, ingresos, tendencias',
+        detailTitle: 'Datos que Hacen Crecer tu Negocio',
+        detailBullets: [
+          'Dashboard con KPIs en tiempo real: citas hoy, ingresos, cancelaciones',
+          'Productividad por estilista: citas completadas, ingresos, calificaciones',
+          'Tendencias mensuales con graficas interactivas',
+          'Desglose de ingresos por servicio, estilista y metodo de pago',
+          'Reportes exportables a CSV',
+        ],
+      ),
+      _Feature(Icons.verified_outlined, 'Cumplimiento SAT',
+        'Cumplimiento fiscal automatico para todas las transacciones',
+        detailTitle: 'SAT Compliant — Automatico y Gratuito',
+        detailBullets: [
+          'Retenciones ISR (2.5% con RFC, 20% sin RFC) y IVA (8%/16%) calculadas automaticamente',
+          'Ledger inmutable de todas las transacciones — listo para auditoria',
+          'Reportes mensuales para el SAT generados automaticamente',
+          'Compatible con CFF Art. 30-B (acceso SAT en tiempo real, vigente abril 2026)',
+          'Badge de "Negocio Verificado" visible para clientes — genera confianza',
+          'Tu no calculas nada — nosotros nos encargamos de todo',
+        ],
+        detailNote: 'Integracion con PAC SW Sapien para timbrado de CFDI (proximamente).',
+      ),
+      _Feature(Icons.download_outlined, 'Import de Datos',
+        'Migra desde Vagaro, Fresha o Booksy en minutos',
+        detailTitle: 'Migracion Facil desde Otra Plataforma',
+        detailBullets: [
+          'Importa clientes, servicios, horarios y citas desde Vagaro, Fresha o Booksy',
+          'Proceso guiado paso a paso — no necesitas ser tecnico',
+          'Tus datos historicos se preservan — no pierdes nada',
+          'Soporte personalizado durante la migracion',
+          'Empieza a recibir citas el mismo dia',
+        ],
+      ),
+      _Feature(Icons.credit_card_outlined, 'Prestamos para Salones',
+        'Creditos para hacer crecer tu negocio (proximamente)',
+        detailTitle: 'Financiamiento para Crecer',
+        detailBullets: [
+          'Creditos de bajo interes disenados para salones de belleza',
+          'Basados en tu historial de ingresos en BeautyCita',
+          'Aprobacion rapida — sin burocracia bancaria',
+          'Para: remodelacion, equipo nuevo, inventario, publicidad',
+          'Pagos automaticos deducidos de tus ingresos',
+        ],
+        detailNote: 'Proximamente — en desarrollo. Registrate ahora para ser de los primeros.',
+      ),
+      _Feature(Icons.photo_library_outlined, 'Fotos Antes/Despues',
+        'El arma secreta para atraer mas clientes',
+        detailTitle: 'El Portfolio Visual que Vende por Ti',
+        detailBullets: [
+          'Los salones con portfolio visual reciben 4x mas reservaciones que los que no tienen',
+          'Te recordamos antes de cada cita: "No olvides pedir la foto del antes"',
+          'Alerta 10 min antes: el estilista recibe un push — "Tu cliente llega pronto para [servicio]. Pide la foto antes."',
+          'Alerta ~20 min antes de terminar: "Recuerda pedir la foto del despues. Tu proximo cliente es a las [hora]."',
+          'Las fotos alimentan tu portfolio web, el feed de inspiracion, y Google Images',
+          'Los motores de busqueda indexan imagenes y comentarios — visibilidad gratuita',
+          'Convence a clientes timidos: "Es solo para mostrar nuestro trabajo, no se publica tu cara"',
+        ],
+        detailNote: 'Los salones que suben antes/despues consistentemente ven un incremento del 40% en reservaciones nuevas.',
+      ),
+      _Feature(Icons.bolt_outlined, 'Cita Express',
+        'Widget embebible para tu sitio web existente',
+        detailTitle: 'Booking Widget para tu Sitio Web',
+        detailBullets: [
+          'Un boton de "Reservar" que puedes poner en tu pagina web, Instagram o Facebook',
+          'Los clientes reservan sin salir de tu sitio',
+          'Personalizable con tus colores y servicios',
+          'QR code para walk-ins: el cliente escanea y reserva al instante',
+          'Funciona en cualquier sitio web — solo copia y pega el codigo',
+        ],
       ),
     ];
 
+    final crossCount = isDesktop ? 4 : (isTablet ? 3 : (isMobile ? 1 : 2));
+
     return Container(
+      key: _forSalonsKey,
       width: double.infinity,
-      color: _cream,
-      padding: EdgeInsets.symmetric(
-        horizontal: hPad,
-        vertical: isDesktop ? 80 : (isMobile ? 32 : 48),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [_bgColor, _brandPink.withValues(alpha: 0.04), _brandPurple.withValues(alpha: 0.04), _bgColor],
+          stops: const [0.0, 0.3, 0.7, 1.0],
+        ),
       ),
+      child: _SectionWrapper(
+        anim: _salonsAnim,
+        padding: EdgeInsets.zero,
+        child: Column(
+          children: [
+            Padding(
+              padding: EdgeInsets.symmetric(vertical: isDesktop ? 100 : 60, horizontal: 24),
+              child: Column(
+                children: [
+                  _sectionHeader(
+                    null,
+                    'Herramientas profesionales para hacer crecer tu negocio sin pagar mensualidades',
+                    richTitle: Text.rich(
+                      TextSpan(children: [
+                        const TextSpan(text: 'Todo lo que tu salon necesita. ', style: TextStyle(fontSize: 42, fontWeight: FontWeight.w800, color: _textPrimary)),
+                      ]),
+                      textAlign: TextAlign.center,
+                    ),
+                    richTitleSuffix: const _GradientText('Gratis.', style: TextStyle(fontSize: 42, fontWeight: FontWeight.w800)),
+                  ),
+                  const SizedBox(height: 48),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: _maxWidth),
+                    child: Wrap(
+                      spacing: 24,
+                      runSpacing: 24,
+                      children: features.map((f) {
+                        final cardWidth = crossCount == 1
+                            ? double.infinity
+                            : (_maxWidth - (crossCount - 1) * 24) / crossCount;
+                        return SizedBox(
+                          width: crossCount == 1 ? null : cardWidth,
+                          child: _FeatureCard(
+                            feature: f,
+                            onTapUp: (pos) => _showFeatureDetail(context, f, pos),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Demo Section ───────────────────────────────────────────────────────────
+
+  Widget _buildDemo(bool isDesktop, bool isMobile) {
+    return _SectionWrapper(
+      sectionKey: _demoKey,
+      anim: _demoAnim,
       child: Column(
         children: [
-          Text(
-            'Como funciona',
-            style: (isMobile
-                    ? theme.textTheme.titleLarge
-                    : theme.textTheme.headlineMedium)
-                ?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'BeautyCita no es una app de reservas. Es tu agente personal de belleza.',
-            textAlign: TextAlign.center,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-              fontSize: isMobile ? 13 : null,
+          _sectionHeader(
+            null,
+            'Ingresa tu numero y explora todas las herramientas',
+            richTitle: Text.rich(
+              TextSpan(children: [
+                const TextSpan(text: 'Prueba BeautyCita en ', style: TextStyle(fontSize: 42, fontWeight: FontWeight.w800, color: _textPrimary)),
+              ]),
+              textAlign: TextAlign.center,
             ),
+            richTitleSuffix: const _GradientText('30 segundos', style: TextStyle(fontSize: 42, fontWeight: FontWeight.w800)),
           ),
-          const SizedBox(height: 32),
-          Wrap(
-            spacing: isMobile ? 12 : 32,
-            runSpacing: isMobile ? 12 : 32,
-            alignment: WrapAlignment.center,
-            children: items.map((item) {
-              return SizedBox(
-                width: isDesktop ? 260 : double.infinity,
-                child: _buildFeatureCard(context, item, isMobile),
-              );
-            }).toList(),
-          ),
+          const SizedBox(height: 48),
+          isDesktop
+              ? Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: _demoLeft(isMobile)),
+                    const SizedBox(width: 60),
+                    Expanded(child: _demoDashboardPreview()),
+                  ],
+                )
+              : Column(
+                  children: [
+                    _demoLeft(isMobile),
+                    const SizedBox(height: 40),
+                    _demoDashboardPreview(),
+                  ],
+                ),
         ],
       ),
     );
   }
 
-  Widget _buildFeatureCard(
-      BuildContext context, _FeatureItem item, bool isMobile) {
-    final theme = Theme.of(context);
+  Widget _demoLeft(bool isMobile) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Phone input row
+        Row(
+          children: [
+            Expanded(
+              child: _DemoPhoneInput(
+                controller: _phoneController,
+                error: _phoneError,
+              ),
+            ),
+            const SizedBox(width: 12),
+            _HoverScaleButton(
+              onTap: _onSendDemoCode,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                decoration: BoxDecoration(
+                  gradient: _brandGradient,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Text('Enviar codigo', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16)),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'Te enviaremos un codigo por WhatsApp para verificar tu numero. Sin compromiso.',
+          style: TextStyle(fontSize: 14, color: _textHint),
+        ),
+        if (_phoneError != null) ...[
+          const SizedBox(height: 8),
+          Text(_phoneError!, style: const TextStyle(fontSize: 14, color: _crossRed, fontWeight: FontWeight.w600)),
+        ],
+        const SizedBox(height: 40),
+        // 3 steps
+        isMobile
+            ? Column(
+                children: [
+                  _demoStep('1', 'Ingresa tu numero', 'Tu numero de celular mexicano'),
+                  const SizedBox(height: 20),
+                  _demoStep('2', 'Verifica por WhatsApp', 'Recibe tu codigo de acceso'),
+                  const SizedBox(height: 20),
+                  _demoStep('3', 'Explora el demo completo', 'Accede a todas las herramientas'),
+                ],
+              )
+            : Row(
+                children: [
+                  Expanded(child: _demoStep('1', 'Ingresa tu numero', 'Tu numero de celular mexicano')),
+                  const SizedBox(width: 24),
+                  Expanded(child: _demoStep('2', 'Verifica por WhatsApp', 'Recibe tu codigo de acceso')),
+                  const SizedBox(width: 24),
+                  Expanded(child: _demoStep('3', 'Explora el demo completo', 'Accede a todas las herramientas')),
+                ],
+              ),
+      ],
+    );
+  }
+
+  Widget _demoStep(String num, String title, String subtitle) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          decoration: const BoxDecoration(
+            gradient: _brandGradient,
+            shape: BoxShape.circle,
+          ),
+          child: Center(child: Text(num, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700))),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: _textPrimary)),
+              const SizedBox(height: 2),
+              Text(subtitle, style: const TextStyle(fontSize: 13, color: _textHint)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _demoDashboardPreview() {
     return Container(
-      padding: EdgeInsets.all(isMobile ? 16 : 24),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.black.withValues(alpha: 0.06)),
+        border: Border.all(color: _cardBorder),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 24, offset: const Offset(0, 4))],
       ),
-      child: isMobile
-          ? Row(
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          // Browser chrome
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [_brandPink.withValues(alpha: 0.06), _brandPurple.withValues(alpha: 0.06)],
+              ),
+              border: const Border(bottom: BorderSide(color: _cardBorder)),
+            ),
+            child: Row(
+              children: [
+                Container(width: 10, height: 10, decoration: const BoxDecoration(color: _crossRed, shape: BoxShape.circle)),
+                const SizedBox(width: 6),
+                Container(width: 10, height: 10, decoration: const BoxDecoration(color: _warnAmber, shape: BoxShape.circle)),
+                const SizedBox(width: 6),
+                Container(width: 10, height: 10, decoration: const BoxDecoration(color: _checkGreen, shape: BoxShape.circle)),
+                const SizedBox(width: 12),
+                const Text('beautycita.com/dashboard', style: TextStyle(fontSize: 13, color: _textHint)),
+              ],
+            ),
+          ),
+          // Dashboard body
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: _lightRose.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
+                // Sidebar
+                SizedBox(
+                  width: 140,
+                  child: Column(
+                    children: [
+                      _demoSidebarItem('Dashboard', active: true),
+                      _demoSidebarItem('Calendario'),
+                      _demoSidebarItem('Clientes'),
+                      _demoSidebarItem('Servicios'),
+                      _demoSidebarItem('Staff'),
+                      _demoSidebarItem('Analiticas'),
+                      _demoSidebarItem('Portfolio'),
+                    ],
                   ),
-                  child: Icon(item.icon, color: _lightRose, size: 22),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 16),
+                // Main content
                 Expanded(
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        item.title,
-                        style: theme.textTheme.titleSmall
-                            ?.copyWith(fontWeight: FontWeight.w600),
+                      // Stat cards
+                      Row(
+                        children: [
+                          Expanded(child: _demoStatCard('142', 'Citas este mes')),
+                          const SizedBox(width: 12),
+                          Expanded(child: _demoStatCard('\$47.2k', 'Ingresos')),
+                          const SizedBox(width: 12),
+                          Expanded(child: _demoStatCard('96%', 'Satisfaccion')),
+                        ],
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        item.description,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurface
-                              .withValues(alpha: 0.6),
-                          height: 1.4,
+                      const SizedBox(height: 12),
+                      // Chart placeholder
+                      Container(
+                        height: 120,
+                        decoration: BoxDecoration(
+                          color: _bgColor,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.all(16),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            _demoBar(0.4),
+                            _demoBar(0.65),
+                            _demoBar(0.45),
+                            _demoBar(0.8),
+                            _demoBar(0.55),
+                            _demoBar(0.9),
+                            _demoBar(0.7),
+                          ],
                         ),
                       ),
                     ],
                   ),
                 ),
               ],
-            )
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: _lightRose.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(item.icon, color: _lightRose, size: 28),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  item.title,
-                  style: theme.textTheme.titleMedium
-                      ?.copyWith(fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  item.description,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                    height: 1.5,
-                  ),
-                ),
-              ],
-            ),
-    );
-  }
-
-  // ── App preview carousel ────────────────────────────────────────────────────
-
-  static const _screenshots = [
-    'assets/screenshots/01_home.png',
-    'assets/screenshots/02_subcategory.png',
-    'assets/screenshots/03_service_flow.png',
-    'assets/screenshots/04_categories_scroll.png',
-    'assets/screenshots/05_settings.png',
-    'assets/screenshots/06_security.png',
-    'assets/screenshots/07_preferences.png',
-    'assets/screenshots/08_unas.png',
-  ];
-
-  static const _screenshotLabels = [
-    'Categorias',
-    'Subcategoria',
-    'Servicios',
-    'Mas categorias',
-    'Ajustes',
-    'Seguridad',
-    'Preferencias',
-    'Pestanas y cejas',
-  ];
-
-  Widget _buildAppPreview(
-      BuildContext context, bool isDesktop, bool isMobile, double hPad) {
-    final theme = Theme.of(context);
-    final cardH = isMobile ? 340.0 : (isDesktop ? 480.0 : 400.0);
-    final cardW = cardH * 0.487; // ~9:19 phone ratio
-
-    return Container(
-      width: double.infinity,
-      color: Colors.white,
-      padding: EdgeInsets.symmetric(
-        vertical: isDesktop ? 80 : (isMobile ? 32 : 48),
-      ),
-      child: Column(
-        children: [
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: hPad),
-            child: Column(
-              children: [
-                Text(
-                  'Conoce la app',
-                  style: (isMobile
-                          ? theme.textTheme.titleLarge
-                          : theme.textTheme.headlineMedium)
-                      ?.copyWith(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Asi se ve BeautyCita en tu telefono',
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                    fontSize: isMobile ? 13 : null,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-          SizedBox(
-            height: cardH + 32, // card + label
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: EdgeInsets.symmetric(horizontal: hPad),
-              itemCount: _screenshots.length,
-              separatorBuilder: (_, __) =>
-                  SizedBox(width: isMobile ? 12 : 20),
-              itemBuilder: (context, index) {
-                return Column(
-                  children: [
-                    Container(
-                      width: cardW,
-                      height: cardH,
-                      decoration: BoxDecoration(
-                        color: _cream,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: Colors.black.withValues(alpha: 0.08),
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.08),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      clipBehavior: Clip.antiAlias,
-                      child: Image.asset(
-                        _screenshots[index],
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      _screenshotLabels[index],
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: theme.colorScheme.onSurface
-                            .withValues(alpha: 0.5),
-                      ),
-                    ),
-                  ],
-                );
-              },
             ),
           ),
         ],
@@ -553,230 +1283,707 @@ class LandingPage extends StatelessWidget {
     );
   }
 
-  // ── Stats section ───────────────────────────────────────────────────────────
-
-  Widget _buildStats(BuildContext context, bool isDesktop, bool isMobile,
-      double hPad, double viewportWidth) {
-    final theme = Theme.of(context);
-    final stats = [
-      ('30,000+', 'Salones descubiertos'),
-      ('200ms', 'Tiempo de respuesta'),
-      ('30 seg', 'De inicio a reserva'),
-      ('4', 'Toques maximo'),
-    ];
-
+  Widget _demoSidebarItem(String label, {bool active = false}) {
     return Container(
       width: double.infinity,
-      color: Colors.white,
-      padding: EdgeInsets.symmetric(
-        horizontal: hPad,
-        vertical: isDesktop ? 60 : (isMobile ? 24 : 40),
+      margin: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        gradient: active
+            ? LinearGradient(colors: [_brandPink.withValues(alpha: 0.1), _brandPurple.withValues(alpha: 0.1)])
+            : null,
+        borderRadius: BorderRadius.circular(10),
       ),
-      child: Container(
-        width: double.infinity,
-        padding: EdgeInsets.symmetric(
-          horizontal: isMobile ? 12 : (isDesktop ? 48 : 24),
-          vertical: isMobile ? 20 : (isDesktop ? 40 : 28),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: active ? _brandPurple : _textSecondary,
         ),
-        decoration: BoxDecoration(
-          color: _cream,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.black.withValues(alpha: 0.06)),
-        ),
-        child: viewportWidth < 500
-            ? Column(
-                children: stats
-                    .map((s) => Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          child: _statItem(theme, s.$1, s.$2, true),
-                        ))
-                    .toList(),
-              )
-            : isMobile
-                ? Wrap(
-                    spacing: 0,
-                    runSpacing: 16,
-                    alignment: WrapAlignment.center,
-                    children: stats.map((s) {
-                      return SizedBox(
-                        width:
-                            (viewportWidth - hPad * 2 - 24) / 2,
-                        child: _statItem(theme, s.$1, s.$2, isMobile),
-                      );
-                    }).toList(),
-                  )
-                : Row(
-                    children: stats
-                        .map((s) => Expanded(
-                            child: _statItem(theme, s.$1, s.$2, isMobile)))
-                        .toList(),
-                  ),
       ),
     );
   }
 
-  Widget _statItem(
-      ThemeData theme, String value, String label, bool isMobile) {
-    return Column(
-      children: [
-        ShaderMask(
-          shaderCallback: (bounds) => const LinearGradient(
-            colors: [_deepRose, _lightRose],
-          ).createShader(bounds),
-          child: Text(
-            value,
-            style: theme.textTheme.headlineSmall?.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: isMobile ? 22 : null,
+  Widget _demoStatCard(String value, String label) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: _bgColor,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _GradientText(value, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 2),
+          Text(label, style: const TextStyle(fontSize: 11, color: _textHint)),
+        ],
+      ),
+    );
+  }
+
+  Widget _demoBar(double heightFraction) {
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        child: FractionallySizedBox(
+          heightFactor: heightFraction,
+          alignment: Alignment.bottomCenter,
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.bottomCenter,
+                end: Alignment.topCenter,
+                colors: [_brandPink.withValues(alpha: 0.3), _brandPurple.withValues(alpha: 0.3)],
+              ),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
             ),
           ),
         ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          textAlign: TextAlign.center,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-            fontSize: isMobile ? 11 : null,
+      ),
+    );
+  }
+
+  void _onSendDemoCode() {
+    final raw = _phoneController.text.replaceAll(RegExp(r'\D'), '');
+    if (raw.length < 12) {
+      setState(() => _phoneError = 'Ingresa un numero de 10 digitos valido');
+      return;
+    }
+    setState(() => _phoneError = null);
+    // TODO: integrate with demo-wa-funnel edge function
+  }
+
+  // ── For Clients ────────────────────────────────────────────────────────────
+
+  Widget _buildForClients(bool isDesktop, bool isMobile) {
+    final cards = [
+      _ClientCard(Icons.attach_money, 'Mejores Precios', 'Nuestra comision baja significa que los salones no inflan sus precios. Tu pagas lo justo.'),
+      _ClientCard(Icons.verified_outlined, 'Salones Responsables', 'Todos nuestros salones cumplen con el SAT. Apoyas negocios que contribuyen a Mexico.'),
+      _ClientCard(Icons.shield_outlined, 'Garantia de Calidad', 'Si no quedas satisfecho, te devolvemos tu dinero. Sin preguntas.'),
+    ];
+
+    return _SectionWrapper(
+      sectionKey: _forClientsKey,
+      anim: _clientsAnim,
+      child: Column(
+        children: [
+          _sectionHeader(
+            null,
+            'Para los que buscan el salon perfecto, sin sorpresas',
+            richTitle: Text.rich(
+              TextSpan(children: [
+                const TextSpan(text: 'La mejor experiencia de ', style: TextStyle(fontSize: 42, fontWeight: FontWeight.w800, color: _textPrimary)),
+              ]),
+              textAlign: TextAlign.center,
+            ),
+            richTitleSuffix: const _GradientText('reserva', style: TextStyle(fontSize: 42, fontWeight: FontWeight.w800)),
           ),
+          const SizedBox(height: 40),
+          isMobile
+              ? Column(
+                  children: cards.map((c) => Padding(
+                    padding: const EdgeInsets.only(bottom: 20),
+                    child: _ClientCardWidget(card: c),
+                  )).toList(),
+                )
+              : Row(
+                  children: cards.map((c) => Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      child: _ClientCardWidget(card: c),
+                    ),
+                  )).toList(),
+                ),
+          const SizedBox(height: 60),
+          // Download CTA
+          Column(
+            children: [
+              Text.rich(
+                TextSpan(children: [
+                  const TextSpan(text: 'Descarga la app y reserva en ', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: _textPrimary)),
+                ]),
+                textAlign: TextAlign.center,
+              ),
+              const _GradientText('30 segundos', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 12),
+              const Text('Sin cuentas, sin passwords. Solo tu huella o tu cara.', style: TextStyle(color: _textSecondary, fontSize: 16)),
+              const SizedBox(height: 24),
+              Wrap(
+                spacing: 16,
+                runSpacing: 12,
+                alignment: WrapAlignment.center,
+                children: [
+                  _HoverScaleButton(
+                    onTap: () => context.go('/reservar'),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+                      decoration: BoxDecoration(
+                        gradient: _brandGradient,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const Text('Reservar ahora', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16)),
+                    ),
+                  ),
+                  _HoverScaleButton(
+                    onTap: () => _scrollToSection(_downloadKey),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: _brandPurple, width: 2),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const Text('Descargar la app', style: TextStyle(color: _brandPurple, fontWeight: FontWeight.w700, fontSize: 16)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Testimonials ───────────────────────────────────────────────────────────
+
+  Widget _buildTestimonials(bool isDesktop, bool isMobile) {
+    final testimonials = [
+      _Testimonial(
+        'MC',
+        'Maria Carmen R.',
+        'Salon Glamour, Puerto Vallarta',
+        '"Antes usaba AgendaPro y pagaba \$2,500 al mes. Con BeautyCita tengo las mismas funciones y no pago nada. Mis clientas reciben recordatorio por WhatsApp gratis. Es increible."',
+      ),
+      _Testimonial(
+        'LS',
+        'Lupita Sanchez',
+        'Studio Lash & Brow, Guadalajara',
+        '"El motor inteligente me trae clientes nuevos cada semana. No tengo que estar publicando en redes como loca. La plataforma trabaja para mi."',
+      ),
+      _Testimonial(
+        'AF',
+        'Ana Fernandez',
+        'Clienta frecuente, CDMX',
+        '"Como clienta, me encanta que solo necesito mi huella para reservar. En 30 segundos ya tengo mi cita. Y los precios son justos porque el salon no paga comisiones absurdas."',
+      ),
+    ];
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [_bgColor, _brandPink.withValues(alpha: 0.03), _bgColor],
+          stops: const [0.0, 0.5, 1.0],
+        ),
+      ),
+      child: _SectionWrapper(
+        anim: _testimonialsAnim,
+        padding: EdgeInsets.zero,
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: isDesktop ? 100 : 60, horizontal: 24),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: _maxWidth),
+              child: Column(
+                children: [
+                  _sectionHeader(
+                    null,
+                    'Salones y clientes que ya confian en BeautyCita',
+                    richTitle: Text.rich(
+                      TextSpan(children: [
+                        const TextSpan(text: 'Lo que dicen nuestros ', style: TextStyle(fontSize: 42, fontWeight: FontWeight.w800, color: _textPrimary)),
+                      ]),
+                      textAlign: TextAlign.center,
+                    ),
+                    richTitleSuffix: const _GradientText('usuarios', style: TextStyle(fontSize: 42, fontWeight: FontWeight.w800)),
+                  ),
+                  const SizedBox(height: 40),
+                  isMobile
+                      ? Column(
+                          children: testimonials.map((t) => Padding(
+                            padding: const EdgeInsets.only(bottom: 20),
+                            child: _TestimonialCard(testimonial: t),
+                          )).toList(),
+                        )
+                      : Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: testimonials.map((t) => Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 14),
+                              child: _TestimonialCard(testimonial: t),
+                            ),
+                          )).toList(),
+                        ),
+                  const SizedBox(height: 60),
+                  // Trust metrics bar
+                  Container(
+                    padding: const EdgeInsets.all(32),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: _cardBorder),
+                    ),
+                    child: Wrap(
+                      spacing: 48,
+                      runSpacing: 24,
+                      alignment: WrapAlignment.center,
+                      children: [
+                        _trustMetric('64,024', 'Salones descubiertos'),
+                        _trustMetric('20+', 'Ciudades'),
+                        _trustMetric('100%', 'Uptime'),
+                        _trustMetric('4.9', 'Calificacion promedio'),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _trustMetric(String value, String label) {
+    return Column(
+      children: [
+        _GradientText(value, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800)),
+        const SizedBox(height: 4),
+        Text(label, style: const TextStyle(fontSize: 13, color: _textHint)),
+      ],
+    );
+  }
+
+  // ── Pricing ────────────────────────────────────────────────────────────────
+
+  Widget _buildPricing(bool isDesktop, bool isMobile) {
+    final features = [
+      'Staff ilimitado',
+      'Calendario inteligente con drag & drop',
+      'WhatsApp ilimitado (recordatorios + alertas)',
+      'Pagina portfolio con 5 temas',
+      'Sync Google Calendar',
+      'Motor inteligente de clientes',
+      'Punto de venta integrado',
+      'Analiticas y reportes',
+      'Cumplimiento SAT automatico',
+      'Pagos cash, OXXO, y tarjeta',
+    ];
+
+    return _SectionWrapper(
+      sectionKey: _pricingKey,
+      anim: _pricingAnim,
+      child: Column(
+        children: [
+          _sectionHeader(
+            null,
+            'Sin trucos, sin letras chiquitas. Tu salon crece, tu bolsillo tambien.',
+            richTitle: Text.rich(
+              TextSpan(children: [
+                const TextSpan(text: 'Nuestros precios ', style: TextStyle(fontSize: 42, fontWeight: FontWeight.w800, color: _textPrimary)),
+              ]),
+              textAlign: TextAlign.center,
+            ),
+            richTitleSuffix: const _GradientText('(spoiler: es gratis)', style: TextStyle(fontSize: 42, fontWeight: FontWeight.w800)),
+          ),
+          const SizedBox(height: 40),
+          // Pricing card with gradient border
+          Center(
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 480),
+              decoration: BoxDecoration(
+                gradient: _brandGradient,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [BoxShadow(color: _brandPurple.withValues(alpha: 0.1), blurRadius: 40, offset: const Offset(0, 8))],
+              ),
+              padding: const EdgeInsets.all(2), // gradient border width
+              child: Container(
+                padding: EdgeInsets.all(isMobile ? 28 : 48),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(22),
+                ),
+                child: Column(
+                  children: [
+                    const Text('Plan Profesional', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: _textPrimary)),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: const [
+                        Text('\$0', style: TextStyle(fontSize: 56, fontWeight: FontWeight.w800, color: _textPrimary)),
+                        SizedBox(width: 8),
+                        Text('MXN / mes', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500, color: _textHint)),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'Otros cobran \$299 - \$4,500/mes',
+                      style: TextStyle(fontSize: 14, color: _textHint, decoration: TextDecoration.lineThrough),
+                    ),
+                    const SizedBox(height: 32),
+                    // Feature checklist
+                    ...features.map((f) => Padding(
+                      padding: const EdgeInsets.only(bottom: 0),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        decoration: const BoxDecoration(
+                          border: Border(bottom: BorderSide(color: Color(0xFFF9F4EF))),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 22,
+                              height: 22,
+                              decoration: BoxDecoration(
+                                color: _checkGreen.withValues(alpha: 0.1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Center(
+                                child: Text('\u2713', style: TextStyle(color: _checkGreen, fontSize: 13, fontWeight: FontWeight.w700)),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(child: Text(f, style: const TextStyle(fontSize: 15, color: Color(0xFF444444)))),
+                          ],
+                        ),
+                      ),
+                    )),
+                    const SizedBox(height: 28),
+                    const Text(
+                      'Solo cobramos 3% por transaccion con tarjeta.\nPagos en efectivo y OXXO: 0% comision.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 13, color: _textHint, height: 1.6),
+                    ),
+                    const SizedBox(height: 28),
+                    SizedBox(
+                      width: double.infinity,
+                      child: _HoverScaleButton(
+                        onTap: () => _scrollToSection(_demoKey),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          decoration: BoxDecoration(
+                            gradient: _brandGradient,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: const Center(
+                            child: Text('Comienza ahora', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16)),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Download CTA ───────────────────────────────────────────────────────────
+
+  Widget _buildDownload(bool isDesktop, bool isMobile) {
+    return Container(
+      key: _downloadKey,
+      width: double.infinity,
+      decoration: const BoxDecoration(gradient: _brandGradient),
+      child: _SectionWrapper(
+        anim: _downloadAnim,
+        padding: EdgeInsets.zero,
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: isDesktop ? 100 : 60, horizontal: 24),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: _maxWidth),
+              child: Column(
+                children: [
+                  Text(
+                    'Descarga BeautyCita',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: isMobile ? 28 : 42, fontWeight: FontWeight.w800, color: Colors.white),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Disponible para Android. iOS proximamente.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 18, color: Colors.white.withValues(alpha: 0.85)),
+                  ),
+                  const SizedBox(height: 40),
+                  // Download buttons
+                  Wrap(
+                    spacing: 16,
+                    runSpacing: 12,
+                    alignment: WrapAlignment.center,
+                    children: [
+                      _downloadBtn(Icons.play_arrow, 'Google Play (proximamente)', null),
+                      _downloadBtn(Icons.download, 'Descarga APK directa', _apkUrl),
+                    ],
+                  ),
+                  const SizedBox(height: 40),
+                  // QR placeholder
+                  Container(
+                    width: 140,
+                    height: 140,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Center(
+                      child: CustomPaint(
+                        size: const Size(100, 100),
+                        painter: _QrPlaceholderPainter(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.share_outlined, size: 18, color: Colors.white.withValues(alpha: 0.8)),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Reenvia este mensaje a un amigo que tenga salon',
+                        style: TextStyle(fontSize: 15, color: Colors.white.withValues(alpha: 0.8)),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _downloadBtn(IconData icon, String label, String? url) {
+    return _HoverScaleButton(
+      onTap: url != null ? () => _launchUrl(url) : null,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.15),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 2),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: Colors.white, size: 24),
+            const SizedBox(width: 12),
+            Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 16)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Footer ─────────────────────────────────────────────────────────────────
+
+  Widget _buildFooter(bool isDesktop, bool isMobile) {
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFF1A1A1A), Color(0xFF0D0D0D)],
+        ),
+      ),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: _maxWidth),
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 24, vertical: isDesktop ? 60 : 40),
+            child: Column(
+              children: [
+                isDesktop
+                    ? Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Brand column
+                          Expanded(child: _footerBrand()),
+                          // Links columns
+                          Expanded(flex: 2, child: _footerLinks(isMobile)),
+                          // Contact column
+                          Expanded(child: _footerContact()),
+                        ],
+                      )
+                    : Column(
+                        children: [
+                          _footerBrand(),
+                          const SizedBox(height: 32),
+                          _footerLinks(isMobile),
+                          const SizedBox(height: 32),
+                          _footerContact(),
+                        ],
+                      ),
+                const SizedBox(height: 40),
+                Container(
+                  padding: const EdgeInsets.only(top: 24),
+                  decoration: BoxDecoration(
+                    border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.08))),
+                  ),
+                  child: isMobile
+                      ? Column(
+                          children: [
+                            Text('BeautyCita S.A. de C.V. -- Puerto Vallarta, Jalisco, Mexico', textAlign: TextAlign.center, style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.3))),
+                            const SizedBox(height: 8),
+                            Text('2026 BeautyCita. Todos los derechos reservados.', textAlign: TextAlign.center, style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.3))),
+                          ],
+                        )
+                      : Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('BeautyCita S.A. de C.V. -- Puerto Vallarta, Jalisco, Mexico', style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.3))),
+                            Text('2026 BeautyCita. Todos los derechos reservados.', style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.3))),
+                          ],
+                        ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _footerBrand() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text.rich(
+          TextSpan(children: [
+            const TextSpan(text: 'Beauty', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.white)),
+            TextSpan(text: 'Cita', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: _brandPink)),
+          ]),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          'La plataforma inteligente que conecta clientes con el salon perfecto. Hecha en Mexico, para Mexico.',
+          style: TextStyle(fontSize: 14, color: Colors.white.withValues(alpha: 0.5), height: 1.6),
+        ),
+        const SizedBox(height: 16),
+        // Social icons
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _socialIcon(Icons.camera_alt_outlined), // Instagram
+            const SizedBox(width: 12),
+            _socialIcon(Icons.facebook_outlined), // Facebook
+            const SizedBox(width: 12),
+            _socialIcon(Icons.music_note_outlined), // TikTok
+          ],
         ),
       ],
     );
   }
 
-  // ── Bottom CTA ──────────────────────────────────────────────────────────────
-
-  Widget _buildCta(
-      BuildContext context, bool isDesktop, bool isMobile, double hPad) {
-    final theme = Theme.of(context);
-    return Container(
-      width: double.infinity,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFF660033), _deepRose],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+  Widget _socialIcon(IconData icon) {
+    return _HoverContainer(
+      normalDecoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(10),
       ),
-      padding: EdgeInsets.symmetric(
-        horizontal: hPad,
-        vertical: isDesktop ? 60 : (isMobile ? 32 : 40),
+      hoverDecoration: BoxDecoration(
+        color: _brandPink.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(10),
       ),
-      child: Column(
-        children: [
-          Text(
-            'Descarga BeautyCita gratis',
-            textAlign: TextAlign.center,
-            style: (isMobile
-                    ? theme.textTheme.titleLarge
-                    : theme.textTheme.headlineMedium)
-                ?.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            'Disponible para Android. iOS proximamente.',
-            textAlign: TextAlign.center,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: Colors.white.withValues(alpha: 0.7),
-              fontSize: isMobile ? 13 : null,
-            ),
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: () => _launchUrl(_apkUrl),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _gold,
-              foregroundColor: Colors.black87,
-              padding: EdgeInsets.symmetric(
-                horizontal: isMobile ? 24 : 32,
-                vertical: isMobile ? 14 : 18,
-              ),
-              textStyle: theme.textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            icon: const Icon(Icons.android, size: 22),
-            label: const Text('Descargar APK'),
-          ),
-        ],
+      child: SizedBox(
+        width: 40,
+        height: 40,
+        child: Center(child: Icon(icon, size: 16, color: Colors.white.withValues(alpha: 0.6))),
       ),
     );
   }
 
-  // ── Footer ──────────────────────────────────────────────────────────────────
-
-  Widget _buildFooter(BuildContext context, bool isMobile) {
-    final theme = Theme.of(context);
-    return Container(
-      width: double.infinity,
-      color: const Color(0xFF1A1A1A),
-      padding: EdgeInsets.symmetric(
-        horizontal: isMobile ? 16 : 32,
-        vertical: isMobile ? 24 : 32,
-      ),
-      child: Column(
-        children: [
-          ShaderMask(
-            shaderCallback: (bounds) => const LinearGradient(
-              colors: [Colors.white, _gold],
-            ).createShader(bounds),
-            child: Text(
-              'BeautyCita',
-              style: theme.textTheme.titleLarge?.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: isMobile ? 18 : null,
-              ),
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'Tu agente inteligente de belleza',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: Colors.white.withValues(alpha: 0.5),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 20,
-            runSpacing: 8,
-            alignment: WrapAlignment.center,
-            children: [
-              _footerLink(context, 'Clientes', WebRoutes.reservar),
-              _footerLink(context, 'Salones', WebRoutes.demo),
-              _footerLink(context, 'Soporte', WebRoutes.soporte),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            '2026 BeautyCita. Todos los derechos reservados.',
-            textAlign: TextAlign.center,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: Colors.white.withValues(alpha: 0.3),
-              fontSize: isMobile ? 11 : null,
-            ),
-          ),
-        ],
-      ),
+  Widget _footerLinks(bool isMobile) {
+    return Wrap(
+      spacing: 60,
+      runSpacing: 32,
+      children: [
+        _footerCol('Plataforma', [
+          _FooterLink('Para Salones', key: _forSalonsKey),
+          _FooterLink('Para Clientes', key: _forClientsKey),
+          _FooterLink('Precios', key: _pricingKey),
+          _FooterLink('Demo', key: _demoKey),
+        ]),
+        _footerCol('Empresa', [
+          _FooterLink('Sobre nosotros'),
+          _FooterLink('Terminos', route: '/terminos'),
+          _FooterLink('Privacidad', route: '/privacidad'),
+          _FooterLink('Contacto'),
+        ]),
+        _footerCol('Soporte', [
+          _FooterLink('Centro de ayuda'),
+          _FooterLink('WhatsApp'),
+          _FooterLink('soporte@beautycita.com'),
+        ]),
+      ],
     );
   }
 
-  Widget _footerLink(BuildContext context, String label, String route) {
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: () => context.go(route),
-        child: Text(
-          label,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.white.withValues(alpha: 0.7),
-              ),
+  Widget _footerCol(String title, List<_FooterLink> links) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
+        const SizedBox(height: 16),
+        ...links.map((l) => Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: GestureDetector(
+              onTap: () {
+                if (l.key != null) {
+                  _scrollToSection(l.key!);
+                } else if (l.route != null) {
+                  context.go(l.route!);
+                }
+              },
+              child: Text(l.label, style: TextStyle(fontSize: 14, color: Colors.white.withValues(alpha: 0.5))),
+            ),
+          ),
+        )),
+      ],
+    );
+  }
+
+  Widget _footerContact() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Contacto', style: TextStyle(fontSize: 14, color: Colors.white.withValues(alpha: 0.5))),
+        const SizedBox(height: 8),
+        Text('+52 (720) 677-7800', style: TextStyle(fontSize: 15, color: Colors.white.withValues(alpha: 0.85), fontWeight: FontWeight.w600)),
+      ],
+    );
+  }
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+
+  Widget _sectionHeader(String? title, String subtitle, {Widget? richTitle, Widget? richTitleSuffix}) {
+    return Column(
+      children: [
+        if (title != null)
+          Text(title, textAlign: TextAlign.center, style: const TextStyle(fontSize: 42, fontWeight: FontWeight.w800, color: _textPrimary)),
+        if (richTitle != null) ...[
+          richTitle,
+          if (richTitleSuffix != null) richTitleSuffix,
+        ],
+        const SizedBox(height: 16),
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 640),
+          child: Text(subtitle, textAlign: TextAlign.center, style: const TextStyle(fontSize: 18, color: _textSecondary)),
         ),
-      ),
+      ],
     );
   }
 
@@ -785,14 +1992,852 @@ class LandingPage extends StatelessWidget {
   }
 }
 
-class _FeatureItem {
+// ── Section Wrapper (fade+slide animation) ───────────────────────────────────
+
+class _SectionWrapper extends StatelessWidget {
+  final GlobalKey? sectionKey;
+  final AnimationController anim;
+  final Widget child;
+  final EdgeInsetsGeometry? padding;
+
+  const _SectionWrapper({
+    this.sectionKey,
+    required this.anim,
+    required this.child,
+    this.padding,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final defaultPadding = const EdgeInsets.symmetric(vertical: 100, horizontal: 24);
+    return SizedBox(
+      key: sectionKey,
+      width: double.infinity,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: _maxWidth),
+          child: Padding(
+            padding: padding ?? defaultPadding,
+            child: FadeTransition(
+              opacity: CurvedAnimation(parent: anim, curve: Curves.easeOut),
+              child: SlideTransition(
+                position: Tween<Offset>(begin: const Offset(0, 0.05), end: Offset.zero)
+                    .animate(CurvedAnimation(parent: anim, curve: Curves.easeOut)),
+                child: child,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Hover Scale Button ───────────────────────────────────────────────────────
+
+class _HoverScaleButton extends StatefulWidget {
+  final VoidCallback? onTap;
+  final Widget child;
+  const _HoverScaleButton({this.onTap, required this.child});
+  @override
+  State<_HoverScaleButton> createState() => _HoverScaleButtonState();
+}
+
+class _HoverScaleButtonState extends State<_HoverScaleButton> {
+  bool _hovered = false;
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedScale(
+          scale: _hovered ? 1.02 : 1.0,
+          duration: const Duration(milliseconds: 200),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            decoration: BoxDecoration(
+              boxShadow: _hovered
+                  ? [BoxShadow(color: _brandPurple.withValues(alpha: 0.35), blurRadius: 24, offset: const Offset(0, 4))]
+                  : [],
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: widget.child,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Hover Container (for footer social icons etc) ────────────────────────────
+
+class _HoverContainer extends StatefulWidget {
+  final BoxDecoration normalDecoration;
+  final BoxDecoration hoverDecoration;
+  final Widget child;
+  const _HoverContainer({required this.normalDecoration, required this.hoverDecoration, required this.child});
+  @override
+  State<_HoverContainer> createState() => _HoverContainerState();
+}
+
+class _HoverContainerState extends State<_HoverContainer> {
+  bool _hovered = false;
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        decoration: _hovered ? widget.hoverDecoration : widget.normalDecoration,
+        child: widget.child,
+      ),
+    );
+  }
+}
+
+// ── Phone Mockup (floating) ──────────────────────────────────────────────────
+
+class _PhoneFloating extends StatefulWidget {
+  final Widget child;
+  const _PhoneFloating({required this.child});
+  @override
+  State<_PhoneFloating> createState() => _PhoneFloatingState();
+}
+
+class _PhoneFloatingState extends State<_PhoneFloating> with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _floatAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 3500))..repeat(reverse: true);
+    _floatAnim = Tween<double>(begin: 0, end: -10).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return RepaintBoundary(
+      child: AnimatedBuilder(
+      animation: _floatAnim,
+      builder: (context, child) => Transform.translate(
+        offset: Offset(0, _floatAnim.value),
+        child: child,
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          color: _textPrimary,
+          borderRadius: BorderRadius.circular(36),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 60, offset: const Offset(0, 24))],
+        ),
+        padding: const EdgeInsets.all(12),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(26),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: AspectRatio(
+            aspectRatio: 0.5,
+            child: widget.child,
+          ),
+        ),
+      ),
+    ),
+    );
+  }
+}
+
+// ── Comparison Row Widget ────────────────────────────────────────────────────
+
+enum _CellType { check, checkText, free, warn, cross, plain }
+
+class _CompRow {
+  final String feature;
+  final String? bcText;
+  final String col2Text;
+  final String col3Text;
+  final _CellType bcType;
+  final _CellType col2Type;
+  final _CellType col3Type;
+  const _CompRow(this.feature, this.bcText, this.col2Text, this.col3Text,
+      {this.bcType = _CellType.check, this.col2Type = _CellType.plain, this.col3Type = _CellType.plain});
+}
+
+class _ComparisonRow extends StatefulWidget {
+  final _CompRow row;
+  final bool isEven;
+  const _ComparisonRow({required this.row, required this.isEven});
+  @override
+  State<_ComparisonRow> createState() => _ComparisonRowState();
+}
+
+class _ComparisonRowState extends State<_ComparisonRow> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final bgColor = _hovered
+        ? _brandPurple.withValues(alpha: 0.03)
+        : Colors.transparent;
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: Container(
+        color: bgColor,
+        child: Row(
+          children: [
+            // Feature name
+            Expanded(
+              flex: 3,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                decoration: const BoxDecoration(
+                  border: Border(bottom: BorderSide(color: _cardBorder)),
+                ),
+                child: Text(widget.row.feature, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: _textPrimary)),
+              ),
+            ),
+            // BC column (clean, no background tint)
+            Expanded(
+              flex: 2,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                decoration: const BoxDecoration(
+                  border: Border(bottom: BorderSide(color: _cardBorder)),
+                ),
+                child: Center(child: _buildCell(widget.row.bcType, widget.row.bcText)),
+              ),
+            ),
+            // AgendaPro
+            Expanded(
+              flex: 2,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                decoration: const BoxDecoration(
+                  border: Border(bottom: BorderSide(color: _cardBorder)),
+                ),
+                child: Center(child: _buildCell(widget.row.col2Type, widget.row.col2Text)),
+              ),
+            ),
+            // Booksy
+            Expanded(
+              flex: 2,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                decoration: const BoxDecoration(
+                  border: Border(bottom: BorderSide(color: _cardBorder)),
+                ),
+                child: Center(child: _buildCell(widget.row.col3Type, widget.row.col3Text)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCell(_CellType type, String? text) {
+    switch (type) {
+      case _CellType.check:
+        return const Text('\u2713', style: TextStyle(color: _checkGreen, fontWeight: FontWeight.w700, fontSize: 18));
+      case _CellType.checkText:
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('\u2713 ', style: TextStyle(color: _checkGreen, fontWeight: FontWeight.w700, fontSize: 18)),
+            Flexible(child: Text(text ?? '', style: const TextStyle(fontSize: 14, color: _textSecondary))),
+          ],
+        );
+      case _CellType.free:
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(colors: [_checkGreen.withValues(alpha: 0.1), _checkGreen.withValues(alpha: 0.05)]),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Text(text ?? 'GRATIS', style: const TextStyle(color: _checkGreen, fontWeight: FontWeight.w700, fontSize: 13)),
+        );
+      case _CellType.warn:
+        return Text(text ?? '', style: const TextStyle(color: _warnAmber, fontWeight: FontWeight.w600, fontSize: 13));
+      case _CellType.cross:
+        return Text(text ?? 'No', style: const TextStyle(color: _crossRed, fontWeight: FontWeight.w600));
+      case _CellType.plain:
+        return Text(text ?? '', style: const TextStyle(fontSize: 14, color: _textSecondary));
+    }
+  }
+}
+
+// ── Feature Card (For Salons) ────────────────────────────────────────────────
+
+class _Feature {
   final IconData icon;
   final String title;
   final String description;
-
-  _FeatureItem({
-    required this.icon,
-    required this.title,
-    required this.description,
+  final String detailTitle;
+  final List<String> detailBullets;
+  final String? detailNote;
+  const _Feature(this.icon, this.title, this.description, {
+    required this.detailTitle,
+    required this.detailBullets,
+    this.detailNote,
   });
+}
+
+class _FeatureCard extends StatefulWidget {
+  final _Feature feature;
+  final void Function(Offset globalPosition)? onTapUp;
+  const _FeatureCard({required this.feature, this.onTapUp});
+  @override
+  State<_FeatureCard> createState() => _FeatureCardState();
+}
+
+class _FeatureCardState extends State<_FeatureCard> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapUp: (details) => widget.onTapUp?.call(details.globalPosition),
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border.all(color: _cardBorder),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [_hovered ? _cardShadowHover : _cardShadow],
+          ),
+          transform: _hovered ? (Matrix4.translationValues(0.0, -4.0, 0.0)) : Matrix4.identity(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [_brandPink.withValues(alpha: 0.1), _brandPurple.withValues(alpha: 0.1)],
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Center(child: Icon(widget.feature.icon, color: _brandPurple, size: 24)),
+              ),
+              const SizedBox(height: 16),
+              Text(widget.feature.title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: _textPrimary)),
+              const SizedBox(height: 8),
+              Text(widget.feature.description, style: const TextStyle(fontSize: 14, color: _textSecondary, height: 1.6)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Circle Clipper (Radial Burst) ────────────────────────────────────────────
+
+class _CircleClipper extends CustomClipper<Path> {
+  final Offset center;
+  final double radius;
+  _CircleClipper({required this.center, required this.radius});
+
+  @override
+  Path getClip(Size size) =>
+      Path()..addOval(Rect.fromCircle(center: center, radius: radius));
+
+  @override
+  bool shouldReclip(covariant _CircleClipper old) =>
+      old.radius != radius || old.center != center;
+}
+
+// ── Feature Detail Popup ─────────────────────────────────────────────────────
+
+class _FeatureDetailPopup extends StatelessWidget {
+  final _Feature feature;
+  final VoidCallback? onDemo;
+  const _FeatureDetailPopup({required this.feature, this.onDemo});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: 600,
+          maxHeight: MediaQuery.of(context).size.height * 0.8,
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.1),
+                  blurRadius: 40,
+                  offset: const Offset(0, 16),
+                ),
+                BoxShadow(
+                  color: _brandPurple.withValues(alpha: 0.08),
+                  blurRadius: 60,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Header
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(28, 28, 28, 0),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 64,
+                          height: 64,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                _brandPink.withValues(alpha: 0.15),
+                                _brandPurple.withValues(alpha: 0.15),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          child: Center(
+                            child: Icon(feature.icon, color: _brandPurple, size: 30),
+                          ),
+                        ),
+                        const SizedBox(width: 20),
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: _GradientText(
+                              feature.detailTitle,
+                              style: const TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        GestureDetector(
+                          onTap: () => Navigator.of(context).pop(),
+                          child: Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(color: _cardBorder),
+                            ),
+                            child: const Center(
+                              child: Icon(Icons.close, size: 18, color: _textSecondary),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  // Scrollable bullet list
+                  Flexible(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(horizontal: 28),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          ...feature.detailBullets.map((bullet) => Padding(
+                            padding: const EdgeInsets.only(bottom: 14),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 7),
+                                  child: Container(
+                                    width: 8,
+                                    height: 8,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      gradient: LinearGradient(
+                                        colors: [_brandPink, _brandPurple],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Text(
+                                    bullet,
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      color: _textPrimary,
+                                      height: 1.7,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )),
+                          // Optional note
+                          if (feature.detailNote != null) ...[
+                            const SizedBox(height: 8),
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: _brandPurple.withValues(alpha: 0.04),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: _brandPurple.withValues(alpha: 0.12),
+                                ),
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Icon(
+                                    Icons.info_outline,
+                                    size: 18,
+                                    color: _brandPurple.withValues(alpha: 0.6),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      feature.detailNote!,
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: _textSecondary,
+                                        height: 1.6,
+                                        fontStyle: FontStyle.italic,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                  // CTA button
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(28, 20, 28, 28),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: GestureDetector(
+                        onTap: onDemo,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          decoration: BoxDecoration(
+                            gradient: _brandGradient,
+                            borderRadius: BorderRadius.circular(14),
+                            boxShadow: [
+                              BoxShadow(
+                                color: _brandPink.withValues(alpha: 0.3),
+                                blurRadius: 16,
+                                offset: const Offset(0, 6),
+                              ),
+                            ],
+                          ),
+                          child: const Center(
+                            child: Text(
+                              'Probar Demo',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Client Card ──────────────────────────────────────────────────────────────
+
+class _ClientCard {
+  final IconData icon;
+  final String title;
+  final String description;
+  const _ClientCard(this.icon, this.title, this.description);
+}
+
+class _ClientCardWidget extends StatefulWidget {
+  final _ClientCard card;
+  const _ClientCardWidget({required this.card});
+  @override
+  State<_ClientCardWidget> createState() => _ClientCardWidgetState();
+}
+
+class _ClientCardWidgetState extends State<_ClientCardWidget> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 40),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(color: _cardBorder),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [_hovered ? _cardShadowHover : _cardShadow],
+        ),
+        transform: _hovered ? (Matrix4.translationValues(0.0, -4.0, 0.0)) : Matrix4.identity(),
+        child: Column(
+          children: [
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [_brandPink.withValues(alpha: 0.1), _brandPurple.withValues(alpha: 0.1)],
+                ),
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Center(child: Icon(widget.card.icon, color: _brandPurple, size: 28)),
+            ),
+            const SizedBox(height: 20),
+            Text(widget.card.title, textAlign: TextAlign.center, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: _textPrimary)),
+            const SizedBox(height: 12),
+            Text(widget.card.description, textAlign: TextAlign.center, style: const TextStyle(fontSize: 15, color: _textSecondary, height: 1.7)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Testimonial Card ─────────────────────────────────────────────────────────
+
+class _Testimonial {
+  final String initials;
+  final String name;
+  final String role;
+  final String text;
+  const _Testimonial(this.initials, this.name, this.role, this.text);
+}
+
+class _TestimonialCard extends StatefulWidget {
+  final _Testimonial testimonial;
+  const _TestimonialCard({required this.testimonial});
+  @override
+  State<_TestimonialCard> createState() => _TestimonialCardState();
+}
+
+class _TestimonialCardState extends State<_TestimonialCard> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        padding: const EdgeInsets.all(32),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(color: _cardBorder),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [_hovered ? _cardShadowHover : _cardShadow],
+        ),
+        transform: _hovered ? (Matrix4.translationValues(0.0, -2.0, 0.0)) : Matrix4.identity(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Stars
+            Row(
+              children: List.generate(5, (_) => const Padding(
+                padding: EdgeInsets.only(right: 2),
+                child: Icon(Icons.star, color: _warnAmber, size: 16),
+              )),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              widget.testimonial.text,
+              style: const TextStyle(fontSize: 15, color: Color(0xFF444444), height: 1.7, fontStyle: FontStyle.italic),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [_brandPink.withValues(alpha: 0.2), _brandPurple.withValues(alpha: 0.2)],
+                    ),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(widget.testimonial.initials, style: const TextStyle(fontWeight: FontWeight.w700, color: _brandPurple, fontSize: 16)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(widget.testimonial.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: _textPrimary)),
+                    Text(widget.testimonial.role, style: const TextStyle(fontSize: 13, color: _textHint)),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Demo Phone Input ─────────────────────────────────────────────────────────
+
+class _DemoPhoneInput extends StatefulWidget {
+  final TextEditingController controller;
+  final String? error;
+  const _DemoPhoneInput({required this.controller, this.error});
+  @override
+  State<_DemoPhoneInput> createState() => _DemoPhoneInputState();
+}
+
+class _DemoPhoneInputState extends State<_DemoPhoneInput> {
+  bool _focused = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: _focused ? _brandPurple : _cardBorder,
+          width: 2,
+        ),
+        boxShadow: _focused
+            ? [BoxShadow(color: _brandPurple.withValues(alpha: 0.1), blurRadius: 8, spreadRadius: 2)]
+            : [],
+      ),
+      child: Focus(
+        onFocusChange: (f) => setState(() => _focused = f),
+        child: TextField(
+          controller: widget.controller,
+          keyboardType: TextInputType.phone,
+          style: const TextStyle(fontSize: 16, color: _textPrimary),
+          decoration: InputDecoration(
+            hintText: '+52 (___) ___-____',
+            hintStyle: const TextStyle(color: Color(0xFFBBBBBB)),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            border: InputBorder.none,
+            errorText: null,
+          ),
+          onChanged: (value) {
+            // Format phone number
+            String v = value.replaceAll(RegExp(r'\D'), '');
+            if (v.startsWith('52')) v = v.substring(2);
+            if (v.length > 10) v = v.substring(0, 10);
+            String formatted = '+52 ';
+            if (v.isNotEmpty) formatted += '(${v.substring(0, v.length.clamp(0, 3))}';
+            if (v.length >= 3) formatted += ') ${v.substring(3, v.length.clamp(3, 6))}';
+            if (v.length >= 6) formatted += '-${v.substring(6, v.length.clamp(6, 10))}';
+
+            if (formatted != value) {
+              widget.controller.value = TextEditingValue(
+                text: formatted,
+                selection: TextSelection.collapsed(offset: formatted.length),
+              );
+            }
+          },
+        ),
+      ),
+    );
+  }
+}
+
+// ── QR Placeholder Painter ───────────────────────────────────────────────────
+
+class _QrPlaceholderPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final dark = Paint()..color = _textPrimary;
+    final r = size.width / 100;
+
+    // Corner squares (top-left, top-right, bottom-left)
+    _drawCornerSquare(canvas, 5 * r, 5 * r, 25 * r, dark);
+    _drawCornerSquare(canvas, 70 * r, 5 * r, 25 * r, dark);
+    _drawCornerSquare(canvas, 5 * r, 70 * r, 25 * r, dark);
+
+    // Data cells - scattered pattern
+    final cells = [
+      [35, 8], [45, 8], [55, 8], [35, 18], [55, 18],
+      [8, 35], [18, 35], [8, 45], [18, 55],
+      [35, 35], [45, 35], [55, 35], [35, 45], [55, 45],
+      [35, 55], [45, 55], [55, 55],
+      [70, 35], [80, 35], [70, 45], [80, 55],
+      [45, 70], [55, 70], [70, 70], [45, 80], [70, 80], [80, 80],
+    ];
+
+    for (final c in cells) {
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(Rect.fromLTWH(c[0] * r, c[1] * r, 6 * r, 6 * r), Radius.circular(r)),
+        dark,
+      );
+    }
+  }
+
+  void _drawCornerSquare(Canvas canvas, double x, double y, double size, Paint paint) {
+    final white = Paint()..color = Colors.white;
+    canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(x, y, size, size), Radius.circular(3)), paint);
+    canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(x + size * 0.2, y + size * 0.2, size * 0.6, size * 0.6), Radius.circular(2)), white);
+    canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(x + size * 0.32, y + size * 0.32, size * 0.36, size * 0.36), Radius.circular(1)), paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+// ── Footer Link Model ────────────────────────────────────────────────────────
+
+class _FooterLink {
+  final String label;
+  final GlobalKey? key;
+  final String? route;
+  const _FooterLink(this.label, {this.key, this.route});
 }

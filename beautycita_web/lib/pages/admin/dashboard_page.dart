@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../config/breakpoints.dart';
+import '../../config/web_theme.dart';
 import '../../providers/admin_dashboard_provider.dart';
 import '../../widgets/dashboard_charts.dart';
 import '../../widgets/kpi_card.dart';
+import '../../widgets/web_design_system.dart';
 
 /// Admin dashboard — BC's daily command center.
 ///
@@ -38,12 +40,11 @@ class DashboardPage extends ConsumerWidget {
             horizontal: horizontalPadding,
             vertical: 24,
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: StaggeredFadeIn(
+            spacing: 24,
             children: [
               // Welcome header
               _WelcomeHeader(isMobile: isMobile),
-              const SizedBox(height: 24),
 
               // KPI cards
               _KpiSection(
@@ -52,21 +53,18 @@ class DashboardPage extends ConsumerWidget {
                 isTablet: isTablet,
                 isMobile: isMobile,
               ),
-              const SizedBox(height: 24),
 
               // Activity feed + Alerts
               if (isDesktop)
                 _DesktopFeedAndAlerts(ref: ref)
               else
                 _StackedFeedAndAlerts(ref: ref),
-              const SizedBox(height: 24),
 
               // Charts
               if (isDesktop)
                 _DesktopCharts(ref: ref)
               else
                 _StackedCharts(ref: ref),
-              const SizedBox(height: 24),
             ],
           ),
         );
@@ -83,8 +81,6 @@ class _WelcomeHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
     final now = DateTime.now();
     final dateStr = DateFormat('EEEE, d MMMM yyyy', 'es').format(now);
     // Capitalize first letter
@@ -92,40 +88,22 @@ class _WelcomeHeader extends StatelessWidget {
         dateStr[0].toUpperCase() + dateStr.substring(1);
 
     if (isMobile) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Bienvenido, BC',
-            style: theme.textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            formattedDate,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: colors.onSurface.withValues(alpha: 0.6),
-            ),
-          ),
-        ],
+      return WebSectionHeader(
+        label: formattedDate,
+        title: 'Bienvenido, BC',
+        centered: false,
+        titleSize: 28,
       );
     }
 
     return Row(
       children: [
         Expanded(
-          child: Text(
-            'Bienvenido, BC',
-            style: theme.textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ),
-        Text(
-          formattedDate,
-          style: theme.textTheme.bodyLarge?.copyWith(
-            color: colors.onSurface.withValues(alpha: 0.6),
+          child: WebSectionHeader(
+            label: formattedDate,
+            title: 'Bienvenido, BC',
+            centered: false,
+            titleSize: 36,
           ),
         ),
       ],
@@ -233,7 +211,6 @@ class _KpiLoadingGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
     final width = MediaQuery.sizeOf(context).width;
     final isMobile = WebBreakpoints.isMobile(width);
     final isDesktop = WebBreakpoints.isDesktop(width);
@@ -248,9 +225,9 @@ class _KpiLoadingGrid extends StatelessWidget {
             child: Container(
               height: 80,
               decoration: BoxDecoration(
-                color: colors.surface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: colors.outlineVariant),
+                color: kWebSurface,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: kWebCardBorder),
               ),
               child: Center(
                 child: SizedBox(
@@ -258,7 +235,7 @@ class _KpiLoadingGrid extends StatelessWidget {
                   height: 24,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: colors.primary.withValues(alpha: 0.5),
+                    color: kWebPrimary.withValues(alpha: 0.5),
                   ),
                 ),
               ),
@@ -278,9 +255,9 @@ class _KpiLoadingGrid extends StatelessWidget {
       children: List.generate(4, (_) {
         return Container(
           decoration: BoxDecoration(
-            color: colors.surface,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: colors.outlineVariant),
+            color: kWebSurface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: kWebCardBorder),
           ),
           child: Center(
             child: SizedBox(
@@ -288,7 +265,7 @@ class _KpiLoadingGrid extends StatelessWidget {
               height: 24,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                color: colors.primary.withValues(alpha: 0.5),
+                color: kWebPrimary.withValues(alpha: 0.5),
               ),
             ),
           ),
@@ -345,28 +322,29 @@ class _ActivityFeed extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-    final isMobile = MediaQuery.sizeOf(context).width < 800;
     final feedAsync = ref.watch(activityFeedProvider);
 
-    return Container(
-      padding: EdgeInsets.all(isMobile ? 14 : 20),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colors.outlineVariant),
-      ),
+    return WebCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.timeline, size: 20, color: colors.primary),
-              const SizedBox(width: 8),
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: kWebPrimary.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.timeline_outlined, size: 18, color: kWebPrimary),
+              ),
+              const SizedBox(width: 10),
               Text(
                 'Actividad reciente',
                 style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w700,
+                  color: kWebTextPrimary,
                 ),
               ),
               const Spacer(),
@@ -407,7 +385,7 @@ class _ActivityFeed extends StatelessWidget {
                 child: Text(
                   'No se pudo cargar la actividad',
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: colors.onSurface.withValues(alpha: 0.5),
+                    color: kWebTextHint,
                   ),
                 ),
               ),
@@ -422,13 +400,13 @@ class _ActivityFeed extends StatelessWidget {
                         Icon(
                           Icons.inbox_outlined,
                           size: 36,
-                          color: colors.onSurface.withValues(alpha: 0.3),
+                          color: kWebTextHint.withValues(alpha: 0.5),
                         ),
                         const SizedBox(height: 8),
                         Text(
                           'Sin actividad reciente',
                           style: theme.textTheme.bodySmall?.copyWith(
-                            color: colors.onSurface.withValues(alpha: 0.5),
+                            color: kWebTextHint,
                           ),
                         ),
                       ],
@@ -444,7 +422,7 @@ class _ActivityFeed extends StatelessWidget {
                     if (i < items.length - 1 && i < 7)
                       Divider(
                         height: 1,
-                        color: colors.outlineVariant.withValues(alpha: 0.5),
+                        color: kWebCardBorder.withValues(alpha: 0.5),
                       ),
                   ],
                 ],
@@ -465,14 +443,13 @@ class _ActivityRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colors = theme.colorScheme;
 
     final (IconData icon, Color color) = switch (item.type) {
-      'booking' => (Icons.calendar_today, const Color(0xFF4CAF50)),
-      'user' => (Icons.person_add, const Color(0xFF2196F3)),
-      'salon' => (Icons.store, const Color(0xFF9C27B0)),
+      'booking' => (Icons.calendar_today_outlined, const Color(0xFF4CAF50)),
+      'user' => (Icons.person_add_outlined, const Color(0xFF2196F3)),
+      'salon' => (Icons.store_outlined, const Color(0xFF9C27B0)),
       'cancellation' => (Icons.cancel_outlined, const Color(0xFFE53935)),
-      _ => (Icons.info_outline, colors.primary),
+      _ => (Icons.info_outlined, kWebPrimary),
     };
 
     final timeAgo = _formatTimeAgo(item.timestamp);
@@ -482,13 +459,13 @@ class _ActivityRow extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 32,
-            height: 32,
+            width: 34,
+            height: 34,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(8),
+              color: color.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, size: 16, color: color),
+            child: Icon(icon, size: 18, color: color),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -499,6 +476,7 @@ class _ActivityRow extends StatelessWidget {
                   item.title,
                   style: theme.textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w600,
+                    color: kWebTextPrimary,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -506,7 +484,7 @@ class _ActivityRow extends StatelessWidget {
                 Text(
                   item.subtitle,
                   style: theme.textTheme.labelSmall?.copyWith(
-                    color: colors.onSurface.withValues(alpha: 0.5),
+                    color: kWebTextSecondary,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -518,7 +496,7 @@ class _ActivityRow extends StatelessWidget {
           Text(
             timeAgo,
             style: theme.textTheme.labelSmall?.copyWith(
-              color: colors.onSurface.withValues(alpha: 0.4),
+              color: kWebTextHint,
             ),
           ),
         ],
@@ -544,32 +522,33 @@ class _AlertsPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-    final isMobile = MediaQuery.sizeOf(context).width < 800;
     final alertsAsync = ref.watch(dashboardAlertsProvider);
 
-    return Container(
-      padding: EdgeInsets.all(isMobile ? 14 : 20),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colors.outlineVariant),
-      ),
+    return WebCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(
-                Icons.warning_amber_rounded,
-                size: 20,
-                color: const Color(0xFFFF9800),
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF9800).withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.warning_amber_outlined,
+                  size: 18,
+                  color: Color(0xFFFF9800),
+                ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 10),
               Text(
                 'Alertas',
                 style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w700,
+                  color: kWebTextPrimary,
                 ),
               ),
               const Spacer(),
@@ -612,7 +591,7 @@ class _AlertsPanel extends StatelessWidget {
               child: Text(
                 'Error al cargar alertas',
                 style: theme.textTheme.bodySmall?.copyWith(
-                  color: colors.onSurface.withValues(alpha: 0.5),
+                  color: kWebTextHint,
                 ),
               ),
             ),
@@ -624,7 +603,7 @@ class _AlertsPanel extends StatelessWidget {
                     child: Column(
                       children: [
                         Icon(
-                          Icons.check_circle_outline,
+                          Icons.check_circle_outlined,
                           size: 36,
                           color: const Color(0xFF4CAF50).withValues(alpha: 0.6),
                         ),
@@ -632,7 +611,7 @@ class _AlertsPanel extends StatelessWidget {
                         Text(
                           'Todo en orden',
                           style: theme.textTheme.bodySmall?.copyWith(
-                            color: colors.onSurface.withValues(alpha: 0.5),
+                            color: kWebTextHint,
                           ),
                         ),
                       ],
@@ -645,7 +624,7 @@ class _AlertsPanel extends StatelessWidget {
                 children: [
                   if (alerts.pendingDisputes > 0)
                     _AlertRow(
-                      icon: Icons.gavel,
+                      icon: Icons.gavel_outlined,
                       label: 'Disputas pendientes',
                       count: alerts.pendingDisputes,
                       color: const Color(0xFFE53935),
@@ -664,7 +643,7 @@ class _AlertsPanel extends StatelessWidget {
                         alerts.unverifiedSalons > 0)
                       const SizedBox(height: 12),
                     _AlertRow(
-                      icon: Icons.payment,
+                      icon: Icons.payment_outlined,
                       label: 'Pagos fallidos',
                       count: alerts.failedPayments,
                       color: const Color(0xFFE53935),
@@ -704,7 +683,6 @@ class _AlertRowState extends State<_AlertRow> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colors = theme.colorScheme;
 
     return MouseRegion(
       onEnter: (_) => setState(() => _hovering = true),
@@ -717,26 +695,34 @@ class _AlertRowState extends State<_AlertRow> {
           color: _hovering
               ? widget.color.withValues(alpha: 0.06)
               : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(10),
         ),
         child: Row(
           children: [
-            Icon(widget.icon, size: 18, color: widget.color),
-            const SizedBox(width: 10),
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: widget.color.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(widget.icon, size: 18, color: widget.color),
+            ),
+            const SizedBox(width: 12),
             Expanded(
               child: Text(
                 widget.label,
                 style: theme.textTheme.bodySmall?.copyWith(
                   fontWeight: FontWeight.w500,
-                  color: colors.onSurface.withValues(alpha: 0.8),
+                  color: kWebTextPrimary,
                 ),
               ),
             ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
-                color: widget.color.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(12),
+                color: widget.color.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(999),
               ),
               child: Text(
                 '${widget.count}',
@@ -824,19 +810,30 @@ class _RevenueChartSection extends StatelessWidget {
 }
 
 Widget _chartPlaceholder(BuildContext context) {
-  final colors = Theme.of(context).colorScheme;
   final isMobile = MediaQuery.sizeOf(context).width < 800;
   return Container(
     height: isMobile ? 210 : 260,
     decoration: BoxDecoration(
-      color: colors.surface,
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: colors.outlineVariant),
+      color: kWebSurface,
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: kWebCardBorder),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.03),
+          blurRadius: 10,
+          offset: const Offset(0, 2),
+        ),
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.02),
+          blurRadius: 20,
+          offset: const Offset(0, 4),
+        ),
+      ],
     ),
     child: Center(
       child: CircularProgressIndicator(
         strokeWidth: 2,
-        color: colors.primary.withValues(alpha: 0.5),
+        color: kWebPrimary.withValues(alpha: 0.5),
       ),
     ),
   );

@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../config/breakpoints.dart';
+import '../../config/web_theme.dart';
 import '../../providers/business_portal_provider.dart';
 // ignore: unused_import — imported for consistency with other business pages
 import '../../providers/demo_providers.dart';
+import '../../widgets/web_design_system.dart';
 
 /// Review filter.
 enum _ReviewFilter { all, recent, low }
@@ -56,18 +58,30 @@ class _ReviewsContent extends ConsumerWidget {
               // Header
               Row(
                 children: [
-                  Text('Resenas', style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
+                  Expanded(
+                    child: WebSectionHeader(
+                      label: 'Retroalimentacion',
+                      title: 'Resenas',
+                      centered: false,
+                      titleSize: 28,
+                    ),
+                  ),
                   const SizedBox(width: 12),
                   statsAsync.when(
                     loading: () => const SizedBox.shrink(),
                     error: (_, __) => const SizedBox.shrink(),
                     data: (stats) => Row(
                       children: [
-                        Chip(label: Text('${stats.totalReviews}'), visualDensity: VisualDensity.compact),
+                        Chip(
+                          label: Text('${stats.totalReviews}'),
+                          visualDensity: VisualDensity.compact,
+                          side: const BorderSide(color: kWebCardBorder),
+                          backgroundColor: kWebSurface,
+                        ),
                         const SizedBox(width: 8),
-                        Icon(Icons.star, color: const Color(0xFFFFC107), size: 20),
+                        const Icon(Icons.star_outlined, color: Color(0xFFFFC107), size: 20),
                         const SizedBox(width: 4),
-                        Text(stats.averageRating.toStringAsFixed(1), style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+                        Text(stats.averageRating.toStringAsFixed(1), style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600, color: kWebTextPrimary)),
                       ],
                     ),
                   ),
@@ -86,9 +100,17 @@ class _ReviewsContent extends ConsumerWidget {
                         padding: const EdgeInsets.all(48),
                         child: Column(
                           children: [
-                            Icon(Icons.reviews_outlined, size: 48, color: colors.onSurface.withValues(alpha: 0.3)),
+                            Container(
+                              width: 64,
+                              height: 64,
+                              decoration: BoxDecoration(
+                                color: kWebPrimary.withValues(alpha: 0.06),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.reviews_outlined, size: 32, color: kWebTextHint),
+                            ),
                             const SizedBox(height: 12),
-                            Text('Sin resenas', style: theme.textTheme.bodyMedium?.copyWith(color: colors.onSurface.withValues(alpha: 0.5))),
+                            Text('Sin resenas', style: theme.textTheme.bodyMedium?.copyWith(color: kWebTextHint)),
                           ],
                         ),
                       ),
@@ -156,17 +178,11 @@ class _StarDistribution extends StatelessWidget {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colors.outlineVariant),
-      ),
+    return WebCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Distribucion', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+          Text('Distribucion', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600, color: kWebTextPrimary)),
           const SizedBox(height: 16),
           for (var stars = 5; stars >= 1; stars--)
             Padding(
@@ -268,14 +284,10 @@ class _ReviewCard extends StatelessWidget {
     final createdAt = DateTime.tryParse(review['created_at'] as String? ?? '');
     final dateStr = createdAt != null ? DateFormat('d MMM yyyy', 'es').format(createdAt) : '';
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: colors.outlineVariant),
-      ),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: WebCard(
+        padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -283,10 +295,10 @@ class _ReviewCard extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 16,
-                backgroundColor: colors.primary.withValues(alpha: 0.12),
+                backgroundColor: kWebPrimary.withValues(alpha: 0.12),
                 child: Text(
                   customerName.isNotEmpty ? customerName[0].toUpperCase() : '?',
-                  style: TextStyle(fontSize: 12, color: colors.primary, fontWeight: FontWeight.bold),
+                  style: const TextStyle(fontSize: 12, color: kWebPrimary, fontWeight: FontWeight.bold),
                 ),
               ),
               const SizedBox(width: 10),
@@ -295,7 +307,7 @@ class _ReviewCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(customerName, style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
-                    Text(dateStr, style: theme.textTheme.labelSmall?.copyWith(color: colors.onSurface.withValues(alpha: 0.4))),
+                    Text(dateStr, style: theme.textTheme.labelSmall?.copyWith(color: kWebTextHint)),
                   ],
                 ),
               ),
@@ -305,7 +317,7 @@ class _ReviewCard extends StatelessWidget {
                 children: [
                   for (var i = 1; i <= 5; i++)
                     Icon(
-                      i <= rating ? Icons.star : Icons.star_border,
+                      i <= rating ? Icons.star_outlined : Icons.star_outline,
                       size: 16,
                       color: const Color(0xFFFFC107),
                     ),
@@ -318,6 +330,7 @@ class _ReviewCard extends StatelessWidget {
             Text(text, style: theme.textTheme.bodySmall),
           ],
         ],
+      ),
       ),
     );
   }

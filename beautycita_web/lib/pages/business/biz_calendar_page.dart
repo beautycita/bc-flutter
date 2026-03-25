@@ -9,9 +9,11 @@ import 'package:beautycita_core/supabase.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/breakpoints.dart';
+import '../../config/web_theme.dart';
 import '../../data/demo_data.dart';
 import '../../providers/business_portal_provider.dart';
 import '../../providers/demo_providers.dart';
+import '../../widgets/web_design_system.dart';
 
 /// State providers for calendar UI.
 final calendarDateProvider = StateProvider<DateTime>((ref) => DateTime.now());
@@ -126,27 +128,28 @@ class _CalendarToolbar extends ConsumerWidget {
     return Container(
       height: 56,
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: colors.outlineVariant)),
+      decoration: const BoxDecoration(
+        color: kWebSurface,
+        border: Border(bottom: BorderSide(color: kWebCardBorder)),
       ),
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(Icons.chevron_left),
+            icon: const Icon(Icons.chevron_left_outlined),
             onPressed: () {
               ref.read(calendarDateProvider.notifier).state = date.subtract(const Duration(days: 1));
             },
             tooltip: 'Anterior',
           ),
           IconButton(
-            icon: const Icon(Icons.chevron_right),
+            icon: const Icon(Icons.chevron_right_outlined),
             onPressed: () {
               ref.read(calendarDateProvider.notifier).state = date.add(const Duration(days: 1));
             },
             tooltip: 'Siguiente',
           ),
           const SizedBox(width: 8),
-          Text(title, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+          Text(title, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600, color: kWebTextPrimary)),
           const SizedBox(width: 8),
           TextButton(
             onPressed: () => ref.read(calendarDateProvider.notifier).state = DateTime.now(),
@@ -155,11 +158,17 @@ class _CalendarToolbar extends ConsumerWidget {
           const Spacer(),
           // Quick-add walk-in button — hidden in demo
           if (!isDemo)
-            ElevatedButton.icon(
+            WebGradientButton(
               onPressed: () => _showWalkInDialog(context, ref),
-              icon: const Icon(Icons.add, size: 18),
-              label: const Text('Walk-in'),
-              style: ElevatedButton.styleFrom(visualDensity: VisualDensity.compact),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.add, size: 18, color: Colors.white),
+                  SizedBox(width: 4),
+                  Text('Walk-in'),
+                ],
+              ),
             ),
         ],
       ),

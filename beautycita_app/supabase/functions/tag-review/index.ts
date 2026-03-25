@@ -75,11 +75,22 @@ const STAFF_PATTERNS = [
   /\b(estilista|especialista|chica|chico|señora|joven|doctor|doctora)\b/i,
 ];
 
+const ALLOWED_ORIGINS = [
+  "https://beautycita.com",
+  "https://www.beautycita.com",
+  "https://debug.beautycita.com",
+];
+
+function corsOrigin(req: Request): string {
+  const o = req.headers.get("origin") ?? "";
+  return ALLOWED_ORIGINS.includes(o) ? o : ALLOWED_ORIGINS[0];
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, {
       headers: {
-        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Origin": corsOrigin(req),
         "Access-Control-Allow-Methods": "POST",
         "Access-Control-Allow-Headers": "authorization, content-type, x-client-info, apikey",
       },
@@ -218,7 +229,7 @@ Deno.serve(async (req: Request) => {
     if (error) {
       console.error("Failed to upsert review_tags:", error);
       return new Response(
-        JSON.stringify({ error: error.message }),
+        JSON.stringify({ error: "An internal error occurred" }),
         { status: 500, headers: { "Content-Type": "application/json" } },
       );
     }
@@ -239,7 +250,7 @@ Deno.serve(async (req: Request) => {
   } catch (err) {
     console.error("tag-review error:", err);
     return new Response(
-      JSON.stringify({ error: String(err) }),
+      JSON.stringify({ error: "An internal error occurred" }),
       { status: 500, headers: { "Content-Type": "application/json" } },
     );
   }

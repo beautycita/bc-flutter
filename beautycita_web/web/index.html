@@ -724,30 +724,27 @@ function submitContact(e, form) {
   return false;
 }
 
-// ── Flutter loader (only for non-root paths) ──
+// ── Flutter loader (ALL paths including root) ──
 (function(){
-  var path = window.location.pathname;
-  if (path !== '/' && path !== '') {
-    document.getElementById('landing').style.display = 'none';
-    document.getElementById('flutter-loading').style.display = 'flex';
-    var s = document.createElement('script');
-    s.src = 'flutter_bootstrap.js?v=' + Date.now(); s.async = true;
-    document.body.appendChild(s);
+  var landing = document.getElementById('landing');
+  if (landing) landing.style.display = 'none';
+  document.getElementById('flutter-loading').style.display = 'flex';
+  var s = document.createElement('script');
+  s.src = 'flutter_bootstrap.js?v=' + Date.now(); s.async = true;
+  document.body.appendChild(s);
 
-    var loadTimer = setTimeout(function(){
-      var fl = document.getElementById('flutter-loading');
-      if (fl && fl.style.display !== 'none') {
-        fl.innerHTML = '<h1 style="color:#fff;font-size:2rem;font-weight:700;margin:0 0 12px">BeautyCita</h1>'
-          + '<p style="color:rgba(255,255,255,.85);font-size:1.1rem;margin:0 0 24px">No se pudo cargar la aplicacion.</p>'
-          + '<button onclick="location.reload()" style="background:#FFB300;color:#1a1a1a;border:none;padding:12px 32px;border-radius:24px;font-weight:700;font-size:1rem;cursor:pointer">Reintentar</button>'
-          + '<a href="/" style="display:block;margin-top:16px;color:rgba(255,255,255,.6);font-size:.9rem">Volver al inicio</a>';
-      }
-    }, 10000);
+  var loadTimer = setTimeout(function(){
+    var fl = document.getElementById('flutter-loading');
+    if (fl && fl.style.display !== 'none') {
+      fl.innerHTML = '<h1 style="color:#fff;font-size:2rem;font-weight:700;margin:0 0 12px">BeautyCita</h1>'
+        + '<p style="color:rgba(255,255,255,.85);font-size:1.1rem;margin:0 0 24px">No se pudo cargar la aplicacion.</p>'
+        + '<button onclick="location.reload()" style="background:#FFB300;color:#1a1a1a;border:none;padding:12px 32px;border-radius:24px;font-weight:700;font-size:1rem;cursor:pointer">Reintentar</button>';
+    }
+  }, 15000);
 
-    window.addEventListener('flutter-first-frame', function(){
-      clearTimeout(loadTimer);
-    });
-  }
+  window.addEventListener('flutter-first-frame', function(){
+    clearTimeout(loadTimer);
+  });
 })();
 window.addEventListener('flutter-first-frame', function(){
   var f = document.getElementById('flutter-loading');
