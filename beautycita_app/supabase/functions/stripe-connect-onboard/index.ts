@@ -56,6 +56,21 @@ async function stripeGet(path: string) {
   return data;
 }
 
+// Rate limiting
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+
+function checkRateLimit(key: string, limit: number, windowMs: number): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(key);
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(key, { count: 1, resetAt: now + windowMs });
+    return true;
+  }
+  if (entry.count >= limit) return false;
+  entry.count++;
+  return true;
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, {
@@ -85,6 +100,12 @@ Deno.serve(async (req: Request) => {
   const { data: { user }, error: authErr } = await supabase.auth.getUser(token);
   if (authErr || !user) {
     return json({ error: "Invalid token" }, 401);
+  }
+
+  // Rate limit: 5 requests per minute
+  const rateLimitKey = user?.id || authHeader.slice(-16) || "anon";
+  if (!checkRateLimit(rateLimitKey, 5, 60_000)) {
+    return json({ error: "Rate limit exceeded" }, 429);
   }
 
   try {

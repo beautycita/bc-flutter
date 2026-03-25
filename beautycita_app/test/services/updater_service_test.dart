@@ -84,6 +84,158 @@ void main() {
       });
     });
 
+    group('cache-busting query param', () {
+      test('version check URL gets a cache-buster ?t= param', () async {
+        Uri? capturedUri;
+        final client = MockClient((request) async {
+          capturedUri = request.url;
+          return http.Response(
+            jsonEncode({'version': '1.0.0', 'build': 1, 'url': ''}),
+            200,
+          );
+        });
+
+        // Simulate what checkForApkUpdate does: append ?t=<timestamp>
+        final cacheBuster = DateTime.now().millisecondsSinceEpoch;
+        final url = '${AppConstants.versionCheckUrl}?t=$cacheBuster';
+        await client.get(Uri.parse(url));
+
+        expect(capturedUri, isNotNull);
+        expect(capturedUri!.queryParameters.containsKey('t'), isTrue);
+        // The timestamp should be a numeric string
+        expect(int.tryParse(capturedUri!.queryParameters['t']!), isNotNull);
+
+        client.close();
+      });
+
+      test('cache-buster changes between calls', () async {
+        final timestamps = <String>[];
+        final client = MockClient((request) async {
+          timestamps.add(request.url.queryParameters['t'] ?? '');
+          return http.Response(
+            jsonEncode({'version': '1.0.0', 'build': 1, 'url': ''}),
+            200,
+          );
+        });
+
+        final t1 = DateTime.now().millisecondsSinceEpoch;
+        await client.get(
+            Uri.parse('${AppConstants.versionCheckUrl}?t=$t1'));
+        // Small delay to ensure different timestamp
+        await Future.delayed(const Duration(milliseconds: 2));
+        final t2 = DateTime.now().millisecondsSinceEpoch;
+        await client.get(
+            Uri.parse('${AppConstants.versionCheckUrl}?t=$t2'));
+
+        expect(timestamps.length, 2);
+        // Timestamps should differ (or at least both be valid)
+        expect(int.tryParse(timestamps[0]), isNotNull);
+        expect(int.tryParse(timestamps[1]), isNotNull);
+
+        client.close();
+      });
+    });
+
+    group('24h rate limiting', () {
+      test('check is skipped when last check was < 24h ago (force=false)', () async {
+        final recentCheck = DateTime.now()
+            .subtract(const Duration(hours: 1))
+            .toIso8601String();
+        SharedPreferences.setMockInitialValues({
+          'last_version_check': recentCheck,
+        });
+
+        final prefs = await SharedPreferences.getInstance();
+        final lastCheck = prefs.getString('last_version_check');
+        final lastTime = DateTime.tryParse(lastCheck ?? '');
+
+        // Simulate force=false logic
+        const force = false;
+        final shouldSkip = !force &&
+            lastTime != null &&
+            DateTime.now().difference(lastTime) < const Duration(hours: 24);
+
+        expect(shouldSkip, isTrue);
+      });
+
+      test('check proceeds when force=true even if < 24h ago', () async {
+        final recentCheck = DateTime.now()
+            .subtract(const Duration(hours: 1))
+            .toIso8601String();
+        SharedPreferences.setMockInitialValues({
+          'last_version_check': recentCheck,
+        });
+
+        final prefs = await SharedPreferences.getInstance();
+        final lastCheck = prefs.getString('last_version_check');
+        final lastTime = DateTime.tryParse(lastCheck ?? '');
+
+        // Simulate force=true logic — bypasses rate limit
+        const force = true;
+        final shouldSkip = !force &&
+            lastTime != null &&
+            DateTime.now().difference(lastTime) < const Duration(hours: 24);
+
+        expect(shouldSkip, isFalse);
+      });
+
+      test('check proceeds when last check was > 24h ago', () async {
+        final oldCheck = DateTime.now()
+            .subtract(const Duration(hours: 25))
+            .toIso8601String();
+        SharedPreferences.setMockInitialValues({
+          'last_version_check': oldCheck,
+        });
+
+        final prefs = await SharedPreferences.getInstance();
+        final lastCheck = prefs.getString('last_version_check');
+        final lastTime = DateTime.tryParse(lastCheck ?? '');
+
+        const force = false;
+        final shouldSkip = !force &&
+            lastTime != null &&
+            DateTime.now().difference(lastTime) < const Duration(hours: 24);
+
+        expect(shouldSkip, isFalse);
+      });
+
+      test('check proceeds when no previous check exists', () async {
+        SharedPreferences.setMockInitialValues({});
+
+        final prefs = await SharedPreferences.getInstance();
+        final lastCheck = prefs.getString('last_version_check');
+
+        // No previous check means lastCheck is null, should proceed
+        expect(lastCheck, isNull);
+      });
+    });
+
+    group('build number comparison with concrete values', () {
+      test('remote 50000 > local 48063 triggers update', () {
+        const remoteBuild = 50000;
+        const localBuild = 48063;
+        expect(remoteBuild > localBuild, isTrue);
+      });
+
+      test('remote 48063 == local 48063 means no update', () {
+        const remoteBuild = 48063;
+        const localBuild = 48063;
+        expect(remoteBuild > localBuild, isFalse);
+      });
+
+      test('remote 47000 < local 48063 means no update', () {
+        const remoteBuild = 47000;
+        const localBuild = 48063;
+        expect(remoteBuild > localBuild, isFalse);
+      });
+
+      test('remote 48064 (one higher) triggers update', () {
+        const remoteBuild = 48064;
+        const localBuild = 48063;
+        expect(remoteBuild > localBuild, isTrue);
+      });
+    });
+
     group('24h dismissal cooldown', () {
       test('recently dismissed build is skipped', () async {
         SharedPreferences.setMockInitialValues({

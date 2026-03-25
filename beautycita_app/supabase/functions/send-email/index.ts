@@ -8,11 +8,39 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import nodemailer from "npm:nodemailer@6.9.16";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+const ALLOWED_ORIGINS = [
+  "https://beautycita.com",
+  "https://www.beautycita.com",
+  "https://debug.beautycita.com",
+];
+
+function getCorsOrigin(req: Request): string {
+  const origin = req.headers.get("origin") ?? "";
+  return ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+}
+
+const corsHeaders = (req: Request) => ({
+  "Access-Control-Allow-Origin": getCorsOrigin(req),
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
-};
+});
+
+// Rate limiting: max 20 emails per minute per caller
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT = 20;
+const RATE_WINDOW_MS = 60_000;
+
+function checkRateLimit(key: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(key);
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(key, { count: 1, resetAt: now + RATE_WINDOW_MS });
+    return true;
+  }
+  if (entry.count >= RATE_LIMIT) return false;
+  entry.count++;
+  return true;
+}
 
 const SMTP_HOST = Deno.env.get("SMTP_HOST") ?? "smtp.ionos.mx";
 const SMTP_PORT = parseInt(Deno.env.get("SMTP_PORT") ?? "587");
@@ -796,9 +824,16 @@ interface SendEmailRequest {
   variables: Record<string, string>;
 }
 
+function json(body: unknown, status: number, req: Request) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders(req), "Content-Type": "application/json" },
+  });
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
 
   try {
@@ -817,7 +852,7 @@ serve(async (req) => {
       });
       const { data: { user }, error: authError } = await userClient.auth.getUser();
       if (authError || !user) {
-        return json({ error: "Unauthorized" }, 401);
+        return json({ error: "Unauthorized" }, 401, req);
       }
       const svcClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
       const { data: profile } = await svcClient
@@ -826,15 +861,21 @@ serve(async (req) => {
         .eq("id", user.id)
         .single();
       if (!profile || !["admin", "superadmin", "rp"].includes(profile.role)) {
-        return json({ error: "Admin or RP role required" }, 403);
+        return json({ error: "Admin or RP role required" }, 403, req);
       }
+    }
+
+    // Rate limit: 20 emails/min per caller
+    const rateLimitKey = authHeader.slice(-16) || "anon";
+    if (!checkRateLimit(rateLimitKey)) {
+      return json({ error: "Rate limit exceeded (20/min)" }, 429, req);
     }
 
     const body: SendEmailRequest = await req.json();
     const { template, to, subject, variables } = body;
 
     if (!template || !to || !subject) {
-      return json({ error: "template, to, and subject are required" }, 400);
+      return json({ error: "template, to, and subject are required" }, 400, req);
     }
 
     if (!TEMPLATES[template]) {
@@ -843,6 +884,7 @@ serve(async (req) => {
           error: `Unknown template: ${template}. Valid: ${Object.keys(TEMPLATES).join(", ")}`,
         },
         400,
+        req,
       );
     }
 
@@ -868,16 +910,11 @@ serve(async (req) => {
 
     console.log(`[EMAIL] Sent "${template}" to ${to} — subject: ${subject}`);
 
-    return json({ success: true, template, to });
+    return json({ success: true, template, to }, 200, req);
   } catch (err) {
     console.error("[EMAIL] Error:", err);
-    return json({ error: "An internal error occurred" }, 500);
+    return json({ error: "An internal error occurred" }, 500, req);
   }
 });
 
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
+// old json function removed — replaced by json(body, status, req) above

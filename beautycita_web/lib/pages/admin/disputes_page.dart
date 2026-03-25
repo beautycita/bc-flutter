@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../config/web_theme.dart';
 import '../../providers/admin_disputes_provider.dart';
 import '../../widgets/bc_data_table.dart';
 import '../../widgets/filter_bar.dart';
@@ -328,18 +329,18 @@ class _TypeChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (Color bg, Color fg) = switch (type) {
-      'service_quality' => (const Color(0xFFE3F2FD), const Color(0xFF1565C0)),
-      'no_show' => (const Color(0xFFFFF3E0), const Color(0xFFE65100)),
-      'overcharge' => (const Color(0xFFFFEBEE), const Color(0xFFC62828)),
-      _ => (Colors.grey.shade100, Colors.grey.shade700),
+    final Color fg = switch (type) {
+      'service_quality' => const Color(0xFF1565C0),
+      'no_show' => const Color(0xFFE65100),
+      'overcharge' => const Color(0xFFC62828),
+      _ => kWebTextSecondary,
     };
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(12),
+        color: fg.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
         label,
@@ -356,19 +357,19 @@ class _StatusChipSmall extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (Color bg, Color fg) = switch (status) {
-      'open' => (const Color(0xFFFFF3E0), const Color(0xFFE65100)),
-      'reviewing' => (const Color(0xFFE3F2FD), const Color(0xFF1565C0)),
-      'resolved' => (const Color(0xFFE8F5E9), const Color(0xFF2E7D32)),
-      'rejected' => (const Color(0xFFFFEBEE), const Color(0xFFC62828)),
-      _ => (Colors.grey.shade100, Colors.grey.shade700),
+    final Color fg = switch (status) {
+      'open' => const Color(0xFFE65100),
+      'reviewing' => const Color(0xFF1565C0),
+      'resolved' => const Color(0xFF2E7D32),
+      'rejected' => const Color(0xFFC62828),
+      _ => kWebTextSecondary,
     };
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(12),
+        color: fg.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
         label,

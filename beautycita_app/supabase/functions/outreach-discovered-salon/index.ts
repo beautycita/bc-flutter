@@ -8,6 +8,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { cacheGet, cacheSet } from "../_shared/redis.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -16,6 +17,19 @@ const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 // WhatsApp API on beautypi
 const WA_API_URL = Deno.env.get("BEAUTYPI_WA_URL") ?? "";
 const WA_API_TOKEN = Deno.env.get("BEAUTYPI_WA_TOKEN") ?? "";
+
+const ALLOWED_ORIGINS = [
+  "https://beautycita.com",
+  "https://www.beautycita.com",
+  "https://debug.beautycita.com",
+];
+
+function corsOrigin(req: Request): string {
+  const o = req.headers.get("origin") ?? "";
+  return ALLOWED_ORIGINS.includes(o) ? o : ALLOWED_ORIGINS[0];
+}
+
+let _req: Request;
 
 // TEST MODE: send outreach to wife's number instead of the actual salon
 const LIVE_MODE = true; // LIVE — messages go to actual salon phones
@@ -53,10 +67,11 @@ function shouldSendOutreach(interestCount: number): boolean {
 }
 
 serve(async (req: Request) => {
+  _req = req;
   if (req.method === "OPTIONS") {
     return new Response(null, {
       headers: {
-        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Origin": corsOrigin(req),
         "Access-Control-Allow-Methods": "POST, OPTIONS",
         "Access-Control-Allow-Headers": "authorization, content-type, apikey",
       },
@@ -105,7 +120,7 @@ serve(async (req: Request) => {
         headers: {
           "Content-Type": "application/json",
           "Cache-Control": "public, max-age=86400",
-          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Origin": corsOrigin(req),
         },
       });
     }
@@ -220,6 +235,13 @@ serve(async (req: Request) => {
         return jsonResponse({ error: "query, lat, lng required" }, 400);
       }
 
+      // --- Redis cache for search results (10 min) ---
+      const searchCacheKey = `discover:search:${query}:${lat?.toFixed(2)}:${lng?.toFixed(2)}`;
+      try {
+        const cached = await cacheGet(searchCacheKey);
+        if (cached) return jsonResponse(JSON.parse(cached));
+      } catch { /* cache miss or error — continue to DB */ }
+
       // Search by name with ILIKE, grab a candidate pool
       const { data, error } = await serviceClient
         .from("discovered_salons")
@@ -230,7 +252,7 @@ serve(async (req: Request) => {
         .limit(50);
 
       if (error) {
-        return jsonResponse({ error: error.message }, 500);
+        return jsonResponse({ error: "An internal error occurred" }, 500);
       }
 
       // Client-side distance filter (50km) + sort
@@ -260,10 +282,15 @@ serve(async (req: Request) => {
       // Strip PII before sending to client
       const sanitized = results.map(({ phone, whatsapp, email, phone_raw, ...safe }: any) => safe);
 
-      return jsonResponse({
+      const searchResult = {
         salons: sanitized,
         suggest_scrape: sanitized.length === 0,
-      });
+      };
+
+      // Cache search results for 10 minutes
+      cacheSet(searchCacheKey, JSON.stringify(searchResult), 600).catch(() => {});
+
+      return jsonResponse(searchResult);
     }
 
     // ───────── INVITE: record interest + evaluate outreach ─────────
@@ -848,7 +875,7 @@ function jsonResponse(body: unknown, status = 200): Response {
     status,
     headers: {
       "Content-Type": "application/json",
-      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Origin": corsOrigin(_req),
     },
   });
 }

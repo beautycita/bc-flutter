@@ -22,6 +22,19 @@ const WA_API_TOKEN = Deno.env.get("BEAUTYPI_WA_TOKEN") ?? "";
 
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY") ?? "";
 
+const ALLOWED_ORIGINS = [
+  "https://beautycita.com",
+  "https://www.beautycita.com",
+  "https://debug.beautycita.com",
+];
+
+function corsOrigin(req: Request): string {
+  const o = req.headers.get("origin") ?? "";
+  return ALLOWED_ORIGINS.includes(o) ? o : ALLOWED_ORIGINS[0];
+}
+
+let _req: Request;
+
 // ── Valid call outcomes ──
 
 const VALID_OUTCOMES = [
@@ -150,11 +163,27 @@ async function resolveMessage(
   return null;
 }
 
+// Rate limiting
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+
+function checkRateLimit(key: string, limit: number, windowMs: number): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(key);
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(key, { count: 1, resetAt: now + windowMs });
+    return true;
+  }
+  if (entry.count >= limit) return false;
+  entry.count++;
+  return true;
+}
+
 serve(async (req: Request) => {
+  _req = req;
   if (req.method === "OPTIONS") {
     return new Response(null, {
       headers: {
-        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Origin": corsOrigin(req),
         "Access-Control-Allow-Methods": "POST, OPTIONS",
         "Access-Control-Allow-Headers": "authorization, content-type, apikey",
       },
@@ -172,6 +201,12 @@ serve(async (req: Request) => {
     // All actions require admin/superadmin or rp (for allowed actions)
     const { user, error: authErr } = await verifyAuthorized(token, serviceClient, action);
     if (authErr) return authErr;
+
+    // Rate limit: 20 requests per minute
+    const rateLimitKey = user?.id || authHeader.slice(-16) || "anon";
+    if (!checkRateLimit(rateLimitKey, 20, 60_000)) {
+      return jsonResponse({ error: "Rate limit exceeded" }, 429);
+    }
 
     // ───────── SEND_WA: send WhatsApp message ─────────
     if (action === "send_wa") {
@@ -598,7 +633,7 @@ function jsonResponse(body: unknown, status = 200): Response {
     status,
     headers: {
       "Content-Type": "application/json",
-      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Origin": corsOrigin(_req),
     },
   });
 }

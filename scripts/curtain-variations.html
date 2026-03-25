@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gradient Curtain Pull — Variations</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#FFFAF5; font-family:-apple-system,system-ui,sans-serif; color:#1a1a1a; }
+.header { text-align:center; padding:20px 20px 12px; }
+.header h1 { font-size:18px; font-weight:800; }
+.header p { font-size:11px; color:#999; margin-top:3px; }
+
+.grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; max-width:700px; margin:0 auto; padding:0 12px 32px; }
+
+.demo { background:#fff; border-radius:20px; overflow:hidden; border:1px solid #f0ebe6; box-shadow:0 2px 10px rgba(0,0,0,0.04); }
+.demo-name { padding:10px 12px 0; font-size:12px; font-weight:700; }
+.demo-desc { padding:2px 12px 6px; font-size:9px; color:#999; line-height:1.4; }
+.demo-area { height:360px; position:relative; overflow:hidden; background:#FFFAF5; margin:0 6px 6px; border-radius:14px; cursor:pointer; }
+
+/* Shared screen content */
+.scr { position:absolute; top:0; left:0; width:100%; height:100%; background:#FFFAF5; padding:6px; }
+.bar { text-align:center; padding:4px 0 6px; font-size:11px; font-weight:700; }
+.bar-back { font-size:9px; color:#999; position:absolute; left:10px; }
+.hero { background:linear-gradient(135deg,#ec4899,#9333ea,#3b82f6); border-radius:12px; padding:10px; margin:0 3px 6px; color:#fff; }
+.hero-sm { font-size:7px; opacity:0.6; letter-spacing:0.6px; }
+.hero-lg { font-size:12px; font-weight:800; margin-top:1px; }
+.crd { background:#fff; border-radius:10px; padding:8px 10px; margin:0 3px 5px; border:1px solid #f0ebe6; }
+.rw { display:flex; align-items:center; gap:6px; }
+.ic { width:22px; height:22px; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:9px; flex-shrink:0; }
+.tx { font-size:9px; font-weight:600; }
+.hn { font-size:7px; color:#aaa; }
+.ch { font-size:8px; color:#ccc; margin-left:auto; }
+.dv { height:1px; background:#f5f0eb; margin:4px 0; }
+
+/* ═══ V1: Single Line Sweep ═══ */
+.v1 .scr-from { z-index:1; }
+.v1 .scr-to { z-index:3; clip-path:inset(0 100% 0 0); }
+.v1 .line {
+  position:absolute; z-index:2; top:0; width:4px; height:100%;
+  background:linear-gradient(180deg, #ec4899, #9333ea, #3b82f6);
+  box-shadow: 0 0 16px rgba(147,51,234,0.5), 4px 0 12px rgba(147,51,234,0.3);
+  left:-4px; opacity:0;
+}
+.v1.go .line { animation: v1-sweep 0.6s cubic-bezier(0.4,0,0.2,1) forwards; }
+.v1.go .scr-to { animation: v1-reveal 0.6s cubic-bezier(0.4,0,0.2,1) forwards; }
+@keyframes v1-sweep { 0%{left:-4px;opacity:1;} 100%{left:100%;opacity:0.3;} }
+@keyframes v1-reveal { 0%{clip-path:inset(0 100% 0 0);} 100%{clip-path:inset(0 0 0 0);} }
+
+/* ═══ V2: Double Line (Split) ═══ */
+.v2 .scr-from { z-index:1; }
+.v2 .scr-to { z-index:3; clip-path:inset(50% 0); }
+.v2 .line-top, .v2 .line-bot {
+  position:absolute; z-index:2; left:0; width:100%; height:3px;
+  background:linear-gradient(90deg, #ec4899, #9333ea, #3b82f6);
+  box-shadow: 0 0 12px rgba(147,51,234,0.4);
+  opacity:0;
+}
+.v2 .line-top { top:50%; }
+.v2 .line-bot { top:50%; }
+.v2.go .line-top { animation: v2-top 0.7s cubic-bezier(0.4,0,0.2,1) forwards; }
+.v2.go .line-bot { animation: v2-bot 0.7s cubic-bezier(0.4,0,0.2,1) forwards; }
+.v2.go .scr-to { animation: v2-reveal 0.7s cubic-bezier(0.4,0,0.2,1) forwards; }
+@keyframes v2-top { 0%{top:50%;opacity:1;} 100%{top:-3px;opacity:0.3;} }
+@keyframes v2-bot { 0%{top:50%;opacity:1;} 100%{top:100%;opacity:0.3;} }
+@keyframes v2-reveal { 0%{clip-path:inset(50% 0);} 100%{clip-path:inset(0 0);} }
+
+/* ═══ V3: Diagonal Slash ═══ */
+.v3 .scr-from { z-index:1; }
+.v3 .scr-to { z-index:3; clip-path:polygon(100% 0, 100% 0, 100% 100%, 100% 100%); }
+.v3 .slash {
+  position:absolute; z-index:2; top:0; bottom:0; width:6px;
+  background:linear-gradient(180deg, #ec4899, #9333ea, #3b82f6);
+  box-shadow: 0 0 20px rgba(236,72,153,0.5);
+  transform:skewX(-8deg); left:110%; opacity:0;
+}
+.v3.go .slash { animation: v3-slash 0.65s cubic-bezier(0.4,0,0.2,1) forwards; }
+.v3.go .scr-to { animation: v3-reveal 0.65s cubic-bezier(0.4,0,0.2,1) forwards; }
+@keyframes v3-slash { 0%{left:110%;opacity:1;} 100%{left:-10%;opacity:0.3;} }
+@keyframes v3-reveal {
+  0%{clip-path:polygon(100% 0, 100% 0, 100% 100%, 100% 100%);}
+  100%{clip-path:polygon(-10% 0, 110% 0, 100% 100%, -10% 100%);}
+}
+
+/* ═══ V4: Gradient Fade Band ═══ */
+.v4 .scr-from { z-index:2; }
+.v4 .scr-to { z-index:1; }
+.v4 .band {
+  position:absolute; z-index:3; top:0; bottom:0; width:120px;
+  background:linear-gradient(90deg, transparent, rgba(147,51,234,0.3), rgba(236,72,153,0.2), transparent);
+  left:-120px; opacity:0;
+}
+.v4.go .band { animation: v4-band 0.7s cubic-bezier(0.4,0,0.2,1) forwards; }
+.v4.go .scr-from { animation: v4-out 0.7s cubic-bezier(0.4,0,0.2,1) forwards; }
+@keyframes v4-band { 0%{left:-120px;opacity:1;} 100%{left:100%;opacity:0;} }
+@keyframes v4-out { 0%{opacity:1;transform:translateX(0);} 100%{opacity:0;transform:translateX(-20px);} }
+
+/* ═══ V5: Vertical Curtain Drop ═══ */
+.v5 .scr-from { z-index:1; }
+.v5 .scr-to { z-index:3; clip-path:inset(0 0 100% 0); }
+.v5 .line-h {
+  position:absolute; z-index:2; left:0; width:100%; height:3px;
+  background:linear-gradient(90deg, #ec4899, #9333ea, #3b82f6);
+  box-shadow: 0 4px 16px rgba(147,51,234,0.5);
+  top:-3px; opacity:0;
+}
+.v5.go .line-h { animation: v5-drop 0.7s cubic-bezier(0.4,0,0.2,1) forwards; }
+.v5.go .scr-to { animation: v5-reveal 0.7s cubic-bezier(0.4,0,0.2,1) forwards; }
+@keyframes v5-drop { 0%{top:-3px;opacity:1;} 100%{top:100%;opacity:0.3;} }
+@keyframes v5-reveal { 0%{clip-path:inset(0 0 100% 0);} 100%{clip-path:inset(0 0 0 0);} }
+
+/* ═══ V6: Radial Gradient Burst ═══ */
+.v6 .scr-from { z-index:1; }
+.v6 .scr-to { z-index:3; clip-path:circle(0% at var(--cx,50%) var(--cy,50%)); }
+.v6 .glow {
+  position:absolute; z-index:2; width:0; height:0; border-radius:50%;
+  background:radial-gradient(circle, rgba(236,72,153,0.4), rgba(147,51,234,0.3), transparent 70%);
+  top:50%; left:50%; transform:translate(-50%,-50%); opacity:0;
+}
+.v6.go .glow { animation: v6-glow 0.8s cubic-bezier(0.22,1,0.36,1) forwards; }
+.v6.go .scr-to { animation: v6-reveal 0.8s cubic-bezier(0.22,1,0.36,1) forwards; }
+@keyframes v6-glow { 0%{width:0;height:0;opacity:1;} 50%{width:300px;height:300px;opacity:0.8;} 100%{width:500px;height:500px;opacity:0;} }
+@keyframes v6-reveal { 0%{clip-path:circle(0% at 50% 50%);} 100%{clip-path:circle(80% at 50% 50%);} }
+
+/* ═══ V7: Gradient Wipe + Content Stagger ═══ */
+.v7 .scr-from { z-index:1; }
+.v7 .scr-to { z-index:3; clip-path:inset(0 100% 0 0); }
+.v7 .line-w {
+  position:absolute; z-index:2; top:0; width:6px; height:100%;
+  background:linear-gradient(180deg, #ec4899, #9333ea, #3b82f6);
+  box-shadow: 0 0 20px rgba(147,51,234,0.6), 6px 0 16px rgba(236,72,153,0.3);
+  left:-6px; opacity:0;
+}
+.v7 .scr-to .crd { opacity:0; transform:translateX(15px); }
+.v7.go .line-w { animation: v7-sweep 0.6s cubic-bezier(0.4,0,0.2,1) forwards; }
+.v7.go .scr-to { animation: v7-reveal 0.6s cubic-bezier(0.4,0,0.2,1) forwards; }
+.v7.go .scr-to .crd:nth-child(2) { animation: v7-card 0.4s ease-out 0.25s forwards; }
+.v7.go .scr-to .crd:nth-child(3) { animation: v7-card 0.4s ease-out 0.35s forwards; }
+.v7.go .scr-to .crd:nth-child(4) { animation: v7-card 0.4s ease-out 0.45s forwards; }
+@keyframes v7-sweep { 0%{left:-6px;opacity:1;} 100%{left:100%;opacity:0.3;} }
+@keyframes v7-reveal { 0%{clip-path:inset(0 100% 0 0);} 100%{clip-path:inset(0 0 0 0);} }
+@keyframes v7-card { 0%{opacity:0;transform:translateX(15px);} 100%{opacity:1;transform:translateX(0);} }
+
+/* ═══ V8: Thin Glow Trace ═══ */
+.v8 .scr-from { z-index:1; }
+.v8 .scr-to { z-index:3; clip-path:inset(0 100% 0 0); }
+.v8 .trace {
+  position:absolute; z-index:2; top:0; width:1px; height:100%;
+  background:#ec4899;
+  box-shadow: 0 0 8px #ec4899, 0 0 24px rgba(236,72,153,0.6), 0 0 48px rgba(147,51,234,0.3);
+  left:-1px; opacity:0;
+}
+.v8.go .trace { animation: v8-trace 0.55s cubic-bezier(0.4,0,0.15,1) forwards; }
+.v8.go .scr-to { animation: v8-reveal 0.55s cubic-bezier(0.4,0,0.15,1) forwards; }
+.v8.go .scr-from { animation: v8-dim 0.55s ease forwards; }
+@keyframes v8-trace { 0%{left:-1px;opacity:1;} 100%{left:100%;opacity:0;} }
+@keyframes v8-reveal { 0%{clip-path:inset(0 100% 0 0);} 100%{clip-path:inset(0 0 0 0);} }
+@keyframes v8-dim { 0%{filter:brightness(1);} 30%{filter:brightness(0.85);} 100%{filter:brightness(1);} }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Gradient Curtain Pull — 8 Variations</h1>
+  <p>Tap each demo to trigger. Same concept, different execution.</p>
+</div>
+
+<div class="grid">
+
+<!-- V1 -->
+<div class="demo">
+  <div class="demo-name">V1: Classic Line Sweep</div>
+  <div class="demo-desc">Single gradient line sweeps left→right. Clean, fast.</div>
+  <div class="demo-area v1" id="d1" onclick="go(1)">
+    <div class="scr scr-from"><div class="bar">Ajustes</div><div class="crd"><div class="rw"><div class="ic" style="background:#fce4ec;">👤</div><div><div class="tx">Perfil</div></div><div class="ch">›</div></div><div class="dv"></div><div class="rw"><div class="ic" style="background:#f3e5f5;">⚙</div><div><div class="tx">Preferencias</div></div><div class="ch">›</div></div><div class="dv"></div><div class="rw"><div class="ic" style="background:#e3f2fd;">🔒</div><div><div class="tx">Seguridad</div></div><div class="ch">›</div></div></div></div>
+    <div class="scr scr-to"><div class="bar"><span class="bar-back">←</span>Perfil</div><div class="hero"><div class="hero-sm">MI PERFIL</div><div class="hero-lg">strawberryBlonde</div></div><div class="crd"><div class="rw"><div class="ic" style="background:#f3e5f5;">📋</div><div><div class="hn">NOMBRE</div><div class="tx">Kriket</div></div></div></div></div>
+    <div class="line"></div>
+  </div>
+</div>
+
+<!-- V2 -->
+<div class="demo">
+  <div class="demo-name">V2: Split Horizontal</div>
+  <div class="demo-desc">Two lines split from center — one up, one down. Dramatic.</div>
+  <div class="demo-area v2" id="d2" onclick="go(2)">
+    <div class="scr scr-from"><div class="bar">Ajustes</div><div class="crd"><div class="rw"><div class="ic" style="background:#fce4ec;">👤</div><div><div class="tx">Perfil</div></div><div class="ch">›</div></div><div class="dv"></div><div class="rw"><div class="ic" style="background:#e8f5e9;">💳</div><div><div class="tx">Pagos</div></div><div class="ch">›</div></div></div></div>
+    <div class="scr scr-to"><div class="bar"><span class="bar-back">←</span>Pagos</div><div class="crd"><div class="rw"><div class="ic" style="background:#e8f5e9;">💳</div><div><div class="hn">TARJETA</div><div class="tx">Visa ****4589</div></div></div><div class="dv"></div><div class="rw"><div class="ic" style="background:#fff3e0;">🏪</div><div><div class="hn">EFECTIVO</div><div class="tx">OXXO</div></div></div></div></div>
+    <div class="line-top"></div><div class="line-bot"></div>
+  </div>
+</div>
+
+<!-- V3 -->
+<div class="demo">
+  <div class="demo-name">V3: Diagonal Slash</div>
+  <div class="demo-desc">Angled line cuts across diagonally. Edgy, dynamic.</div>
+  <div class="demo-area v3" id="d3" onclick="go(3)">
+    <div class="scr scr-from"><div class="bar">Seguridad</div><div class="crd"><div class="rw"><div class="ic" style="background:#fce4ec;">🔒</div><div><div class="tx">Biometrico</div></div></div><div class="dv"></div><div class="rw"><div class="ic" style="background:#e3f2fd;">📱</div><div><div class="tx">Dispositivos</div></div></div></div></div>
+    <div class="scr scr-to"><div class="bar"><span class="bar-back">←</span>Preferencias</div><div class="hero"><div class="hero-sm">MI ESTILO</div><div class="hero-lg">Personaliza</div></div><div class="crd"><div class="tx" style="text-align:center;">$$ · Balance · Fiel</div></div></div>
+    <div class="slash"></div>
+  </div>
+</div>
+
+<!-- V4 -->
+<div class="demo">
+  <div class="demo-name">V4: Soft Gradient Band</div>
+  <div class="demo-desc">Wide translucent gradient band sweeps across. Subtle, elegant.</div>
+  <div class="demo-area v4" id="d4" onclick="go(4)">
+    <div class="scr scr-from"><div class="bar">Ajustes</div><div class="crd"><div class="rw"><div class="ic" style="background:#fce4ec;">👤</div><div><div class="tx">Perfil</div></div><div class="ch">›</div></div><div class="dv"></div><div class="rw"><div class="ic" style="background:#f3e5f5;">⚙</div><div><div class="tx">Preferencias</div></div><div class="ch">›</div></div></div></div>
+    <div class="scr scr-to"><div class="bar"><span class="bar-back">←</span>Perfil</div><div class="hero"><div class="hero-lg">strawberryBlonde</div></div><div class="crd"><div class="rw"><div class="ic" style="background:#f3e5f5;">📋</div><div><div class="tx">Kriket</div></div></div></div></div>
+    <div class="band"></div>
+  </div>
+</div>
+
+<!-- V5 -->
+<div class="demo">
+  <div class="demo-name">V5: Vertical Drop</div>
+  <div class="demo-desc">Line drops top→bottom. Like a curtain falling.</div>
+  <div class="demo-area v5" id="d5" onclick="go(5)">
+    <div class="scr scr-from"><div class="bar">Terminos</div><div class="crd"><div class="tx">Terminos de Servicio</div><div class="hn" style="margin-top:2px;">BeautyCita S.A. de C.V....</div></div></div>
+    <div class="scr scr-to"><div class="bar"><span class="bar-back">←</span>Privacidad</div><div class="hero" style="background:linear-gradient(135deg,#3b82f6,#9333ea);"><div class="hero-lg">Politica de Privacidad</div></div><div class="crd"><div class="hn">Datos que recopilamos...</div></div></div>
+    <div class="line-h"></div>
+  </div>
+</div>
+
+<!-- V6 -->
+<div class="demo">
+  <div class="demo-name">V6: Radial Gradient Burst</div>
+  <div class="demo-desc">Gradient glow expands from center. Iris + gradient combined.</div>
+  <div class="demo-area v6" id="d6" onclick="go(6)">
+    <div class="scr scr-from"><div class="bar">Mis Citas</div><div class="crd"><div class="rw"><div class="ic" style="background:#e3f2fd;">📅</div><div><div class="tx">Corte</div><div class="hn">Mar 25</div></div></div></div></div>
+    <div class="scr scr-to"><div class="bar"><span class="bar-back">←</span>Detalle</div><div class="hero"><div class="hero-lg">Corte de cabello</div><div style="font-size:8px;opacity:0.7;">Salon Luna Bella</div></div><div class="crd"><div class="rw"><div class="ic" style="background:#e3f2fd;">📅</div><div><div class="hn">FECHA</div><div class="tx">25 Mar · 3:00 PM</div></div></div></div></div>
+    <div class="glow"></div>
+  </div>
+</div>
+
+<!-- V7 -->
+<div class="demo">
+  <div class="demo-name">V7: Sweep + Card Stagger</div>
+  <div class="demo-desc">Line sweeps, then cards cascade in with delay. Best of both worlds.</div>
+  <div class="demo-area v7" id="d7" onclick="go(7)">
+    <div class="scr scr-from"><div class="bar">Ajustes</div><div class="crd"><div class="rw"><div class="ic" style="background:#fce4ec;">👤</div><div><div class="tx">Perfil</div></div><div class="ch">›</div></div></div></div>
+    <div class="scr scr-to"><div class="bar"><span class="bar-back">←</span>Perfil</div><div class="hero"><div class="hero-lg">strawberryBlonde</div></div><div class="crd"><div class="rw"><div class="ic" style="background:#f3e5f5;">📋</div><div><div class="tx">Kriket</div></div></div></div><div class="crd"><div class="rw"><div class="ic" style="background:#fce4ec;">📱</div><div><div class="tx">+52 322...</div></div></div></div></div>
+    <div class="line-w"></div>
+  </div>
+</div>
+
+<!-- V8 -->
+<div class="demo">
+  <div class="demo-name">V8: Thin Neon Trace</div>
+  <div class="demo-desc">Hair-thin glowing line. Fast, minimal, futuristic. The screen behind it dims briefly.</div>
+  <div class="demo-area v8" id="d8" onclick="go(8)">
+    <div class="scr scr-from"><div class="bar">Ajustes</div><div class="crd"><div class="rw"><div class="ic" style="background:#fce4ec;">👤</div><div><div class="tx">Perfil</div></div><div class="ch">›</div></div><div class="dv"></div><div class="rw"><div class="ic" style="background:#f3e5f5;">⚙</div><div><div class="tx">Preferencias</div></div><div class="ch">›</div></div><div class="dv"></div><div class="rw"><div class="ic" style="background:#e3f2fd;">🔒</div><div><div class="tx">Seguridad</div></div><div class="ch">›</div></div></div></div>
+    <div class="scr scr-to"><div class="bar"><span class="bar-back">←</span>Perfil</div><div class="hero"><div class="hero-sm">MI PERFIL</div><div class="hero-lg">strawberryBlonde</div></div><div class="crd"><div class="rw"><div class="ic" style="background:#f3e5f5;">📋</div><div><div class="hn">NOMBRE</div><div class="tx">Kriket</div></div></div></div></div>
+    <div class="trace"></div>
+  </div>
+</div>
+
+</div>
+
+<script>
+function go(n) {
+  const el = document.getElementById('d'+n);
+  el.classList.remove('go');
+  void el.offsetWidth;
+  el.classList.add('go');
+  setTimeout(() => el.classList.remove('go'), 1500);
+}
+</script>
+
+</body>
+</html>

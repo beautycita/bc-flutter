@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../config/web_theme.dart';
 import '../../providers/admin_users_provider.dart';
 import '../../services/csv_export.dart';
 import '../../widgets/bc_data_table.dart';
@@ -428,17 +429,17 @@ class _RoleChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (label, color) = switch (role) {
-      'admin' || 'superadmin' => ('Admin', Colors.deepPurple),
-      'stylist' => ('Estilista', Colors.indigo),
-      'customer' => ('Cliente', Colors.blueGrey),
-      _ => (role, Colors.grey),
+      'admin' || 'superadmin' => ('Admin', kWebSecondary),
+      'stylist' => ('Estilista', kWebTertiary),
+      'customer' => ('Cliente', kWebTextSecondary),
+      _ => (role, kWebTextHint),
     };
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(BCSpacing.radiusFull),
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
         label,
@@ -461,31 +462,38 @@ class _StatusChip extends StatelessWidget {
     final (label, color) = switch (status) {
       'active' => ('Activo', Colors.green),
       'suspended' => ('Suspendido', Colors.orange),
-      'archived' => ('Archivado', Colors.grey),
-      _ => (status, Colors.grey),
+      'archived' => ('Archivado', kWebTextHint),
+      _ => (status, kWebTextHint),
     };
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 6,
-          height: 6,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: color,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: color,
+            ),
           ),
-        ),
-        const SizedBox(width: 4),
-        Text(
-          label,
-          style: TextStyle(
-            color: color,
-            fontSize: 11,
-            fontWeight: FontWeight.w500,
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

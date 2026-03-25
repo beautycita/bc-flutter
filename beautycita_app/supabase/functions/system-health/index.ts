@@ -7,12 +7,24 @@
 // =============================================================================
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { cacheGet, cacheSet } from "../_shared/redis.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+const ALLOWED_ORIGINS = [
+  "https://beautycita.com",
+  "https://www.beautycita.com",
+  "https://debug.beautycita.com",
+];
+
+function corsOrigin(req: Request): string {
+  const o = req.headers.get("origin") ?? "";
+  return ALLOWED_ORIGINS.includes(o) ? o : ALLOWED_ORIGINS[0];
+}
+
+const corsHeaders = (req: Request) => ({
+  "Access-Control-Allow-Origin": corsOrigin(req),
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
-};
+});
 
 type OverallStatus = "operational" | "degraded" | "down" | "unknown";
 
@@ -27,11 +39,13 @@ interface HealthResponse {
   checked_at: string;
 }
 
+let _req: Request;
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
-      ...corsHeaders,
+      ...corsHeaders(_req),
       "Content-Type": "application/json",
       "Cache-Control": "public, max-age=60",
     },
@@ -197,10 +211,8 @@ async function checkAuth(): Promise<ServiceStatus> {
 // Beautypi daemon status (via bpi_status.py on port 3210)
 // ---------------------------------------------------------------------------
 async function checkBeautypi(): Promise<Record<string, ServiceStatus>> {
-  const waUrl = Deno.env.get("BEAUTYPI_WA_URL") ?? "";
-  // Use same URL as WA API but different path — both served by beautypi on same port
-  const bpiUrl = `${waUrl}/api/bpi/status`;
-  if (!bpiUrl) return {};
+  const bpiBase = Deno.env.get("BPI_STATUS_URL") || "http://172.22.0.1:3210";
+  const bpiUrl = `${bpiBase}/api/bpi/status`;
 
   try {
     const res = await fetch(bpiUrl, { signal: AbortSignal.timeout(10000) });
@@ -223,7 +235,11 @@ async function checkBeautypi(): Promise<Record<string, ServiceStatus>> {
     };
     result["GuestKey"] = {
       status: data.guestkey ? "operational" : "down",
-      uptime: data.guestkey ? "active" : "stopped",
+      uptime: data.guestkey_last || (data.guestkey ? "active" : "stopped"),
+    };
+    result["WA Validator"] = {
+      status: data.wa_validator ? "operational" : "down",
+      uptime: data.wa_validator ? "running" : "stopped",
     };
 
     return result;
@@ -236,8 +252,8 @@ async function checkBeautypi(): Promise<Record<string, ServiceStatus>> {
 // Backup status check
 // ---------------------------------------------------------------------------
 async function checkBackup(): Promise<ServiceStatus> {
-  const waUrl = Deno.env.get("BEAUTYPI_WA_URL") ?? "";
-  const backupUrl = waUrl.replace(/\/api\/.*$/, "").replace(/:\d+$/, ":3201") + "/api/backup/status";
+  const bpiBase = Deno.env.get("BPI_STATUS_URL") || "http://172.22.0.1:3210";
+  const backupUrl = bpiBase.replace(/:\d+$/, ":3201") + "/api/backup/status";
   try {
     const res = await fetch(backupUrl, { signal: AbortSignal.timeout(5000) });
     if (!res.ok) return { status: "unknown", uptime: "check failed" };
@@ -255,10 +271,17 @@ async function checkBackup(): Promise<ServiceStatus> {
 // Handler
 // ---------------------------------------------------------------------------
 Deno.serve(async (req) => {
+  _req = req;
   // CORS preflight
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
+
+  // --- Redis cache (30 seconds) ---
+  try {
+    const cached = await cacheGet("health");
+    if (cached) return json(JSON.parse(cached));
+  } catch { /* cache miss or error — continue */ }
 
   const checkedAt = new Date().toISOString();
 
@@ -292,6 +315,10 @@ Deno.serve(async (req) => {
     const overall = computeOverall(allStatuses);
 
     const body: HealthResponse = { overall, services, checked_at: checkedAt };
+
+    // Cache health response for 30 seconds
+    cacheSet("health", JSON.stringify(body), 30).catch(() => {});
+
     return json(body);
   } catch (_) {
     // Always return 200 so the status page renders

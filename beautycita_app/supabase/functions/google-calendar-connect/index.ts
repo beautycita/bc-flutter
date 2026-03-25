@@ -16,12 +16,25 @@ const GOOGLE_CLIENT_SECRET = Deno.env.get("GOOGLE_CLIENT_SECRET") ?? "";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const DEFAULT_REDIRECT_URI = "https://beautycita.com/auth/google-calendar-callback";
 
+const ALLOWED_ORIGINS = [
+  "https://beautycita.com",
+  "https://www.beautycita.com",
+  "https://debug.beautycita.com",
+];
+
+function corsOrigin(req: Request): string {
+  const o = req.headers.get("origin") ?? "";
+  return ALLOWED_ORIGINS.includes(o) ? o : ALLOWED_ORIGINS[0];
+}
+
+let _req: Request;
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
       "Content-Type": "application/json",
-      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Origin": corsOrigin(_req),
       "Access-Control-Allow-Headers":
         "authorization, content-type, x-client-info, apikey",
     },
@@ -29,10 +42,11 @@ function json(body: unknown, status = 200) {
 }
 
 Deno.serve(async (req: Request) => {
+  _req = req;
   if (req.method === "OPTIONS") {
     return new Response(null, {
       headers: {
-        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Origin": corsOrigin(req),
         "Access-Control-Allow-Methods": "POST",
         "Access-Control-Allow-Headers":
           "authorization, content-type, x-client-info, apikey",

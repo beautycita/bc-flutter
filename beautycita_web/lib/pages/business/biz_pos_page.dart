@@ -5,8 +5,10 @@ import 'package:beautycita_core/models.dart' hide Provider;
 import 'package:beautycita_core/supabase.dart';
 
 import '../../config/breakpoints.dart';
+import '../../config/web_theme.dart';
 import '../../providers/business_portal_provider.dart';
 import '../../providers/demo_providers.dart';
+import '../../widgets/web_design_system.dart';
 
 // ── Providers ────────────────────────────────────────────────────────────────
 
@@ -107,65 +109,64 @@ class _PosOptInState extends ConsumerState<_PosOptIn> {
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 520),
-        child: Card(
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: BorderSide(color: colors.outlineVariant),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.storefront_outlined, size: 64,
-                    color: colors.primary.withValues(alpha: 0.6)),
-                const SizedBox(height: 20),
-                Text(
-                  'Punto de Venta',
-                  style: theme.textTheme.headlineSmall
-                      ?.copyWith(fontWeight: FontWeight.w700),
+        child: WebCard(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: kWebPrimary.withValues(alpha: 0.08),
+                  shape: BoxShape.circle,
                 ),
-                const SizedBox(height: 12),
-                Text(
-                  'Vende productos de belleza directamente desde tu perfil. '
-                  'Agrega tu catalogo, administra inventario y publica '
-                  'productos en el feed de inspiracion de BeautyCita.',
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: colors.onSurface.withValues(alpha: 0.6),
-                    height: 1.5,
-                  ),
+                child: const Icon(Icons.storefront_outlined, size: 40, color: kWebPrimary),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'Punto de Venta',
+                style: theme.textTheme.headlineSmall
+                    ?.copyWith(fontWeight: FontWeight.w700, color: kWebTextPrimary),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Vende productos de belleza directamente desde tu perfil. '
+                'Agrega tu catalogo, administra inventario y publica '
+                'productos en el feed de inspiracion de BeautyCita.',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: kWebTextSecondary,
+                  height: 1.5,
                 ),
-                const SizedBox(height: 8),
-                Text(
+              ),
+              const SizedBox(height: 8),
+              ShaderMask(
+                shaderCallback: (bounds) => kWebBrandGradient.createShader(bounds),
+                child: Text(
                   'Sin comisiones adicionales.',
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: colors.primary,
+                    color: Colors.white,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: 28),
-                if (!isDemo)
-                  FilledButton.icon(
-                    onPressed: _loading ? null : _activate,
-                    icon: _loading
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.white),
-                          )
-                        : const Icon(Icons.rocket_launch_outlined),
-                    label: const Text('Activar Punto de Venta'),
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 28, vertical: 16),
-                    ),
+              ),
+              const SizedBox(height: 28),
+              if (!isDemo)
+                WebGradientButton(
+                  onPressed: _loading ? null : _activate,
+                  isLoading: _loading,
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.rocket_launch_outlined, size: 18, color: Colors.white),
+                      SizedBox(width: 8),
+                      Text('Activar Punto de Venta'),
+                    ],
                   ),
-              ],
-            ),
+                ),
+            ],
           ),
         ),
       ),
@@ -208,17 +209,25 @@ class _PosContentState extends ConsumerState<_PosContent> {
               Row(
                 children: [
                   Expanded(
-                    child: Text(
-                      'Punto de Venta',
-                      style: theme.textTheme.headlineSmall
-                          ?.copyWith(fontWeight: FontWeight.w700),
+                    child: WebSectionHeader(
+                      label: 'Comercio',
+                      title: 'Punto de Venta',
+                      centered: false,
+                      titleSize: 28,
                     ),
                   ),
                   if (!isDemo)
-                    FilledButton.icon(
+                    WebGradientButton(
                       onPressed: () => _showProductDialog(context),
-                      icon: const Icon(Icons.add, size: 18),
-                      label: const Text('Agregar Producto'),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.add, size: 18, color: Colors.white),
+                          SizedBox(width: 6),
+                          Text('Agregar Producto'),
+                        ],
+                      ),
                     ),
                 ],
               ),
@@ -280,21 +289,27 @@ class _PosContentState extends ConsumerState<_PosContent> {
                         padding: const EdgeInsets.all(48),
                         child: Column(
                           children: [
-                            Icon(Icons.inventory_2_outlined,
-                                size: 48,
-                                color: colors.onSurface.withValues(alpha: 0.3)),
+                            Container(
+                              width: 64,
+                              height: 64,
+                              decoration: BoxDecoration(
+                                color: kWebPrimary.withValues(alpha: 0.06),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.inventory_2_outlined, size: 32, color: kWebTextHint),
+                            ),
                             const SizedBox(height: 12),
                             Text(
                               'Sin productos',
                               style: theme.textTheme.bodyMedium?.copyWith(
-                                color: colors.onSurface.withValues(alpha: 0.5),
+                                color: kWebTextHint,
                               ),
                             ),
                             const SizedBox(height: 8),
                             Text(
                               'Agrega tu primer producto para comenzar a vender.',
                               style: theme.textTheme.bodySmall?.copyWith(
-                                color: colors.onSurface.withValues(alpha: 0.4),
+                                color: kWebTextHint,
                               ),
                             ),
                           ],
@@ -519,14 +534,29 @@ class _StatChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.07),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.18)),
+        color: kWebSurface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: kWebCardBorder),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 22, color: color),
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, size: 18, color: color),
+          ),
           const SizedBox(width: 10),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -535,7 +565,7 @@ class _StatChip extends StatelessWidget {
               Text(
                 label,
                 style: theme.textTheme.labelSmall?.copyWith(
-                  color: colors.onSurface.withValues(alpha: 0.6),
+                  color: kWebTextSecondary,
                 ),
               ),
               Text(

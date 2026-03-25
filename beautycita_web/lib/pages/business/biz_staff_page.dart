@@ -7,9 +7,11 @@ import 'package:beautycita_core/theme.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show FileOptions;
 
 import '../../config/breakpoints.dart';
+import '../../config/web_theme.dart';
 import '../../providers/business_portal_provider.dart';
 import '../../providers/demo_providers.dart';
 import '../../widgets/aphrodite_copy_field.dart';
+import '../../widgets/web_design_system.dart';
 
 /// Selected staff for detail panel.
 final selectedStaffProvider = StateProvider<Map<String, dynamic>?>((ref) => null);
@@ -106,18 +108,25 @@ class _StaffList extends ConsumerWidget {
         Container(
           height: 56,
           padding: const EdgeInsets.symmetric(horizontal: 20),
-          decoration: BoxDecoration(border: Border(bottom: BorderSide(color: colors.outlineVariant))),
+          decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: kWebCardBorder))),
           child: Row(
             children: [
-              Text('Staff', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+              Text('Staff', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600, color: kWebTextPrimary)),
               const SizedBox(width: 8),
-              Chip(label: Text('${staff.length}'), visualDensity: VisualDensity.compact),
+              Chip(label: Text('${staff.length}'), visualDensity: VisualDensity.compact, side: const BorderSide(color: kWebCardBorder), backgroundColor: kWebSurface),
               const Spacer(),
               if (!isDemo)
-                ElevatedButton.icon(
+                WebGradientButton(
                   onPressed: () => _showAddStaffDialog(context, ref),
-                  icon: const Icon(Icons.add, size: 18),
-                  label: const Text('Agregar staff'),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.add, size: 18, color: Colors.white),
+                      SizedBox(width: 6),
+                      Text('Agregar staff'),
+                    ],
+                  ),
                 ),
             ],
           ),
@@ -134,9 +143,17 @@ class _StaffList extends ConsumerWidget {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.people_outlined, size: 48, color: colors.onSurface.withValues(alpha: 0.3)),
+                      Container(
+                        width: 64,
+                        height: 64,
+                        decoration: BoxDecoration(
+                          color: kWebPrimary.withValues(alpha: 0.06),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.people_outlined, size: 32, color: kWebTextHint),
+                      ),
                       const SizedBox(height: 12),
-                      Text('Sin staff registrado', style: theme.textTheme.bodyMedium?.copyWith(color: colors.onSurface.withValues(alpha: 0.5))),
+                      Text('Sin staff registrado', style: theme.textTheme.bodyMedium?.copyWith(color: kWebTextHint)),
                     ],
                   ),
                 )
@@ -190,13 +207,21 @@ class _CreateOwnerCardState extends ConsumerState<_CreateOwnerCard> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: colors.primary.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: colors.primary.withValues(alpha: 0.15)),
+        color: kWebPrimary.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: kWebPrimary.withValues(alpha: 0.15)),
       ),
       child: Row(
         children: [
-          Icon(Icons.person_add_outlined, size: 24, color: colors.primary),
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: kWebPrimary.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.person_add_outlined, size: 18, color: kWebPrimary),
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(

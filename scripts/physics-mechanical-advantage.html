@@ -1,0 +1,1686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mechanical Advantage - Interactive 3D Physics</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a0a1a;
+    color: #e0e0e0;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    overflow: hidden;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Tab bar */
+  #tab-bar {
+    display: flex;
+    background: #111128;
+    border-bottom: 1px solid #2a2a4a;
+    flex-shrink: 0;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+  .tab-btn {
+    padding: 12px 20px;
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 14px;
+    cursor: pointer;
+    white-space: nowrap;
+    border-bottom: 2px solid transparent;
+    transition: all 0.3s;
+  }
+  .tab-btn:hover { color: #bbb; background: #1a1a3a; }
+  .tab-btn.active { color: #7df; border-bottom-color: #7df; }
+
+  /* Main layout */
+  #main-area {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+  }
+
+  /* Left panel */
+  #left-panel {
+    width: 300px;
+    flex-shrink: 0;
+    background: #0e0e24;
+    border-right: 1px solid #2a2a4a;
+    overflow-y: auto;
+    padding: 16px;
+    scrollbar-width: thin;
+  }
+  #left-panel h3 {
+    color: #7df;
+    margin-bottom: 12px;
+    font-size: 16px;
+  }
+  .control-group {
+    margin-bottom: 16px;
+  }
+  .control-group label {
+    display: block;
+    font-size: 13px;
+    color: #aaa;
+    margin-bottom: 4px;
+  }
+  .control-group input[type="range"] {
+    width: 100%;
+    accent-color: #7df;
+  }
+  .control-group .val {
+    text-align: right;
+    font-size: 12px;
+    color: #7df;
+  }
+  .control-group select {
+    width: 100%;
+    padding: 6px 8px;
+    background: #1a1a3a;
+    color: #e0e0e0;
+    border: 1px solid #3a3a5a;
+    border-radius: 4px;
+    font-size: 13px;
+  }
+  .control-group button {
+    padding: 6px 14px;
+    background: #2a2a5a;
+    color: #e0e0e0;
+    border: 1px solid #4a4a7a;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    margin-right: 4px;
+    margin-bottom: 4px;
+    transition: background 0.2s;
+  }
+  .control-group button:hover { background: #3a3a7a; }
+  .control-group button.active { background: #4a4a9a; border-color: #7df; }
+
+  .real-world {
+    background: #141430;
+    border: 1px solid #2a2a4a;
+    border-radius: 6px;
+    padding: 12px;
+    margin-top: 12px;
+  }
+  .real-world h4 { color: #f7a; font-size: 13px; margin-bottom: 6px; }
+  .real-world p { font-size: 12px; line-height: 1.5; color: #bbb; }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* 3D viewport */
+  #viewport {
+    flex: 1;
+    position: relative;
+    min-width: 0;
+  }
+  #viewport canvas { display: block; }
+
+  /* Bottom panel */
+  #bottom-panel {
+    height: 100px;
+    flex-shrink: 0;
+    background: #0e0e24;
+    border-top: 1px solid #2a2a4a;
+    padding: 12px 20px;
+    display: flex;
+    gap: 40px;
+    overflow-x: auto;
+  }
+  .data-item {
+    display: flex;
+    flex-direction: column;
+    min-width: 120px;
+  }
+  .data-item .data-label {
+    font-size: 11px;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .data-item .data-value {
+    font-size: 24px;
+    color: #7df;
+    font-weight: 600;
+    margin-top: 4px;
+  }
+  .data-item .data-unit {
+    font-size: 12px;
+    color: #aaa;
+  }
+  #explanation-text {
+    flex: 1;
+    font-size: 13px;
+    line-height: 1.6;
+    color: #bbb;
+    max-width: 500px;
+    overflow-y: auto;
+  }
+
+  /* Mobile responsive */
+  @media (max-width: 900px) {
+    #main-area { flex-direction: column; }
+    #left-panel { width: 100%; height: auto; max-height: 200px; border-right: none; border-bottom: 1px solid #2a2a4a; }
+    #bottom-panel { height: auto; min-height: 80px; flex-wrap: wrap; gap: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="tab-bar">
+  <button class="tab-btn active" data-tab="inclined">Inclined Plane</button>
+  <button class="tab-btn" data-tab="levers">Levers</button>
+  <button class="tab-btn" data-tab="gears">Gears</button>
+  <button class="tab-btn" data-tab="pulleys">Pulleys</button>
+  <button class="tab-btn" data-tab="buoyancy">Buoyancy</button>
+  <button class="tab-btn" data-tab="density">Density</button>
+  <button class="tab-btn" data-tab="wedge">Wedge</button>
+  <button class="tab-btn" data-tab="screw">Screw</button>
+  <button class="tab-btn" data-tab="wheelaxle">Wheel &amp; Axle</button>
+</div>
+
+<div id="main-area">
+  <div id="left-panel">
+    <!-- Inclined Plane controls -->
+    <div class="tab-content active" id="ctrl-inclined">
+      <h3>Inclined Plane</h3>
+      <div class="control-group">
+        <label>Ramp Angle: <span id="ramp-angle-val">30</span>&deg;</label>
+        <input type="range" id="ramp-angle" min="5" max="60" value="30" step="1">
+      </div>
+      <div class="control-group">
+        <label>Load Weight: <span id="ramp-load-val">100</span> N</label>
+        <input type="range" id="ramp-load" min="10" max="500" value="100" step="10">
+      </div>
+      <div class="control-group">
+        <label>Show Force Vectors</label>
+        <button id="ramp-vectors-btn" class="active" onclick="toggleRampVectors()">Visible</button>
+      </div>
+      <div class="real-world">
+        <h4>Real World Applications</h4>
+        <p>Wheelchair ramps, loading docks, mountain roads/switchbacks, slides, conveyor belts, and stairs. A longer, gentler ramp requires less force to move an object upward.</p>
+      </div>
+    </div>
+
+    <!-- Lever controls -->
+    <div class="tab-content" id="ctrl-levers">
+      <h3>Levers</h3>
+      <div class="control-group">
+        <label>Class:</label>
+        <button class="lever-class-btn active" data-class="1">Class 1</button>
+        <button class="lever-class-btn" data-class="2">Class 2</button>
+        <button class="lever-class-btn" data-class="3">Class 3</button>
+      </div>
+      <div class="control-group">
+        <label>Fulcrum Position: <span id="fulcrum-pos-val">50</span>%</label>
+        <input type="range" id="fulcrum-pos" min="10" max="90" value="50" step="1">
+      </div>
+      <div class="control-group">
+        <label>Effort Force: <span id="lever-effort-val">50</span> N</label>
+        <input type="range" id="lever-effort" min="10" max="200" value="50" step="5">
+      </div>
+      <div class="control-group">
+        <label>Load Weight: <span id="lever-load-val">100</span> N</label>
+        <input type="range" id="lever-load" min="10" max="500" value="100" step="10">
+      </div>
+      <div class="real-world" id="lever-real-world">
+        <h4>Real World Applications</h4>
+        <p><b>Class 1:</b> Seesaw, crowbar, scissors, pliers.<br>
+        <b>Class 2:</b> Wheelbarrow, nutcracker, bottle opener.<br>
+        <b>Class 3:</b> Fishing rod, tweezers, human forearm.</p>
+      </div>
+    </div>
+
+    <!-- Gear controls -->
+    <div class="tab-content" id="ctrl-gears">
+      <h3>Gears</h3>
+      <div class="control-group">
+        <label>Drive Gear Teeth: <span id="gear-drive-val">16</span></label>
+        <input type="range" id="gear-drive" min="8" max="40" value="16" step="1">
+      </div>
+      <div class="control-group">
+        <label>Driven Gear Teeth: <span id="gear-driven-val">32</span></label>
+        <input type="range" id="gear-driven" min="8" max="40" value="32" step="1">
+      </div>
+      <div class="control-group">
+        <label>Drive Speed: <span id="gear-speed-val">2.0</span> RPM</label>
+        <input type="range" id="gear-speed" min="0.5" max="5" value="2" step="0.1">
+      </div>
+      <div class="control-group">
+        <label>Idler Gear:</label>
+        <button id="idler-btn" onclick="toggleIdler()">Off</button>
+      </div>
+      <div class="real-world">
+        <h4>Real World Applications</h4>
+        <p>Bicycle gears, clock mechanisms, car transmissions, windmills, industrial machinery. Gears trade speed for torque or vice versa.</p>
+      </div>
+    </div>
+
+    <!-- Pulley controls -->
+    <div class="tab-content" id="ctrl-pulleys">
+      <h3>Pulleys</h3>
+      <div class="control-group">
+        <label>Configuration:</label>
+        <select id="pulley-config">
+          <option value="1">Single Fixed Pulley</option>
+          <option value="2">Single Moveable Pulley</option>
+          <option value="3">Compound (2 pulleys)</option>
+          <option value="4">Compound (3 pulleys)</option>
+          <option value="5">Compound (4 pulleys)</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label>Load Weight: <span id="pulley-load-val">100</span> N</label>
+        <input type="range" id="pulley-load" min="10" max="500" value="100" step="10">
+      </div>
+      <div class="control-group">
+        <label>Lift/Lower:</label>
+        <input type="range" id="pulley-lift" min="0" max="100" value="0" step="1">
+      </div>
+      <div class="real-world">
+        <h4>Real World Applications</h4>
+        <p>Elevators, cranes, flagpoles, sailing rigging, rock climbing, window blinds. More pulleys = less effort but more rope to pull.</p>
+      </div>
+    </div>
+
+    <!-- Buoyancy controls -->
+    <div class="tab-content" id="ctrl-buoyancy">
+      <h3>Buoyancy</h3>
+      <div class="control-group">
+        <label>Object Material:</label>
+        <select id="buoy-material">
+          <option value="wood">Wood (600 kg/m3)</option>
+          <option value="ice">Ice (917 kg/m3)</option>
+          <option value="steel">Steel (7800 kg/m3)</option>
+          <option value="balloon">Air Balloon (1.2 kg/m3)</option>
+          <option value="custom">Custom</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label>Object Density: <span id="buoy-density-val">600</span> kg/m3</label>
+        <input type="range" id="buoy-density" min="1" max="10000" value="600" step="10">
+      </div>
+      <div class="control-group">
+        <label>Object Size: <span id="buoy-size-val">1.0</span></label>
+        <input type="range" id="buoy-size" min="0.3" max="2" value="1" step="0.1">
+      </div>
+      <div class="real-world">
+        <h4>Real World Applications</h4>
+        <p>Ships float because their average density (hull + air) is less than water. Submarines control ballast tanks. Hot air balloons use heated air (lower density than surrounding air).</p>
+      </div>
+    </div>
+
+    <!-- Density controls -->
+    <div class="tab-content" id="ctrl-density">
+      <h3>Density Layers</h3>
+      <div class="control-group">
+        <label>Drop Object:</label>
+        <select id="density-object">
+          <option value="cork">Cork (120 kg/m3)</option>
+          <option value="plastic">Plastic (950 kg/m3)</option>
+          <option value="rubber">Rubber (1100 kg/m3)</option>
+          <option value="glass">Glass Marble (2500 kg/m3)</option>
+          <option value="steel">Steel Ball (7800 kg/m3)</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <button onclick="dropDensityObject()">Drop Object</button>
+        <button onclick="resetDensityObjects()">Reset All</button>
+      </div>
+      <div class="control-group">
+        <label>Liquids (top to bottom):</label>
+        <p style="font-size:12px; color:#aaa; margin-top:4px;">
+          Oil: 800 kg/m3 (yellow)<br>
+          Water: 1000 kg/m3 (blue)<br>
+          Honey: 1400 kg/m3 (amber)
+        </p>
+      </div>
+      <div class="real-world">
+        <h4>Real World Applications</h4>
+        <p>Oil spills float on water. Blood tests use density gradients to separate components. Geological layers form by density. Lava lamps use density differences.</p>
+      </div>
+    </div>
+
+    <!-- Wedge controls -->
+    <div class="tab-content" id="ctrl-wedge">
+      <h3>Wedge</h3>
+      <div class="control-group">
+        <label>Wedge Angle: <span id="wedge-angle-val">20</span>&deg;</label>
+        <input type="range" id="wedge-angle" min="5" max="60" value="20" step="1">
+      </div>
+      <div class="control-group">
+        <label>Applied Force: <span id="wedge-force-val">100</span> N</label>
+        <input type="range" id="wedge-force" min="10" max="500" value="100" step="10">
+      </div>
+      <div class="control-group">
+        <label>Push Wedge:</label>
+        <input type="range" id="wedge-push" min="0" max="100" value="0" step="1">
+      </div>
+      <div class="real-world">
+        <h4>Real World Applications</h4>
+        <p>Axes, knives, chisels, door stops, nails, plows. A thinner wedge has higher MA, splitting with less force over a longer distance. Essentially a moving inclined plane.</p>
+      </div>
+    </div>
+
+    <!-- Screw controls -->
+    <div class="tab-content" id="ctrl-screw">
+      <h3>Screw</h3>
+      <div class="control-group">
+        <label>Thread Pitch: <span id="screw-pitch-val">5</span> mm</label>
+        <input type="range" id="screw-pitch" min="1" max="20" value="5" step="0.5">
+      </div>
+      <div class="control-group">
+        <label>Handle Radius: <span id="screw-radius-val">50</span> mm</label>
+        <input type="range" id="screw-radius" min="10" max="150" value="50" step="5">
+      </div>
+      <div class="control-group">
+        <label>Rotate (turns): <span id="screw-turns-val">0</span></label>
+        <input type="range" id="screw-turns" min="0" max="10" value="0" step="0.1">
+      </div>
+      <div class="real-world">
+        <h4>Real World Applications</h4>
+        <p>Wood screws, bolts, jar lids, car jacks, Archimedes screw (water pump), vises, drill bits. A screw is an inclined plane wrapped around a cylinder.</p>
+      </div>
+    </div>
+
+    <!-- Wheel & Axle controls -->
+    <div class="tab-content" id="ctrl-wheelaxle">
+      <h3>Wheel &amp; Axle</h3>
+      <div class="control-group">
+        <label>Wheel Radius: <span id="wa-wheel-val">3.0</span></label>
+        <input type="range" id="wa-wheel" min="1" max="5" value="3" step="0.1">
+      </div>
+      <div class="control-group">
+        <label>Axle Radius: <span id="wa-axle-val">0.5</span></label>
+        <input type="range" id="wa-axle" min="0.2" max="2" value="0.5" step="0.1">
+      </div>
+      <div class="control-group">
+        <label>Applied Force: <span id="wa-force-val">50</span> N</label>
+        <input type="range" id="wa-force" min="10" max="200" value="50" step="5">
+      </div>
+      <div class="control-group">
+        <label>Spin:</label>
+        <input type="range" id="wa-spin" min="0" max="5" value="1" step="0.1">
+      </div>
+      <div class="real-world">
+        <h4>Real World Applications</h4>
+        <p>Steering wheels, door knobs, screwdrivers, ferris wheels, windlass (well crank), bicycle wheels. Force applied at the wheel's edge is multiplied at the axle.</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="viewport"></div>
+</div>
+
+<div id="bottom-panel">
+  <div class="data-item">
+    <span class="data-label">Mech. Advantage</span>
+    <span class="data-value" id="d-ma">2.00</span>
+    <span class="data-unit" id="d-ma-unit">ratio</span>
+  </div>
+  <div class="data-item">
+    <span class="data-label">Effort Force</span>
+    <span class="data-value" id="d-effort">50.0</span>
+    <span class="data-unit">N</span>
+  </div>
+  <div class="data-item">
+    <span class="data-label">Load / Output</span>
+    <span class="data-value" id="d-load">100.0</span>
+    <span class="data-unit" id="d-load-unit">N</span>
+  </div>
+  <div id="explanation-text"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ===================== OrbitControls inline (r128) =====================
+// Minimal OrbitControls implementation
+(function(){
+  const _changeEvent = { type: 'change' };
+  const STATE = { NONE: -1, ROTATE: 0, DOLLY: 1, PAN: 2, TOUCH_ROTATE: 3, TOUCH_PAN: 4, TOUCH_DOLLY_PAN: 5 };
+  class OrbitControls extends THREE.EventDispatcher {
+    constructor(object, domElement) {
+      super();
+      this.object = object;
+      this.domElement = domElement;
+      this.enabled = true;
+      this.target = new THREE.Vector3();
+      this.minDistance = 0;
+      this.maxDistance = Infinity;
+      this.minPolarAngle = 0;
+      this.maxPolarAngle = Math.PI;
+      this.enableDamping = true;
+      this.dampingFactor = 0.08;
+      this.enableZoom = true;
+      this.zoomSpeed = 1.0;
+      this.enableRotate = true;
+      this.rotateSpeed = 0.8;
+      this.enablePan = true;
+      this.panSpeed = 1.0;
+
+      const scope = this;
+      const spherical = new THREE.Spherical();
+      const sphericalDelta = new THREE.Spherical();
+      const panOffset = new THREE.Vector3();
+      let scale = 1;
+      let state = STATE.NONE;
+      const rotateStart = new THREE.Vector2();
+      const rotateEnd = new THREE.Vector2();
+      const panStart = new THREE.Vector2();
+      const panEnd = new THREE.Vector2();
+
+      this.update = function() {
+        const offset = new THREE.Vector3();
+        const position = scope.object.position;
+        offset.copy(position).sub(scope.target);
+        spherical.setFromVector3(offset);
+        spherical.theta += sphericalDelta.theta;
+        spherical.phi += sphericalDelta.phi;
+        spherical.phi = Math.max(scope.minPolarAngle, Math.min(scope.maxPolarAngle, spherical.phi));
+        spherical.radius = offset.length() * scale;
+        spherical.radius = Math.max(scope.minDistance, Math.min(scope.maxDistance, spherical.radius));
+        scope.target.add(panOffset);
+        offset.setFromSpherical(spherical);
+        position.copy(scope.target).add(offset);
+        scope.object.lookAt(scope.target);
+        if (scope.enableDamping) {
+          sphericalDelta.theta *= (1 - scope.dampingFactor);
+          sphericalDelta.phi *= (1 - scope.dampingFactor);
+        } else {
+          sphericalDelta.set(0, 0, 0);
+        }
+        panOffset.set(0, 0, 0);
+        scale = 1;
+        return false;
+      };
+
+      function onMouseDown(event) {
+        if (!scope.enabled) return;
+        event.preventDefault();
+        if (event.button === 0) {
+          state = STATE.ROTATE;
+          rotateStart.set(event.clientX, event.clientY);
+        } else if (event.button === 1) {
+          state = STATE.DOLLY;
+        } else if (event.button === 2) {
+          state = STATE.PAN;
+          panStart.set(event.clientX, event.clientY);
+        }
+        document.addEventListener('mousemove', onMouseMove, false);
+        document.addEventListener('mouseup', onMouseUp, false);
+      }
+      function onMouseMove(event) {
+        if (!scope.enabled) return;
+        if (state === STATE.ROTATE) {
+          rotateEnd.set(event.clientX, event.clientY);
+          const el = scope.domElement;
+          sphericalDelta.theta -= 2 * Math.PI * (rotateEnd.x - rotateStart.x) / el.clientHeight * scope.rotateSpeed;
+          sphericalDelta.phi -= 2 * Math.PI * (rotateEnd.y - rotateStart.y) / el.clientHeight * scope.rotateSpeed;
+          rotateStart.copy(rotateEnd);
+        } else if (state === STATE.PAN) {
+          panEnd.set(event.clientX, event.clientY);
+          const offset = new THREE.Vector3();
+          offset.copy(scope.object.position).sub(scope.target);
+          let targetDistance = offset.length() * Math.tan((scope.object.fov / 2) * Math.PI / 180);
+          const el = scope.domElement;
+          const dx = (panEnd.x - panStart.x) * 2 * targetDistance / el.clientHeight * scope.panSpeed;
+          const dy = (panEnd.y - panStart.y) * 2 * targetDistance / el.clientHeight * scope.panSpeed;
+          const v = new THREE.Vector3();
+          v.setFromMatrixColumn(scope.object.matrix, 0);
+          panOffset.addScaledVector(v, -dx);
+          v.setFromMatrixColumn(scope.object.matrix, 1);
+          panOffset.addScaledVector(v, dy);
+          panStart.copy(panEnd);
+        }
+      }
+      function onMouseUp() {
+        state = STATE.NONE;
+        document.removeEventListener('mousemove', onMouseMove, false);
+        document.removeEventListener('mouseup', onMouseUp, false);
+      }
+      function onWheel(event) {
+        if (!scope.enabled || !scope.enableZoom) return;
+        event.preventDefault();
+        if (event.deltaY < 0) scale /= Math.pow(0.95, scope.zoomSpeed);
+        else scale *= Math.pow(0.95, scope.zoomSpeed);
+      }
+      function onTouchStart(event) {
+        if (!scope.enabled) return;
+        if (event.touches.length === 1) {
+          state = STATE.TOUCH_ROTATE;
+          rotateStart.set(event.touches[0].pageX, event.touches[0].pageY);
+        } else if (event.touches.length === 2) {
+          state = STATE.TOUCH_DOLLY_PAN;
+          const dx = event.touches[0].pageX - event.touches[1].pageX;
+          const dy = event.touches[0].pageY - event.touches[1].pageY;
+          scope._dollyStart = Math.sqrt(dx*dx + dy*dy);
+        }
+      }
+      function onTouchMove(event) {
+        if (!scope.enabled) return;
+        event.preventDefault();
+        if (state === STATE.TOUCH_ROTATE && event.touches.length === 1) {
+          rotateEnd.set(event.touches[0].pageX, event.touches[0].pageY);
+          const el = scope.domElement;
+          sphericalDelta.theta -= 2 * Math.PI * (rotateEnd.x - rotateStart.x) / el.clientHeight * scope.rotateSpeed;
+          sphericalDelta.phi -= 2 * Math.PI * (rotateEnd.y - rotateStart.y) / el.clientHeight * scope.rotateSpeed;
+          rotateStart.copy(rotateEnd);
+        } else if (state === STATE.TOUCH_DOLLY_PAN && event.touches.length === 2) {
+          const dx = event.touches[0].pageX - event.touches[1].pageX;
+          const dy = event.touches[0].pageY - event.touches[1].pageY;
+          const dist = Math.sqrt(dx*dx + dy*dy);
+          if (dist > scope._dollyStart) scale /= Math.pow(0.95, scope.zoomSpeed);
+          else scale *= Math.pow(0.95, scope.zoomSpeed);
+          scope._dollyStart = dist;
+        }
+      }
+      function onTouchEnd() { state = STATE.NONE; }
+      function onContextMenu(e) { e.preventDefault(); }
+      domElement.addEventListener('mousedown', onMouseDown, false);
+      domElement.addEventListener('wheel', onWheel, { passive: false });
+      domElement.addEventListener('touchstart', onTouchStart, { passive: false });
+      domElement.addEventListener('touchmove', onTouchMove, { passive: false });
+      domElement.addEventListener('touchend', onTouchEnd, false);
+      domElement.addEventListener('contextmenu', onContextMenu, false);
+      this.update();
+    }
+  }
+  THREE.OrbitControls = OrbitControls;
+})();
+
+// ===================== Scene Setup =====================
+const viewport = document.getElementById('viewport');
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setClearColor(0x0a0a1a);
+viewport.appendChild(renderer.domElement);
+
+const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
+camera.position.set(8, 6, 10);
+
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 1, 0);
+
+let currentScene = null;
+let currentTab = 'inclined';
+
+// Shared materials
+const matGray = new THREE.MeshPhongMaterial({ color: 0x888888 });
+const matRed = new THREE.MeshPhongMaterial({ color: 0xff4444 });
+const matGreen = new THREE.MeshPhongMaterial({ color: 0x44ff44 });
+const matBlue = new THREE.MeshPhongMaterial({ color: 0x4488ff });
+const matYellow = new THREE.MeshPhongMaterial({ color: 0xffcc00 });
+const matOrange = new THREE.MeshPhongMaterial({ color: 0xff8800 });
+const matWhite = new THREE.MeshPhongMaterial({ color: 0xffffff });
+const matDark = new THREE.MeshPhongMaterial({ color: 0x333333 });
+const matWater = new THREE.MeshPhongMaterial({ color: 0x2266cc, transparent: true, opacity: 0.4 });
+const matOil = new THREE.MeshPhongMaterial({ color: 0xccaa00, transparent: true, opacity: 0.35 });
+const matHoney = new THREE.MeshPhongMaterial({ color: 0xcc7700, transparent: true, opacity: 0.45 });
+
+function makeScene() {
+  const scene = new THREE.Scene();
+  scene.add(new THREE.AmbientLight(0x404060, 0.6));
+  const dl = new THREE.DirectionalLight(0xffffff, 0.8);
+  dl.position.set(5, 10, 7);
+  scene.add(dl);
+  const dl2 = new THREE.DirectionalLight(0x8888ff, 0.3);
+  dl2.position.set(-5, 5, -3);
+  scene.add(dl2);
+  // grid
+  const grid = new THREE.GridHelper(20, 20, 0x1a1a3a, 0x1a1a3a);
+  scene.add(grid);
+  return scene;
+}
+
+function makeArrow(dir, origin, length, color) {
+  return new THREE.ArrowHelper(dir.normalize(), origin, length, color, length*0.2, length*0.1);
+}
+
+function resize() {
+  const w = viewport.clientWidth, h = viewport.clientHeight;
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+}
+window.addEventListener('resize', resize);
+
+// ===================== Data display helpers =====================
+const dMA = document.getElementById('d-ma');
+const dEffort = document.getElementById('d-effort');
+const dLoad = document.getElementById('d-load');
+const dMAUnit = document.getElementById('d-ma-unit');
+const dLoadUnit = document.getElementById('d-load-unit');
+const explText = document.getElementById('explanation-text');
+
+function setData(ma, effort, load, explanation, maUnit, loadUnit) {
+  dMA.textContent = typeof ma === 'number' ? ma.toFixed(2) : ma;
+  dEffort.textContent = typeof effort === 'number' ? effort.toFixed(1) : effort;
+  dLoad.textContent = typeof load === 'number' ? load.toFixed(1) : load;
+  dMAUnit.textContent = maUnit || 'ratio';
+  dLoadUnit.textContent = loadUnit || 'N';
+  explText.textContent = explanation || '';
+}
+
+// ===================== INCLINED PLANE =====================
+let rampScene, rampGroup, rampMesh, rampBox, rampArrows = [];
+let showRampVectors = true;
+
+function buildInclinedPlane() {
+  const scene = makeScene();
+  rampGroup = new THREE.Group();
+  scene.add(rampGroup);
+  updateInclinedPlane(scene);
+  return scene;
+}
+
+function updateInclinedPlane(scene) {
+  if (rampGroup) { while(rampGroup.children.length) rampGroup.remove(rampGroup.children[0]); }
+  rampArrows = [];
+  const angleDeg = parseFloat(document.getElementById('ramp-angle').value);
+  const load = parseFloat(document.getElementById('ramp-load').value);
+  const angleRad = angleDeg * Math.PI / 180;
+  const rampLen = 6;
+  const rampH = rampLen * Math.sin(angleRad);
+  const rampBase = rampLen * Math.cos(angleRad);
+
+  // Ramp shape
+  const shape = new THREE.Shape();
+  shape.moveTo(0, 0);
+  shape.lineTo(rampBase, 0);
+  shape.lineTo(rampBase, rampH);
+  shape.closePath();
+  const extrudeSettings = { depth: 2, bevelEnabled: false };
+  const geo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+  const ramp = new THREE.Mesh(geo, new THREE.MeshPhongMaterial({ color: 0x556677 }));
+  ramp.position.set(-rampBase/2, 0, -1);
+  rampGroup.add(ramp);
+
+  // Box on ramp
+  const boxSize = 0.6;
+  const boxGeo = new THREE.BoxGeometry(boxSize, boxSize, boxSize);
+  const box = new THREE.Mesh(boxGeo, matOrange);
+  const distAlongRamp = rampLen * 0.4;
+  const bx = -rampBase/2 + distAlongRamp * Math.cos(angleRad);
+  const by = distAlongRamp * Math.sin(angleRad) + boxSize/2 * Math.cos(angleRad);
+  box.position.set(bx, by, 0);
+  box.rotation.z = angleRad;
+  rampGroup.add(box);
+
+  // Force vectors
+  if (showRampVectors) {
+    // Weight (down)
+    const wArr = makeArrow(new THREE.Vector3(0, -1, 0), new THREE.Vector3(bx, by, 0), 2, 0xff4444);
+    rampGroup.add(wArr);
+    rampArrows.push(wArr);
+    // Normal force (perpendicular to ramp surface, pointing away)
+    const nx = -Math.sin(angleRad), ny = Math.cos(angleRad);
+    const normalLen = 1.5 * Math.cos(angleRad);
+    const nArr = makeArrow(new THREE.Vector3(nx, ny, 0), new THREE.Vector3(bx, by, 0), normalLen, 0x44ff44);
+    rampGroup.add(nArr);
+    rampArrows.push(nArr);
+    // Effort force (along ramp upward)
+    const ex = Math.cos(angleRad), ey = Math.sin(angleRad);
+    const effortForce = load * Math.sin(angleRad);
+    const effortLen = 1.5;
+    const eArr = makeArrow(new THREE.Vector3(ex, ey, 0), new THREE.Vector3(bx, by, 0), effortLen, 0x4488ff);
+    rampGroup.add(eArr);
+    rampArrows.push(eArr);
+  }
+
+  // MA
+  const ma = 1 / Math.sin(angleRad);
+  const effort = load / ma;
+  document.getElementById('ramp-angle-val').textContent = angleDeg;
+  document.getElementById('ramp-load-val').textContent = load;
+  setData(ma, effort, load,
+    `At ${angleDeg} degrees, the ramp is ${(rampLen/Math.sin(angleRad)*Math.sin(angleRad)).toFixed(1)} units long with height ${rampH.toFixed(1)}. MA = length/height = 1/sin(angle) = ${ma.toFixed(2)}. You need only ${effort.toFixed(1)} N to push a ${load} N load up the ramp.`
+  );
+}
+
+function toggleRampVectors() {
+  showRampVectors = !showRampVectors;
+  const btn = document.getElementById('ramp-vectors-btn');
+  btn.textContent = showRampVectors ? 'Visible' : 'Hidden';
+  btn.classList.toggle('active', showRampVectors);
+  updateInclinedPlane();
+}
+
+// ===================== LEVERS =====================
+let leverScene, leverGroup, leverClass = 1;
+
+function buildLevers() {
+  const scene = makeScene();
+  leverGroup = new THREE.Group();
+  scene.add(leverGroup);
+  updateLevers();
+  return scene;
+}
+
+function updateLevers() {
+  if (!leverGroup) return;
+  while(leverGroup.children.length) leverGroup.remove(leverGroup.children[0]);
+
+  const fulcrumPct = parseFloat(document.getElementById('fulcrum-pos').value) / 100;
+  const effortForce = parseFloat(document.getElementById('lever-effort').value);
+  const loadWeight = parseFloat(document.getElementById('lever-load').value);
+  document.getElementById('fulcrum-pos-val').textContent = Math.round(fulcrumPct*100);
+  document.getElementById('lever-effort-val').textContent = effortForce;
+  document.getElementById('lever-load-val').textContent = loadWeight;
+
+  const beamLen = 8;
+  const beamH = 0.15;
+
+  // Fulcrum triangle
+  const fulcrumGeo = new THREE.ConeGeometry(0.4, 0.8, 4);
+  const fulcrum = new THREE.Mesh(fulcrumGeo, matYellow);
+
+  // Beam
+  const beamGeo = new THREE.BoxGeometry(beamLen, beamH, 0.6);
+  const beam = new THREE.Mesh(beamGeo, new THREE.MeshPhongMaterial({ color: 0x886644 }));
+
+  let effortPos, loadPos, fulcrumX;
+
+  if (leverClass === 1) {
+    // Class 1: F in middle, E on left, L on right
+    fulcrumX = -beamLen/2 + fulcrumPct * beamLen;
+    effortPos = -beamLen/2;
+    loadPos = beamLen/2;
+  } else if (leverClass === 2) {
+    // Class 2: F on left end, L in middle, E on right
+    fulcrumX = -beamLen/2;
+    loadPos = -beamLen/2 + fulcrumPct * beamLen;
+    effortPos = beamLen/2;
+  } else {
+    // Class 3: F on left end, E in middle, L on right
+    fulcrumX = -beamLen/2;
+    effortPos = -beamLen/2 + fulcrumPct * beamLen;
+    loadPos = beamLen/2;
+  }
+
+  // Compute tilt based on balance
+  const dEffort = Math.abs(effortPos - fulcrumX);
+  const dLoad = Math.abs(loadPos - fulcrumX);
+  const torqueEffort = effortForce * dEffort;
+  const torqueLoad = loadWeight * dLoad;
+  const netTorque = torqueEffort - torqueLoad;
+  const tiltAngle = Math.max(-0.15, Math.min(0.15, netTorque * 0.002));
+
+  fulcrum.position.set(fulcrumX, 0.4, 0);
+  leverGroup.add(fulcrum);
+
+  beam.position.set(fulcrumX, 0.8 + beamH/2, 0);
+  beam.rotation.z = -tiltAngle; // negative so positive torque tilts load side down
+  // Adjust beam so it pivots at fulcrum
+  const pivotGroup = new THREE.Group();
+  pivotGroup.position.set(fulcrumX, 0.8 + beamH/2, 0);
+  const beamInner = new THREE.Mesh(beamGeo, new THREE.MeshPhongMaterial({ color: 0x886644 }));
+  beamInner.position.set(-fulcrumX, 0, 0); // offset so fulcrum is pivot
+  pivotGroup.add(beamInner);
+  pivotGroup.rotation.z = -tiltAngle;
+  leverGroup.add(pivotGroup);
+
+  // Effort weight
+  const eWGeo = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+  const eW = new THREE.Mesh(eWGeo, matBlue);
+  const ePosWorld = new THREE.Vector3(effortPos - fulcrumX, 0.25 + beamH, 0);
+  ePosWorld.applyAxisAngle(new THREE.Vector3(0,0,1), -tiltAngle);
+  eW.position.copy(ePosWorld).add(new THREE.Vector3(fulcrumX, 0.8 + beamH/2, 0));
+  // Simpler: place on beam
+  const eBlock = new THREE.Mesh(eWGeo, matBlue);
+  eBlock.position.set(effortPos - fulcrumX, beamH/2 + 0.25, 0);
+  pivotGroup.add(eBlock);
+
+  // Load weight
+  const lBlock = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.6), matRed);
+  lBlock.position.set(loadPos - fulcrumX, beamH/2 + 0.3, 0);
+  pivotGroup.add(lBlock);
+
+  // Fulcrum label marker
+  const fMarker = new THREE.Mesh(new THREE.SphereGeometry(0.15), matYellow);
+  fMarker.position.set(0, beamH/2 - 0.1, 0);
+  pivotGroup.add(fMarker);
+
+  // Force arrows
+  const eArrowOrigin = new THREE.Vector3(effortPos - fulcrumX, beamH/2 + 0.6, 0.5);
+  eArrowOrigin.applyAxisAngle(new THREE.Vector3(0,0,1), -tiltAngle);
+  eArrowOrigin.add(new THREE.Vector3(fulcrumX, 0.8 + beamH/2, 0));
+  const eArr = makeArrow(new THREE.Vector3(0, -1, 0), eArrowOrigin, 1.2, 0x4488ff);
+  leverGroup.add(eArr);
+
+  const lArrowOrigin = new THREE.Vector3(loadPos - fulcrumX, beamH/2 + 0.8, 0.5);
+  lArrowOrigin.applyAxisAngle(new THREE.Vector3(0,0,1), -tiltAngle);
+  lArrowOrigin.add(new THREE.Vector3(fulcrumX, 0.8 + beamH/2, 0));
+  const lArr = makeArrow(new THREE.Vector3(0, -1, 0), lArrowOrigin, 1.5, 0xff4444);
+  leverGroup.add(lArr);
+
+  // MA
+  let ma;
+  if (leverClass === 1) {
+    ma = dLoad > 0.001 ? dEffort / dLoad : Infinity;
+  } else if (leverClass === 2) {
+    ma = dLoad > 0.001 ? (dEffort + dLoad) / dEffort : 1; // total / effort arm wait no
+    // Class 2: MA = distance(fulcrum to effort) / distance(fulcrum to load)
+    ma = dLoad > 0.001 ? dEffort / dLoad : Infinity;
+  } else {
+    ma = dLoad > 0.001 ? dEffort / dLoad : Infinity;
+  }
+  const actualEffort = ma > 0 ? loadWeight / ma : loadWeight;
+
+  const classNames = {1: 'Class 1 (seesaw/crowbar)', 2: 'Class 2 (wheelbarrow)', 3: 'Class 3 (fishing rod)'};
+  setData(ma, actualEffort, loadWeight,
+    `${classNames[leverClass]}: Effort arm = ${dEffort.toFixed(1)}, Load arm = ${dLoad.toFixed(1)}. MA = effort arm / load arm = ${ma.toFixed(2)}. ${ma >= 1 ? 'Force multiplier: less effort needed.' : 'Speed multiplier: more effort but greater range of motion.'}`
+  );
+}
+
+// ===================== GEARS =====================
+let gearScene, gearGroup, gearDriveObj, gearDrivenObj, gearIdlerObj;
+let gearAngle = 0;
+let useIdler = false;
+
+function makeGear(teeth, radius, color) {
+  const group = new THREE.Group();
+  // Hub
+  const hubGeo = new THREE.CylinderGeometry(radius * 0.8, radius * 0.8, 0.3, 32);
+  const hub = new THREE.Mesh(hubGeo, new THREE.MeshPhongMaterial({ color }));
+  hub.rotation.x = Math.PI / 2;
+  group.add(hub);
+  // Teeth
+  const toothW = 0.12;
+  const toothH = radius * 0.25;
+  const toothGeo = new THREE.BoxGeometry(toothW, toothH, 0.35);
+  for (let i = 0; i < teeth; i++) {
+    const angle = (i / teeth) * Math.PI * 2;
+    const tooth = new THREE.Mesh(toothGeo, new THREE.MeshPhongMaterial({ color }));
+    tooth.position.set(Math.cos(angle) * (radius * 0.8 + toothH/2), Math.sin(angle) * (radius * 0.8 + toothH/2), 0);
+    tooth.rotation.z = angle;
+    group.add(tooth);
+  }
+  // Center axle
+  const axleGeo = new THREE.CylinderGeometry(0.08, 0.08, 0.6, 8);
+  const axle = new THREE.Mesh(axleGeo, matDark);
+  axle.rotation.x = Math.PI / 2;
+  group.add(axle);
+  group.userData.teeth = teeth;
+  group.userData.radius = radius;
+  return group;
+}
+
+function buildGears() {
+  const scene = makeScene();
+  gearGroup = new THREE.Group();
+  gearGroup.position.y = 2;
+  scene.add(gearGroup);
+  updateGears();
+  return scene;
+}
+
+function getGearRadius(teeth) {
+  return teeth * 0.06;
+}
+
+function updateGears() {
+  if (!gearGroup) return;
+  while(gearGroup.children.length) gearGroup.remove(gearGroup.children[0]);
+
+  const driveTeeth = parseInt(document.getElementById('gear-drive').value);
+  const drivenTeeth = parseInt(document.getElementById('gear-driven').value);
+  document.getElementById('gear-drive-val').textContent = driveTeeth;
+  document.getElementById('gear-driven-val').textContent = drivenTeeth;
+  document.getElementById('gear-speed-val').textContent = parseFloat(document.getElementById('gear-speed').value).toFixed(1);
+
+  const r1 = getGearRadius(driveTeeth);
+  const r2 = getGearRadius(drivenTeeth);
+
+  gearDriveObj = makeGear(driveTeeth, r1, 0x4488cc);
+  gearDriveObj.position.set(-r1 - 0.05, 0, 0);
+  gearGroup.add(gearDriveObj);
+
+  if (useIdler) {
+    const idlerTeeth = 16;
+    const ri = getGearRadius(idlerTeeth);
+    gearIdlerObj = makeGear(idlerTeeth, ri, 0x88cc44);
+    gearIdlerObj.position.set(r1 + ri - 0.05, 0, 0);
+    gearGroup.add(gearIdlerObj);
+
+    gearDrivenObj = makeGear(drivenTeeth, r2, 0xcc4488);
+    gearDrivenObj.position.set(r1 + 2*ri + r2 - 0.15, 0, 0);
+    gearGroup.add(gearDrivenObj);
+  } else {
+    gearIdlerObj = null;
+    gearDrivenObj = makeGear(drivenTeeth, r2, 0xcc4488);
+    gearDrivenObj.position.set(r1 + r2 - 0.1, 0, 0);
+    gearGroup.add(gearDrivenObj);
+  }
+
+  // Direction arrow indicators
+  const arrUp = makeArrow(new THREE.Vector3(0,1,0), new THREE.Vector3(gearDriveObj.position.x, -r1-0.5, 0.5), 0.6, 0x4488cc);
+  gearGroup.add(arrUp);
+
+  const gearRatio = drivenTeeth / driveTeeth;
+  const speed = parseFloat(document.getElementById('gear-speed').value);
+  const outputSpeed = speed / gearRatio;
+  const directionSame = useIdler; // idler reverses the reversal
+  setData(gearRatio, speed, outputSpeed,
+    `Gear ratio = ${drivenTeeth}/${driveTeeth} = ${gearRatio.toFixed(2)}. Drive at ${speed.toFixed(1)} RPM, driven at ${outputSpeed.toFixed(2)} RPM. Torque multiplied by ${gearRatio.toFixed(2)}x. ${directionSame ? 'Idler gear: output spins SAME direction as input.' : 'Output spins OPPOSITE direction to input.'}`,
+    'ratio', 'RPM'
+  );
+}
+
+function toggleIdler() {
+  useIdler = !useIdler;
+  const btn = document.getElementById('idler-btn');
+  btn.textContent = useIdler ? 'On' : 'Off';
+  btn.classList.toggle('active', useIdler);
+  updateGears();
+}
+
+// ===================== PULLEYS =====================
+let pulleyScene, pulleyGroup;
+
+function buildPulleys() {
+  const scene = makeScene();
+  pulleyGroup = new THREE.Group();
+  scene.add(pulleyGroup);
+  updatePulleys();
+  return scene;
+}
+
+function makePulleyWheel(x, y) {
+  const group = new THREE.Group();
+  const geo = new THREE.TorusGeometry(0.4, 0.08, 8, 24);
+  const mesh = new THREE.Mesh(geo, matGray);
+  group.add(mesh);
+  const axle = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.3, 8), matDark);
+  axle.rotation.x = Math.PI/2;
+  group.add(axle);
+  group.position.set(x, y, 0);
+  return group;
+}
+
+function makeRopeSegment(x1, y1, x2, y2) {
+  const points = [new THREE.Vector3(x1, y1, 0), new THREE.Vector3(x2, y2, 0)];
+  const geo = new THREE.BufferGeometry().setFromPoints(points);
+  return new THREE.Line(geo, new THREE.LineBasicMaterial({ color: 0xccaa66, linewidth: 2 }));
+}
+
+function updatePulleys() {
+  if (!pulleyGroup) return;
+  while(pulleyGroup.children.length) pulleyGroup.remove(pulleyGroup.children[0]);
+
+  const config = parseInt(document.getElementById('pulley-config').value);
+  const load = parseFloat(document.getElementById('pulley-load').value);
+  const liftPct = parseFloat(document.getElementById('pulley-lift').value) / 100;
+  document.getElementById('pulley-load-val').textContent = load;
+
+  // Support structure
+  const supportGeo = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+  const ceilingGeo = new THREE.BoxGeometry(6, 0.15, 1);
+  const ceiling = new THREE.Mesh(ceilingGeo, matDark);
+  ceiling.position.set(0, 7, 0);
+  pulleyGroup.add(ceiling);
+
+  // Weight box
+  const weightGeo = new THREE.BoxGeometry(0.8, 0.8, 0.8);
+  const weight = new THREE.Mesh(weightGeo, matRed);
+
+  let ma, ropeCount, effortForce;
+  const baseY = 1;
+  const topY = 6.5;
+  const liftRange = topY - baseY - 1;
+  const weightY = baseY + liftPct * liftRange;
+
+  if (config === 1) {
+    // Single fixed pulley - MA = 1
+    ma = 1; ropeCount = 1;
+    const pw = makePulleyWheel(0, topY);
+    pulleyGroup.add(pw);
+    weight.position.set(0, weightY, 0);
+    pulleyGroup.add(weight);
+    pulleyGroup.add(makeRopeSegment(0, weightY + 0.4, 0, topY - 0.4));
+    pulleyGroup.add(makeRopeSegment(0, topY - 0.4, 1.5, topY - 2 - liftPct * 2));
+    // person pulling rope
+    effortForce = load;
+  } else if (config === 2) {
+    // Single moveable - MA = 2
+    ma = 2; ropeCount = 2;
+    const pFixed = makePulleyWheel(0.5, topY);
+    pulleyGroup.add(pFixed);
+    const pMove = makePulleyWheel(0, weightY + 1);
+    pulleyGroup.add(pMove);
+    weight.position.set(0, weightY, 0);
+    pulleyGroup.add(weight);
+    // rope: ceiling attach -> down to moveable -> up to fixed -> down to hand
+    pulleyGroup.add(makeRopeSegment(-0.5, topY, -0.5, weightY + 1));
+    pulleyGroup.add(makeRopeSegment(-0.5, weightY + 1, 0.5, topY));
+    pulleyGroup.add(makeRopeSegment(0.5, topY, 1.5, topY - 2 - liftPct));
+    effortForce = load / 2;
+  } else {
+    // Compound: config 3=2pulleys, 4=3pulleys, 5=4pulleys
+    const numPulleys = config - 1;
+    ma = numPulleys;
+    ropeCount = numPulleys;
+    weight.position.set(0, weightY, 0);
+    pulleyGroup.add(weight);
+    // Create alternating fixed/moveable pulleys
+    for (let i = 0; i < numPulleys; i++) {
+      const isFixed = i % 2 === 0;
+      const xOff = (i - numPulleys/2) * 0.8;
+      const yPos = isFixed ? topY : weightY + 1;
+      const pw = makePulleyWheel(xOff, yPos);
+      pulleyGroup.add(pw);
+    }
+    // Simplified rope representation
+    for (let i = 0; i < numPulleys; i++) {
+      const xOff = (i - numPulleys/2) * 0.8;
+      pulleyGroup.add(makeRopeSegment(xOff, topY, xOff, weightY + 0.5));
+    }
+    // trailing rope
+    const lastX = ((numPulleys-1) - numPulleys/2) * 0.8;
+    pulleyGroup.add(makeRopeSegment(lastX, topY, lastX + 1.5, topY - 2 - liftPct));
+    effortForce = load / ma;
+  }
+
+  // Weight arrow
+  const wArr = makeArrow(new THREE.Vector3(0, -1, 0), weight.position.clone().add(new THREE.Vector3(0.6, 0.2, 0)), 1.5, 0xff4444);
+  pulleyGroup.add(wArr);
+
+  const configNames = {1:'Single Fixed',2:'Single Moveable',3:'Compound (2)',4:'Compound (3)',5:'Compound (4)'};
+  setData(ma, effortForce, load,
+    `${configNames[config]}: ${ropeCount} supporting rope segment(s). MA = ${ma}. To lift ${load} N, you pull with ${effortForce.toFixed(1)} N, but must pull ${ma}x the distance.`
+  );
+}
+
+// ===================== BUOYANCY =====================
+let buoyScene, buoyGroup, buoyObj;
+
+function buildBuoyancy() {
+  const scene = makeScene();
+  buoyGroup = new THREE.Group();
+  scene.add(buoyGroup);
+  updateBuoyancy();
+  return scene;
+}
+
+function updateBuoyancy() {
+  if (!buoyGroup) return;
+  while(buoyGroup.children.length) buoyGroup.remove(buoyGroup.children[0]);
+
+  const material = document.getElementById('buoy-material').value;
+  const densitySlider = document.getElementById('buoy-density');
+  const sizeVal = parseFloat(document.getElementById('buoy-size').value);
+  document.getElementById('buoy-size-val').textContent = sizeVal.toFixed(1);
+
+  // Preset densities
+  const presets = { wood: 600, ice: 917, steel: 7800, balloon: 1.2 };
+  if (material !== 'custom' && presets[material]) {
+    densitySlider.value = presets[material];
+  }
+  const objDensity = parseFloat(densitySlider.value);
+  document.getElementById('buoy-density-val').textContent = objDensity;
+
+  const waterDensity = 1000;
+  const g = 9.81;
+  const volume = sizeVal * sizeVal * sizeVal; // cube for simplicity
+  const mass = objDensity * volume;
+  const weight = mass * g;
+
+  // Container
+  const containerGeo = new THREE.BoxGeometry(6, 0.1, 4);
+  const containerBottom = new THREE.Mesh(containerGeo, new THREE.MeshPhongMaterial({ color: 0x334455 }));
+  containerBottom.position.set(0, 0, 0);
+  buoyGroup.add(containerBottom);
+  // Walls
+  const wallGeo = new THREE.BoxGeometry(0.1, 5, 4);
+  const lw = new THREE.Mesh(wallGeo, new THREE.MeshPhongMaterial({ color: 0x334455, transparent: true, opacity: 0.3 }));
+  lw.position.set(-3, 2.5, 0);
+  buoyGroup.add(lw);
+  const rw = new THREE.Mesh(wallGeo.clone(), new THREE.MeshPhongMaterial({ color: 0x334455, transparent: true, opacity: 0.3 }));
+  rw.position.set(3, 2.5, 0);
+  buoyGroup.add(rw);
+
+  // Water
+  const waterH = 4;
+  const waterGeo = new THREE.BoxGeometry(5.8, waterH, 3.8);
+  const water = new THREE.Mesh(waterGeo, matWater);
+  water.position.set(0, waterH/2 + 0.05, 0);
+  buoyGroup.add(water);
+
+  // Object
+  const objGeo = objDensity < 10 ? new THREE.SphereGeometry(sizeVal * 0.5, 16, 16) : new THREE.BoxGeometry(sizeVal, sizeVal, sizeVal);
+  const objColor = objDensity < 100 ? 0xff8888 : objDensity < 1000 ? 0x88aa44 : 0x666688;
+  buoyObj = new THREE.Mesh(objGeo, new THREE.MeshPhongMaterial({ color: objColor }));
+
+  // Position: floating or sinking
+  const densityRatio = objDensity / waterDensity;
+  let objY;
+  if (densityRatio < 1) {
+    // Floating: fraction submerged = densityRatio
+    const submergedFraction = densityRatio;
+    objY = waterH + 0.05 - submergedFraction * sizeVal + sizeVal/2;
+  } else {
+    // Sinking: on the bottom
+    objY = 0.05 + sizeVal/2;
+  }
+  buoyObj.position.set(0, objY, 0);
+  buoyGroup.add(buoyObj);
+
+  // Force arrows
+  // Weight down
+  const wArr = makeArrow(new THREE.Vector3(0, -1, 0), new THREE.Vector3(1.2, objY, 0), Math.min(weight/500, 3), 0xff4444);
+  buoyGroup.add(wArr);
+  // Buoyant force up
+  const displacedVol = densityRatio < 1 ? volume * densityRatio : volume;
+  const buoyantForce = waterDensity * displacedVol * g;
+  const bArr = makeArrow(new THREE.Vector3(0, 1, 0), new THREE.Vector3(-1.2, objY, 0), Math.min(buoyantForce/500, 3), 0x44ff44);
+  buoyGroup.add(bArr);
+
+  const floats = densityRatio < 1;
+  const pctSubmerged = floats ? (densityRatio * 100).toFixed(1) : '100';
+  setData(
+    densityRatio < 1 ? densityRatio : densityRatio,
+    buoyantForce, weight,
+    `Object density: ${objDensity} kg/m3 vs water: ${waterDensity} kg/m3. ${floats ? 'FLOATS' : 'SINKS'}. ${pctSubmerged}% submerged. Buoyant force = ${buoyantForce.toFixed(1)} N. Weight = ${weight.toFixed(1)} N. Archimedes: buoyant force equals weight of displaced fluid.`,
+    'density ratio', 'N (weight)'
+  );
+}
+
+// ===================== DENSITY =====================
+let densityScene, densityGroup, densityObjects = [];
+
+function buildDensity() {
+  const scene = makeScene();
+  densityGroup = new THREE.Group();
+  scene.add(densityGroup);
+  densityObjects = [];
+  updateDensityContainer();
+  return scene;
+}
+
+function updateDensityContainer() {
+  if (!densityGroup) return;
+  // Only rebuild container, keep objects
+  const toKeep = densityObjects.map(o => o.mesh);
+
+  while(densityGroup.children.length) {
+    const c = densityGroup.children[0];
+    densityGroup.remove(c);
+  }
+
+  // Container
+  const wallMat = new THREE.MeshPhongMaterial({ color: 0x445566, transparent: true, opacity: 0.2 });
+  const bottom = new THREE.Mesh(new THREE.BoxGeometry(5, 0.1, 4), new THREE.MeshPhongMaterial({ color: 0x334455 }));
+  bottom.position.set(0, 0, 0);
+  densityGroup.add(bottom);
+  const lw = new THREE.Mesh(new THREE.BoxGeometry(0.1, 6, 4), wallMat);
+  lw.position.set(-2.5, 3, 0); densityGroup.add(lw);
+  const rw = new THREE.Mesh(new THREE.BoxGeometry(0.1, 6, 4), wallMat);
+  rw.position.set(2.5, 3, 0); densityGroup.add(rw);
+
+  // Three liquid layers: honey (bottom), water (middle), oil (top)
+  const layerH = 1.8;
+  // Honey
+  const honey = new THREE.Mesh(new THREE.BoxGeometry(4.8, layerH, 3.8), matHoney);
+  honey.position.set(0, layerH/2 + 0.05, 0); densityGroup.add(honey);
+  // Water
+  const water = new THREE.Mesh(new THREE.BoxGeometry(4.8, layerH, 3.8), matWater);
+  water.position.set(0, layerH + layerH/2 + 0.05, 0); densityGroup.add(water);
+  // Oil
+  const oil = new THREE.Mesh(new THREE.BoxGeometry(4.8, layerH, 3.8), matOil);
+  oil.position.set(0, 2*layerH + layerH/2 + 0.05, 0); densityGroup.add(oil);
+
+  // Labels (simple cube markers)
+  function addLabel(y, color) {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, 0.15), new THREE.MeshPhongMaterial({ color }));
+    m.position.set(-2.8, y, 0);
+    densityGroup.add(m);
+  }
+  addLabel(layerH/2 + 0.05, 0xcc7700);     // honey
+  addLabel(layerH + layerH/2 + 0.05, 0x2266cc); // water
+  addLabel(2*layerH + layerH/2 + 0.05, 0xccaa00); // oil
+
+  // Re-add existing objects
+  toKeep.forEach(m => densityGroup.add(m));
+
+  setData('--', '--', '--',
+    'Three liquid layers: Oil (800 kg/m3, top), Water (1000 kg/m3, middle), Honey (1400 kg/m3, bottom). Drop objects to see where they settle based on their density.',
+    '', ''
+  );
+}
+
+function dropDensityObject() {
+  const sel = document.getElementById('density-object').value;
+  const densities = { cork: 120, plastic: 950, rubber: 1100, glass: 2500, steel: 7800 };
+  const colors = { cork: 0xddbb77, plastic: 0xdddddd, rubber: 0x333333, glass: 0x88ccff, steel: 0x888899 };
+  const d = densities[sel];
+  const c = colors[sel];
+
+  // Where it settles
+  const layerH = 1.8;
+  let targetY;
+  if (d < 800) {
+    targetY = 2 * layerH + layerH * 0.7 + 0.05; // floats on oil
+  } else if (d < 1000) {
+    targetY = layerH + layerH * 0.7 + 0.05; // between oil and water
+  } else if (d < 1400) {
+    targetY = layerH * 0.7 + 0.05; // between water and honey
+  } else {
+    targetY = 0.25; // sinks to bottom
+  }
+
+  const xOff = (Math.random() - 0.5) * 2;
+  const geo = new THREE.SphereGeometry(0.2, 12, 12);
+  const mesh = new THREE.Mesh(geo, new THREE.MeshPhongMaterial({ color: c }));
+  mesh.position.set(xOff, 7, 0);
+  densityGroup.add(mesh);
+
+  const obj = { mesh, targetY, density: d, name: sel, vy: 0 };
+  densityObjects.push(obj);
+
+  setData(d, d, '---',
+    `Dropped ${sel} (${d} kg/m3). ${d < 800 ? 'Floats on oil.' : d < 1000 ? 'Sinks through oil, floats on water.' : d < 1400 ? 'Sinks through water, floats on honey.' : 'Sinks through all layers to the bottom.'}`,
+    'kg/m3', ''
+  );
+}
+
+function resetDensityObjects() {
+  densityObjects.forEach(o => densityGroup.remove(o.mesh));
+  densityObjects = [];
+  updateDensityContainer();
+}
+
+// ===================== WEDGE =====================
+let wedgeScene, wedgeGroup;
+
+function buildWedge() {
+  const scene = makeScene();
+  wedgeGroup = new THREE.Group();
+  scene.add(wedgeGroup);
+  updateWedge();
+  return scene;
+}
+
+function updateWedge() {
+  if (!wedgeGroup) return;
+  while(wedgeGroup.children.length) wedgeGroup.remove(wedgeGroup.children[0]);
+
+  const angleDeg = parseFloat(document.getElementById('wedge-angle').value);
+  const force = parseFloat(document.getElementById('wedge-force').value);
+  const pushPct = parseFloat(document.getElementById('wedge-push').value) / 100;
+  document.getElementById('wedge-angle-val').textContent = angleDeg;
+  document.getElementById('wedge-force-val').textContent = force;
+
+  const angleRad = angleDeg * Math.PI / 180;
+  const wedgeLen = 5;
+  const wedgeH = wedgeLen * Math.tan(angleRad / 2); // half angle for symmetric wedge
+
+  // Two blocks being split
+  const blockW = 2;
+  const separation = pushPct * wedgeH * 2;
+  const blockL = new THREE.Mesh(new THREE.BoxGeometry(blockW, 3, 2), new THREE.MeshPhongMaterial({ color: 0x886644 }));
+  blockL.position.set(0, 1.5, -1 - separation/2);
+  wedgeGroup.add(blockL);
+  const blockR = new THREE.Mesh(new THREE.BoxGeometry(blockW, 3, 2), new THREE.MeshPhongMaterial({ color: 0x886644 }));
+  blockR.position.set(0, 1.5, 1 + separation/2);
+  wedgeGroup.add(blockR);
+
+  // Wedge (triangular prism)
+  const shape = new THREE.Shape();
+  shape.moveTo(0, 0);
+  shape.lineTo(-wedgeLen, -wedgeH);
+  shape.lineTo(-wedgeLen, wedgeH);
+  shape.closePath();
+  const wedgeMesh = new THREE.Mesh(
+    new THREE.ExtrudeGeometry(shape, { depth: blockW, bevelEnabled: false }),
+    new THREE.MeshPhongMaterial({ color: 0xccccdd })
+  );
+  wedgeMesh.rotation.x = Math.PI / 2;
+  wedgeMesh.position.set(blockW/2, 1.5, -blockW/2);
+  // Push the wedge in
+  wedgeMesh.position.x = blockW/2 + pushPct * wedgeLen * 0.5;
+  wedgeGroup.add(wedgeMesh);
+
+  // Force arrow (pushing wedge forward)
+  const pushArrow = makeArrow(new THREE.Vector3(1, 0, 0), new THREE.Vector3(-wedgeLen + pushPct * wedgeLen * 0.5, 1.5, 0), 1.5, 0x4488ff);
+  wedgeGroup.add(pushArrow);
+
+  // Split force arrows
+  if (pushPct > 0.05) {
+    const splitF = force / (2 * Math.tan(angleRad / 2));
+    const sArr1 = makeArrow(new THREE.Vector3(0, 0, -1), new THREE.Vector3(0, 1.5, -0.5 - separation/2), 1, 0xff4444);
+    wedgeGroup.add(sArr1);
+    const sArr2 = makeArrow(new THREE.Vector3(0, 0, 1), new THREE.Vector3(0, 1.5, 0.5 + separation/2), 1, 0xff4444);
+    wedgeGroup.add(sArr2);
+  }
+
+  const ma = 1 / Math.tan(angleRad / 2);
+  const splitForce = force * ma / 2;
+  setData(ma, force, splitForce,
+    `Wedge angle: ${angleDeg} deg. MA = 1/tan(half-angle) = ${ma.toFixed(2)}. Input force ${force} N produces ${splitForce.toFixed(1)} N splitting force on each side. Thinner wedge = higher MA.`
+  );
+}
+
+// ===================== SCREW =====================
+let screwScene, screwGroup;
+
+function buildScrew() {
+  const scene = makeScene();
+  screwGroup = new THREE.Group();
+  scene.add(screwGroup);
+  updateScrew();
+  return scene;
+}
+
+function updateScrew() {
+  if (!screwGroup) return;
+  while(screwGroup.children.length) screwGroup.remove(screwGroup.children[0]);
+
+  const pitch = parseFloat(document.getElementById('screw-pitch').value);
+  const handleR = parseFloat(document.getElementById('screw-radius').value);
+  const turns = parseFloat(document.getElementById('screw-turns').value);
+  document.getElementById('screw-pitch-val').textContent = pitch;
+  document.getElementById('screw-radius-val').textContent = handleR;
+  document.getElementById('screw-turns-val').textContent = turns.toFixed(1);
+
+  // Scale for visualization (mm to scene units)
+  const scale = 0.02;
+  const screwR = 8 * scale; // shaft radius
+  const screwLen = 5;
+  const pitchScaled = pitch * scale * 3; // exaggerate pitch for visibility
+
+  // Shaft
+  const shaftGeo = new THREE.CylinderGeometry(screwR, screwR, screwLen, 16);
+  const shaft = new THREE.Mesh(shaftGeo, matGray);
+  shaft.position.set(0, screwLen/2, 0);
+  screwGroup.add(shaft);
+
+  // Thread helix
+  const threadPoints = [];
+  const threadTurns = screwLen / pitchScaled;
+  for (let i = 0; i <= threadTurns * 60; i++) {
+    const t = i / 60;
+    const angle = t * Math.PI * 2;
+    const y = t * pitchScaled;
+    if (y > screwLen) break;
+    threadPoints.push(new THREE.Vector3(Math.cos(angle) * (screwR + 0.08), y, Math.sin(angle) * (screwR + 0.08)));
+  }
+  if (threadPoints.length > 1) {
+    const threadGeo = new THREE.BufferGeometry().setFromPoints(threadPoints);
+    const thread = new THREE.Line(threadGeo, new THREE.LineBasicMaterial({ color: 0xffcc44, linewidth: 2 }));
+    thread.rotation.y = turns * Math.PI * 2; // rotate with turns
+    screwGroup.add(thread);
+  }
+
+  // Handle (T-bar at top)
+  const handleScaled = handleR * scale;
+  const handleGeo = new THREE.CylinderGeometry(0.06, 0.06, handleScaled * 2, 12);
+  handleGeo.rotateZ(Math.PI / 2);
+  const handle = new THREE.Mesh(handleGeo, matOrange);
+  handle.position.set(0, screwLen + 0.2, 0);
+  handle.rotation.y = turns * Math.PI * 2;
+  screwGroup.add(handle);
+
+  // Handle end caps
+  const capGeo = new THREE.SphereGeometry(0.1, 8, 8);
+  const cap1 = new THREE.Mesh(capGeo, matRed);
+  const cap2 = new THREE.Mesh(capGeo, matRed);
+  const hx = Math.cos(turns * Math.PI * 2) * handleScaled;
+  const hz = Math.sin(turns * Math.PI * 2) * handleScaled;
+  cap1.position.set(hx, screwLen + 0.2, hz);
+  cap2.position.set(-hx, screwLen + 0.2, -hz);
+  screwGroup.add(cap1);
+  screwGroup.add(cap2);
+
+  // Block being driven into
+  const blockGeo = new THREE.BoxGeometry(3, 1, 3);
+  const block = new THREE.Mesh(blockGeo, new THREE.MeshPhongMaterial({ color: 0x886644 }));
+  const penetration = turns * pitchScaled;
+  block.position.set(0, -0.5, 0);
+  screwGroup.add(block);
+
+  // Screw penetration
+  shaft.position.y = screwLen/2 - penetration;
+
+  // Force arrows
+  const circArrow = makeArrow(new THREE.Vector3(1, 0, 0), new THREE.Vector3(hx*0.7, screwLen + 0.2 - penetration, hz*0.7), 0.8, 0x4488ff);
+  screwGroup.add(circArrow);
+  const downArrow = makeArrow(new THREE.Vector3(0, -1, 0), new THREE.Vector3(0.5, 1 - penetration, 0), 1, 0xff4444);
+  screwGroup.add(downArrow);
+
+  const ma = (2 * Math.PI * handleR) / pitch;
+  setData(ma, 1, ma,
+    `Pitch: ${pitch}mm, Handle radius: ${handleR}mm. MA = 2 * pi * radius / pitch = ${ma.toFixed(1)}. One full turn of the handle (${(2 * Math.PI * handleR).toFixed(0)}mm circumference) advances the screw only ${pitch}mm. Force is multiplied ${ma.toFixed(1)}x.`
+  );
+}
+
+// ===================== WHEEL & AXLE =====================
+let waScene, waGroup;
+
+function buildWheelAxle() {
+  const scene = makeScene();
+  waGroup = new THREE.Group();
+  waGroup.position.y = 3;
+  scene.add(waGroup);
+  updateWheelAxle();
+  return scene;
+}
+
+function updateWheelAxle() {
+  if (!waGroup) return;
+  while(waGroup.children.length) waGroup.remove(waGroup.children[0]);
+
+  const wheelR = parseFloat(document.getElementById('wa-wheel').value);
+  const axleR = parseFloat(document.getElementById('wa-axle').value);
+  const force = parseFloat(document.getElementById('wa-force').value);
+  const spin = parseFloat(document.getElementById('wa-spin').value);
+  document.getElementById('wa-wheel-val').textContent = wheelR.toFixed(1);
+  document.getElementById('wa-axle-val').textContent = axleR.toFixed(1);
+  document.getElementById('wa-force-val').textContent = force;
+
+  // Wheel (torus for visibility)
+  const wheelGeo = new THREE.TorusGeometry(wheelR, 0.12, 12, 32);
+  const wheel = new THREE.Mesh(wheelGeo, new THREE.MeshPhongMaterial({ color: 0x5588bb }));
+  waGroup.add(wheel);
+
+  // Spokes
+  for (let i = 0; i < 8; i++) {
+    const angle = (i / 8) * Math.PI * 2;
+    const spokeGeo = new THREE.CylinderGeometry(0.03, 0.03, wheelR, 4);
+    const spoke = new THREE.Mesh(spokeGeo, matGray);
+    spoke.position.set(Math.cos(angle) * wheelR/2, Math.sin(angle) * wheelR/2, 0);
+    spoke.rotation.z = angle - Math.PI/2;
+    waGroup.add(spoke);
+  }
+
+  // Axle (cylinder through center)
+  const axleGeo = new THREE.CylinderGeometry(axleR, axleR, 1.5, 16);
+  const axle = new THREE.Mesh(axleGeo, new THREE.MeshPhongMaterial({ color: 0xcc8844 }));
+  axle.rotation.x = Math.PI / 2;
+  waGroup.add(axle);
+
+  // Rope on axle (load)
+  const ropeGeo = new THREE.CylinderGeometry(0.04, 0.04, 2, 6);
+  const rope = new THREE.Mesh(ropeGeo, new THREE.MeshPhongMaterial({ color: 0xccaa66 }));
+  rope.position.set(0, -axleR - 1, 0.3);
+  waGroup.add(rope);
+  const bucket = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.4, 0.5), matRed);
+  bucket.position.set(0, -axleR - 2.2, 0.3);
+  waGroup.add(bucket);
+
+  // Effort arrow at wheel rim
+  const eArr = makeArrow(new THREE.Vector3(0, -1, 0), new THREE.Vector3(wheelR + 0.3, 0.5, 0), 1.2, 0x4488ff);
+  waGroup.add(eArr);
+  // Load arrow
+  const lArr = makeArrow(new THREE.Vector3(0, -1, 0), new THREE.Vector3(0.5, -axleR - 2.5, 0.3), 1, 0xff4444);
+  waGroup.add(lArr);
+
+  // Rotation
+  waGroup.rotation.z = spin * 0.5;
+
+  const ma = wheelR / axleR;
+  const outputForce = force * ma;
+  setData(ma, force, outputForce,
+    `Wheel radius: ${wheelR.toFixed(1)}, Axle radius: ${axleR.toFixed(1)}. MA = wheel/axle = ${ma.toFixed(2)}. Apply ${force} N at the wheel rim, get ${outputForce.toFixed(1)} N at the axle. Like a well crank or steering wheel.`
+  );
+}
+
+// ===================== TAB SWITCHING =====================
+const tabBtns = document.querySelectorAll('.tab-btn');
+const tabContents = document.querySelectorAll('.tab-content');
+const builders = {
+  inclined: buildInclinedPlane,
+  levers: buildLevers,
+  gears: buildGears,
+  pulleys: buildPulleys,
+  buoyancy: buildBuoyancy,
+  density: buildDensity,
+  wedge: buildWedge,
+  screw: buildScrew,
+  wheelaxle: buildWheelAxle
+};
+const defaultCamPos = {
+  inclined: { pos: [8, 5, 8], target: [0, 1, 0] },
+  levers: { pos: [0, 5, 10], target: [0, 1, 0] },
+  gears: { pos: [0, 4, 8], target: [0, 2, 0] },
+  pulleys: { pos: [5, 4, 8], target: [0, 3.5, 0] },
+  buoyancy: { pos: [6, 4, 8], target: [0, 2, 0] },
+  density: { pos: [6, 4, 8], target: [0, 2.5, 0] },
+  wedge: { pos: [5, 5, 8], target: [0, 1.5, 0] },
+  screw: { pos: [5, 5, 8], target: [0, 2.5, 0] },
+  wheelaxle: { pos: [6, 5, 8], target: [0, 3, 0] }
+};
+
+function switchTab(tab) {
+  currentTab = tab;
+  tabBtns.forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  tabContents.forEach(tc => tc.classList.toggle('active', tc.id === 'ctrl-' + tab));
+  currentScene = builders[tab]();
+  const cam = defaultCamPos[tab] || defaultCamPos.inclined;
+  camera.position.set(...cam.pos);
+  controls.target.set(...cam.target);
+  controls.update();
+}
+
+tabBtns.forEach(btn => {
+  btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+});
+
+// ===================== SLIDER EVENT LISTENERS =====================
+// Inclined plane
+document.getElementById('ramp-angle').addEventListener('input', () => { currentScene = buildInclinedPlane(); });
+document.getElementById('ramp-load').addEventListener('input', () => { currentScene = buildInclinedPlane(); });
+
+// Levers
+document.getElementById('fulcrum-pos').addEventListener('input', updateLevers);
+document.getElementById('lever-effort').addEventListener('input', updateLevers);
+document.getElementById('lever-load').addEventListener('input', updateLevers);
+document.querySelectorAll('.lever-class-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.lever-class-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    leverClass = parseInt(btn.dataset.class);
+    currentScene = buildLevers();
+  });
+});
+
+// Gears
+document.getElementById('gear-drive').addEventListener('input', () => { currentScene = buildGears(); });
+document.getElementById('gear-driven').addEventListener('input', () => { currentScene = buildGears(); });
+document.getElementById('gear-speed').addEventListener('input', updateGears);
+
+// Pulleys
+document.getElementById('pulley-config').addEventListener('change', () => { currentScene = buildPulleys(); });
+document.getElementById('pulley-load').addEventListener('input', updatePulleys);
+document.getElementById('pulley-lift').addEventListener('input', updatePulleys);
+
+// Buoyancy
+document.getElementById('buoy-material').addEventListener('change', () => { currentScene = buildBuoyancy(); });
+document.getElementById('buoy-density').addEventListener('input', () => {
+  document.getElementById('buoy-material').value = 'custom';
+  currentScene = buildBuoyancy();
+});
+document.getElementById('buoy-size').addEventListener('input', () => { currentScene = buildBuoyancy(); });
+
+// Wedge
+document.getElementById('wedge-angle').addEventListener('input', () => { currentScene = buildWedge(); });
+document.getElementById('wedge-force').addEventListener('input', updateWedge);
+document.getElementById('wedge-push').addEventListener('input', () => { currentScene = buildWedge(); });
+
+// Screw
+document.getElementById('screw-pitch').addEventListener('input', () => { currentScene = buildScrew(); });
+document.getElementById('screw-radius').addEventListener('input', updateScrew);
+document.getElementById('screw-turns').addEventListener('input', () => { currentScene = buildScrew(); });
+
+// Wheel & Axle
+document.getElementById('wa-wheel').addEventListener('input', () => { currentScene = buildWheelAxle(); });
+document.getElementById('wa-axle').addEventListener('input', () => { currentScene = buildWheelAxle(); });
+document.getElementById('wa-force').addEventListener('input', updateWheelAxle);
+document.getElementById('wa-spin').addEventListener('input', () => { currentScene = buildWheelAxle(); });
+
+// ===================== ANIMATION LOOP =====================
+let clock = new THREE.Clock();
+
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = clock.getDelta();
+
+  controls.update();
+
+  // Gear rotation animation
+  if (currentTab === 'gears' && gearDriveObj && gearDrivenObj) {
+    const speed = parseFloat(document.getElementById('gear-speed').value);
+    const driveTeeth = parseInt(document.getElementById('gear-drive').value);
+    const drivenTeeth = parseInt(document.getElementById('gear-driven').value);
+    const gearRatio = drivenTeeth / driveTeeth;
+    gearAngle += dt * speed * 2;
+    gearDriveObj.rotation.z = gearAngle;
+    gearDrivenObj.rotation.z = -gearAngle / gearRatio;
+    if (gearIdlerObj) {
+      const idlerTeeth = 16;
+      gearIdlerObj.rotation.z = -gearAngle * driveTeeth / idlerTeeth;
+    }
+  }
+
+  // Density object falling animation
+  if (currentTab === 'density') {
+    densityObjects.forEach(obj => {
+      if (obj.mesh.position.y > obj.targetY + 0.05) {
+        obj.vy += dt * 3;
+        // slow down in liquid
+        if (obj.mesh.position.y < 5.45) obj.vy *= 0.96;
+        obj.mesh.position.y -= obj.vy * dt;
+        if (obj.mesh.position.y < obj.targetY) {
+          obj.mesh.position.y = obj.targetY;
+          obj.vy = 0;
+        }
+      }
+    });
+  }
+
+  // Buoyancy gentle bob
+  if (currentTab === 'buoyancy' && buoyObj) {
+    const d = parseFloat(document.getElementById('buoy-density').value);
+    if (d < 1000) {
+      buoyObj.position.y += Math.sin(clock.elapsedTime * 2) * 0.002;
+    }
+  }
+
+  if (currentScene) {
+    renderer.render(currentScene, camera);
+  }
+}
+
+// ===================== INIT =====================
+switchTab('inclined');
+resize();
+animate();
+</script>
+</body>
+</html>

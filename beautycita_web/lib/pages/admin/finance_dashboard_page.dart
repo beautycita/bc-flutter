@@ -1,11 +1,12 @@
-import 'package:beautycita_core/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../config/breakpoints.dart';
+import '../../config/web_theme.dart';
 import '../../providers/admin_finance_dashboard_provider.dart';
 import '../../widgets/kpi_card.dart';
+import '../../widgets/web_design_system.dart';
 
 /// CEO Financial Dashboard — deep financial reconciliation and analytics.
 ///
@@ -124,57 +125,15 @@ class _PageHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final now = DateTime.now();
     final dateStr = DateFormat('EEEE, d MMMM yyyy', 'es').format(now);
     final formattedDate = dateStr[0].toUpperCase() + dateStr.substring(1);
 
-    if (isMobile) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.account_balance,
-                  size: 24, color: theme.colorScheme.primary),
-              const SizedBox(width: BCSpacing.sm),
-              Text(
-                'Panel Financiero CEO',
-                style: theme.textTheme.headlineSmall
-                    ?.copyWith(fontWeight: FontWeight.w700),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            formattedDate,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-            ),
-          ),
-        ],
-      );
-    }
-
-    return Row(
-      children: [
-        Icon(Icons.account_balance,
-            size: 28, color: theme.colorScheme.primary),
-        const SizedBox(width: BCSpacing.sm),
-        Expanded(
-          child: Text(
-            'Panel Financiero CEO',
-            style: theme.textTheme.headlineMedium
-                ?.copyWith(fontWeight: FontWeight.w700),
-          ),
-        ),
-        Text(
-          formattedDate,
-          style: theme.textTheme.bodyLarge?.copyWith(
-            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-          ),
-        ),
-      ],
+    return WebSectionHeader(
+      label: formattedDate,
+      title: 'Panel Financiero CEO',
+      centered: false,
+      titleSize: isMobile ? 28 : 36,
     );
   }
 }
@@ -290,9 +249,9 @@ class _KpiLoadingGrid extends StatelessWidget {
           child: Container(
             height: 80,
             decoration: BoxDecoration(
-              color: colors.surface,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: colors.outlineVariant),
+              color: kWebSurface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: kWebCardBorder),
             ),
             child: Center(
               child: SizedBox(
@@ -300,7 +259,7 @@ class _KpiLoadingGrid extends StatelessWidget {
                 height: 24,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: colors.primary.withValues(alpha: 0.5),
+                  color: kWebPrimary.withValues(alpha: 0.5),
                 ),
               ),
             ),
@@ -318,9 +277,9 @@ class _KpiLoadingGrid extends StatelessWidget {
       childAspectRatio: 1.4,
       children: List.generate(6, (_) => Container(
         decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: colors.outlineVariant),
+          color: kWebSurface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: kWebCardBorder),
         ),
         child: Center(
           child: SizedBox(
@@ -328,7 +287,7 @@ class _KpiLoadingGrid extends StatelessWidget {
             height: 24,
             child: CircularProgressIndicator(
               strokeWidth: 2,
-              color: colors.primary.withValues(alpha: 0.5),
+              color: kWebPrimary.withValues(alpha: 0.5),
             ),
           ),
         ),
@@ -346,27 +305,28 @@ class _CommissionBreakdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colors = theme.colorScheme;
     final dataAsync = ref.watch(commissionBreakdownProvider);
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colors.outlineVariant),
-      ),
+    return WebCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.pie_chart_outline, size: 20, color: colors.primary),
-              const SizedBox(width: 8),
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: kWebPrimary.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.pie_chart_outline, size: 18, color: kWebPrimary),
+              ),
+              const SizedBox(width: 10),
               Text(
                 'Desglose de Comisiones (Mes Actual)',
                 style: theme.textTheme.titleSmall
-                    ?.copyWith(fontWeight: FontWeight.w600),
+                    ?.copyWith(fontWeight: FontWeight.w700, color: kWebTextPrimary),
               ),
             ],
           ),
@@ -550,27 +510,28 @@ class _TaxWithholdings extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colors = theme.colorScheme;
     final dataAsync = ref.watch(taxWithholdingProvider);
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colors.outlineVariant),
-      ),
+    return WebCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.receipt_long, size: 20, color: colors.primary),
-              const SizedBox(width: 8),
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: kWebSecondary.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.receipt_long_outlined, size: 18, color: kWebSecondary),
+              ),
+              const SizedBox(width: 10),
               Text(
                 'Retenciones de Impuestos',
                 style: theme.textTheme.titleSmall
-                    ?.copyWith(fontWeight: FontWeight.w600),
+                    ?.copyWith(fontWeight: FontWeight.w700, color: kWebTextPrimary),
               ),
             ],
           ),

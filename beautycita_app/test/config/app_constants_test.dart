@@ -49,6 +49,89 @@ void main() {
       });
     });
 
+    group('baseBuildNumber ABI offset stripping', () {
+      // Save and restore buildNumber since it's a mutable static
+      late int originalBuildNumber;
+
+      setUp(() {
+        originalBuildNumber = AppConstants.buildNumber;
+      });
+
+      tearDown(() {
+        AppConstants.buildNumber = originalBuildNumber;
+      });
+
+      // Uses examples from the code comment: base 50010, offsets 1-4k
+      test('strips armeabi ABI offset (+1000): 51010 → 50010', () {
+        AppConstants.buildNumber = 51010;
+        // (51010 ~/ 1000) % 10 = 51 % 10 = 1, in [1,4] → strip
+        expect(AppConstants.baseBuildNumber, 50010);
+      });
+
+      test('strips arm64 ABI offset (+2000): 52010 → 50010', () {
+        AppConstants.buildNumber = 52010;
+        // (52010 ~/ 1000) % 10 = 52 % 10 = 2, in [1,4] → strip
+        expect(AppConstants.baseBuildNumber, 50010);
+      });
+
+      test('strips x86 ABI offset (+3000): 53010 → 50010', () {
+        AppConstants.buildNumber = 53010;
+        expect(AppConstants.baseBuildNumber, 50010);
+      });
+
+      test('strips x86_64 ABI offset (+4000): 54010 → 50010', () {
+        AppConstants.buildNumber = 54010;
+        // (54010 ~/ 1000) % 10 = 54 % 10 = 4, in [1,4] → strip
+        expect(AppConstants.baseBuildNumber, 50010);
+      });
+
+      test('no offset when thousands digit is 0: 50010 → 50010', () {
+        AppConstants.buildNumber = 50010;
+        // (50010 ~/ 1000) % 10 = 50 % 10 = 0, NOT in [1,4] → no strip
+        expect(AppConstants.baseBuildNumber, 50010);
+      });
+
+      test('no offset when thousands digit > 4: 48063 → 48063', () {
+        AppConstants.buildNumber = 48063;
+        // (48063 ~/ 1000) % 10 = 48 % 10 = 8, NOT in [1,4] → no strip
+        expect(AppConstants.baseBuildNumber, 48063);
+      });
+
+      test('no offset when thousands digit is 5: 45000 → 45000', () {
+        AppConstants.buildNumber = 45000;
+        // (45000 ~/ 1000) % 10 = 45 % 10 = 5, NOT in [1,4] → no strip
+        expect(AppConstants.baseBuildNumber, 45000);
+      });
+
+      test('returns 0 for buildNumber <= 0', () {
+        AppConstants.buildNumber = 0;
+        expect(AppConstants.baseBuildNumber, 0);
+
+        AppConstants.buildNumber = -1;
+        expect(AppConstants.baseBuildNumber, 0);
+      });
+
+      test('offset 1 is stripped correctly: 41000 → 40000', () {
+        AppConstants.buildNumber = 41000;
+        expect(AppConstants.baseBuildNumber, 40000);
+      });
+
+      test('offset 2 is stripped correctly: 42000 → 40000', () {
+        AppConstants.buildNumber = 42000;
+        expect(AppConstants.baseBuildNumber, 40000);
+      });
+
+      test('offset 3 is stripped correctly: 43000 → 40000', () {
+        AppConstants.buildNumber = 43000;
+        expect(AppConstants.baseBuildNumber, 40000);
+      });
+
+      test('offset 4 is stripped correctly: 44000 → 40000', () {
+        AppConstants.buildNumber = 44000;
+        expect(AppConstants.baseBuildNumber, 40000);
+      });
+    });
+
     group('value ranges', () {
       test('buildNumber is positive', () {
         expect(AppConstants.buildNumber, greaterThan(0));

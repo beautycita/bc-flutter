@@ -5,8 +5,10 @@ import 'package:beautycita_core/supabase.dart';
 import 'package:beautycita_core/theme.dart';
 
 import '../../config/breakpoints.dart';
+import '../../config/web_theme.dart';
 import '../../providers/business_portal_provider.dart';
 import '../../providers/demo_providers.dart';
+import '../../widgets/web_design_system.dart';
 
 /// Selected dispute for detail panel.
 final selectedDisputeProvider =
@@ -102,18 +104,20 @@ class _DisputesList extends ConsumerWidget {
         Container(
           height: 56,
           padding: const EdgeInsets.symmetric(horizontal: 20),
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
               border:
-                  Border(bottom: BorderSide(color: colors.outlineVariant))),
+                  Border(bottom: BorderSide(color: kWebCardBorder))),
           child: Row(
             children: [
               Text('Disputas',
                   style: theme.textTheme.titleMedium
-                      ?.copyWith(fontWeight: FontWeight.w600)),
+                      ?.copyWith(fontWeight: FontWeight.w600, color: kWebTextPrimary)),
               const SizedBox(width: 8),
               Chip(
                   label: Text('$allCount'),
-                  visualDensity: VisualDensity.compact),
+                  visualDensity: VisualDensity.compact,
+                  side: const BorderSide(color: kWebCardBorder),
+                  backgroundColor: kWebSurface),
             ],
           ),
         ),
@@ -121,10 +125,9 @@ class _DisputesList extends ConsumerWidget {
         Container(
           height: 48,
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
               border: Border(
-                  bottom: BorderSide(
-                      color: colors.outlineVariant.withValues(alpha: 0.5)))),
+                  bottom: BorderSide(color: kWebCardBorder))),
           child: ListView(
             scrollDirection: Axis.horizontal,
             children: [
@@ -156,14 +159,19 @@ class _DisputesList extends ConsumerWidget {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.gavel_outlined,
-                          size: 48,
-                          color: colors.onSurface.withValues(alpha: 0.3)),
+                      Container(
+                        width: 64,
+                        height: 64,
+                        decoration: BoxDecoration(
+                          color: kWebPrimary.withValues(alpha: 0.06),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.gavel_outlined, size: 32, color: kWebTextHint),
+                      ),
                       const SizedBox(height: 12),
                       Text('Sin disputas',
                           style: theme.textTheme.bodyMedium?.copyWith(
-                              color:
-                                  colors.onSurface.withValues(alpha: 0.5))),
+                              color: kWebTextHint)),
                     ],
                   ),
                 )
@@ -241,7 +249,7 @@ class _DisputeRowState extends ConsumerState<_DisputeRow> {
           duration: const Duration(milliseconds: 150),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
           color: _hovering
-              ? colors.primary.withValues(alpha: 0.04)
+              ? kWebPrimary.withValues(alpha: 0.04)
               : Colors.transparent,
           child: Row(
             children: [
@@ -277,10 +285,10 @@ class _DisputeRowState extends ConsumerState<_DisputeRow> {
               const SizedBox(width: 8),
               Container(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                 decoration: BoxDecoration(
-                    color: sColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12)),
+                    color: sColor.withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(999)),
                 child: Text(
                   _statusLabel(status),
                   style: TextStyle(

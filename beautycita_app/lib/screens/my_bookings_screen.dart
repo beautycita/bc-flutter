@@ -43,8 +43,59 @@ class MyBookingsScreen extends ConsumerStatefulWidget {
   ConsumerState<MyBookingsScreen> createState() => _MyBookingsScreenState();
 }
 
-class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
+class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
+    with SingleTickerProviderStateMixin {
   _BookingTab _activeTab = _BookingTab.proximas;
+
+  late final AnimationController _entryController;
+  late final List<Animation<double>> _fadeAnims;
+  late final List<Animation<Offset>> _slideAnims;
+
+  @override
+  void initState() {
+    super.initState();
+    _entryController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+    const count = 2; // filter chips, booking list
+    _fadeAnims = List.generate(count, (i) {
+      final start = i * 0.12;
+      final end = (start + 0.4).clamp(0.0, 1.0);
+      return CurvedAnimation(
+        parent: _entryController,
+        curve: Interval(start, end, curve: Curves.easeOut),
+      );
+    });
+    _slideAnims = List.generate(count, (i) {
+      final start = i * 0.12;
+      final end = (start + 0.4).clamp(0.0, 1.0);
+      return Tween<Offset>(
+        begin: const Offset(0, 0.05),
+        end: Offset.zero,
+      ).animate(CurvedAnimation(
+        parent: _entryController,
+        curve: Interval(start, end, curve: Curves.easeOut),
+      ));
+    });
+    _entryController.forward();
+  }
+
+  @override
+  void dispose() {
+    _entryController.dispose();
+    super.dispose();
+  }
+
+  Widget _animated(int index, Widget child) {
+    return FadeTransition(
+      opacity: _fadeAnims[index],
+      child: SlideTransition(
+        position: _slideAnims[index],
+        child: child,
+      ),
+    );
+  }
 
   /// Return label text for each tab.
   String _tabLabel(_BookingTab tab) {
@@ -493,7 +544,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.local_offer_rounded,
+                            Icon(Icons.local_offer_outlined,
                                 size: 18, color: offerColor),
                             const SizedBox(width: 6),
                             Text(offerLabel,
@@ -621,11 +672,11 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
 
     // Translate
     final (String resLabel, Color resColor, IconData resIcon) = switch (resolution) {
-      'favor_client' => ('A favor tuyo', Colors.green, Icons.check_circle_rounded),
-      'favor_provider' => ('A favor del salon', Colors.blue, Icons.store_rounded),
-      'favor_both' => ('A favor de ambos', Colors.teal, Icons.handshake_rounded),
+      'favor_client' => ('A favor tuyo', Colors.green, Icons.check_circle_outlined),
+      'favor_provider' => ('A favor del salon', Colors.blue, Icons.store_outlined),
+      'favor_both' => ('A favor de ambos', Colors.teal, Icons.handshake_outlined),
       'dismissed' => ('Descartada', Colors.grey, Icons.cancel_outlined),
-      _ => ('Resuelta', Colors.green, Icons.check_circle_rounded),
+      _ => ('Resuelta', Colors.green, Icons.check_circle_outlined),
     };
 
     final offerLabel = switch (salonOffer) {
@@ -754,7 +805,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
                             const SizedBox(height: 10),
                             Row(
                               children: [
-                                Icon(Icons.payments_rounded, size: 16,
+                                Icon(Icons.payments_outlined, size: 16,
                                     color: colors.onSurface.withValues(alpha: 0.4)),
                                 const SizedBox(width: 6),
                                 Text('\$${refundAmount.toStringAsFixed(0)} MXN',
@@ -882,7 +933,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
                 const SizedBox(height: AppConstants.paddingSM),
                 Row(
                   children: [
-                    Icon(Icons.access_time_rounded, size: 12,
+                    Icon(Icons.access_time_outlined, size: 12,
                         color: colors.onSurface.withValues(alpha: 0.3)),
                     const SizedBox(width: 4),
                     Text('Resuelto: $resolvedDate',
@@ -1003,11 +1054,11 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
       body: Column(
         children: [
           // -- Filter Chips --
-          _buildFilterChips(textTheme),
+          _animated(0, _buildFilterChips(textTheme)),
 
           // -- Booking List --
           Expanded(
-            child: bookingsAsync.when(
+            child: _animated(1, bookingsAsync.when(
               loading: () =>
                   const Center(child: CircularProgressIndicator()),
               error: (err, _) => Center(
@@ -1052,7 +1103,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
                   ),
                 );
               },
-            ),
+            )),
           ),
         ],
       ),
@@ -1079,47 +1130,40 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
               ),
               child: GestureDetector(
                 onTap: () => setState(() => _activeTab = tab),
-                child: Container(
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
                   height: AppConstants.minTouchHeight - 8,
+                  alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    gradient: ext.goldGradientDirectional(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                    ),
+                    color: isSelected
+                        ? colorScheme.primary
+                        : colorScheme.surface,
                     borderRadius:
-                        BorderRadius.circular(AppConstants.radiusMD),
+                        BorderRadius.circular(AppConstants.radiusXL),
+                    border: isSelected
+                        ? null
+                        : Border.all(color: ext.cardBorderColor),
                     boxShadow: isSelected
                         ? [
                             BoxShadow(
                               color: colorScheme.primary
-                                  .withValues(alpha: 0.3),
+                                  .withValues(alpha: 0.25),
                               blurRadius: 8,
                               offset: const Offset(0, 3),
                             ),
                           ]
                         : null,
                   ),
-                  child: Container(
-                    margin: const EdgeInsets.all(1.5),
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
+                  child: Text(
+                    _tabLabel(tab),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: textTheme.labelLarge?.copyWith(
                       color: isSelected
-                          ? colorScheme.primary
-                          : colorScheme.surface,
-                      borderRadius:
-                          BorderRadius.circular(AppConstants.radiusMD - 1.5),
-                    ),
-                    child: Text(
-                      _tabLabel(tab),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: textTheme.labelLarge?.copyWith(
-                        color: isSelected
-                            ? Colors.white
-                            : colorScheme.onSurface,
-                        fontWeight:
-                            isSelected ? FontWeight.w700 : FontWeight.w500,
-                      ),
+                          ? Colors.white
+                          : colorScheme.onSurface,
+                      fontWeight:
+                          isSelected ? FontWeight.w700 : FontWeight.w500,
                     ),
                   ),
                 ),
@@ -1141,7 +1185,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.calendar_today_rounded,
+              Icons.calendar_today_outlined,
               size: AppConstants.iconSizeXXL,
               color: colorScheme.onSurface.withValues(alpha: 0.2),
             ),
@@ -1175,24 +1219,21 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
       onTap: () => context.push('/appointment/${booking.id}'),
       child: Container(
       decoration: BoxDecoration(
-        gradient: ext.goldGradientDirectional(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+        border: Border.all(color: ext.cardBorderColor),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
           ),
         ],
-      ),
-      child: Container(
-      margin: const EdgeInsets.all(1.5),
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(AppConstants.radiusMD - 1.5),
       ),
       child: Padding(
         padding: const EdgeInsets.all(AppConstants.paddingMD),
@@ -1206,8 +1247,10 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
                 Expanded(
                   child: Text(
                     booking.providerName ?? 'Proveedor',
-                    style: textTheme.titleMedium?.copyWith(
+                    style: const TextStyle(
+                      fontSize: 13,
                       fontWeight: FontWeight.w700,
+                      color: Color(0xFF1a1a1a),
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -1218,60 +1261,34 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
               ],
             ),
 
-            const SizedBox(height: AppConstants.paddingXS),
+            const Divider(height: 20, thickness: 1, color: Color(0xFFF5F0EB)),
 
-            // Service name
-            Text(
-              booking.serviceName,
-              style: textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurface.withValues(alpha: 0.5),
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+            // Service info row: IconBox + label/value
+            _buildInfoRow(
+              icon: Icons.content_cut_outlined,
+              iconColor: colorScheme.primary,
+              label: 'SERVICIO',
+              value: booking.serviceName,
             ),
 
-            const SizedBox(height: AppConstants.paddingSM),
+            const Divider(height: 16, thickness: 1, color: Color(0xFFF5F0EB)),
 
-            // Date formatted in Spanish
-            Row(
-              children: [
-                Icon(
-                  Icons.schedule_rounded,
-                  size: AppConstants.iconSizeSM,
-                  color: colorScheme.primary,
-                ),
-                const SizedBox(width: AppConstants.paddingXS),
-                Expanded(
-                  child: Text(
-                    _formatDate(booking.scheduledAt),
-                    style: textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
+            // Date info row
+            _buildInfoRow(
+              icon: Icons.schedule_outlined,
+              iconColor: colorScheme.secondary,
+              label: 'FECHA Y HORA',
+              value: _formatDate(booking.scheduledAt),
             ),
 
-            // Price if available
+            // Price info row
             if (booking.price != null) ...[
-              const SizedBox(height: AppConstants.paddingXS),
-              Row(
-                children: [
-                  Icon(
-                    Icons.attach_money_rounded,
-                    size: AppConstants.iconSizeSM,
-                    color: colorScheme.primary,
-                  ),
-                  Text(
-                    '\$${booking.price!.toStringAsFixed(0)} MXN',
-                    style: textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
+              const Divider(height: 16, thickness: 1, color: Color(0xFFF5F0EB)),
+              _buildInfoRow(
+                icon: Icons.payments_outlined,
+                iconColor: Colors.green.shade600,
+                label: 'PRECIO',
+                value: '\$${booking.price!.toStringAsFixed(0)} MXN',
               ),
             ],
 
@@ -1290,8 +1307,8 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
                   children: [
                     Icon(
                       disputeStatus == 'resolved'
-                          ? Icons.check_circle_rounded
-                          : Icons.block_rounded,
+                          ? Icons.check_circle_outlined
+                          : Icons.block_outlined,
                       size: 14,
                       color: disputeStatus == 'resolved' ? Colors.green : Colors.red,
                     ),
@@ -1324,7 +1341,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
-                      hasSalonOffer ? Icons.local_offer_rounded : Icons.gavel_rounded,
+                      hasSalonOffer ? Icons.local_offer_outlined : Icons.gavel_outlined,
                       size: 14,
                       color: hasSalonOffer ? Colors.blue : Colors.orange,
                     ),
@@ -1377,7 +1394,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
                     ? TextButton.icon(
                         onPressed: () => _showDisputeOffer(dispute!),
                         icon: Icon(
-                          Icons.visibility_rounded,
+                          Icons.visibility_outlined,
                           size: AppConstants.iconSizeSM,
                           color: Colors.blue.shade700,
                         ),
@@ -1397,7 +1414,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
                         ? TextButton.icon(
                             onPressed: () => _showDisputeResult(dispute),
                             icon: Icon(
-                              Icons.info_outline_rounded,
+                              Icons.info_outlined,
                               size: AppConstants.iconSizeSM,
                               color: Colors.green.shade700,
                             ),
@@ -1438,8 +1455,59 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
           ],
         ),
       ),
-      ),
     ),
+    );
+  }
+
+  /// Build an info row following the approved IconBox pattern.
+  Widget _buildInfoRow({
+    required IconData icon,
+    required Color iconColor,
+    required String label,
+    required String value,
+    Widget? trailing,
+  }) {
+    return Row(
+      children: [
+        Container(
+          width: 34,
+          height: 34,
+          decoration: BoxDecoration(
+            color: iconColor.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, size: AppConstants.iconSizeSM, color: iconColor),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 8,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.5,
+                  color: Color(0xFFAAAAAA),
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF1a1a1a),
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+        ?trailing,
+      ],
     );
   }
 

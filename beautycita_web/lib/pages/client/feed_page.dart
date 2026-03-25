@@ -9,6 +9,8 @@ import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 
 import '../../config/breakpoints.dart';
+import '../../config/web_theme.dart';
+import '../../widgets/web_design_system.dart';
 
 // ── Feed Page ─────────────────────────────────────────────────────────────────
 
@@ -145,14 +147,17 @@ class _FeedPageState extends ConsumerState<FeedPage> {
       children: [
         // Left sidebar — category filters
         SizedBox(
-          width: 240,
+          width: 260,
           child: _CategorySidebar(
             categories: _categories,
             selected: _selectedCategory,
             onSelected: _onCategorySelected,
           ),
         ),
-        const VerticalDivider(width: 1),
+        Container(
+          width: 1,
+          color: kWebCardBorder,
+        ),
         // Main masonry area
         Expanded(
           child: _buildMasonryArea(context, columnCount: 4),
@@ -195,7 +200,9 @@ class _FeedPageState extends ConsumerState<FeedPage> {
 
   Widget _buildMasonryArea(BuildContext context, {required int columnCount}) {
     if (_items.isEmpty && _isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(
+        child: CircularProgressIndicator(color: kWebPrimary),
+      );
     }
 
     if (_items.isEmpty && !_isLoading) {
@@ -203,14 +210,34 @@ class _FeedPageState extends ConsumerState<FeedPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.photo_library_outlined,
-                size: 64, color: Theme.of(context).colorScheme.outline),
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: kWebPrimary.withValues(alpha: 0.08),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.photo_library_outlined,
+                  size: 40, color: kWebTextHint),
+            ),
             const SizedBox(height: 16),
-            Text(
+            const Text(
               'No hay publicaciones todavia',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.outline,
-                  ),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: kWebTextSecondary,
+                fontFamily: 'system-ui',
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Las fotos de salones apareceran aqui',
+              style: TextStyle(
+                fontSize: 14,
+                color: kWebTextHint,
+                fontFamily: 'system-ui',
+              ),
             ),
           ],
         ),
@@ -225,8 +252,9 @@ class _FeedPageState extends ConsumerState<FeedPage> {
 
     return SingleChildScrollView(
       controller: _scrollController,
-      padding: const EdgeInsets.all(16),
-      child: Column(
+      padding: const EdgeInsets.all(20),
+      child: StaggeredFadeIn(
+        staggerDelay: const Duration(milliseconds: 60),
         children: [
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -253,16 +281,22 @@ class _FeedPageState extends ConsumerState<FeedPage> {
           if (_isLoading)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 24),
-              child: CircularProgressIndicator(),
+              child: Center(
+                child: CircularProgressIndicator(color: kWebPrimary),
+              ),
             ),
           if (!_hasMore && _items.isNotEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 24),
-              child: Text(
-                'Has visto todo',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.outline,
-                    ),
+              child: Center(
+                child: Text(
+                  'Has visto todo',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: kWebTextHint,
+                    fontFamily: 'system-ui',
+                  ),
+                ),
               ),
             ),
         ],
@@ -295,37 +329,51 @@ class _CategorySidebar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return ListView(
-      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-      children: [
-        Text(
-          'Explorar',
-          style: theme.textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.w700,
+    return Container(
+      color: kWebSurface,
+      child: ListView(
+        padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
+        children: [
+          // Section header with gradient label
+          ShaderMask(
+            shaderCallback: (bounds) =>
+                kWebBrandGradient.createShader(bounds),
+            child: const Text(
+              'EXPLORAR',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 2,
+                color: Colors.white,
+                fontFamily: 'system-ui',
+              ),
+            ),
           ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Inspiracion y tendencias',
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.outline,
+          const SizedBox(height: 8),
+          const Text(
+            'Inspiracion y tendencias',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w400,
+              color: kWebTextSecondary,
+              fontFamily: 'system-ui',
+            ),
           ),
-        ),
-        const SizedBox(height: 24),
-        // "All" option
-        _SidebarItem(
-          label: 'Todo',
-          isActive: selected == null,
-          onTap: () => onSelected(null),
-        ),
-        for (final cat in categories)
+          const SizedBox(height: 24),
+          // "All" option
           _SidebarItem(
-            label: cat,
-            isActive: selected == cat,
-            onTap: () => onSelected(cat),
+            label: 'Todo',
+            isActive: selected == null,
+            onTap: () => onSelected(null),
           ),
-      ],
+          for (final cat in categories)
+            _SidebarItem(
+              label: cat,
+              isActive: selected == cat,
+              onTap: () => onSelected(cat),
+            ),
+        ],
+      ),
     );
   }
 }
@@ -350,7 +398,6 @@ class _SidebarItemState extends State<_SidebarItem> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
@@ -363,32 +410,35 @@ class _SidebarItemState extends State<_SidebarItem> {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
             color: widget.isActive
-                ? theme.colorScheme.primaryContainer
+                ? kWebPrimary.withValues(alpha: 0.08)
                 : _hovered
-                    ? theme.colorScheme.surfaceContainerHighest
+                    ? kWebCardBorder.withValues(alpha: 0.5)
                     : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(10),
           ),
           child: Row(
             children: [
-              Icon(
-                widget.isActive
-                    ? Icons.radio_button_checked
-                    : Icons.radio_button_unchecked,
-                size: 18,
-                color: widget.isActive
-                    ? theme.colorScheme.primary
-                    : theme.colorScheme.outline,
-              ),
-              const SizedBox(width: 10),
+              // Gradient accent bar for active
+              if (widget.isActive)
+                Container(
+                  width: 3,
+                  height: 18,
+                  margin: const EdgeInsets.only(right: 10),
+                  decoration: BoxDecoration(
+                    gradient: kWebBrandGradient,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              if (!widget.isActive)
+                const SizedBox(width: 13),
               Text(
                 widget.label,
-                style: theme.textTheme.bodyMedium?.copyWith(
+                style: TextStyle(
+                  fontSize: 14,
                   fontWeight:
                       widget.isActive ? FontWeight.w600 : FontWeight.w400,
-                  color: widget.isActive
-                      ? theme.colorScheme.onPrimaryContainer
-                      : theme.colorScheme.onSurface,
+                  color: widget.isActive ? kWebPrimary : kWebTextPrimary,
+                  fontFamily: 'system-ui',
                 ),
               ),
             ],
@@ -472,23 +522,27 @@ class _FilterChipState extends State<_FilterChip> {
           onTap: widget.onTap,
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 150),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
             decoration: BoxDecoration(
+              gradient: widget.isActive ? kWebBrandGradient : null,
               color: widget.isActive
-                  ? widget.theme.colorScheme.primary
+                  ? null
                   : _hovered
-                      ? widget.theme.colorScheme.surfaceContainerHighest
-                      : widget.theme.colorScheme.surfaceContainerLow,
-              borderRadius: BorderRadius.circular(20),
+                      ? kWebCardBorder
+                      : kWebSurface,
+              borderRadius: BorderRadius.circular(999),
+              border: widget.isActive
+                  ? null
+                  : Border.all(color: kWebCardBorder),
             ),
             child: Text(
               widget.label,
-              style: widget.theme.textTheme.bodySmall?.copyWith(
+              style: TextStyle(
+                fontSize: 13,
                 fontWeight:
-                    widget.isActive ? FontWeight.w600 : FontWeight.w400,
-                color: widget.isActive
-                    ? widget.theme.colorScheme.onPrimary
-                    : widget.theme.colorScheme.onSurface,
+                    widget.isActive ? FontWeight.w600 : FontWeight.w500,
+                color: widget.isActive ? Colors.white : kWebTextPrimary,
+                fontFamily: 'system-ui',
               ),
             ),
           ),
@@ -515,7 +569,6 @@ class _FeedCardState extends State<_FeedCard> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final item = widget.item;
 
     return MouseRegion(
@@ -526,18 +579,22 @@ class _FeedCardState extends State<_FeedCard> {
         onTap: widget.onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          transform: _hovered
-              ? (Matrix4.identity()..translateByDouble(0.0, -2.0, 0.0, 0.0))
-              : Matrix4.identity(),
+          curve: Curves.easeOut,
+          transform: Matrix4.translationValues(0, _hovered ? -4 : 0, 0),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            color: theme.colorScheme.surface,
+            borderRadius: BorderRadius.circular(16),
+            color: kWebSurface,
+            border: Border.all(color: kWebCardBorder),
             boxShadow: [
               BoxShadow(
-                color: theme.colorScheme.shadow
-                    .withValues(alpha: _hovered ? 0.15 : 0.08),
-                blurRadius: _hovered ? 16 : 8,
+                color: Colors.black.withValues(alpha: _hovered ? 0.06 : 0.03),
+                blurRadius: _hovered ? 16 : 10,
                 offset: Offset(0, _hovered ? 6 : 2),
+              ),
+              BoxShadow(
+                color: Colors.black.withValues(alpha: _hovered ? 0.04 : 0.02),
+                blurRadius: _hovered ? 30 : 20,
+                offset: Offset(0, _hovered ? 10 : 4),
               ),
             ],
           ),
@@ -559,7 +616,7 @@ class _FeedCardState extends State<_FeedCard> {
                                   item.beforeUrl!,
                                   fit: BoxFit.cover,
                                   errorBuilder: (_, __, ___) =>
-                                      _imagePlaceholder(theme),
+                                      _imagePlaceholder(),
                                 ),
                               ),
                               const SizedBox(width: 2),
@@ -568,7 +625,7 @@ class _FeedCardState extends State<_FeedCard> {
                                   item.afterUrl,
                                   fit: BoxFit.cover,
                                   errorBuilder: (_, __, ___) =>
-                                      _imagePlaceholder(theme),
+                                      _imagePlaceholder(),
                                 ),
                               ),
                             ],
@@ -578,7 +635,7 @@ class _FeedCardState extends State<_FeedCard> {
                             fit: BoxFit.cover,
                             width: double.infinity,
                             errorBuilder: (_, __, ___) =>
-                                _imagePlaceholder(theme),
+                                _imagePlaceholder(),
                           ),
                   ),
                   // Gradient overlay with names
@@ -604,9 +661,11 @@ class _FeedCardState extends State<_FeedCard> {
                         children: [
                           Text(
                             item.businessName,
-                            style: theme.textTheme.labelLarge?.copyWith(
+                            style: const TextStyle(
                               color: Colors.white,
+                              fontSize: 14,
                               fontWeight: FontWeight.w600,
+                              fontFamily: 'system-ui',
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -614,8 +673,10 @@ class _FeedCardState extends State<_FeedCard> {
                           if (item.staffName != null)
                             Text(
                               item.staffName!,
-                              style: theme.textTheme.labelSmall?.copyWith(
+                              style: const TextStyle(
                                 color: Colors.white70,
+                                fontSize: 12,
+                                fontFamily: 'system-ui',
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -624,23 +685,25 @@ class _FeedCardState extends State<_FeedCard> {
                       ),
                     ),
                   ),
-                  // Before/After badge
+                  // Before/After badge with gradient
                   if (item.isBeforeAfter)
                     Positioned(
                       top: 8,
                       left: 8,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
+                            horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.primary,
-                          borderRadius: BorderRadius.circular(12),
+                          gradient: kWebBrandGradient,
+                          borderRadius: BorderRadius.circular(999),
                         ),
-                        child: Text(
+                        child: const Text(
                           'Antes / Despues',
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: theme.colorScheme.onPrimary,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
                             fontWeight: FontWeight.w600,
+                            fontFamily: 'system-ui',
                           ),
                         ),
                       ),
@@ -650,14 +713,19 @@ class _FeedCardState extends State<_FeedCard> {
 
               // Caption + tags + save count
               Padding(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(14),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     if (item.caption != null && item.caption!.isNotEmpty) ...[
                       Text(
                         item.caption!,
-                        style: theme.textTheme.bodySmall,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: kWebTextPrimary,
+                          height: 1.5,
+                          fontFamily: 'system-ui',
+                        ),
                         maxLines: 3,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -672,31 +740,35 @@ class _FeedCardState extends State<_FeedCard> {
                           for (final tag in item.productTags.take(3))
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 3),
+                                  horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(
-                                color: theme.colorScheme.secondaryContainer,
-                                borderRadius: BorderRadius.circular(12),
+                                color: kWebSecondary.withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(999),
                               ),
                               child: Text(
                                 tag.name,
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  color:
-                                      theme.colorScheme.onSecondaryContainer,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                  color: kWebSecondary,
+                                  fontFamily: 'system-ui',
                                 ),
                               ),
                             ),
                           if (item.productTags.length > 3)
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 3),
+                                  horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(
-                                color: theme.colorScheme.surfaceContainerLow,
-                                borderRadius: BorderRadius.circular(12),
+                                color: kWebCardBorder,
+                                borderRadius: BorderRadius.circular(999),
                               ),
                               child: Text(
                                 '+${item.productTags.length - 3}',
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  color: theme.colorScheme.outline,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: kWebTextHint,
+                                  fontFamily: 'system-ui',
                                 ),
                               ),
                             ),
@@ -709,26 +781,30 @@ class _FeedCardState extends State<_FeedCard> {
                         Icon(
                           item.isSaved
                               ? Icons.favorite
-                              : Icons.favorite_border,
+                              : Icons.favorite_border_outlined,
                           size: 16,
                           color: item.isSaved
-                              ? theme.colorScheme.error
-                              : theme.colorScheme.outline,
+                              ? kWebPrimary
+                              : kWebTextHint,
                         ),
                         const SizedBox(width: 4),
                         Text(
                           '${item.saveCount}',
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: theme.colorScheme.outline,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: kWebTextHint,
+                            fontFamily: 'system-ui',
                           ),
                         ),
                         const Spacer(),
                         if (item.serviceCategory != null)
                           Text(
                             item.serviceCategory!,
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: theme.colorScheme.outline,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: kWebTextHint,
                               fontStyle: FontStyle.italic,
+                              fontFamily: 'system-ui',
                             ),
                           ),
                       ],
@@ -743,12 +819,11 @@ class _FeedCardState extends State<_FeedCard> {
     );
   }
 
-  Widget _imagePlaceholder(ThemeData theme) {
+  Widget _imagePlaceholder() {
     return Container(
-      color: theme.colorScheme.surfaceContainerHighest,
-      child: Center(
-        child: Icon(Icons.image_outlined,
-            size: 48, color: theme.colorScheme.outline),
+      color: kWebCardBorder,
+      child: const Center(
+        child: Icon(Icons.image_outlined, size: 48, color: kWebTextHint),
       ),
     );
   }
@@ -954,16 +1029,18 @@ class _FeedDetailDialog extends StatelessWidget {
 
   Widget _badge(ThemeData theme, String text) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
       decoration: BoxDecoration(
-        color: Colors.black54,
-        borderRadius: BorderRadius.circular(12),
+        gradient: kWebBrandGradient,
+        borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
         text,
-        style: theme.textTheme.labelSmall?.copyWith(
+        style: const TextStyle(
           color: Colors.white,
+          fontSize: 12,
           fontWeight: FontWeight.w600,
+          fontFamily: 'system-ui',
         ),
       ),
     );

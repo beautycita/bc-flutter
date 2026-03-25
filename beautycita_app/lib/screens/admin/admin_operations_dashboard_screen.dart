@@ -228,7 +228,7 @@ class AdminOperationsDashboardScreen extends ConsumerWidget {
                   color: const Color(0xFFF46800),
                   onTap: () => launchUrl(
                     Uri.parse(
-                        'https://admin:JUs3f2m3Fa@beautycita.com/grafana/'),
+                        'https://beautycita.com/grafana/'),
                     mode: LaunchMode.externalApplication,
                   ),
                 ),

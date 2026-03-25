@@ -11,11 +11,22 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { requireFeature } from "../_shared/check-toggle.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+const ALLOWED_ORIGINS = [
+  "https://beautycita.com",
+  "https://www.beautycita.com",
+  "https://debug.beautycita.com",
+];
+
+function corsOrigin(req: Request): string {
+  const o = req.headers.get("origin") ?? "";
+  return ALLOWED_ORIGINS.includes(o) ? o : ALLOWED_ORIGINS[0];
+}
+
+const corsHeaders = (req: Request) => ({
+  "Access-Control-Allow-Origin": corsOrigin(req),
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
-};
+});
 
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY")!;
 const LIGHTX_API_KEY = Deno.env.get("LIGHTX_API_KEY") ?? "";
@@ -379,7 +390,7 @@ async function getUserIdFromToken(
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
 
   const blocked = await requireFeature("enable_chat");
@@ -392,7 +403,15 @@ serve(async (req) => {
     );
 
     const authHeader = req.headers.get("authorization");
-    const userId = await getUserIdFromToken(authHeader, supabase);
+    let userId: string;
+    try {
+      userId = await getUserIdFromToken(authHeader, supabase);
+    } catch (_) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
+      );
+    }
 
     const body: ChatRequest = await req.json();
     const { action } = body;
@@ -404,7 +423,7 @@ serve(async (req) => {
       if (!message) {
         return new Response(
           JSON.stringify({ error: "message required" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
         );
       }
 
@@ -442,7 +461,7 @@ serve(async (req) => {
 
       return new Response(
         JSON.stringify({ response, thread_id: threadId, response_id }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        { headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
       );
     }
 
@@ -453,7 +472,7 @@ serve(async (req) => {
 
       return new Response(
         JSON.stringify({ history, thread_id: threadId }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        { headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
       );
     }
 
@@ -467,7 +486,7 @@ serve(async (req) => {
       if (!field_type) {
         return new Response(
           JSON.stringify({ error: "field_type required" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
         );
       }
 
@@ -482,7 +501,7 @@ serve(async (req) => {
       if ((count ?? 0) >= 10) {
         return new Response(
           JSON.stringify({ error: "rate_limit", text: "Ay mortal, ya me pediste demasiados textos. Regresa en un rato..." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          { status: 429, headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
         );
       }
 
@@ -558,7 +577,7 @@ Solo el texto, nada mas.`;
 
       return new Response(
         JSON.stringify({ text: generatedText.trim() }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        { headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
       );
     }
 
@@ -577,7 +596,7 @@ Solo el texto, nada mas.`;
       if (!salon_name || !discovered_salon_id) {
         return new Response(
           JSON.stringify({ error: "salon_name and discovered_salon_id required" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
         );
       }
 
@@ -599,7 +618,7 @@ Especialidades: ${(salon_specialties && salon_specialties.length > 0) ? salon_sp
 
       return new Response(
         JSON.stringify({ bio: bio.trim() }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        { headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
       );
     }
 
@@ -616,7 +635,7 @@ Especialidades: ${(salon_specialties && salon_specialties.length > 0) ? salon_sp
       if (!salon_name) {
         return new Response(
           JSON.stringify({ error: "salon_name required" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
         );
       }
 
@@ -631,7 +650,7 @@ Ciudad: ${salon_city || "Mexico"}${service_searched ? `\nServicio buscado: ${ser
 
       return new Response(
         JSON.stringify({ message: message.trim() }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        { headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
       );
     }
 
@@ -645,14 +664,14 @@ Ciudad: ${salon_city || "Mexico"}${service_searched ? `\nServicio buscado: ${ser
         if (!image_base64 || !target_image_base64) {
           return new Response(
             JSON.stringify({ error: `${tool} requires image_base64 (your photo) and target_image_base64 (reference model)` }),
-            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+            { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
           );
         }
       } else {
         if (!image_base64 || !style_prompt) {
           return new Response(
             JSON.stringify({ error: "image_base64 and style_prompt required" }),
-            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+            { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
           );
         }
       }
@@ -660,7 +679,7 @@ Ciudad: ${salon_city || "Mexico"}${service_searched ? `\nServicio buscado: ${ser
       if (!LIGHTX_TOOL_ENDPOINTS[tool]) {
         return new Response(
           JSON.stringify({ error: `Unknown tool_type: ${tool}. Valid: ${Object.keys(LIGHTX_TOOL_ENDPOINTS).join(", ")}` }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
         );
       }
 
@@ -689,20 +708,20 @@ Ciudad: ${salon_city || "Mexico"}${service_searched ? `\nServicio buscado: ${ser
 
       return new Response(
         JSON.stringify({ result_url: resultUrl, thread_id: threadId }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        { headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
       );
     }
 
     return new Response(
       JSON.stringify({ error: "Unknown action" }),
-      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
     );
   } catch (err) {
     const message = err instanceof Error ? err.message : "Internal error";
     console.error("aphrodite-chat error:", message);
     return new Response(
       JSON.stringify({ error: "An internal error occurred" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
     );
   }
 });

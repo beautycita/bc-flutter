@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:beautycita/config/constants.dart';
+import 'package:beautycita/config/theme_extension.dart';
 import 'package:beautycita/providers/payment_methods_provider.dart';
 import 'package:beautycita/services/toast_service.dart';
 import 'package:beautycita/widgets/settings_widgets.dart';
@@ -12,13 +13,59 @@ class PaymentMethodsScreen extends ConsumerStatefulWidget {
   ConsumerState<PaymentMethodsScreen> createState() => _PaymentMethodsScreenState();
 }
 
-class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
+class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _entryController;
+  late final List<Animation<double>> _fadeAnims;
+  late final List<Animation<Offset>> _slideAnims;
+
   @override
   void initState() {
     super.initState();
+    _entryController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+    const count = 3; // saved cards, other methods, fee info
+    _fadeAnims = List.generate(count, (i) {
+      final start = i * 0.12;
+      final end = (start + 0.4).clamp(0.0, 1.0);
+      return CurvedAnimation(
+        parent: _entryController,
+        curve: Interval(start, end, curve: Curves.easeOut),
+      );
+    });
+    _slideAnims = List.generate(count, (i) {
+      final start = i * 0.12;
+      final end = (start + 0.4).clamp(0.0, 1.0);
+      return Tween<Offset>(
+        begin: const Offset(0, 0.05),
+        end: Offset.zero,
+      ).animate(CurvedAnimation(
+        parent: _entryController,
+        curve: Interval(start, end, curve: Curves.easeOut),
+      ));
+    });
+    _entryController.forward();
     Future.microtask(() {
       ref.read(paymentMethodsProvider.notifier).loadCards();
     });
+  }
+
+  @override
+  void dispose() {
+    _entryController.dispose();
+    super.dispose();
+  }
+
+  Widget _animated(int index, Widget child) {
+    return FadeTransition(
+      opacity: _fadeAnims[index],
+      child: SlideTransition(
+        position: _slideAnims[index],
+        child: child,
+      ),
+    );
   }
 
   void _showCashInfo(BuildContext context) {
@@ -75,7 +122,6 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
   Widget build(BuildContext context) {
     final pm = ref.watch(paymentMethodsProvider);
     final textTheme = Theme.of(context).textTheme;
-    final surface = Theme.of(context).colorScheme.surface;
     final onSurfaceLight = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
 
     // Listen for messages
@@ -90,6 +136,9 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
       }
     });
 
+    final cs = Theme.of(context).colorScheme;
+    final ext = Theme.of(context).extension<BCThemeExtension>()!;
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(title: const Text('Metodos de pago')),
@@ -100,69 +149,145 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
         ),
         children: [
           // ── Tarjetas guardadas ──
-          const SectionHeader(label: 'Tarjetas guardadas'),
-          const SizedBox(height: AppConstants.paddingXS),
+          _animated(0, Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SectionHeader(label: 'Tarjetas guardadas'),
 
-          if (pm.isLoading && pm.cards.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 16),
-              child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-            )
-          else if (pm.cards.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppConstants.paddingSM,
-                vertical: AppConstants.paddingSM,
-              ),
-              child: Text(
-                'No tienes tarjetas guardadas',
-                style: textTheme.bodyMedium?.copyWith(color: onSurfaceLight),
-              ),
-            )
-          else
-            ...pm.cards.map((card) => _CardTile(card: card, ref: ref)),
+              // Grouped card container for saved cards
+              Container(
+                decoration: BoxDecoration(
+                  color: cs.surface,
+                  borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+                  border: Border.all(color: ext.cardBorderColor),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.03),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
+                    ),
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.02),
+                      blurRadius: 20,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    if (pm.isLoading && pm.cards.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                      )
+                    else if (pm.cards.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.all(AppConstants.paddingMD),
+                        child: Text(
+                          'No tienes tarjetas guardadas',
+                          style: textTheme.bodyMedium?.copyWith(color: onSurfaceLight),
+                        ),
+                      )
+                    else
+                      ...pm.cards.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final card = entry.value;
+                        return Column(
+                          children: [
+                            _CardTile(card: card, ref: ref),
+                            if (index < pm.cards.length - 1)
+                              const Divider(height: 1, thickness: 1, color: Color(0xFFF5F0EB),
+                                indent: AppConstants.paddingSM, endIndent: AppConstants.paddingSM),
+                          ],
+                        );
+                      }),
 
-          // Add card button
-          SettingsTile(
-            icon: Icons.add_card_rounded,
-            label: 'Agregar tarjeta',
-            trailing: pm.isLoading
-                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                : null,
-            onTap: pm.isLoading ? null : () => ref.read(paymentMethodsProvider.notifier).addCard(),
-          ),
+                    // Divider before add button
+                    const Divider(height: 1, thickness: 1, color: Color(0xFFF5F0EB),
+                      indent: AppConstants.paddingSM, endIndent: AppConstants.paddingSM),
+
+                    // Add card button
+                    SettingsTile(
+                      icon: Icons.add_card_outlined,
+                      label: 'Agregar tarjeta',
+                      trailing: pm.isLoading
+                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                          : null,
+                      onTap: pm.isLoading ? null : () => ref.read(paymentMethodsProvider.notifier).addCard(),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          )),
 
           const SizedBox(height: AppConstants.paddingLG),
 
           // ── Otros metodos ──
-          const SectionHeader(label: 'Otros metodos'),
-          const SizedBox(height: AppConstants.paddingXS),
+          _animated(1, Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SectionHeader(label: 'Otros metodos'),
 
-          // Cash
-          _OtherMethodTile(
-            icon: Icons.store_rounded,
-            iconColor: const Color(0xFFCC0000),
-            label: 'Pago en efectivo',
-            subtitle: 'OXXO, 7-Eleven, tiendas de conveniencia',
-            badgeText: 'Disponible',
-            badgeColor: Colors.green.shade600,
-            onTap: () => _showCashInfo(context),
-          ),
+              // Grouped card container for other methods
+              Container(
+                decoration: BoxDecoration(
+                  color: cs.surface,
+                  borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+                  border: Border.all(color: ext.cardBorderColor),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.03),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
+                    ),
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.02),
+                      blurRadius: 20,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: _OtherMethodTile(
+                  icon: Icons.store_outlined,
+                  iconColor: const Color(0xFFCC0000),
+                  label: 'Pago en efectivo',
+                  subtitle: 'OXXO, 7-Eleven, tiendas de conveniencia',
+                  badgeText: 'Disponible',
+                  badgeColor: Colors.green.shade600,
+                  onTap: () => _showCashInfo(context),
+                ),
+              ),
+            ],
+          )),
 
           const SizedBox(height: AppConstants.paddingLG),
 
           // ── Fee info ──
-          Container(
+          _animated(2, Container(
             padding: const EdgeInsets.all(AppConstants.paddingMD),
             decoration: BoxDecoration(
-              color: surface,
-              borderRadius: BorderRadius.circular(AppConstants.radiusSM),
+              color: cs.surface,
+              borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+              border: Border.all(color: ext.cardBorderColor),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
+                ),
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.02),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ],
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Icon(
-                  Icons.info_outline_rounded,
+                  Icons.info_outlined,
                   size: 20,
                   color: onSurfaceLight,
                 ),
@@ -177,9 +302,9 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
                 ),
               ],
             ),
-          ),
+          )),
 
-          const SizedBox(height: AppConstants.paddingLG),
+          const SizedBox(height: AppConstants.paddingXXL),
         ],
       ),
     );
@@ -198,7 +323,7 @@ class _CardTile extends StatelessWidget {
     final onSurfaceLight = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
 
     return SettingsTile(
-      icon: Icons.credit_card_rounded,
+      icon: Icons.credit_card_outlined,
       iconColor: Colors.green.shade600,
       label: '${card.displayBrand} ****${card.last4}',
       trailing: Row(
@@ -211,7 +336,7 @@ class _CardTile extends StatelessWidget {
           const SizedBox(width: 8),
           GestureDetector(
             onTap: () => _confirmRemove(context),
-            child: Icon(Icons.close_rounded, size: 18, color: Colors.red.shade400),
+            child: Icon(Icons.delete_outlined, size: 18, color: Colors.red.shade400),
           ),
         ],
       ),
@@ -314,40 +439,50 @@ class _OtherMethodTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final onSurfaceLight = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
+    final cs = Theme.of(context).colorScheme;
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(AppConstants.radiusSM),
+      borderRadius: BorderRadius.circular(AppConstants.radiusMD),
       child: Padding(
         padding: const EdgeInsets.symmetric(
           horizontal: AppConstants.paddingSM,
-          vertical: AppConstants.paddingMD,
+          vertical: AppConstants.paddingSM + 4,
         ),
         child: Row(
           children: [
+            // IconBox 34x34, radius 10, colored bg
             Container(
-              width: 40,
-              height: 40,
+              width: 34,
+              height: 34,
               decoration: BoxDecoration(
-                color: iconColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(AppConstants.radiusSM),
+                color: iconColor.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(icon, color: iconColor, size: 22),
+              child: Icon(icon, color: iconColor, size: AppConstants.iconSizeSM),
             ),
-            const SizedBox(width: AppConstants.paddingMD),
+            const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    label,
-                    style: textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w500),
+                    subtitle.toUpperCase(),
+                    style: const TextStyle(
+                      fontSize: 8,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.5,
+                      color: Color(0xFFAAAAAA),
+                    ),
                   ),
+                  const SizedBox(height: 2),
                   Text(
-                    subtitle,
-                    style: textTheme.bodySmall?.copyWith(color: onSurfaceLight),
+                    label,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF1a1a1a),
+                    ),
                   ),
                 ],
               ),
@@ -356,19 +491,21 @@ class _OtherMethodTile extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
                 color: badgeColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: BorderRadius.circular(6),
               ),
               child: Text(
                 badgeText,
-                style: textTheme.labelSmall?.copyWith(
-                  color: badgeColor,
+                style: TextStyle(
+                  fontSize: 10,
                   fontWeight: FontWeight.w600,
+                  color: badgeColor,
                 ),
               ),
             ),
             if (onTap != null) ...[
               const SizedBox(width: 8),
-              Icon(Icons.chevron_right_rounded, size: 20, color: onSurfaceLight),
+              Icon(Icons.chevron_right_outlined, size: 20,
+                color: cs.onSurface.withValues(alpha: 0.3)),
             ],
           ],
         ),

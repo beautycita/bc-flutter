@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
@@ -9,9 +8,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:beautycita/widgets/bc_image_picker_sheet.dart';
 import 'package:beautycita/config/constants.dart';
+import 'package:beautycita/config/theme_extension.dart';
 import 'package:beautycita/providers/auth_provider.dart';
 import 'package:beautycita/providers/profile_provider.dart';
-import 'package:beautycita/widgets/location_picker_sheet.dart';
+import 'package:beautycita/providers/theme_provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:beautycita/services/lightx_service.dart';
@@ -33,6 +33,7 @@ class _AIAvatarStyle {
   final IconData icon;
   final String prompt;
   final Color color;
+  final List<Color> gradientColors;
 
   const _AIAvatarStyle({
     required this.id,
@@ -40,37 +41,42 @@ class _AIAvatarStyle {
     required this.icon,
     required this.prompt,
     required this.color,
+    required this.gradientColors,
   });
 }
 
 const _aiAvatarStyles = [
   _AIAvatarStyle(
-    id: 'professional',
-    name: 'Profesional',
-    icon: Icons.work_outline,
-    prompt: 'Professional corporate headshot, clean background, studio lighting, confident expression, business attire',
-    color: Color(0xFF1976D2),
-  ),
-  _AIAvatarStyle(
-    id: 'artistic',
-    name: 'Artistico',
-    icon: Icons.palette_outlined,
-    prompt: 'Stylized artistic portrait, vibrant colors, painterly effect, creative lighting, artistic interpretation',
-    color: Color(0xFFE91E63),
+    id: 'glam',
+    name: 'Glam',
+    icon: Icons.auto_awesome_outlined,
+    prompt: 'Glamorous beauty portrait, studio lighting, radiant skin, elegant makeup, fashion editorial style',
+    color: Color(0xFFEB0000),
+    gradientColors: [Color(0xFFEB0000), Color(0xFF95008A), Color(0xFF3300FC)],
   ),
   _AIAvatarStyle(
     id: 'cyberpunk',
     name: 'Cyberpunk',
-    icon: Icons.electric_bolt,
+    icon: Icons.electric_bolt_outlined,
     prompt: 'Cyberpunk sci-fi portrait, neon lights, futuristic style, holographic effects, dystopian aesthetic, tech vibes',
-    color: Color(0xFF00BCD4),
+    color: Color(0xFF0C0C6D),
+    gradientColors: [Color(0xFF0C0C6D), Color(0xFFDE512B), Color(0xFF98D0C1), Color(0xFF5BB226), Color(0xFF023C0D)],
   ),
   _AIAvatarStyle(
-    id: 'fantasy',
+    id: 'fantasia',
     name: 'Fantasia',
-    icon: Icons.auto_awesome,
+    icon: Icons.nightlight_outlined,
     prompt: 'Fantasy mythical portrait, ethereal glow, magical aura, enchanted forest background, fairy tale aesthetic',
-    color: Color(0xFF9C27B0),
+    color: Color(0xFF8BDEDA),
+    gradientColors: [Color(0xFF8BDEDA), Color(0xFF43ADD0), Color(0xFF998EE0), Color(0xFFE17DC2), Color(0xFFEF9393)],
+  ),
+  _AIAvatarStyle(
+    id: 'clasico',
+    name: 'Clasico',
+    icon: Icons.photo_outlined,
+    prompt: 'Classic timeless portrait, warm tones, soft lighting, professional headshot, refined elegance',
+    color: Color(0xFFC31432),
+    gradientColors: [Color(0xFFC31432), Color(0xFF240B36)],
   ),
 ];
 
@@ -91,6 +97,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   String? _usernameError;
   List<String> _usernameSuggestions = [];
   Timer? _usernameDebounce;
+  String _selectedAvatarStyle = 'glam';
 
   @override
   void dispose() {
@@ -105,46 +112,139 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final authState = ref.watch(authStateProvider);
     final profile = ref.watch(profileProvider);
     final textTheme = Theme.of(context).textTheme;
+    final cs = Theme.of(context).colorScheme;
+    final ext = Theme.of(context).extension<BCThemeExtension>()!;
+
+    // Profile completion calculation
+    int completedFields = 0;
+    const totalFields = 4;
+    if (profile.fullName != null) completedFields++;
+    if (profile.phone != null) completedFields++;
+    if (profile.birthday != null) completedFields++;
+    if (profile.gender != null) completedFields++;
+    final completionPercent = (completedFields / totalFields * 100).round();
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(title: const Text('Perfil')),
+      appBar: AppBar(
+        title: const Text('Perfil'),
+        backgroundColor: cs.surface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+      ),
       body: ListView(
         padding: const EdgeInsets.symmetric(
           horizontal: AppConstants.screenPaddingHorizontal,
           vertical: AppConstants.paddingMD,
         ),
         children: [
-          // ── Avatar ──
-          Center(
-            child: GestureDetector(
-              onTap: _showAvatarOptions,
+          // ── Avatar Hero Card ──
+          _buildAvatarHeroCard(
+            context, authState, profile, textTheme, cs, ext, completionPercent,
+          ),
+
+          const SizedBox(height: AppConstants.paddingLG),
+
+          // ── AI Avatar Styles ──
+          _buildAvatarStylesSection(context, textTheme, cs, ext),
+
+          const SizedBox(height: AppConstants.paddingLG),
+
+          // ── Personal Info Card ──
+          const SectionHeader(label: 'Informacion personal'),
+          const SizedBox(height: AppConstants.paddingSM),
+          _buildPersonalInfoCard(context, profile, textTheme, cs, ext),
+
+          const SizedBox(height: AppConstants.paddingLG),
+
+          // ── Register Salon CTA ──
+          _buildRegisterSalonCTA(context, cs, ext, textTheme),
+
+          const SizedBox(height: AppConstants.paddingLG),
+        ],
+      ),
+    );
+  }
+
+  // ── Avatar Hero Card ──
+
+  Widget _buildAvatarHeroCard(
+    BuildContext context,
+    dynamic authState,
+    dynamic profile,
+    TextTheme textTheme,
+    ColorScheme cs,
+    BCThemeExtension ext,
+    int completionPercent,
+  ) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 800),
+      curve: Curves.easeInOut,
+      padding: const EdgeInsets.all(AppConstants.paddingLG),
+      decoration: BoxDecoration(
+        gradient: ext.primaryGradient,
+        borderRadius: BorderRadius.circular(AppConstants.radiusLG),
+        boxShadow: [
+          BoxShadow(
+            color: cs.primary.withValues(alpha: 0.25),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Avatar with camera badge and completion ring
+          GestureDetector(
+            onTap: _showAvatarOptions,
+            child: SizedBox(
+              width: 108,
+              height: 108,
               child: Stack(
+                alignment: Alignment.center,
                 children: [
+                  // Completion ring
+                  SizedBox(
+                    width: 108,
+                    height: 108,
+                    child: CircularProgressIndicator(
+                      value: completionPercent / 100,
+                      strokeWidth: 3,
+                      backgroundColor: Colors.white.withValues(alpha: 0.3),
+                      valueColor: const AlwaysStoppedAnimation(Colors.white),
+                    ),
+                  ),
+                  // Avatar
                   CircleAvatar(
                     key: ValueKey(profile.avatarUrl),
-                    radius: 48,
-                    backgroundColor: Theme.of(context).colorScheme.surface,
+                    radius: 46,
+                    backgroundColor: Colors.white.withValues(alpha: 0.2),
                     backgroundImage: profile.avatarUrl != null
                         ? NetworkImage(profile.avatarUrl!)
                         : null,
                     child: profile.avatarUrl == null
-                        ? Icon(Icons.person_outline,
-                            size: 48, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5))
+                        ? Icon(Icons.person_outline, size: 46,
+                            color: Colors.white.withValues(alpha: 0.7))
                         : null,
                   ),
+                  // Camera badge
                   Positioned(
-                    bottom: 0,
-                    right: 0,
+                    bottom: 4,
+                    right: 4,
                     child: Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary,
+                        color: Colors.white,
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.15),
+                            blurRadius: 4,
+                          ),
+                        ],
                       ),
-                      child: const Icon(Icons.camera_alt,
-                          size: 16, color: Colors.white),
+                      child: Icon(Icons.camera_alt_outlined,
+                          size: 16, color: cs.primary),
                     ),
                   ),
                 ],
@@ -152,95 +252,268 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
           ),
 
-          const SizedBox(height: AppConstants.paddingMD),
+          const SizedBox(height: AppConstants.paddingSM),
 
-          // ── Username (tappable to edit) ──
+          // Username (tap to edit)
           if (_editingUsername)
-            _buildUsernameEditor(textTheme)
+            _buildUsernameEditorWhite(textTheme)
           else
-            Center(
-              child: GestureDetector(
-                onTap: _startEditingUsername,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      authState.username ?? 'Usuario',
-                      style: textTheme.titleLarge
-                          ?.copyWith(fontWeight: FontWeight.w700),
+            GestureDetector(
+              onTap: _startEditingUsername,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    authState.username ?? 'Usuario',
+                    style: textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
                     ),
-                    const SizedBox(width: 6),
-                    Icon(Icons.edit_outlined,
-                        size: 16, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 6),
+                  Icon(Icons.edit_outlined, size: 16,
+                      color: Colors.white.withValues(alpha: 0.7)),
+                ],
               ),
             ),
 
-          const SizedBox(height: AppConstants.paddingLG),
+          const SizedBox(height: 4),
 
-          // ── Full Name ──
-          const SectionHeader(label: 'Informacion personal'),
-          const SizedBox(height: AppConstants.paddingXS),
+          // Completion percentage text
+          Text(
+            '$completionPercent% completado',
+            style: textTheme.bodySmall?.copyWith(
+              color: Colors.white.withValues(alpha: 0.8),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-          if (_editingName)
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppConstants.paddingSM,
-                vertical: AppConstants.paddingSM,
+  Widget _buildUsernameEditorWhite(TextTheme textTheme) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppConstants.paddingSM),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _usernameController,
+                  autofocus: true,
+                  maxLength: 30,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    hintText: 'Nombre de usuario',
+                    hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
+                    isDense: true,
+                    counterText: '',
+                    errorText: _usernameError,
+                    errorStyle: const TextStyle(color: Colors.yellowAccent),
+                    enabledBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.5)),
+                    ),
+                    focusedBorder: const UnderlineInputBorder(
+                      borderSide: BorderSide(color: Colors.white),
+                    ),
+                    suffixIcon: _checkingUsername
+                        ? const Padding(
+                            padding: EdgeInsets.all(12),
+                            child: SizedBox(
+                              width: 16, height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white),
+                            ),
+                          )
+                        : _usernameController.text.length >= 3
+                            ? Icon(
+                                _usernameAvailable
+                                    ? Icons.check_circle_outlined
+                                    : Icons.cancel_outlined,
+                                color: _usernameAvailable
+                                    ? Colors.greenAccent
+                                    : Colors.redAccent,
+                                size: 20,
+                              )
+                            : null,
+                  ),
+                  onChanged: _onUsernameChanged,
+                  onSubmitted: (_) => _saveUsername(),
+                ),
               ),
-              child: Row(
+              const SizedBox(width: 8),
+              IconButton(
+                icon: const Icon(Icons.check_outlined, color: Colors.white),
+                onPressed: _usernameAvailable && _usernameError == null
+                    ? _saveUsername
+                    : null,
+              ),
+              IconButton(
+                icon: Icon(Icons.close_outlined,
+                    color: Colors.white.withValues(alpha: 0.7)),
+                onPressed: () => setState(() => _editingUsername = false),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppConstants.paddingXS),
+          Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            alignment: WrapAlignment.center,
+            children: _usernameSuggestions
+                .map(
+                  (s) => ActionChip(
+                    label: Text(s, style: const TextStyle(
+                      fontSize: 12, color: Colors.white)),
+                    onPressed: () {
+                      _usernameController.text = s;
+                      _onUsernameChanged(s);
+                    },
+                    backgroundColor: Colors.white.withValues(alpha: 0.2),
+                    side: BorderSide.none,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                )
+                .toList(),
+          ),
+          const SizedBox(height: AppConstants.paddingXS),
+        ],
+      ),
+    );
+  }
+
+  // ── AI Avatar Styles (compact row) ──
+
+  Widget _buildAvatarStylesSection(
+    BuildContext context, TextTheme textTheme, ColorScheme cs, BCThemeExtension ext,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SectionHeader(label: 'Estilo de avatar'),
+        const SizedBox(height: AppConstants.paddingSM),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: _aiAvatarStyles.map((style) {
+            final isActive = _selectedAvatarStyle == style.id;
+            return GestureDetector(
+              onTap: () => _onAvatarStyleSelected(style),
+              child: Column(
                 children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _nameController,
-                      autofocus: true,
-                      decoration: const InputDecoration(
-                        hintText: 'Tu nombre completo',
-                        isDense: true,
-                      ),
-                      onSubmitted: (_) => _saveName(),
+                  AnimatedContainer(
+                    duration: AppConstants.mediumAnimation,
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      gradient: isActive
+                          ? LinearGradient(
+                              colors: style.gradientColors,
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            )
+                          : null,
+                      color: isActive ? null : cs.surface,
+                      borderRadius: BorderRadius.circular(AppConstants.radiusSM),
+                      border: isActive
+                          ? null
+                          : Border.all(color: ext.cardBorderColor),
+                      boxShadow: isActive
+                          ? [
+                              BoxShadow(
+                                color: style.gradientColors.first.withValues(alpha: 0.35),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ]
+                          : null,
+                    ),
+                    child: Icon(
+                      style.icon,
+                      size: AppConstants.iconSizeMD,
+                      color: isActive ? Colors.white : cs.onSurface.withValues(alpha: 0.6),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    icon: Icon(Icons.check_rounded,
-                        color: Theme.of(context).colorScheme.primary),
-                    onPressed: _saveName,
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.close_rounded,
-                        color: Colors.grey.shade500),
-                    onPressed: () => setState(() => _editingName = false),
+                  const SizedBox(height: 4),
+                  Text(
+                    style.name,
+                    style: textTheme.bodySmall?.copyWith(
+                      fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+                      color: isActive ? cs.primary : cs.onSurface.withValues(alpha: 0.6),
+                      fontSize: 11,
+                    ),
                   ),
                 ],
               ),
-            )
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  void _onAvatarStyleSelected(_AIAvatarStyle style) {
+    setState(() => _selectedAvatarStyle = style.id);
+
+    // Apply the full multi-color gradient to the app theme
+    ref.read(themeProvider.notifier).setCustomGradient(style.gradientColors);
+    ref.read(themeProvider.notifier).saveCustomColor();
+  }
+
+  // ── Personal Info Card ──
+
+  Widget _buildPersonalInfoCard(
+    BuildContext context,
+    dynamic profile,
+    TextTheme textTheme,
+    ColorScheme cs,
+    BCThemeExtension ext,
+  ) {
+    return Container(
+      decoration: BoxDecoration(
+        color: cs.surface,
+        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+        border: Border.all(color: ext.cardBorderColor),
+      ),
+      child: Column(
+        children: [
+          // Name
+          if (_editingName)
+            _buildNameEditor(textTheme, cs)
           else
-            SettingsTile(
+            _infoRow(
               icon: Icons.badge_outlined,
-              iconColor: profile.fullName != null ? Colors.green.shade600 : null,
-              label: profile.fullName ?? 'Agregar nombre',
+              iconColor: profile.fullName != null
+                  ? Colors.green.shade600
+                  : cs.primary,
+              label: 'Nombre',
+              value: profile.fullName ?? 'Agregar nombre',
+              valueIsPlaceholder: profile.fullName == null,
               trailing: profile.fullName != null
-                  ? Icon(Icons.check_circle, size: 20, color: Colors.green.shade600)
-                  : Text(
-                      'Agregar',
-                      style: textTheme.bodySmall
-                          ?.copyWith(color: Theme.of(context).colorScheme.primary),
-                    ),
+                  ? Icon(Icons.check_circle_outlined, size: 18,
+                      color: Colors.green.shade600)
+                  : Text('Agregar', style: textTheme.bodySmall?.copyWith(
+                      color: cs.primary, fontWeight: FontWeight.w600)),
               onTap: () {
                 _nameController.text = profile.fullName ?? '';
                 setState(() => _editingName = true);
               },
+              showDivider: true,
             ),
 
-          // ── Phone ──
-          SettingsTile(
+          // Phone
+          _infoRow(
             icon: Icons.phone_outlined,
             iconColor: profile.hasVerifiedPhone
                 ? Colors.green.shade600
-                : profile.phone != null ? Colors.orange.shade600 : null,
-            label: profile.phone ?? 'Agregar telefono',
+                : profile.phone != null
+                    ? Colors.orange.shade600
+                    : cs.primary,
+            label: 'Telefono',
+            value: profile.phone ?? 'Agregar telefono',
+            valueIsPlaceholder: profile.phone == null,
             trailing: profile.hasVerifiedPhone
                 ? Row(
                     mainAxisSize: MainAxisSize.min,
@@ -248,61 +521,262 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       Text('Verificado', style: textTheme.bodySmall?.copyWith(
                         color: Colors.green.shade600, fontSize: 11)),
                       const SizedBox(width: 6),
-                      Icon(Icons.check_circle, color: Colors.green.shade600, size: 18),
+                      Icon(Icons.check_circle_outlined, color: Colors.green.shade600,
+                          size: 18),
                     ],
                   )
                 : profile.phone != null
                     ? GestureDetector(
                         onTap: () => _showOtpSheet(context),
-                        child: Text('Verificar', style: textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600)),
+                        child: Text('Verificar', style: textTheme.bodySmall
+                            ?.copyWith(color: cs.primary,
+                                fontWeight: FontWeight.w600)),
                       )
                     : Text('Requerido', style: textTheme.bodySmall?.copyWith(
                         color: Colors.red.shade400, fontSize: 11)),
             onTap: () => _showPhoneSheet(context),
+            showDivider: true,
           ),
 
-          // ── Birthday ──
-          SettingsTile(
+          // Birthday
+          _infoRow(
             icon: Icons.cake_outlined,
-            iconColor: profile.birthday != null ? Colors.green.shade600 : null,
-            label: profile.birthday != null
+            iconColor: profile.birthday != null
+                ? Colors.green.shade600
+                : cs.primary,
+            label: 'Fecha de nacimiento',
+            value: profile.birthday != null
                 ? DateFormat('d MMM yyyy', 'es').format(profile.birthday!)
-                : 'Fecha de nacimiento',
+                : 'Agregar',
+            valueIsPlaceholder: profile.birthday == null,
             trailing: profile.birthday != null
-                ? Icon(Icons.check_circle, size: 18, color: Colors.green.shade600)
+                ? Icon(Icons.check_circle_outlined, size: 18,
+                    color: Colors.green.shade600)
                 : null,
             onTap: () => _showBirthdayPicker(context),
+            showDivider: true,
           ),
 
-          // ── Gender ──
-          SettingsTile(
+          // Gender
+          _infoRow(
             icon: Icons.person_outline_rounded,
-            iconColor: profile.gender != null ? Colors.green.shade600 : null,
-            label: profile.gender != null
+            iconColor: profile.gender != null
+                ? Colors.green.shade600
+                : cs.primary,
+            label: 'Genero',
+            value: profile.gender != null
                 ? _genderLabel(profile.gender!)
-                : 'Genero',
+                : 'Agregar',
+            valueIsPlaceholder: profile.gender == null,
             trailing: profile.gender != null
-                ? Icon(Icons.check_circle, size: 18, color: Colors.green.shade600)
+                ? Icon(Icons.check_circle_outlined, size: 18,
+                    color: Colors.green.shade600)
                 : null,
             onTap: () => _showGenderSheet(context),
+            showDivider: false,
           ),
-
-          const SizedBox(height: AppConstants.paddingLG),
-
-          // ── Ubicacion temporal ──
-          const SectionHeader(label: 'Buscar desde otra ubicacion'),
-          const SizedBox(height: AppConstants.paddingXS),
-
-          _buildTempLocationTile(context, textTheme),
-
-          const SizedBox(height: AppConstants.paddingLG),
-
-          // ── Registra tu salon (shown here after 10 app opens for customers) ──
-          _buildRegisterSalonTile(),
-
-          const SizedBox(height: AppConstants.paddingLG),
         ],
+      ),
+    );
+  }
+
+  Widget _infoRow({
+    required IconData icon,
+    required Color iconColor,
+    required String label,
+    required String value,
+    bool valueIsPlaceholder = false,
+    Widget? trailing,
+    VoidCallback? onTap,
+    bool showDivider = true,
+  }) {
+    final cs = Theme.of(context).colorScheme;
+    final ext = Theme.of(context).extension<BCThemeExtension>()!;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Column(
+      children: [
+        InkWell(
+          onTap: onTap,
+          borderRadius: showDivider
+              ? null
+              : BorderRadius.vertical(
+                  bottom: Radius.circular(AppConstants.radiusMD)),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppConstants.paddingMD,
+              vertical: AppConstants.paddingSM + 4,
+            ),
+            child: Row(
+              children: [
+                // Icon box
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: iconColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(AppConstants.radiusXS),
+                  ),
+                  child: Icon(icon, size: 18, color: iconColor),
+                ),
+                const SizedBox(width: AppConstants.paddingSM + 4),
+                // Label + value
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(label, style: textTheme.bodySmall?.copyWith(
+                        color: cs.onSurface.withValues(alpha: 0.5),
+                        fontSize: 11,
+                      )),
+                      const SizedBox(height: 2),
+                      Text(
+                        value,
+                        style: textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w500,
+                          color: valueIsPlaceholder
+                              ? cs.onSurface.withValues(alpha: 0.4)
+                              : cs.onSurface,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (trailing != null) ...[
+                  const SizedBox(width: AppConstants.paddingSM),
+                  trailing,
+                ],
+              ],
+            ),
+          ),
+        ),
+        if (showDivider)
+          Divider(
+            height: 1,
+            indent: AppConstants.paddingMD + 32 + AppConstants.paddingSM + 4,
+            endIndent: AppConstants.paddingMD,
+            color: ext.cardBorderColor,
+          ),
+      ],
+    );
+  }
+
+  Widget _buildNameEditor(TextTheme textTheme, ColorScheme cs) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppConstants.paddingMD,
+        vertical: AppConstants.paddingSM,
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: cs.primary.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(AppConstants.radiusXS),
+            ),
+            child: Icon(Icons.badge_outlined, size: 18, color: cs.primary),
+          ),
+          const SizedBox(width: AppConstants.paddingSM + 4),
+          Expanded(
+            child: TextField(
+              controller: _nameController,
+              autofocus: true,
+              decoration: const InputDecoration(
+                hintText: 'Tu nombre completo',
+                isDense: true,
+              ),
+              onSubmitted: (_) => _saveName(),
+            ),
+          ),
+          const SizedBox(width: 8),
+          IconButton(
+            icon: Icon(Icons.check_outlined, color: cs.primary),
+            onPressed: _saveName,
+          ),
+          IconButton(
+            icon: Icon(Icons.close_outlined, color: Colors.grey.shade500),
+            onPressed: () => setState(() => _editingName = false),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Register Salon CTA ──
+
+  Widget _buildRegisterSalonCTA(
+    BuildContext context, ColorScheme cs, BCThemeExtension ext, TextTheme textTheme,
+  ) {
+    final toggles = ref.watch(featureTogglesProvider);
+    if (!toggles.isEnabled('enable_salon_registration')) {
+      return const SizedBox.shrink();
+    }
+
+    final role = ref.watch(userRoleProvider).valueOrNull;
+    if (role == 'admin' || role == 'superadmin' || role == 'stylist') {
+      return const SizedBox.shrink();
+    }
+
+    final isOwner = ref.watch(isBusinessOwnerProvider).valueOrNull ?? false;
+    if (isOwner) return const SizedBox.shrink();
+
+    final appOpens = ref.watch(appOpenCountProvider).valueOrNull ?? 0;
+    if (appOpens < 10) return const SizedBox.shrink();
+
+    final phoneVerified = ref.watch(profileProvider).hasVerifiedPhone;
+    final emailVerified = ref.watch(securityProvider).isEmailConfirmed;
+    final canRegister = phoneVerified && emailVerified;
+
+    return GestureDetector(
+      onTap: canRegister
+          ? () => context.push('/registro')
+          : () => ToastService.showWarning(
+              'Para registrar tu salon necesitas verificar tu numero de telefono '
+              'y confirmar tu email. Ve a Ajustes > Seguridad para completar la verificacion.',
+            ),
+      child: Container(
+        padding: const EdgeInsets.all(AppConstants.paddingMD),
+        decoration: BoxDecoration(
+          gradient: ext.primaryGradient,
+          borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+          boxShadow: [
+            BoxShadow(
+              color: cs.primary.withValues(alpha: 0.2),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(AppConstants.radiusSM),
+              ),
+              child: const Icon(Icons.home_outlined, color: Colors.white, size: 22),
+            ),
+            const SizedBox(width: AppConstants.paddingSM + 4),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Registra tu salon', style: textTheme.titleSmall?.copyWith(
+                    color: Colors.white, fontWeight: FontWeight.w700)),
+                  Text('Lleva tu negocio al siguiente nivel',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: Colors.white.withValues(alpha: 0.8))),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right_outlined,
+                color: Colors.white.withValues(alpha: 0.8)),
+          ],
+        ),
       ),
     );
   }
@@ -322,90 +796,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     });
   }
 
-  Widget _buildUsernameEditor(TextTheme textTheme) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppConstants.paddingSM),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _usernameController,
-                  autofocus: true,
-                  maxLength: 30,
-                  decoration: InputDecoration(
-                    hintText: 'Nombre de usuario',
-                    isDense: true,
-                    counterText: '',
-                    errorText: _usernameError,
-                    suffixIcon: _checkingUsername
-                        ? const Padding(
-                            padding: EdgeInsets.all(12),
-                            child: SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
-                          )
-                        : _usernameController.text.length >= 3
-                            ? Icon(
-                                _usernameAvailable
-                                    ? Icons.check_circle
-                                    : Icons.cancel,
-                                color: _usernameAvailable
-                                    ? Colors.green
-                                    : Colors.red,
-                                size: 20,
-                              )
-                            : null,
-                  ),
-                  onChanged: _onUsernameChanged,
-                  onSubmitted: (_) => _saveUsername(),
-                ),
-              ),
-              const SizedBox(width: 8),
-              IconButton(
-                icon: Icon(Icons.check_rounded,
-                    color: Theme.of(context).colorScheme.primary),
-                onPressed:
-                    _usernameAvailable && _usernameError == null
-                        ? _saveUsername
-                        : null,
-              ),
-              IconButton(
-                icon: Icon(Icons.close_rounded, color: Colors.grey.shade500),
-                onPressed: () => setState(() => _editingUsername = false),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppConstants.paddingXS),
-          // Suggestion chips
-          Wrap(
-            spacing: 8,
-            runSpacing: 4,
-            alignment: WrapAlignment.center,
-            children: _usernameSuggestions
-                .map(
-                  (s) => ActionChip(
-                    label: Text(s, style: const TextStyle(fontSize: 12)),
-                    onPressed: () {
-                      _usernameController.text = s;
-                      _onUsernameChanged(s);
-                    },
-                    backgroundColor: Theme.of(context).colorScheme.surface,
-                    side: BorderSide.none,
-                    visualDensity: VisualDensity.compact,
-                  ),
-                )
-                .toList(),
-          ),
-          const SizedBox(height: AppConstants.paddingXS),
-        ],
-      ),
-    );
-  }
+  // Old _buildUsernameEditor removed — replaced by _buildUsernameEditorWhite
 
   void _onUsernameChanged(String value) {
     _usernameDebounce?.cancel();
@@ -491,7 +882,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ),
                 if (ref.read(featureTogglesProvider).isEnabled('enable_ai_avatars'))
                   SettingsTile(
-                    icon: Icons.auto_awesome,
+                    icon: Icons.auto_awesome_outlined,
                     label: 'Crear avatar IA',
                     iconColor: Colors.deepPurple,
                     onTap: () {
@@ -556,7 +947,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         style.name,
                         style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
-                      trailing: Icon(Icons.chevron_right,
+                      trailing: Icon(Icons.chevron_right_outlined,
                           color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.5)),
                       onTap: () => Navigator.pop(ctx, style),
                     )),
@@ -665,82 +1056,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       if (!mounted) return;
       Navigator.of(context).pop(); // dismiss loading
       ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, st);
-    }
-  }
-
-  // ── Temp location tile ──
-
-  Widget _buildTempLocationTile(BuildContext context, TextTheme textTheme) {
-    final tempLoc = ref.watch(tempSearchLocationProvider);
-
-    if (tempLoc != null) {
-      return Container(
-        margin: const EdgeInsets.symmetric(horizontal: AppConstants.paddingSM),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.amber.shade50,
-          borderRadius: BorderRadius.circular(AppConstants.radiusSM),
-          border: Border.all(color: Colors.amber.shade200),
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.location_on, color: Colors.amber.shade700, size: 22),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(tempLoc.address,
-                    style: textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
-                    maxLines: 2, overflow: TextOverflow.ellipsis),
-                  const SizedBox(height: 2),
-                  Text('Temporal — se reinicia al cerrar la app',
-                    style: textTheme.bodySmall?.copyWith(
-                      color: Colors.amber.shade800, fontSize: 11)),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            GestureDetector(
-              onTap: () => ref.read(tempSearchLocationProvider.notifier).state = null,
-              child: Icon(Icons.close_rounded, color: Colors.grey.shade500, size: 20),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppConstants.paddingSM),
-          child: Text(
-            'Si estaras en otro lugar (boda, viaje, etc.), busca estilistas cerca de esa direccion. Se reinicia al cerrar la app.',
-            style: textTheme.bodySmall?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        SettingsTile(
-          icon: Icons.add_location_alt_outlined,
-          label: 'Elegir ubicacion temporal',
-          onTap: () => _pickTempLocation(context),
-        ),
-      ],
-    );
-  }
-
-  Future<void> _pickTempLocation(BuildContext context) async {
-    final location = await showLocationPicker(
-      context: context,
-      ref: ref,
-      title: 'Buscar desde esta ubicacion',
-    );
-    if (location != null && mounted) {
-      ref.read(tempSearchLocationProvider.notifier).state = location;
-      ToastService.showSuccess('Buscando desde: ${location.address}');
     }
   }
 
@@ -955,49 +1270,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  // ── Register salon tile (after 10 app opens, for customers only) ──
-
-  Widget _buildRegisterSalonTile() {
-    final toggles = ref.watch(featureTogglesProvider);
-    if (!toggles.isEnabled('enable_salon_registration')) {
-      return const SizedBox.shrink();
-    }
-
-    final role = ref.watch(userRoleProvider).valueOrNull;
-    if (role == 'admin' || role == 'superadmin' || role == 'stylist') {
-      return const SizedBox.shrink();
-    }
-
-    final isOwner = ref.watch(isBusinessOwnerProvider).valueOrNull ?? false;
-    if (isOwner) return const SizedBox.shrink();
-
-    final appOpens = ref.watch(appOpenCountProvider).valueOrNull ?? 0;
-    if (appOpens < 10) return const SizedBox.shrink();
-
-    final phoneVerified = ref.watch(profileProvider).hasVerifiedPhone;
-    final emailVerified = ref.watch(securityProvider).isEmailConfirmed;
-    final canRegister = phoneVerified && emailVerified;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: AppConstants.paddingLG),
-        const SectionHeader(label: 'Para profesionales'),
-        const SizedBox(height: AppConstants.paddingXS),
-        SettingsTile(
-          icon: Icons.store_rounded,
-          label: 'Registra tu salon',
-          onTap: canRegister
-              ? () => context.push('/registro')
-              : () => ToastService.showWarning(
-                  'Para registrar tu salon necesitas verificar tu numero de telefono '
-                  'y confirmar tu email. Ve a Ajustes > Seguridad para completar la verificacion.',
-                ),
-        ),
-      ],
-    );
-  }
-
   // ── Name editing ──
 
   Future<void> _saveName() async {
@@ -1046,7 +1318,7 @@ class _AvatarCropEditorState extends State<_AvatarCropEditor> {
         foregroundColor: Colors.white,
         title: const Text('Recortar foto'),
         leading: IconButton(
-          icon: const Icon(Icons.close),
+          icon: const Icon(Icons.close_outlined),
           onPressed: () => Navigator.pop(context),
         ),
       ),

@@ -197,13 +197,13 @@ serve(async (req) => {
 
       if (insertErr) throw insertErr;
 
-      // 8. Set PostGIS geography column
+      // 8. Set PostGIS geography column (parameterized to prevent SQL injection)
       if (placeLat != null && placeLng != null && inserted) {
-        await supabase.rpc("exec_sql", {
-          query: `UPDATE discovered_salons SET location = ST_SetSRID(ST_MakePoint(${placeLng}, ${placeLat}), 4326)::geography WHERE id = '${inserted.id}'`,
+        await supabase.rpc("set_salon_location", {
+          p_id: inserted.id,
+          p_lng: Number(placeLng),
+          p_lat: Number(placeLat),
         }).catch(() => {
-          // Fallback: direct SQL if exec_sql RPC doesn't exist
-          // The location column may be set by a trigger or can be updated later
           console.warn("[on-demand-scrape] Could not set geography column via RPC");
         });
       }

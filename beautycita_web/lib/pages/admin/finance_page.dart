@@ -7,8 +7,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../config/breakpoints.dart';
+import '../../config/web_theme.dart';
 import '../../providers/admin_finance_provider.dart';
 import '../../widgets/kpi_card.dart';
+import '../../widgets/web_design_system.dart';
 
 /// Admin finance page — dashboard-style with charts and summary cards.
 ///
@@ -99,19 +101,11 @@ class _PageHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Row(
-      children: [
-        Icon(Icons.account_balance, size: 24, color: theme.colorScheme.primary),
-        const SizedBox(width: BCSpacing.sm),
-        Text(
-          'Finanzas',
-          style: (isMobile
-                  ? theme.textTheme.headlineSmall
-                  : theme.textTheme.headlineMedium)
-              ?.copyWith(fontWeight: FontWeight.w700),
-        ),
-      ],
+    return WebSectionHeader(
+      label: 'Panel Financiero',
+      title: 'Finanzas',
+      centered: false,
+      titleSize: isMobile ? 28 : 36,
     );
   }
 }
@@ -215,9 +209,9 @@ class _KpiLoadingRow extends StatelessWidget {
       children: List.generate(4, (_) {
         return Container(
           decoration: BoxDecoration(
-            color: colors.surface,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: colors.outlineVariant),
+            color: kWebSurface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: kWebCardBorder),
           ),
           child: Center(
             child: SizedBox(
@@ -225,7 +219,7 @@ class _KpiLoadingRow extends StatelessWidget {
               height: 24,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                color: colors.primary.withValues(alpha: 0.5),
+                color: kWebPrimary.withValues(alpha: 0.5),
               ),
             ),
           ),
@@ -247,20 +241,15 @@ class _RevenueChart extends StatelessWidget {
     final colors = theme.colorScheme;
     final revenueAsync = ref.watch(monthlyRevenueProvider);
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colors.outlineVariant),
-      ),
+    return WebCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'Ingresos mensuales (12 meses)',
             style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w700,
+              color: kWebTextPrimary,
             ),
           ),
           const SizedBox(height: 20),
@@ -425,20 +414,15 @@ class _PaymentMethodsChart extends StatelessWidget {
     final colors = theme.colorScheme;
     final methodsAsync = ref.watch(paymentMethodsProvider);
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colors.outlineVariant),
-      ),
+    return WebCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'Metodos de pago (mes actual)',
             style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w700,
+              color: kWebTextPrimary,
             ),
           ),
           const SizedBox(height: 20),
@@ -606,20 +590,15 @@ class _PayoutHistoryTable extends StatelessWidget {
     final payoutsAsync = ref.watch(payoutHistoryProvider);
     final dateFmt = DateFormat('d/MM/yy', 'es');
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colors.outlineVariant),
-      ),
+    return WebCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'Historial de pagos',
             style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w700,
+              color: kWebTextPrimary,
             ),
           ),
           const SizedBox(height: 16),
@@ -719,15 +698,15 @@ class _PayoutRow extends StatelessWidget {
         vertical: BCSpacing.sm,
       ),
       color: isEven
-          ? colors.onSurface.withValues(alpha: 0.02)
-          : Colors.transparent,
+          ? kWebBackground
+          : kWebSurface,
       child: Row(
         children: [
           Expanded(
             child: Text(
               dateFmt.format(payout.date),
               style: theme.textTheme.bodySmall?.copyWith(
-                color: colors.onSurface.withValues(alpha: 0.6),
+                color: kWebTextSecondary,
               ),
             ),
           ),
@@ -793,20 +772,15 @@ class _PlatformFeesTable extends StatelessWidget {
     final feesAsync = ref.watch(platformFeesProvider);
     final dateFmt = DateFormat('d/MM/yy', 'es');
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colors.outlineVariant),
-      ),
+    return WebCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'Comisiones de plataforma',
             style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w700,
+              color: kWebTextPrimary,
             ),
           ),
           const SizedBox(height: 16),
@@ -885,7 +859,6 @@ class _FeeRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colors = theme.colorScheme;
 
     return Container(
       padding: const EdgeInsets.symmetric(
@@ -893,15 +866,15 @@ class _FeeRow extends StatelessWidget {
         vertical: BCSpacing.sm,
       ),
       color: isEven
-          ? colors.onSurface.withValues(alpha: 0.02)
-          : Colors.transparent,
+          ? kWebBackground
+          : kWebSurface,
       child: Row(
         children: [
           Expanded(
             child: Text(
               dateFmt.format(fee.date),
               style: theme.textTheme.bodySmall?.copyWith(
-                color: colors.onSurface.withValues(alpha: 0.6),
+                color: kWebTextSecondary,
               ),
             ),
           ),
@@ -951,12 +924,24 @@ class _TableHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colors = theme.colorScheme;
 
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: BCSpacing.sm,
-        vertical: BCSpacing.xs,
+        vertical: BCSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            kWebPrimary.withValues(alpha: 0.04),
+            kWebSecondary.withValues(alpha: 0.04),
+          ],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
+        border: Border(
+          bottom: BorderSide(color: kWebCardBorder),
+        ),
       ),
       child: Row(
         children: [
@@ -965,8 +950,8 @@ class _TableHeader extends StatelessWidget {
               child: Text(
                 col,
                 style: theme.textTheme.labelMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: colors.onSurface.withValues(alpha: 0.6),
+                  fontWeight: FontWeight.w700,
+                  color: kWebTextSecondary,
                 ),
               ),
             ),

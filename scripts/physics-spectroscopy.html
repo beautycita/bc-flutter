@@ -1,0 +1,1504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spectroscopy - Interactive 3D Physics</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: #0a0a1a;
+  color: #e0e0e0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  overflow: hidden;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+#main {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Left Panel */
+#left-panel {
+  width: 300px;
+  min-width: 300px;
+  background: rgba(15, 15, 35, 0.95);
+  border-right: 1px solid #1a1a3a;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+#left-panel::-webkit-scrollbar { width: 6px; }
+#left-panel::-webkit-scrollbar-track { background: transparent; }
+#left-panel::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+
+#left-panel h1 {
+  font-size: 1.3em;
+  color: #88ccff;
+  margin-bottom: 4px;
+  letter-spacing: 1px;
+}
+
+#left-panel .subtitle {
+  font-size: 0.72em;
+  color: #667;
+  margin-bottom: 16px;
+}
+
+.section-label {
+  font-size: 0.7em;
+  color: #557;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin: 14px 0 8px;
+}
+
+/* Mode buttons */
+.mode-btn {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  margin-bottom: 5px;
+  background: rgba(30, 30, 60, 0.8);
+  border: 1px solid #2a2a5a;
+  border-radius: 8px;
+  color: #ccc;
+  font-size: 0.82em;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s;
+}
+.mode-btn:hover { background: rgba(50, 50, 100, 0.8); border-color: #4a4aaa; }
+.mode-btn.active { background: rgba(40, 60, 120, 0.9); border-color: #5588cc; color: #aaccff; }
+
+/* Element checkboxes */
+.element-list { display: flex; flex-direction: column; gap: 3px; }
+.element-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 8px;
+  background: rgba(20, 20, 45, 0.6);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s;
+  font-size: 0.82em;
+}
+.element-item:hover { background: rgba(35, 35, 70, 0.8); }
+.element-item input[type="checkbox"] { accent-color: #5588cc; cursor: pointer; }
+.element-item .el-symbol {
+  font-weight: bold;
+  width: 28px;
+  text-align: center;
+  border-radius: 4px;
+  padding: 1px 0;
+  font-size: 0.9em;
+}
+.element-item .el-name { flex: 1; color: #aab; }
+
+/* Sliders */
+.slider-group { margin: 8px 0; }
+.slider-group label {
+  display: flex; justify-content: space-between;
+  font-size: 0.75em; color: #889; margin-bottom: 4px;
+}
+.slider-group input[type="range"] {
+  width: 100%;
+  accent-color: #5588cc;
+  cursor: pointer;
+}
+
+/* Toggle switches */
+.toggle-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 0; font-size: 0.8em; color: #99a;
+}
+.toggle-switch {
+  width: 36px; height: 20px;
+  background: #2a2a4a;
+  border-radius: 10px;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.toggle-switch.on { background: #3366aa; }
+.toggle-switch::after {
+  content: '';
+  position: absolute;
+  width: 16px; height: 16px;
+  background: #ddd;
+  border-radius: 50%;
+  top: 2px; left: 2px;
+  transition: transform 0.2s;
+}
+.toggle-switch.on::after { transform: translateX(16px); }
+
+/* Explanation box */
+.explanation {
+  margin-top: 10px;
+  padding: 10px;
+  background: rgba(20, 30, 50, 0.6);
+  border-radius: 8px;
+  border-left: 3px solid #3366aa;
+  font-size: 0.78em;
+  line-height: 1.5;
+  color: #99aabb;
+}
+.explanation strong { color: #aaccff; }
+
+/* Mystery mode */
+#mystery-panel {
+  display: none;
+  margin-top: 10px;
+  padding: 10px;
+  background: rgba(50, 30, 20, 0.5);
+  border: 1px solid #664422;
+  border-radius: 8px;
+}
+#mystery-panel .mystery-title { font-size: 0.85em; color: #ffaa66; margin-bottom: 8px; }
+#mystery-panel button {
+  padding: 6px 12px;
+  margin: 3px;
+  background: rgba(40, 30, 20, 0.8);
+  border: 1px solid #554433;
+  border-radius: 6px;
+  color: #ccaa88;
+  cursor: pointer;
+  font-size: 0.78em;
+  transition: all 0.15s;
+}
+#mystery-panel button:hover { background: rgba(70, 50, 30, 0.8); border-color: #886644; }
+#mystery-panel .result { margin-top: 8px; font-size: 0.8em; min-height: 20px; }
+
+/* Center area */
+#center {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+#scene-container {
+  height: 40%;
+  position: relative;
+  border-bottom: 1px solid #1a1a3a;
+}
+
+#spectrum-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  min-height: 0;
+}
+
+#spectrum-wrapper {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  cursor: crosshair;
+}
+
+#spectrum-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Spectrum tooltip */
+#spectrum-tooltip {
+  display: none;
+  position: absolute;
+  background: rgba(10, 10, 30, 0.92);
+  border: 1px solid #445;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 0.75em;
+  pointer-events: none;
+  z-index: 10;
+  white-space: nowrap;
+}
+#spectrum-tooltip .tt-wavelength { color: #ffcc44; font-weight: bold; }
+#spectrum-tooltip .tt-element { color: #88bbff; }
+#spectrum-tooltip .tt-line-name { color: #aaa; font-style: italic; }
+
+/* Compare mode layout */
+#spectrum-wrapper.compare-mode {
+  display: flex;
+  flex-direction: column;
+}
+#spectrum-canvas-top, #spectrum-canvas-bottom {
+  display: none;
+  width: 100%;
+  flex: 1;
+}
+#spectrum-wrapper.compare-mode #spectrum-canvas { display: none; }
+#spectrum-wrapper.compare-mode #spectrum-canvas-top,
+#spectrum-wrapper.compare-mode #spectrum-canvas-bottom { display: block; }
+
+/* Spectrum labels */
+.spectrum-label {
+  position: absolute;
+  left: 10px;
+  font-size: 0.7em;
+  color: #667;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  z-index: 5;
+  pointer-events: none;
+}
+#label-top { top: 6px; display: none; }
+#label-bottom { display: none; }
+
+/* Bottom bar */
+#bottom-bar {
+  height: auto;
+  min-height: 36px;
+  background: rgba(12, 12, 28, 0.95);
+  border-top: 1px solid #1a1a3a;
+  display: flex;
+  align-items: center;
+  padding: 6px 16px;
+  font-size: 0.72em;
+  color: #667;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+#bottom-bar .cursor-info { color: #aab; }
+#bottom-bar .cursor-info span { color: #ffcc44; font-weight: bold; }
+
+/* Energy Level Diagram overlay */
+#energy-diagram {
+  display: none;
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  width: 260px;
+  background: rgba(10, 10, 30, 0.92);
+  border: 1px solid #2a2a5a;
+  border-radius: 10px;
+  padding: 14px;
+  z-index: 20;
+}
+#energy-diagram h3 {
+  font-size: 0.8em;
+  color: #88ccff;
+  margin-bottom: 10px;
+}
+#energy-canvas {
+  width: 100%;
+  height: 280px;
+  display: block;
+}
+
+/* Applications section */
+#applications {
+  display: none;
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  background: rgba(8, 8, 22, 0.97);
+  border-top: 1px solid #2a2a5a;
+  padding: 16px 20px;
+  z-index: 15;
+  max-height: 50%;
+  overflow-y: auto;
+}
+#applications h3 { color: #88ccff; font-size: 0.9em; margin-bottom: 10px; }
+#applications .app-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 10px;
+}
+#applications .app-card {
+  background: rgba(20, 20, 45, 0.6);
+  border: 1px solid #2a2a5a;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+#applications .app-card h4 { color: #aaccff; font-size: 0.82em; margin-bottom: 4px; }
+#applications .app-card p { color: #889; font-size: 0.75em; line-height: 1.4; }
+#close-apps {
+  position: absolute;
+  top: 10px; right: 14px;
+  background: none; border: none;
+  color: #667; font-size: 1.2em;
+  cursor: pointer;
+}
+#close-apps:hover { color: #aab; }
+
+/* Zoom indicator */
+#zoom-indicator {
+  position: absolute;
+  top: 6px; right: 10px;
+  font-size: 0.7em;
+  color: #556;
+  z-index: 5;
+  pointer-events: none;
+}
+</style>
+</head>
+<body>
+
+<div id="main">
+  <div id="left-panel">
+    <h1>Spectroscopy</h1>
+    <div class="subtitle">The fingerprints of light</div>
+
+    <div class="section-label">Mode</div>
+    <button class="mode-btn active" data-mode="absorption" onclick="setMode('absorption')">Absorption Spectrum</button>
+    <button class="mode-btn" data-mode="emission" onclick="setMode('emission')">Emission Spectrum</button>
+    <button class="mode-btn" data-mode="compare" onclick="setMode('compare')">Compare Both</button>
+
+    <div class="section-label">Elements</div>
+    <div class="element-list" id="element-list"></div>
+
+    <div class="section-label">Controls</div>
+    <div class="slider-group">
+      <label><span>Temperature</span><span id="temp-val">5500 K</span></label>
+      <input type="range" id="temp-slider" min="2000" max="30000" value="5500" step="100" oninput="onTempChange(this.value)">
+    </div>
+
+    <div class="toggle-row">
+      <span>Energy Level Diagram</span>
+      <div class="toggle-switch" id="toggle-energy" onclick="toggleEnergy()"></div>
+    </div>
+    <div class="toggle-row">
+      <span>Identify Unknown</span>
+      <div class="toggle-switch" id="toggle-mystery" onclick="toggleMystery()"></div>
+    </div>
+    <div class="toggle-row">
+      <span>Real-World Applications</span>
+      <div class="toggle-switch" id="toggle-apps" onclick="toggleApps()"></div>
+    </div>
+
+    <div id="mystery-panel">
+      <div class="mystery-title">Which element produces this spectrum?</div>
+      <div id="mystery-buttons"></div>
+      <div class="result" id="mystery-result"></div>
+    </div>
+
+    <div class="explanation" id="explanation">
+      <strong>Absorption Spectrum:</strong> When white light passes through a cool gas, atoms absorb photons at specific wavelengths matching their electron transitions. The result: dark lines on a continuous rainbow. This is how Fraunhofer first observed hundreds of dark lines in sunlight in 1814.
+    </div>
+  </div>
+
+  <div id="center">
+    <div id="scene-container">
+      <canvas id="three-canvas"></canvas>
+    </div>
+    <div id="spectrum-area">
+      <div id="spectrum-wrapper">
+        <canvas id="spectrum-canvas"></canvas>
+        <canvas id="spectrum-canvas-top"></canvas>
+        <canvas id="spectrum-canvas-bottom"></canvas>
+        <div id="spectrum-tooltip">
+          <div class="tt-wavelength"></div>
+          <div class="tt-element"></div>
+          <div class="tt-line-name"></div>
+        </div>
+        <span class="spectrum-label" id="label-top">Absorption</span>
+        <span class="spectrum-label" id="label-bottom">Emission</span>
+        <div id="zoom-indicator"></div>
+      </div>
+      <div id="energy-diagram">
+        <h3 id="energy-title">Energy Levels</h3>
+        <canvas id="energy-canvas"></canvas>
+      </div>
+    </div>
+    <div id="bottom-bar">
+      <div class="cursor-info">Wavelength: <span id="cursor-nm">—</span></div>
+      <div class="cursor-info">Color: <span id="cursor-color">—</span></div>
+      <div class="cursor-info" id="cursor-element-info"></div>
+      <div style="flex:1"></div>
+      <div style="color:#445">Scroll to zoom spectrum | Drag to pan</div>
+    </div>
+    <div id="applications">
+      <button id="close-apps" onclick="toggleApps()">&times;</button>
+      <h3>Real-World Applications of Spectroscopy</h3>
+      <div class="app-grid">
+        <div class="app-card">
+          <h4>Stellar Composition</h4>
+          <p>Every element absorbs unique wavelengths. By analyzing starlight, we determine what stars are made of without ever visiting them. The Sun's spectrum reveals hydrogen, helium, iron, calcium, sodium, and dozens more elements.</p>
+        </div>
+        <div class="app-card">
+          <h4>Redshift &amp; the Expanding Universe</h4>
+          <p>When a star moves away from us, its spectral lines shift toward red (longer wavelengths). Edwin Hubble used this to prove the universe is expanding. The faster a galaxy recedes, the greater the redshift — leading to the discovery of the Big Bang.</p>
+        </div>
+        <div class="app-card">
+          <h4>Chemical Analysis</h4>
+          <p>Forensics uses spectroscopy to identify unknown substances. Environmental agencies monitor pollution. Food safety labs detect contaminants. Each material has a unique spectral fingerprint that cannot be faked.</p>
+        </div>
+        <div class="app-card">
+          <h4>Medical Applications</h4>
+          <p>Pulse oximeters use spectroscopy to measure blood oxygen by shining light through your finger. Different hemoglobin states absorb different wavelengths. MRI spectroscopy maps brain chemistry. Blood tests use spectrophotometry.</p>
+        </div>
+        <div class="app-card">
+          <h4>Astronomy</h4>
+          <p>Beyond composition, spectroscopy reveals stellar temperature (hotter stars peak at bluer wavelengths), rotation speed (line broadening), magnetic fields (Zeeman splitting), and even the presence of exoplanet atmospheres.</p>
+        </div>
+        <div class="app-card">
+          <h4>Historical: Fraunhofer (1814)</h4>
+          <p>Joseph von Fraunhofer mapped 574 dark lines in the solar spectrum, naming the strongest A through K. He had no idea what caused them. Decades later, Kirchhoff and Bunsen proved each line corresponds to a specific chemical element.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===================== ELEMENT DATA =====================
+const ELEMENTS = {
+  H: {
+    name: 'Hydrogen', symbol: 'H', color: '#ff4466',
+    lines: [
+      { wl: 656.3, name: 'H-alpha (C line)', series: 'Balmer', intensity: 1.0 },
+      { wl: 486.1, name: 'H-beta (F line)', series: 'Balmer', intensity: 0.8 },
+      { wl: 434.0, name: 'H-gamma (G\' line)', series: 'Balmer', intensity: 0.5 },
+      { wl: 410.2, name: 'H-delta', series: 'Balmer', intensity: 0.35 },
+      { wl: 397.0, name: 'H-epsilon', series: 'Balmer', intensity: 0.2 },
+    ],
+    energyLevels: [
+      { n: 1, eV: -13.6 },
+      { n: 2, eV: -3.4 },
+      { n: 3, eV: -1.51 },
+      { n: 4, eV: -0.85 },
+      { n: 5, eV: -0.54 },
+      { n: 6, eV: -0.38 },
+    ],
+    transitions: [
+      { from: 3, to: 2, wl: 656.3 },
+      { from: 4, to: 2, wl: 486.1 },
+      { from: 5, to: 2, wl: 434.0 },
+      { from: 6, to: 2, wl: 410.2 },
+    ]
+  },
+  He: {
+    name: 'Helium', symbol: 'He', color: '#ffcc44',
+    lines: [
+      { wl: 587.6, name: 'D3 line', intensity: 1.0 },
+      { wl: 501.6, name: '', intensity: 0.6 },
+      { wl: 471.3, name: '', intensity: 0.45 },
+      { wl: 447.1, name: '', intensity: 0.5 },
+      { wl: 667.8, name: '', intensity: 0.4 },
+      { wl: 402.6, name: '', intensity: 0.3 },
+      { wl: 492.2, name: '', intensity: 0.35 },
+    ],
+    energyLevels: [
+      { n: 1, eV: -24.59 },
+      { n: 2, eV: -4.77 },
+      { n: 3, eV: -1.87 },
+      { n: 4, eV: -1.02 },
+      { n: 5, eV: -0.64 },
+    ],
+    transitions: [
+      { from: 3, to: 2, wl: 587.6 },
+      { from: 4, to: 2, wl: 501.6 },
+      { from: 5, to: 2, wl: 471.3 },
+    ]
+  },
+  Na: {
+    name: 'Sodium', symbol: 'Na', color: '#ffaa00',
+    lines: [
+      { wl: 589.0, name: 'D1 line', intensity: 1.0 },
+      { wl: 589.6, name: 'D2 line', intensity: 0.95 },
+      { wl: 568.8, name: '', intensity: 0.2 },
+      { wl: 498.3, name: '', intensity: 0.15 },
+      { wl: 449.4, name: '', intensity: 0.12 },
+    ],
+    energyLevels: [
+      { n: 1, eV: -5.14 },
+      { n: 2, eV: -3.04 },
+      { n: 3, eV: -1.95 },
+      { n: 4, eV: -1.02 },
+      { n: 5, eV: -0.65 },
+    ],
+    transitions: [
+      { from: 2, to: 1, wl: 589.0 },
+      { from: 2, to: 1, wl: 589.6 },
+    ]
+  },
+  Fe: {
+    name: 'Iron', symbol: 'Fe', color: '#6688cc',
+    lines: [
+      { wl: 527.0, name: 'E line', intensity: 0.7 },
+      { wl: 438.4, name: '', intensity: 0.65 },
+      { wl: 430.8, name: 'G line (Fe)', intensity: 0.7 },
+      { wl: 489.1, name: '', intensity: 0.4 },
+      { wl: 495.8, name: '', intensity: 0.45 },
+      { wl: 516.7, name: '', intensity: 0.5 },
+      { wl: 532.8, name: '', intensity: 0.55 },
+      { wl: 537.1, name: '', intensity: 0.4 },
+      { wl: 539.7, name: '', intensity: 0.35 },
+      { wl: 540.6, name: '', intensity: 0.3 },
+      { wl: 543.5, name: '', intensity: 0.4 },
+      { wl: 545.6, name: '', intensity: 0.3 },
+      { wl: 561.6, name: '', intensity: 0.25 },
+      { wl: 578.2, name: '', intensity: 0.35 },
+      { wl: 615.2, name: '', intensity: 0.3 },
+    ],
+    energyLevels: [
+      { n: 1, eV: -7.90 },
+      { n: 2, eV: -4.15 },
+      { n: 3, eV: -2.83 },
+      { n: 4, eV: -1.61 },
+      { n: 5, eV: -0.86 },
+    ],
+    transitions: [
+      { from: 3, to: 2, wl: 527.0 },
+      { from: 4, to: 2, wl: 438.4 },
+      { from: 5, to: 2, wl: 430.8 },
+    ]
+  },
+  Ca: {
+    name: 'Calcium', symbol: 'Ca', color: '#aa66ff',
+    lines: [
+      { wl: 393.4, name: 'K line', intensity: 1.0 },
+      { wl: 396.8, name: 'H line', intensity: 0.95 },
+      { wl: 422.7, name: '', intensity: 0.6 },
+      { wl: 430.3, name: 'G line (Ca)', intensity: 0.5 },
+      { wl: 443.5, name: '', intensity: 0.3 },
+      { wl: 445.5, name: '', intensity: 0.25 },
+      { wl: 612.2, name: '', intensity: 0.2 },
+      { wl: 616.2, name: '', intensity: 0.2 },
+      { wl: 643.9, name: '', intensity: 0.15 },
+      { wl: 646.3, name: '', intensity: 0.15 },
+      { wl: 649.4, name: '', intensity: 0.15 },
+    ],
+    energyLevels: [
+      { n: 1, eV: -6.11 },
+      { n: 2, eV: -3.15 },
+      { n: 3, eV: -1.89 },
+      { n: 4, eV: -1.04 },
+    ],
+    transitions: [
+      { from: 2, to: 1, wl: 393.4 },
+      { from: 2, to: 1, wl: 396.8 },
+      { from: 3, to: 1, wl: 422.7 },
+    ]
+  },
+  O: {
+    name: 'Oxygen', symbol: 'O', color: '#44cc88',
+    lines: [
+      { wl: 759.4, name: 'A band (atm)', intensity: 0.9 },
+      { wl: 686.7, name: 'B band (atm)', intensity: 0.8 },
+      { wl: 627.7, name: '', intensity: 0.5 },
+      { wl: 557.7, name: 'Green line (aurora)', intensity: 0.4 },
+      { wl: 533.0, name: '', intensity: 0.2 },
+      { wl: 615.8, name: '', intensity: 0.3 },
+      { wl: 646.0, name: '', intensity: 0.2 },
+    ],
+    energyLevels: [
+      { n: 1, eV: -13.62 },
+      { n: 2, eV: -3.44 },
+      { n: 3, eV: -1.76 },
+      { n: 4, eV: -0.91 },
+    ],
+    transitions: [
+      { from: 3, to: 2, wl: 759.4 },
+      { from: 4, to: 2, wl: 686.7 },
+      { from: 4, to: 3, wl: 627.7 },
+    ]
+  },
+};
+
+// Fraunhofer named lines for reference
+const FRAUNHOFER = [
+  { letter: 'A', wl: 759.4, element: 'O2', desc: 'Atmospheric oxygen' },
+  { letter: 'B', wl: 686.7, element: 'O2', desc: 'Atmospheric oxygen' },
+  { letter: 'C', wl: 656.3, element: 'H', desc: 'Hydrogen alpha' },
+  { letter: 'D1', wl: 589.6, element: 'Na', desc: 'Sodium' },
+  { letter: 'D2', wl: 589.0, element: 'Na', desc: 'Sodium' },
+  { letter: 'D3', wl: 587.6, element: 'He', desc: 'Helium' },
+  { letter: 'E', wl: 527.0, element: 'Fe', desc: 'Iron' },
+  { letter: 'F', wl: 486.1, element: 'H', desc: 'Hydrogen beta' },
+  { letter: 'G', wl: 431.0, element: 'Fe+Ca', desc: 'Iron and Calcium' },
+  { letter: 'H', wl: 396.8, element: 'Ca', desc: 'Calcium' },
+  { letter: 'K', wl: 393.4, element: 'Ca', desc: 'Calcium' },
+];
+
+// ===================== STATE =====================
+let currentMode = 'absorption'; // absorption, emission, compare
+let activeElements = new Set(['H']);
+let temperature = 5500;
+let showEnergy = false;
+let mysteryMode = false;
+let mysteryElement = null;
+let showApps = false;
+
+// Spectrum zoom/pan
+let specZoomMin = 380;
+let specZoomMax = 700;
+let specDragging = false;
+let specDragStart = 0;
+let specDragMinStart = 0;
+let specDragMaxStart = 0;
+let needsSpectrumRedraw = true;
+
+// ===================== INIT ELEMENT LIST =====================
+function buildElementList() {
+  const list = document.getElementById('element-list');
+  const sunItem = document.createElement('div');
+  sunItem.className = 'element-item';
+  sunItem.innerHTML = `<input type="checkbox" id="el-Sun" onchange="toggleElement('Sun', this.checked)">
+    <span class="el-symbol" style="background:#443300;color:#ffcc44">&#9788;</span>
+    <span class="el-name">Sun (all Fraunhofer)</span>`;
+  list.appendChild(sunItem);
+
+  for (const [sym, el] of Object.entries(ELEMENTS)) {
+    const item = document.createElement('div');
+    item.className = 'element-item';
+    const checked = activeElements.has(sym) ? 'checked' : '';
+    item.innerHTML = `<input type="checkbox" id="el-${sym}" ${checked} onchange="toggleElement('${sym}', this.checked)">
+      <span class="el-symbol" style="background:${el.color}22;color:${el.color}">${sym}</span>
+      <span class="el-name">${el.name}</span>`;
+    list.appendChild(item);
+  }
+}
+
+function toggleElement(sym, on) {
+  if (sym === 'Sun') {
+    if (on) {
+      Object.keys(ELEMENTS).forEach(s => {
+        activeElements.add(s);
+        document.getElementById('el-' + s).checked = true;
+      });
+    } else {
+      Object.keys(ELEMENTS).forEach(s => {
+        activeElements.delete(s);
+        document.getElementById('el-' + s).checked = false;
+      });
+    }
+  } else {
+    if (on) activeElements.add(sym);
+    else activeElements.delete(sym);
+    // Uncheck Sun if not all checked
+    const allOn = Object.keys(ELEMENTS).every(s => activeElements.has(s));
+    document.getElementById('el-Sun').checked = allOn;
+  }
+  needsSpectrumRedraw = true;
+  updateGasCloud();
+  updateEnergyDiagram();
+}
+
+// ===================== MODE =====================
+function setMode(mode) {
+  currentMode = mode;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+  needsSpectrumRedraw = true;
+  updateExplanation();
+  update3DScene();
+
+  const wrapper = document.getElementById('spectrum-wrapper');
+  const labelTop = document.getElementById('label-top');
+  const labelBottom = document.getElementById('label-bottom');
+
+  if (mode === 'compare') {
+    wrapper.classList.add('compare-mode');
+    labelTop.style.display = 'block';
+    labelBottom.style.display = 'block';
+  } else {
+    wrapper.classList.remove('compare-mode');
+    labelTop.style.display = 'none';
+    labelBottom.style.display = 'none';
+  }
+}
+
+function updateExplanation() {
+  const el = document.getElementById('explanation');
+  if (currentMode === 'absorption') {
+    el.innerHTML = '<strong>Absorption Spectrum:</strong> When white light passes through a cool gas, atoms absorb photons at specific wavelengths matching their electron transitions. The result: dark lines on a continuous rainbow. This is how Fraunhofer first observed hundreds of dark lines in sunlight in 1814.';
+  } else if (currentMode === 'emission') {
+    el.innerHTML = '<strong>Emission Spectrum:</strong> When a gas is heated or electrically excited, its atoms emit photons at specific wavelengths as electrons drop to lower energy levels. The result: bright colored lines on a black background. This is how neon signs work — each gas has its own unique color signature.';
+  } else {
+    el.innerHTML = '<strong>Compare Mode:</strong> The absorption lines (dark on bright) and emission lines (bright on dark) appear at exactly the same wavelengths for any given element. This proves they arise from the same atomic transitions — the same energy jumps that absorb a photon can also emit one.';
+  }
+}
+
+// ===================== TEMPERATURE =====================
+function onTempChange(val) {
+  temperature = parseInt(val);
+  document.getElementById('temp-val').textContent = temperature + ' K';
+  needsSpectrumRedraw = true;
+}
+
+// ===================== TOGGLES =====================
+function toggleEnergy() {
+  showEnergy = !showEnergy;
+  document.getElementById('toggle-energy').classList.toggle('on', showEnergy);
+  document.getElementById('energy-diagram').style.display = showEnergy ? 'block' : 'none';
+  if (showEnergy) updateEnergyDiagram();
+}
+
+function toggleMystery() {
+  mysteryMode = !mysteryMode;
+  document.getElementById('toggle-mystery').classList.toggle('on', mysteryMode);
+  document.getElementById('mystery-panel').style.display = mysteryMode ? 'block' : 'none';
+  if (mysteryMode) startMystery();
+  else {
+    mysteryElement = null;
+    needsSpectrumRedraw = true;
+  }
+}
+
+function toggleApps() {
+  showApps = !showApps;
+  document.getElementById('toggle-apps').classList.toggle('on', showApps);
+  document.getElementById('applications').style.display = showApps ? 'block' : 'none';
+}
+
+// ===================== MYSTERY MODE =====================
+function startMystery() {
+  const keys = Object.keys(ELEMENTS);
+  mysteryElement = keys[Math.floor(Math.random() * keys.length)];
+  document.getElementById('mystery-result').textContent = '';
+  document.getElementById('mystery-result').style.color = '';
+
+  const btns = document.getElementById('mystery-buttons');
+  btns.innerHTML = '';
+  keys.forEach(k => {
+    const b = document.createElement('button');
+    b.textContent = ELEMENTS[k].name + ' (' + k + ')';
+    b.onclick = () => guessMystery(k);
+    btns.appendChild(b);
+  });
+
+  // Temporarily override active elements for display
+  needsSpectrumRedraw = true;
+}
+
+function guessMystery(guess) {
+  const res = document.getElementById('mystery-result');
+  if (guess === mysteryElement) {
+    res.textContent = 'Correct! That is ' + ELEMENTS[mysteryElement].name + '!';
+    res.style.color = '#44cc88';
+    setTimeout(() => startMystery(), 2000);
+  } else {
+    res.textContent = 'Not quite. Try again!';
+    res.style.color = '#ff6644';
+  }
+}
+
+function getActiveLines() {
+  if (mysteryMode && mysteryElement) {
+    return ELEMENTS[mysteryElement].lines.map(l => ({ ...l, element: mysteryElement }));
+  }
+  let lines = [];
+  for (const sym of activeElements) {
+    if (ELEMENTS[sym]) {
+      ELEMENTS[sym].lines.forEach(l => lines.push({ ...l, element: sym }));
+    }
+  }
+  return lines;
+}
+
+// ===================== WAVELENGTH TO COLOR =====================
+function wavelengthToRGB(wl) {
+  let r = 0, g = 0, b = 0;
+  if (wl >= 380 && wl < 440) {
+    r = -(wl - 440) / (440 - 380);
+    g = 0;
+    b = 1;
+  } else if (wl >= 440 && wl < 490) {
+    r = 0;
+    g = (wl - 440) / (490 - 440);
+    b = 1;
+  } else if (wl >= 490 && wl < 510) {
+    r = 0;
+    g = 1;
+    b = -(wl - 510) / (510 - 490);
+  } else if (wl >= 510 && wl < 580) {
+    r = (wl - 510) / (580 - 510);
+    g = 1;
+    b = 0;
+  } else if (wl >= 580 && wl < 645) {
+    r = 1;
+    g = -(wl - 645) / (645 - 580);
+    b = 0;
+  } else if (wl >= 645 && wl <= 780) {
+    r = 1;
+    g = 0;
+    b = 0;
+  }
+
+  // Intensity falloff at edges
+  let factor;
+  if (wl >= 380 && wl < 420) factor = 0.3 + 0.7 * (wl - 380) / (420 - 380);
+  else if (wl >= 645 && wl <= 780) factor = 0.3 + 0.7 * (780 - wl) / (780 - 645);
+  else if (wl >= 420 && wl < 645) factor = 1.0;
+  else factor = 0;
+
+  return [Math.round(r * factor * 255), Math.round(g * factor * 255), Math.round(b * factor * 255)];
+}
+
+function wavelengthToHex(wl) {
+  const [r, g, b] = wavelengthToRGB(wl);
+  return '#' + [r, g, b].map(c => c.toString(16).padStart(2, '0')).join('');
+}
+
+function wavelengthToColorName(wl) {
+  if (wl < 420) return 'Violet';
+  if (wl < 450) return 'Indigo';
+  if (wl < 490) return 'Blue';
+  if (wl < 510) return 'Cyan';
+  if (wl < 540) return 'Green';
+  if (wl < 580) return 'Yellow';
+  if (wl < 620) return 'Orange';
+  return 'Red';
+}
+
+// ===================== SPECTRUM RENDERING =====================
+function drawSpectrum(canvas, mode, lines) {
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width;
+  const H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const rangeMin = specZoomMin;
+  const rangeMax = specZoomMax;
+  const nmPerPx = (rangeMax - rangeMin) / W;
+
+  // Temperature line broadening factor
+  const broadeningBase = 0.3 + (temperature - 2000) / 28000 * 1.5;
+
+  if (mode === 'absorption') {
+    // Draw continuous spectrum
+    for (let x = 0; x < W; x++) {
+      const wl = rangeMin + x * nmPerPx;
+      const [r, g, b] = wavelengthToRGB(wl);
+      // Apply blackbody-ish intensity based on temperature
+      const bbFactor = blackbodyFactor(wl, temperature);
+      ctx.fillStyle = `rgb(${Math.round(r * bbFactor)},${Math.round(g * bbFactor)},${Math.round(b * bbFactor)})`;
+      ctx.fillRect(x, 0, 1, H);
+    }
+
+    // Draw absorption lines (dark)
+    lines.forEach(line => {
+      const x = (line.wl - rangeMin) / nmPerPx;
+      if (x < -5 || x > W + 5) return;
+      const width = Math.max(1, 1.5 / nmPerPx * broadeningBase);
+      const intensity = line.intensity * (temperature / 5500);
+      const alpha = Math.min(0.95, intensity);
+      ctx.fillStyle = `rgba(0,0,0,${alpha})`;
+      ctx.fillRect(x - width / 2, 0, Math.max(width, 1.2), H);
+    });
+
+    // Fraunhofer labels at top
+    if (activeElements.size > 2 || document.getElementById('el-Sun').checked) {
+      drawFraunhoferLabels(ctx, W, H, rangeMin, nmPerPx);
+    }
+
+  } else if (mode === 'emission') {
+    // Black background
+    ctx.fillStyle = '#050508';
+    ctx.fillRect(0, 0, W, H);
+
+    // Draw emission lines (bright)
+    lines.forEach(line => {
+      const x = (line.wl - rangeMin) / nmPerPx;
+      if (x < -5 || x > W + 5) return;
+      const [r, g, b] = wavelengthToRGB(line.wl);
+      const width = Math.max(1.5, 2.0 / nmPerPx * broadeningBase);
+      const intensity = line.intensity * Math.min(1.5, temperature / 5500);
+
+      // Glow effect
+      const glowWidth = width * 4;
+      const grad = ctx.createLinearGradient(x - glowWidth, 0, x + glowWidth, 0);
+      grad.addColorStop(0, `rgba(${r},${g},${b},0)`);
+      grad.addColorStop(0.35, `rgba(${r},${g},${b},${intensity * 0.15})`);
+      grad.addColorStop(0.5, `rgba(${r},${g},${b},${intensity * 0.8})`);
+      grad.addColorStop(0.65, `rgba(${r},${g},${b},${intensity * 0.15})`);
+      grad.addColorStop(1, `rgba(${r},${g},${b},0)`);
+      ctx.fillStyle = grad;
+      ctx.fillRect(x - glowWidth, 0, glowWidth * 2, H);
+
+      // Core line
+      ctx.fillStyle = `rgba(${Math.min(255, r + 80)},${Math.min(255, g + 80)},${Math.min(255, b + 80)},${Math.min(1, intensity)})`;
+      ctx.fillRect(x - width / 2, 0, Math.max(width, 1.2), H);
+    });
+  }
+
+  // Wavelength scale at bottom
+  drawWavelengthScale(ctx, W, H, rangeMin, rangeMax);
+}
+
+function blackbodyFactor(wl, T) {
+  // Simplified Planck distribution for visual effect
+  const nm = wl * 1e-9;
+  const h = 6.626e-34, c = 3e8, k = 1.381e-23;
+  const x = h * c / (nm * k * T);
+  const intensity = 1.0 / (Math.pow(nm * 1e6, 5) * (Math.exp(x) - 1));
+  // Normalize roughly
+  const peakWl = 2898000 / T; // Wien's law in nm
+  const peakNm = peakWl * 1e-9;
+  const xPeak = h * c / (peakNm * k * T);
+  const peakIntensity = 1.0 / (Math.pow(peakNm * 1e6, 5) * (Math.exp(xPeak) - 1));
+  return Math.min(1.0, Math.max(0.05, intensity / peakIntensity));
+}
+
+function drawFraunhoferLabels(ctx, W, H, rangeMin, nmPerPx) {
+  ctx.font = '10px monospace';
+  ctx.textAlign = 'center';
+  FRAUNHOFER.forEach(f => {
+    const x = (f.wl - rangeMin) / nmPerPx;
+    if (x < 10 || x > W - 10) return;
+    ctx.fillStyle = 'rgba(255,255,200,0.7)';
+    ctx.fillText(f.letter, x, 12);
+  });
+}
+
+function drawWavelengthScale(ctx, W, H, rangeMin, rangeMax) {
+  const range = rangeMax - rangeMin;
+  let step = 10;
+  if (range > 200) step = 50;
+  if (range > 100 && range <= 200) step = 20;
+  if (range <= 50) step = 5;
+
+  ctx.font = '9px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(200,200,220,0.5)';
+
+  const start = Math.ceil(rangeMin / step) * step;
+  for (let wl = start; wl <= rangeMax; wl += step) {
+    const x = (wl - rangeMin) / (rangeMax - rangeMin) * W;
+    ctx.fillRect(x, H - 18, 1, 6);
+    ctx.fillText(wl + '', x, H - 4);
+  }
+}
+
+function renderAllSpectra() {
+  if (!needsSpectrumRedraw) return;
+  needsSpectrumRedraw = false;
+
+  const lines = getActiveLines();
+
+  if (currentMode === 'compare') {
+    const c1 = document.getElementById('spectrum-canvas-top');
+    const c2 = document.getElementById('spectrum-canvas-bottom');
+    resizeCanvas(c1);
+    resizeCanvas(c2);
+    drawSpectrum(c1, 'absorption', lines);
+    drawSpectrum(c2, 'emission', lines);
+    const lb = document.getElementById('label-bottom');
+    lb.style.top = (c1.clientHeight + 6) + 'px';
+  } else {
+    const c = document.getElementById('spectrum-canvas');
+    resizeCanvas(c);
+    drawSpectrum(c, currentMode, lines);
+  }
+}
+
+function resizeCanvas(canvas) {
+  const rect = canvas.getBoundingClientRect();
+  if (canvas.width !== Math.round(rect.width) || canvas.height !== Math.round(rect.height)) {
+    canvas.width = Math.round(rect.width);
+    canvas.height = Math.round(rect.height);
+  }
+}
+
+// ===================== SPECTRUM INTERACTION =====================
+function setupSpectrumInteraction() {
+  const wrapper = document.getElementById('spectrum-wrapper');
+
+  wrapper.addEventListener('mousemove', (e) => {
+    const rect = wrapper.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const w = rect.width;
+    const wl = specZoomMin + (x / w) * (specZoomMax - specZoomMin);
+
+    document.getElementById('cursor-nm').textContent = wl.toFixed(1) + ' nm';
+    const colorEl = document.getElementById('cursor-color');
+    const cname = wavelengthToColorName(wl);
+    const chex = wavelengthToHex(wl);
+    colorEl.textContent = cname;
+    colorEl.style.color = chex;
+
+    // Check if near a line
+    const lines = getActiveLines();
+    const threshold = (specZoomMax - specZoomMin) / w * 8; // 8px tolerance
+    let closest = null;
+    let closestDist = Infinity;
+    lines.forEach(l => {
+      const d = Math.abs(l.wl - wl);
+      if (d < threshold && d < closestDist) {
+        closestDist = d;
+        closest = l;
+      }
+    });
+
+    const tooltip = document.getElementById('spectrum-tooltip');
+    const elInfo = document.getElementById('cursor-element-info');
+    if (closest) {
+      tooltip.style.display = 'block';
+      tooltip.style.left = Math.min(e.clientX - rect.left + 12, w - 180) + 'px';
+      tooltip.style.top = (e.clientY - rect.top - 60) + 'px';
+      tooltip.querySelector('.tt-wavelength').textContent = closest.wl + ' nm';
+      tooltip.querySelector('.tt-element').textContent = ELEMENTS[closest.element]?.name || closest.element;
+      tooltip.querySelector('.tt-line-name').textContent = closest.name || '';
+
+      // Find Fraunhofer designation
+      const fLine = FRAUNHOFER.find(f => Math.abs(f.wl - closest.wl) < 1);
+      if (fLine) {
+        tooltip.querySelector('.tt-line-name').textContent = (closest.name ? closest.name + ' — ' : '') + 'Fraunhofer ' + fLine.letter;
+      }
+
+      elInfo.innerHTML = `Line: <span style="color:${wavelengthToHex(closest.wl)}">${closest.wl} nm</span> (${ELEMENTS[closest.element]?.name || '?'})`;
+    } else {
+      tooltip.style.display = 'none';
+      elInfo.textContent = '';
+    }
+  });
+
+  wrapper.addEventListener('mouseleave', () => {
+    document.getElementById('spectrum-tooltip').style.display = 'none';
+  });
+
+  // Zoom
+  wrapper.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const rect = wrapper.getBoundingClientRect();
+    const mx = (e.clientX - rect.left) / rect.width;
+    const range = specZoomMax - specZoomMin;
+    const zoomFactor = e.deltaY > 0 ? 1.15 : 0.87;
+    const newRange = Math.max(20, Math.min(400, range * zoomFactor));
+    const center = specZoomMin + mx * range;
+    specZoomMin = Math.max(360, center - mx * newRange);
+    specZoomMax = Math.min(780, specZoomMin + newRange);
+    if (specZoomMax > 780) { specZoomMax = 780; specZoomMin = specZoomMax - newRange; }
+    if (specZoomMin < 360) { specZoomMin = 360; specZoomMax = specZoomMin + newRange; }
+
+    document.getElementById('zoom-indicator').textContent =
+      Math.round(specZoomMin) + ' — ' + Math.round(specZoomMax) + ' nm' +
+      (newRange < 310 ? '  (scroll out to reset)' : '');
+    needsSpectrumRedraw = true;
+  });
+
+  // Pan
+  wrapper.addEventListener('mousedown', (e) => {
+    specDragging = true;
+    specDragStart = e.clientX;
+    specDragMinStart = specZoomMin;
+    specDragMaxStart = specZoomMax;
+  });
+  window.addEventListener('mousemove', (e) => {
+    if (!specDragging) return;
+    const rect = document.getElementById('spectrum-wrapper').getBoundingClientRect();
+    const dx = e.clientX - specDragStart;
+    const nmShift = -dx / rect.width * (specDragMaxStart - specDragMinStart);
+    const range = specDragMaxStart - specDragMinStart;
+    specZoomMin = Math.max(360, Math.min(780 - range, specDragMinStart + nmShift));
+    specZoomMax = specZoomMin + range;
+    needsSpectrumRedraw = true;
+  });
+  window.addEventListener('mouseup', () => { specDragging = false; });
+}
+
+// ===================== ENERGY LEVEL DIAGRAM =====================
+function updateEnergyDiagram() {
+  if (!showEnergy) return;
+  const canvas = document.getElementById('energy-canvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = 232;
+  canvas.height = 280;
+  ctx.clearRect(0, 0, 232, 280);
+
+  // Pick first active element that has energy data
+  let elSym = null;
+  for (const s of activeElements) {
+    if (ELEMENTS[s]?.energyLevels) { elSym = s; break; }
+  }
+  if (!elSym) {
+    ctx.fillStyle = '#556';
+    ctx.font = '11px sans-serif';
+    ctx.fillText('Select an element to see', 20, 140);
+    ctx.fillText('its energy levels.', 20, 158);
+    document.getElementById('energy-title').textContent = 'Energy Levels';
+    return;
+  }
+
+  const el = ELEMENTS[elSym];
+  document.getElementById('energy-title').textContent = el.name + ' Energy Levels';
+  const levels = el.energyLevels;
+  const transitions = el.transitions || [];
+
+  const W = 232, H = 280;
+  const margin = 30;
+  const maxEv = Math.abs(levels[0].eV);
+  const minEv = Math.abs(levels[levels.length - 1].eV);
+
+  function yForEv(eV) {
+    const absEv = Math.abs(eV);
+    const frac = (absEv - minEv) / (maxEv - minEv);
+    return margin + (1 - frac) * (H - 2 * margin);
+  }
+
+  // Draw levels
+  levels.forEach(lv => {
+    const y = yForEv(lv.eV);
+    ctx.strokeStyle = '#3a4a6a';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(60, y);
+    ctx.lineTo(180, y);
+    ctx.stroke();
+
+    ctx.fillStyle = '#8899bb';
+    ctx.font = '10px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('n=' + lv.n, 6, y + 4);
+    ctx.textAlign = 'right';
+    ctx.fillText(lv.eV.toFixed(2) + ' eV', W - 4, y + 4);
+  });
+
+  // Draw transitions as arrows
+  transitions.forEach(tr => {
+    const fromLv = levels.find(l => l.n === tr.from);
+    const toLv = levels.find(l => l.n === tr.to);
+    if (!fromLv || !toLv) return;
+
+    const y1 = yForEv(fromLv.eV);
+    const y2 = yForEv(toLv.eV);
+    const x = 90 + (tr.from - 2) * 25;
+
+    const [r, g, b] = wavelengthToRGB(tr.wl);
+    ctx.strokeStyle = `rgb(${r},${g},${b})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x, y1);
+    ctx.lineTo(x, y2);
+    ctx.stroke();
+
+    // Arrowhead
+    ctx.fillStyle = ctx.strokeStyle;
+    ctx.beginPath();
+    ctx.moveTo(x - 4, y2 - 8);
+    ctx.lineTo(x + 4, y2 - 8);
+    ctx.lineTo(x, y2);
+    ctx.fill();
+
+    // Label
+    ctx.fillStyle = `rgba(${r},${g},${b},0.8)`;
+    ctx.font = '8px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(tr.wl + '', x, y1 - 4);
+  });
+}
+
+// ===================== THREE.JS 3D SCENE =====================
+let scene, camera, renderer, threeCanvas;
+let lightSource, prism, screen3D, gasCloud, beamGroup;
+let spectrumTexture, spectrumPlane;
+
+function init3D() {
+  threeCanvas = document.getElementById('three-canvas');
+  const container = document.getElementById('scene-container');
+
+  renderer = new THREE.WebGLRenderer({ canvas: threeCanvas, antialias: true, alpha: true });
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setClearColor(0x0a0a1a, 1);
+
+  scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x0a0a1a, 0.015);
+
+  camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 100);
+  camera.position.set(0, 4, 12);
+  camera.lookAt(0, 0, 0);
+
+  // Ambient light
+  scene.add(new THREE.AmbientLight(0x222244, 0.5));
+
+  // Create objects
+  createLightSource();
+  createPrism();
+  createScreen();
+  createGasCloud();
+  createBeams();
+
+  resize3D();
+}
+
+function createLightSource() {
+  const geo = new THREE.SphereGeometry(0.6, 32, 32);
+  const mat = new THREE.MeshBasicMaterial({ color: 0xffffcc });
+  lightSource = new THREE.Mesh(geo, mat);
+  lightSource.position.set(-7, 0, 0);
+  scene.add(lightSource);
+
+  // Glow
+  const glowGeo = new THREE.SphereGeometry(0.9, 32, 32);
+  const glowMat = new THREE.MeshBasicMaterial({ color: 0xffffaa, transparent: true, opacity: 0.15 });
+  const glow = new THREE.Mesh(glowGeo, glowMat);
+  lightSource.add(glow);
+
+  // Point light
+  const pl = new THREE.PointLight(0xffffcc, 1, 20);
+  lightSource.add(pl);
+}
+
+function createPrism() {
+  // Triangular prism
+  const shape = new THREE.Shape();
+  const s = 1.2;
+  shape.moveTo(0, s);
+  shape.lineTo(-s * 0.866, -s * 0.5);
+  shape.lineTo(s * 0.866, -s * 0.5);
+  shape.closePath();
+
+  const extrudeSettings = { depth: 1.5, bevelEnabled: false };
+  const geo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+  geo.center();
+
+  const mat = new THREE.MeshPhysicalMaterial({
+    color: 0x8899cc,
+    transparent: true,
+    opacity: 0.35,
+    roughness: 0.05,
+    metalness: 0.0,
+    transmission: 0.7,
+    side: THREE.DoubleSide,
+  });
+  prism = new THREE.Mesh(geo, mat);
+  prism.position.set(0, 0, 0);
+  prism.rotation.y = Math.PI / 2;
+  scene.add(prism);
+
+  // Edge wireframe
+  const edges = new THREE.EdgesGeometry(geo);
+  const lineMat = new THREE.LineBasicMaterial({ color: 0x6677aa, transparent: true, opacity: 0.6 });
+  const wire = new THREE.LineSegments(edges, lineMat);
+  wire.rotation.y = Math.PI / 2;
+  prism.add(wire);
+}
+
+function createScreen() {
+  const geo = new THREE.PlaneGeometry(4, 3);
+  const mat = new THREE.MeshBasicMaterial({ color: 0x111122, side: THREE.DoubleSide });
+  screen3D = new THREE.Mesh(geo, mat);
+  screen3D.position.set(7, 0, 0);
+  screen3D.rotation.y = -Math.PI / 2;
+  scene.add(screen3D);
+
+  // Spectrum texture on screen
+  const specCanvas = document.createElement('canvas');
+  specCanvas.width = 256;
+  specCanvas.height = 128;
+  spectrumTexture = new THREE.CanvasTexture(specCanvas);
+  const specMat = new THREE.MeshBasicMaterial({ map: spectrumTexture, transparent: true });
+  spectrumPlane = new THREE.Mesh(new THREE.PlaneGeometry(3.5, 2.5), specMat);
+  spectrumPlane.position.set(7, 0, 0);
+  spectrumPlane.rotation.y = -Math.PI / 2;
+  scene.add(spectrumPlane);
+}
+
+function createGasCloud() {
+  const geo = new THREE.SphereGeometry(0.8, 16, 16);
+  const mat = new THREE.MeshBasicMaterial({
+    color: 0xff4466,
+    transparent: true,
+    opacity: 0.15,
+    wireframe: true,
+  });
+  gasCloud = new THREE.Mesh(geo, mat);
+  gasCloud.position.set(-3.5, 0, 0);
+  scene.add(gasCloud);
+  updateGasCloud();
+}
+
+function updateGasCloud() {
+  if (!gasCloud) return;
+  // Visibility depends on mode
+  gasCloud.visible = true;
+
+  if (currentMode === 'emission') {
+    gasCloud.position.set(0, 0, 0);
+    gasCloud.material.opacity = 0.25;
+  } else {
+    gasCloud.position.set(-3.5, 0, 0);
+    gasCloud.material.opacity = 0.15;
+  }
+
+  // Color based on active elements
+  let color = 0x445566;
+  if (activeElements.size > 0) {
+    const first = [...activeElements][0];
+    if (ELEMENTS[first]) {
+      const c = ELEMENTS[first].color;
+      color = parseInt(c.replace('#', ''), 16);
+    }
+  }
+  gasCloud.material.color.setHex(color);
+}
+
+function createBeams() {
+  beamGroup = new THREE.Group();
+  scene.add(beamGroup);
+  updateBeams();
+}
+
+function updateBeams() {
+  if (!beamGroup) return;
+  // Clear
+  while (beamGroup.children.length) beamGroup.remove(beamGroup.children[0]);
+
+  if (currentMode === 'emission') {
+    // No incoming white beam; gas emits colored rays
+    const lines = getActiveLines();
+    const uniqueWls = [...new Set(lines.map(l => l.wl))].slice(0, 12);
+    uniqueWls.forEach((wl, i) => {
+      const [r, g, b] = wavelengthToRGB(wl);
+      const col = new THREE.Color(r / 255, g / 255, b / 255);
+      const angle = (i - uniqueWls.length / 2) * 0.08;
+      const mat = new THREE.LineBasicMaterial({ color: col, transparent: true, opacity: 0.7 });
+      const geo = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(0, 0, 0),
+        new THREE.Vector3(7, angle * 7, 0),
+      ]);
+      beamGroup.add(new THREE.Line(geo, mat));
+    });
+    return;
+  }
+
+  // White beam: source to prism
+  const whiteMat = new THREE.LineBasicMaterial({ color: 0xffffee, transparent: true, opacity: 0.6 });
+  const whiteGeo = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(-7, 0, 0),
+    new THREE.Vector3(-0.5, 0, 0),
+  ]);
+  beamGroup.add(new THREE.Line(whiteGeo, whiteMat));
+
+  // If absorption, beam goes through gas cloud first
+  if (currentMode === 'absorption' || currentMode === 'compare') {
+    // Extra segment through gas
+    const gasMat = new THREE.LineBasicMaterial({ color: 0xeeeedd, transparent: true, opacity: 0.4 });
+    const gasGeo = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(-7, 0, 0),
+      new THREE.Vector3(-3.5, 0, 0),
+    ]);
+    beamGroup.add(new THREE.Line(gasGeo, gasMat));
+  }
+
+  // Dispersed rays from prism to screen
+  const numRays = 20;
+  for (let i = 0; i < numRays; i++) {
+    const t = i / (numRays - 1);
+    const wl = 380 + t * 320;
+    const [r, g, b] = wavelengthToRGB(wl);
+    const col = new THREE.Color(r / 255, g / 255, b / 255);
+    const angle = (t - 0.5) * 1.2;
+    const mat = new THREE.LineBasicMaterial({ color: col, transparent: true, opacity: 0.5 });
+    const geo = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(0.5, 0, 0),
+      new THREE.Vector3(7, angle * 2, 0),
+    ]);
+    beamGroup.add(new THREE.Line(geo, mat));
+  }
+}
+
+function update3DSpectrumTexture() {
+  if (!spectrumTexture) return;
+  const canvas = spectrumTexture.image;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  const lines = getActiveLines();
+
+  if (currentMode === 'emission') {
+    ctx.fillStyle = '#080810';
+    ctx.fillRect(0, 0, W, H);
+    lines.forEach(line => {
+      const t = (line.wl - 380) / 320;
+      if (t < 0 || t > 1) return;
+      const x = t * W;
+      const [r, g, b] = wavelengthToRGB(line.wl);
+      ctx.fillStyle = `rgba(${r},${g},${b},${line.intensity})`;
+      ctx.fillRect(x - 1, 0, 3, H);
+    });
+  } else {
+    // Continuous with dark lines
+    for (let x = 0; x < W; x++) {
+      const wl = 380 + (x / W) * 320;
+      const [r, g, b] = wavelengthToRGB(wl);
+      ctx.fillStyle = `rgb(${r},${g},${b})`;
+      ctx.fillRect(x, 0, 1, H);
+    }
+    lines.forEach(line => {
+      const t = (line.wl - 380) / 320;
+      if (t < 0 || t > 1) return;
+      const x = t * W;
+      ctx.fillStyle = `rgba(0,0,0,${line.intensity * 0.9})`;
+      ctx.fillRect(x - 1, 0, 2, H);
+    });
+  }
+
+  spectrumTexture.needsUpdate = true;
+}
+
+function update3DScene() {
+  updateGasCloud();
+  updateBeams();
+  update3DSpectrumTexture();
+
+  if (lightSource) {
+    if (currentMode === 'emission') {
+      lightSource.visible = false;
+    } else {
+      lightSource.visible = true;
+    }
+  }
+}
+
+function resize3D() {
+  const container = document.getElementById('scene-container');
+  const w = container.clientWidth;
+  const h = container.clientHeight;
+  renderer.setSize(w, h);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+
+// ===================== ANIMATION LOOP =====================
+let lastTime = 0;
+function animate(time) {
+  requestAnimationFrame(animate);
+
+  // Rotate prism slowly
+  if (prism) prism.rotation.z += 0.002;
+
+  // Pulse light source
+  if (lightSource && lightSource.visible) {
+    const s = 1 + Math.sin(time * 0.003) * 0.05;
+    lightSource.scale.set(s, s, s);
+  }
+
+  // Pulse gas cloud
+  if (gasCloud && gasCloud.visible) {
+    const s = 1 + Math.sin(time * 0.002) * 0.08;
+    gasCloud.scale.set(s, s, s);
+  }
+
+  renderer.render(scene, camera);
+  renderAllSpectra();
+}
+
+// ===================== WINDOW RESIZE =====================
+window.addEventListener('resize', () => {
+  resize3D();
+  needsSpectrumRedraw = true;
+});
+
+// ===================== INIT =====================
+buildElementList();
+setupSpectrumInteraction();
+init3D();
+update3DScene();
+update3DSpectrumTexture();
+needsSpectrumRedraw = true;
+requestAnimationFrame(animate);
+</script>
+</body>
+</html>

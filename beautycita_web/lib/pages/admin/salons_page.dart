@@ -2,6 +2,7 @@ import 'package:beautycita_core/supabase.dart';
 import 'package:beautycita_core/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../config/web_theme.dart';
 import '../../providers/admin_salons_provider.dart';
 import '../../services/csv_export.dart';
 import '../../widgets/bc_data_table.dart';
@@ -940,15 +941,15 @@ class _StripeChip extends StatelessWidget {
     final (label, color) = switch (status) {
       'complete' => ('OK', Colors.green),
       'pending' || 'pending_verification' => ('Pendiente', Colors.orange),
-      'not_started' => ('Sin iniciar', Colors.grey),
-      _ => (status, Colors.grey),
+      'not_started' => ('Sin iniciar', kWebTextHint),
+      _ => (status, kWebTextHint),
     };
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(BCSpacing.radiusFull),
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
         label,
@@ -969,17 +970,17 @@ class _SourceChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (label, color) = switch (source) {
-      'google_maps' => ('Google', Colors.blue),
+      'google_maps' => ('Google', kWebTertiary),
       'facebook' => ('Facebook', Colors.indigo),
       'bing' => ('Bing', Colors.teal),
-      _ => (source ?? '-', Colors.grey),
+      _ => (source ?? '-', kWebTextHint),
     };
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(BCSpacing.radiusFull),
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
         label,

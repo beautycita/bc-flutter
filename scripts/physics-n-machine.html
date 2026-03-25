@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The N-Machine — Homopolar Generator Physics</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a1a;
+  color: #c8c8d8;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  overflow: hidden;
+  height: 100vh;
+}
+#app {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  grid-template-rows: 1fr 180px;
+  height: 100vh;
+}
+#left-panel {
+  grid-row: 1 / 3;
+  background: rgba(12, 12, 30, 0.95);
+  border-right: 1px solid #1a1a3a;
+  overflow-y: auto;
+  padding: 16px;
+  scrollbar-width: thin;
+  scrollbar-color: #2a2a5a #0c0c1e;
+}
+#left-panel::-webkit-scrollbar { width: 6px; }
+#left-panel::-webkit-scrollbar-track { background: #0c0c1e; }
+#left-panel::-webkit-scrollbar-thumb { background: #2a2a5a; border-radius: 3px; }
+#canvas-container {
+  position: relative;
+  overflow: hidden;
+}
+#bottom-panel {
+  background: rgba(12, 12, 30, 0.95);
+  border-top: 1px solid #1a1a3a;
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  overflow-x: auto;
+}
+h1 {
+  font-size: 20px;
+  color: #7eb8ff;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+.subtitle {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 16px;
+}
+h2 {
+  font-size: 14px;
+  color: #5a9aff;
+  margin: 16px 0 8px 0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-bottom: 1px solid #1a1a3a;
+  padding-bottom: 4px;
+}
+.control-group { margin-bottom: 12px; }
+.control-group label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #8888aa;
+  margin-bottom: 4px;
+}
+.control-group label span { color: #7eb8ff; font-weight: 600; }
+input[type="range"] {
+  width: 100%;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: #1a1a3a;
+  border-radius: 2px;
+  outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: #5a9aff;
+  cursor: pointer;
+}
+.toggle-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  font-size: 12px;
+}
+.toggle-switch {
+  position: relative;
+  width: 36px; height: 18px;
+  cursor: pointer;
+}
+.toggle-switch input { display: none; }
+.toggle-slider {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: #1a1a3a;
+  border-radius: 9px;
+  transition: 0.2s;
+}
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  width: 14px; height: 14px;
+  left: 2px; top: 2px;
+  background: #555;
+  border-radius: 50%;
+  transition: 0.2s;
+}
+.toggle-switch input:checked + .toggle-slider { background: #2a4a8a; }
+.toggle-switch input:checked + .toggle-slider::before {
+  transform: translateX(18px);
+  background: #5a9aff;
+}
+.explanation-section {
+  margin-bottom: 12px;
+}
+.explanation-section summary {
+  cursor: pointer;
+  font-size: 13px;
+  color: #aab;
+  padding: 6px 0;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.explanation-section summary::before {
+  content: '\25B6';
+  font-size: 8px;
+  color: #5a9aff;
+  transition: 0.2s;
+}
+.explanation-section[open] summary::before { transform: rotate(90deg); }
+.explanation-section p, .explanation-section ul {
+  font-size: 12px;
+  line-height: 1.6;
+  color: #889;
+  padding: 4px 0 4px 14px;
+}
+.explanation-section ul { padding-left: 28px; }
+.explanation-section li { margin-bottom: 4px; }
+.data-card {
+  background: rgba(20, 20, 50, 0.8);
+  border: 1px solid #1a1a3a;
+  border-radius: 8px;
+  padding: 12px 16px;
+  min-width: 120px;
+  text-align: center;
+}
+.data-card .label {
+  font-size: 10px;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+.data-card .value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #7eb8ff;
+  font-family: 'Courier New', monospace;
+}
+.data-card .unit {
+  font-size: 11px;
+  color: #555;
+  margin-left: 2px;
+}
+.data-card.efficiency .value { color: #ffaa44; }
+.data-card.power-in .value { color: #ff6666; }
+.data-card.power-out .value { color: #66ff88; }
+.formula {
+  background: rgba(30,30,60,0.6);
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  color: #aac;
+  margin: 6px 0;
+  text-align: center;
+}
+.highlight { color: #ffcc44; }
+.controversial { color: #ff6666; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="left-panel">
+    <h1>The N-Machine</h1>
+    <div class="subtitle">Faraday Homopolar Generator / DePalma N-Machine</div>
+
+    <h2>Controls</h2>
+    <div class="control-group">
+      <label>Rotation Speed <span id="rpm-label">0 RPM</span></label>
+      <input type="range" id="rpm-slider" min="0" max="10000" value="0" step="50">
+    </div>
+    <div class="control-group">
+      <label>Magnetic Field <span id="b-label">0.5 T</span></label>
+      <input type="range" id="b-slider" min="0" max="200" value="50">
+    </div>
+    <div class="control-group">
+      <label>Load Resistance <span id="r-label">1.0 &Omega;</span></label>
+      <input type="range" id="r-slider" min="1" max="100" value="10">
+    </div>
+
+    <div class="toggle-row">
+      <span>Magnets rotate with disc</span>
+      <label class="toggle-switch"><input type="checkbox" id="toggle-magnet-rotate"><span class="toggle-slider"></span></label>
+    </div>
+    <div class="toggle-row">
+      <span>Show magnetic field lines</span>
+      <label class="toggle-switch"><input type="checkbox" id="toggle-field-lines" checked><span class="toggle-slider"></span></label>
+    </div>
+    <div class="toggle-row">
+      <span>Show current flow</span>
+      <label class="toggle-switch"><input type="checkbox" id="toggle-current" checked><span class="toggle-slider"></span></label>
+    </div>
+    <div class="toggle-row">
+      <span>Show force vectors</span>
+      <label class="toggle-switch"><input type="checkbox" id="toggle-forces"><span class="toggle-slider"></span></label>
+    </div>
+
+    <h2>How It Works</h2>
+
+    <details class="explanation-section" open>
+      <summary>What is it?</summary>
+      <p>The Faraday disc is the simplest possible electric generator. A conducting disc rotates in a magnetic field, and voltage appears between the center axis and the outer rim. Michael Faraday built the first one in 1831, making it one of the earliest generators ever constructed.</p>
+    </details>
+
+    <details class="explanation-section">
+      <summary>How does it work?</summary>
+      <p>Free electrons in the spinning disc experience a Lorentz force (F = qv x B) that pushes them radially. This charge separation creates an EMF between center and rim:</p>
+      <div class="formula">&epsilon; = &frac12; &omega; B R&sup2;</div>
+      <p>Where &omega; is angular velocity, B is magnetic field strength, and R is disc radius. Brush contacts at the axis and rim collect this voltage to power an external circuit.</p>
+    </details>
+
+    <details class="explanation-section">
+      <summary><span class="controversial">The Controversy</span></summary>
+      <p>Bruce DePalma (1935-1997) claimed his version, the "N-Machine," could produce more electrical energy output than the mechanical energy input required to spin the disc — so-called <span class="highlight">"over-unity"</span> or free energy.</p>
+      <p>He reported efficiencies of 200-500% in some experiments, asserting the excess energy was extracted from the "primordial energy field of space itself."</p>
+    </details>
+
+    <details class="explanation-section">
+      <summary>Mainstream Physics View</summary>
+      <p>Conventional physics explains all observed outputs through:</p>
+      <ul>
+        <li><strong>Back-EMF:</strong> When current flows, it creates opposing torque (Lenz's law), requiring more motor power</li>
+        <li><strong>Measurement errors:</strong> Homopolar generators produce very high current at very low voltage, making precise power measurements difficult</li>
+        <li><strong>Ohmic losses:</strong> Internal resistance of the disc, brushes, and connections dissipate energy as heat</li>
+        <li><strong>No independent replication</strong> of over-unity claims has been achieved under controlled conditions</li>
+      </ul>
+    </details>
+
+    <details class="explanation-section">
+      <summary>DePalma's View</summary>
+      <p>DePalma argued that rotation affects the inertial properties of matter at a fundamental level. His "spinning ball experiment" (1977) claimed to show that rotating objects fall faster than non-rotating ones.</p>
+      <p>He theorized the N-Machine tapped into a "vacuum energy" or "zero-point energy" — the quantum mechanical energy that exists in apparently empty space. He viewed rotation as a gateway to accessing this energy.</p>
+      <p>His supporters included Paramahamsa Tewari (Indian nuclear engineer) who built similar devices and reported similar results.</p>
+    </details>
+
+    <details class="explanation-section">
+      <summary>Historical Context</summary>
+      <ul>
+        <li><strong>1831:</strong> Faraday invents the homopolar generator</li>
+        <li><strong>1889:</strong> Tesla patents improved homopolar designs</li>
+        <li><strong>1903:</strong> Trouton-Noble experiment (related electrodynamics)</li>
+        <li><strong>1977:</strong> DePalma's spinning ball experiment</li>
+        <li><strong>1978-85:</strong> DePalma builds N-Machine prototypes at MIT</li>
+        <li><strong>1986:</strong> Tewari builds Space Power Generator in India</li>
+        <li><strong>1997:</strong> DePalma dies in New Zealand</li>
+      </ul>
+    </details>
+
+    <details class="explanation-section">
+      <summary>Real-World Applications</summary>
+      <p>Homopolar generators (without free-energy claims) are used in:</p>
+      <ul>
+        <li><strong>Railguns:</strong> Military electromagnetic launchers use massive homopolar generators for megaampere current pulses</li>
+        <li><strong>Metal welding:</strong> Inertia welding systems use homopolar generator energy storage</li>
+        <li><strong>Scientific instruments:</strong> Plasma physics experiments, MHD generators</li>
+        <li><strong>Industrial:</strong> Electroplating, aluminum smelting (high-current, low-voltage applications)</li>
+      </ul>
+    </details>
+  </div>
+
+  <div id="canvas-container"></div>
+
+  <div id="bottom-panel">
+    <div class="data-card">
+      <div class="label">RPM</div>
+      <div class="value" id="data-rpm">0</div>
+    </div>
+    <div class="data-card">
+      <div class="label">EMF Generated</div>
+      <div class="value" id="data-emf">0.00<span class="unit">V</span></div>
+    </div>
+    <div class="data-card">
+      <div class="label">Current</div>
+      <div class="value" id="data-current">0.00<span class="unit">A</span></div>
+    </div>
+    <div class="data-card power-out">
+      <div class="label">Power Output</div>
+      <div class="value" id="data-power-out">0.00<span class="unit">W</span></div>
+    </div>
+    <div class="data-card power-in">
+      <div class="label">Power Input</div>
+      <div class="value" id="data-power-in">0.00<span class="unit">W</span></div>
+    </div>
+    <div class="data-card efficiency">
+      <div class="label">Efficiency</div>
+      <div class="value" id="data-efficiency">0.0<span class="unit">%</span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── State ──
+const state = {
+  rpm: 0,
+  B: 0.5,
+  R: 0.15,       // disc radius in meters
+  loadR: 1.0,
+  internalR: 0.05,
+  magnetRotate: false,
+  showFieldLines: true,
+  showCurrent: true,
+  showForces: false,
+};
+
+// ── Three.js Setup ──
+const container = document.getElementById('canvas-container');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0a0a1a);
+scene.fog = new THREE.FogExp2(0x0a0a1a, 0.15);
+
+const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
+camera.position.set(0.6, 0.5, 0.8);
+camera.lookAt(0, 0.05, 0);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.shadowMap.enabled = true;
+container.appendChild(renderer.domElement);
+
+// Lights
+const ambientLight = new THREE.AmbientLight(0x222244, 0.6);
+scene.add(ambientLight);
+const dirLight = new THREE.DirectionalLight(0xaabbff, 0.8);
+dirLight.position.set(2, 3, 2);
+dirLight.castShadow = true;
+scene.add(dirLight);
+const pointLight = new THREE.PointLight(0x5588ff, 0.4, 5);
+pointLight.position.set(-1, 1.5, 0.5);
+scene.add(pointLight);
+
+// ── Materials ──
+const copperMat = new THREE.MeshStandardMaterial({
+  color: 0xd4884a,
+  metalness: 0.9,
+  roughness: 0.25,
+});
+const magnetNMat = new THREE.MeshStandardMaterial({
+  color: 0xff3333,
+  metalness: 0.5,
+  roughness: 0.4,
+});
+const magnetSMat = new THREE.MeshStandardMaterial({
+  color: 0x3355ff,
+  metalness: 0.5,
+  roughness: 0.4,
+});
+const axisMat = new THREE.MeshStandardMaterial({
+  color: 0x888899,
+  metalness: 0.8,
+  roughness: 0.3,
+});
+const wireMat = new THREE.MeshStandardMaterial({
+  color: 0x333333,
+  metalness: 0.3,
+  roughness: 0.6,
+});
+const brushMat = new THREE.MeshStandardMaterial({
+  color: 0x555555,
+  metalness: 0.6,
+  roughness: 0.5,
+});
+const baseMat = new THREE.MeshStandardMaterial({
+  color: 0x1a1a2a,
+  metalness: 0.3,
+  roughness: 0.7,
+});
+
+// ── Build Device ──
+const deviceGroup = new THREE.Group();
+scene.add(deviceGroup);
+
+// Base platform
+const base = new THREE.Mesh(
+  new THREE.BoxGeometry(0.6, 0.02, 0.4),
+  baseMat
+);
+base.position.y = -0.12;
+base.receiveShadow = true;
+deviceGroup.add(base);
+
+// Motor housing
+const motorHousing = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.04, 0.04, 0.08, 16),
+  new THREE.MeshStandardMaterial({ color: 0x2a2a3a, metalness: 0.7, roughness: 0.3 })
+);
+motorHousing.position.y = -0.08;
+deviceGroup.add(motorHousing);
+
+// Central axis
+const axis = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.008, 0.008, 0.22, 12),
+  axisMat
+);
+axis.position.y = 0.0;
+deviceGroup.add(axis);
+
+// ── Disc (rotor) ──
+const discGroup = new THREE.Group();
+deviceGroup.add(discGroup);
+
+// Main disc
+const disc = new THREE.Mesh(
+  new THREE.CylinderGeometry(state.R, state.R, 0.012, 64),
+  copperMat
+);
+disc.position.y = 0.05;
+disc.castShadow = true;
+discGroup.add(disc);
+
+// Disc grid lines (radial marks)
+for (let i = 0; i < 12; i++) {
+  const angle = (i / 12) * Math.PI * 2;
+  const lineGeo = new THREE.CylinderGeometry(0.001, 0.001, state.R - 0.01, 4);
+  lineGeo.rotateZ(Math.PI / 2);
+  const line = new THREE.Mesh(lineGeo, new THREE.MeshBasicMaterial({ color: 0xbb7744 }));
+  line.position.set(
+    Math.cos(angle) * (state.R / 2),
+    0.057,
+    Math.sin(angle) * (state.R / 2)
+  );
+  line.rotation.y = -angle;
+  discGroup.add(line);
+}
+
+// ── Magnets ──
+const magnetGroup = new THREE.Group();
+discGroup.add(magnetGroup);
+
+const magnetPositions = [0, Math.PI / 2, Math.PI, 3 * Math.PI / 2];
+magnetPositions.forEach((angle, i) => {
+  const r = state.R * 0.6;
+  const magnet = new THREE.Mesh(
+    new THREE.BoxGeometry(0.03, 0.025, 0.015),
+    i % 2 === 0 ? magnetNMat : magnetSMat
+  );
+  magnet.position.set(
+    Math.cos(angle) * r,
+    0.05,
+    Math.sin(angle) * r
+  );
+  magnet.rotation.y = -angle;
+  magnetGroup.add(magnet);
+
+  // Pole labels
+  const canvas = document.createElement('canvas');
+  canvas.width = 32; canvas.height = 16;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = 'white';
+  ctx.font = 'bold 12px Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText(i % 2 === 0 ? 'N' : 'S', 16, 13);
+  const tex = new THREE.CanvasTexture(canvas);
+  const labelMat = new THREE.SpriteMaterial({ map: tex, transparent: true });
+  const label = new THREE.Sprite(labelMat);
+  label.scale.set(0.025, 0.0125, 1);
+  label.position.set(
+    Math.cos(angle) * r,
+    0.072,
+    Math.sin(angle) * r
+  );
+  magnetGroup.add(label);
+});
+
+// ── Brush Contacts ──
+// Center brush
+const centerBrush = new THREE.Mesh(
+  new THREE.BoxGeometry(0.015, 0.02, 0.01),
+  brushMat
+);
+centerBrush.position.set(0.012, 0.05, 0);
+deviceGroup.add(centerBrush);
+
+// Rim brush
+const rimBrush = new THREE.Mesh(
+  new THREE.BoxGeometry(0.015, 0.02, 0.01),
+  brushMat
+);
+rimBrush.position.set(state.R + 0.005, 0.05, 0);
+deviceGroup.add(rimBrush);
+
+// ── Wires + Load ──
+const wirePath = [
+  new THREE.Vector3(0.012, 0.05, 0.01),
+  new THREE.Vector3(0.012, -0.05, 0.02),
+  new THREE.Vector3(0.12, -0.07, 0.14),
+  new THREE.Vector3(0.22, -0.05, 0.14),
+  new THREE.Vector3(0.22, 0.02, 0.14),
+];
+const wirePath2 = [
+  new THREE.Vector3(0.22, 0.02, 0.14),
+  new THREE.Vector3(0.22, -0.05, 0.14),
+  new THREE.Vector3(0.28, -0.07, 0.08),
+  new THREE.Vector3(state.R + 0.005, -0.05, 0.02),
+  new THREE.Vector3(state.R + 0.005, 0.05, 0.01),
+];
+
+function makeWire(points) {
+  const curve = new THREE.CatmullRomCurve3(points);
+  const geo = new THREE.TubeGeometry(curve, 32, 0.003, 8, false);
+  return new THREE.Mesh(geo, wireMat);
+}
+const wire1 = makeWire(wirePath);
+const wire2 = makeWire(wirePath2);
+deviceGroup.add(wire1);
+deviceGroup.add(wire2);
+
+// Light bulb
+const bulbGroup = new THREE.Group();
+bulbGroup.position.set(0.22, 0.05, 0.14);
+deviceGroup.add(bulbGroup);
+
+const bulbGlass = new THREE.Mesh(
+  new THREE.SphereGeometry(0.022, 16, 16, 0, Math.PI * 2, 0, Math.PI * 0.7),
+  new THREE.MeshStandardMaterial({
+    color: 0xffffdd,
+    transparent: true,
+    opacity: 0.3,
+    metalness: 0,
+    roughness: 0.1,
+  })
+);
+bulbGlass.position.y = 0.01;
+bulbGroup.add(bulbGlass);
+
+const bulbBase = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.01, 0.012, 0.02, 8),
+  axisMat
+);
+bulbBase.position.y = -0.01;
+bulbGroup.add(bulbBase);
+
+const bulbGlow = new THREE.PointLight(0xffdd88, 0, 0.5);
+bulbGlow.position.copy(bulbGroup.position);
+bulbGlow.position.y += 0.02;
+deviceGroup.add(bulbGlow);
+
+// Filament inside bulb
+const filament = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.002, 0.002, 0.015, 4),
+  new THREE.MeshBasicMaterial({ color: 0x000000 })
+);
+filament.position.y = 0.005;
+bulbGroup.add(filament);
+
+// ── Magnetic Field Lines ──
+const fieldLinesGroup = new THREE.Group();
+deviceGroup.add(fieldLinesGroup);
+
+function createFieldLines() {
+  while (fieldLinesGroup.children.length) fieldLinesGroup.remove(fieldLinesGroup.children[0]);
+  const linesMat = new THREE.LineBasicMaterial({ color: 0x4466ff, transparent: true, opacity: 0.4 });
+  for (let i = 0; i < 8; i++) {
+    const angle = (i / 8) * Math.PI * 2;
+    const r = state.R * 0.4;
+    const pts = [];
+    for (let t = -0.15; t <= 0.25; t += 0.01) {
+      const spread = 1 + Math.abs(t - 0.05) * 2;
+      pts.push(new THREE.Vector3(
+        Math.cos(angle) * r * spread,
+        t,
+        Math.sin(angle) * r * spread
+      ));
+    }
+    const geo = new THREE.BufferGeometry().setFromPoints(pts);
+    const line = new THREE.Line(geo, linesMat);
+    fieldLinesGroup.add(line);
+  }
+  // Through-disc lines
+  for (let i = 0; i < 6; i++) {
+    const angle = (i / 6) * Math.PI * 2 + 0.3;
+    const r = state.R * 0.7;
+    const pts = [];
+    for (let t = -0.1; t <= 0.2; t += 0.008) {
+      pts.push(new THREE.Vector3(
+        Math.cos(angle) * r,
+        t,
+        Math.sin(angle) * r
+      ));
+    }
+    const geo = new THREE.BufferGeometry().setFromPoints(pts);
+    const lm = new THREE.LineBasicMaterial({ color: 0xff4444, transparent: true, opacity: 0.3 });
+    fieldLinesGroup.add(new THREE.Line(geo, lm));
+  }
+}
+createFieldLines();
+
+// ── Current Flow Particles ──
+const currentParticles = [];
+const currentGroup = new THREE.Group();
+deviceGroup.add(currentGroup);
+
+const particleMat = new THREE.MeshBasicMaterial({ color: 0x44ffaa });
+
+function createCurrentParticles() {
+  while (currentGroup.children.length) currentGroup.remove(currentGroup.children[0]);
+  currentParticles.length = 0;
+
+  // Full circuit path: rim brush -> wire2 (external) -> bulb -> wire1 -> center brush -> through disc -> rim
+  const fullPath = [];
+
+  // Segment 1: Rim to load (wire2 reversed)
+  const w2curve = new THREE.CatmullRomCurve3(wirePath2.slice().reverse());
+  const w2pts = w2curve.getPoints(20);
+  fullPath.push(...w2pts);
+
+  // Segment 2: Load to center (wire1 reversed)
+  const w1curve = new THREE.CatmullRomCurve3(wirePath.slice().reverse());
+  const w1pts = w1curve.getPoints(20);
+  fullPath.push(...w1pts);
+
+  // Segment 3: Through disc (center to rim)
+  for (let r = 0.01; r <= state.R; r += 0.01) {
+    fullPath.push(new THREE.Vector3(r, 0.05, 0));
+  }
+
+  const numParticles = 30;
+  for (let i = 0; i < numParticles; i++) {
+    const sphere = new THREE.Mesh(
+      new THREE.SphereGeometry(0.004, 6, 6),
+      particleMat.clone()
+    );
+    currentGroup.add(sphere);
+    currentParticles.push({
+      mesh: sphere,
+      t: i / numParticles,
+      path: fullPath,
+    });
+  }
+}
+createCurrentParticles();
+
+// ── Force Vectors ──
+const forceGroup = new THREE.Group();
+deviceGroup.add(forceGroup);
+
+function createForceVectors() {
+  while (forceGroup.children.length) forceGroup.remove(forceGroup.children[0]);
+  const arrowColor = 0xffff44;
+  for (let i = 0; i < 6; i++) {
+    const angle = (i / 6) * Math.PI * 2;
+    const r = state.R * 0.5;
+    const origin = new THREE.Vector3(
+      Math.cos(angle) * r,
+      0.065,
+      Math.sin(angle) * r
+    );
+    // Force direction: radially outward (Lorentz force on electrons)
+    const dir = new THREE.Vector3(Math.cos(angle), 0, Math.sin(angle)).normalize();
+    const arrow = new THREE.ArrowHelper(dir, origin, 0.04, arrowColor, 0.01, 0.006);
+    forceGroup.add(arrow);
+  }
+}
+createForceVectors();
+forceGroup.visible = state.showForces;
+
+// ── Spark Particles ──
+const sparkParticles = [];
+const sparkGroup = new THREE.Group();
+deviceGroup.add(sparkGroup);
+
+for (let i = 0; i < 20; i++) {
+  const spark = new THREE.Mesh(
+    new THREE.SphereGeometry(0.002, 4, 4),
+    new THREE.MeshBasicMaterial({ color: 0xffff88 })
+  );
+  spark.visible = false;
+  sparkGroup.add(spark);
+  sparkParticles.push({
+    mesh: spark,
+    vel: new THREE.Vector3(),
+    life: 0,
+    maxLife: 0,
+    origin: i < 10 ? 'center' : 'rim',
+  });
+}
+
+// ── Camera Control (orbit) ──
+let isDragging = false;
+let prevMouse = { x: 0, y: 0 };
+let cameraAngle = { theta: 0.7, phi: 0.5, distance: 1.1 };
+
+function updateCamera() {
+  camera.position.set(
+    Math.sin(cameraAngle.theta) * Math.cos(cameraAngle.phi) * cameraAngle.distance,
+    Math.sin(cameraAngle.phi) * cameraAngle.distance,
+    Math.cos(cameraAngle.theta) * Math.cos(cameraAngle.phi) * cameraAngle.distance
+  );
+  camera.lookAt(0, 0.03, 0);
+}
+updateCamera();
+
+container.addEventListener('mousedown', (e) => {
+  isDragging = true;
+  prevMouse = { x: e.clientX, y: e.clientY };
+});
+window.addEventListener('mousemove', (e) => {
+  if (!isDragging) return;
+  const dx = e.clientX - prevMouse.x;
+  const dy = e.clientY - prevMouse.y;
+  cameraAngle.theta -= dx * 0.005;
+  cameraAngle.phi = Math.max(-0.3, Math.min(1.2, cameraAngle.phi + dy * 0.005));
+  prevMouse = { x: e.clientX, y: e.clientY };
+  updateCamera();
+});
+window.addEventListener('mouseup', () => isDragging = false);
+container.addEventListener('wheel', (e) => {
+  cameraAngle.distance = Math.max(0.4, Math.min(3, cameraAngle.distance + e.deltaY * 0.001));
+  updateCamera();
+  e.preventDefault();
+}, { passive: false });
+
+// ── Resize ──
+function onResize() {
+  const rect = container.getBoundingClientRect();
+  camera.aspect = rect.width / rect.height;
+  camera.updateProjectionMatrix();
+  renderer.setSize(rect.width, rect.height);
+}
+window.addEventListener('resize', onResize);
+setTimeout(onResize, 0);
+
+// ── UI Bindings ──
+const rpmSlider = document.getElementById('rpm-slider');
+const bSlider = document.getElementById('b-slider');
+const rSlider = document.getElementById('r-slider');
+
+rpmSlider.addEventListener('input', () => {
+  state.rpm = parseFloat(rpmSlider.value);
+  document.getElementById('rpm-label').textContent = state.rpm.toLocaleString() + ' RPM';
+});
+bSlider.addEventListener('input', () => {
+  state.B = parseFloat(bSlider.value) / 100;
+  document.getElementById('b-label').textContent = state.B.toFixed(2) + ' T';
+});
+rSlider.addEventListener('input', () => {
+  state.loadR = parseFloat(rSlider.value) / 10;
+  document.getElementById('r-label').textContent = state.loadR.toFixed(1) + ' \u03A9';
+});
+
+document.getElementById('toggle-magnet-rotate').addEventListener('change', (e) => {
+  state.magnetRotate = e.target.checked;
+});
+document.getElementById('toggle-field-lines').addEventListener('change', (e) => {
+  state.showFieldLines = e.target.checked;
+  fieldLinesGroup.visible = state.showFieldLines;
+});
+document.getElementById('toggle-current').addEventListener('change', (e) => {
+  state.showCurrent = e.target.checked;
+  currentGroup.visible = state.showCurrent;
+});
+document.getElementById('toggle-forces').addEventListener('change', (e) => {
+  state.showForces = e.target.checked;
+  forceGroup.visible = state.showForces;
+});
+
+// ── Physics Calculations ──
+function calcPhysics() {
+  const omega = state.rpm * 2 * Math.PI / 60; // rad/s
+  const emf = 0.5 * omega * state.B * state.R * state.R; // V
+  const totalR = state.loadR + state.internalR;
+  const current = totalR > 0 ? emf / totalR : 0;
+  const powerOut = current * current * state.loadR;
+  // Motor power: torque * omega. Back-torque = I * B * R^2 / 2. Plus friction.
+  const backTorque = current * state.B * state.R * state.R / 2;
+  const friction = omega * 0.001; // small friction term
+  const powerIn = (backTorque + friction) * omega;
+  const efficiency = powerIn > 0 ? (powerOut / powerIn) * 100 : 0;
+
+  return { emf, current, powerOut, powerIn, efficiency, omega };
+}
+
+// ── Spark spawning ──
+function spawnSpark(particle, brushPos) {
+  particle.mesh.visible = true;
+  particle.mesh.position.copy(brushPos);
+  particle.vel.set(
+    (Math.random() - 0.5) * 0.02,
+    Math.random() * 0.02,
+    (Math.random() - 0.5) * 0.02
+  );
+  particle.life = 0;
+  particle.maxLife = 0.2 + Math.random() * 0.3;
+}
+
+// ── Animation Loop ──
+const clock = new THREE.Clock();
+let sparkTimer = 0;
+
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = clock.getDelta();
+  const phys = calcPhysics();
+
+  // Rotate disc
+  const discRotSpeed = phys.omega * dt;
+  discGroup.rotation.y += discRotSpeed;
+
+  // If magnets should NOT rotate with disc, counter-rotate them
+  if (!state.magnetRotate) {
+    magnetGroup.rotation.y -= discRotSpeed;
+  } else {
+    magnetGroup.rotation.y = 0; // stay with disc
+  }
+
+  // Update current particles
+  if (state.showCurrent && phys.current > 0.01) {
+    const speed = Math.min(phys.current * 0.5, 2) * dt;
+    currentParticles.forEach(p => {
+      p.t = (p.t + speed) % 1;
+      const idx = Math.floor(p.t * (p.path.length - 1));
+      const nextIdx = Math.min(idx + 1, p.path.length - 1);
+      const frac = (p.t * (p.path.length - 1)) - idx;
+      p.mesh.position.lerpVectors(p.path[idx], p.path[nextIdx], frac);
+      const brightness = 0.3 + phys.current * 0.3;
+      p.mesh.material.color.setRGB(0.2, Math.min(1, brightness), 0.5);
+      p.mesh.visible = true;
+    });
+  } else {
+    currentParticles.forEach(p => p.mesh.visible = false);
+  }
+
+  // Update bulb glow
+  const glowIntensity = Math.min(phys.powerOut * 2, 3);
+  bulbGlow.intensity = glowIntensity;
+  bulbGlass.material.emissive = new THREE.Color(0xffdd88);
+  bulbGlass.material.emissiveIntensity = Math.min(glowIntensity * 0.5, 1);
+  filament.material.color.setRGB(
+    Math.min(1, glowIntensity * 0.8),
+    Math.min(1, glowIntensity * 0.5),
+    Math.min(0.3, glowIntensity * 0.1)
+  );
+
+  // Sparks at brushes
+  sparkTimer += dt;
+  if (phys.current > 0.1 && sparkTimer > 0.05) {
+    sparkTimer = 0;
+    const sparkChance = Math.min(phys.current * 0.3, 0.8);
+    sparkParticles.forEach(p => {
+      if (!p.mesh.visible && Math.random() < sparkChance * 0.2) {
+        const brushPos = p.origin === 'center'
+          ? new THREE.Vector3(0.012, 0.055, 0)
+          : new THREE.Vector3(state.R + 0.005, 0.055, 0);
+        spawnSpark(p, brushPos);
+      }
+    });
+  }
+  sparkParticles.forEach(p => {
+    if (p.mesh.visible) {
+      p.life += dt;
+      if (p.life > p.maxLife) {
+        p.mesh.visible = false;
+      } else {
+        p.mesh.position.add(p.vel.clone().multiplyScalar(dt * 2));
+        p.vel.y -= dt * 0.05;
+        const fade = 1 - p.life / p.maxLife;
+        p.mesh.material.opacity = fade;
+        p.mesh.material.transparent = true;
+      }
+    }
+  });
+
+  // Force vectors scale with field
+  if (state.showForces) {
+    const forceScale = Math.min(phys.omega * state.B * 0.005, 0.06);
+    forceGroup.children.forEach(arrow => {
+      arrow.setLength(Math.max(0.01, forceScale), 0.01, 0.006);
+    });
+    forceGroup.rotation.y = discGroup.rotation.y;
+  }
+
+  // Field lines rotate with disc if magnets rotate
+  if (state.magnetRotate) {
+    fieldLinesGroup.rotation.y = discGroup.rotation.y;
+  } else {
+    fieldLinesGroup.rotation.y = 0;
+  }
+
+  // Update data displays
+  document.getElementById('data-rpm').textContent = Math.round(state.rpm).toLocaleString();
+  document.getElementById('data-emf').innerHTML = phys.emf.toFixed(3) + '<span class="unit">V</span>';
+  document.getElementById('data-current').innerHTML = phys.current.toFixed(2) + '<span class="unit">A</span>';
+  document.getElementById('data-power-out').innerHTML = phys.powerOut.toFixed(3) + '<span class="unit">W</span>';
+  document.getElementById('data-power-in').innerHTML = phys.powerIn.toFixed(3) + '<span class="unit">W</span>';
+  document.getElementById('data-efficiency').innerHTML = (phys.powerIn > 0.001 ? phys.efficiency.toFixed(1) : '0.0') + '<span class="unit">%</span>';
+
+  renderer.render(scene, camera);
+}
+
+animate();
+</script>
+</body>
+</html>

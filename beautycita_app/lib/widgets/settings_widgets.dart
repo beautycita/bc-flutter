@@ -2,18 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:beautycita/config/constants.dart';
 
 /// Reusable section header for settings sub-screens.
+/// Design system: 9px, uppercase, letter-spacing 1.2, primary color, bold.
+/// Margin: 14px top, 6px bottom, 4px left.
 class SectionHeader extends StatelessWidget {
   final String label;
   const SectionHeader({super.key, required this.label});
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      label,
-      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-            fontWeight: FontWeight.w600,
-          ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 14, 0, 6),
+      child: Text(
+        label.toUpperCase(),
+        style: TextStyle(
+          fontSize: 9,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 1.2,
+          color: Theme.of(context).colorScheme.primary,
+        ),
+      ),
     );
   }
 }
@@ -37,7 +44,8 @@ class SettingsTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
+    final cs = Theme.of(context).colorScheme;
+    final effectiveColor = iconColor ?? cs.primary;
 
     return Material(
       color: Colors.transparent,
@@ -47,21 +55,32 @@ class SettingsTile extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(
             horizontal: AppConstants.paddingSM,
-            vertical: AppConstants.paddingMD,
+            vertical: AppConstants.paddingSM + 4,
           ),
           child: Row(
             children: [
-              Icon(
-                icon,
-                size: AppConstants.iconSizeMD,
-                color: iconColor ?? Theme.of(context).colorScheme.primary,
+              // IconBox 34x34, radius 10, colored bg at ~8% opacity
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: effectiveColor.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  icon,
+                  size: AppConstants.iconSizeSM,
+                  color: effectiveColor,
+                ),
               ),
-              const SizedBox(width: AppConstants.paddingMD),
+              const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   label,
-                  style: textTheme.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.w500,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF1a1a1a),
                   ),
                 ),
               ),
@@ -69,8 +88,9 @@ class SettingsTile extends StatelessWidget {
                 trailing!
               else if (onTap != null)
                 Icon(
-                  Icons.chevron_right_rounded,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.25),
+                  Icons.chevron_right_outlined,
+                  size: 20,
+                  color: cs.onSurface.withValues(alpha: 0.3),
                 ),
             ],
           ),

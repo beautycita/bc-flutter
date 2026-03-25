@@ -1,0 +1,1224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tesla Turbine — Bladeless Hydroelectric Generator</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a1a;
+  color: #e0e0e0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  overflow-x: hidden;
+}
+#app {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  grid-template-rows: 1fr auto;
+  height: 100vh;
+  gap: 0;
+}
+#left-panel {
+  grid-row: 1 / 3;
+  background: linear-gradient(180deg, #0d0d24 0%, #0a0a1a 100%);
+  border-right: 1px solid #1a1a3a;
+  overflow-y: auto;
+  padding: 20px;
+  scrollbar-width: thin;
+  scrollbar-color: #2a2a5a #0d0d24;
+}
+#left-panel::-webkit-scrollbar { width: 6px; }
+#left-panel::-webkit-scrollbar-track { background: #0d0d24; }
+#left-panel::-webkit-scrollbar-thumb { background: #2a2a5a; border-radius: 3px; }
+#viewport {
+  position: relative;
+  background: #0a0a1a;
+}
+#viewport canvas { display: block; }
+#bottom-panel {
+  background: linear-gradient(0deg, #0d0d24 0%, #0f0f28 100%);
+  border-top: 1px solid #1a1a3a;
+  padding: 16px 24px;
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  overflow-x: auto;
+}
+h1 {
+  font-size: 1.3em;
+  color: #4fc3f7;
+  margin-bottom: 4px;
+  letter-spacing: 0.5px;
+}
+.subtitle {
+  font-size: 0.78em;
+  color: #7a7aa0;
+  margin-bottom: 18px;
+  line-height: 1.4;
+}
+h2 {
+  font-size: 0.92em;
+  color: #81d4fa;
+  margin: 16px 0 8px 0;
+  border-bottom: 1px solid #1a1a3a;
+  padding-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.control-group { margin-bottom: 10px; }
+.control-group label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8em;
+  color: #a0a0c0;
+  margin-bottom: 3px;
+}
+.control-group label span.val {
+  color: #4fc3f7;
+  font-weight: 600;
+  font-family: 'Courier New', monospace;
+}
+input[type="range"] {
+  width: 100%;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: #1a1a3a;
+  border-radius: 2px;
+  outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px; height: 14px;
+  background: #4fc3f7;
+  border-radius: 50%;
+  cursor: pointer;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 14px; height: 14px;
+  background: #4fc3f7;
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+}
+select {
+  width: 100%;
+  padding: 5px 8px;
+  background: #12122a;
+  border: 1px solid #2a2a5a;
+  color: #e0e0e0;
+  border-radius: 4px;
+  font-size: 0.82em;
+}
+.toggle-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  font-size: 0.8em;
+  color: #a0a0c0;
+}
+.toggle {
+  position: relative;
+  width: 36px; height: 18px;
+  cursor: pointer;
+}
+.toggle input { opacity: 0; width: 0; height: 0; }
+.toggle .slider {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: #1a1a3a;
+  border-radius: 9px;
+  transition: 0.3s;
+}
+.toggle .slider::before {
+  content: '';
+  position: absolute;
+  width: 14px; height: 14px;
+  left: 2px; bottom: 2px;
+  background: #555;
+  border-radius: 50%;
+  transition: 0.3s;
+}
+.toggle input:checked + .slider { background: #1565c0; }
+.toggle input:checked + .slider::before {
+  transform: translateX(18px);
+  background: #4fc3f7;
+}
+.data-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+.data-item {
+  background: #0f0f28;
+  border: 1px solid #1a1a3a;
+  border-radius: 4px;
+  padding: 6px 8px;
+}
+.data-item .label {
+  font-size: 0.68em;
+  color: #7a7aa0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.data-item .value {
+  font-size: 1.05em;
+  color: #4fc3f7;
+  font-weight: 700;
+  font-family: 'Courier New', monospace;
+}
+.explanation {
+  font-size: 0.78em;
+  color: #9090b0;
+  line-height: 1.5;
+  margin-bottom: 6px;
+}
+.explanation strong { color: #b0c4de; }
+.bottom-section {
+  min-width: 200px;
+  flex-shrink: 0;
+}
+.bottom-section h3 {
+  font-size: 0.82em;
+  color: #81d4fa;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.perf-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8em;
+  padding: 3px 0;
+  border-bottom: 1px solid #0a0a1a;
+}
+.perf-row .plabel { color: #7a7aa0; }
+.perf-row .pval { color: #4fc3f7; font-family: 'Courier New', monospace; font-weight: 600; }
+.info-section {
+  margin-bottom: 10px;
+  cursor: pointer;
+}
+.info-section .info-title {
+  font-size: 0.8em;
+  color: #81d4fa;
+  padding: 5px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #12122a;
+}
+.info-section .info-title::after {
+  content: '+';
+  font-size: 1em;
+  color: #4a4a7a;
+  transition: 0.2s;
+}
+.info-section.open .info-title::after { content: '-'; }
+.info-section .info-body {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+.info-section.open .info-body { max-height: 400px; }
+.info-body p {
+  font-size: 0.76em;
+  color: #8080a0;
+  line-height: 1.5;
+  padding: 6px 0;
+}
+#rpm-display {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  background: rgba(10,10,26,0.85);
+  border: 1px solid #1a1a3a;
+  border-radius: 8px;
+  padding: 12px 18px;
+  text-align: center;
+  z-index: 10;
+}
+#rpm-display .rpm-val {
+  font-size: 2em;
+  font-weight: 700;
+  color: #4fc3f7;
+  font-family: 'Courier New', monospace;
+}
+#rpm-display .rpm-label {
+  font-size: 0.7em;
+  color: #7a7aa0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+#instructions {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.72em;
+  color: #4a4a6a;
+  z-index: 10;
+}
+.flow-legend {
+  display: flex;
+  gap: 12px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+.flow-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72em;
+  color: #7a7aa0;
+}
+.flow-legend-item .dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="left-panel">
+    <h1>Tesla Turbine</h1>
+    <div class="subtitle">Bladeless turbine using the boundary layer effect<br>US Patent 1,061,206 (1913) — Nikola Tesla</div>
+
+    <h2>Controls</h2>
+    <div class="control-group">
+      <label>Flow Rate <span class="val" id="flowRateVal">15 L/s</span></label>
+      <input type="range" id="flowRate" min="1" max="60" value="15" step="1">
+    </div>
+    <div class="control-group">
+      <label>Number of Discs <span class="val" id="numDiscsVal">15</span></label>
+      <input type="range" id="numDiscs" min="5" max="50" value="15" step="1">
+    </div>
+    <div class="control-group">
+      <label>Disc Spacing <span class="val" id="discSpacingVal">1.5 mm</span></label>
+      <input type="range" id="discSpacing" min="0.5" max="5" value="1.5" step="0.1">
+    </div>
+    <div class="control-group">
+      <label>Head Pressure <span class="val" id="headPressureVal">10 m</span></label>
+      <input type="range" id="headPressure" min="1" max="50" value="10" step="1">
+    </div>
+    <div class="control-group">
+      <label>Fluid Type</label>
+      <select id="fluidType">
+        <option value="water" selected>Water (mu=1.002e-3 Pa.s)</option>
+        <option value="steam">Steam (mu=1.2e-5 Pa.s)</option>
+        <option value="air">Air (mu=1.81e-5 Pa.s)</option>
+      </select>
+    </div>
+
+    <h2>Visualization</h2>
+    <div class="toggle-row">
+      <span>Cutaway View</span>
+      <label class="toggle"><input type="checkbox" id="toggleCutaway" checked><span class="slider"></span></label>
+    </div>
+    <div class="toggle-row">
+      <span>Flow Particles</span>
+      <label class="toggle"><input type="checkbox" id="toggleParticles" checked><span class="slider"></span></label>
+    </div>
+    <div class="toggle-row">
+      <span>Boundary Layer</span>
+      <label class="toggle"><input type="checkbox" id="toggleBoundary"><span class="slider"></span></label>
+    </div>
+    <div class="toggle-row">
+      <span>Pressure Gradient</span>
+      <label class="toggle"><input type="checkbox" id="togglePressure"><span class="slider"></span></label>
+    </div>
+    <div class="toggle-row">
+      <span>Hydroelectric Setup</span>
+      <label class="toggle"><input type="checkbox" id="toggleHydro"><span class="slider"></span></label>
+    </div>
+
+    <h2>Live Data</h2>
+    <div class="data-grid">
+      <div class="data-item"><div class="label">RPM</div><div class="value" id="dataRPM">0</div></div>
+      <div class="data-item"><div class="label">Torque (N.m)</div><div class="value" id="dataTorque">0</div></div>
+      <div class="data-item"><div class="label">Power</div><div class="value" id="dataPower">0 W</div></div>
+      <div class="data-item"><div class="label">Efficiency</div><div class="value" id="dataEff">0%</div></div>
+      <div class="data-item"><div class="label">Inlet Vel (m/s)</div><div class="value" id="dataVin">0</div></div>
+      <div class="data-item"><div class="label">Exhaust Vel</div><div class="value" id="dataVout">0</div></div>
+      <div class="data-item"><div class="label">Reynolds #</div><div class="value" id="dataRe">0</div></div>
+      <div class="data-item"><div class="label">BL Thick (mm)</div><div class="value" id="dataBL">0</div></div>
+    </div>
+
+    <h2>How It Works</h2>
+
+    <div class="info-section">
+      <div class="info-title">What is a Tesla Turbine?</div>
+      <div class="info-body"><p>Patented by Nikola Tesla in 1913 (US Patent 1,061,206), the Tesla turbine is a bladeless centripetal flow turbine. Instead of blades or vanes, it uses a set of smooth, flat, closely-spaced discs mounted on a central shaft. The working fluid enters tangentially at the rim and spirals inward, transferring energy to the discs through viscous drag and the boundary layer effect.</p></div>
+    </div>
+    <div class="info-section">
+      <div class="info-title">The Boundary Layer Effect</div>
+      <div class="info-body"><p>When fluid flows over a surface, molecules directly touching the surface have zero velocity relative to it (the no-slip condition). This creates a thin layer — the boundary layer — where fluid velocity transitions from zero at the surface to the free-stream velocity. In the Tesla turbine, the closely-spaced discs trap the entire flow within overlapping boundary layers, maximizing viscous energy transfer from fluid to disc.</p></div>
+    </div>
+    <div class="info-section">
+      <div class="info-title">Why No Blades?</div>
+      <div class="info-body"><p>Conventional turbine blades create turbulence, are subject to erosion and cavitation damage, require precise manufacturing tolerances, and can be destroyed by debris. Tesla's smooth discs eliminate all these problems. The energy transfer relies on molecular adhesion rather than impulse, resulting in smooth, laminar flow with minimal losses.</p></div>
+    </div>
+    <div class="info-section">
+      <div class="info-title">Disc Spacing Science</div>
+      <div class="info-body"><p>The gap between discs is critical. The optimal spacing is approximately twice the boundary layer thickness for the given fluid and flow conditions. Too wide: fluid in the center of the gap doesn't contact either disc and passes through without transferring energy. Too narrow: excessive friction losses and reduced flow capacity. The boundary layer thickness depends on fluid viscosity, velocity, and disc radius.</p></div>
+    </div>
+    <div class="info-section">
+      <div class="info-title">Hydroelectric Application</div>
+      <div class="info-body"><p>The Tesla turbine is ideal for small-scale hydroelectric generation in streams, irrigation canals, and remote locations. Water enters a tangential inlet pipe and spirals through the disc stack, spinning the shaft connected to a generator. Advantages: handles sediment-laden water without blade damage, fish-safe passage, low maintenance, and scalable by adding discs. The centrifugal force naturally pushes debris outward and away from the mechanism.</p></div>
+    </div>
+    <div class="info-section">
+      <div class="info-title">Advantages Over Conventional Turbines</div>
+      <div class="info-body"><p>Handles dirty water, sand, and debris without damage. Fish-safe (no blades to strike). Extremely low maintenance (no precision-machined blades). Easily scalable by adding or removing discs. Reversible operation as a pump. Simple, low-cost manufacturing. Self-cleaning via centrifugal force. Operates efficiently across a wide range of flow conditions.</p></div>
+    </div>
+    <div class="info-section">
+      <div class="info-title">Why It Wasn't Widely Adopted</div>
+      <div class="info-body"><p>In 1913, metallurgy could not produce discs thin enough and strong enough to operate at optimal spacing. The discs would flex, vibrate, and fail at high speeds. Modern materials — stainless steel, carbon fiber, ceramics, and 3D-printed metals — have eliminated this barrier. Additionally, Tesla's contemporaries focused on large-scale power generation where conventional turbines were already established.</p></div>
+    </div>
+    <div class="info-section">
+      <div class="info-title">Modern Revival</div>
+      <div class="info-body"><p>3D-printed Tesla turbines are now common in maker communities. Micro-hydro projects in developing nations use the design for its simplicity and debris tolerance. Geothermal applications leverage its ability to handle two-phase flow (steam + water). Research groups have achieved efficiencies above 40% with optimized disc spacing, and theoretical models suggest 90%+ is achievable with precision manufacturing.</p></div>
+    </div>
+    <div class="info-section">
+      <div class="info-title">Tesla's Original Claims</div>
+      <div class="info-body"><p>Tesla claimed his turbine could produce 200 HP from 9-inch (22.8 cm) diameter discs spinning at 35,000 RPM, with efficiency approaching 95%. While these numbers remain debated, modern computational fluid dynamics simulations have confirmed that the boundary layer energy transfer mechanism is fundamentally sound and capable of high efficiency when disc spacing is properly optimized for the working fluid.</p></div>
+    </div>
+  </div>
+
+  <div id="viewport">
+    <div id="rpm-display">
+      <div class="rpm-val" id="rpmBig">0</div>
+      <div class="rpm-label">RPM</div>
+    </div>
+    <div id="instructions">Click + drag to rotate | Scroll to zoom | Right-click to pan</div>
+  </div>
+
+  <div id="bottom-panel">
+    <div class="bottom-section">
+      <h3>Performance Data</h3>
+      <div class="perf-row"><span class="plabel">Shaft Power</span><span class="pval" id="perfPower">0 W</span></div>
+      <div class="perf-row"><span class="plabel">Electrical Output</span><span class="pval" id="perfElec">0 W</span></div>
+      <div class="perf-row"><span class="plabel">Hydraulic Input</span><span class="pval" id="perfHydIn">0 W</span></div>
+      <div class="perf-row"><span class="plabel">Overall Efficiency</span><span class="pval" id="perfEffTotal">0%</span></div>
+      <div class="perf-row"><span class="plabel">Annual Energy</span><span class="pval" id="perfAnnual">0 kWh</span></div>
+    </div>
+    <div class="bottom-section">
+      <h3>Flow Parameters</h3>
+      <div class="perf-row"><span class="plabel">Inlet Velocity</span><span class="pval" id="perfVin">0 m/s</span></div>
+      <div class="perf-row"><span class="plabel">Exhaust Velocity</span><span class="pval" id="perfVout">0 m/s</span></div>
+      <div class="perf-row"><span class="plabel">Mass Flow Rate</span><span class="pval" id="perfMass">0 kg/s</span></div>
+      <div class="perf-row"><span class="plabel">Volume Flow</span><span class="pval" id="perfVol">0 L/s</span></div>
+      <div class="perf-row"><span class="plabel">Pressure Drop</span><span class="pval" id="perfPdrop">0 kPa</span></div>
+    </div>
+    <div class="bottom-section">
+      <h3>Turbine Specs</h3>
+      <div class="perf-row"><span class="plabel">Disc Diameter</span><span class="pval">200 mm</span></div>
+      <div class="perf-row"><span class="plabel">Exhaust Diameter</span><span class="pval">40 mm</span></div>
+      <div class="perf-row"><span class="plabel">Active Disc Area</span><span class="pval" id="perfArea">0 m2</span></div>
+      <div class="perf-row"><span class="plabel">Total Disc Stack</span><span class="pval" id="perfStack">0 mm</span></div>
+      <div class="perf-row"><span class="plabel">Optimal Spacing</span><span class="pval" id="perfOptimal">0 mm</span></div>
+    </div>
+    <div class="bottom-section">
+      <h3>Flow Visualization Legend</h3>
+      <div class="flow-legend">
+        <div class="flow-legend-item"><div class="dot" style="background:#4fc3f7"></div> Inlet flow</div>
+        <div class="flow-legend-item"><div class="dot" style="background:#00e5ff"></div> Spiral path</div>
+        <div class="flow-legend-item"><div class="dot" style="background:#69f0ae"></div> Exhaust flow</div>
+        <div class="flow-legend-item"><div class="dot" style="background:#ff5252"></div> High pressure</div>
+        <div class="flow-legend-item"><div class="dot" style="background:#448aff"></div> Low pressure</div>
+      </div>
+      <div style="margin-top:10px;">
+        <div class="perf-row"><span class="plabel">Boundary Layer</span><span class="pval" id="perfBL">0 mm</span></div>
+        <div class="perf-row"><span class="plabel">Reynolds Number</span><span class="pval" id="perfRe">0</span></div>
+        <div class="perf-row"><span class="plabel">Flow Regime</span><span class="pval" id="perfRegime">Laminar</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== PHYSICS ENGINE =====
+const FLUID_PROPS = {
+  water: { density: 998, viscosity: 1.002e-3, name: 'Water' },
+  steam: { density: 0.59, viscosity: 1.2e-5, name: 'Steam' },
+  air:   { density: 1.225, viscosity: 1.81e-5, name: 'Air' }
+};
+
+const TURBINE = {
+  discRadius: 0.1,      // 100mm radius = 200mm diameter
+  exhaustRadius: 0.02,  // 20mm radius = 40mm exhaust diameter
+  inletWidth: 0.015     // 15mm inlet port width
+};
+
+function computePhysics(params) {
+  const fluid = FLUID_PROPS[params.fluidType];
+  const nDiscs = params.numDiscs;
+  const gap = params.discSpacing / 1000; // mm to m
+  const Q = params.flowRate / 1000;       // L/s to m^3/s
+  const H = params.headPressure;          // meters of head
+
+  const rO = TURBINE.discRadius;
+  const rI = TURBINE.exhaustRadius;
+  const nGaps = nDiscs - 1;
+
+  // Inlet area = number of gaps * gap * inlet port width
+  const inletArea = nGaps * gap * TURBINE.inletWidth;
+  const vInlet = inletArea > 0 ? Q / inletArea : 0;
+
+  // Exhaust area (annular at center)
+  const exhaustArea = nGaps * gap * 2 * Math.PI * rI;
+  const vExhaust = exhaustArea > 0 ? Q / exhaustArea : 0;
+
+  // Reynolds number based on gap
+  const Re = fluid.density * vInlet * gap / fluid.viscosity;
+
+  // Boundary layer thickness (Blasius, flat plate approximation)
+  const L = rO - rI; // flow path length
+  const ReL = fluid.density * vInlet * L / fluid.viscosity;
+  const blThickness = ReL > 0 ? 5.0 * L / Math.sqrt(ReL) : 0;
+
+  // Hydraulic input power = rho * g * H * Q
+  const g = 9.81;
+  const pHydraulic = fluid.density * g * H * Q;
+
+  // Pressure drop
+  const pDrop = fluid.density * g * H / 1000; // kPa
+
+  // Turbine efficiency model
+  // Optimal gap ratio: gap / (2 * blThickness)
+  const optimalGap = 2 * blThickness * 1000; // in mm
+  const gapRatio = blThickness > 0 ? gap / (2 * blThickness) : 1;
+  // Efficiency peaks near gapRatio = 1
+  const gapEfficiency = Math.exp(-0.5 * Math.pow((gapRatio - 1) / 0.4, 2));
+  // More discs = more surface area = better extraction (diminishing returns)
+  const discEfficiency = 1 - Math.exp(-nDiscs / 15);
+  // Base efficiency with laminar flow bonus
+  const laminarBonus = Re < 2300 ? 1.0 : 0.85;
+  const turbineEfficiency = Math.min(0.92, 0.75 * gapEfficiency * discEfficiency * laminarBonus);
+
+  // Shaft power
+  const pShaft = pHydraulic * turbineEfficiency;
+
+  // Generator efficiency (assume 85%)
+  const genEff = 0.85;
+  const pElectrical = pShaft * genEff;
+
+  // Torque and RPM
+  // Specific speed approach: omega = P / torque
+  // Approximate angular velocity from tangential inlet velocity
+  const omega = vInlet / rO; // rad/s (simplified)
+  const rpm = omega * 60 / (2 * Math.PI);
+  const torque = omega > 0 ? pShaft / omega : 0;
+
+  // Mass flow rate
+  const massFlow = fluid.density * Q;
+
+  // Disc area (active, both sides, all discs)
+  const discArea = nDiscs * 2 * Math.PI * (rO * rO - rI * rI);
+
+  // Stack height
+  const stackHeight = nDiscs * 1.5 + (nDiscs - 1) * params.discSpacing; // mm (disc thickness ~1.5mm)
+
+  const flowRegime = Re < 2300 ? 'Laminar' : Re < 4000 ? 'Transition' : 'Turbulent';
+
+  return {
+    rpm: Math.round(rpm),
+    torque: torque.toFixed(3),
+    powerShaft: pShaft,
+    powerElec: pElectrical,
+    powerHydraulic: pHydraulic,
+    efficiency: turbineEfficiency * 100,
+    effTotal: turbineEfficiency * genEff * 100,
+    vInlet: vInlet.toFixed(2),
+    vExhaust: vExhaust.toFixed(2),
+    Re: Math.round(Re),
+    blThickness: (blThickness * 1000).toFixed(3),
+    massFlow: massFlow.toFixed(2),
+    pDrop: pDrop.toFixed(1),
+    discArea: discArea.toFixed(4),
+    stackHeight: stackHeight.toFixed(1),
+    optimalGap: optimalGap.toFixed(2),
+    flowRegime,
+    annualEnergy: (pElectrical * 8760 / 1000).toFixed(1),
+    omega
+  };
+}
+
+function formatPower(w) {
+  if (w >= 1000) return (w/1000).toFixed(2) + ' kW';
+  return w.toFixed(1) + ' W';
+}
+
+// ===== THREE.JS SETUP =====
+let scene, camera, renderer, turbineGroup, particleSystem, hydroGroup;
+let boundaryLayerGroup, pressureGroup;
+let discMeshes = [], housingMesh, shaftMesh, inletMesh, exhaustMesh;
+let generatorMesh, generatorGlow;
+let particles = [];
+let animTime = 0;
+let currentPhysics = {};
+let isDragging = false, prevMouse = {x:0, y:0};
+let cameraTheta = Math.PI / 4, cameraPhi = Math.PI / 6, cameraDistance = 6;
+let cameraPanX = 0, cameraPanY = 0;
+let isRightDragging = false;
+
+const params = {
+  flowRate: 15,
+  numDiscs: 15,
+  discSpacing: 1.5,
+  headPressure: 10,
+  fluidType: 'water',
+  cutaway: true,
+  showParticles: true,
+  showBoundary: false,
+  showPressure: false,
+  showHydro: false
+};
+
+function init() {
+  const viewport = document.getElementById('viewport');
+  const w = viewport.clientWidth;
+  const h = viewport.clientHeight;
+
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0a0a1a);
+  scene.fog = new THREE.Fog(0x0a0a1a, 15, 30);
+
+  camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 100);
+  updateCamera();
+
+  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setSize(w, h);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.shadowMap.enabled = true;
+  viewport.appendChild(renderer.domElement);
+
+  // Lights
+  const ambientLight = new THREE.AmbientLight(0x404060, 0.6);
+  scene.add(ambientLight);
+
+  const mainLight = new THREE.DirectionalLight(0x88aaff, 1.0);
+  mainLight.position.set(5, 8, 5);
+  mainLight.castShadow = true;
+  scene.add(mainLight);
+
+  const fillLight = new THREE.DirectionalLight(0x4fc3f7, 0.3);
+  fillLight.position.set(-3, 2, -5);
+  scene.add(fillLight);
+
+  const rimLight = new THREE.PointLight(0x00e5ff, 0.5, 12);
+  rimLight.position.set(0, 0, 5);
+  scene.add(rimLight);
+
+  // Grid floor
+  const gridHelper = new THREE.GridHelper(20, 40, 0x1a1a3a, 0x0d0d24);
+  gridHelper.position.y = -3;
+  scene.add(gridHelper);
+
+  // Create groups
+  turbineGroup = new THREE.Group();
+  scene.add(turbineGroup);
+
+  hydroGroup = new THREE.Group();
+  hydroGroup.visible = false;
+  scene.add(hydroGroup);
+
+  boundaryLayerGroup = new THREE.Group();
+  boundaryLayerGroup.visible = false;
+  turbineGroup.add(boundaryLayerGroup);
+
+  pressureGroup = new THREE.Group();
+  pressureGroup.visible = false;
+  turbineGroup.add(pressureGroup);
+
+  buildTurbine();
+  buildParticles();
+  buildHydroSetup();
+  buildBoundaryLayer();
+  buildPressureGradient();
+
+  // Events
+  renderer.domElement.addEventListener('mousedown', onMouseDown);
+  renderer.domElement.addEventListener('mousemove', onMouseMove);
+  renderer.domElement.addEventListener('mouseup', onMouseUp);
+  renderer.domElement.addEventListener('wheel', onWheel);
+  renderer.domElement.addEventListener('contextmenu', e => e.preventDefault());
+  window.addEventListener('resize', onResize);
+
+  // Controls
+  document.getElementById('flowRate').addEventListener('input', onControlChange);
+  document.getElementById('numDiscs').addEventListener('input', onControlChange);
+  document.getElementById('discSpacing').addEventListener('input', onControlChange);
+  document.getElementById('headPressure').addEventListener('input', onControlChange);
+  document.getElementById('fluidType').addEventListener('change', onControlChange);
+  document.getElementById('toggleCutaway').addEventListener('change', onToggleChange);
+  document.getElementById('toggleParticles').addEventListener('change', onToggleChange);
+  document.getElementById('toggleBoundary').addEventListener('change', onToggleChange);
+  document.getElementById('togglePressure').addEventListener('change', onToggleChange);
+  document.getElementById('toggleHydro').addEventListener('change', onToggleChange);
+
+  // Info sections
+  document.querySelectorAll('.info-section').forEach(sec => {
+    sec.querySelector('.info-title').addEventListener('click', () => sec.classList.toggle('open'));
+  });
+
+  onControlChange();
+  animate();
+}
+
+function buildTurbine() {
+  // Clear existing
+  while (turbineGroup.children.length > 0) {
+    const child = turbineGroup.children[0];
+    if (child === boundaryLayerGroup || child === pressureGroup) {
+      turbineGroup.children.splice(turbineGroup.children.indexOf(child), 1);
+      continue;
+    }
+    turbineGroup.remove(child);
+    if (child.geometry) child.geometry.dispose();
+    if (child.material) child.material.dispose();
+  }
+  turbineGroup.add(boundaryLayerGroup);
+  turbineGroup.add(pressureGroup);
+  discMeshes = [];
+
+  const nDiscs = params.numDiscs;
+  const gap = params.discSpacing / 1000;
+  const discThickness = 0.0015; // 1.5mm
+  const rO = TURBINE.discRadius * 10; // scale up for visibility
+  const rI = TURBINE.exhaustRadius * 10;
+  const totalHeight = (nDiscs * discThickness + (nDiscs - 1) * gap) * 10;
+
+  // Housing — semi-transparent cylinder
+  const housingGeo = new THREE.CylinderGeometry(rO + 0.05, rO + 0.05, totalHeight + 0.3, 64, 1, false,
+    params.cutaway ? 0 : 0, params.cutaway ? Math.PI * 1.5 : Math.PI * 2);
+  const housingMat = new THREE.MeshPhysicalMaterial({
+    color: 0x2a3a5a,
+    transparent: true,
+    opacity: 0.2,
+    roughness: 0.1,
+    metalness: 0.8,
+    side: THREE.DoubleSide,
+    depthWrite: false
+  });
+  housingMesh = new THREE.Mesh(housingGeo, housingMat);
+  turbineGroup.add(housingMesh);
+
+  // Housing end caps
+  const capGeo = new THREE.RingGeometry(rI + 0.02, rO + 0.05, 64, 1, 0, params.cutaway ? Math.PI * 1.5 : Math.PI * 2);
+  const capMat = new THREE.MeshPhysicalMaterial({
+    color: 0x3a4a6a,
+    transparent: true,
+    opacity: 0.35,
+    roughness: 0.3,
+    metalness: 0.7,
+    side: THREE.DoubleSide
+  });
+  const topCap = new THREE.Mesh(capGeo, capMat);
+  topCap.rotation.x = -Math.PI / 2;
+  topCap.position.y = (totalHeight + 0.3) / 2;
+  turbineGroup.add(topCap);
+  const botCap = new THREE.Mesh(capGeo.clone(), capMat);
+  botCap.rotation.x = Math.PI / 2;
+  botCap.position.y = -(totalHeight + 0.3) / 2;
+  turbineGroup.add(botCap);
+
+  // Discs
+  for (let i = 0; i < nDiscs; i++) {
+    const discGeo = new THREE.CylinderGeometry(rO - 0.02, rO - 0.02, discThickness * 10, 64, 1, false,
+      params.cutaway ? 0 : 0, params.cutaway ? Math.PI * 1.5 : Math.PI * 2);
+    const discMat = new THREE.MeshPhysicalMaterial({
+      color: 0x8899bb,
+      roughness: 0.2,
+      metalness: 0.9,
+      side: THREE.DoubleSide
+    });
+    const disc = new THREE.Mesh(discGeo, discMat);
+    const yPos = -totalHeight / 2 + i * (discThickness * 10 + gap * 10) + discThickness * 5;
+    disc.position.y = yPos;
+    turbineGroup.add(disc);
+    discMeshes.push(disc);
+
+    // Exhaust hole in disc (dark ring at center)
+    const holeGeo = new THREE.RingGeometry(0, rI, 32, 1, 0, params.cutaway ? Math.PI * 1.5 : Math.PI * 2);
+    const holeMat = new THREE.MeshBasicMaterial({ color: 0x050510, side: THREE.DoubleSide });
+    const holeTop = new THREE.Mesh(holeGeo, holeMat);
+    holeTop.rotation.x = -Math.PI / 2;
+    holeTop.position.y = yPos + discThickness * 5 + 0.001;
+    turbineGroup.add(holeTop);
+
+    // Grid lines on disc surface for rotation visibility
+    const ringGeo = new THREE.RingGeometry(rI + 0.02, rO - 0.03, 64, 1, 0, params.cutaway ? Math.PI * 1.5 : Math.PI * 2);
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0x556688, side: THREE.DoubleSide, wireframe: true });
+    const ringWire = new THREE.Mesh(ringGeo, ringMat);
+    ringWire.rotation.x = -Math.PI / 2;
+    ringWire.position.y = yPos + discThickness * 5 + 0.002;
+    disc.userData.ring = ringWire;
+    turbineGroup.add(ringWire);
+  }
+
+  // Central shaft
+  const shaftLen = totalHeight + 1.5;
+  const shaftGeo = new THREE.CylinderGeometry(0.04, 0.04, shaftLen, 16);
+  const shaftMat = new THREE.MeshPhysicalMaterial({
+    color: 0xaabbdd,
+    roughness: 0.15,
+    metalness: 0.95
+  });
+  shaftMesh = new THREE.Mesh(shaftGeo, shaftMat);
+  turbineGroup.add(shaftMesh);
+
+  // Inlet port (tangential tube at rim)
+  const inletLen = 0.6;
+  const inletGeo = new THREE.CylinderGeometry(0.06, 0.06, inletLen, 16);
+  const inletMat = new THREE.MeshPhysicalMaterial({
+    color: 0x2a4a7a,
+    transparent: true,
+    opacity: 0.5,
+    roughness: 0.2,
+    metalness: 0.7
+  });
+  inletMesh = new THREE.Mesh(inletGeo, inletMat);
+  inletMesh.rotation.z = Math.PI / 2;
+  inletMesh.position.set(rO + 0.05 + inletLen / 2, 0, 0);
+  turbineGroup.add(inletMesh);
+
+  // Inlet flange
+  const flangeGeo = new THREE.CylinderGeometry(0.1, 0.1, 0.03, 16);
+  const flangeMat = new THREE.MeshPhysicalMaterial({ color: 0x4a5a7a, roughness: 0.3, metalness: 0.8 });
+  const flange = new THREE.Mesh(flangeGeo, flangeMat);
+  flange.rotation.z = Math.PI / 2;
+  flange.position.set(rO + 0.05 + inletLen + 0.015, 0, 0);
+  turbineGroup.add(flange);
+
+  // Exhaust port (at top, from center shaft area)
+  const exGeo = new THREE.CylinderGeometry(rI + 0.01, rI + 0.01, 0.5, 16);
+  const exMat = new THREE.MeshPhysicalMaterial({
+    color: 0x2a4a7a,
+    transparent: true,
+    opacity: 0.4,
+    roughness: 0.2,
+    metalness: 0.7
+  });
+  exhaustMesh = new THREE.Mesh(exGeo, exMat);
+  exhaustMesh.position.y = (totalHeight + 0.3) / 2 + 0.25;
+  turbineGroup.add(exhaustMesh);
+
+  // Generator on shaft (bottom)
+  const genBodyGeo = new THREE.CylinderGeometry(0.25, 0.25, 0.4, 32);
+  const genMat = new THREE.MeshPhysicalMaterial({
+    color: 0x3a4a5a,
+    roughness: 0.4,
+    metalness: 0.8
+  });
+  generatorMesh = new THREE.Mesh(genBodyGeo, genMat);
+  generatorMesh.position.y = -(totalHeight + 0.3) / 2 - 0.55;
+  turbineGroup.add(generatorMesh);
+
+  // Generator glow ring
+  const glowGeo = new THREE.TorusGeometry(0.26, 0.015, 8, 32);
+  const glowMat = new THREE.MeshBasicMaterial({ color: 0x4fc3f7 });
+  generatorGlow = new THREE.Mesh(glowGeo, glowMat);
+  generatorGlow.rotation.x = Math.PI / 2;
+  generatorGlow.position.y = -(totalHeight + 0.3) / 2 - 0.55;
+  turbineGroup.add(generatorGlow);
+
+  // Wire coil representation
+  for (let i = 0; i < 8; i++) {
+    const coilGeo = new THREE.BoxGeometry(0.04, 0.35, 0.06);
+    const coilMat = new THREE.MeshPhysicalMaterial({ color: 0xcc8844, roughness: 0.5, metalness: 0.6 });
+    const coil = new THREE.Mesh(coilGeo, coilMat);
+    const angle = (i / 8) * Math.PI * 2;
+    coil.position.set(Math.cos(angle) * 0.2, -(totalHeight + 0.3) / 2 - 0.55, Math.sin(angle) * 0.2);
+    coil.rotation.y = -angle;
+    turbineGroup.add(coil);
+  }
+}
+
+function buildParticles() {
+  const maxParticles = 500;
+  const geo = new THREE.BufferGeometry();
+  const positions = new Float32Array(maxParticles * 3);
+  const colors = new Float32Array(maxParticles * 3);
+  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+  const mat = new THREE.PointsMaterial({
+    size: 0.04,
+    vertexColors: true,
+    transparent: true,
+    opacity: 0.85,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false
+  });
+
+  particleSystem = new THREE.Points(geo, mat);
+  scene.add(particleSystem);
+
+  // Initialize particles
+  particles = [];
+  for (let i = 0; i < maxParticles; i++) {
+    particles.push({
+      angle: Math.random() * Math.PI * 2,
+      radius: TURBINE.discRadius * 10,
+      y: (Math.random() - 0.5) * 0.5,
+      speed: 0.5 + Math.random() * 0.5,
+      phase: Math.random() * Math.PI * 2,
+      life: Math.random()
+    });
+  }
+}
+
+function buildHydroSetup() {
+  // River/water surface
+  const waterGeo = new THREE.PlaneGeometry(20, 8);
+  const waterMat = new THREE.MeshPhysicalMaterial({
+    color: 0x1a4a7a,
+    transparent: true,
+    opacity: 0.35,
+    roughness: 0.1,
+    metalness: 0.3,
+    side: THREE.DoubleSide
+  });
+  const water = new THREE.Mesh(waterGeo, waterMat);
+  water.rotation.x = -Math.PI / 2;
+  water.position.set(0, -2.5, 0);
+  hydroGroup.add(water);
+
+  // Dam wall
+  const damGeo = new THREE.BoxGeometry(0.5, 5, 8);
+  const damMat = new THREE.MeshPhysicalMaterial({ color: 0x555566, roughness: 0.8, metalness: 0.2 });
+  const dam = new THREE.Mesh(damGeo, damMat);
+  dam.position.set(-4, 0, 0);
+  hydroGroup.add(dam);
+
+  // Intake pipe
+  const pipeGeo = new THREE.CylinderGeometry(0.15, 0.15, 3, 16);
+  const pipeMat = new THREE.MeshPhysicalMaterial({
+    color: 0x3a4a5a,
+    transparent: true,
+    opacity: 0.6,
+    roughness: 0.3,
+    metalness: 0.7
+  });
+  const intakePipe = new THREE.Mesh(pipeGeo, pipeMat);
+  intakePipe.rotation.z = Math.PI / 2;
+  intakePipe.position.set(-2.5, 0, 0);
+  hydroGroup.add(intakePipe);
+
+  // Return pipe
+  const returnGeo = new THREE.CylinderGeometry(0.12, 0.12, 2, 16);
+  const returnPipe = new THREE.Mesh(returnGeo, pipeMat.clone());
+  returnPipe.position.set(0, 1.2, 0);
+  hydroGroup.add(returnPipe);
+
+  // Riverbed rocks
+  for (let i = 0; i < 30; i++) {
+    const rockGeo = new THREE.SphereGeometry(0.1 + Math.random() * 0.15, 6, 4);
+    const rockMat = new THREE.MeshPhysicalMaterial({
+      color: new THREE.Color().setHSL(0.08, 0.1 + Math.random() * 0.1, 0.2 + Math.random() * 0.15),
+      roughness: 0.9
+    });
+    const rock = new THREE.Mesh(rockGeo, rockMat);
+    rock.position.set((Math.random() - 0.5) * 18, -2.8 + Math.random() * 0.3, (Math.random() - 0.5) * 6);
+    rock.scale.y = 0.5 + Math.random() * 0.5;
+    hydroGroup.add(rock);
+  }
+}
+
+function buildBoundaryLayer() {
+  // Clear old
+  while (boundaryLayerGroup.children.length > 0) {
+    const c = boundaryLayerGroup.children[0];
+    boundaryLayerGroup.remove(c);
+    if (c.geometry) c.geometry.dispose();
+    if (c.material) c.material.dispose();
+  }
+
+  // Show velocity profile between two discs — parabolic arrows
+  const rO = TURBINE.discRadius * 10;
+  const nArrows = 12;
+  for (let i = 0; i < nArrows; i++) {
+    const angle = (i / nArrows) * Math.PI * (params.cutaway ? 1.5 : 2);
+    const r = rO * 0.4 + (i / nArrows) * rO * 0.5;
+    // Velocity profile: parabolic across gap
+    const nBars = 7;
+    for (let j = 0; j < nBars; j++) {
+      const t = (j / (nBars - 1)) - 0.5; // -0.5 to 0.5
+      const vel = 1 - 4 * t * t; // parabolic profile
+      const barLen = vel * 0.15;
+      const barGeo = new THREE.CylinderGeometry(0.005, 0.005, Math.max(barLen, 0.01), 4);
+      const barMat = new THREE.MeshBasicMaterial({
+        color: new THREE.Color().setHSL(0.55 + vel * 0.15, 0.9, 0.5 + vel * 0.3)
+      });
+      const bar = new THREE.Mesh(barGeo, barMat);
+      bar.rotation.z = Math.PI / 2;
+      bar.position.set(
+        Math.cos(angle) * r,
+        t * 0.15,
+        Math.sin(angle) * r
+      );
+      bar.position.x += Math.cos(angle + Math.PI/2) * barLen / 2;
+      bar.position.z += Math.sin(angle + Math.PI/2) * barLen / 2;
+      boundaryLayerGroup.add(bar);
+    }
+  }
+}
+
+function buildPressureGradient() {
+  while (pressureGroup.children.length > 0) {
+    const c = pressureGroup.children[0];
+    pressureGroup.remove(c);
+    if (c.geometry) c.geometry.dispose();
+    if (c.material) c.material.dispose();
+  }
+
+  const rO = TURBINE.discRadius * 10;
+  const rI = TURBINE.exhaustRadius * 10;
+  const nRings = 15;
+  for (let i = 0; i < nRings; i++) {
+    const t = i / (nRings - 1);
+    const r = rI + t * (rO - rI - 0.05);
+    const ringGeo = new THREE.TorusGeometry(r, 0.008, 4, 64, params.cutaway ? Math.PI * 1.5 : Math.PI * 2);
+    // Red at rim (high pressure), blue at center (low pressure)
+    const hue = 0.0 + t * 0.0; // red
+    const color = new THREE.Color();
+    color.setRGB(
+      0.3 + t * 0.7,   // more red at rim
+      0.1 * (1 - t),     // slight green near center
+      0.8 * (1 - t)     // more blue near center
+    );
+    const ringMat = new THREE.MeshBasicMaterial({
+      color,
+      transparent: true,
+      opacity: 0.5
+    });
+    const ring = new THREE.Mesh(ringGeo, ringMat);
+    ring.rotation.x = Math.PI / 2;
+    pressureGroup.add(ring);
+  }
+}
+
+function updateCamera() {
+  camera.position.x = Math.cos(cameraTheta) * Math.cos(cameraPhi) * cameraDistance + cameraPanX;
+  camera.position.y = Math.sin(cameraPhi) * cameraDistance + cameraPanY;
+  camera.position.z = Math.sin(cameraTheta) * Math.cos(cameraPhi) * cameraDistance + cameraPanX * 0.3;
+  camera.lookAt(cameraPanX, cameraPanY, 0);
+}
+
+function onMouseDown(e) {
+  if (e.button === 2) {
+    isRightDragging = true;
+  } else {
+    isDragging = true;
+  }
+  prevMouse = { x: e.clientX, y: e.clientY };
+}
+
+function onMouseMove(e) {
+  if (isDragging) {
+    const dx = e.clientX - prevMouse.x;
+    const dy = e.clientY - prevMouse.y;
+    cameraTheta -= dx * 0.005;
+    cameraPhi = Math.max(-Math.PI/3, Math.min(Math.PI/3, cameraPhi + dy * 0.005));
+    updateCamera();
+  }
+  if (isRightDragging) {
+    const dx = e.clientX - prevMouse.x;
+    const dy = e.clientY - prevMouse.y;
+    cameraPanX -= dx * 0.005;
+    cameraPanY += dy * 0.005;
+    updateCamera();
+  }
+  prevMouse = { x: e.clientX, y: e.clientY };
+}
+
+function onMouseUp() { isDragging = false; isRightDragging = false; }
+
+function onWheel(e) {
+  cameraDistance = Math.max(2, Math.min(15, cameraDistance + e.deltaY * 0.005));
+  updateCamera();
+}
+
+function onResize() {
+  const viewport = document.getElementById('viewport');
+  const w = viewport.clientWidth;
+  const h = viewport.clientHeight;
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+}
+
+function onControlChange() {
+  params.flowRate = parseFloat(document.getElementById('flowRate').value);
+  params.numDiscs = parseInt(document.getElementById('numDiscs').value);
+  params.discSpacing = parseFloat(document.getElementById('discSpacing').value);
+  params.headPressure = parseFloat(document.getElementById('headPressure').value);
+  params.fluidType = document.getElementById('fluidType').value;
+
+  document.getElementById('flowRateVal').textContent = params.flowRate + ' L/s';
+  document.getElementById('numDiscsVal').textContent = params.numDiscs;
+  document.getElementById('discSpacingVal').textContent = params.discSpacing.toFixed(1) + ' mm';
+  document.getElementById('headPressureVal').textContent = params.headPressure + ' m';
+
+  // Rebuild turbine when disc count changes
+  buildTurbine();
+  buildBoundaryLayer();
+  buildPressureGradient();
+  boundaryLayerGroup.visible = params.showBoundary;
+  pressureGroup.visible = params.showPressure;
+
+  updatePhysics();
+}
+
+function onToggleChange() {
+  params.cutaway = document.getElementById('toggleCutaway').checked;
+  params.showParticles = document.getElementById('toggleParticles').checked;
+  params.showBoundary = document.getElementById('toggleBoundary').checked;
+  params.showPressure = document.getElementById('togglePressure').checked;
+  params.showHydro = document.getElementById('toggleHydro').checked;
+
+  particleSystem.visible = params.showParticles;
+  boundaryLayerGroup.visible = params.showBoundary;
+  pressureGroup.visible = params.showPressure;
+  hydroGroup.visible = params.showHydro;
+
+  buildTurbine();
+  buildBoundaryLayer();
+  buildPressureGradient();
+  boundaryLayerGroup.visible = params.showBoundary;
+  pressureGroup.visible = params.showPressure;
+}
+
+function updatePhysics() {
+  const p = computePhysics(params);
+  currentPhysics = p;
+
+  document.getElementById('dataRPM').textContent = p.rpm.toLocaleString();
+  document.getElementById('dataTorque').textContent = p.torque;
+  document.getElementById('dataPower').textContent = formatPower(p.powerShaft);
+  document.getElementById('dataEff').textContent = p.efficiency.toFixed(1) + '%';
+  document.getElementById('dataVin').textContent = p.vInlet;
+  document.getElementById('dataVout').textContent = p.vExhaust;
+  document.getElementById('dataRe').textContent = p.Re.toLocaleString();
+  document.getElementById('dataBL').textContent = p.blThickness;
+
+  document.getElementById('rpmBig').textContent = p.rpm.toLocaleString();
+
+  // Bottom panel
+  document.getElementById('perfPower').textContent = formatPower(p.powerShaft);
+  document.getElementById('perfElec').textContent = formatPower(p.powerElec);
+  document.getElementById('perfHydIn').textContent = formatPower(p.powerHydraulic);
+  document.getElementById('perfEffTotal').textContent = p.effTotal.toFixed(1) + '%';
+  document.getElementById('perfAnnual').textContent = p.annualEnergy + ' kWh';
+  document.getElementById('perfVin').textContent = p.vInlet + ' m/s';
+  document.getElementById('perfVout').textContent = p.vExhaust + ' m/s';
+  document.getElementById('perfMass').textContent = p.massFlow + ' kg/s';
+  document.getElementById('perfVol').textContent = params.flowRate + ' L/s';
+  document.getElementById('perfPdrop').textContent = p.pDrop + ' kPa';
+  document.getElementById('perfArea').textContent = p.discArea + ' m\u00B2';
+  document.getElementById('perfStack').textContent = p.stackHeight + ' mm';
+  document.getElementById('perfOptimal').textContent = p.optimalGap + ' mm';
+  document.getElementById('perfBL').textContent = p.blThickness + ' mm';
+  document.getElementById('perfRe').textContent = p.Re.toLocaleString();
+  document.getElementById('perfRegime').textContent = p.flowRegime;
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+
+  const dt = 0.016;
+  animTime += dt;
+
+  // Spin discs based on RPM
+  const rpm = currentPhysics.rpm || 0;
+  const spinRate = (rpm / 60) * Math.PI * 2 * dt;
+  discMeshes.forEach(disc => {
+    disc.rotation.y += spinRate * 0.01; // scaled down for visual
+    if (disc.userData.ring) {
+      disc.userData.ring.rotation.z += spinRate * 0.01;
+    }
+  });
+  if (shaftMesh) shaftMesh.rotation.y += spinRate * 0.01;
+
+  // Generator glow intensity based on power
+  if (generatorGlow) {
+    const power = currentPhysics.powerElec || 0;
+    const intensity = Math.min(1, power / 5000);
+    generatorGlow.material.color.setHSL(0.55, 0.9, 0.3 + intensity * 0.5);
+    generatorGlow.scale.set(1 + Math.sin(animTime * 5) * 0.03 * intensity, 1 + Math.sin(animTime * 5) * 0.03 * intensity, 1);
+  }
+
+  // Update particles
+  if (params.showParticles && particleSystem.visible) {
+    const positions = particleSystem.geometry.attributes.position.array;
+    const colors = particleSystem.geometry.attributes.color.array;
+    const rO = TURBINE.discRadius * 10;
+    const rI = TURBINE.exhaustRadius * 10;
+    const flowSpeed = (params.flowRate / 30) * 0.5 + 0.1;
+
+    for (let i = 0; i < particles.length; i++) {
+      const p = particles[i];
+
+      // Spiral inward
+      p.angle += flowSpeed * (1.0 + (rO - p.radius) / rO * 2) * dt * 3;
+      p.radius -= flowSpeed * dt * 0.3;
+
+      // Reset when reaching center
+      if (p.radius <= rI) {
+        p.radius = rO + 0.1;
+        p.angle = Math.random() * Math.PI * (params.cutaway ? 1.5 : 2);
+        p.y = (Math.random() - 0.5) * (params.numDiscs * 0.02);
+        p.life = 1;
+      }
+
+      p.life -= dt * 0.1;
+
+      const x = Math.cos(p.angle) * p.radius;
+      const z = Math.sin(p.angle) * p.radius;
+
+      positions[i * 3] = x;
+      positions[i * 3 + 1] = p.y;
+      positions[i * 3 + 2] = z;
+
+      // Color: blue at rim, cyan spiraling, green at exhaust
+      const t = 1 - (p.radius - rI) / (rO - rI);
+      if (t < 0.3) {
+        // Inlet: blue
+        colors[i * 3] = 0.3;
+        colors[i * 3 + 1] = 0.5 + t;
+        colors[i * 3 + 2] = 1.0;
+      } else if (t < 0.8) {
+        // Spiral: cyan
+        colors[i * 3] = 0.0;
+        colors[i * 3 + 1] = 0.7 + t * 0.3;
+        colors[i * 3 + 2] = 1.0;
+      } else {
+        // Exhaust: green
+        colors[i * 3] = 0.2;
+        colors[i * 3 + 1] = 0.9;
+        colors[i * 3 + 2] = 0.4;
+      }
+    }
+
+    particleSystem.geometry.attributes.position.needsUpdate = true;
+    particleSystem.geometry.attributes.color.needsUpdate = true;
+  }
+
+  // Boundary layer rotation
+  if (boundaryLayerGroup.visible) {
+    boundaryLayerGroup.rotation.y += spinRate * 0.005;
+  }
+  if (pressureGroup.visible) {
+    pressureGroup.rotation.y += spinRate * 0.002;
+  }
+
+  renderer.render(scene, camera);
+}
+
+// Initialize on load
+window.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

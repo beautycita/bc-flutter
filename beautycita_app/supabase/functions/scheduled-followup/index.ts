@@ -177,7 +177,7 @@ Deno.serve(async (req: Request) => {
 
     if (error) {
       console.error("Query error:", error);
-      return json({ error: error.message }, 500);
+      return json({ error: "An internal error occurred" }, 500);
     }
 
     const sent: string[] = [];

@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rotational Dynamics — Interactive 3D Physics</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#0a0a1a; color:#e0e0e0; font-family:'Segoe UI',system-ui,-apple-system,sans-serif; overflow:hidden; height:100vh; }
+
+/* ── Layout ── */
+#app { display:flex; height:100vh; }
+#left-panel {
+  width:300px; min-width:300px; background:#0f0f2a; border-right:1px solid #1a1a3a;
+  display:flex; flex-direction:column; overflow:hidden;
+}
+#viewport { flex:1; position:relative; }
+#viewport canvas { display:block; }
+#bottom-bar {
+  position:absolute; bottom:0; left:300px; right:0; height:60px;
+  background:rgba(10,10,26,0.92); border-top:1px solid #1a1a3a;
+  display:flex; align-items:center; padding:0 24px; gap:32px;
+  font-size:13px; font-family:'Courier New',monospace;
+}
+.data-item { display:flex; align-items:center; gap:6px; }
+.data-label { color:#667; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; }
+.data-value { color:#4fc3f7; font-weight:bold; font-size:14px; }
+
+/* ── Tabs ── */
+#tabs {
+  display:flex; border-bottom:1px solid #1a1a3a; background:#0b0b22;
+}
+.tab {
+  flex:1; padding:10px 4px; text-align:center; font-size:10px; font-weight:600;
+  cursor:pointer; color:#556; border-bottom:2px solid transparent;
+  transition: color 0.2s, border-color 0.2s; letter-spacing:0.3px;
+}
+.tab:hover { color:#99b; }
+.tab.active { color:#4fc3f7; border-bottom-color:#4fc3f7; }
+
+/* ── Panel content ── */
+#panel-content { flex:1; overflow-y:auto; padding:16px; }
+#panel-content::-webkit-scrollbar { width:4px; }
+#panel-content::-webkit-scrollbar-thumb { background:#333; border-radius:2px; }
+
+h2 { font-size:15px; color:#fff; margin-bottom:8px; font-weight:700; }
+h3 { font-size:12px; color:#4fc3f7; margin:14px 0 6px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; }
+
+.control-group { margin-bottom:14px; }
+.control-group label {
+  display:flex; justify-content:space-between; align-items:center;
+  font-size:11px; color:#889; margin-bottom:4px;
+}
+.control-group label span { color:#4fc3f7; font-family:'Courier New',monospace; font-weight:bold; }
+input[type="range"] {
+  width:100%; -webkit-appearance:none; height:4px; border-radius:2px;
+  background:#1a1a3a; outline:none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance:none; width:14px; height:14px; border-radius:50%;
+  background:#4fc3f7; cursor:pointer;
+}
+
+.btn {
+  display:inline-block; padding:8px 16px; border:1px solid #4fc3f7; color:#4fc3f7;
+  background:transparent; border-radius:4px; font-size:11px; cursor:pointer;
+  font-weight:600; transition: background 0.2s, color 0.2s; margin:4px 4px 4px 0;
+}
+.btn:hover { background:#4fc3f7; color:#0a0a1a; }
+.btn.danger { border-color:#f44; color:#f44; }
+.btn.danger:hover { background:#f44; color:#fff; }
+
+.explanation {
+  background:#111133; border-left:3px solid #4fc3f7; padding:10px 12px;
+  font-size:11px; line-height:1.6; color:#aab; border-radius:0 4px 4px 0;
+  margin:12px 0;
+}
+.explanation strong { color:#e0e0e0; }
+
+.formula {
+  background:#0d0d28; padding:8px 12px; border-radius:4px; font-family:'Courier New',monospace;
+  font-size:13px; color:#7ecfff; margin:8px 0; text-align:center;
+}
+
+.real-world { margin:10px 0; font-size:11px; color:#889; line-height:1.5; }
+.real-world strong { color:#bb86fc; }
+
+.cradle-btns { display:flex; gap:6px; margin:8px 0; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="left-panel">
+    <div id="tabs">
+      <div class="tab active" data-tab="centripetal">Forces</div>
+      <div class="tab" data-tab="angular">Angular Mom.</div>
+      <div class="tab" data-tab="cradle">Energy Xfer</div>
+      <div class="tab" data-tab="gyro">Precession</div>
+    </div>
+    <div id="panel-content"></div>
+  </div>
+  <div id="viewport"></div>
+  <div id="bottom-bar" id="data-bar"></div>
+</div>
+
+<script>
+// ── OrbitControls inline (minimal) ──
+THREE.OrbitControls=function(o,d){this.object=o;this.domElement=d;this.enabled=!0;this.target=new THREE.Vector3;
+this.enableDamping=!0;this.dampingFactor=0.08;this.enableZoom=!0;this.enableRotate=!0;this.enablePan=!0;
+this.minDistance=1;this.maxDistance=200;this.rotateSpeed=0.8;
+var s=this,S={NONE:-1,ROTATE:0,ZOOM:1,PAN:2},state=S.NONE;
+var spherical=new THREE.Spherical,sphericalDelta=new THREE.Spherical;
+var scale=1,panOffset=new THREE.Vector3,zoomChanged=!1;
+var rotateStart=new THREE.Vector2,rotateEnd=new THREE.Vector2,rotateDelta=new THREE.Vector2;
+var panStart=new THREE.Vector2,panEnd=new THREE.Vector2,panDelta=new THREE.Vector2;
+function getZoomScale(){return Math.pow(0.95,1)}
+this.update=function(){var offset=new THREE.Vector3;var quat=new THREE.Quaternion().setFromUnitVectors(o.up,new THREE.Vector3(0,1,0));
+var quatInverse=quat.clone().invert();var lastPosition=new THREE.Vector3;
+return function(){var position=s.object.position;offset.copy(position).sub(s.target);
+offset.applyQuaternion(quat);spherical.setFromVector3(offset);
+spherical.theta+=sphericalDelta.theta*s.dampingFactor;
+spherical.phi+=sphericalDelta.phi*s.dampingFactor;
+spherical.phi=Math.max(0.01,Math.min(Math.PI-0.01,spherical.phi));
+spherical.radius*=scale;spherical.radius=Math.max(s.minDistance,Math.min(s.maxDistance,spherical.radius));
+s.target.add(panOffset);offset.setFromSpherical(spherical);offset.applyQuaternion(quatInverse);
+position.copy(s.target).add(offset);s.object.lookAt(s.target);
+sphericalDelta.theta*=(1-s.dampingFactor);sphericalDelta.phi*=(1-s.dampingFactor);
+panOffset.multiplyScalar(1-s.dampingFactor);scale=1;}}();
+function onMouseDown(e){if(!s.enabled)return;e.preventDefault();
+if(e.button===0)state=S.ROTATE,rotateStart.set(e.clientX,e.clientY);
+else if(e.button===1)state=S.ZOOM;
+else if(e.button===2)state=S.PAN,panStart.set(e.clientX,e.clientY);
+document.addEventListener('mousemove',onMouseMove,!1);document.addEventListener('mouseup',onMouseUp,!1);}
+function onMouseMove(e){if(!s.enabled)return;e.preventDefault();
+if(state===S.ROTATE){rotateEnd.set(e.clientX,e.clientY);rotateDelta.subVectors(rotateEnd,rotateStart);
+var el=s.domElement;sphericalDelta.theta-=2*Math.PI*rotateDelta.x/el.clientWidth*s.rotateSpeed;
+sphericalDelta.phi-=2*Math.PI*rotateDelta.y/el.clientHeight*s.rotateSpeed;rotateStart.copy(rotateEnd);}
+else if(state===S.PAN){panEnd.set(e.clientX,e.clientY);panDelta.subVectors(panEnd,panStart);
+var te=s.object.matrix.elements;var offset=new THREE.Vector3;
+offset.set(te[0],te[1],te[2]).multiplyScalar(-panDelta.x*0.01);panOffset.add(offset);
+offset.set(te[4],te[5],te[6]).multiplyScalar(panDelta.y*0.01);panOffset.add(offset);
+panStart.copy(panEnd);}}
+function onMouseUp(){state=S.NONE;document.removeEventListener('mousemove',onMouseMove);document.removeEventListener('mouseup',onMouseUp);}
+function onWheel(e){if(!s.enabled||!s.enableZoom)return;e.preventDefault();
+if(e.deltaY<0)scale/=getZoomScale();else scale*=getZoomScale();}
+d.addEventListener('contextmenu',function(e){e.preventDefault()});
+d.addEventListener('mousedown',onMouseDown,!1);d.addEventListener('wheel',onWheel,{passive:!1});
+this.dispose=function(){d.removeEventListener('mousedown',onMouseDown);d.removeEventListener('wheel',onWheel);};
+this.reset=function(){s.target.set(0,0,0);s.object.position.set(0,5,15);s.update();};
+};
+
+// ── Globals ──
+let scene, camera, renderer, controls, clock;
+let currentTab = 'centripetal';
+let animationId;
+const bottomBar = document.getElementById('bottom-bar');
+
+// Tab-specific state
+const simState = {
+  centripetal: { omega:2, radius:3, mass:1, cut:false, cutTime:0, ballAngle:0, ballVel:null, ballPos:null, trail:[] },
+  angular: { armSpan:1.0, omega:3, baseInertia:0.5 },
+  cradle: { balls:[], pulled:0, phase:'idle', releaseTime:0, velocities:[0,0,0,0,0], angles:[0,0,0,0,0] },
+  gyro: { spinSpeed:20, wheelAngle:0, precessionAngle:0, tiltAngle:Math.PI/6 }
+};
+
+// ── Panel HTML ──
+const panels = {
+centripetal: `
+<h2>Centrifugal vs Centripetal Force</h2>
+<div class="control-group">
+  <label>Rotation Speed (rad/s) <span id="v-omega">2.0</span></label>
+  <input type="range" id="s-omega" min="0.5" max="8" step="0.1" value="2">
+</div>
+<div class="control-group">
+  <label>String Length (m) <span id="v-radius">3.0</span></label>
+  <input type="range" id="s-radius" min="1" max="6" step="0.1" value="3">
+</div>
+<div class="control-group">
+  <label>Ball Mass (kg) <span id="v-mass">1.0</span></label>
+  <input type="range" id="s-mass" min="0.2" max="5" step="0.1" value="1">
+</div>
+<button class="btn danger" id="btn-cut">Cut the String</button>
+<button class="btn" id="btn-reset-cp">Reset</button>
+
+<h3>Force Vectors</h3>
+<div class="explanation">
+  <strong style="color:#4fc3f7">Blue arrow (inward):</strong> Centripetal force — the real force pulling the ball toward the center (string tension).<br><br>
+  <strong style="color:#f44">Red arrow (outward):</strong> "Centrifugal force" — not a real force. It is the apparent outward push felt only in the rotating reference frame.<br><br>
+  When you <strong>cut the string</strong>, the ball flies off <strong>tangentially</strong> — not outward! This proves there was never an outward force.
+</div>
+
+<div class="formula">F<sub>c</sub> = m &middot; &omega;&sup2; &middot; r = m &middot; v&sup2; / r</div>
+
+<h3>Real-World Examples</h3>
+<div class="real-world">
+  <strong>Car on a curve:</strong> Friction provides centripetal force. "Feeling pushed outward" is the centrifugal illusion.<br>
+  <strong>Washing machine spin cycle:</strong> Drum pushes water inward; water without enough force flies out through holes.<br>
+  <strong>Planets orbiting:</strong> Gravity is the centripetal force keeping Earth in orbit.
+</div>`,
+
+angular: `
+<h2>Conservation of Angular Momentum</h2>
+<div class="control-group">
+  <label>Arm Extension <span id="v-arms">1.00</span></label>
+  <input type="range" id="s-arms" min="0.15" max="1.0" step="0.01" value="1.0">
+</div>
+<button class="btn" id="btn-reset-ang">Reset</button>
+
+<h3>The Physics</h3>
+<div class="explanation">
+  Angular momentum <strong>L = I &times; &omega;</strong> is conserved when no external torque acts.<br><br>
+  When the skater <strong>pulls arms in</strong>, moment of inertia <strong>I decreases</strong>, so angular velocity <strong>&omega; must increase</strong> to keep L constant.<br><br>
+  Try pulling the slider to minimum — watch the spin rate skyrocket!
+</div>
+
+<div class="formula">L = I &middot; &omega; = constant</div>
+<div class="formula">I = I<sub>body</sub> + 2 &middot; m<sub>arm</sub> &middot; r&sup2;</div>
+
+<h3>Real-World Examples</h3>
+<div class="real-world">
+  <strong>Figure skating:</strong> Skaters pull arms in during spins to accelerate rotation from ~2 to ~6 rev/s.<br>
+  <strong>Diving:</strong> Tucking into a ball spins the diver faster for more flips.<br>
+  <strong>Galaxy formation:</strong> As gas clouds collapse inward, they spin faster — forming disk-shaped galaxies.<br>
+  <strong>Neutron stars:</strong> When a massive star collapses, its rotation period goes from days to milliseconds.
+</div>`,
+
+cradle: `
+<h2>Kinetic Energy Transfer</h2>
+<h3>Newton's Cradle</h3>
+<div class="cradle-btns">
+  <button class="btn" id="btn-pull1">Pull 1 Ball</button>
+  <button class="btn" id="btn-pull2">Pull 2 Balls</button>
+  <button class="btn" id="btn-pull3">Pull 3 Balls</button>
+</div>
+<button class="btn" id="btn-reset-cradle">Reset</button>
+
+<div class="explanation">
+  In an <strong>elastic collision</strong>, both momentum AND kinetic energy are conserved.<br><br>
+  When one ball strikes the row, the collision wave travels through at the speed of sound in steel. The last ball receives nearly all the energy.<br><br>
+  Pull <strong>2 balls</strong> — exactly 2 fly out the other side. The system "knows" to conserve both quantities simultaneously.
+</div>
+
+<div class="formula">m<sub>1</sub>v<sub>1</sub> = m<sub>2</sub>v<sub>2</sub> (momentum)</div>
+<div class="formula">&frac12;m<sub>1</sub>v<sub>1</sub>&sup2; = &frac12;m<sub>2</sub>v<sub>2</sub>&sup2; (energy)</div>
+
+<h3>Real-World Examples</h3>
+<div class="real-world">
+  <strong>Billiards:</strong> Cue ball stops on perfect center hit — all momentum transfers to target ball.<br>
+  <strong>Car crashes:</strong> Inelastic collisions — energy converts to deformation, heat, sound. Crumple zones save lives by extending collision time.<br>
+  <strong>Particle accelerators:</strong> Proton-proton collisions at near light speed — kinetic energy converts to mass (E=mc&sup2;), creating new particles.
+</div>`,
+
+gyro: `
+<h2>Gyroscopic Precession</h2>
+<div class="control-group">
+  <label>Spin Speed (rad/s) <span id="v-spin">20.0</span></label>
+  <input type="range" id="s-spin" min="5" max="60" step="1" value="20">
+</div>
+<button class="btn" id="btn-reset-gyro">Reset</button>
+
+<h3>The Physics</h3>
+<div class="explanation">
+  A spinning wheel has angular momentum <strong>L</strong> along its spin axis. Gravity exerts a <strong>torque</strong> trying to tip it over.<br><br>
+  But torque changes angular momentum: <strong>&tau; = dL/dt</strong>. Instead of falling, the angular momentum vector rotates horizontally — the wheel <strong>precesses</strong>.<br><br>
+  <strong>Faster spin = slower precession.</strong> The gyroscope "resists" tipping more strongly when spinning fast.
+</div>
+
+<div class="formula">&Omega;<sub>precession</sub> = m &middot; g &middot; d / (I &middot; &omega;)</div>
+<div class="formula">&tau; = r &times; F = dL/dt</div>
+
+<h3>Real-World Examples</h3>
+<div class="real-world">
+  <strong>Bicycle stability:</strong> Spinning wheels create gyroscopic effects that help keep you upright (plus trail geometry).<br>
+  <strong>Spacecraft attitude control:</strong> Reaction wheels spin up/down to rotate the craft without fuel. Hubble uses 4 reaction wheels.<br>
+  <strong>Gyrocompass:</strong> Earth's rotation causes a free gyroscope to precess until aligned with Earth's axis — true north without magnets.
+</div>`
+};
+
+// ── Init Three.js ──
+function init() {
+  const container = document.getElementById('viewport');
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0a0a1a);
+  scene.fog = new THREE.FogExp2(0x0a0a1a, 0.015);
+
+  camera = new THREE.PerspectiveCamera(50, container.clientWidth / (container.clientHeight - 60), 0.1, 500);
+  camera.position.set(0, 8, 18);
+
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(container.clientWidth, container.clientHeight - 60);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  container.insertBefore(renderer.domElement, container.firstChild);
+
+  // Lights
+  const ambient = new THREE.AmbientLight(0x334466, 0.6);
+  scene.add(ambient);
+  const dir = new THREE.DirectionalLight(0xffffff, 0.8);
+  dir.position.set(10, 20, 10);
+  dir.castShadow = true;
+  dir.shadow.mapSize.set(1024, 1024);
+  scene.add(dir);
+  const point1 = new THREE.PointLight(0x4fc3f7, 0.5, 50);
+  point1.position.set(-5, 10, 5);
+  scene.add(point1);
+  const point2 = new THREE.PointLight(0xbb86fc, 0.3, 50);
+  point2.position.set(5, 8, -5);
+  scene.add(point2);
+
+  // Grid
+  const grid = new THREE.GridHelper(30, 30, 0x1a1a3a, 0x111133);
+  grid.position.y = -0.01;
+  scene.add(grid);
+
+  controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.target.set(0, 2, 0);
+  controls.update();
+
+  clock = new THREE.Clock();
+
+  window.addEventListener('resize', onResize);
+
+  // Tab clicks
+  document.querySelectorAll('.tab').forEach(t => {
+    t.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+      switchTab(t.dataset.tab);
+    });
+  });
+
+  switchTab('centripetal');
+  animate();
+}
+
+function onResize() {
+  const container = document.getElementById('viewport');
+  camera.aspect = container.clientWidth / (container.clientHeight - 60);
+  camera.updateProjectionMatrix();
+  renderer.setSize(container.clientWidth, container.clientHeight - 60);
+}
+
+// ── Scene management ──
+let sceneObjects = [];
+function clearScene() {
+  sceneObjects.forEach(o => {
+    scene.remove(o);
+    if (o.geometry) o.geometry.dispose();
+    if (o.material) {
+      if (Array.isArray(o.material)) o.material.forEach(m => m.dispose());
+      else o.material.dispose();
+    }
+  });
+  sceneObjects = [];
+}
+
+function addObj(o) { scene.add(o); sceneObjects.push(o); return o; }
+
+// ── Arrow helper ──
+function makeArrow(color, len) {
+  const arrow = new THREE.ArrowHelper(
+    new THREE.Vector3(1,0,0), new THREE.Vector3(0,0,0),
+    len || 2, color, 0.3, 0.15
+  );
+  return addObj(arrow);
+}
+
+// ── Trail system ──
+function createTrail(color, maxPoints) {
+  const geom = new THREE.BufferGeometry();
+  const positions = new Float32Array(maxPoints * 3);
+  geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geom.setDrawRange(0, 0);
+  const mat = new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.5 });
+  const line = new THREE.Line(geom, mat);
+  line.userData = { positions, index: 0, maxPoints };
+  return addObj(line);
+}
+
+function addTrailPoint(trail, x, y, z) {
+  const ud = trail.userData;
+  const i = ud.index % ud.maxPoints;
+  ud.positions[i*3] = x;
+  ud.positions[i*3+1] = y;
+  ud.positions[i*3+2] = z;
+  ud.index++;
+  const count = Math.min(ud.index, ud.maxPoints);
+  trail.geometry.attributes.position.needsUpdate = true;
+  trail.geometry.setDrawRange(0, count);
+}
+
+// ── Tab switch ──
+function switchTab(tab) {
+  currentTab = tab;
+  document.getElementById('panel-content').innerHTML = panels[tab];
+  clearScene();
+
+  // Re-add grid
+  const grid = new THREE.GridHelper(30, 30, 0x1a1a3a, 0x111133);
+  grid.position.y = -0.01;
+  addObj(grid);
+
+  if (tab === 'centripetal') setupCentripetal();
+  else if (tab === 'angular') setupAngular();
+  else if (tab === 'cradle') setupCradle();
+  else if (tab === 'gyro') setupGyro();
+
+  bindControls(tab);
+  resetCamera(tab);
+}
+
+function resetCamera(tab) {
+  if (tab === 'centripetal') { camera.position.set(0, 12, 14); controls.target.set(0, 1, 0); }
+  else if (tab === 'angular') { camera.position.set(0, 6, 12); controls.target.set(0, 3, 0); }
+  else if (tab === 'cradle') { camera.position.set(0, 6, 14); controls.target.set(0, 4, 0); }
+  else if (tab === 'gyro') { camera.position.set(6, 6, 12); controls.target.set(0, 3, 0); }
+  controls.update();
+}
+
+// ══════════════════════════════════════════
+// TAB 1: CENTRIPETAL / CENTRIFUGAL
+// ══════════════════════════════════════════
+let cp = {};
+function setupCentripetal() {
+  const st = simState.centripetal;
+  st.cut = false; st.ballAngle = 0; st.trail = [];
+
+  // Center post
+  const post = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.15, 0.15, 2, 16),
+    new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.8, roughness: 0.2 })
+  );
+  post.position.y = 1;
+  addObj(post);
+
+  // Ball
+  cp.ball = new THREE.Mesh(
+    new THREE.SphereGeometry(0.4, 32, 32),
+    new THREE.MeshStandardMaterial({ color: 0xff6644, metalness: 0.3, roughness: 0.4 })
+  );
+  cp.ball.castShadow = true;
+  addObj(cp.ball);
+
+  // String (line)
+  const stringGeom = new THREE.BufferGeometry();
+  stringGeom.setAttribute('position', new THREE.BufferAttribute(new Float32Array(6), 3));
+  cp.string = new THREE.Line(stringGeom, new THREE.LineBasicMaterial({ color: 0xcccccc }));
+  addObj(cp.string);
+
+  // Force arrows
+  cp.arrowCentripetal = makeArrow(0x4fc3f7, 2);
+  cp.arrowCentrifugal = makeArrow(0xff4444, 2);
+
+  // Velocity arrow
+  cp.arrowVelocity = makeArrow(0x66ff66, 2);
+
+  // Trail
+  cp.trail = createTrail(0xff6644, 300);
+
+  // Platform circle (visual reference)
+  const circleGeom = new THREE.RingGeometry(st.radius - 0.02, st.radius + 0.02, 64);
+  const circleMat = new THREE.MeshBasicMaterial({ color: 0x333355, side: THREE.DoubleSide });
+  cp.circle = new THREE.Mesh(circleGeom, circleMat);
+  cp.circle.rotation.x = -Math.PI / 2;
+  cp.circle.position.y = 0.01;
+  addObj(cp.circle);
+}
+
+function updateCentripetal(dt) {
+  const st = simState.centripetal;
+  const h = 2; // height of rotation
+
+  if (!st.cut) {
+    st.ballAngle += st.omega * dt;
+    const x = Math.cos(st.ballAngle) * st.radius;
+    const z = Math.sin(st.ballAngle) * st.radius;
+    cp.ball.position.set(x, h, z);
+
+    // String
+    const sp = cp.string.geometry.attributes.position.array;
+    sp[0]=0; sp[1]=h; sp[2]=0; sp[3]=x; sp[4]=h; sp[5]=z;
+    cp.string.geometry.attributes.position.needsUpdate = true;
+    cp.string.visible = true;
+
+    // Update circle radius
+    cp.circle.geometry.dispose();
+    cp.circle.geometry = new THREE.RingGeometry(st.radius - 0.02, st.radius + 0.02, 64);
+
+    // Centripetal force arrow (inward)
+    const forceMag = st.mass * st.omega * st.omega * st.radius;
+    const dirIn = new THREE.Vector3(-x, 0, -z).normalize();
+    cp.arrowCentripetal.position.set(x, h, z);
+    cp.arrowCentripetal.setDirection(dirIn);
+    cp.arrowCentripetal.setLength(Math.min(forceMag * 0.3, 4), 0.3, 0.15);
+    cp.arrowCentripetal.visible = true;
+
+    // Centrifugal arrow (outward — "apparent")
+    const dirOut = new THREE.Vector3(x, 0, z).normalize();
+    cp.arrowCentrifugal.position.set(x, h, z);
+    cp.arrowCentrifugal.setDirection(dirOut);
+    cp.arrowCentrifugal.setLength(Math.min(forceMag * 0.3, 4), 0.3, 0.15);
+    cp.arrowCentrifugal.visible = true;
+
+    // Velocity arrow (tangential)
+    const v = st.omega * st.radius;
+    const dirTan = new THREE.Vector3(-Math.sin(st.ballAngle), 0, Math.cos(st.ballAngle)).normalize();
+    cp.arrowVelocity.position.set(x, h, z);
+    cp.arrowVelocity.setDirection(dirTan);
+    cp.arrowVelocity.setLength(Math.min(v * 0.5, 4), 0.3, 0.15);
+    cp.arrowVelocity.visible = true;
+
+    addTrailPoint(cp.trail, x, h, z);
+
+    // Data
+    const vel = st.omega * st.radius;
+    const acc = st.omega * st.omega * st.radius;
+    bottomBar.innerHTML = `
+      <div class="data-item"><span class="data-label">Velocity</span><span class="data-value">${vel.toFixed(2)} m/s</span></div>
+      <div class="data-item"><span class="data-label">Centripetal Accel</span><span class="data-value">${acc.toFixed(2)} m/s&sup2;</span></div>
+      <div class="data-item"><span class="data-label">Force</span><span class="data-value">${forceMag.toFixed(2)} N</span></div>
+      <div class="data-item"><span class="data-label">&omega;</span><span class="data-value">${st.omega.toFixed(1)} rad/s</span></div>
+      <div class="data-item"><span class="data-label">Period</span><span class="data-value">${(2*Math.PI/st.omega).toFixed(2)} s</span></div>
+    `;
+  } else {
+    // Ball flies tangentially
+    if (!st.ballVel) {
+      const x = cp.ball.position.x, z = cp.ball.position.z;
+      const v = st.omega * st.radius;
+      st.ballVel = new THREE.Vector3(
+        -Math.sin(st.ballAngle) * v,
+        0,
+        Math.cos(st.ballAngle) * v
+      );
+      st.ballPos = cp.ball.position.clone();
+    }
+    st.ballPos.add(st.ballVel.clone().multiplyScalar(dt));
+    // Add slight gravity
+    st.ballVel.y -= 9.8 * dt;
+    cp.ball.position.copy(st.ballPos);
+    cp.string.visible = false;
+    cp.arrowCentripetal.visible = false;
+    cp.arrowCentrifugal.visible = false;
+    cp.arrowVelocity.visible = true;
+    cp.arrowVelocity.position.copy(st.ballPos);
+
+    addTrailPoint(cp.trail, st.ballPos.x, st.ballPos.y, st.ballPos.z);
+
+    const speed = st.ballVel.length();
+    bottomBar.innerHTML = `
+      <div class="data-item"><span class="data-label">STRING</span><span class="data-value" style="color:#f44">CUT</span></div>
+      <div class="data-item"><span class="data-label">Speed</span><span class="data-value">${speed.toFixed(2)} m/s</span></div>
+      <div class="data-item"><span class="data-label">Path</span><span class="data-value" style="color:#66ff66">TANGENTIAL (straight line)</span></div>
+    `;
+  }
+}
+
+// ══════════════════════════════════════════
+// TAB 2: ANGULAR MOMENTUM CONSERVATION
+// ══════════════════════════════════════════
+let ang = {};
+function setupAngular() {
+  const st = simState.angular;
+  st.armSpan = 1.0;
+  st.omega = 3;
+
+  // Body (cylinder)
+  ang.body = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.5, 0.4, 3, 16),
+    new THREE.MeshStandardMaterial({ color: 0xbb86fc, metalness: 0.2, roughness: 0.6 })
+  );
+  ang.body.position.y = 1.5;
+  addObj(ang.body);
+
+  // Head
+  ang.head = new THREE.Mesh(
+    new THREE.SphereGeometry(0.35, 16, 16),
+    new THREE.MeshStandardMaterial({ color: 0xffccaa, roughness: 0.8 })
+  );
+  ang.head.position.y = 3.3;
+  addObj(ang.head);
+
+  // Arms (two boxes)
+  ang.armL = new THREE.Mesh(
+    new THREE.BoxGeometry(1, 0.15, 0.15),
+    new THREE.MeshStandardMaterial({ color: 0xffccaa, roughness: 0.8 })
+  );
+  ang.armR = ang.armL.clone();
+  ang.armL.position.y = 2.5;
+  ang.armR.position.y = 2.5;
+  addObj(ang.armL);
+  addObj(ang.armR);
+
+  // Hands (small spheres)
+  ang.handL = new THREE.Mesh(
+    new THREE.SphereGeometry(0.12, 8, 8),
+    new THREE.MeshStandardMaterial({ color: 0xffccaa })
+  );
+  ang.handR = ang.handL.clone();
+  addObj(ang.handL);
+  addObj(ang.handR);
+
+  // Platform
+  const platform = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.8, 0.9, 0.2, 32),
+    new THREE.MeshStandardMaterial({ color: 0x444466, metalness: 0.8, roughness: 0.2 })
+  );
+  platform.position.y = 0.1;
+  addObj(platform);
+
+  // L vector arrow
+  ang.arrowL = makeArrow(0x4fc3f7, 3);
+
+  // Omega arrow
+  ang.arrowOmega = makeArrow(0xff6644, 2);
+
+  // Compute initial L
+  const armMass = 0.3;
+  const I0 = st.baseInertia + 2 * armMass * (st.armSpan * 2) * (st.armSpan * 2);
+  st.L = I0 * st.omega; // conserved quantity
+
+  ang.group = new THREE.Group();
+  // We'll rotate the group
+}
+
+function updateAngular(dt) {
+  const st = simState.angular;
+  const armMass = 0.3;
+  const armLen = st.armSpan * 2;
+  const I = st.baseInertia + 2 * armMass * armLen * armLen;
+  st.omega = st.L / I;
+
+  st.angle = (st.angle || 0) + st.omega * dt;
+
+  const cosA = Math.cos(st.angle), sinA = Math.sin(st.angle);
+
+  // Rotate body
+  ang.body.rotation.y = st.angle;
+  ang.head.position.x = 0;
+  ang.head.position.z = 0;
+  ang.head.rotation.y = st.angle;
+
+  // Arms
+  const armOffset = 0.5 + armLen / 2;
+  ang.armL.scale.x = armLen;
+  ang.armR.scale.x = armLen;
+  ang.armL.position.set(cosA * armOffset, 2.5, sinA * armOffset);
+  ang.armL.rotation.y = st.angle;
+  ang.armR.position.set(-cosA * armOffset, 2.5, -sinA * armOffset);
+  ang.armR.rotation.y = st.angle;
+
+  // Hands
+  const handDist = 0.5 + armLen;
+  ang.handL.position.set(cosA * handDist, 2.5, sinA * handDist);
+  ang.handR.position.set(-cosA * handDist, 2.5, -sinA * handDist);
+  ang.handL.position.y = 2.5;
+  ang.handR.position.y = 2.5;
+
+  // L arrow (vertical, proportional to L)
+  ang.arrowL.position.set(0, 4, 0);
+  ang.arrowL.setDirection(new THREE.Vector3(0, 1, 0));
+  ang.arrowL.setLength(Math.min(st.L * 0.8, 5), 0.3, 0.15);
+
+  // Omega arrow
+  ang.arrowOmega.position.set(0, 0.5, 0);
+  ang.arrowOmega.setDirection(new THREE.Vector3(0, 1, 0));
+  ang.arrowOmega.setLength(Math.min(st.omega * 0.3, 4), 0.3, 0.15);
+
+  const rpm = st.omega * 60 / (2 * Math.PI);
+  bottomBar.innerHTML = `
+    <div class="data-item"><span class="data-label">&omega;</span><span class="data-value">${st.omega.toFixed(2)} rad/s</span></div>
+    <div class="data-item"><span class="data-label">RPM</span><span class="data-value">${rpm.toFixed(1)}</span></div>
+    <div class="data-item"><span class="data-label">I (inertia)</span><span class="data-value">${I.toFixed(3)} kg&middot;m&sup2;</span></div>
+    <div class="data-item"><span class="data-label">L (conserved)</span><span class="data-value">${st.L.toFixed(3)} kg&middot;m&sup2;/s</span></div>
+    <div class="data-item"><span class="data-label">Arm span</span><span class="data-value">${(st.armSpan * 2).toFixed(2)} m</span></div>
+  `;
+}
+
+// ══════════════════════════════════════════
+// TAB 3: NEWTON'S CRADLE
+// ══════════════════════════════════════════
+let crd = {};
+function setupCradle() {
+  const st = simState.cradle;
+  st.phase = 'idle';
+  st.angles = [0, 0, 0, 0, 0];
+  st.velocities = [0, 0, 0, 0, 0];
+
+  const stringLen = 5;
+  const ballRadius = 0.4;
+  const spacing = ballRadius * 2.02;
+
+  // Frame
+  const frameMat = new THREE.MeshStandardMaterial({ color: 0x666688, metalness: 0.8, roughness: 0.2 });
+  // Top bar
+  const topBar = new THREE.Mesh(new THREE.BoxGeometry(spacing * 6, 0.12, 0.12), frameMat);
+  topBar.position.set(0, stringLen + ballRadius + 0.5, 0);
+  addObj(topBar);
+  // Side bars
+  for (let s = -1; s <= 1; s += 2) {
+    const side = new THREE.Mesh(new THREE.BoxGeometry(0.12, stringLen + 1, 0.12), frameMat);
+    side.position.set(s * spacing * 3, (stringLen + 1) / 2, 0);
+    addObj(side);
+  }
+
+  crd.balls = [];
+  crd.strings = [];
+  crd.pivots = [];
+
+  const ballMat = new THREE.MeshStandardMaterial({ color: 0xccccdd, metalness: 0.9, roughness: 0.1 });
+
+  for (let i = 0; i < 5; i++) {
+    const pivotX = (i - 2) * spacing;
+    const pivotY = stringLen + ballRadius + 0.5;
+
+    // Pivot group
+    const pivot = new THREE.Group();
+    pivot.position.set(pivotX, pivotY, 0);
+    addObj(pivot);
+
+    // Ball (positioned at end of string)
+    const ball = new THREE.Mesh(new THREE.SphereGeometry(ballRadius, 32, 32), ballMat.clone());
+    ball.position.set(0, -stringLen, 0);
+    ball.castShadow = true;
+    pivot.add(ball);
+
+    // String
+    const sGeom = new THREE.BufferGeometry();
+    sGeom.setAttribute('position', new THREE.BufferAttribute(new Float32Array([0,0,0, 0,-stringLen,0]), 3));
+    const sLine = new THREE.Line(sGeom, new THREE.LineBasicMaterial({ color: 0x888888 }));
+    pivot.add(sLine);
+
+    crd.balls.push(ball);
+    crd.strings.push(sLine);
+    crd.pivots.push(pivot);
+  }
+
+  crd.stringLen = stringLen;
+}
+
+function pullCradleBalls(count) {
+  const st = simState.cradle;
+  st.phase = 'pulling';
+  st.pullCount = count;
+  st.pullTarget = -Math.PI / 4; // 45 degrees
+  st.angles = [0, 0, 0, 0, 0];
+  st.velocities = [0, 0, 0, 0, 0];
+
+  // Animate pull
+  let pullProgress = 0;
+  const pullInterval = setInterval(() => {
+    pullProgress += 0.03;
+    if (pullProgress >= 1) {
+      pullProgress = 1;
+      clearInterval(pullInterval);
+      st.phase = 'swinging';
+    }
+    for (let i = 0; i < count; i++) {
+      st.angles[i] = st.pullTarget * pullProgress;
+    }
+  }, 16);
+}
+
+function updateCradle(dt) {
+  const st = simState.cradle;
+  const g = 9.8;
+  const L = crd.stringLen;
+  const damping = 0.999;
+
+  if (st.phase === 'swinging') {
+    // Pendulum physics for each ball
+    const ballRadius = 0.4;
+    const timeStep = dt;
+
+    for (let i = 0; i < 5; i++) {
+      // Angular acceleration: alpha = -(g/L) * sin(theta)
+      const alpha = -(g / L) * Math.sin(st.angles[i]);
+      st.velocities[i] += alpha * timeStep;
+      st.velocities[i] *= damping;
+      st.angles[i] += st.velocities[i] * timeStep;
+    }
+
+    // Collision detection between adjacent balls
+    for (let i = 0; i < 4; i++) {
+      // Ball i and i+1 collide when they're at same position
+      // Simplified: collision when angle[i] > angle[i+1] and ball i is moving right
+      if (st.angles[i] > st.angles[i+1] + 0.001) {
+        // Elastic collision — swap velocities (equal mass)
+        const temp = st.velocities[i];
+        st.velocities[i] = st.velocities[i + 1];
+        st.velocities[i + 1] = temp;
+        // Prevent overlap
+        const avg = (st.angles[i] + st.angles[i+1]) / 2;
+        st.angles[i] = avg - 0.0005;
+        st.angles[i+1] = avg + 0.0005;
+      }
+    }
+  }
+
+  // Update visual positions
+  let totalKE = 0;
+  let totalPE = 0;
+  for (let i = 0; i < 5; i++) {
+    crd.pivots[i].rotation.z = st.angles[i];
+
+    // Color based on velocity
+    const speed = Math.abs(st.velocities[i]);
+    const hue = 0.6 - speed * 0.15; // blue->red as speed increases
+    crd.balls[i].material.color.setHSL(Math.max(0, hue), 0.3, 0.85);
+    crd.balls[i].material.emissive.setHSL(Math.max(0, hue), 0.5, speed * 0.1);
+
+    // Energy calculations (mass = 1)
+    const v = st.velocities[i] * crd.stringLen;
+    totalKE += 0.5 * v * v;
+    const h = crd.stringLen * (1 - Math.cos(st.angles[i]));
+    totalPE += g * h;
+  }
+
+  const totalE = totalKE + totalPE;
+  const maxAngle = Math.max(...st.angles.map(Math.abs));
+  bottomBar.innerHTML = `
+    <div class="data-item"><span class="data-label">KE</span><span class="data-value">${totalKE.toFixed(3)} J</span></div>
+    <div class="data-item"><span class="data-label">PE</span><span class="data-value">${totalPE.toFixed(3)} J</span></div>
+    <div class="data-item"><span class="data-label">Total E</span><span class="data-value">${totalE.toFixed(3)} J</span></div>
+    <div class="data-item"><span class="data-label">Max Angle</span><span class="data-value">${(maxAngle * 180 / Math.PI).toFixed(1)}&deg;</span></div>
+    <div class="data-item"><span class="data-label">Phase</span><span class="data-value">${st.phase.toUpperCase()}</span></div>
+  `;
+}
+
+// ══════════════════════════════════════════
+// TAB 4: GYROSCOPIC PRECESSION
+// ══════════════════════════════════════════
+let gyro = {};
+function setupGyro() {
+  const st = simState.gyro;
+  st.precessionAngle = 0;
+  st.wheelAngle = 0;
+
+  // Pedestal
+  const pedestal = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.3, 0.5, 2, 16),
+    new THREE.MeshStandardMaterial({ color: 0x555577, metalness: 0.7, roughness: 0.3 })
+  );
+  pedestal.position.y = 1;
+  addObj(pedestal);
+
+  // Pedestal top ball joint
+  const joint = new THREE.Mesh(
+    new THREE.SphereGeometry(0.2, 16, 16),
+    new THREE.MeshStandardMaterial({ color: 0x888899, metalness: 0.9, roughness: 0.1 })
+  );
+  joint.position.y = 2;
+  addObj(joint);
+
+  // Axle + Wheel group (rotates for precession)
+  gyro.precGroup = new THREE.Group();
+  gyro.precGroup.position.y = 2;
+  addObj(gyro.precGroup);
+
+  // Tilt group (tilted axle)
+  gyro.tiltGroup = new THREE.Group();
+  gyro.tiltGroup.rotation.z = st.tiltAngle;
+  gyro.precGroup.add(gyro.tiltGroup);
+
+  // Axle
+  const axle = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.06, 0.06, 5, 8),
+    new THREE.MeshStandardMaterial({ color: 0xaaaacc, metalness: 0.8, roughness: 0.2 })
+  );
+  axle.rotation.z = Math.PI / 2;
+  gyro.tiltGroup.add(axle);
+
+  // Wheel (torus)
+  const wheelGeom = new THREE.TorusGeometry(1.2, 0.2, 16, 32);
+  const wheelMat = new THREE.MeshStandardMaterial({ color: 0x4fc3f7, metalness: 0.5, roughness: 0.3 });
+  gyro.wheel = new THREE.Mesh(wheelGeom, wheelMat);
+  gyro.wheel.position.x = 2;
+  gyro.tiltGroup.add(gyro.wheel);
+
+  // Spokes
+  for (let i = 0; i < 6; i++) {
+    const angle = (i / 6) * Math.PI * 2;
+    const spoke = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.03, 0.03, 2.4, 4),
+      new THREE.MeshStandardMaterial({ color: 0x888899 })
+    );
+    spoke.rotation.z = angle;
+    spoke.position.x = 2;
+    gyro.tiltGroup.add(spoke);
+  }
+
+  // Counterweight
+  const cw = new THREE.Mesh(
+    new THREE.SphereGeometry(0.25, 16, 16),
+    new THREE.MeshStandardMaterial({ color: 0xff6644, metalness: 0.4, roughness: 0.5 })
+  );
+  cw.position.x = -2;
+  gyro.tiltGroup.add(cw);
+
+  // Angular momentum arrow
+  gyro.arrowL = makeArrow(0x4fc3f7, 3);
+
+  // Torque arrow
+  gyro.arrowTau = makeArrow(0xff6644, 2);
+
+  // Gravity arrow
+  gyro.arrowG = makeArrow(0xffff44, 1.5);
+
+  // Precession trail
+  gyro.trail = createTrail(0x4fc3f7, 500);
+}
+
+function updateGyro(dt) {
+  const st = simState.gyro;
+
+  // Physics
+  const m = 1; // wheel mass
+  const g = 9.8;
+  const d = 2; // distance from pivot to wheel center
+  const I = 0.5 * m * 1.2 * 1.2; // I = 0.5 * m * r^2 for disk
+  const torque = m * g * d * Math.sin(st.tiltAngle);
+  const L = I * st.spinSpeed;
+  const precessionRate = (L > 0.1) ? torque / L : 0;
+
+  st.precessionAngle += precessionRate * dt;
+  st.wheelAngle += st.spinSpeed * dt;
+
+  gyro.precGroup.rotation.y = st.precessionAngle;
+  gyro.wheel.rotation.x = st.wheelAngle;
+
+  // Angular momentum arrow (along spin axis, rotates with precession)
+  const lDir = new THREE.Vector3(
+    Math.cos(st.tiltAngle) * Math.cos(st.precessionAngle),
+    Math.sin(st.tiltAngle),
+    -Math.cos(st.tiltAngle) * Math.sin(st.precessionAngle)
+  ).normalize();
+  gyro.arrowL.position.set(
+    2 * Math.cos(st.precessionAngle) * Math.cos(st.tiltAngle) + gyro.precGroup.position.x,
+    2 * Math.sin(st.tiltAngle) + gyro.precGroup.position.y,
+    -2 * Math.sin(st.precessionAngle) * Math.cos(st.tiltAngle)
+  );
+  gyro.arrowL.setDirection(lDir);
+  gyro.arrowL.setLength(Math.min(L * 0.15, 4), 0.3, 0.15);
+
+  // Torque arrow (perpendicular to L and gravity, drives precession)
+  const tauDir = new THREE.Vector3(
+    -Math.sin(st.precessionAngle),
+    0,
+    -Math.cos(st.precessionAngle)
+  ).normalize();
+  gyro.arrowTau.position.copy(gyro.arrowL.position);
+  gyro.arrowTau.setDirection(tauDir);
+  gyro.arrowTau.setLength(Math.min(torque * 0.1, 3), 0.3, 0.15);
+
+  // Gravity arrow (downward from wheel)
+  const wheelWorldX = 2 * Math.cos(st.precessionAngle) * Math.cos(st.tiltAngle);
+  const wheelWorldY = 2 * Math.sin(st.tiltAngle) + 2;
+  const wheelWorldZ = -2 * Math.sin(st.precessionAngle) * Math.cos(st.tiltAngle);
+  gyro.arrowG.position.set(wheelWorldX, wheelWorldY, wheelWorldZ);
+  gyro.arrowG.setDirection(new THREE.Vector3(0, -1, 0));
+  gyro.arrowG.setLength(1.5, 0.3, 0.15);
+
+  // Trail at wheel tip
+  addTrailPoint(gyro.trail, wheelWorldX, wheelWorldY, wheelWorldZ);
+
+  const precRPM = precessionRate * 60 / (2 * Math.PI);
+  const spinRPM = st.spinSpeed * 60 / (2 * Math.PI);
+  bottomBar.innerHTML = `
+    <div class="data-item"><span class="data-label">Spin &omega;</span><span class="data-value">${st.spinSpeed.toFixed(1)} rad/s</span></div>
+    <div class="data-item"><span class="data-label">Spin RPM</span><span class="data-value">${spinRPM.toFixed(0)}</span></div>
+    <div class="data-item"><span class="data-label">Precession</span><span class="data-value">${precessionRate.toFixed(3)} rad/s</span></div>
+    <div class="data-item"><span class="data-label">Prec. RPM</span><span class="data-value">${precRPM.toFixed(2)}</span></div>
+    <div class="data-item"><span class="data-label">L</span><span class="data-value">${L.toFixed(2)} kg&middot;m&sup2;/s</span></div>
+    <div class="data-item"><span class="data-label">Torque</span><span class="data-value">${torque.toFixed(2)} N&middot;m</span></div>
+  `;
+}
+
+// ── Bind controls ──
+function bindControls(tab) {
+  if (tab === 'centripetal') {
+    const so = document.getElementById('s-omega');
+    const sr = document.getElementById('s-radius');
+    const sm = document.getElementById('s-mass');
+    if (so) {
+      so.value = simState.centripetal.omega;
+      sr.value = simState.centripetal.radius;
+      sm.value = simState.centripetal.mass;
+      so.addEventListener('input', () => {
+        simState.centripetal.omega = parseFloat(so.value);
+        document.getElementById('v-omega').textContent = parseFloat(so.value).toFixed(1);
+      });
+      sr.addEventListener('input', () => {
+        simState.centripetal.radius = parseFloat(sr.value);
+        document.getElementById('v-radius').textContent = parseFloat(sr.value).toFixed(1);
+      });
+      sm.addEventListener('input', () => {
+        simState.centripetal.mass = parseFloat(sm.value);
+        document.getElementById('v-mass').textContent = parseFloat(sm.value).toFixed(1);
+      });
+    }
+    const btnCut = document.getElementById('btn-cut');
+    if (btnCut) btnCut.addEventListener('click', () => {
+      simState.centripetal.cut = true;
+      simState.centripetal.ballVel = null;
+    });
+    const btnReset = document.getElementById('btn-reset-cp');
+    if (btnReset) btnReset.addEventListener('click', () => {
+      clearScene();
+      const grid = new THREE.GridHelper(30, 30, 0x1a1a3a, 0x111133);
+      grid.position.y = -0.01;
+      addObj(grid);
+      simState.centripetal.cut = false;
+      simState.centripetal.ballVel = null;
+      simState.centripetal.ballPos = null;
+      simState.centripetal.ballAngle = 0;
+      setupCentripetal();
+    });
+  }
+  else if (tab === 'angular') {
+    const sa = document.getElementById('s-arms');
+    if (sa) {
+      sa.value = simState.angular.armSpan;
+      sa.addEventListener('input', () => {
+        simState.angular.armSpan = parseFloat(sa.value);
+        document.getElementById('v-arms').textContent = parseFloat(sa.value).toFixed(2);
+      });
+    }
+    const btnReset = document.getElementById('btn-reset-ang');
+    if (btnReset) btnReset.addEventListener('click', () => {
+      switchTab('angular');
+    });
+  }
+  else if (tab === 'cradle') {
+    const btn1 = document.getElementById('btn-pull1');
+    const btn2 = document.getElementById('btn-pull2');
+    const btn3 = document.getElementById('btn-pull3');
+    if (btn1) btn1.addEventListener('click', () => pullCradleBalls(1));
+    if (btn2) btn2.addEventListener('click', () => pullCradleBalls(2));
+    if (btn3) btn3.addEventListener('click', () => pullCradleBalls(3));
+    const btnReset = document.getElementById('btn-reset-cradle');
+    if (btnReset) btnReset.addEventListener('click', () => switchTab('cradle'));
+  }
+  else if (tab === 'gyro') {
+    const ss = document.getElementById('s-spin');
+    if (ss) {
+      ss.value = simState.gyro.spinSpeed;
+      ss.addEventListener('input', () => {
+        simState.gyro.spinSpeed = parseFloat(ss.value);
+        document.getElementById('v-spin').textContent = parseFloat(ss.value).toFixed(1);
+      });
+    }
+    const btnReset = document.getElementById('btn-reset-gyro');
+    if (btnReset) btnReset.addEventListener('click', () => switchTab('gyro'));
+  }
+}
+
+// ── Animation loop ──
+function animate() {
+  animationId = requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.05); // cap dt
+
+  controls.update();
+
+  if (currentTab === 'centripetal') updateCentripetal(dt);
+  else if (currentTab === 'angular') updateAngular(dt);
+  else if (currentTab === 'cradle') updateCradle(dt);
+  else if (currentTab === 'gyro') updateGyro(dt);
+
+  renderer.render(scene, camera);
+}
+
+// ── Start ──
+init();
+</script>
+</body>
+</html>
