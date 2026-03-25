@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:beautycita/config/app_transitions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/config/theme_extension.dart';
@@ -71,7 +72,7 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen>
   void _showCashInfo(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final cs = Theme.of(context).colorScheme;
-    showModalBottomSheet(
+    showBurstBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(AppConstants.radiusLG)),

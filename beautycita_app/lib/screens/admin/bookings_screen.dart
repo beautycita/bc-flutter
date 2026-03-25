@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:beautycita/config/app_transitions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/constants.dart';
@@ -120,7 +121,7 @@ class BookingsScreen extends ConsumerWidget {
       List<Map<String, dynamic>> bookings) {
     final colors = Theme.of(context).colorScheme;
 
-    showModalBottomSheet(
+    showBurstBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.white,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:beautycita/config/app_transitions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/constants.dart';
@@ -201,7 +202,7 @@ class _CategoryTreeScreenState extends ConsumerState<CategoryTreeScreen> {
     var isActive = node.isActive;
     final colors = Theme.of(context).colorScheme;
 
-    showDialog(
+    showBurstDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(

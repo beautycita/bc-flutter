@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:beautycita/config/app_transitions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -104,7 +105,7 @@ class BusinessStaffScreen extends ConsumerWidget {
   }
 
   void _showAddStaffForm(BuildContext context, WidgetRef ref) {
-    showModalBottomSheet(
+    showBurstBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -115,7 +116,7 @@ class BusinessStaffScreen extends ConsumerWidget {
 
   void _showStaffDetail(
       BuildContext context, WidgetRef ref, Map<String, dynamic> staff) {
-    showModalBottomSheet(
+    showBurstBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -1524,7 +1525,7 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
     final selected = <String>{};
 
     if (!context.mounted) return;
-    await showDialog(
+    await showBurstDialog(
       context: context,
       builder: (ctx) {
         return StatefulBuilder(
@@ -1703,7 +1704,7 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
     String reason = 'day_off';
 
     if (!context.mounted) return;
-    await showModalBottomSheet(
+    await showBurstBottomSheet(
       context: context,
       isScrollControlled: true,
       builder: (ctx) {

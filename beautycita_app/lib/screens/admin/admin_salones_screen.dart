@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:beautycita/config/app_transitions.dart';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -101,7 +102,7 @@ class _RegisteredSalonesTabState extends ConsumerState<_RegisteredSalonesTab> {
   }
 
   void _showExportSheet(List<Map<String, dynamic>> salons) {
-    showModalBottomSheet(
+    showBurstBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(AppConstants.radiusMD)),

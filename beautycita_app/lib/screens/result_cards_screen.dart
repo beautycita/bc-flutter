@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:beautycita/config/app_transitions.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -202,7 +203,7 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
 
 
   void _showTimeOverride(BuildContext context) {
-    showModalBottomSheet(
+    showBurstBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,

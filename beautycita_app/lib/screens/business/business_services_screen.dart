@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:beautycita/config/app_transitions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:beautycita_core/models.dart';
@@ -162,7 +163,7 @@ class BusinessServicesScreen extends ConsumerWidget {
 
   void _showServiceForm(
       BuildContext context, WidgetRef ref, Map<String, dynamic>? existing) {
-    showModalBottomSheet(
+    showBurstBottomSheet(
       context: context,
       isScrollControlled: true,
       builder: (ctx) => _ServiceFormSheet(

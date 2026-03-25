@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:beautycita/config/app_transitions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -418,7 +419,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
         ref.read(isSuperAdminProvider).valueOrNull ?? false;
     final targetIsSuperAdmin = user.role == 'superadmin';
 
-    showModalBottomSheet(
+    showBurstBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,

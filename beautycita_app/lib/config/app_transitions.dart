@@ -270,7 +270,7 @@ class _DiagonalSlashPainter extends CustomPainter {
 // Page Builders for GoRouter
 // ═══════════════════════════════════════════════════════════════════════════
 
-/// Main navigation: sweep + stagger
+/// Main navigation: sweep + stagger on push, diagonal slash on pop
 CustomTransitionPage<T> bcSweepPage<T>({
   required LocalKey key,
   required Widget child,
@@ -280,7 +280,15 @@ CustomTransitionPage<T> bcSweepPage<T>({
     child: child,
     transitionDuration: const Duration(milliseconds: 550),
     reverseTransitionDuration: const Duration(milliseconds: 400),
-    transitionsBuilder: bcSweepStaggerTransition,
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      // animation runs forward (0→1) on push, reverse (1→0) on pop
+      if (animation.status == AnimationStatus.reverse) {
+        return bcDiagonalSlashTransition(
+            context, animation, secondaryAnimation, child);
+      }
+      return bcSweepStaggerTransition(
+          context, animation, secondaryAnimation, child);
+    },
   );
 }
 
@@ -309,5 +317,164 @@ CustomTransitionPage<T> bcSlashPage<T>({
     transitionDuration: const Duration(milliseconds: 450),
     reverseTransitionDuration: const Duration(milliseconds: 350),
     transitionsBuilder: bcDiagonalSlashTransition,
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Radial Burst Wrappers for Dialogs & Bottom Sheets
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// Shows a dialog with a radial burst animation expanding from screen center.
+Future<T?> showBurstDialog<T>({
+  required BuildContext context,
+  required WidgetBuilder builder,
+  bool barrierDismissible = true,
+  Color? barrierColor,
+  String? barrierLabel,
+  bool useRootNavigator = true,
+  RouteSettings? routeSettings,
+  Offset? anchorPoint,
+}) {
+  final size = MediaQuery.of(context).size;
+  final maxRadius =
+      math.sqrt(size.width * size.width + size.height * size.height);
+
+  return showGeneralDialog<T>(
+    context: context,
+    barrierDismissible: barrierDismissible,
+    barrierLabel: barrierLabel ?? MaterialLocalizations.of(context).modalBarrierDismissLabel,
+    barrierColor: barrierColor ?? Colors.black54,
+    useRootNavigator: useRootNavigator,
+    routeSettings: routeSettings,
+    transitionDuration: const Duration(milliseconds: 500),
+    pageBuilder: (ctx, animation, secondaryAnimation) => builder(ctx),
+    transitionBuilder: (ctx, animation, secondaryAnimation, child) {
+      final center = Offset(size.width / 2, size.height / 2);
+      final curved = CurvedAnimation(
+        parent: animation,
+        curve: Curves.easeOutCubic,
+      );
+      final radius = curved.value * maxRadius;
+
+      return Stack(
+        children: [
+          ClipPath(
+            clipper: _CircleClipper(center: center, radius: radius),
+            child: FadeTransition(
+              opacity: CurvedAnimation(
+                parent: animation,
+                curve: const Interval(0.3, 1.0),
+              ),
+              child: child,
+            ),
+          ),
+          if (animation.value > 0.01 && animation.value < 0.85)
+            CustomPaint(
+              size: size,
+              painter: _RadialGlowPainter(
+                center: center,
+                radius: radius,
+                opacity: (1.0 - animation.value).clamp(0.0, 0.6),
+              ),
+            ),
+        ],
+      );
+    },
+  );
+}
+
+/// Shows a modal bottom sheet with a radial burst animation.
+/// Uses showGeneralDialog with bottom-aligned content for full animation control.
+Future<T?> showBurstBottomSheet<T>({
+  required BuildContext context,
+  required WidgetBuilder builder,
+  Color? backgroundColor,
+  ShapeBorder? shape,
+  bool isScrollControlled = false,
+  bool isDismissible = true,
+  bool enableDrag = true,
+  bool? showDragHandle,
+  bool useRootNavigator = false,
+  bool useSafeArea = false,
+  BoxConstraints? constraints,
+  RouteSettings? routeSettings,
+}) {
+  final size = MediaQuery.of(context).size;
+  final maxRadius =
+      math.sqrt(size.width * size.width + size.height * size.height);
+  // Burst origin: bottom-center of screen
+  final center = Offset(size.width / 2, size.height);
+
+  return showGeneralDialog<T>(
+    context: context,
+    barrierDismissible: isDismissible,
+    barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
+    barrierColor: Colors.black54,
+    useRootNavigator: useRootNavigator,
+    routeSettings: routeSettings,
+    transitionDuration: const Duration(milliseconds: 500),
+    pageBuilder: (ctx, animation, secondaryAnimation) {
+      final content = builder(ctx);
+      return Align(
+        alignment: Alignment.bottomCenter,
+        child: Material(
+          color: backgroundColor ?? Theme.of(ctx).colorScheme.surface,
+          shape: shape ??
+              const RoundedRectangleBorder(
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+          clipBehavior: Clip.antiAlias,
+          child: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (showDragHandle == true)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Container(
+                      width: 32,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Theme.of(ctx)
+                            .colorScheme
+                            .onSurfaceVariant
+                            .withValues(alpha: 0.4),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                Flexible(child: content),
+              ],
+            ),
+          ),
+        ),
+      );
+    },
+    transitionBuilder: (ctx, animation, secondaryAnimation, child) {
+      final curved = CurvedAnimation(
+        parent: animation,
+        curve: Curves.easeOutCubic,
+      );
+      final radius = curved.value * maxRadius;
+
+      return Stack(
+        children: [
+          ClipPath(
+            clipper: _CircleClipper(center: center, radius: radius),
+            child: child,
+          ),
+          if (animation.value > 0.01 && animation.value < 0.85)
+            CustomPaint(
+              size: size,
+              painter: _RadialGlowPainter(
+                center: center,
+                radius: radius,
+                opacity: (1.0 - animation.value).clamp(0.0, 0.6),
+              ),
+            ),
+        ],
+      );
+    },
   );
 }

@@ -3,6 +3,7 @@
 // Built fresh for mobile UX — NOT adapted from any web screen.
 
 import 'package:flutter/material.dart';
+import 'package:beautycita/config/app_transitions.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -73,7 +74,7 @@ Future<void> showOutreachContactSheet(
   BuildContext context,
   Map<String, dynamic> salon,
 ) {
-  return showModalBottomSheet(
+  return showBurstBottomSheet(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,

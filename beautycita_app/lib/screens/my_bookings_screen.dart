@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:beautycita/config/app_transitions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -489,7 +490,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
       _ => Colors.grey,
     };
 
-    await showModalBottomSheet(
+    await showBurstBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
@@ -721,7 +722,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
       summary = 'La disputa fue resuelta.';
     }
 
-    showModalBottomSheet(
+    showBurstBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(

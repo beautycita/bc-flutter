@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:beautycita/config/app_transitions.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:beautycita_core/models.dart' hide Provider;
 import 'package:beautycita/config/constants.dart';
@@ -19,7 +20,7 @@ class ProductDetailSheet extends StatelessWidget {
     required FeedProductTag product,
     required String salonName,
   }) {
-    return showModalBottomSheet(
+    return showBurstBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,

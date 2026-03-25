@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:beautycita/config/app_transitions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -17,7 +18,7 @@ void showLeadDetailSheet(
   Map<String, dynamic> lead, {
   VoidCallback? onChanged,
 }) {
-  showModalBottomSheet(
+  showBurstBottomSheet(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
@@ -1053,7 +1054,7 @@ class _LeadDetailSheetState extends State<_LeadDetailSheet> {
     DateTime selectedDate = DateTime.now();
     bool saving = false;
 
-    await showDialog(
+    await showBurstDialog(
       context: context,
       builder: (dialogCtx) => StatefulBuilder(
         builder: (dialogCtx, setDialogState) {
@@ -1448,7 +1449,7 @@ class _LeadDetailSheetState extends State<_LeadDetailSheet> {
       return;
     }
 
-    showDialog(
+    showBurstDialog(
       context: context,
       builder: (ctx) => SimpleDialog(
         title: Text('Asignar RP',
