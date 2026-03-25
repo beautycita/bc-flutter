@@ -1512,7 +1512,7 @@ class _DiscoveredSalonDetailContentState
         ),
         const SizedBox(height: BCSpacing.sm),
         _HoverActionButton(
-          onPressed: _sendingInvite ? null : () {},
+          onPressed: null, // Actual handler on inner OutlinedButton
           child: SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(

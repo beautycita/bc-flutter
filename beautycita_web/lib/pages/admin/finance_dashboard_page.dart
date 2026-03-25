@@ -1,6 +1,10 @@
+import 'dart:convert';
+import 'dart:js_interop';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:web/web.dart' as web;
 
 import '../../config/breakpoints.dart';
 import '../../config/web_theme.dart';
@@ -1546,9 +1550,14 @@ void _downloadCsv(BuildContext context, String csvContent, String filename) {
 }
 
 void _triggerWebDownload(String content, String filename) {
-  // Use dart:js_interop for web download
-  // This creates a data URI and triggers download via JavaScript interop
-  // For production web downloads, use file_saver or universal_html package.
-  // Throwing to fall through to the clipboard/snackbar fallback.
-  throw UnimplementedError('Use file_saver package for production');
+  // Use dart:html for web download via blob URL
+  // ignore: avoid_web_libraries_in_flutter
+  final bytes = utf8.encode(content);
+  final blob = web.Blob([bytes.toJS].toJS, web.BlobPropertyBag(type: 'text/csv'));
+  final url = web.URL.createObjectURL(blob);
+  final anchor = web.document.createElement('a') as web.HTMLAnchorElement
+    ..href = url
+    ..download = filename;
+  anchor.click();
+  web.URL.revokeObjectURL(url);
 }
