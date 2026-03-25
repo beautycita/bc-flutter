@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:beautycita/config/app_transitions.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -389,7 +390,7 @@ class _PosContentView extends ConsumerWidget {
 
   void _showProductSheet(
       BuildContext context, WidgetRef ref, Product? product) {
-    showModalBottomSheet(
+    showBurstBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -403,7 +404,7 @@ class _PosContentView extends ConsumerWidget {
       ToastService.showInfo('Agrega productos primero');
       return;
     }
-    showModalBottomSheet(
+    showBurstBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,

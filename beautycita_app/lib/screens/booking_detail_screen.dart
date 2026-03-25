@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:beautycita/config/app_transitions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -237,7 +238,7 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
     final controller = TextEditingController(text: booking.notes ?? '');
     final colorScheme = Theme.of(context).colorScheme;
 
-    await showModalBottomSheet(
+    await showBurstBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:beautycita/config/app_transitions.dart';
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
@@ -853,7 +854,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   // ── Avatar options ──
 
   void _showAvatarOptions() {
-    showModalBottomSheet(
+    showBurstBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius:
@@ -981,7 +982,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Future<void> _processAIAvatar(Uint8List croppedBytes, String stylePrompt) async {
     if (!mounted) return;
     if (kDebugMode) debugPrint('[Avatar] Starting AI avatar creation — ${croppedBytes.length} bytes, style: $stylePrompt');
-    showDialog(
+    showBurstDialog(
       context: context,
       barrierDismissible: false,
       builder: (_) => const Center(
@@ -1066,7 +1067,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       text: ref.read(profileProvider).phone ?? '+52 ',
     );
 
-    showModalBottomSheet(
+    showBurstBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
@@ -1141,7 +1142,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     if (!context.mounted) return;
     final otpController = TextEditingController();
 
-    showModalBottomSheet(
+    showBurstBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
@@ -1235,7 +1236,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   void _showGenderSheet(BuildContext context) {
-    showModalBottomSheet(
+    showBurstBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),

@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:beautycita/config/app_transitions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -345,7 +346,7 @@ class _ToolViewState extends ConsumerState<_ToolView>
 
   void _showImageSourcePicker() {
     final primary = Theme.of(context).colorScheme.primary;
-    showModalBottomSheet(
+    showBurstBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
@@ -916,7 +917,7 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
 
   void _showSelfiePicker() {
     final primary = Theme.of(context).colorScheme.primary;
-    showModalBottomSheet(
+    showBurstBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),

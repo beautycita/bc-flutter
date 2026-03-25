@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:beautycita/config/app_transitions.dart';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -50,7 +51,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     if (!updater.apkUpdateAvailable || !mounted) return;
     _updateDialogShown = true;
 
-    showDialog(
+    showBurstDialog(
       context: context,
       barrierDismissible: !updater.apkUpdateRequired,
       builder: (ctx) => _ApkUpdateDialog(
@@ -438,7 +439,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   void _showSubcategorySheet(BuildContext context, ServiceCategory category) {
-    showModalBottomSheet(
+    showBurstBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,

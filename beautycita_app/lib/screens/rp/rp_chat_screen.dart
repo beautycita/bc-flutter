@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:beautycita/config/app_transitions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -362,7 +363,7 @@ class _RPChatScreenState extends ConsumerState<RPChatScreen> {
 
   void _showTemplates() {
     final channel = widget.channel;
-    showModalBottomSheet(
+    showBurstBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
@@ -476,7 +477,7 @@ class _RPChatScreenState extends ConsumerState<RPChatScreen> {
       'Registrada'
     ];
 
-    showDialog(
+    showBurstDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(

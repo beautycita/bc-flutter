@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:beautycita/config/app_transitions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:beautycita/config/constants.dart';
@@ -335,7 +336,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen>
 
   void _showEmailSheet(BuildContext context) {
     final controller = TextEditingController();
-    showModalBottomSheet(
+    showBurstBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
@@ -404,7 +405,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen>
     final confirmController = TextEditingController();
     bool obscure = true;
 
-    showModalBottomSheet(
+    showBurstBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(

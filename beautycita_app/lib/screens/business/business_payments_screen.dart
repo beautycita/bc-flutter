@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:beautycita/config/app_transitions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -215,7 +216,7 @@ class _BusinessPaymentsScreenState
     final bizId = biz['id'] as String;
     final navigator = Navigator.of(context, rootNavigator: true);
 
-    showDialog(
+    showBurstDialog(
       context: context,
       barrierDismissible: false,
       builder: (_) => const PopScope(

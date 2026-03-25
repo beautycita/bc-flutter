@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:beautycita/config/app_transitions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -498,7 +499,7 @@ class _RPCentroScreenState extends ConsumerState<RPCentroScreen> {
   // ── Checklist Sheet ──
 
   void _showChecklist() {
-    showModalBottomSheet(
+    showBurstBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
@@ -514,7 +515,7 @@ class _RPCentroScreenState extends ConsumerState<RPCentroScreen> {
     TimeOfDay? selectedTime;
     final noteCtrl = TextEditingController();
 
-    showDialog(
+    showBurstDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
@@ -634,7 +635,7 @@ class _RPCentroScreenState extends ConsumerState<RPCentroScreen> {
       'Otro'
     ];
 
-    showDialog(
+    showBurstDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(

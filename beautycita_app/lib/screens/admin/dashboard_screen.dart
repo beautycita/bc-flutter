@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:beautycita/config/app_transitions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/constants.dart';
@@ -238,7 +239,7 @@ class DashboardScreen extends ConsumerWidget {
   void _showFullActivity(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).colorScheme;
 
-    showModalBottomSheet(
+    showBurstBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -449,7 +450,7 @@ class _FullActivityTile extends StatelessWidget {
         title = 'Detalle de Usuario';
     }
 
-    showModalBottomSheet(
+    showBurstBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (ctx) => Container(

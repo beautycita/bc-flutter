@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:beautycita/config/app_transitions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -404,7 +405,7 @@ class ProviderDetailScreen extends ConsumerWidget {
   Future<void> _openSalonChat(
       BuildContext context, WidgetRef ref, models.Provider provider) async {
     // Show loading
-    showDialog(
+    showBurstDialog(
       context: context,
       barrierDismissible: false,
       builder: (_) => const Center(child: CircularProgressIndicator()),

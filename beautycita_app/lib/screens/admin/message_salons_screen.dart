@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:beautycita/config/app_transitions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -270,7 +271,7 @@ class _MessageSalonsScreenState extends ConsumerState<MessageSalonsScreen> {
 
     _messageController.text = template;
 
-    showDialog(
+    showBurstDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text('Mensaje a $name', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600)),
@@ -363,7 +364,7 @@ class _MessageSalonsScreenState extends ConsumerState<MessageSalonsScreen> {
     final imageUrl = salon['feature_image_url'] as String?;
     bool saving = false;
 
-    showDialog(
+    showBurstDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => Dialog(
@@ -604,7 +605,7 @@ class _MessageSalonsScreenState extends ConsumerState<MessageSalonsScreen> {
     final salonId = salon['id'] as String;
     final name = salon['business_name'] ?? 'Salon';
 
-    showModalBottomSheet(
+    showBurstBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(

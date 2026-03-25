@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'package:beautycita/config/app_transitions.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -358,7 +359,7 @@ class _BusinessCalendarScreenState
     }
     allStaff.addAll(staffList);
 
-    showModalBottomSheet(
+    showBurstBottomSheet(
       context: context,
       isScrollControlled: true,
       builder: (ctx) => _BlockTimeSheet(
@@ -373,7 +374,7 @@ class _BusinessCalendarScreenState
     final time = initialTime ??
         DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day,
             DateTime.now().hour);
-    showModalBottomSheet(
+    showBurstBottomSheet(
       context: context,
       isScrollControlled: true,
       builder: (ctx) => _WalkinSheet(
@@ -386,7 +387,7 @@ class _BusinessCalendarScreenState
 
 
   void _showEditSheet(BuildContext context, Map<String, dynamic> appt) {
-    showModalBottomSheet(
+    showBurstBottomSheet(
       context: context,
       isScrollControlled: true,
       builder: (ctx) => _EditApptSheet(
@@ -397,7 +398,7 @@ class _BusinessCalendarScreenState
   }
 
   void _showNotesSheet(BuildContext context, Map<String, dynamic> appt) {
-    showModalBottomSheet(
+    showBurstBottomSheet(
       context: context,
       isScrollControlled: true,
       builder: (ctx) => _NotesSheet(
@@ -409,7 +410,7 @@ class _BusinessCalendarScreenState
 
   void _showRescheduleSheet(
       BuildContext context, Map<String, dynamic> appt) {
-    showModalBottomSheet(
+    showBurstBottomSheet(
       context: context,
       isScrollControlled: true,
       builder: (ctx) => _RescheduleSheet(
@@ -423,7 +424,7 @@ class _BusinessCalendarScreenState
     final deposit = (appt['deposit_amount'] as num?)?.toDouble() ?? 0;
     final price = (appt['price'] as num?)?.toDouble() ?? 0;
 
-    showModalBottomSheet(
+    showBurstBottomSheet(
       context: context,
       builder: (ctx) {
         final colors = Theme.of(ctx).colorScheme;
@@ -1615,7 +1616,7 @@ class _StaffLane extends StatelessWidget {
     final blockId = block['id'] as String?;
     final colors = Theme.of(context).colorScheme;
 
-    showModalBottomSheet(
+    showBurstBottomSheet(
       context: context,
       builder: (ctx) => Padding(
         padding: const EdgeInsets.all(20),
@@ -1841,7 +1842,7 @@ void _showApptActionSheet(
       DateTime.tryParse(appointment['starts_at'] as String? ?? '')?.toLocal();
   final notes = appointment['notes'] as String?;
 
-  showModalBottomSheet(
+  showBurstBottomSheet(
     context: context,
     builder: (ctx) {
       final colors = Theme.of(ctx).colorScheme;

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:beautycita/config/app_transitions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -228,7 +229,7 @@ class _ApplicationCard extends ConsumerWidget {
         .where((s) => s != null && s.isNotEmpty)
         .join(', ');
 
-    showDialog(
+    showBurstDialog(
       context: context,
       builder: (ctx) => Dialog(
         shape: RoundedRectangleBorder(

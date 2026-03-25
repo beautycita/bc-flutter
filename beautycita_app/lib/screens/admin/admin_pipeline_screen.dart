@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:beautycita/config/app_transitions.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -268,7 +269,7 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
   }
 
   void _showPinDropDialog() {
-    showDialog(
+    showBurstDialog(
       context: context,
       builder: (ctx) => _PinDropDialog(
         initialLat: _pinLat,
@@ -292,7 +293,7 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
         ToastService.showInfo('No hay usuarios RP registrados');
         return;
       }
-      showDialog(
+      showBurstDialog(
         context: context,
         builder: (ctx) => _RpPickerDialog(
           rpUsers: rpUsers,
@@ -365,7 +366,7 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
   }
 
   void _showExportSheet(List<Map<String, dynamic>> leads) {
-    showModalBottomSheet(
+    showBurstBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
@@ -380,7 +381,7 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
     final theme = Theme.of(context);
     String? picked;
 
-    showDialog(
+    showBurstDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(

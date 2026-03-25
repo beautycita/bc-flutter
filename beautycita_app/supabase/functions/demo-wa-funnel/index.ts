@@ -220,24 +220,18 @@ Deno.serve(async (req) => {
         return json({ error: "Internal error" }, 500);
       }
 
-      // Send WA
+      // Send WA in background — return immediately so we don't hit wall clock
       const message =
         `*BeautyCita Demo*\n\n` +
         `Tu codigo de verificacion: *${code}*\n\n` +
         `Ingresalo en beautycita.com para explorar todas las herramientas de tu nuevo salon management system — gratis, sin compromiso.`;
 
-      const sent = await sendWA(phone, message);
-      if (!sent) {
-        return json(
-          {
-            error:
-              "No se pudo enviar el codigo por WhatsApp. Verifica que tu numero tenga WhatsApp activo.",
-          },
-          500
-        );
-      }
+      // Fire and forget — don't await
+      sendWA(phone, message).then((ok) => {
+        if (ok) console.log(`[demo-wa] Code sent to ${phone.slice(0, 6)}***`);
+        else console.error(`[demo-wa] WA send failed for ${phone.slice(0, 6)}***`);
+      }).catch(() => {});
 
-      console.log(`[demo-wa] Code sent to ${phone.slice(0, 6)}***`);
       return json({ sent: true });
     }
 

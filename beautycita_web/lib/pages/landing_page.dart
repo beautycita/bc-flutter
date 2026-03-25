@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../config/breakpoints.dart';
@@ -1108,14 +1109,20 @@ class _LandingPageState extends State<LandingPage>
             ),
             const SizedBox(width: 12),
             _HoverScaleButton(
-              onTap: _onSendDemoCode,
+              onTap: _sendingCode || _codeSent ? null : _onSendDemoCode,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                 decoration: BoxDecoration(
-                  gradient: _brandGradient,
+                  gradient: _codeSent ? null : _brandGradient,
+                  color: _codeSent ? _checkGreen : null,
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: const Text('Enviar codigo', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16)),
+                child: _sendingCode
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : Text(
+                        _codeSent ? 'Codigo enviado ✓' : 'Enviar codigo',
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16),
+                      ),
               ),
             ),
           ],
@@ -1345,14 +1352,45 @@ class _LandingPageState extends State<LandingPage>
     );
   }
 
-  void _onSendDemoCode() {
+  bool _sendingCode = false;
+  bool _codeSent = false;
+
+  Future<void> _onSendDemoCode() async {
     final raw = _phoneController.text.replaceAll(RegExp(r'\D'), '');
-    if (raw.length < 12) {
+    if (raw.length < 10) {
       setState(() => _phoneError = 'Ingresa un numero de 10 digitos valido');
       return;
     }
-    setState(() => _phoneError = null);
-    // TODO: integrate with demo-wa-funnel edge function
+    setState(() {
+      _phoneError = null;
+      _sendingCode = true;
+    });
+
+    try {
+      final phone = raw.startsWith('52') ? raw : '52$raw';
+      final response = await Supabase.instance.client.functions.invoke(
+        'demo-wa-funnel',
+        body: {'action': 'send_code', 'phone': phone},
+      );
+      final data = response.data as Map<String, dynamic>?;
+      if (data?['sent'] == true) {
+        setState(() {
+          _codeSent = true;
+          _sendingCode = false;
+          _phoneError = null;
+        });
+      } else {
+        setState(() {
+          _sendingCode = false;
+          _phoneError = data?['error'] as String? ?? 'Error al enviar. Intenta de nuevo.';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _sendingCode = false;
+        _phoneError = 'Error de conexion. Intenta de nuevo.';
+      });
+    }
   }
 
   // ── For Clients ────────────────────────────────────────────────────────────

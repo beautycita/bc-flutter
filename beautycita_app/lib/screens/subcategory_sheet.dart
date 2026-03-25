@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:beautycita/config/app_transitions.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -203,7 +204,7 @@ class _SubcategoryPillState extends State<_SubcategoryPill> {
   }
 
   void _showItemsSheet(BuildContext context) {
-    showModalBottomSheet(
+    showBurstBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
