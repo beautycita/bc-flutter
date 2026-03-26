@@ -435,3 +435,102 @@ Widget bcDiagonalSlashTransition(
   Animation<double> secondaryAnimation,
   Widget child,
 ) => bcSweepStaggerTransition(context, animation, secondaryAnimation, child);
+
+// ═══════════════════════════════════════════════════════════════════════════
+// BcStaggeredList — drop-in ListView replacement with route-driven stagger
+// ═══════════════════════════════════════════════════════════════════════════
+
+class BcStaggeredList extends StatelessWidget {
+  final List<Widget> children;
+  final ScrollPhysics? physics;
+  final EdgeInsetsGeometry? padding;
+  final bool shrinkWrap;
+
+  const BcStaggeredList({
+    super.key,
+    required this.children,
+    this.physics,
+    this.padding,
+    this.shrinkWrap = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final route = ModalRoute.of(context);
+    final animation = route?.animation;
+
+    // No route animation (dialog, test, or already complete) → render immediately
+    if (animation == null || animation.isCompleted) {
+      return ListView(
+        physics: physics,
+        padding: padding,
+        shrinkWrap: shrinkWrap,
+        children: children,
+      );
+    }
+
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, _) {
+        if (animation.isCompleted) {
+          return ListView(
+            physics: physics,
+            padding: padding,
+            shrinkWrap: shrinkWrap,
+            children: children,
+          );
+        }
+
+        return ListView(
+          physics: physics,
+          padding: padding,
+          shrinkWrap: shrinkWrap,
+          children: [
+            for (int i = 0; i < children.length; i++)
+              _BcStaggerItem(
+                animation: animation,
+                index: i,
+                child: children[i],
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _BcStaggerItem extends StatelessWidget {
+  final Animation<double> animation;
+  final int index;
+  final Widget child;
+
+  const _BcStaggerItem({
+    required this.animation,
+    required this.index,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // Stagger: each item starts 5% later, capped at 8 slots
+    final slot = index.clamp(0, 7);
+    final start = 0.45 + slot * 0.05;
+    final end = (start + 0.20).clamp(0.0, 1.0);
+
+    final itemAnimation = CurvedAnimation(
+      parent: animation,
+      curve: Interval(start, end, curve: Curves.easeOutCubic),
+    );
+
+    return FadeTransition(
+      opacity: itemAnimation,
+      child: SlideTransition(
+        position: Tween<Offset>(
+          begin: const Offset(0, 0.08),
+          end: Offset.zero,
+        ).animate(itemAnimation),
+        child: child,
+      ),
+    );
+  }
+}
