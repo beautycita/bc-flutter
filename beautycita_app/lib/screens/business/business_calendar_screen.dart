@@ -337,6 +337,9 @@ class _BusinessCalendarScreenState
           .update({'status': action}).eq('id', id);
       _refresh();
       ToastService.showSuccess('Cita actualizada');
+      if (action == 'cancelled_business' && mounted) {
+        await showShredderTransition(context);
+      }
     } catch (e, stack) {
       ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
     }

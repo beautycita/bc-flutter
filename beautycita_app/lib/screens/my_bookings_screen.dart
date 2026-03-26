@@ -309,6 +309,9 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
         ref.invalidate(upcomingBookingsProvider);
 
         ToastService.showSuccess(AppConstants.successBookingCancelled);
+        if (mounted) {
+          await showShredderTransition(context);
+        }
       } catch (e, stack) {
         ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
       }

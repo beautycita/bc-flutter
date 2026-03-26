@@ -4,11 +4,31 @@ import 'package:flutter/material.dart';
 // ============================================================================
 // Web Page Transitions — Double Radial Burst
 //
-// Phase 1: Black circle expands from random focal point → covers screen
+// Phase 1: Black circle expands from tap point → covers screen
 // Phase 2: From same point, new page circle expands → eats the black
+// Both push and pop always expand (never contracts).
 // ============================================================================
 
-final math.Random _focalRng = math.Random();
+/// Global tap position tracker. Wrap your app root in this widget.
+Offset _lastTapPosition = const Offset(0, 0);
+bool _hasTapPosition = false;
+
+class BcWebTapTracker extends StatelessWidget {
+  final Widget child;
+  const BcWebTapTracker({super.key, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Listener(
+      onPointerDown: (event) {
+        _lastTapPosition = event.position;
+        _hasTapPosition = true;
+      },
+      behavior: HitTestBehavior.translucent,
+      child: child,
+    );
+  }
+}
 
 class _CircleClipper extends CustomClipper<Path> {
   final Offset center;
@@ -33,26 +53,27 @@ Widget _doubleRadialBurst(
   final size = MediaQuery.of(context).size;
   final maxRadius = math.sqrt(size.width * size.width + size.height * size.height);
 
-  final rng = math.Random(animation.hashCode);
-  final focal = Offset(
-    size.width * (0.15 + rng.nextDouble() * 0.7),
-    size.height * (0.15 + rng.nextDouble() * 0.7),
-  );
+  final focal = _hasTapPosition
+      ? _lastTapPosition
+      : Offset(size.width / 2, size.height / 2);
 
-  final blackRadius = CurvedAnimation(
-    parent: animation,
-    curve: const Interval(0.0, 0.65, curve: Curves.easeOutCubic),
-  );
-  final revealRadius = CurvedAnimation(
-    parent: animation,
-    curve: const Interval(0.35, 1.0, curve: Curves.easeOutCubic),
-  );
+  final isReverse = animation.status == AnimationStatus.reverse;
 
   return AnimatedBuilder(
     animation: animation,
     builder: (context, _) {
-      final blackR = blackRadius.value * maxRadius;
-      final revealR = revealRadius.value * maxRadius;
+      final rawT = animation.value;
+      final t = isReverse ? 1.0 - rawT : rawT;
+
+      final blackT = Curves.easeOutCubic.transform(
+        (t / 0.65).clamp(0.0, 1.0),
+      );
+      final revealT = Curves.easeOutCubic.transform(
+        ((t - 0.35) / 0.65).clamp(0.0, 1.0),
+      );
+
+      final blackR = blackT * maxRadius;
+      final revealR = revealT * maxRadius;
 
       return Stack(
         children: [
