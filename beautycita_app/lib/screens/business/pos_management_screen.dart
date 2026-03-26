@@ -383,6 +383,7 @@ class _PosContentView extends ConsumerWidget {
       await service.deleteProduct(product.id);
       ref.invalidate(businessProductsProvider);
       ToastService.showSuccess('Producto eliminado');
+      if (context.mounted) await showShredderTransition(context);
     } catch (e, st) {
       ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, st);
     }

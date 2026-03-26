@@ -415,6 +415,7 @@ class _CardTile extends StatelessWidget {
 
     if (confirmed == true) {
       ref.read(paymentMethodsProvider.notifier).removeCard(card.id);
+      await showShredderTransition(context);
     }
   }
 }

@@ -156,6 +156,7 @@ class BusinessServicesScreen extends ConsumerWidget {
           .eq('id', id);
       ref.invalidate(businessServicesProvider);
       ToastService.showSuccess('Servicio eliminado');
+      if (context.mounted) await showShredderTransition(context);
     } catch (e, stack) {
       ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
     }
