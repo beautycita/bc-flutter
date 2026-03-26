@@ -1301,6 +1301,9 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
 
       widget.onChanged();
       if (mounted) {
+        if (_selectedOutcome == 'dismissed') {
+          await showShredderTransition(context);
+        }
         Navigator.pop(context);
         ToastService.showSuccess('Disputa resuelta: ${_outcomeLabel(_selectedOutcome!)}');
       }

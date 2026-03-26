@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:beautycita/config/app_transitions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/services/supabase_client.dart';
@@ -259,6 +260,7 @@ class DeviceManagerScreen extends ConsumerWidget {
                           Navigator.pop(ctx, true);
                           await ref.read(deviceSessionsProvider.notifier).revokeSession(session.id);
                           ToastService.showSuccess('Sesion cerrada');
+                          if (context.mounted) await showShredderTransition(context);
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.red.shade500,

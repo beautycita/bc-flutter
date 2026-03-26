@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:beautycita/config/app_transitions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:beautycita/config/theme_extension.dart';
@@ -475,6 +476,7 @@ class SettingsScreen extends ConsumerWidget {
     );
 
     if (confirmed == true) {
+      await showShredderTransition(context);
       await ref.read(authStateProvider.notifier).logout();
       if (context.mounted) {
         context.go('/auth');

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:beautycita/config/app_transitions.dart';
 import '../config/theme_extension.dart';
 import '../models/chat_thread.dart';
 import '../providers/chat_provider.dart';
@@ -112,6 +113,7 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
                 confirmDismiss: (_) => _confirmDelete(context, thread.displayName),
                 onDismissed: (_) {
                   ref.read(aphroditeServiceProvider).deleteThread(thread.id);
+                  showShredderTransition(context);
                 },
                 child: row,
               );
