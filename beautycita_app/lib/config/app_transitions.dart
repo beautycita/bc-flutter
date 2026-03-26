@@ -6,23 +6,18 @@ import 'package:go_router/go_router.dart';
 // BeautyCita Custom Transitions
 //
 // Three transitions used throughout the app:
-// 1. Sweep + Card Stagger — main navigation (settings → sub-page)
-// 2. Radial Gradient Burst — opening detail views, modals
-// 3. Diagonal Slash — tab switches, category changes
+// 1. Sweep + Card Stagger — main navigation forward push
+// 2. Radial Gradient Burst — detail views, dialogs, bottom sheets
+// 3. Diagonal Gradient Fade — back navigation (pop)
 // ═══════════════════════════════════════════════════════════════════════════
 
 const _brandPink = Color(0xFFEC4899);
 const _brandPurple = Color(0xFF9333EA);
 const _brandBlue = Color(0xFF3B82F6);
-const _brandGradient = LinearGradient(
-  begin: Alignment.topCenter,
-  end: Alignment.bottomCenter,
-  colors: [_brandPink, _brandPurple, _brandBlue],
-);
 
 // ── 1. SWEEP + CARD STAGGER ────────────────────────────────────────────────
-// Gradient line sweeps left→right revealing new page.
-// After sweep completes (~60% of animation), content fades+slides up.
+// A gradient band sweeps left→right with a soft feathered edge.
+// Behind it, content slides up in a staggered cascade.
 
 Widget bcSweepStaggerTransition(
   BuildContext context,
@@ -30,80 +25,77 @@ Widget bcSweepStaggerTransition(
   Animation<double> secondaryAnimation,
   Widget child,
 ) {
-  // Sweep occupies 0.0-0.6, content stagger occupies 0.4-1.0 (overlaps)
-  final sweepProgress = CurvedAnimation(
+  final screenW = MediaQuery.of(context).size.width;
+
+  // The sweep band position: -bandWidth → screenW + bandWidth
+  const bandWidth = 80.0;
+  final sweepX = Tween<double>(
+    begin: -bandWidth,
+    end: screenW + bandWidth,
+  ).animate(CurvedAnimation(
     parent: animation,
-    curve: const Interval(0.0, 0.6, curve: Curves.easeInOut),
-  );
-  final contentFade = CurvedAnimation(
+    curve: const Interval(0.0, 0.65, curve: Curves.easeInOut),
+  ));
+
+  // Content appears with a slight upward slide + fade, delayed after sweep starts
+  final contentOpacity = CurvedAnimation(
     parent: animation,
-    curve: const Interval(0.35, 0.85, curve: Curves.easeOut),
+    curve: const Interval(0.25, 0.80, curve: Curves.easeOut),
   );
   final contentSlide = Tween<Offset>(
-    begin: const Offset(0, 0.03),
+    begin: const Offset(0, 0.04),
     end: Offset.zero,
   ).animate(CurvedAnimation(
     parent: animation,
-    curve: const Interval(0.35, 0.85, curve: Curves.easeOut),
+    curve: const Interval(0.25, 0.85, curve: Curves.easeOutCubic),
   ));
 
-  return Stack(
-    children: [
-      // New page clips in behind the sweep line
-      ClipRect(
-        clipper: _HorizontalClipClipper(sweepProgress.value),
-        child: FadeTransition(
-          opacity: contentFade,
-          child: SlideTransition(
-            position: contentSlide,
-            child: child,
-          ),
-        ),
-      ),
-      // The gradient sweep line
-      if (sweepProgress.value > 0.01 && sweepProgress.value < 0.99)
-        Positioned(
-          left: MediaQuery.of(context).size.width * sweepProgress.value - 3,
-          top: 0,
-          bottom: 0,
-          child: Container(
-            width: 5,
-            decoration: BoxDecoration(
-              gradient: _brandGradient,
-              boxShadow: [
-                BoxShadow(
-                  color: _brandPurple.withValues(alpha: 0.6),
-                  blurRadius: 20,
-                  spreadRadius: 1,
-                ),
-                BoxShadow(
-                  color: _brandPink.withValues(alpha: 0.3),
-                  blurRadius: 8,
-                ),
-              ],
+  return AnimatedBuilder(
+    animation: animation,
+    builder: (context, _) {
+      return Stack(
+        children: [
+          // Content behind the sweep — fades in with slide
+          FadeTransition(
+            opacity: contentOpacity,
+            child: SlideTransition(
+              position: contentSlide,
+              child: child,
             ),
           ),
-        ),
-    ],
+          // The gradient sweep band
+          if (animation.value > 0.01 && animation.value < 0.90)
+            Positioned(
+              left: sweepX.value,
+              top: 0,
+              bottom: 0,
+              child: Container(
+                width: bandWidth,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                    colors: [
+                      Colors.transparent,
+                      _brandPink.withValues(alpha: 0.15),
+                      _brandPink.withValues(alpha: 0.5),
+                      _brandPurple.withValues(alpha: 0.8),
+                      _brandBlue.withValues(alpha: 0.5),
+                      _brandBlue.withValues(alpha: 0.15),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
+      );
+    },
   );
 }
 
-class _HorizontalClipClipper extends CustomClipper<Rect> {
-  final double progress;
-  _HorizontalClipClipper(this.progress);
-
-  @override
-  Rect getClip(Size size) =>
-      Rect.fromLTRB(0, 0, size.width * progress.clamp(0.0, 1.0), size.height);
-
-  @override
-  bool shouldReclip(covariant _HorizontalClipClipper old) =>
-      old.progress != progress;
-}
-
 // ── 2. RADIAL GRADIENT BURST ───────────────────────────────────────────────
-// Circular clip expands from center (or tap point). Glow on the edge.
-// Used for: detail views, modals, expanding cards.
+// Circular clip expands from center. Gradient glow on the edge.
 
 Widget bcRadialBurstTransition(
   BuildContext context,
@@ -122,12 +114,10 @@ Widget bcRadialBurstTransition(
 
   return Stack(
     children: [
-      // Clip the new page in a circle
       ClipPath(
         clipper: _CircleClipper(center: center, radius: radius),
         child: child,
       ),
-      // Gradient glow ring on the expanding edge
       if (animation.value > 0.01 && animation.value < 0.85)
         CustomPaint(
           size: size,
@@ -185,9 +175,9 @@ class _RadialGlowPainter extends CustomPainter {
       old.radius != radius || old.opacity != opacity;
 }
 
-// ── 3. DIAGONAL SLASH ──────────────────────────────────────────────────────
-// Angled gradient line cuts diagonally across, revealing new content.
-// Used for: tab switches, category transitions, filter changes.
+// ── 3. DIAGONAL GRADIENT FADE ──────────────────────────────────────────────
+// Angled gradient band sweeps diagonally. New content fades in behind it
+// with a soft edge — no hard clip.
 
 Widget bcDiagonalSlashTransition(
   BuildContext context,
@@ -200,77 +190,94 @@ Widget bcDiagonalSlashTransition(
     curve: Curves.easeInOutCubic,
   ).value;
 
-  return Stack(
-    children: [
-      // New page clips in with diagonal edge
-      ClipPath(
-        clipper: _DiagonalClipper(progress),
-        child: child,
-      ),
-      // The gradient slash line
-      if (progress > 0.02 && progress < 0.98)
-        CustomPaint(
-          size: MediaQuery.of(context).size,
-          painter: _DiagonalSlashPainter(progress: progress),
-        ),
-    ],
+  final contentOpacity = CurvedAnimation(
+    parent: animation,
+    curve: const Interval(0.15, 0.75, curve: Curves.easeOut),
+  );
+
+  return AnimatedBuilder(
+    animation: animation,
+    builder: (context, _) {
+      return Stack(
+        children: [
+          // Content fades in (no hard clip — soft reveal)
+          FadeTransition(
+            opacity: contentOpacity,
+            child: child,
+          ),
+          // Diagonal gradient band sweeping across
+          if (progress > 0.02 && progress < 0.95)
+            CustomPaint(
+              size: MediaQuery.of(context).size,
+              painter: _DiagonalGradientBandPainter(progress: progress),
+            ),
+        ],
+      );
+    },
   );
 }
 
-class _DiagonalClipper extends CustomClipper<Path> {
+class _DiagonalGradientBandPainter extends CustomPainter {
   final double progress;
-  _DiagonalClipper(this.progress);
-
-  @override
-  Path getClip(Size size) {
-    // Diagonal from top-right to bottom-left, sweeping left-to-right
-    final offset = size.width * progress * 1.4; // 1.4 to account for angle
-    return Path()
-      ..moveTo(offset - size.height * 0.15, 0)
-      ..lineTo(offset + size.width * 0.1, 0)
-      ..lineTo(size.width, 0)
-      ..lineTo(size.width, size.height)
-      ..lineTo(offset - size.height * 0.15 - size.width * 0.1, size.height)
-      ..lineTo(offset - size.height * 0.15, 0)
-      ..close();
-  }
-
-  @override
-  bool shouldReclip(covariant _DiagonalClipper old) => old.progress != progress;
-}
-
-class _DiagonalSlashPainter extends CustomPainter {
-  final double progress;
-  _DiagonalSlashPainter({required this.progress});
+  _DiagonalGradientBandPainter({required this.progress});
 
   @override
   void paint(Canvas canvas, Size size) {
-    final offset = size.width * progress * 1.4;
+    const bandWidth = 100.0;
+    // The band sweeps from top-right to bottom-left
+    // Progress 0 → band at top-right corner, progress 1 → band past bottom-left
+    final totalTravel = size.width + size.height + bandWidth * 2;
+    final offset = -bandWidth + totalTravel * progress;
+
+    // The band runs perpendicular to the diagonal (top-right → bottom-left)
+    // Angle: ~135° from horizontal
+    const angle = -math.pi / 4; // 45° diagonal
+
+    canvas.save();
+
+    // Rotate canvas 45° and draw a vertical gradient band
+    canvas.translate(size.width / 2, size.height / 2);
+    canvas.rotate(angle);
+
+    final bandRect = Rect.fromCenter(
+      center: Offset(offset - totalTravel / 2, 0),
+      width: bandWidth,
+      height: size.width + size.height, // long enough to cover rotated canvas
+    );
+
+    // Opacity peaks in the middle of the animation
+    final bandOpacity = (math.sin(progress * math.pi)).clamp(0.0, 1.0) * 0.7;
+
     final paint = Paint()
-      ..strokeWidth = 4
-      ..shader = const LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [_brandPink, _brandPurple, _brandBlue],
-      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height))
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
+      ..shader = LinearGradient(
+        begin: Alignment.centerLeft,
+        end: Alignment.centerRight,
+        colors: [
+          Colors.transparent,
+          _brandPink.withValues(alpha: bandOpacity * 0.3),
+          _brandPink.withValues(alpha: bandOpacity),
+          _brandPurple.withValues(alpha: bandOpacity),
+          _brandBlue.withValues(alpha: bandOpacity),
+          _brandBlue.withValues(alpha: bandOpacity * 0.3),
+          Colors.transparent,
+        ],
+      ).createShader(bandRect)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
 
-    final path = Path()
-      ..moveTo(offset - size.height * 0.15, 0)
-      ..lineTo(offset - size.height * 0.15 - size.width * 0.1, size.height);
-
-    canvas.drawPath(path, paint);
+    canvas.drawRect(bandRect, paint);
+    canvas.restore();
   }
 
   @override
-  bool shouldRepaint(covariant _DiagonalSlashPainter old) => old.progress != progress;
+  bool shouldRepaint(covariant _DiagonalGradientBandPainter old) =>
+      old.progress != progress;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Page Builders for GoRouter
 // ═══════════════════════════════════════════════════════════════════════════
 
-/// Main navigation: sweep + stagger on push, diagonal slash on pop
+/// Main navigation: sweep + stagger on push, diagonal gradient fade on pop
 CustomTransitionPage<T> bcSweepPage<T>({
   required LocalKey key,
   required Widget child,
@@ -281,7 +288,6 @@ CustomTransitionPage<T> bcSweepPage<T>({
     transitionDuration: const Duration(milliseconds: 550),
     reverseTransitionDuration: const Duration(milliseconds: 400),
     transitionsBuilder: (context, animation, secondaryAnimation, child) {
-      // animation runs forward (0→1) on push, reverse (1→0) on pop
       if (animation.status == AnimationStatus.reverse) {
         return bcDiagonalSlashTransition(
             context, animation, secondaryAnimation, child);
@@ -306,7 +312,7 @@ CustomTransitionPage<T> bcBurstPage<T>({
   );
 }
 
-/// Tab/category switches: diagonal slash
+/// Tab/category switches: diagonal gradient fade
 CustomTransitionPage<T> bcSlashPage<T>({
   required LocalKey key,
   required Widget child,
@@ -384,7 +390,6 @@ Future<T?> showBurstDialog<T>({
 }
 
 /// Shows a modal bottom sheet with a radial burst animation.
-/// Uses showGeneralDialog with bottom-aligned content for full animation control.
 Future<T?> showBurstBottomSheet<T>({
   required BuildContext context,
   required WidgetBuilder builder,
@@ -402,7 +407,6 @@ Future<T?> showBurstBottomSheet<T>({
   final size = MediaQuery.of(context).size;
   final maxRadius =
       math.sqrt(size.width * size.width + size.height * size.height);
-  // Burst origin: bottom-center of screen
   final center = Offset(size.width / 2, size.height);
 
   return showGeneralDialog<T>(
