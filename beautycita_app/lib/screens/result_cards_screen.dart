@@ -116,6 +116,32 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
     super.dispose();
   }
 
+  Widget _staggerChild(int index, Widget child) {
+    final route = ModalRoute.of(context);
+    final anim = route?.animation;
+    if (anim == null || anim.isCompleted) return child;
+
+    final slot = index.clamp(0, 7);
+    final start = 0.45 + slot * 0.05;
+    final end = (start + 0.20).clamp(0.0, 1.0);
+
+    final curved = CurvedAnimation(
+      parent: anim,
+      curve: Interval(start, end, curve: Curves.easeOutCubic),
+    );
+
+    return FadeTransition(
+      opacity: curved,
+      child: SlideTransition(
+        position: Tween<Offset>(
+          begin: const Offset(0, 0.08),
+          end: Offset.zero,
+        ).animate(curved),
+        child: child,
+      ),
+    );
+  }
+
   /// Drag progress as fraction of card width (0-1+)
   double _dragProgress(double cardWidth) {
     return cardWidth > 0 ? (_dragOffset.dx.abs() / cardWidth).clamp(0.0, 1.5) : 0.0;
@@ -264,15 +290,14 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
       ),
       body: Column(
         children: [
-          const Padding(
+          _staggerChild(0, const Padding(
             padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
             child: CinematicQuestionText(
               text: 'Elige tu mejor opcion',
               fontSize: 24,
             ),
-          ),
-          // Position indicator
-          Padding(
+          )),
+          _staggerChild(1, Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: Text(
               '${_currentIndex + 1}/$_totalCards',
@@ -282,9 +307,9 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
                 color: palette.onSurface.withValues(alpha: 0.5),
               ),
             ),
-          ),
+          )),
           Expanded(
-            child: _buildCardStack(results, _currentIndex),
+            child: _staggerChild(2, _buildCardStack(results, _currentIndex)),
           ),
         ],
       ),

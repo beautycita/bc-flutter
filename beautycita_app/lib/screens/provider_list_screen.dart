@@ -81,29 +81,28 @@ class ProviderListScreen extends ConsumerWidget {
             );
           }
 
-          return ListView.builder(
+          return BcStaggeredList(
             physics: const BouncingScrollPhysics(),
             padding: const EdgeInsets.symmetric(
               horizontal: AppConstants.screenPaddingHorizontal,
               vertical: AppConstants.screenPaddingVertical,
             ),
-            itemCount: providers.length,
-            itemBuilder: (context, index) {
-              final provider = providers[index];
-              return Padding(
-                padding: EdgeInsets.only(
-                  bottom: index < providers.length - 1
-                      ? AppConstants.cardSpacing
-                      : 0,
+            children: [
+              for (int i = 0; i < providers.length; i++)
+                Padding(
+                  padding: EdgeInsets.only(
+                    bottom: i < providers.length - 1
+                        ? AppConstants.cardSpacing
+                        : 0,
+                  ),
+                  child: _ProviderCard(
+                    provider: providers[i],
+                    categoryColor: effectiveColor,
+                    category: category,
+                    onTap: () => context.push('/provider/${providers[i].id}'),
+                  ),
                 ),
-                child: _ProviderCard(
-                  provider: provider,
-                  categoryColor: effectiveColor,
-                  category: category,
-                  onTap: () => context.push('/provider/${provider.id}'),
-                ),
-              );
-            },
+            ],
           );
         },
       ),
