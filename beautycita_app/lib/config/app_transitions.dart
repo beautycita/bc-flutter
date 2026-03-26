@@ -5,19 +5,18 @@ import 'package:go_router/go_router.dart';
 // ═══════════════════════════════════════════════════════════════════════════
 // BeautyCita Custom Transitions
 //
-// Three transitions used throughout the app:
-// 1. Sweep + Card Stagger — main navigation forward push
-// 2. Radial Gradient Burst — detail views, dialogs, bottom sheets
-// 3. Diagonal Gradient Fade — back navigation (pop)
+// Two transitions:
+// 1. Soft Gradient Band — primary (all page navigation, push & pop)
+// 2. Radial Gradient Burst — dialogs & bottom sheets
 // ═══════════════════════════════════════════════════════════════════════════
 
 const _brandPink = Color(0xFFEC4899);
 const _brandPurple = Color(0xFF9333EA);
 const _brandBlue = Color(0xFF3B82F6);
 
-// ── 1. SWEEP + CARD STAGGER ────────────────────────────────────────────────
-// A gradient band sweeps left→right with a soft feathered edge.
-// Behind it, content slides up in a staggered cascade.
+// ── 1. SOFT GRADIENT BAND ──────────────────────────────────────────────────
+// A gradient band sweeps left→right with soft feathered edges.
+// Content fades in with a slight upward slide behind it.
 
 Widget bcSweepStaggerTransition(
   BuildContext context,
@@ -27,7 +26,6 @@ Widget bcSweepStaggerTransition(
 ) {
   final screenW = MediaQuery.of(context).size.width;
 
-  // The sweep band position: -bandWidth → screenW + bandWidth
   const bandWidth = 80.0;
   final sweepX = Tween<double>(
     begin: -bandWidth,
@@ -37,7 +35,6 @@ Widget bcSweepStaggerTransition(
     curve: const Interval(0.0, 0.65, curve: Curves.easeInOut),
   ));
 
-  // Content appears with a slight upward slide + fade, delayed after sweep starts
   final contentOpacity = CurvedAnimation(
     parent: animation,
     curve: const Interval(0.25, 0.80, curve: Curves.easeOut),
@@ -55,7 +52,6 @@ Widget bcSweepStaggerTransition(
     builder: (context, _) {
       return Stack(
         children: [
-          // Content behind the sweep — fades in with slide
           FadeTransition(
             opacity: contentOpacity,
             child: SlideTransition(
@@ -63,7 +59,6 @@ Widget bcSweepStaggerTransition(
               child: child,
             ),
           ),
-          // The gradient sweep band
           if (animation.value > 0.01 && animation.value < 0.90)
             Positioned(
               left: sweepX.value,
@@ -175,109 +170,11 @@ class _RadialGlowPainter extends CustomPainter {
       old.radius != radius || old.opacity != opacity;
 }
 
-// ── 3. DIAGONAL GRADIENT FADE ──────────────────────────────────────────────
-// Angled gradient band sweeps diagonally. New content fades in behind it
-// with a soft edge — no hard clip.
-
-Widget bcDiagonalSlashTransition(
-  BuildContext context,
-  Animation<double> animation,
-  Animation<double> secondaryAnimation,
-  Widget child,
-) {
-  final progress = CurvedAnimation(
-    parent: animation,
-    curve: Curves.easeInOutCubic,
-  ).value;
-
-  final contentOpacity = CurvedAnimation(
-    parent: animation,
-    curve: const Interval(0.15, 0.75, curve: Curves.easeOut),
-  );
-
-  return AnimatedBuilder(
-    animation: animation,
-    builder: (context, _) {
-      return Stack(
-        children: [
-          // Content fades in (no hard clip — soft reveal)
-          FadeTransition(
-            opacity: contentOpacity,
-            child: child,
-          ),
-          // Diagonal gradient band sweeping across
-          if (progress > 0.02 && progress < 0.95)
-            CustomPaint(
-              size: MediaQuery.of(context).size,
-              painter: _DiagonalGradientBandPainter(progress: progress),
-            ),
-        ],
-      );
-    },
-  );
-}
-
-class _DiagonalGradientBandPainter extends CustomPainter {
-  final double progress;
-  _DiagonalGradientBandPainter({required this.progress});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    const bandWidth = 100.0;
-    // The band sweeps from top-right to bottom-left
-    // Progress 0 → band at top-right corner, progress 1 → band past bottom-left
-    final totalTravel = size.width + size.height + bandWidth * 2;
-    final offset = -bandWidth + totalTravel * progress;
-
-    // The band runs perpendicular to the diagonal (top-right → bottom-left)
-    // Angle: ~135° from horizontal
-    const angle = -math.pi / 4; // 45° diagonal
-
-    canvas.save();
-
-    // Rotate canvas 45° and draw a vertical gradient band
-    canvas.translate(size.width / 2, size.height / 2);
-    canvas.rotate(angle);
-
-    final bandRect = Rect.fromCenter(
-      center: Offset(offset - totalTravel / 2, 0),
-      width: bandWidth,
-      height: size.width + size.height, // long enough to cover rotated canvas
-    );
-
-    // Opacity peaks in the middle of the animation
-    final bandOpacity = (math.sin(progress * math.pi)).clamp(0.0, 1.0) * 0.7;
-
-    final paint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.centerLeft,
-        end: Alignment.centerRight,
-        colors: [
-          Colors.transparent,
-          _brandPink.withValues(alpha: bandOpacity * 0.3),
-          _brandPink.withValues(alpha: bandOpacity),
-          _brandPurple.withValues(alpha: bandOpacity),
-          _brandBlue.withValues(alpha: bandOpacity),
-          _brandBlue.withValues(alpha: bandOpacity * 0.3),
-          Colors.transparent,
-        ],
-      ).createShader(bandRect)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
-
-    canvas.drawRect(bandRect, paint);
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(covariant _DiagonalGradientBandPainter old) =>
-      old.progress != progress;
-}
-
 // ═══════════════════════════════════════════════════════════════════════════
 // Page Builders for GoRouter
 // ═══════════════════════════════════════════════════════════════════════════
 
-/// Main navigation: sweep + stagger on push, diagonal gradient fade on pop
+/// Primary page transition — soft gradient band (push and pop)
 CustomTransitionPage<T> bcSweepPage<T>({
   required LocalKey key,
   required Widget child,
@@ -287,14 +184,7 @@ CustomTransitionPage<T> bcSweepPage<T>({
     child: child,
     transitionDuration: const Duration(milliseconds: 550),
     reverseTransitionDuration: const Duration(milliseconds: 400),
-    transitionsBuilder: (context, animation, secondaryAnimation, child) {
-      if (animation.status == AnimationStatus.reverse) {
-        return bcDiagonalSlashTransition(
-            context, animation, secondaryAnimation, child);
-      }
-      return bcSweepStaggerTransition(
-          context, animation, secondaryAnimation, child);
-    },
+    transitionsBuilder: bcSweepStaggerTransition,
   );
 }
 
@@ -312,25 +202,16 @@ CustomTransitionPage<T> bcBurstPage<T>({
   );
 }
 
-/// Tab/category switches: diagonal gradient fade
+// Keep bcSlashPage as alias → same as sweep (no diagonal)
 CustomTransitionPage<T> bcSlashPage<T>({
   required LocalKey key,
   required Widget child,
-}) {
-  return CustomTransitionPage<T>(
-    key: key,
-    child: child,
-    transitionDuration: const Duration(milliseconds: 450),
-    reverseTransitionDuration: const Duration(milliseconds: 350),
-    transitionsBuilder: bcDiagonalSlashTransition,
-  );
-}
+}) => bcSweepPage(key: key, child: child);
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Radial Burst Wrappers for Dialogs & Bottom Sheets
 // ═══════════════════════════════════════════════════════════════════════════
 
-/// Shows a dialog with a radial burst animation expanding from screen center.
 Future<T?> showBurstDialog<T>({
   required BuildContext context,
   required WidgetBuilder builder,
@@ -389,7 +270,6 @@ Future<T?> showBurstDialog<T>({
   );
 }
 
-/// Shows a modal bottom sheet with a radial burst animation.
 Future<T?> showBurstBottomSheet<T>({
   required BuildContext context,
   required WidgetBuilder builder,
@@ -482,3 +362,11 @@ Future<T?> showBurstBottomSheet<T>({
     },
   );
 }
+
+// Legacy alias — diagonal slash removed, maps to sweep
+Widget bcDiagonalSlashTransition(
+  BuildContext context,
+  Animation<double> animation,
+  Animation<double> secondaryAnimation,
+  Widget child,
+) => bcSweepStaggerTransition(context, animation, secondaryAnimation, child);
