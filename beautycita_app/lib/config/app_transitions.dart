@@ -24,69 +24,134 @@ Widget bcSweepStaggerTransition(
   Animation<double> secondaryAnimation,
   Widget child,
 ) {
-  final screenW = MediaQuery.of(context).size.width;
+  final screenSize = MediaQuery.of(context).size;
+  final cs = Theme.of(context).colorScheme;
+  final brandColors = [cs.primary, cs.secondary, cs.tertiary];
 
-  const bandWidth = 80.0;
-  final sweepX = Tween<double>(
-    begin: -bandWidth,
-    end: screenW + bandWidth,
-  ).animate(CurvedAnimation(
+  final sweepProgress = CurvedAnimation(
     parent: animation,
-    curve: const Interval(0.0, 0.65, curve: Curves.easeInOut),
-  ));
+    curve: const Interval(0.0, 0.65, curve: Curves.easeInOutCubic),
+  );
 
   final contentOpacity = CurvedAnimation(
     parent: animation,
-    curve: const Interval(0.25, 0.80, curve: Curves.easeOut),
+    curve: const Interval(0.20, 0.85, curve: Curves.easeOut),
   );
   final contentSlide = Tween<Offset>(
-    begin: const Offset(0, 0.04),
+    begin: const Offset(0, 0.05),
     end: Offset.zero,
   ).animate(CurvedAnimation(
     parent: animation,
-    curve: const Interval(0.25, 0.85, curve: Curves.easeOutCubic),
+    curve: const Interval(0.20, 0.85, curve: Curves.easeOutCubic),
   ));
 
   return AnimatedBuilder(
     animation: animation,
     builder: (context, _) {
+      final t = sweepProgress.value;
       return Stack(
         children: [
-          FadeTransition(
-            opacity: contentOpacity,
+          ClipPath(
+            clipper: _DiagonalRevealClipper(progress: t, size: screenSize),
             child: SlideTransition(
               position: contentSlide,
-              child: child,
+              child: FadeTransition(
+                opacity: contentOpacity,
+                child: child,
+              ),
             ),
           ),
-          if (animation.value > 0.01 && animation.value < 0.90)
-            Positioned(
-              left: sweepX.value,
-              top: 0,
-              bottom: 0,
-              child: Container(
-                width: bandWidth,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                    colors: [
-                      Colors.transparent,
-                      _brandPink.withValues(alpha: 0.15),
-                      _brandPink.withValues(alpha: 0.5),
-                      _brandPurple.withValues(alpha: 0.8),
-                      _brandBlue.withValues(alpha: 0.5),
-                      _brandBlue.withValues(alpha: 0.15),
-                      Colors.transparent,
-                    ],
-                  ),
-                ),
+          if (animation.value > 0.01 && animation.value < 0.99)
+            CustomPaint(
+              size: screenSize,
+              painter: _DiagonalBandPainter(
+                progress: t,
+                screenSize: screenSize,
+                colors: brandColors,
               ),
             ),
         ],
       );
     },
   );
+}
+
+class _DiagonalRevealClipper extends CustomClipper<Path> {
+  final double progress;
+  final Size size;
+  _DiagonalRevealClipper({required this.progress, required this.size});
+
+  @override
+  Path getClip(Size size) {
+    final diagonal = math.sqrt(size.width * size.width + size.height * size.height);
+    final angle = math.atan2(size.width, size.height);
+    const bandHalf = 60.0;
+    final travel = progress * (diagonal + bandHalf * 2) - bandHalf;
+    final dx = math.sin(angle);
+    final dy = math.cos(angle);
+    final cx = travel * dx;
+    final cy = travel * dy;
+    final px = -dy;
+    final py = dx;
+    final extend = diagonal;
+    final x1 = cx + px * extend;
+    final y1 = cy + py * extend;
+    final x2 = cx - px * extend;
+    final y2 = cy - py * extend;
+    final path = Path();
+    path.moveTo(x1, y1);
+    path.lineTo(x2, y2);
+    path.lineTo(x2 - dx * diagonal * 2, y2 - dy * diagonal * 2);
+    path.lineTo(x1 - dx * diagonal * 2, y1 - dy * diagonal * 2);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(covariant _DiagonalRevealClipper old) => old.progress != progress;
+}
+
+class _DiagonalBandPainter extends CustomPainter {
+  final double progress;
+  final Size screenSize;
+  final List<Color> colors;
+  _DiagonalBandPainter({required this.progress, required this.screenSize, required this.colors});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final diagonal = math.sqrt(size.width * size.width + size.height * size.height);
+    final angle = math.atan2(size.width, size.height);
+    const bandHalf = 60.0;
+    final travel = progress * (diagonal + bandHalf * 2) - bandHalf;
+    final cx = travel * math.sin(angle);
+    final cy = travel * math.cos(angle);
+    canvas.save();
+    canvas.translate(cx, cy);
+    canvas.rotate(angle);
+    final bandRect = Rect.fromCenter(center: Offset.zero, width: bandHalf * 2, height: diagonal * 2);
+    final edgeFade = (1.0 - (progress * 2 - 1).abs()).clamp(0.0, 1.0);
+    final alpha = 0.7 * edgeFade;
+    final paint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.centerLeft,
+        end: Alignment.centerRight,
+        colors: [
+          Colors.transparent,
+          colors[0].withValues(alpha: alpha * 0.3),
+          colors[0].withValues(alpha: alpha * 0.7),
+          colors[1].withValues(alpha: alpha),
+          colors[2].withValues(alpha: alpha * 0.7),
+          colors[2].withValues(alpha: alpha * 0.3),
+          Colors.transparent,
+        ],
+      ).createShader(bandRect)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
+    canvas.drawRect(bandRect, paint);
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _DiagonalBandPainter old) => old.progress != progress;
 }
 
 // ── 2. RADIAL GRADIENT BURST ───────────────────────────────────────────────
@@ -182,8 +247,8 @@ CustomTransitionPage<T> bcSweepPage<T>({
   return CustomTransitionPage<T>(
     key: key,
     child: child,
-    transitionDuration: const Duration(milliseconds: 550),
-    reverseTransitionDuration: const Duration(milliseconds: 400),
+    transitionDuration: const Duration(milliseconds: 650),
+    reverseTransitionDuration: const Duration(milliseconds: 450),
     transitionsBuilder: bcSweepStaggerTransition,
   );
 }
