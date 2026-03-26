@@ -1,5 +1,7 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:go_router/go_router.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -193,6 +195,289 @@ Widget bcRadialBurstTransition(
   Animation<double> secondaryAnimation,
   Widget child,
 ) => _doubleRadialBurstTransition(context, animation, secondaryAnimation, child);
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Paper Shredder Transition — cancel actions
+//
+// Captures the current screen, zooms it out onto a 3D stage, then feeds it
+// through a shredder bar. Two copies + two masks: intact above, strips below.
+// Tap anywhere to skip. 1200ms duration.
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// Call this to play the shredder effect on the current screen.
+/// [onComplete] fires after the animation (or skip). Use it to pop/navigate.
+/// Wrap your Scaffold in a RepaintBoundary with [shredderBoundaryKey] as key.
+final GlobalKey shredderBoundaryKey = GlobalKey();
+
+Future<void> showShredderTransition(
+  BuildContext context, {
+  VoidCallback? onComplete,
+  int stripCount = 30,
+}) async {
+  // Capture the screen
+  final boundary = shredderBoundaryKey.currentContext?.findRenderObject()
+      as RenderRepaintBoundary?;
+  if (boundary == null) {
+    onComplete?.call();
+    return;
+  }
+
+  final image = await boundary.toImage(pixelRatio: 2.0);
+
+  if (!context.mounted) {
+    onComplete?.call();
+    return;
+  }
+
+  final overlay = Overlay.of(context);
+  late OverlayEntry entry;
+
+  entry = OverlayEntry(
+    builder: (_) => _ShredderOverlay(
+      image: image,
+      stripCount: stripCount,
+      onComplete: () {
+        entry.remove();
+        onComplete?.call();
+      },
+    ),
+  );
+
+  overlay.insert(entry);
+}
+
+class _ShredderOverlay extends StatefulWidget {
+  final ui.Image image;
+  final int stripCount;
+  final VoidCallback onComplete;
+
+  const _ShredderOverlay({
+    required this.image,
+    required this.stripCount,
+    required this.onComplete,
+  });
+
+  @override
+  State<_ShredderOverlay> createState() => _ShredderOverlayState();
+}
+
+class _ShredderOverlayState extends State<_ShredderOverlay>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..addStatusListener((status) {
+        if (status == AnimationStatus.completed) {
+          widget.onComplete();
+        }
+      });
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _skip() {
+    if (_controller.isAnimating) {
+      _controller.value = 1.0;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: _skip,
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, _) {
+          return CustomPaint(
+            size: MediaQuery.of(context).size,
+            painter: _ShredderPainter(
+              image: widget.image,
+              progress: _controller.value,
+              stripCount: widget.stripCount,
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _ShredderPainter extends CustomPainter {
+  final ui.Image image;
+  final double progress;
+  final int stripCount;
+
+  _ShredderPainter({
+    required this.image,
+    required this.progress,
+    required this.stripCount,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+
+    // Black background
+    canvas.drawRect(Offset.zero & size, Paint()..color = Colors.black);
+
+    // Off-screen light source for depth
+    final lightPaint = Paint()
+      ..shader = ui.Gradient.radial(
+        Offset(-w * 0.1, -h * 0.07),
+        w * 1.2,
+        [
+          const Color(0x59403050), // rgba(60,50,70,0.35)
+          const Color(0x261E1928), // rgba(30,25,40,0.15)
+          const Color(0x00000000),
+        ],
+        [0.0, 0.4, 1.0],
+      );
+    canvas.drawRect(Offset.zero & size, lightPaint);
+
+    // Stage margins
+    const mx = 20.0, mt = 20.0, mb = 40.0;
+    final pW = w - mx * 2;
+    final pH = h - mt - mb;
+
+    // Shredder bar position
+    final barY = mt + pH * 0.68;
+    const barH = 10.0;
+
+    // Zoom out: 0 → 0.12
+    final zt = (progress / 0.12).clamp(0.0, 1.0);
+    final ez = 1.0 - math.pow(1.0 - zt, 3).toDouble();
+
+    final curMx = mx * ez;
+    final curMt = mt * ez;
+    final curW = w - curMx * 2;
+    final curH = pH * ez + h * (1 - ez);
+
+    // Slide: 0.12 → 1.0
+    final st = progress <= 0.12 ? 0.0 : ((progress - 0.12) / 0.88).clamp(0.0, 1.0);
+    final ss = st * st * (3 - 2 * st); // smoothstep
+    final slide = ss * (pH + curH * 0.2);
+    final pY = curMt + slide;
+
+    // Source rect for the full image
+    final srcRect = Rect.fromLTWH(
+      0, 0, image.width.toDouble(), image.height.toDouble(),
+    );
+
+    // ── TOP MASK: intact page above the bar ──
+    canvas.save();
+    canvas.clipRect(Rect.fromLTWH(0, 0, w, barY));
+
+    // Draw full page
+    final dstRect = Rect.fromLTWH(curMx, pY, curW, curH);
+    canvas.drawImageRect(image, srcRect, dstRect, Paint()..filterQuality = FilterQuality.medium);
+
+    // Roller distortion: stretch bottom of visible page toward bar
+    if (st > 0.03) {
+      final visBot = math.min(pY + curH, barY);
+      const dz = 25.0;
+      final dStart = visBot - dz;
+      if (dStart > pY) {
+        final fY = (dStart - pY) / curH;
+        final fH = (visBot - dStart) / curH;
+        final stretch = math.min(st * 8, 1.0) * 18;
+        final distSrc = Rect.fromLTWH(
+          0, fY * image.height, image.width.toDouble(), fH * image.height,
+        );
+        final distDst = Rect.fromLTWH(
+          curMx, dStart, curW, (visBot - dStart) + stretch,
+        );
+        canvas.drawImageRect(image, distSrc, distDst, Paint()..filterQuality = FilterQuality.medium);
+      }
+    }
+    canvas.restore();
+
+    // ── BOTTOM MASK: shredded strips below the bar ──
+    canvas.save();
+    canvas.clipRect(Rect.fromLTWH(0, barY + barH, w, h - barY - barH));
+
+    if (st > 0.01) {
+      final stripW = curW / stripCount;
+      final srcStripW = image.width / stripCount;
+
+      for (int i = 0; i < stripCount; i++) {
+        final jitter = 1.0 + math.sin(i * 7.3 + i * i * 0.3) * 0.05;
+        final gap = st * 1.5;
+        final wobble = math.sin(i * 4.7 + st * 18) * (1 + st * 2.5);
+        final dw = stripW - gap;
+        final dx = curMx + i * stripW + gap / 2 + wobble;
+
+        final sSrc = Rect.fromLTWH(
+          i * srcStripW, 0, srcStripW, image.height.toDouble(),
+        );
+        final sDst = Rect.fromLTWH(
+          dx, pY * jitter, dw, curH * jitter,
+        );
+        canvas.drawImageRect(image, sSrc, sDst, Paint()..filterQuality = FilterQuality.low);
+      }
+    }
+    canvas.restore();
+
+    // ── SHREDDER BAR ──
+    // Shadow above
+    final shAbove = Paint()
+      ..shader = ui.Gradient.linear(
+        Offset(0, barY - 10), Offset(0, barY),
+        [const Color(0x00000000), const Color(0xB3000000)],
+      );
+    canvas.drawRect(Rect.fromLTWH(0, barY - 10, w, 10), shAbove);
+
+    // Bar body
+    final barPaint = Paint()
+      ..shader = ui.Gradient.linear(
+        Offset(0, barY), Offset(0, barY + barH),
+        [
+          const Color(0xFF444444),
+          const Color(0xFF666666),
+          const Color(0xFF777777),
+          const Color(0xFF666666),
+          const Color(0xFF444444),
+        ],
+        [0, 0.3, 0.5, 0.7, 1],
+      );
+    canvas.drawRect(Rect.fromLTWH(0, barY, w, barH), barPaint);
+
+    // Highlight
+    canvas.drawRect(
+      Rect.fromLTWH(0, barY + 3, w, 1.5),
+      Paint()..color = const Color(0x4DC8C8C8),
+    );
+
+    // Roller dots
+    final dotPaint = Paint()..color = const Color(0xCC5A5A5A);
+    for (double x = 8; x < w; x += 12) {
+      canvas.drawCircle(Offset(x, barY + barH / 2), 2, dotPaint);
+    }
+
+    // Shadow below
+    final shBelow = Paint()
+      ..shader = ui.Gradient.linear(
+        Offset(0, barY + barH), Offset(0, barY + barH + 10),
+        [const Color(0xB3000000), const Color(0x00000000)],
+      );
+    canvas.drawRect(Rect.fromLTWH(0, barY + barH, w, 10), shBelow);
+  }
+
+  @override
+  bool shouldRepaint(covariant _ShredderPainter old) =>
+      old.progress != progress;
+}
 
 // ═══════════════════════════════════════════════════════════════════════════
 // BcStaggeredList — drop-in ListView replacement with route-driven stagger
