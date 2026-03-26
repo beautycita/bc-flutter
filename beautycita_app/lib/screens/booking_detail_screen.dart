@@ -461,9 +461,7 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
 
-    return RepaintBoundary(
-      key: shredderBoundaryKey,
-      child: Scaffold(
+    return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Detalle de Cita'),
@@ -573,7 +571,6 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
           );
         },
       ),
-    ),
     );
   }
 

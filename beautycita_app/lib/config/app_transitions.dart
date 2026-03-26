@@ -12,12 +12,32 @@ import 'package:go_router/go_router.dart';
 // ═══════════════════════════════════════════════════════════════════════════
 
 // ── DOUBLE RADIAL BURST ─────────────────────────────────────────────────
-// Phase 1: Black circle expands from random focal point → covers screen
+// Phase 1: Black circle expands from tap point → covers screen
 // Phase 2: From same point, new page circle expands → eats the black
 //
-// Duration: 800ms, gap between phases scales with screen diagonal
+// Both push and pop play the SAME expanding animation (never contracts).
+// Focal point = last tap position captured by bcTapTracker.
 
-final math.Random _focalRng = math.Random();
+/// Global tap position tracker. Wrap your MaterialApp in this widget.
+Offset _lastTapPosition = const Offset(0, 0);
+bool _hasTapPosition = false;
+
+class BcTapTracker extends StatelessWidget {
+  final Widget child;
+  const BcTapTracker({super.key, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Listener(
+      onPointerDown: (event) {
+        _lastTapPosition = event.position;
+        _hasTapPosition = true;
+      },
+      behavior: HitTestBehavior.translucent,
+      child: child,
+    );
+  }
+}
 
 Widget _doubleRadialBurstTransition(
   BuildContext context,
@@ -28,31 +48,34 @@ Widget _doubleRadialBurstTransition(
   final size = MediaQuery.of(context).size;
   final maxRadius = math.sqrt(size.width * size.width + size.height * size.height);
 
-  // Random focal point (15%-85% of each axis), stable per route
-  // Use animation hashCode as seed so it's consistent for the same route push
-  final rng = math.Random(animation.hashCode);
-  final focal = Offset(
-    size.width * (0.15 + rng.nextDouble() * 0.7),
-    size.height * (0.15 + rng.nextDouble() * 0.7),
-  );
+  // Focal point = where user tapped, or center as fallback
+  final focal = _hasTapPosition
+      ? _lastTapPosition
+      : Offset(size.width / 2, size.height / 2);
 
-  // Gap scales with screen size: ~0.35 of the animation for the delay
-  // Phase 1 (black mask): 0.0 → 0.65
-  // Phase 2 (reveal):     0.35 → 1.0
-  final blackRadius = CurvedAnimation(
-    parent: animation,
-    curve: const Interval(0.0, 0.65, curve: Curves.easeOutCubic),
-  );
-  final revealRadius = CurvedAnimation(
-    parent: animation,
-    curve: const Interval(0.35, 1.0, curve: Curves.easeOutCubic),
-  );
+  // For reverse (pop), we need to flip the animation so it still expands.
+  // Flutter runs the same animation 1→0 on pop, which would contract.
+  // We detect reverse and invert the value so both directions expand.
+  final isReverse = animation.status == AnimationStatus.reverse;
 
   return AnimatedBuilder(
     animation: animation,
     builder: (context, _) {
-      final blackR = blackRadius.value * maxRadius;
-      final revealR = revealRadius.value * maxRadius;
+      // Normalize progress to always go 0→1 regardless of direction
+      final rawT = animation.value;
+      final t = isReverse ? 1.0 - rawT : rawT;
+
+      // Phase 1 (black mask): 0.0 → 0.65
+      final blackT = Curves.easeOutCubic.transform(
+        ((t) / 0.65).clamp(0.0, 1.0),
+      );
+      // Phase 2 (reveal): 0.35 → 1.0
+      final revealT = Curves.easeOutCubic.transform(
+        ((t - 0.35) / 0.65).clamp(0.0, 1.0),
+      );
+
+      final blackR = blackT * maxRadius;
+      final revealR = revealT * maxRadius;
 
       return Stack(
         children: [
@@ -206,23 +229,29 @@ Widget bcRadialBurstTransition(
 
 /// Call this to play the shredder effect on the current screen.
 /// [onComplete] fires after the animation (or skip). Use it to pop/navigate.
-/// Wrap your Scaffold in a RepaintBoundary with [shredderBoundaryKey] as key.
-final GlobalKey shredderBoundaryKey = GlobalKey();
-
+/// Captures from the nearest RepaintBoundary ancestor — no special key needed.
 Future<void> showShredderTransition(
   BuildContext context, {
   VoidCallback? onComplete,
   int stripCount = 30,
 }) async {
-  // Capture the screen
-  final boundary = shredderBoundaryKey.currentContext?.findRenderObject()
-      as RenderRepaintBoundary?;
+  // Find nearest RepaintBoundary ancestor to capture
+  RenderRepaintBoundary? boundary;
+  context.visitAncestorElements((element) {
+    final ro = element.renderObject;
+    if (ro is RenderRepaintBoundary) {
+      boundary = ro;
+      return false; // stop
+    }
+    return true; // keep looking
+  });
+
   if (boundary == null) {
     onComplete?.call();
     return;
   }
 
-  final image = await boundary.toImage(pixelRatio: 2.0);
+  final image = await boundary!.toImage(pixelRatio: 2.0);
 
   if (!context.mounted) {
     onComplete?.call();
