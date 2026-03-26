@@ -1,0 +1,13 @@
+name: transition_demo
+description: Double radial burst transition demo
+publish_to: none
+
+environment:
+  sdk: ^3.6.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
