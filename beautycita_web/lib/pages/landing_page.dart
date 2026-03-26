@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -1869,7 +1870,7 @@ class _LandingPageState extends State<LandingPage>
                     ],
                   ),
                   const SizedBox(height: 40),
-                  // QR placeholder
+                  // QR code — scans to APK download
                   Container(
                     width: 140,
                     height: 140,
@@ -1878,9 +1879,19 @@ class _LandingPageState extends State<LandingPage>
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Center(
-                      child: CustomPaint(
-                        size: const Size(100, 100),
-                        painter: _QrPlaceholderPainter(),
+                      child: QrImageView(
+                        data: _apkUrl,
+                        version: QrVersions.auto,
+                        size: 110,
+                        eyeStyle: const QrEyeStyle(
+                          eyeShape: QrEyeShape.square,
+                          color: _textPrimary,
+                        ),
+                        dataModuleStyle: const QrDataModuleStyle(
+                          dataModuleShape: QrDataModuleShape.square,
+                          color: _textPrimary,
+                        ),
+                        backgroundColor: Colors.white,
                       ),
                     ),
                   ),
