@@ -17,16 +17,35 @@ The current `bcSweepStaggerTransition` has three defects vs. the intended design
 
 A thick (~120px) diagonal gradient band sweeps **top-left to bottom-right**. It acts as a mask boundary: behind the band the new page is revealed, ahead of the band the old page remains visible. The band carries the brand gradient (pink/purple/blue) with soft feathered edges — no hard clip lines.
 
-**Implementation:**
-- `CustomClipper<Path>` draws a diagonal line perpendicular to the sweep direction (roughly 30-35 degrees from vertical)
-- The clip region grows as the animation progresses, revealing the new page underneath
-- The gradient band is a `CustomPaint` overlay positioned along the clip edge
+**Implementation — Clip Geometry:**
+
+The sweep axis runs from top-left corner to bottom-right corner. The clip boundary is a line perpendicular to this axis. The angle is derived from the screen aspect ratio: `atan(screenWidth / screenHeight)` — so the diagonal always connects opposite corners regardless of device dimensions.
+
+At animation value `t`, the clip path is a polygon covering everything to the upper-left of the diagonal boundary line:
+- `t = 0.0`: polygon covers nothing (line is off-screen to the top-left)
+- `t = 0.5`: line crosses screen center diagonally
+- `t = 1.0`: polygon covers entire screen (line is off-screen to the bottom-right)
+
+The total sweep distance is `sqrt(screenWidth^2 + screenHeight^2)` (the screen diagonal). The boundary line position at time `t` is `offset = t * totalSweepDistance` along the sweep axis, measured from the top-left corner.
+
+Polygon vertices at any `t`: start from the intersection of the diagonal boundary line with the screen edges, then include all screen corners that fall on the "revealed" (upper-left) side.
+
+**Implementation — Gradient Band:**
+
+The gradient band is drawn by a `CustomPaint` overlay using `canvas.save()` → `canvas.translate()` to the boundary line center → `canvas.rotate()` to match the diagonal angle → draw a `Rect(-bandWidth/2, -screenDiag, bandWidth/2, screenDiag)` filled with a `LinearGradient` shader in local (rotated) coordinates → `canvas.restore()`. This ensures the band always straddles the clip edge at the correct angle.
+
+**Implementation — Page Layering:**
 - Old page content is not explicitly managed — Flutter's `transitionsBuilder` receives only the new page as `child`. The old page naturally sits behind in the route stack. The clip on the new page creates the reveal effect.
+
+**Implementation — Brand Colors:**
+- The gradient band reads brand colors from `Theme.of(context)` via the `BuildContext` parameter available in `transitionsBuilder`, not hardcoded hex values.
 
 **Timing (650ms forward, 450ms reverse):**
 - `0.00-0.65`: Diagonal band sweeps across screen. Curve: `easeInOutCubic`
 - `0.20-0.85`: New page content fades in (opacity 0-1) with subtle upward slide (20px-0). Starts before sweep finishes for fluid feel.
-- Reverse (pop): same diagonal in reverse direction, 450ms
+- Reverse (pop): same diagonal in reverse direction, 450ms. `BcStaggeredList` does nothing on reverse — the diagonal sweep masks children as it recedes, which is sufficient.
+
+**Note on duration:** The design system token `pageTransition: 350ms` is for standard fade/slide transitions. This diagonal sweep covers more visual distance (the full screen diagonal) and needs more time to read. 650ms is intentional and within the Flutter transitions guide's 600-1200ms range for complex entrance animations.
 
 **Band visual:**
 - Width: ~120 logical pixels
@@ -43,10 +62,12 @@ Drop-in replacement for `ListView`/`Column` that staggers children after the pag
 
 **Behavior:**
 - Reads the enclosing `ModalRoute.of(context)` animation
+- **Null safety:** If `ModalRoute.of(context)` returns null (dialog, nested navigator, test harness) or the animation is already complete (`value == 1.0`), all children render immediately without stagger
 - Each child gets a staggered `Interval`: child 0 starts at 0.45, child 1 at 0.50, child 2 at 0.55, etc. (5% offset per item)
+- Each child's interval spans from `startOffset` to `min(startOffset + 0.20, 1.0)`. For child 7 (last stagger slot): 0.80 to 1.0.
 - Cap at 8 stagger slots — items beyond index 7 share the last interval (appear together)
 - Per-child animation: fade in (0-1) + slide up (30px-0) with `easeOutCubic`
-- If route animation is already complete (value == 1.0, e.g. returning to cached page), all children render immediately — no stagger on back-navigation
+- **Reverse (pop):** No stagger-out. The diagonal sweep handles visual exit by masking children as the clip recedes.
 - Supports `ScrollPhysics`, `padding`, `shrinkWrap` — same API surface as `ListView`
 
 **Usage:**
@@ -86,7 +107,7 @@ Other screens can adopt `BcStaggeredList` incrementally.
 
 - Single `CustomClipper` + single `CustomPaint` per frame — minimal GPU cost
 - Stagger animations use the existing route animation controller — no extra `AnimationController` allocations
-- `shouldReclip` / `shouldRepaint` guard against unnecessary repaints
+- `shouldReclip` returns true only when the animation value changes (every frame during animation, but not on unrelated rebuilds). Same for `shouldRepaint`.
 - 650ms total duration keeps transitions perceptible but not sluggish
 
 ## Acceptance Criteria
