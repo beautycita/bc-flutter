@@ -442,7 +442,9 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
 
       ToastService.showSuccess('Cita cancelada');
       if (mounted) {
-        context.pop();
+        await showShredderTransition(context, onComplete: () {
+          if (mounted) context.pop();
+        });
       }
     } catch (e, stack) {
       ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
@@ -459,7 +461,9 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
 
-    return Scaffold(
+    return RepaintBoundary(
+      key: shredderBoundaryKey,
+      child: Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Detalle de Cita'),
@@ -569,6 +573,7 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
           );
         },
       ),
+    ),
     );
   }
 
