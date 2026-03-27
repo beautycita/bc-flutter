@@ -2718,6 +2718,53 @@ class _WalkinSheetState extends ConsumerState<_WalkinSheet> {
                 )),
             const SizedBox(height: AppConstants.paddingMD),
 
+            // SAT compliance nudge
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF7ED),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFFED7AA)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.account_balance_outlined, size: 18, color: Color(0xFFEA580C)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Registra todos tus clientes',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF9A3412),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'BeautyCita reporta tus ingresos al SAT mensualmente. '
+                          'Los clientes atendidos fuera de BeautyCita no aparecen en tu reporte — '
+                          'esto puede causar discrepancias con el SAT.\n\n'
+                          'Recuerda: muebles, herramientas, gasolina y todo lo que compras '
+                          'para tu negocio es 100% deducible. Registrar todo tu ingreso '
+                          'te permite aprovechar al maximo tus deducciones.',
+                          style: GoogleFonts.nunito(
+                            fontSize: 11,
+                            color: const Color(0xFFB45309),
+                            height: 1.4,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+
             // Customer name (optional — for walk-ins without an account)
             _SheetTextField(
               controller: _customerNameCtrl,
