@@ -43,6 +43,7 @@ import 'package:beautycita/screens/help_screen.dart';
 import 'package:beautycita/screens/press_screen.dart';
 import 'package:beautycita/screens/system_status_screen.dart';
 import 'package:beautycita/screens/report_problem_screen.dart';
+import 'package:beautycita/screens/business/portfolio_capture_screen.dart';
 import 'app_transitions.dart';
 
 
@@ -92,6 +93,7 @@ class AppRoutes {
   static const String press = '/press';
   static const String systemStatus = '/system-status';
   static const String reportProblem = '/report-problem';
+  static const String portfolioCapture = '/business/portfolio-capture';
 
 
   static final GoRouter router = GoRouter(
@@ -522,6 +524,21 @@ class AppRoutes {
           key: state.pageKey,
           child: const ReportProblemScreen(),
         ),
+      ),
+      GoRoute(
+        path: portfolioCapture,
+        name: 'portfolio-capture',
+        pageBuilder: (context, state) {
+          final staffId = state.uri.queryParameters['staffId'];
+          final appointmentId = state.uri.queryParameters['appointmentId'];
+          return bcSweepPage(
+            key: state.pageKey,
+            child: PortfolioCaptureScreen(
+              staffId: staffId,
+              appointmentId: appointmentId,
+            ),
+          );
+        },
       ),
     ],
     errorPageBuilder: (context, state) => MaterialPage(
