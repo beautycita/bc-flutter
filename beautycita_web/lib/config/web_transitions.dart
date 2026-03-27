@@ -57,23 +57,25 @@ Widget _doubleRadialBurst(
       ? _lastTapPosition
       : Offset(size.width / 2, size.height / 2);
 
-  final isReverse = animation.status == AnimationStatus.reverse;
-
   return AnimatedBuilder(
     animation: animation,
     builder: (context, _) {
+      final isReverse = animation.status == AnimationStatus.reverse;
       final rawT = animation.value;
       final t = isReverse ? 1.0 - rawT : rawT;
 
-      final blackT = Curves.easeOutCubic.transform(
-        (t / 0.65).clamp(0.0, 1.0),
+      final blackT = Curves.easeOutExpo.transform(
+        (t / 0.60).clamp(0.0, 1.0),
       );
-      final revealT = Curves.easeOutCubic.transform(
-        ((t - 0.35) / 0.65).clamp(0.0, 1.0),
+      final revealT = Curves.easeOutQuart.transform(
+        ((t - 0.30) / 0.70).clamp(0.0, 1.0),
       );
 
-      final blackR = blackT * maxRadius;
-      final revealR = revealT * maxRadius;
+      final blackR = blackT * maxRadius * 1.05;
+      final revealR = revealT * maxRadius * 1.05;
+
+      final pageScale = 0.96 + 0.04 * revealT;
+      final pageOpacity = (revealT / 0.4).clamp(0.0, 1.0);
 
       return Stack(
         children: [
@@ -84,14 +86,57 @@ Widget _doubleRadialBurst(
               child: SizedBox.expand(),
             ),
           ),
+          if (blackT > 0.01 && blackT < 0.95)
+            CustomPaint(
+              size: size,
+              painter: _CircleGlowPainter(
+                center: focal,
+                radius: blackR,
+                opacity: (1.0 - blackT) * 0.3,
+              ),
+            ),
           ClipPath(
             clipper: _CircleClipper(center: focal, radius: revealR),
-            child: child,
+            child: Transform.scale(
+              scale: pageScale,
+              alignment: Alignment(
+                (focal.dx / size.width) * 2 - 1,
+                (focal.dy / size.height) * 2 - 1,
+              ),
+              child: Opacity(
+                opacity: pageOpacity,
+                child: child,
+              ),
+            ),
           ),
         ],
       );
     },
   );
+}
+
+class _CircleGlowPainter extends CustomPainter {
+  final Offset center;
+  final double radius;
+  final double opacity;
+  _CircleGlowPainter({required this.center, required this.radius, required this.opacity});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (opacity < 0.01) return;
+    canvas.drawCircle(
+      center, radius,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 30
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 15)
+        ..color = Color.fromRGBO(147, 51, 234, opacity),
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _CircleGlowPainter old) =>
+      old.radius != radius || old.opacity != opacity;
 }
 
 /// Main navigation transition

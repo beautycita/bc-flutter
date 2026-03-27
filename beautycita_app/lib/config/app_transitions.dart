@@ -53,33 +53,35 @@ Widget _doubleRadialBurstTransition(
       ? _lastTapPosition
       : Offset(size.width / 2, size.height / 2);
 
-  // For reverse (pop), we need to flip the animation so it still expands.
-  // Flutter runs the same animation 1→0 on pop, which would contract.
-  // We detect reverse and invert the value so both directions expand.
-  final isReverse = animation.status == AnimationStatus.reverse;
-
   return AnimatedBuilder(
     animation: animation,
     builder: (context, _) {
-      // Normalize progress to always go 0→1 regardless of direction
+      // Detect direction each frame (not once at build time)
+      final isReverse = animation.status == AnimationStatus.reverse;
       final rawT = animation.value;
       final t = isReverse ? 1.0 - rawT : rawT;
 
-      // Phase 1 (black mask): 0.0 → 0.65
-      final blackT = Curves.easeOutCubic.transform(
-        ((t) / 0.65).clamp(0.0, 1.0),
+      // Black mask: fast start, long tail — feels like it rushes out then settles
+      final blackT = Curves.easeOutExpo.transform(
+        (t / 0.60).clamp(0.0, 1.0),
       );
-      // Phase 2 (reveal): 0.35 → 1.0
-      final revealT = Curves.easeOutCubic.transform(
-        ((t - 0.35) / 0.65).clamp(0.0, 1.0),
+      // Reveal: slightly delayed, more organic deceleration
+      final revealT = Curves.easeOutQuart.transform(
+        ((t - 0.30) / 0.70).clamp(0.0, 1.0),
       );
 
-      final blackR = blackT * maxRadius;
-      final revealR = revealT * maxRadius;
+      // Overshoot the radius slightly so the circle fully covers corners
+      final blackR = blackT * maxRadius * 1.05;
+      final revealR = revealT * maxRadius * 1.05;
+
+      // New page scales up subtly as it's revealed (0.96 → 1.0)
+      final pageScale = 0.96 + 0.04 * revealT;
+      // Slight fade-in on the new page for the first 40% of its reveal
+      final pageOpacity = (revealT / 0.4).clamp(0.0, 1.0);
 
       return Stack(
         children: [
-          // Black mask expanding from focal point
+          // Black mask — slight gradient at the edge for softness
           ClipPath(
             clipper: _CircleClipper(center: focal, radius: blackR),
             child: const ColoredBox(
@@ -87,15 +89,62 @@ Widget _doubleRadialBurstTransition(
               child: SizedBox.expand(),
             ),
           ),
-          // New page expanding from same focal point, above the black
+          // Soft glow ring at the edge of the black circle
+          if (blackT > 0.01 && blackT < 0.95)
+            CustomPaint(
+              size: size,
+              painter: _CircleGlowPainter(
+                center: focal,
+                radius: blackR,
+                opacity: (1.0 - blackT) * 0.3,
+              ),
+            ),
+          // New page with subtle scale + fade
           ClipPath(
             clipper: _CircleClipper(center: focal, radius: revealR),
-            child: child,
+            child: Transform.scale(
+              scale: pageScale,
+              alignment: Alignment(
+                (focal.dx / size.width) * 2 - 1,
+                (focal.dy / size.height) * 2 - 1,
+              ),
+              child: Opacity(
+                opacity: pageOpacity,
+                child: child,
+              ),
+            ),
           ),
         ],
       );
     },
   );
+}
+
+/// Soft glow ring at the expanding edge of the black circle
+class _CircleGlowPainter extends CustomPainter {
+  final Offset center;
+  final double radius;
+  final double opacity;
+  _CircleGlowPainter({
+    required this.center,
+    required this.radius,
+    required this.opacity,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (opacity < 0.01) return;
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 30
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 15)
+      ..color = const Color(0xFF9333EA).withValues(alpha: opacity);
+    canvas.drawCircle(center, radius, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _CircleGlowPainter old) =>
+      old.radius != radius || old.opacity != opacity;
 }
 
 class _CircleClipper extends CustomClipper<Path> {
