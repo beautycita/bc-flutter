@@ -903,8 +903,8 @@ class _NoSlotsView extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
 
-          // Show error from nearby search (GPS denied, no results, etc.)
-          if (state.error != null) ...[
+          // Show error from nearby search (GPS denied, etc.) — but not the no_nearby_salons sentinel
+          if (state.error != null && state.error != 'no_nearby_salons') ...[
             const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -925,6 +925,18 @@ class _NoSlotsView extends StatelessWidget {
 
           const SizedBox(height: AppConstants.paddingXL),
 
+          // If no nearby salons, show invite card
+          if (state.error == 'no_nearby_salons') ...[
+            _ActionCard(
+              icon: Icons.favorite_rounded,
+              title: 'Recomienda tu salon',
+              subtitle: 'Invita a tu salon favorito a unirse a BeautyCita',
+              color: colors.primary,
+              onTap: () => context.push('/invite-salon'),
+            ),
+            const SizedBox(height: 12),
+          ],
+
           // Try another day at same salon
           _ActionCard(
             icon: Icons.calendar_month_rounded,
@@ -936,7 +948,8 @@ class _NoSlotsView extends StatelessWidget {
 
           const SizedBox(height: 12),
 
-          // Nearby salons with availability
+          // Nearby salons with availability (hide if already tried and got no results)
+          if (state.error != 'no_nearby_salons')
           _ActionCard(
             icon: Icons.near_me_rounded,
             title: 'Salones cercanos',

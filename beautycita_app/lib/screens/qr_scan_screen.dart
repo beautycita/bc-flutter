@@ -34,6 +34,22 @@ class _QrScanScreenState extends State<QrScanScreen> with SingleTickerProviderSt
     super.dispose();
   }
 
+  /// Parse Cita Express walk-in QR: https://beautycita.com/cita-express/{bizId}
+  String? _parseExpressQr(String rawValue) {
+    final uri = Uri.tryParse(rawValue);
+    if (uri == null) return null;
+    // Handle both https://beautycita.com/cita-express/ID and beautycita://cita-express/ID
+    if (uri.path.startsWith('/cita-express/')) {
+      final bizId = uri.path.replaceFirst('/cita-express/', '');
+      if (bizId.isNotEmpty) return bizId;
+    }
+    if (uri.scheme == 'beautycita' && uri.host == 'cita-express') {
+      final bizId = uri.pathSegments.isNotEmpty ? uri.pathSegments.first : '';
+      if (bizId.isNotEmpty) return bizId;
+    }
+    return null;
+  }
+
   /// Parse QR data and extract code + session
   ({String code, String sessionId})? _parseQrData(String rawValue) {
     final uri = Uri.tryParse(rawValue);
@@ -54,6 +70,14 @@ class _QrScanScreenState extends State<QrScanScreen> with SingleTickerProviderSt
 
     final rawValue = barcodes.first.rawValue;
     if (rawValue == null || rawValue.isEmpty) return;
+
+    // Check for Cita Express walk-in QR first
+    final expressId = _parseExpressQr(rawValue);
+    if (expressId != null) {
+      setState(() { _isProcessing = true; });
+      if (mounted) context.go('/cita-express/$expressId');
+      return;
+    }
 
     final parsed = _parseQrData(rawValue);
     if (parsed == null) {

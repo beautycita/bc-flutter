@@ -325,7 +325,7 @@ class CitaExpressNotifier extends StateNotifier<CitaExpressState> {
       if (filtered.isEmpty) {
         state = state.copyWith(
           step: CitaExpressStep.noSlotsToday,
-          error: 'No hay salones cercanos con disponibilidad hoy',
+          error: 'no_nearby_salons',
         );
         return;
       }
