@@ -2631,6 +2631,7 @@ class _WalkinSheetState extends ConsumerState<_WalkinSheet> {
   String? _staffId;
   final _notesCtrl = TextEditingController();
   final _customServiceCtrl = TextEditingController();
+  final _customerNameCtrl = TextEditingController();
   bool _saving = false;
   bool _isOtherService = false;
   int _customDuration = 60;
@@ -2681,6 +2682,7 @@ class _WalkinSheetState extends ConsumerState<_WalkinSheet> {
   void dispose() {
     _notesCtrl.dispose();
     _customServiceCtrl.dispose();
+    _customerNameCtrl.dispose();
     super.dispose();
   }
 
@@ -2715,6 +2717,16 @@ class _WalkinSheetState extends ConsumerState<_WalkinSheet> {
                   color: colors.onSurface,
                 )),
             const SizedBox(height: AppConstants.paddingMD),
+
+            // Customer name (optional — for walk-ins without an account)
+            _SheetTextField(
+              controller: _customerNameCtrl,
+              label: 'Nombre del cliente (opcional)',
+              hint: 'Ej: Maria Garcia',
+              icon: Icons.person_outline_rounded,
+              maxLines: 1,
+            ),
+            const SizedBox(height: 12),
 
             // Date + Time row
             Row(
@@ -2967,8 +2979,12 @@ class _WalkinSheetState extends ConsumerState<_WalkinSheet> {
         'ends_at': endsAt.toUtc().toIso8601String(),
         'price': price,
         'status': 'confirmed',
+        'payment_method': 'cash_direct',
+        'payment_status': 'paid',
       };
       if (!_isOtherService) data['service_id'] = _serviceId;
+      final customerName = _customerNameCtrl.text.trim();
+      if (customerName.isNotEmpty) data['customer_name'] = customerName;
       final notes = _notesCtrl.text.trim();
       if (notes.isNotEmpty) data['notes'] = notes;
 
