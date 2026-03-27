@@ -1881,7 +1881,7 @@ class _LandingPageState extends State<LandingPage>
                     child: Center(
                       child: CustomPaint(
                         size: const Size(100, 100),
-                        painter: _StyledQrPainter(_apkUrl),
+                        painter: _StyledQrPainter('https://urli.info/1mrKZ'),
                       ),
                     ),
                   ),
