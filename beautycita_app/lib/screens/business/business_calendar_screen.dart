@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/constants.dart';
 import '../../providers/business_provider.dart';
+import 'package:go_router/go_router.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 
@@ -1980,6 +1981,18 @@ void _showApptActionSheet(
                   onTap: () {
                     Navigator.pop(ctx);
                     onAction(appointment, 'reschedule');
+                  },
+                ),
+
+              // Portfolio capture (confirmed + completed)
+              if (status == 'confirmed' || status == 'completed')
+                _ActionTile(
+                  icon: Icons.camera_alt_rounded,
+                  label: 'Portafolio',
+                  color: const Color(0xFF7C3AED),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    context.push('/business/portfolio-capture?staffId=${appointment['staff_id']}');
                   },
                 ),
 
