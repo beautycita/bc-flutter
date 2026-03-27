@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../config/breakpoints.dart';
 import '../config/router.dart';
 import '../config/web_theme.dart';
+import '../providers/auth_provider.dart';
 
 // ── Nav link definitions ────────────────────────────────────────────────────
 
@@ -224,9 +226,9 @@ class _DesktopNavLinkState extends State<_DesktopNavLink> {
 
 // ── Avatar Circle with Dropdown ─────────────────────────────────────────────
 
-class _AvatarCircle extends StatelessWidget {
+class _AvatarCircle extends ConsumerWidget {
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return PopupMenuButton<String>(
       offset: const Offset(0, 48),
       shape: RoundedRectangleBorder(
@@ -234,22 +236,27 @@ class _AvatarCircle extends StatelessWidget {
         side: const BorderSide(color: kWebCardBorder),
       ),
       color: kWebSurface,
-      onSelected: (value) {
+      onSelected: (value) async {
         switch (value) {
-          case 'profile':
-            context.go('/perfil');
+          case 'mis_citas':
+            context.go(WebRoutes.misCitas);
             break;
-          case 'settings':
-            context.go('/preferencias');
+          case 'invitar':
+            context.go(WebRoutes.invitar);
+            break;
+          case 'soporte':
+            context.go(WebRoutes.soporte);
             break;
           case 'logout':
-            context.go('/auth');
+            await ref.read(authProvider.notifier).signOut();
+            if (context.mounted) context.go(WebRoutes.auth);
             break;
         }
       },
       itemBuilder: (context) => [
-        _menuItem('profile', Icons.person_outlined, 'Mi Perfil'),
-        _menuItem('settings', Icons.settings_outlined, 'Preferencias'),
+        _menuItem('mis_citas', Icons.event_note_outlined, 'Mis Citas'),
+        _menuItem('invitar', Icons.share_outlined, 'Invitar Salon'),
+        _menuItem('soporte', Icons.help_outline_rounded, 'Soporte'),
         const PopupMenuDivider(),
         _menuItem('logout', Icons.logout_outlined, 'Cerrar Sesion'),
       ],
