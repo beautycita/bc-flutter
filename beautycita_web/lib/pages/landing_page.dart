@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:qr_flutter/qr_flutter.dart';
+import 'package:qr/qr.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -1870,7 +1870,7 @@ class _LandingPageState extends State<LandingPage>
                     ],
                   ),
                   const SizedBox(height: 40),
-                  // QR code — scans to APK download
+                  // QR code — real scannable data, styled like original design
                   Container(
                     width: 140,
                     height: 140,
@@ -1879,19 +1879,9 @@ class _LandingPageState extends State<LandingPage>
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Center(
-                      child: QrImageView(
-                        data: _apkUrl,
-                        version: QrVersions.auto,
-                        size: 110,
-                        eyeStyle: const QrEyeStyle(
-                          eyeShape: QrEyeShape.square,
-                          color: _textPrimary,
-                        ),
-                        dataModuleStyle: const QrDataModuleStyle(
-                          dataModuleShape: QrDataModuleShape.square,
-                          color: _textPrimary,
-                        ),
-                        backgroundColor: Colors.white,
+                      child: CustomPaint(
+                        size: const Size(100, 100),
+                        painter: _StyledQrPainter(_apkUrl),
                       ),
                     ),
                   ),
@@ -2946,44 +2936,63 @@ class _DemoPhoneInputState extends State<_DemoPhoneInput> {
 
 // ── QR Placeholder Painter ───────────────────────────────────────────────────
 
-class _QrPlaceholderPainter extends CustomPainter {
+class _StyledQrPainter extends CustomPainter {
+  final String data;
+  _StyledQrPainter(this.data);
+
   @override
   void paint(Canvas canvas, Size size) {
+    final qrCode = QrCode.fromData(data: data, errorCorrectLevel: QrErrorCorrectLevel.M);
+    final qrImage = QrImage(qrCode);
+    final moduleCount = qrImage.moduleCount;
     final dark = Paint()..color = _textPrimary;
-    final r = size.width / 100;
+    final white = Paint()..color = Colors.white;
+    final cellSize = size.width / moduleCount;
+    final radius = Radius.circular(cellSize * 0.3);
 
-    // Corner squares (top-left, top-right, bottom-left)
-    _drawCornerSquare(canvas, 5 * r, 5 * r, 25 * r, dark);
-    _drawCornerSquare(canvas, 70 * r, 5 * r, 25 * r, dark);
-    _drawCornerSquare(canvas, 5 * r, 70 * r, 25 * r, dark);
+    // Draw data modules (skip finder pattern areas — we draw those custom)
+    for (int row = 0; row < moduleCount; row++) {
+      for (int col = 0; col < moduleCount; col++) {
+        // Skip the 3 finder pattern regions (7x7 + 1 separator)
+        if (_isFinderPattern(row, col, moduleCount)) continue;
 
-    // Data cells - scattered pattern
-    final cells = [
-      [35, 8], [45, 8], [55, 8], [35, 18], [55, 18],
-      [8, 35], [18, 35], [8, 45], [18, 55],
-      [35, 35], [45, 35], [55, 35], [35, 45], [55, 45],
-      [35, 55], [45, 55], [55, 55],
-      [70, 35], [80, 35], [70, 45], [80, 55],
-      [45, 70], [55, 70], [70, 70], [45, 80], [70, 80], [80, 80],
-    ];
-
-    for (final c in cells) {
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(Rect.fromLTWH(c[0] * r, c[1] * r, 6 * r, 6 * r), Radius.circular(r)),
-        dark,
-      );
+        if (qrImage.isDark(row, col)) {
+          canvas.drawRRect(
+            RRect.fromRectAndRadius(
+              Rect.fromLTWH(col * cellSize, row * cellSize, cellSize, cellSize),
+              radius,
+            ),
+            dark,
+          );
+        }
+      }
     }
+
+    // Draw styled corner finder patterns (same rounded style as original)
+    final finderSize = 7 * cellSize;
+    _drawCornerSquare(canvas, 0, 0, finderSize, dark, white);
+    _drawCornerSquare(canvas, (moduleCount - 7) * cellSize, 0, finderSize, dark, white);
+    _drawCornerSquare(canvas, 0, (moduleCount - 7) * cellSize, finderSize, dark, white);
   }
 
-  void _drawCornerSquare(Canvas canvas, double x, double y, double size, Paint paint) {
-    final white = Paint()..color = Colors.white;
-    canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(x, y, size, size), Radius.circular(3)), paint);
-    canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(x + size * 0.2, y + size * 0.2, size * 0.6, size * 0.6), Radius.circular(2)), white);
-    canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(x + size * 0.32, y + size * 0.32, size * 0.36, size * 0.36), Radius.circular(1)), paint);
+  bool _isFinderPattern(int row, int col, int count) {
+    // Top-left 8x8
+    if (row < 8 && col < 8) return true;
+    // Top-right 8x8
+    if (row < 8 && col >= count - 8) return true;
+    // Bottom-left 8x8
+    if (row >= count - 8 && col < 8) return true;
+    return false;
+  }
+
+  void _drawCornerSquare(Canvas canvas, double x, double y, double size, Paint dark, Paint white) {
+    canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(x, y, size, size), const Radius.circular(3)), dark);
+    canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(x + size * 0.2, y + size * 0.2, size * 0.6, size * 0.6), const Radius.circular(2)), white);
+    canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(x + size * 0.32, y + size * 0.32, size * 0.36, size * 0.36), const Radius.circular(1)), dark);
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _StyledQrPainter oldDelegate) => oldDelegate.data != data;
 }
 
 // ── Footer Link Model ────────────────────────────────────────────────────────
