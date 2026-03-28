@@ -238,16 +238,35 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   /// Register this web session so the mobile device manager can see it.
-  Future<void> registerWebSession() async {
-    if (!BCSupabase.isInitialized || state.user == null) return;
+  /// Returns the session_id for revocation listening.
+  Future<String?> registerWebSession() async {
+    if (!BCSupabase.isInitialized || state.user == null) return null;
     try {
-      await BCSupabase.client.functions.invoke(
+      final response = await BCSupabase.client.functions.invoke(
         'qr-auth',
         body: {'action': 'register_session'},
       );
+      final sessionId = response.data?['session_id'] as String?;
+      if (sessionId != null) {
+        _listenForRevocation(sessionId);
+      }
+      return sessionId;
     } catch (e) {
       debugPrint('registerWebSession error: $e');
+      return null;
     }
+  }
+
+  /// Listen for session revocation from mobile device manager.
+  void _listenForRevocation(String sessionId) {
+    if (!BCSupabase.isInitialized) return;
+    BCSupabase.client.channel('qr_revoke_$sessionId').onBroadcast(
+      event: 'session_revoked',
+      callback: (payload) {
+        debugPrint('Session revoked by mobile device');
+        signOut();
+      },
+    ).subscribe();
   }
 
   /// Clear any error message.

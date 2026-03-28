@@ -20,11 +20,14 @@ class _BusinessSettingsScreenState
     extends ConsumerState<BusinessSettingsScreen> {
   final _nameCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
   final _addressCtrl = TextEditingController();
   final _cityCtrl = TextEditingController();
+  final _descCtrl = TextEditingController();
   final _websiteCtrl = TextEditingController();
   final _igCtrl = TextEditingController();
   final _fbCtrl = TextEditingController();
+  final _tiktokCtrl = TextEditingController();
   final _cancelHoursCtrl = TextEditingController();
   final _depositPctCtrl = TextEditingController();
 
@@ -75,11 +78,14 @@ class _BusinessSettingsScreenState
   void dispose() {
     _nameCtrl.dispose();
     _phoneCtrl.dispose();
+    _emailCtrl.dispose();
     _addressCtrl.dispose();
     _cityCtrl.dispose();
+    _descCtrl.dispose();
     _websiteCtrl.dispose();
     _igCtrl.dispose();
     _fbCtrl.dispose();
+    _tiktokCtrl.dispose();
     _cancelHoursCtrl.dispose();
     _depositPctCtrl.dispose();
     super.dispose();
@@ -90,15 +96,18 @@ class _BusinessSettingsScreenState
     _initialized = true;
     _nameCtrl.text = biz['name'] as String? ?? '';
     _phoneCtrl.text = _formatPhoneLocal(biz['phone'] as String? ?? '');
+    _emailCtrl.text = biz['email'] as String? ?? '';
     _addressCtrl.text = biz['address'] as String? ?? '';
     _cityCtrl.text = biz['city'] as String? ?? '';
+    _descCtrl.text = biz['description'] as String? ?? '';
     _websiteCtrl.text = biz['website'] as String? ?? '';
     _igCtrl.text = biz['instagram_handle'] as String? ?? '';
     _fbCtrl.text = biz['facebook_url'] as String? ?? '';
+    _tiktokCtrl.text = biz['tiktok_handle'] as String? ?? '';
     _cancelHoursCtrl.text =
         (biz['cancellation_hours'] as int?)?.toString() ?? '24';
     _depositPctCtrl.text =
-        (biz['deposit_percentage'] as num?)?.toString() ?? '0';
+        (biz['deposit_percentage'] as num?)?.toInt().toString() ?? '0';
     _autoConfirm = biz['auto_confirm'] as bool? ?? false;
     _acceptWalkins = biz['accept_walkins'] as bool? ?? false;
     _depositRequired = biz['deposit_required'] as bool? ?? false;
@@ -262,6 +271,20 @@ class _BusinessSettingsScreenState
               controller: _cityCtrl,
               decoration: _styledInput('Ciudad'),
             ),
+            const SizedBox(height: AppConstants.paddingSM),
+            TextField(
+              controller: _emailCtrl,
+              keyboardType: TextInputType.emailAddress,
+              decoration: _styledInput('Email del negocio',
+                  prefixIcon: const Icon(Icons.email_outlined, size: 20)),
+            ),
+            const SizedBox(height: AppConstants.paddingSM),
+            TextField(
+              controller: _descCtrl,
+              maxLines: 3,
+              maxLength: 300,
+              decoration: _styledInput('Descripcion del negocio'),
+            ),
 
             const SizedBox(height: AppConstants.paddingLG),
             _SectionHeader(label: 'REDES SOCIALES'),
@@ -286,7 +309,35 @@ class _BusinessSettingsScreenState
               decoration: _styledInput('Facebook URL',
                   prefixIcon: const Icon(Icons.facebook_rounded, size: 20)),
             ),
+            const SizedBox(height: AppConstants.paddingSM),
+            TextField(
+              controller: _tiktokCtrl,
+              decoration: _styledInput('TikTok',
+                  prefixIcon: Icon(Icons.music_note_rounded,
+                      size: 20,
+                      color: colors.onSurface.withValues(alpha: 0.5)),
+                  prefixText: '@'),
+            ),
 
+            // ---------- Quick links ----------
+            const SizedBox(height: AppConstants.paddingLG),
+            _SectionHeader(label: 'GESTION RAPIDA'),
+            const SizedBox(height: AppConstants.paddingSM),
+            _QuickLinkTile(
+              icon: Icons.people_outline_rounded,
+              label: 'Administrar Personal',
+              onTap: () => DefaultTabController.of(context).animateTo(4),
+            ),
+            _QuickLinkTile(
+              icon: Icons.design_services_outlined,
+              label: 'Administrar Servicios',
+              onTap: () => DefaultTabController.of(context).animateTo(3),
+            ),
+            _QuickLinkTile(
+              icon: Icons.qr_code_rounded,
+              label: 'QR para Walk-ins',
+              onTap: () => DefaultTabController.of(context).animateTo(6),
+            ),
 
             // ---------- Operating hours ----------
             const SizedBox(height: AppConstants.paddingLG),
@@ -568,14 +619,20 @@ class _BusinessSettingsScreenState
       await SupabaseClientService.client.from('businesses').update({
         'name': _nameCtrl.text.trim(),
         'phone': _phoneCtrl.text.trim(),
+        'email':
+            _emailCtrl.text.trim().isEmpty ? null : _emailCtrl.text.trim(),
         'address': _addressCtrl.text.trim(),
         'city': _cityCtrl.text.trim(),
+        'description':
+            _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
         'website':
             _websiteCtrl.text.trim().isEmpty ? null : _websiteCtrl.text.trim(),
         'instagram_handle':
             _igCtrl.text.trim().isEmpty ? null : _igCtrl.text.trim(),
         'facebook_url':
             _fbCtrl.text.trim().isEmpty ? null : _fbCtrl.text.trim(),
+        'tiktok_handle':
+            _tiktokCtrl.text.trim().isEmpty ? null : _tiktokCtrl.text.trim(),
         'auto_confirm': _autoConfirm,
         'accept_walkins': _acceptWalkins,
         'deposit_required': _depositRequired,
@@ -661,4 +718,60 @@ class _BreakWindow {
   final TimeOfDay start;
   final TimeOfDay end;
   const _BreakWindow({required this.start, required this.end});
+}
+
+// ---------------------------------------------------------------------------
+// Quick link tile for navigating to other tabs
+// ---------------------------------------------------------------------------
+
+class _QuickLinkTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _QuickLinkTile({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: colors.onSurface.withValues(alpha: 0.08),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(icon, size: 20, color: colors.primary),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(label,
+                      style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: colors.onSurface)),
+                ),
+                Icon(Icons.chevron_right_rounded,
+                    size: 20, color: colors.onSurface.withValues(alpha: 0.3)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
