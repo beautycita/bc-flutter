@@ -416,6 +416,103 @@ class SatMonthlyReport {
   }
 }
 
+/// A single salon debt record.
+@immutable
+class SalonDebt {
+  final String id;
+  final String businessId;
+  final String businessName;
+  final double originalAmount;
+  final double remainingAmount;
+  final String? reason;
+  final DateTime createdAt;
+  final DateTime? clearedAt;
+
+  const SalonDebt({
+    required this.id,
+    required this.businessId,
+    required this.businessName,
+    required this.originalAmount,
+    required this.remainingAmount,
+    this.reason,
+    required this.createdAt,
+    this.clearedAt,
+  });
+
+  bool get isPending => remainingAmount > 0;
+
+  factory SalonDebt.fromJson(Map<String, dynamic> json) {
+    return SalonDebt(
+      id: json['id']?.toString() ?? '',
+      businessId: json['business_id']?.toString() ?? '',
+      businessName: json['business_name'] as String? ?? 'Desconocido',
+      originalAmount: (json['original_amount'] as num?)?.toDouble() ?? 0,
+      remainingAmount: (json['remaining_amount'] as num?)?.toDouble() ?? 0,
+      reason: json['reason'] as String?,
+      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ?? DateTime.now(),
+      clearedAt: json['cleared_at'] != null
+          ? DateTime.tryParse(json['cleared_at'].toString())
+          : null,
+    );
+  }
+}
+
+/// A single debt payment record.
+@immutable
+class DebtPayment {
+  final String id;
+  final String debtId;
+  final String businessName;
+  final double amount;
+  final String? note;
+  final DateTime createdAt;
+
+  const DebtPayment({
+    required this.id,
+    required this.debtId,
+    required this.businessName,
+    required this.amount,
+    this.note,
+    required this.createdAt,
+  });
+
+  factory DebtPayment.fromJson(Map<String, dynamic> json) {
+    return DebtPayment(
+      id: json['id']?.toString() ?? '',
+      debtId: json['debt_id']?.toString() ?? json['salon_debt_id']?.toString() ?? '',
+      businessName: json['business_name'] as String? ??
+          (json['salon_debts'] is Map ? json['salon_debts']['business_name'] as String? : null) ??
+          'Desconocido',
+      amount: (json['amount'] as num?)?.toDouble() ?? 0,
+      note: json['note'] as String?,
+      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ?? DateTime.now(),
+    );
+  }
+}
+
+/// Summary of all outstanding debts.
+@immutable
+class DebtSummary {
+  final double totalOutstanding;
+  final int salonsWithDebt;
+  final List<SalonDebt> debts;
+  final List<DebtPayment> recentPayments;
+
+  const DebtSummary({
+    required this.totalOutstanding,
+    required this.salonsWithDebt,
+    required this.debts,
+    required this.recentPayments,
+  });
+
+  static const placeholder = DebtSummary(
+    totalOutstanding: 0,
+    salonsWithDebt: 0,
+    debts: [],
+    recentPayments: [],
+  );
+}
+
 // ── Providers ────────────────────────────────────────────────────────────────
 
 /// CEO financial KPIs from v_platform_health and v_daily_revenue.
@@ -713,5 +810,66 @@ final satMonthlyReportsProvider =
   } catch (e) {
     if (kDebugMode) debugPrint('SAT monthly reports error: $e');
     return [];
+  }
+});
+
+/// Salon debts + recent debt payments combined.
+final salonDebtSummaryProvider =
+    FutureProvider<DebtSummary>((ref) async {
+  if (!SupabaseClientService.isInitialized) return DebtSummary.placeholder;
+
+  try {
+    final client = SupabaseClientService.client;
+
+    final results = await Future.wait([
+      client
+          .from('salon_debts')
+          .select('*, businesses(name)')
+          .order('remaining_amount', ascending: false),
+      client
+          .from('debt_payments')
+          .select('*, salon_debts(business_id, businesses(name))')
+          .order('created_at', ascending: false)
+          .limit(50),
+    ]);
+
+    final debtRows = results[0] as List;
+    final paymentRows = results[1] as List;
+
+    final debts = debtRows.map((row) {
+      final biz = row['businesses'] as Map<String, dynamic>?;
+      return SalonDebt.fromJson({
+        ...row,
+        'business_name': biz?['name'] ?? 'Desconocido',
+      });
+    }).toList();
+
+    final payments = paymentRows.map((row) {
+      final salonDebt = row['salon_debts'] as Map<String, dynamic>?;
+      final biz = salonDebt?['businesses'] as Map<String, dynamic>?;
+      return DebtPayment.fromJson({
+        ...row,
+        'business_name': biz?['name'] ?? 'Desconocido',
+      });
+    }).toList();
+
+    double totalOutstanding = 0;
+    final salonsWithDebt = <String>{};
+    for (final d in debts) {
+      if (d.remainingAmount > 0) {
+        totalOutstanding += d.remainingAmount;
+        salonsWithDebt.add(d.businessId);
+      }
+    }
+
+    return DebtSummary(
+      totalOutstanding: totalOutstanding,
+      salonsWithDebt: salonsWithDebt.length,
+      debts: debts,
+      recentPayments: payments,
+    );
+  } catch (e) {
+    if (kDebugMode) debugPrint('Salon debt summary error: $e');
+    return DebtSummary.placeholder;
   }
 });
