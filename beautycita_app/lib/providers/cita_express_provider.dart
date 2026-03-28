@@ -1,3 +1,4 @@
+import 'dart:convert' as json_codec;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
@@ -344,6 +345,64 @@ class CitaExpressNotifier extends StateNotifier<CitaExpressState> {
   }
 
   // ---------------------------------------------------------------------------
+  // Business hours helper
+  // ---------------------------------------------------------------------------
+
+  static const _dayKeys = [
+    'sunday', 'monday', 'tuesday', 'wednesday',
+    'thursday', 'friday', 'saturday',
+  ];
+
+  /// Check if a slot falls within business hours.
+  bool _isWithinBusinessHours(DateTime slotStart, DateTime slotEnd) {
+    final biz = state.businessInfo;
+    if (biz == null) return true; // no info = allow
+    final hoursRaw = biz['hours'];
+    if (hoursRaw == null) return true;
+
+    Map<String, dynamic> hoursMap;
+    if (hoursRaw is String) {
+      try {
+        hoursMap = Map<String, dynamic>.from(json_codec.jsonDecode(hoursRaw) as Map);
+      } catch (_) {
+        return true;
+      }
+    } else if (hoursRaw is Map) {
+      hoursMap = Map<String, dynamic>.from(hoursRaw);
+    } else {
+      return true;
+    }
+
+    // Dart weekday: 1=Mon, 7=Sun. Map to day name keys.
+    const dartDayKeys = ['', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    final dayKey = dartDayKeys[slotStart.weekday];
+    final dayData = hoursMap[dayKey];
+
+    // Null or no open/close = closed that day
+    if (dayData == null) return false;
+    if (dayData is! Map) return false;
+
+    final openStr = dayData['open'] as String?;
+    final closeStr = dayData['close'] as String?;
+    if (openStr == null || closeStr == null) return false;
+
+    // Parse open/close times
+    final openParts = openStr.split(':');
+    final closeParts = closeStr.split(':');
+    if (openParts.length < 2 || closeParts.length < 2) return false;
+
+    final openHour = int.tryParse(openParts[0]) ?? 0;
+    final openMin = int.tryParse(openParts[1]) ?? 0;
+    final closeHour = int.tryParse(closeParts[0]) ?? 23;
+    final closeMin = int.tryParse(closeParts[1]) ?? 59;
+
+    final openTime = DateTime(slotStart.year, slotStart.month, slotStart.day, openHour, openMin);
+    final closeTime = DateTime(slotStart.year, slotStart.month, slotStart.day, closeHour, closeMin);
+
+    return !slotStart.isBefore(openTime) && !slotEnd.isAfter(closeTime);
+  }
+
+  // ---------------------------------------------------------------------------
   // Internal — Direct availability query (bypasses engine)
   // ---------------------------------------------------------------------------
 
@@ -438,11 +497,20 @@ class CitaExpressNotifier extends StateNotifier<CitaExpressState> {
         final slots = slotsResponse as List;
         if (slots.isEmpty) continue;
 
-        // Take the first available slot for this staff member
-        final slotStartStr = slots[0]['slot_start'] as String;
-        final slotStart = DateTime.parse(slotStartStr);
-        final slotEnd =
-            slotStart.add(Duration(minutes: effectiveDuration));
+        // Find the first slot that falls within business hours
+        DateTime? slotStart;
+        DateTime? slotEnd;
+        for (final slot in slots) {
+          final candidateStr = slot['slot_start'] as String;
+          final candidate = DateTime.parse(candidateStr).toLocal();
+          final candidateEnd = candidate.add(Duration(minutes: effectiveDuration));
+          if (_isWithinBusinessHours(candidate, candidateEnd)) {
+            slotStart = candidate;
+            slotEnd = candidateEnd;
+            break;
+          }
+        }
+        if (slotStart == null || slotEnd == null) continue;
 
         final firstName = staff['first_name'] as String? ?? '';
         final lastName = staff['last_name'] as String? ?? '';
