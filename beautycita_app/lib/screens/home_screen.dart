@@ -273,46 +273,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       ),
                       child: Column(
                         children: [
-                          // Top row with saldo badge + nav buttons
+                          // Top row with nav buttons
                           Row(
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
-                              // Saldo badge — shows if user has balance > 0
-                              Consumer(
-                                builder: (context, ref, _) {
-                                  final saldoAsync = ref.watch(_saldoProvider);
-                                  final saldo = saldoAsync.valueOrNull ?? 0.0;
-                                  if (saldo <= 0) return const SizedBox.shrink();
-                                  return Padding(
-                                    padding: const EdgeInsets.only(right: AppConstants.paddingSM),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withValues(alpha: 0.2),
-                                        borderRadius: BorderRadius.circular(AppConstants.radiusFull),
-                                        border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(Icons.account_balance_wallet_outlined,
-                                              size: 14, color: Colors.white.withValues(alpha: 0.9)),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            '\$${saldo.toStringAsFixed(0)}',
-                                            style: GoogleFonts.poppins(
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w700,
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                              const Spacer(),
                               // Explore feed button — gated by enable_feed toggle
                               Consumer(
                                 builder: (context, ref, _) {
