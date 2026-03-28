@@ -139,6 +139,7 @@ class _FeedCardState extends ConsumerState<FeedCard> {
             _ProductTagRow(
               tags: item.productTags,
               salonName: item.businessName,
+              businessId: item.businessId,
             ),
 
           // ── Bottom action row ─────────────────────────────────────────
@@ -200,6 +201,7 @@ class _ProductShowcaseCard extends StatelessWidget {
               context,
               product: product,
               salonName: item.businessName,
+              businessId: item.businessId,
             ),
             child: AspectRatio(
               aspectRatio: 1,
@@ -392,6 +394,7 @@ class _ProductShowcaseCard extends StatelessWidget {
                       context,
                       product: product,
                       salonName: item.businessName,
+                      businessId: item.businessId,
                     ),
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 10),
@@ -671,8 +674,9 @@ class _MainImage extends StatelessWidget {
 class _ProductTagRow extends StatelessWidget {
   final List<FeedProductTag> tags;
   final String salonName;
+  final String businessId;
 
-  const _ProductTagRow({required this.tags, required this.salonName});
+  const _ProductTagRow({required this.tags, required this.salonName, required this.businessId});
 
   @override
   Widget build(BuildContext context) {
@@ -709,6 +713,7 @@ class _ProductTagRow extends StatelessWidget {
                       context,
                       product: tag,
                       salonName: salonName,
+                      businessId: businessId,
                     ),
                     child: Container(
                       padding: const EdgeInsets.symmetric(

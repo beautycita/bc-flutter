@@ -4,29 +4,35 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:beautycita_core/models.dart' hide Provider;
 import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/screens/feed/feed_image_viewer.dart';
-import 'package:beautycita/services/toast_service.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:beautycita/screens/feed/product_checkout_sheet.dart';
 
 class ProductDetailSheet extends StatelessWidget {
   final FeedProductTag product;
   final String salonName;
+  final String businessId;
 
   const ProductDetailSheet({
     super.key,
     required this.product,
     required this.salonName,
+    required this.businessId,
   });
 
   static Future<void> show(
     BuildContext context, {
     required FeedProductTag product,
     required String salonName,
+    required String businessId,
   }) {
     return showBurstBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => ProductDetailSheet(product: product, salonName: salonName),
+      builder: (_) => ProductDetailSheet(
+        product: product,
+        salonName: salonName,
+        businessId: businessId,
+      ),
     );
   }
 
@@ -185,23 +191,25 @@ class ProductDetailSheet extends StatelessWidget {
 
                   const SizedBox(height: AppConstants.paddingXL),
 
-                  // Comprar — opens WhatsApp to salon to arrange purchase
+                  // Comprar — opens checkout bottom sheet
                   SizedBox(
                     width: double.infinity,
                     height: AppConstants.minTouchHeight,
                     child: FilledButton.icon(
-                      onPressed: product.inStock ? () {
-                        final msg = Uri.encodeComponent(
-                          'Hola! Vi el producto "${product.name}" '
-                          '(\$${product.price.toStringAsFixed(0)}) en BeautyCita '
-                          'y me gustaria comprarlo.');
-                        final waUrl = 'https://wa.me/?text=$msg';
-                        launchUrl(Uri.parse(waUrl), mode: LaunchMode.externalApplication);
-                        ToastService.showSuccess('Abriendo WhatsApp...');
-                      } : null,
+                      onPressed: product.inStock
+                          ? () => ProductCheckoutSheet.show(
+                                context,
+                                productId: product.productId,
+                                productName: product.name,
+                                brand: product.brand,
+                                price: product.price,
+                                businessId: businessId,
+                                salonName: salonName,
+                              )
+                          : null,
                       icon: const Icon(Icons.shopping_bag_outlined),
                       label: Text(
-                        'Comprar',
+                        'Comprar — \$${product.price.toStringAsFixed(2)} MXN',
                         style: GoogleFonts.poppins(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
