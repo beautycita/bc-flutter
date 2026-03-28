@@ -1543,21 +1543,3 @@ class _EmptyCard extends StatelessWidget {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Tab 7: Deudas
-// ═══════════════════════════════════════════════════════════════════════════
-
-class _DeudasTab extends ConsumerWidget {
-  final NumberFormat mxnDecimal;
-  const _DeudasTab({required this.mxnDecimal});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return ListView(
-      padding: const EdgeInsets.all(AppConstants.paddingMD),
-      children: [
-        const _EmptyCard(message: 'Sin deudas pendientes'),
-      ],
-    );
-  }
-}
