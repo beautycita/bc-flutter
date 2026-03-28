@@ -27,7 +27,7 @@ class _AdminFinanceDashboardScreenState
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 6, vsync: this);
+    _tabController = TabController(length: 7, vsync: this);
   }
 
   @override
@@ -96,6 +96,7 @@ class _AdminFinanceDashboardScreenState
               Tab(text: 'CFDI'),
               Tab(text: 'SAT Plataforma'),
               Tab(text: 'SAT Negocios'),
+              Tab(text: 'Deudas'),
             ],
           ),
         ),
@@ -111,6 +112,7 @@ class _AdminFinanceDashboardScreenState
               _CfdiTab(mxnDecimal: _mxnDecimal),
               _SatPlataformaTab(mxnDecimal: _mxnDecimal),
               _SatNegociosTab(mxnDecimal: _mxnDecimal),
+              _DeudasTab(mxnDecimal: _mxnDecimal),
             ],
           ),
         ),
@@ -136,6 +138,7 @@ class _ResumenTab extends ConsumerWidget {
     final taxAsync = ref.watch(taxWithholdingProvider);
     final reconciliationAsync = ref.watch(reconciliationProvider);
     final businessRevenueAsync = ref.watch(businessRevenueProvider);
+    final debtAsync = ref.watch(salonDebtSummaryProvider);
     final colors = Theme.of(context).colorScheme;
 
     return RefreshIndicator(
@@ -145,6 +148,7 @@ class _ResumenTab extends ConsumerWidget {
         ref.invalidate(taxWithholdingProvider);
         ref.invalidate(reconciliationProvider);
         ref.invalidate(businessRevenueProvider);
+        ref.invalidate(salonDebtSummaryProvider);
       },
       child: ListView(
         padding: const EdgeInsets.all(AppConstants.paddingMD),
@@ -186,7 +190,26 @@ class _ResumenTab extends ConsumerWidget {
             error: (_, _) => const SizedBox.shrink(),
           ),
 
-          const SizedBox(height: AppConstants.paddingLG),
+          const SizedBox(height: AppConstants.paddingMD),
+
+          // Outstanding debts KPI
+          debtAsync.when(
+            data: (debt) => debt.totalOutstanding > 0
+                ? Padding(
+                    padding: const EdgeInsets.only(bottom: AppConstants.paddingSM),
+                    child: _KpiCard(
+                      label: 'Deudas Pendientes',
+                      value: mxnDecimal.format(debt.totalOutstanding),
+                      icon: Icons.warning_amber_rounded,
+                      color: const Color(0xFFDC2626),
+                    ),
+                  )
+                : const SizedBox.shrink(),
+            loading: () => const SizedBox.shrink(),
+            error: (_, _) => const SizedBox.shrink(),
+          ),
+
+          const SizedBox(height: AppConstants.paddingSM),
 
           // Commission breakdown
           _SectionHeader(title: 'Comisiones del Mes'),
@@ -621,6 +644,200 @@ class _SatNegociosTab extends ConsumerWidget {
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: _ErrorCard(message: 'Error: $e')),
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Tab 7: Deudas (salon_debts + debt_payments)
+// ═══════════════════════════════════════════════════════════════════════════
+
+class _DeudasTab extends ConsumerWidget {
+  final NumberFormat mxnDecimal;
+  const _DeudasTab({required this.mxnDecimal});
+
+  static final _dateFmt = DateFormat('dd/MM/yyyy');
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final debtAsync = ref.watch(salonDebtSummaryProvider);
+
+    return RefreshIndicator(
+      onRefresh: () async => ref.invalidate(salonDebtSummaryProvider),
+      child: debtAsync.when(
+        data: (summary) {
+          if (summary.debts.isEmpty) {
+            return ListView(children: const [
+              SizedBox(height: 100),
+              _EmptyCard(message: 'Sin deudas registradas'),
+            ]);
+          }
+
+          return ListView(
+            padding: const EdgeInsets.all(AppConstants.paddingMD),
+            children: [
+              // Summary KPIs
+              Row(
+                children: [
+                  Expanded(
+                    child: _KpiCard(
+                      label: 'Deuda Total',
+                      value: mxnDecimal.format(summary.totalOutstanding),
+                      icon: Icons.warning_amber_rounded,
+                      color: const Color(0xFFDC2626),
+                    ),
+                  ),
+                  const SizedBox(width: AppConstants.paddingSM),
+                  Expanded(
+                    child: _KpiCard(
+                      label: 'Salones con Deuda',
+                      value: '${summary.salonsWithDebt}',
+                      icon: Icons.store,
+                      color: const Color(0xFFF59E0B),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: AppConstants.paddingLG),
+
+              // Debt list
+              _SectionHeader(title: 'Deudas por Salon'),
+              const SizedBox(height: AppConstants.paddingSM),
+              ...summary.debts.map((debt) => _DebtTile(debt: debt, mxn: mxnDecimal, dateFmt: _dateFmt)),
+
+              if (summary.recentPayments.isNotEmpty) ...[
+                const SizedBox(height: AppConstants.paddingLG),
+                _SectionHeader(title: 'Pagos Recientes'),
+                const SizedBox(height: AppConstants.paddingSM),
+                ...summary.recentPayments.map((p) => _DebtPaymentTile(payment: p, mxn: mxnDecimal, dateFmt: _dateFmt)),
+              ],
+            ],
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => Center(child: _ErrorCard(message: 'Error: $e')),
+      ),
+    );
+  }
+}
+
+class _DebtTile extends StatelessWidget {
+  final SalonDebt debt;
+  final NumberFormat mxn;
+  final DateFormat dateFmt;
+  const _DebtTile({required this.debt, required this.mxn, required this.dateFmt});
+
+  @override
+  Widget build(BuildContext context) {
+    final isPending = debt.isPending;
+    final statusColor = isPending ? const Color(0xFFDC2626) : const Color(0xFF059669);
+    final statusLabel = isPending ? 'Pendiente' : 'Saldada';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.all(AppConstants.paddingSM),
+      decoration: BoxDecoration(
+        color: isPending ? const Color(0xFFFEF2F2) : Colors.white,
+        borderRadius: BorderRadius.circular(AppConstants.radiusSM),
+        border: isPending ? Border.all(color: const Color(0xFFFCA5A5), width: 0.5) : null,
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 4, offset: const Offset(0, 1)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(debt.businessName,
+                    style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF212121)),
+                    maxLines: 1, overflow: TextOverflow.ellipsis),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(AppConstants.radiusFull),
+                ),
+                child: Text(statusLabel,
+                    style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w700, color: statusColor)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              Expanded(child: _MiniLabel(label: 'Original', value: mxn.format(debt.originalAmount))),
+              Expanded(child: _MiniLabel(label: 'Restante', value: mxn.format(debt.remainingAmount))),
+              Expanded(child: _MiniLabel(label: 'Creada', value: dateFmt.format(debt.createdAt.toLocal()))),
+              if (debt.clearedAt != null)
+                Expanded(child: _MiniLabel(label: 'Saldada', value: dateFmt.format(debt.clearedAt!.toLocal()))),
+            ],
+          ),
+          if (debt.reason != null && debt.reason!.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(debt.reason!,
+                style: GoogleFonts.nunito(fontSize: 11, fontStyle: FontStyle.italic, color: const Color(0xFF757575)),
+                maxLines: 2, overflow: TextOverflow.ellipsis),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _DebtPaymentTile extends StatelessWidget {
+  final DebtPayment payment;
+  final NumberFormat mxn;
+  final DateFormat dateFmt;
+  const _DebtPaymentTile({required this.payment, required this.mxn, required this.dateFmt});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.all(AppConstants.paddingSM),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(AppConstants.radiusSM),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 4, offset: const Offset(0, 1)),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: const Color(0xFF059669).withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(Icons.payments_outlined, size: 16, color: Color(0xFF059669)),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(payment.businessName,
+                    style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF212121)),
+                    maxLines: 1, overflow: TextOverflow.ellipsis),
+                Text(dateFmt.format(payment.createdAt.toLocal()),
+                    style: GoogleFonts.nunito(fontSize: 11, color: const Color(0xFF9E9E9E))),
+                if (payment.note != null && payment.note!.isNotEmpty)
+                  Text(payment.note!,
+                      style: GoogleFonts.nunito(fontSize: 11, color: const Color(0xFF757575)),
+                      maxLines: 1, overflow: TextOverflow.ellipsis),
+              ],
+            ),
+          ),
+          Text(mxn.format(payment.amount),
+              style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF059669))),
+        ],
       ),
     );
   }
@@ -1322,6 +1539,25 @@ class _EmptyCard extends StatelessWidget {
       padding: const EdgeInsets.all(AppConstants.paddingLG),
       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(AppConstants.radiusMD)),
       child: Center(child: Text(message, style: GoogleFonts.nunito(fontSize: 13, color: const Color(0xFF9E9E9E)))),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Tab 7: Deudas
+// ═══════════════════════════════════════════════════════════════════════════
+
+class _DeudasTab extends ConsumerWidget {
+  final NumberFormat mxnDecimal;
+  const _DeudasTab({required this.mxnDecimal});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return ListView(
+      padding: const EdgeInsets.all(AppConstants.paddingMD),
+      children: [
+        const _EmptyCard(message: 'Sin deudas pendientes'),
+      ],
     );
   }
 }
