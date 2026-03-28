@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:beautycita/config/app_transitions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/constants.dart';
@@ -32,6 +33,11 @@ class _TimeRulesScreenState extends ConsumerState<TimeRulesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isSuperAdmin = ref.watch(isSuperAdminProvider);
+    if (isSuperAdmin.valueOrNull != true) {
+      return const Center(child: Text('Acceso no autorizado'));
+    }
+
     final rulesAsync = ref.watch(timeInferenceRulesProvider);
     final colors = Theme.of(context).colorScheme;
 
@@ -65,7 +71,17 @@ class _TimeRulesScreenState extends ConsumerState<TimeRulesScreen> {
             ),
           );
         }
-        return _buildList(rules);
+        return Scaffold(
+          backgroundColor: Colors.transparent,
+          body: _buildList(rules),
+          floatingActionButton: FloatingActionButton.extended(
+            onPressed: _showCreateDialog,
+            icon: const Icon(Icons.add),
+            label: const Text('Agregar Regla'),
+            backgroundColor: colors.primary,
+            foregroundColor: Colors.white,
+          ),
+        );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(
@@ -92,6 +108,270 @@ class _TimeRulesScreenState extends ConsumerState<TimeRulesScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showCreateDialog() {
+    var hourStart = 6;
+    var hourEnd = 12;
+    var dayStart = 0;
+    var dayEnd = 6;
+    var description = '';
+    var offsetMin = 0;
+    var offsetMax = 1;
+    var prefStart = 9;
+    var prefEnd = 18;
+    int? peakHour = 11;
+    final colors = Theme.of(context).colorScheme;
+
+    showBurstDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+          ),
+          title: Text(
+            'Nueva Regla de Tiempo',
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  decoration: InputDecoration(
+                    labelText: 'Descripción',
+                    labelStyle: GoogleFonts.nunito(fontSize: 13),
+                  ),
+                  onChanged: (v) => description = v,
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(child: Text('Hora inicio: $hourStart',
+                        style: GoogleFonts.nunito(fontSize: 13))),
+                    Expanded(
+                      child: Slider(
+                        value: hourStart.toDouble(),
+                        min: 0, max: 23,
+                        divisions: 23,
+                        onChanged: (v) => setDialogState(() => hourStart = v.round()),
+                      ),
+                    ),
+                  ],
+                ),
+                Row(
+                  children: [
+                    Expanded(child: Text('Hora fin: $hourEnd',
+                        style: GoogleFonts.nunito(fontSize: 13))),
+                    Expanded(
+                      child: Slider(
+                        value: hourEnd.toDouble(),
+                        min: 0, max: 24,
+                        divisions: 24,
+                        onChanged: (v) => setDialogState(() => hourEnd = v.round()),
+                      ),
+                    ),
+                  ],
+                ),
+                Row(
+                  children: [
+                    Expanded(child: Text('Día inicio: ${_dayLabels[dayStart]}',
+                        style: GoogleFonts.nunito(fontSize: 13))),
+                    Expanded(
+                      child: Slider(
+                        value: dayStart.toDouble(),
+                        min: 0, max: 6,
+                        divisions: 6,
+                        onChanged: (v) => setDialogState(() => dayStart = v.round()),
+                      ),
+                    ),
+                  ],
+                ),
+                Row(
+                  children: [
+                    Expanded(child: Text('Día fin: ${_dayLabels[dayEnd]}',
+                        style: GoogleFonts.nunito(fontSize: 13))),
+                    Expanded(
+                      child: Slider(
+                        value: dayEnd.toDouble(),
+                        min: 0, max: 6,
+                        divisions: 6,
+                        onChanged: (v) => setDialogState(() => dayEnd = v.round()),
+                      ),
+                    ),
+                  ],
+                ),
+                Row(
+                  children: [
+                    Expanded(child: Text('Offset mín: $offsetMin',
+                        style: GoogleFonts.nunito(fontSize: 13))),
+                    Expanded(
+                      child: Slider(
+                        value: offsetMin.toDouble(),
+                        min: 0, max: 30,
+                        divisions: 30,
+                        onChanged: (v) => setDialogState(() => offsetMin = v.round()),
+                      ),
+                    ),
+                  ],
+                ),
+                Row(
+                  children: [
+                    Expanded(child: Text('Offset máx: $offsetMax',
+                        style: GoogleFonts.nunito(fontSize: 13))),
+                    Expanded(
+                      child: Slider(
+                        value: offsetMax.toDouble(),
+                        min: 0, max: 30,
+                        divisions: 30,
+                        onChanged: (v) => setDialogState(() => offsetMax = v.round()),
+                      ),
+                    ),
+                  ],
+                ),
+                Row(
+                  children: [
+                    Expanded(child: Text('Hora pref. inicio: $prefStart',
+                        style: GoogleFonts.nunito(fontSize: 13))),
+                    Expanded(
+                      child: Slider(
+                        value: prefStart.toDouble(),
+                        min: 0, max: 23,
+                        divisions: 23,
+                        onChanged: (v) => setDialogState(() => prefStart = v.round()),
+                      ),
+                    ),
+                  ],
+                ),
+                Row(
+                  children: [
+                    Expanded(child: Text('Hora pref. fin: $prefEnd',
+                        style: GoogleFonts.nunito(fontSize: 13))),
+                    Expanded(
+                      child: Slider(
+                        value: prefEnd.toDouble(),
+                        min: 0, max: 24,
+                        divisions: 24,
+                        onChanged: (v) => setDialogState(() => prefEnd = v.round()),
+                      ),
+                    ),
+                  ],
+                ),
+                Row(
+                  children: [
+                    Expanded(child: Text('Hora pico: ${peakHour ?? "ASAP"}',
+                        style: GoogleFonts.nunito(fontSize: 13))),
+                    Expanded(
+                      child: Slider(
+                        value: (peakHour ?? -1).toDouble(),
+                        min: -1, max: 23,
+                        divisions: 24,
+                        onChanged: (v) => setDialogState(
+                            () => peakHour = v.round() < 0 ? null : v.round()),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('CANCELAR'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                try {
+                  await SupabaseClientService.client
+                      .from('time_inference_rules')
+                      .insert({
+                        'hour_start': hourStart,
+                        'hour_end': hourEnd,
+                        'day_of_week_start': dayStart,
+                        'day_of_week_end': dayEnd,
+                        'window_description':
+                            description.isEmpty ? 'Nueva regla' : description,
+                        'window_offset_days_min': offsetMin,
+                        'window_offset_days_max': offsetMax,
+                        'preferred_hour_start': prefStart,
+                        'preferred_hour_end': prefEnd,
+                        'preference_peak_hour': peakHour ?? 11,
+                        'is_active': true,
+                      });
+                  ref.invalidate(timeInferenceRulesProvider);
+                  if (ctx.mounted) Navigator.pop(ctx);
+                  ToastService.showSuccess('Regla creada');
+                } catch (e, stack) {
+                  ToastService.showErrorWithDetails(
+                      ToastService.friendlyError(e), e, stack);
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: colors.primary,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('CREAR'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _confirmDeleteRule(TimeInferenceRule rule) {
+    showBurstDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+        ),
+        title: Text(
+          'Eliminar regla',
+          style: GoogleFonts.poppins(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: Colors.red,
+          ),
+        ),
+        content: Text(
+          '¿Eliminar la regla "${rule.description ?? 'Sin nombre'}"?\nEsta acción no se puede deshacer.',
+          style: GoogleFonts.nunito(fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('CANCELAR'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              try {
+                await SupabaseClientService.client
+                    .from('time_inference_rules')
+                    .delete()
+                    .eq('id', rule.id);
+                ref.invalidate(timeInferenceRulesProvider);
+                if (ctx.mounted) Navigator.pop(ctx);
+                setState(() => _expandedId = null);
+                ToastService.showSuccess('Regla eliminada');
+              } catch (e, stack) {
+                ToastService.showErrorWithDetails(
+                    ToastService.friendlyError(e), e, stack);
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('ELIMINAR'),
+          ),
+        ],
       ),
     );
   }
@@ -242,7 +522,7 @@ class _TimeRulesScreenState extends ConsumerState<TimeRulesScreen> {
           ),
 
           // Expanded editor
-          if (isExpanded)
+          if (isExpanded) ...[
             _RuleEditor(
               rule: rule,
               onSaved: () {
@@ -250,6 +530,20 @@ class _TimeRulesScreenState extends ConsumerState<TimeRulesScreen> {
                 setState(() => _expandedId = null);
               },
             ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppConstants.paddingMD, 0, AppConstants.paddingMD, AppConstants.paddingMD),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: () => _confirmDeleteRule(rule),
+                  icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                  label: Text('Eliminar regla',
+                      style: GoogleFonts.nunito(color: Colors.red, fontSize: 13)),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );

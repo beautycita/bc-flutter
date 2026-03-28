@@ -857,16 +857,18 @@ class NotificationTemplate {
   final String id;
   final String eventType;
   final String channel;
-  final String? subjectEs;
-  final String bodyEs;
+  final String recipientType;
+  final String templateEs;
+  final String? templateEn;
   final bool isActive;
 
   const NotificationTemplate({
     required this.id,
     required this.eventType,
     required this.channel,
-    this.subjectEs,
-    required this.bodyEs,
+    required this.recipientType,
+    required this.templateEs,
+    this.templateEn,
     required this.isActive,
   });
 
@@ -875,8 +877,9 @@ class NotificationTemplate {
       id: json['id'] as String,
       eventType: json['event_type'] as String,
       channel: json['channel'] as String,
-      subjectEs: json['subject_es'] as String?,
-      bodyEs: json['body_es'] as String? ?? '',
+      recipientType: json['recipient_type'] as String? ?? 'customer',
+      templateEs: json['template_es'] as String? ?? '',
+      templateEn: json['template_en'] as String?,
       isActive: json['is_active'] as bool? ?? true,
     );
   }

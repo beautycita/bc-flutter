@@ -17,14 +17,14 @@ class NotificationTemplatesScreen extends ConsumerStatefulWidget {
 class _NotificationTemplatesScreenState
     extends ConsumerState<NotificationTemplatesScreen> {
   String? _editingId;
-  final _bodyCtrl = TextEditingController();
-  final _subjectCtrl = TextEditingController();
+  final _templateEsCtrl = TextEditingController();
+  final _templateEnCtrl = TextEditingController();
   bool _saving = false;
 
   @override
   void dispose() {
-    _bodyCtrl.dispose();
-    _subjectCtrl.dispose();
+    _templateEsCtrl.dispose();
+    _templateEnCtrl.dispose();
     super.dispose();
   }
 
@@ -60,6 +60,11 @@ class _NotificationTemplatesScreenState
 
   @override
   Widget build(BuildContext context) {
+    final isSuperAdmin = ref.watch(isSuperAdminProvider);
+    if (isSuperAdmin.valueOrNull != true) {
+      return const Center(child: Text('Acceso no autorizado'));
+    }
+
     final templatesAsync = ref.watch(notificationTemplatesProvider);
     final colors = Theme.of(context).colorScheme;
 
@@ -86,14 +91,14 @@ class _NotificationTemplatesScreenState
               onTapEdit: (t) {
                 setState(() {
                   _editingId = t.id;
-                  _subjectCtrl.text = t.subjectEs ?? '';
-                  _bodyCtrl.text = t.bodyEs;
+                  _templateEsCtrl.text = t.templateEs;
+                  _templateEnCtrl.text = t.templateEn ?? '';
                 });
               },
               onSave: (t) => _saveTemplate(t),
               onCancel: () => setState(() => _editingId = null),
-              bodyCtrl: _bodyCtrl,
-              subjectCtrl: _subjectCtrl,
+              templateEsCtrl: _templateEsCtrl,
+              templateEnCtrl: _templateEnCtrl,
               saving: _saving,
               channelIcon: _channelIcon,
               channelColor: _channelColor,
@@ -116,10 +121,10 @@ class _NotificationTemplatesScreenState
       await SupabaseClientService.client
           .from('notification_templates')
           .update({
-            'subject_es': _subjectCtrl.text.isEmpty
+            'template_es': _templateEsCtrl.text,
+            'template_en': _templateEnCtrl.text.isEmpty
                 ? null
-                : _subjectCtrl.text,
-            'body_es': _bodyCtrl.text,
+                : _templateEnCtrl.text,
           }).eq('id', t.id);
 
       ref.invalidate(notificationTemplatesProvider);
@@ -142,8 +147,8 @@ class _EventGroup extends StatelessWidget {
   final ValueChanged<NotificationTemplate> onTapEdit;
   final ValueChanged<NotificationTemplate> onSave;
   final VoidCallback onCancel;
-  final TextEditingController bodyCtrl;
-  final TextEditingController subjectCtrl;
+  final TextEditingController templateEsCtrl;
+  final TextEditingController templateEnCtrl;
   final bool saving;
   final IconData Function(String) channelIcon;
   final Color Function(String) channelColor;
@@ -155,8 +160,8 @@ class _EventGroup extends StatelessWidget {
     required this.onTapEdit,
     required this.onSave,
     required this.onCancel,
-    required this.bodyCtrl,
-    required this.subjectCtrl,
+    required this.templateEsCtrl,
+    required this.templateEnCtrl,
     required this.saving,
     required this.channelIcon,
     required this.channelColor,
@@ -217,7 +222,7 @@ class _EventGroup extends StatelessWidget {
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
-                              t.bodyEs,
+                              t.templateEs,
                               style: GoogleFonts.nunito(
                                 fontSize: 13,
                                 color: colors.onSurface,
@@ -237,22 +242,21 @@ class _EventGroup extends StatelessWidget {
                   ),
                   if (isEditing) ...[
                     const SizedBox(height: 8),
-                    if (t.channel == 'email')
-                      TextField(
-                        controller: subjectCtrl,
-                        decoration: InputDecoration(
-                          labelText: 'Asunto',
-                          labelStyle: GoogleFonts.nunito(fontSize: 13),
-                          isDense: true,
-                        ),
-                      ),
-                    if (t.channel == 'email')
-                      const SizedBox(height: 8),
                     TextField(
-                      controller: bodyCtrl,
+                      controller: templateEsCtrl,
                       maxLines: 4,
                       decoration: InputDecoration(
-                        labelText: 'Cuerpo',
+                        labelText: 'Plantilla (ES)',
+                        labelStyle: GoogleFonts.nunito(fontSize: 13),
+                        isDense: true,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: templateEnCtrl,
+                      maxLines: 4,
+                      decoration: InputDecoration(
+                        labelText: 'Plantilla (EN)',
                         labelStyle: GoogleFonts.nunito(fontSize: 13),
                         isDense: true,
                       ),

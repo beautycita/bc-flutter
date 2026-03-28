@@ -52,6 +52,11 @@ class _EngineSettingsEditorScreenState
 
   @override
   Widget build(BuildContext context) {
+    final isSuperAdmin = ref.watch(isSuperAdminProvider);
+    if (isSuperAdmin.valueOrNull != true) {
+      return const Center(child: Text('Acceso no autorizado'));
+    }
+
     final settingsAsync = ref.watch(engineSettingsProvider);
     final colors = Theme.of(context).colorScheme;
 
