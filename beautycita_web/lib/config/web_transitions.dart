@@ -61,8 +61,15 @@ Widget _doubleRadialBurst(
     animation: animation,
     builder: (context, _) {
       final isReverse = animation.status == AnimationStatus.reverse;
-      final rawT = animation.value;
-      final t = isReverse ? 1.0 - rawT : rawT;
+
+      if (isReverse) {
+        return FadeTransition(
+          opacity: animation,
+          child: child,
+        );
+      }
+
+      final t = animation.value;
 
       final blackT = Curves.easeOutExpo.transform(
         (t / 0.60).clamp(0.0, 1.0),

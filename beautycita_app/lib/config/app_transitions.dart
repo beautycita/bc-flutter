@@ -56,32 +56,35 @@ Widget _doubleRadialBurstTransition(
   return AnimatedBuilder(
     animation: animation,
     builder: (context, _) {
-      // Detect direction each frame (not once at build time)
       final isReverse = animation.status == AnimationStatus.reverse;
-      final rawT = animation.value;
-      final t = isReverse ? 1.0 - rawT : rawT;
 
-      // Black mask: fast start, long tail — feels like it rushes out then settles
+      // On pop/back: simple fast fade — no radial burst
+      if (isReverse) {
+        return FadeTransition(
+          opacity: animation,
+          child: child,
+        );
+      }
+
+      final t = animation.value;
+
+      // Black mask: fast start, long tail
       final blackT = Curves.easeOutExpo.transform(
         (t / 0.60).clamp(0.0, 1.0),
       );
-      // Reveal: slightly delayed, more organic deceleration
+      // Reveal: slightly delayed, organic deceleration
       final revealT = Curves.easeOutQuart.transform(
         ((t - 0.30) / 0.70).clamp(0.0, 1.0),
       );
 
-      // Overshoot the radius slightly so the circle fully covers corners
       final blackR = blackT * maxRadius * 1.05;
       final revealR = revealT * maxRadius * 1.05;
 
-      // New page scales up subtly as it's revealed (0.96 → 1.0)
       final pageScale = 0.96 + 0.04 * revealT;
-      // Slight fade-in on the new page for the first 40% of its reveal
       final pageOpacity = (revealT / 0.4).clamp(0.0, 1.0);
 
       return Stack(
         children: [
-          // Black mask — slight gradient at the edge for softness
           ClipPath(
             clipper: _CircleClipper(center: focal, radius: blackR),
             child: const ColoredBox(
@@ -89,7 +92,6 @@ Widget _doubleRadialBurstTransition(
               child: SizedBox.expand(),
             ),
           ),
-          // Soft glow ring at the edge of the black circle
           if (blackT > 0.01 && blackT < 0.95)
             CustomPaint(
               size: size,
@@ -99,7 +101,6 @@ Widget _doubleRadialBurstTransition(
                 opacity: (1.0 - blackT) * 0.3,
               ),
             ),
-          // New page with subtle scale + fade
           ClipPath(
             clipper: _CircleClipper(center: focal, radius: revealR),
             child: Transform.scale(
