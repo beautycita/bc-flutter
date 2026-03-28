@@ -18,6 +18,9 @@ import 'package:go_router/go_router.dart';
 // Both push and pop play the SAME expanding animation (never contracts).
 // Focal point = last tap position captured by bcTapTracker.
 
+/// Global animation reduction flag. Set from user preferences.
+bool bcReduceAnimations = false;
+
 /// Global tap position tracker. Wrap your MaterialApp in this widget.
 Offset _lastTapPosition = const Offset(0, 0);
 bool _hasTapPosition = false;
@@ -45,6 +48,11 @@ Widget _doubleRadialBurstTransition(
   Animation<double> secondaryAnimation,
   Widget child,
 ) {
+  // Reduced animations: simple fast fade, zero GPU cost
+  if (bcReduceAnimations) {
+    return FadeTransition(opacity: animation, child: child);
+  }
+
   final size = MediaQuery.of(context).size;
   final maxRadius = math.sqrt(size.width * size.width + size.height * size.height);
 
@@ -138,7 +146,7 @@ class _CircleGlowPainter extends CustomPainter {
     final paint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 30
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 15)
+      ..strokeWidth = 20 // Wider stroke replaces blur for softer edge without GPU cost
       ..color = const Color(0xFF9333EA).withValues(alpha: opacity);
     canvas.drawCircle(center, radius, paint);
   }

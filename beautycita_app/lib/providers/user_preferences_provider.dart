@@ -19,6 +19,7 @@ class UserPrefsState {
   final double qualitySpeed; // 0.0 (fastest) to 1.0 (best quality)
   final double exploreLoyalty; // 0.0 (explore new) to 1.0 (loyal to known)
   final bool onboardingComplete;
+  final bool reduceAnimations;
 
   const UserPrefsState({
     this.defaultTransport = 'car',
@@ -32,6 +33,7 @@ class UserPrefsState {
     this.qualitySpeed = 0.7,
     this.exploreLoyalty = 0.3,
     this.onboardingComplete = false,
+    this.reduceAnimations = false,
   });
 
   UserPrefsState copyWith({
@@ -46,6 +48,7 @@ class UserPrefsState {
     double? qualitySpeed,
     double? exploreLoyalty,
     bool? onboardingComplete,
+    bool? reduceAnimations,
   }) {
     return UserPrefsState(
       defaultTransport: defaultTransport ?? this.defaultTransport,
@@ -59,6 +62,7 @@ class UserPrefsState {
       qualitySpeed: qualitySpeed ?? this.qualitySpeed,
       exploreLoyalty: exploreLoyalty ?? this.exploreLoyalty,
       onboardingComplete: onboardingComplete ?? this.onboardingComplete,
+      reduceAnimations: reduceAnimations ?? this.reduceAnimations,
     );
   }
 }
@@ -89,6 +93,7 @@ class UserPrefsNotifier extends StateNotifier<UserPrefsState> {
       final qualitySpeed = await _prefs.getQualitySpeed();
       final exploreLoyalty = await _prefs.getExploreLoyalty();
       final onboardingComplete = await _prefs.getOnboardingComplete();
+      final reduceAnimations = await _prefs.getBool('pref_reduce_animations') ?? false;
       state = UserPrefsState(
         defaultTransport: transport,
         notificationsEnabled: notifications,
@@ -101,6 +106,7 @@ class UserPrefsNotifier extends StateNotifier<UserPrefsState> {
         qualitySpeed: qualitySpeed,
         exploreLoyalty: exploreLoyalty,
         onboardingComplete: onboardingComplete,
+        reduceAnimations: reduceAnimations,
       );
     } catch (e) {
       if (kDebugMode) debugPrint('Failed to load user prefs: $e');
@@ -166,6 +172,12 @@ class UserPrefsNotifier extends StateNotifier<UserPrefsState> {
   Future<void> setOnboardingComplete(bool value) async {
     await _prefs.setOnboardingComplete(value);
     state = state.copyWith(onboardingComplete: value);
+  }
+
+  Future<void> toggleReduceAnimations() async {
+    final newValue = !state.reduceAnimations;
+    await _prefs.setBool('pref_reduce_animations', newValue);
+    state = state.copyWith(reduceAnimations: newValue);
   }
 }
 
