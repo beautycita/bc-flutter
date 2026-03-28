@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart' as ll;
@@ -691,7 +692,43 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen>
             onChanged: (v) =>
                 ref.read(themeProvider.notifier).setFontScale(v),
           ),
-          // High contrast and reduce animations removed -- not implemented yet
+          // Reduce animations toggle
+          const SizedBox(height: AppConstants.paddingMD),
+          Consumer(
+            builder: (context, ref, _) {
+              final prefs = ref.watch(userPrefsProvider);
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: cs.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: cs.onSurface.withValues(alpha: 0.08)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.speed_rounded, size: 20, color: cs.primary),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Reducir animaciones',
+                            style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: cs.onSurface)),
+                          Text('Transiciones simples para dispositivos lentos',
+                            style: GoogleFonts.nunito(fontSize: 11, color: cs.onSurface.withValues(alpha: 0.5))),
+                        ],
+                      ),
+                    ),
+                    Switch(
+                      value: prefs.reduceAnimations,
+                      onChanged: (_) => ref.read(userPrefsProvider.notifier).toggleReduceAnimations(),
+                      activeColor: cs.primary,
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
         ],
       ),
     );

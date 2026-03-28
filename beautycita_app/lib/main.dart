@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:app_links/app_links.dart';
 import 'package:beautycita/config/app_transitions.dart';
+import 'package:beautycita/providers/user_preferences_provider.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -318,6 +319,9 @@ class _BeautyCitaAppState extends ConsumerState<BeautyCitaApp> {
   Widget build(BuildContext context) {
     final router = AppRoutes.router;
     final themeState = ref.watch(themeProvider);
+    // Sync reduce animations pref to global flag for transitions
+    final prefs = ref.watch(userPrefsProvider);
+    bcReduceAnimations = prefs.reduceAnimations;
     return BcTapTracker(
       child: MaterialApp.router(
       title: AppConstants.appName,
