@@ -64,4 +64,18 @@ abstract final class BCTables {
   // ── Bitcoin / Payments ───────────────────────────────────────────────
   static const String btcAddresses = 'btc_addresses';
   static const String btcDeposits = 'btc_deposits';
+
+  // ── Tax & CFDI ────────────────────────────────────────────────────────
+  static const String taxWithholdings = 'tax_withholdings';
+  static const String satMonthlyReports = 'sat_monthly_reports';
+  static const String businessExpenses = 'business_expenses';
+  static const String cfdiRecords = 'cfdi_records';
+
+  static const String salonDebts = 'salon_debts';
+  static const String debtPayments = 'debt_payments';
+  static const String platformSatDeclarations = 'platform_sat_declarations';
+
+  // ── Payouts & Commissions ─────────────────────────────────────────────
+  static const String payoutRecords = 'payout_records';
+  static const String commissionRecords = 'commission_records';
 }

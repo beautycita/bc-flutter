@@ -113,6 +113,28 @@ class _FinanceDashboardPageState extends ConsumerState<FinanceDashboardPage> {
                 }),
               ),
               const SizedBox(height: 24),
+              // CFDI Records
+              _CfdiRecordsSection(ref: ref),
+              const SizedBox(height: 24),
+              // Salon Debts + SAT Declarations side by side on desktop
+              if (isDesktop)
+                IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(child: _SalonDebtsSection(ref: ref)),
+                      const SizedBox(width: 16),
+                      Expanded(
+                          child: _PlatformSatDeclarationsSection(ref: ref)),
+                    ],
+                  ),
+                )
+              else ...[
+                _SalonDebtsSection(ref: ref),
+                const SizedBox(height: 16),
+                _PlatformSatDeclarationsSection(ref: ref),
+              ],
+              const SizedBox(height: 24),
             ],
           ),
         );
@@ -1490,6 +1512,296 @@ class _ExportButtonState extends State<_ExportButton> {
   }
 }
 
+// ── CFDI Records Section ─────────────────────────────────────────────────────
+
+class _CfdiRecordsSection extends StatelessWidget {
+  const _CfdiRecordsSection({required this.ref});
+  final WidgetRef ref;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final dataAsync = ref.watch(cfdiRecordsProvider);
+    final dateFmt = DateFormat('d/MM/yy', 'es');
+
+    return WebCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: kWebTertiary.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.receipt_long_outlined, size: 18, color: kWebTertiary),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'Registros CFDI',
+                style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700, color: kWebTextPrimary),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          dataAsync.when(
+            loading: () => const Center(
+              child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator(strokeWidth: 2)),
+            ),
+            error: (_, __) => Center(child: Text('Error al cargar', style: theme.textTheme.bodySmall)),
+            data: (records) {
+              if (records.isEmpty) {
+                return _EmptyState(icon: Icons.receipt_long_outlined, message: 'Sin registros CFDI');
+              }
+
+              return SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: DataTable(
+                  headingRowColor: WidgetStateProperty.all(kWebBackground),
+                  columns: const [
+                    DataColumn(label: Text('Fecha')),
+                    DataColumn(label: Text('Folio')),
+                    DataColumn(label: Text('Negocio')),
+                    DataColumn(label: Text('Periodo')),
+                    DataColumn(label: Text('Estado')),
+                    DataColumn(label: Text('Subtotal'), numeric: true),
+                    DataColumn(label: Text('IVA'), numeric: true),
+                    DataColumn(label: Text('Total'), numeric: true),
+                  ],
+                  rows: [
+                    for (final r in records)
+                      DataRow(cells: [
+                        DataCell(Text(dateFmt.format(r.createdAt), style: const TextStyle(fontSize: 13, fontFamily: 'monospace'))),
+                        DataCell(Text(r.folio ?? '--', style: const TextStyle(fontSize: 13, fontFamily: 'monospace'))),
+                        DataCell(Text(r.businessName, overflow: TextOverflow.ellipsis)),
+                        DataCell(Text(r.period)),
+                        DataCell(
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: _cfdiStatusColor(r.status).withValues(alpha: 0.10),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(r.status, style: TextStyle(fontSize: 12, color: _cfdiStatusColor(r.status), fontWeight: FontWeight.w600)),
+                          ),
+                        ),
+                        DataCell(Text('\$${_fmtAmount(r.subtotal)}')),
+                        DataCell(Text('\$${_fmtAmount(r.iva)}')),
+                        DataCell(Text('\$${_fmtAmount(r.total)}', style: const TextStyle(fontWeight: FontWeight.w600))),
+                      ]),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _cfdiStatusColor(String status) {
+    return switch (status) {
+      'timbrado' || 'emitted' => const Color(0xFF4CAF50),
+      'cancelado' || 'cancelled' => const Color(0xFFE53935),
+      'pendiente' || 'pending' => const Color(0xFFFF9800),
+      _ => const Color(0xFF999999),
+    };
+  }
+}
+
+// ── Salon Debts Section ──────────────────────────────────────────────────────
+
+class _SalonDebtsSection extends StatelessWidget {
+  const _SalonDebtsSection({required this.ref});
+  final WidgetRef ref;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final dataAsync = ref.watch(salonDebtSummaryProvider);
+
+    return WebCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE53935).withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.warning_amber_rounded, size: 18, color: Color(0xFFE53935)),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'Deudas de Salones',
+                style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700, color: kWebTextPrimary),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          dataAsync.when(
+            loading: () => const Center(
+              child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator(strokeWidth: 2)),
+            ),
+            error: (_, __) => Center(child: Text('Error al cargar', style: theme.textTheme.bodySmall)),
+            data: (summary) {
+              if (summary.debts.isEmpty) {
+                return _EmptyState(icon: Icons.check_circle_outline, message: 'Sin deudas pendientes');
+              }
+
+              final displayDebts = summary.debts.take(10).toList();
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE53935).withValues(alpha: 0.06),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      children: [
+                        Text('Total pendiente: ', style: theme.textTheme.bodySmall?.copyWith(color: kWebTextSecondary)),
+                        Text('\$${_fmtAmount(summary.totalOutstanding)}', style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700, color: const Color(0xFFE53935))),
+                        const Spacer(),
+                        Text('${summary.salonsWithDebt} salones', style: theme.textTheme.labelSmall?.copyWith(color: kWebTextSecondary)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  for (var i = 0; i < displayDebts.length; i++) ...[
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(displayDebts[i].businessName, style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
+                                if (displayDebts[i].reason != null)
+                                  Text(displayDebts[i].reason!, style: theme.textTheme.labelSmall?.copyWith(color: kWebTextSecondary)),
+                              ],
+                            ),
+                          ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text('\$${_fmtAmount(displayDebts[i].remainingAmount)}', style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600, color: displayDebts[i].isPending ? const Color(0xFFE53935) : const Color(0xFF4CAF50))),
+                              Text(displayDebts[i].statusLabel, style: theme.textTheme.labelSmall?.copyWith(color: kWebTextHint)),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (i < displayDebts.length - 1) const Divider(height: 1, color: kWebCardBorder),
+                  ],
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Platform SAT Declarations Section ────────────────────────────────────────
+
+class _PlatformSatDeclarationsSection extends StatelessWidget {
+  const _PlatformSatDeclarationsSection({required this.ref});
+  final WidgetRef ref;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final dataAsync = ref.watch(platformSatDeclarationsProvider);
+
+    return WebCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: kWebSecondary.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.account_balance_outlined, size: 18, color: kWebSecondary),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'Declaraciones SAT Plataforma',
+                style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700, color: kWebTextPrimary),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          dataAsync.when(
+            loading: () => const Center(
+              child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator(strokeWidth: 2)),
+            ),
+            error: (_, __) => Center(child: Text('Error al cargar', style: theme.textTheme.bodySmall)),
+            data: (declarations) {
+              if (declarations.isEmpty) {
+                return _EmptyState(icon: Icons.description_outlined, message: 'Sin declaraciones registradas');
+              }
+
+              return Column(
+                children: [
+                  for (var i = 0; i < declarations.length; i++) ...[
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: (declarations[i].status == 'submitted' ? const Color(0xFF4CAF50) : const Color(0xFFFF9800)).withValues(alpha: 0.10),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(
+                              declarations[i].status == 'submitted' ? 'Enviada' : 'Borrador',
+                              style: TextStyle(fontSize: 11, color: declarations[i].status == 'submitted' ? const Color(0xFF4CAF50) : const Color(0xFFFF9800), fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(declarations[i].period, style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
+                                Text('ISR: \$${_fmtAmount(declarations[i].isrCollected)} · IVA: \$${_fmtAmount(declarations[i].ivaCollected)}',
+                                    style: theme.textTheme.labelSmall?.copyWith(color: kWebTextSecondary)),
+                              ],
+                            ),
+                          ),
+                          Text('\$${_fmtAmount(declarations[i].totalRevenue)}', style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                    ),
+                    if (i < declarations.length - 1) const Divider(height: 1, color: kWebCardBorder),
+                  ],
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _EmptyState extends StatelessWidget {
   const _EmptyState({required this.icon, required this.message});
   final IconData icon;
@@ -1516,6 +1828,661 @@ class _EmptyState extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ── CFDI Records Section ──────────────────────────────────────────────────
+
+class _CfdiRecordsSection extends StatefulWidget {
+  const _CfdiRecordsSection({required this.ref});
+  final WidgetRef ref;
+
+  @override
+  State<_CfdiRecordsSection> createState() => _CfdiRecordsSectionState();
+}
+
+class _CfdiRecordsSectionState extends State<_CfdiRecordsSection> {
+  String _statusFilter = 'todos';
+  String _periodFilter = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final dataAsync = widget.ref.watch(cfdiRecordsProvider);
+    final isMobile = MediaQuery.sizeOf(context).width < 800;
+    final dateFmt = DateFormat('d/MM/yy', 'es');
+
+    return Container(
+      padding: EdgeInsets.all(isMobile ? 14 : 20),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: colors.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.description_outlined,
+                      size: 20, color: colors.primary),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Registros CFDI',
+                    style: theme.textTheme.titleSmall
+                        ?.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: 120,
+                    height: 36,
+                    child: TextField(
+                      onChanged: (v) => setState(() => _periodFilter = v),
+                      decoration: InputDecoration(
+                        hintText: 'Periodo...',
+                        hintStyle: theme.textTheme.bodySmall?.copyWith(
+                          color: colors.onSurface.withValues(alpha: 0.4),
+                        ),
+                        filled: true,
+                        fillColor: colors.surfaceContainerHighest
+                            .withValues(alpha: 0.5),
+                        contentPadding: const EdgeInsets.symmetric(
+                            vertical: 0, horizontal: 12),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    height: 36,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: colors.surfaceContainerHighest
+                          .withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: _statusFilter,
+                        isDense: true,
+                        style: theme.textTheme.bodySmall,
+                        items: const [
+                          DropdownMenuItem(
+                              value: 'todos', child: Text('Todos')),
+                          DropdownMenuItem(
+                              value: 'timbrado', child: Text('Timbrado')),
+                          DropdownMenuItem(
+                              value: 'pendiente',
+                              child: Text('Pendiente')),
+                          DropdownMenuItem(
+                              value: 'cancelado',
+                              child: Text('Cancelado')),
+                        ],
+                        onChanged: (v) =>
+                            setState(() => _statusFilter = v ?? 'todos'),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          dataAsync.when(
+            loading: () => const Center(
+              child: Padding(
+                padding: EdgeInsets.all(32),
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+            error: (_, __) => Center(
+              child: Text('Error al cargar CFDI',
+                  style: theme.textTheme.bodySmall),
+            ),
+            data: (rows) {
+              var filtered = rows.where((r) {
+                if (_statusFilter != 'todos' && r.status != _statusFilter) {
+                  return false;
+                }
+                if (_periodFilter.isNotEmpty &&
+                    !r.period
+                        .toLowerCase()
+                        .contains(_periodFilter.toLowerCase())) {
+                  return false;
+                }
+                return true;
+              }).toList();
+
+              if (filtered.isEmpty) {
+                return _EmptyState(
+                  icon: Icons.description_outlined,
+                  message: 'Sin registros CFDI',
+                );
+              }
+
+              if (isMobile) {
+                return Column(
+                  children: [
+                    for (var i = 0;
+                        i < filtered.length && i < 20;
+                        i++) ...[
+                      _MobileCfdiCard(record: filtered[i], dateFmt: dateFmt),
+                      if (i < filtered.length - 1 && i < 19)
+                        const SizedBox(height: 8),
+                    ],
+                  ],
+                );
+              }
+
+              return SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minWidth: MediaQuery.sizeOf(context).width - 120,
+                  ),
+                  child: DataTable(
+                    columnSpacing: 16,
+                    headingRowHeight: 40,
+                    dataRowMinHeight: 40,
+                    dataRowMaxHeight: 48,
+                    headingTextStyle: theme.textTheme.labelMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: colors.onSurface.withValues(alpha: 0.7),
+                    ),
+                    dataTextStyle: theme.textTheme.bodySmall,
+                    columns: const [
+                      DataColumn(label: Text('Negocio')),
+                      DataColumn(label: Text('Folio')),
+                      DataColumn(label: Text('UUID Fiscal')),
+                      DataColumn(label: Text('Periodo')),
+                      DataColumn(label: Text('Estado')),
+                      DataColumn(label: Text('Subtotal'), numeric: true),
+                      DataColumn(label: Text('IVA'), numeric: true),
+                      DataColumn(label: Text('Total'), numeric: true),
+                    ],
+                    rows: filtered.take(50).map((r) {
+                      return DataRow(cells: [
+                        DataCell(Text(r.businessName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis)),
+                        DataCell(Text(r.folio ?? '-',
+                            style: const TextStyle(
+                                fontFamily: 'monospace', fontSize: 11))),
+                        DataCell(Text(
+                            r.uuidFiscal != null
+                                ? '${r.uuidFiscal!.substring(0, 8)}...'
+                                : '-',
+                            style: const TextStyle(
+                                fontFamily: 'monospace', fontSize: 11))),
+                        DataCell(Text(r.period)),
+                        DataCell(_CfdiStatusBadge(status: r.status)),
+                        DataCell(
+                            Text('\$${_fmtAmount(r.subtotal)}')),
+                        DataCell(Text('\$${_fmtAmount(r.iva)}')),
+                        DataCell(Text(
+                          '\$${_fmtAmount(r.total)}',
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        )),
+                      ]);
+                    }).toList(),
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CfdiStatusBadge extends StatelessWidget {
+  const _CfdiStatusBadge({required this.status});
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    final (Color bg, Color fg) = switch (status) {
+      'timbrado' => (const Color(0xFFE8F5E9), const Color(0xFF2E7D32)),
+      'pendiente' => (const Color(0xFFFFF3E0), const Color(0xFFE65100)),
+      'cancelado' => (const Color(0xFFFFEBEE), const Color(0xFFC62828)),
+      _ => (Colors.grey.shade100, Colors.grey.shade700),
+    };
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        status[0].toUpperCase() + status.substring(1),
+        style: TextStyle(
+          color: fg,
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+
+class _MobileCfdiCard extends StatelessWidget {
+  const _MobileCfdiCard({required this.record, required this.dateFmt});
+  final CfdiRecord record;
+  final DateFormat dateFmt;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: colors.surfaceContainerHighest.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: colors.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(record.businessName,
+                    style: theme.textTheme.bodySmall
+                        ?.copyWith(fontWeight: FontWeight.w600),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis),
+              ),
+              _CfdiStatusBadge(status: record.status),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text('Periodo: ${record.period} | Folio: ${record.folio ?? '-'}',
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: colors.onSurface.withValues(alpha: 0.6),
+              )),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _MiniStat('Subtotal', '\$${_fmtAmount(record.subtotal)}'),
+              _MiniStat('IVA', '\$${_fmtAmount(record.iva)}'),
+              _MiniStat('Total', '\$${_fmtAmount(record.total)}',
+                  bold: true),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Salon Debts Section ──────────────────────────────────────────────────
+
+class _SalonDebtsSection extends StatelessWidget {
+  const _SalonDebtsSection({required this.ref});
+  final WidgetRef ref;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final dataAsync = ref.watch(salonDebtSummaryProvider);
+
+    return WebCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE53935).withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.account_balance_wallet_outlined,
+                    size: 18, color: Color(0xFFE53935)),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'Deudas de Salones',
+                style: theme.textTheme.titleSmall
+                    ?.copyWith(fontWeight: FontWeight.w700, color: kWebTextPrimary),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          dataAsync.when(
+            loading: () => const Center(
+              child: Padding(
+                padding: EdgeInsets.all(32),
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+            error: (_, __) => Center(
+              child: Text('Error al cargar deudas',
+                  style: theme.textTheme.bodySmall),
+            ),
+            data: (data) {
+              if (data.debts.isEmpty) {
+                return _EmptyState(
+                  icon: Icons.account_balance_wallet_outlined,
+                  message: 'Sin deudas registradas',
+                );
+              }
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // KPI summary
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE53935).withValues(alpha: 0.04),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                          color: const Color(0xFFE53935)
+                              .withValues(alpha: 0.15)),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Deuda total pendiente',
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: theme.colorScheme.onSurface
+                                      .withValues(alpha: 0.6),
+                                )),
+                            Text(
+                              '\$${_fmtAmount(data.totalOutstanding)}',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFFE53935),
+                              ),
+                            ),
+                          ],
+                        ),
+                        Text(
+                          '${data.salonsWithDebt} salon${data.salonsWithDebt != 1 ? "es" : ""}',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // Debt rows
+                  for (var i = 0;
+                      i < data.debts.length && i < 15;
+                      i++) ...[
+                    _DebtRow(debt: data.debts[i]),
+                    if (i < data.debts.length - 1 && i < 14)
+                      Divider(
+                          height: 1,
+                          color: theme.colorScheme.outlineVariant
+                              .withValues(alpha: 0.5)),
+                  ],
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DebtRow extends StatelessWidget {
+  const _DebtRow({required this.debt});
+  final SalonDebt debt;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+
+    final (Color bg, Color fg) = debt.isPending
+        ? (const Color(0xFFFFF3E0), const Color(0xFFE65100))
+        : (const Color(0xFFE8F5E9), const Color(0xFF2E7D32));
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 3,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(debt.businessName,
+                    style: theme.textTheme.bodySmall
+                        ?.copyWith(fontWeight: FontWeight.w600),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis),
+                if (debt.reason != null)
+                  Text(debt.reason!,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: colors.onSurface.withValues(alpha: 0.5),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '\$${_fmtAmount(debt.remainingAmount)}',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: debt.isPending ? const Color(0xFFE53935) : null,
+                ),
+              ),
+              Text(
+                'de \$${_fmtAmount(debt.originalAmount)}',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: colors.onSurface.withValues(alpha: 0.4),
+                  fontSize: 10,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(width: 8),
+          Container(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: bg,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              debt.statusLabel,
+              style: TextStyle(
+                color: fg,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Platform SAT Declarations Section ────────────────────────────────────
+
+class _PlatformSatDeclarationsSection extends StatelessWidget {
+  const _PlatformSatDeclarationsSection({required this.ref});
+  final WidgetRef ref;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final dataAsync = ref.watch(platformSatDeclarationsProvider);
+
+    return WebCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: kWebSecondary.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.assignment_outlined,
+                    size: 18, color: kWebSecondary),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'Declaraciones SAT Plataforma',
+                style: theme.textTheme.titleSmall
+                    ?.copyWith(fontWeight: FontWeight.w700, color: kWebTextPrimary),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          dataAsync.when(
+            loading: () => const Center(
+              child: Padding(
+                padding: EdgeInsets.all(32),
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+            error: (_, __) => Center(
+              child: Text('Error al cargar declaraciones',
+                  style: theme.textTheme.bodySmall),
+            ),
+            data: (rows) {
+              if (rows.isEmpty) {
+                return _EmptyState(
+                  icon: Icons.assignment_outlined,
+                  message: 'Sin declaraciones SAT',
+                );
+              }
+
+              return Column(
+                children: [
+                  for (var i = 0; i < rows.length && i < 12; i++) ...[
+                    _SatDeclarationRow(declaration: rows[i]),
+                    if (i < rows.length - 1 && i < 11)
+                      Divider(
+                          height: 1,
+                          color: theme.colorScheme.outlineVariant
+                              .withValues(alpha: 0.5)),
+                  ],
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SatDeclarationRow extends StatelessWidget {
+  const _SatDeclarationRow({required this.declaration});
+  final PlatformSatDeclaration declaration;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    final (Color bg, Color fg) = switch (declaration.status) {
+      'submitted' => (const Color(0xFFE8F5E9), const Color(0xFF2E7D32)),
+      'draft' => (const Color(0xFFFFF3E0), const Color(0xFFE65100)),
+      _ => (Colors.grey.shade100, Colors.grey.shade700),
+    };
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                declaration.period,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: bg,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  declaration.status == 'submitted'
+                      ? 'Presentada'
+                      : 'Borrador',
+                  style: TextStyle(
+                    color: fg,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 16,
+            runSpacing: 4,
+            children: [
+              _MiniStat(
+                  'Ingresos', '\$${_fmtAmount(declaration.totalRevenue)}'),
+              _MiniStat(
+                  'IVA', '\$${_fmtAmount(declaration.ivaCollected)}'),
+              _MiniStat(
+                  'ISR', '\$${_fmtAmount(declaration.isrCollected)}'),
+              _MiniStat('Comisiones',
+                  '\$${_fmtAmount(declaration.commissions)}'),
+              if (declaration.bankInterest > 0)
+                _MiniStat('Int. Bancarios',
+                    '\$${_fmtAmount(declaration.bankInterest)}'),
+              if (declaration.uberReferrals > 0)
+                _MiniStat('Ref. Uber',
+                    '\$${_fmtAmount(declaration.uberReferrals)}'),
+            ],
+          ),
+        ],
       ),
     );
   }

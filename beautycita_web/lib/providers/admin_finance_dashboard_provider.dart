@@ -463,3 +463,358 @@ final dailyRevenueProvider =
     return [];
   }
 });
+
+// ── CFDI Records ──────────────────────────────────────────────────────────
+
+@immutable
+class CfdiRecord {
+  final String id;
+  final String businessId;
+  final String businessName;
+  final String? folio;
+  final String? uuidFiscal;
+  final String status; // 'timbrado', 'pendiente', 'cancelado'
+  final double subtotal;
+  final double iva;
+  final double total;
+  final String period;
+  final DateTime createdAt;
+
+  const CfdiRecord({
+    required this.id,
+    required this.businessId,
+    required this.businessName,
+    this.folio,
+    this.uuidFiscal,
+    required this.status,
+    required this.subtotal,
+    required this.iva,
+    required this.total,
+    required this.period,
+    required this.createdAt,
+  });
+
+  factory CfdiRecord.fromJson(Map<String, dynamic> json) {
+    return CfdiRecord(
+      id: json['id']?.toString() ?? '',
+      businessId: json['business_id']?.toString() ?? '',
+      businessName: json['business_name'] as String? ??
+          (json['businesses'] is Map
+              ? json['businesses']['name'] as String? ??
+                  json['businesses']['business_name'] as String?
+              : null) ??
+          'Desconocido',
+      folio: json['folio'] as String?,
+      uuidFiscal: json['uuid_fiscal'] as String?,
+      status: json['status'] as String? ?? 'pendiente',
+      subtotal: (json['subtotal'] as num?)?.toDouble() ?? 0,
+      iva: (json['iva'] as num?)?.toDouble() ?? 0,
+      total: (json['total'] as num?)?.toDouble() ?? 0,
+      period: json['period'] as String? ?? '',
+      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ??
+          DateTime.now(),
+    );
+  }
+}
+
+final cfdiRecordsProvider = FutureProvider<List<CfdiRecord>>((ref) async {
+  if (!BCSupabase.isInitialized) return [];
+
+  try {
+    final data = await BCSupabase.client
+        .from(BCTables.cfdiRecords)
+        .select('*, businesses(name)')
+        .order('created_at', ascending: false)
+        .limit(500);
+
+    return (data as List).map((row) {
+      final biz = row['businesses'] as Map<String, dynamic>?;
+      return CfdiRecord.fromJson({
+        ...row,
+        'business_name': biz?['name'] ?? 'Desconocido',
+      });
+    }).toList();
+  } catch (e) {
+    debugPrint('CFDI records error: $e');
+    return [];
+  }
+});
+
+// ── Salon Debts ───────────────────────────────────────────────────────────
+
+@immutable
+class SalonDebt {
+  final String id;
+  final String businessId;
+  final String businessName;
+  final double originalAmount;
+  final double remainingAmount;
+  final String? reason;
+  final DateTime createdAt;
+  final DateTime? clearedAt;
+
+  const SalonDebt({
+    required this.id,
+    required this.businessId,
+    required this.businessName,
+    required this.originalAmount,
+    required this.remainingAmount,
+    this.reason,
+    required this.createdAt,
+    this.clearedAt,
+  });
+
+  bool get isPending => remainingAmount > 0;
+
+  String get statusLabel =>
+      clearedAt != null ? 'Liquidada' : (remainingAmount > 0 ? 'Pendiente' : 'Pagada');
+
+  factory SalonDebt.fromJson(Map<String, dynamic> json) {
+    return SalonDebt(
+      id: json['id']?.toString() ?? '',
+      businessId: json['business_id']?.toString() ?? '',
+      businessName: json['business_name'] as String? ?? 'Desconocido',
+      originalAmount: (json['original_amount'] as num?)?.toDouble() ?? 0,
+      remainingAmount: (json['remaining_amount'] as num?)?.toDouble() ?? 0,
+      reason: json['reason'] as String?,
+      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ??
+          DateTime.now(),
+      clearedAt: json['cleared_at'] != null
+          ? DateTime.tryParse(json['cleared_at'].toString())
+          : null,
+    );
+  }
+}
+
+@immutable
+class DebtSummary {
+  final double totalOutstanding;
+  final int salonsWithDebt;
+  final List<SalonDebt> debts;
+
+  const DebtSummary({
+    required this.totalOutstanding,
+    required this.salonsWithDebt,
+    required this.debts,
+  });
+
+  static const placeholder = DebtSummary(
+    totalOutstanding: 0,
+    salonsWithDebt: 0,
+    debts: [],
+  );
+}
+
+final salonDebtSummaryProvider = FutureProvider<DebtSummary>((ref) async {
+  if (!BCSupabase.isInitialized) return DebtSummary.placeholder;
+
+  try {
+    final data = await BCSupabase.client
+        .from(BCTables.salonDebts)
+        .select('*, businesses(name)')
+        .order('remaining_amount', ascending: false);
+
+    final debts = (data as List).map((row) {
+      final biz = row['businesses'] as Map<String, dynamic>?;
+      return SalonDebt.fromJson({
+        ...row,
+        'business_name': biz?['name'] ?? 'Desconocido',
+      });
+    }).toList();
+
+    double totalOutstanding = 0;
+    final salonsWithDebt = <String>{};
+    for (final d in debts) {
+      if (d.remainingAmount > 0) {
+        totalOutstanding += d.remainingAmount;
+        salonsWithDebt.add(d.businessId);
+      }
+    }
+
+    return DebtSummary(
+      totalOutstanding: totalOutstanding,
+      salonsWithDebt: salonsWithDebt.length,
+      debts: debts,
+    );
+  } catch (e) {
+    debugPrint('Salon debt summary error: $e');
+    return DebtSummary.placeholder;
+  }
+});
+
+// ── Platform SAT Declarations ─────────────────────────────────────────────
+
+@immutable
+class PlatformSatDeclaration {
+  final String id;
+  final String period;
+  final double totalRevenue;
+  final double ivaCollected;
+  final double isrCollected;
+  final double bankInterest;
+  final double uberReferrals;
+  final String status; // 'submitted', 'draft'
+  final DateTime createdAt;
+
+  const PlatformSatDeclaration({
+    required this.id,
+    required this.period,
+    required this.totalRevenue,
+    required this.ivaCollected,
+    required this.isrCollected,
+    required this.bankInterest,
+    required this.uberReferrals,
+    required this.status,
+    required this.createdAt,
+  });
+
+  double get commissions => totalRevenue * 0.03;
+
+  factory PlatformSatDeclaration.fromJson(Map<String, dynamic> json) {
+    return PlatformSatDeclaration(
+      id: json['id']?.toString() ?? '',
+      period: json['period'] as String? ?? '',
+      totalRevenue: (json['total_revenue'] as num?)?.toDouble() ?? 0,
+      ivaCollected: (json['iva_collected'] as num?)?.toDouble() ?? 0,
+      isrCollected: (json['isr_collected'] as num?)?.toDouble() ?? 0,
+      bankInterest: (json['bank_interest'] as num?)?.toDouble() ?? 0,
+      uberReferrals: (json['uber_referrals'] as num?)?.toDouble() ?? 0,
+      status: json['status'] as String? ?? 'draft',
+      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ??
+          DateTime.now(),
+    );
+  }
+}
+
+final platformSatDeclarationsProvider =
+    FutureProvider<List<PlatformSatDeclaration>>((ref) async {
+  if (!BCSupabase.isInitialized) return [];
+
+  try {
+    final data = await BCSupabase.client
+        .from(BCTables.platformSatDeclarations)
+        .select()
+        .order('period', ascending: false)
+        .limit(24);
+
+    return (data as List)
+        .map((row) => PlatformSatDeclaration.fromJson(row))
+        .toList();
+  } catch (e) {
+    debugPrint('Platform SAT declarations error: $e');
+    return [];
+  }
+});
+
+// ── Commission Records (grouped) ──────────────────────────────────────────
+
+@immutable
+class CommissionMonthlySummary {
+  final String period;
+  final double appointmentCommissions;
+  final double productCommissions;
+  final int appointmentCount;
+  final int productCount;
+
+  const CommissionMonthlySummary({
+    required this.period,
+    required this.appointmentCommissions,
+    required this.productCommissions,
+    required this.appointmentCount,
+    required this.productCount,
+  });
+
+  double get total => appointmentCommissions + productCommissions;
+}
+
+@immutable
+class CommissionDetailData {
+  final double totalCollected;
+  final double totalPending;
+  final List<CommissionMonthlySummary> months;
+
+  const CommissionDetailData({
+    required this.totalCollected,
+    required this.totalPending,
+    required this.months,
+  });
+
+  static const placeholder = CommissionDetailData(
+    totalCollected: 0,
+    totalPending: 0,
+    months: [],
+  );
+}
+
+final commissionDetailProvider =
+    FutureProvider<CommissionDetailData>((ref) async {
+  if (!BCSupabase.isInitialized) return CommissionDetailData.placeholder;
+
+  try {
+    final data = await BCSupabase.client
+        .from(BCTables.commissionRecords)
+        .select('source, amount, period, status')
+        .order('period', ascending: false)
+        .limit(2000);
+
+    final rows = data as List;
+    if (rows.isEmpty) return CommissionDetailData.placeholder;
+
+    double totalCollected = 0;
+    double totalPending = 0;
+    final monthMap = <String, _MutableMonthCommission>{};
+
+    for (final row in rows) {
+      final source = row['source'] as String? ?? 'appointment';
+      final amount = (row['amount'] as num?)?.toDouble() ?? 0;
+      final period = row['period'] as String? ?? '';
+      final status = row['status'] as String? ?? 'collected';
+
+      if (status == 'collected' || status == 'succeeded') {
+        totalCollected += amount;
+      } else {
+        totalPending += amount;
+      }
+
+      final entry = monthMap.putIfAbsent(
+          period, () => _MutableMonthCommission(period));
+      if (source == 'appointment') {
+        entry.appointmentAmount += amount;
+        entry.appointmentCount++;
+      } else {
+        entry.productAmount += amount;
+        entry.productCount++;
+      }
+    }
+
+    final months = monthMap.values
+        .map((e) => CommissionMonthlySummary(
+              period: e.period,
+              appointmentCommissions: e.appointmentAmount,
+              productCommissions: e.productAmount,
+              appointmentCount: e.appointmentCount,
+              productCount: e.productCount,
+            ))
+        .toList()
+      ..sort((a, b) => b.period.compareTo(a.period));
+
+    return CommissionDetailData(
+      totalCollected: totalCollected,
+      totalPending: totalPending,
+      months: months.take(12).toList(),
+    );
+  } catch (e) {
+    debugPrint('Commission detail error: $e');
+    return CommissionDetailData.placeholder;
+  }
+});
+
+class _MutableMonthCommission {
+  final String period;
+  double appointmentAmount = 0;
+  double productAmount = 0;
+  int appointmentCount = 0;
+  int productCount = 0;
+
+  _MutableMonthCommission(this.period);
+}
