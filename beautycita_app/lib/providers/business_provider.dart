@@ -369,6 +369,60 @@ final businessPaymentsProvider =
 });
 
 // ---------------------------------------------------------------------------
+// Payout records
+// ---------------------------------------------------------------------------
+
+final businessPayoutsProvider =
+    FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  final biz = await ref.watch(currentBusinessProvider.future);
+  if (biz == null) return [];
+
+  final bizId = biz['id'] as String;
+
+  final response = await SupabaseClientService.client
+      .from('payout_records')
+      .select()
+      .eq('business_id', bizId)
+      .order('created_at', ascending: false);
+
+  return (response as List).cast<Map<String, dynamic>>();
+});
+
+// ---------------------------------------------------------------------------
+// Commission records (YTD sums by source)
+// ---------------------------------------------------------------------------
+
+final businessCommissionsYtdProvider =
+    FutureProvider<({double serviceCommission, double productCommission})>(
+        (ref) async {
+  final biz = await ref.watch(currentBusinessProvider.future);
+  if (biz == null) return (serviceCommission: 0.0, productCommission: 0.0);
+
+  final bizId = biz['id'] as String;
+  final year = DateTime.now().year;
+
+  final rows = await SupabaseClientService.client
+      .from('commission_records')
+      .select('amount, source')
+      .eq('business_id', bizId)
+      .gte('created_at', '$year-01-01');
+
+  double service = 0;
+  double product = 0;
+  for (final r in (rows as List)) {
+    final m = r as Map<String, dynamic>;
+    final amt = (m['amount'] as num?)?.toDouble() ?? 0;
+    final src = m['source'] as String? ?? '';
+    if (src == 'appointment') {
+      service += amt;
+    } else if (src == 'product_sale') {
+      product += amt;
+    }
+  }
+  return (serviceCommission: service, productCommission: product);
+});
+
+// ---------------------------------------------------------------------------
 // Reviews
 // ---------------------------------------------------------------------------
 
