@@ -1,11 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:beautycita/config/app_transitions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/config/theme_extension.dart';
 import 'package:beautycita/providers/payment_methods_provider.dart';
+import 'package:beautycita/services/supabase_client.dart';
 import 'package:beautycita/services/toast_service.dart';
 import 'package:beautycita/widgets/settings_widgets.dart';
+
+final _saldoProvider = FutureProvider<double>((ref) async {
+  final userId = SupabaseClientService.currentUserId;
+  if (userId == null) return 0;
+  final data = await SupabaseClientService.client
+      .from('profiles')
+      .select('saldo')
+      .eq('id', userId)
+      .maybeSingle();
+  return (data?['saldo'] as num?)?.toDouble() ?? 0;
+});
 
 class PaymentMethodsScreen extends ConsumerStatefulWidget {
   const PaymentMethodsScreen({super.key});
@@ -149,6 +162,60 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen>
           vertical: AppConstants.paddingMD,
         ),
         children: [
+          // ── Saldo (refund credit) ──
+          Consumer(
+            builder: (context, ref, _) {
+              final saldoAsync = ref.watch(_saldoProvider);
+              final saldo = saldoAsync.valueOrNull ?? 0.0;
+              if (saldo <= 0) return const SizedBox.shrink();
+              return Padding(
+                padding: const EdgeInsets.only(bottom: AppConstants.paddingMD),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFEC4899), Color(0xFF9333EA)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.account_balance_wallet_rounded,
+                            color: Colors.white, size: 24),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Saldo disponible',
+                              style: GoogleFonts.nunito(
+                                fontSize: 12, color: Colors.white70, fontWeight: FontWeight.w600)),
+                            Text('\$${saldo.toStringAsFixed(2)} MXN',
+                              style: GoogleFonts.poppins(
+                                fontSize: 22, fontWeight: FontWeight.w800, color: Colors.white)),
+                          ],
+                        ),
+                      ),
+                      Text('Se aplica\nautomaticamente',
+                        textAlign: TextAlign.right,
+                        style: GoogleFonts.nunito(
+                          fontSize: 10, color: Colors.white60, height: 1.3)),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+
           // ── Tarjetas guardadas ──
           _animated(0, Column(
             crossAxisAlignment: CrossAxisAlignment.start,
