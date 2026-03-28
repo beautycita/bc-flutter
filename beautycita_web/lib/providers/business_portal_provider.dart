@@ -519,6 +519,134 @@ final businessWeeklyTrendProvider =
   );
 });
 
+// ── Tax & Deductions (YTD) ────────────────────────────────────────────────────
+
+/// Year-to-date tax calculations for the business.
+final businessTaxSummaryProvider =
+    FutureProvider.autoDispose<TaxSummary>((ref) async {
+  final biz = await ref.watch(currentBusinessProvider.future);
+  if (biz == null) return TaxSummary.empty();
+
+  final bizId = biz['id'] as String;
+  final now = DateTime.now();
+  final yearStart = DateTime(now.year, 1, 1).toIso8601String().substring(0, 10);
+  final todayStr = now.toIso8601String().substring(0, 10);
+  final client = BCSupabase.client;
+
+  // YTD completed appointments for revenue
+  final completedAppts = await client
+      .from(BCTables.appointments)
+      .select('id, price')
+      .eq('business_id', bizId)
+      .eq('status', 'completed')
+      .gte('starts_at', '${yearStart}T00:00:00')
+      .lte('starts_at', '${todayStr}T23:59:59');
+
+  double ytdRevenue = 0;
+  for (final a in completedAppts as List) {
+    ytdRevenue += ((a as Map<String, dynamic>)['price'] as num?)?.toDouble() ?? 0;
+  }
+
+  // YTD expenses
+  double ytdExpenses = 0;
+  try {
+    final expenses = await client
+        .from(BCTables.businessExpenses)
+        .select('amount')
+        .eq('business_id', bizId)
+        .gte('expense_date', yearStart)
+        .lte('expense_date', todayStr);
+    for (final e in expenses as List) {
+      ytdExpenses += ((e as Map<String, dynamic>)['amount'] as num?)?.toDouble() ?? 0;
+    }
+  } catch (_) {
+    // Table may not exist yet
+  }
+
+  // Outstanding debt
+  final outstandingDebt =
+      (biz['outstanding_debt'] as num?)?.toDouble() ?? 0;
+
+  return TaxSummary(
+    ytdRevenue: ytdRevenue,
+    ytdExpenses: ytdExpenses,
+    outstandingDebt: outstandingDebt,
+    daysUntilYearEnd: DateTime(now.year, 12, 31).difference(now).inDays,
+  );
+});
+
+// ── CFDI Records ──────────────────────────────────────────────────────────────
+
+/// CFDI (electronic invoices) for the business.
+final businessCfdiProvider =
+    FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
+  final biz = await ref.watch(currentBusinessProvider.future);
+  if (biz == null) return [];
+
+  final bizId = biz['id'] as String;
+
+  try {
+    final response = await BCSupabase.client
+        .from(BCTables.cfdiRecords)
+        .select()
+        .eq('business_id', bizId)
+        .order('created_at', ascending: false)
+        .limit(20);
+
+    return List<Map<String, dynamic>>.from(response as List);
+  } catch (_) {
+    return [];
+  }
+});
+
+// ── Payout Records ────────────────────────────────────────────────────────────
+
+/// Payout history for the business.
+final businessPayoutRecordsProvider =
+    FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
+  final biz = await ref.watch(currentBusinessProvider.future);
+  if (biz == null) return [];
+
+  final bizId = biz['id'] as String;
+
+  try {
+    final response = await BCSupabase.client
+        .from(BCTables.payoutRecords)
+        .select()
+        .eq('business_id', bizId)
+        .order('created_at', ascending: false)
+        .limit(50);
+
+    return List<Map<String, dynamic>>.from(response as List);
+  } catch (_) {
+    return [];
+  }
+});
+
+// ── Commission Records ────────────────────────────────────────────────────────
+
+/// Commission breakdown for the business.
+final businessCommissionRecordsProvider =
+    FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
+  final biz = await ref.watch(currentBusinessProvider.future);
+  if (biz == null) return [];
+
+  final bizId = biz['id'] as String;
+
+  try {
+    final response = await BCSupabase.client
+        .from(BCTables.commissionRecords)
+        .select()
+        .eq('business_id', bizId)
+        .order('created_at', ascending: false)
+        .limit(50);
+
+    return List<Map<String, dynamic>>.from(response as List);
+  } catch (_) {
+    return [];
+  }
+});
+
 // ── Models ───────────────────────────────────────────────────────────────────
 
 /// Aggregated business statistics for the dashboard.
@@ -565,5 +693,32 @@ class WeeklyTrend {
         dailyCounts: [],
         dailyRevenue: [],
         dailyPending: [],
+      );
+}
+
+/// Year-to-date tax summary for the dashboard.
+class TaxSummary {
+  final double ytdRevenue;
+  final double ytdExpenses;
+  final double outstandingDebt;
+  final int daysUntilYearEnd;
+
+  const TaxSummary({
+    required this.ytdRevenue,
+    required this.ytdExpenses,
+    required this.outstandingDebt,
+    required this.daysUntilYearEnd,
+  });
+
+  double get ivaAmount => ytdRevenue * 0.08;
+  double get isrAmount => ytdRevenue * 0.025;
+  double get totalTaxes => ivaAmount + isrAmount;
+  double get deductionBudget => ytdRevenue * 0.35 - ytdExpenses;
+
+  factory TaxSummary.empty() => const TaxSummary(
+        ytdRevenue: 0,
+        ytdExpenses: 0,
+        outstandingDebt: 0,
+        daysUntilYearEnd: 0,
       );
 }
