@@ -626,6 +626,45 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
 
                   const SizedBox(height: 12),
 
+                  // Saldo section
+                  _DetailSection(children: [
+                    GestureDetector(
+                      onTap: () => _showSaldoEditDialog(ctx, user, setSheetState),
+                      child: Row(
+                        children: [
+                          Icon(Icons.account_balance_wallet_rounded,
+                              size: 16, color: Colors.amber.shade700),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Saldo',
+                            style: GoogleFonts.nunito(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey.shade500,
+                            ),
+                          ),
+                          const Spacer(),
+                          Text(
+                            '\$${user.saldo.toStringAsFixed(2)}',
+                            style: GoogleFonts.nunito(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: user.saldo > 0
+                                  ? Colors.green.shade700
+                                  : colors.onSurface.withValues(alpha: 0.6),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Icon(Icons.edit_rounded,
+                              size: 14,
+                              color: colors.primary.withValues(alpha: 0.6)),
+                        ],
+                      ),
+                    ),
+                  ]),
+
+                  const SizedBox(height: 12),
+
                   // Auth / login methods section
                   Consumer(
                     builder: (ctx, ref, _) {
@@ -921,6 +960,108 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
         },
       ),
     );
+  }
+
+  Future<void> _showSaldoEditDialog(
+    BuildContext sheetCtx,
+    AdminUser user,
+    StateSetter setSheetState,
+  ) async {
+    final controller = TextEditingController(
+      text: user.saldo.toStringAsFixed(2),
+    );
+    final colors = Theme.of(context).colorScheme;
+
+    final newValue = await showDialog<double>(
+      context: sheetCtx,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Editar Saldo',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 16),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '@${user.displayName}',
+              style: GoogleFonts.nunito(
+                fontSize: 13,
+                color: colors.onSurface.withValues(alpha: 0.6),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              autofocus: true,
+              decoration: InputDecoration(
+                labelText: 'Saldo (MXN)',
+                prefixText: '\$ ',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                isDense: true,
+              ),
+              style: GoogleFonts.nunito(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text('Cancelar', style: GoogleFonts.nunito(fontWeight: FontWeight.w600)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final parsed = double.tryParse(controller.text.replaceAll(',', '.'));
+              if (parsed == null) {
+                ToastService.showWarning('Ingresa un numero valido');
+                return;
+              }
+              Navigator.of(ctx).pop(parsed);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: colors.primary,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: Text('Guardar', style: GoogleFonts.nunito(fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+
+    if (newValue == null) return;
+
+    try {
+      await SupabaseClientService.client
+          .from('profiles')
+          .update({'saldo': newValue})
+          .eq('id', user.id);
+
+      await adminLogAction(
+        action: 'update_saldo',
+        targetType: 'user',
+        targetId: user.id,
+        details: {
+          'old_saldo': user.saldo,
+          'new_saldo': newValue,
+          'username': user.username,
+        },
+      );
+
+      ref.invalidate(adminUsersProvider);
+
+      // Close the bottom sheet and show success
+      if (sheetCtx.mounted) Navigator.of(sheetCtx).pop();
+      ToastService.showSuccess(
+        'Saldo de @${user.displayName} actualizado: \$${newValue.toStringAsFixed(2)}',
+      );
+    } catch (e, stack) {
+      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
+    }
   }
 
   void _openLiveSupportChat(AdminUser user) {
