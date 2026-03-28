@@ -356,6 +356,7 @@ class _TaxDeductionsCardState extends ConsumerState<_TaxDeductionsCard> {
   double _isrWithheld = 0;
   double _expensesYtd = 0;
   bool _loading = true;
+  final List<Map<String, dynamic>> _monthlyData = [];
 
   @override
   void initState() {
@@ -395,12 +396,46 @@ class _TaxDeductionsCardState extends ConsumerState<_TaxDeductionsCard> {
         exp += (r['amount'] as num?)?.toDouble() ?? 0;
       }
 
+      // Build monthly breakdown
+      final monthlyRev = <int, double>{};
+      final monthlyExp = <int, double>{};
+      for (final r in revenueRows) {
+        final startStr = r['starts_at'] as String?;
+        if (startStr == null) continue;
+        final dt = DateTime.tryParse(startStr);
+        if (dt == null) continue;
+        monthlyRev[dt.month] = (monthlyRev[dt.month] ?? 0) + ((r['price'] as num?)?.toDouble() ?? 0);
+      }
+      for (final r in expRows) {
+        final m = r['month'] as int?;
+        if (m == null) continue;
+        monthlyExp[m] = (monthlyExp[m] ?? 0) + ((r['amount'] as num?)?.toDouble() ?? 0);
+      }
+
+      final months = <Map<String, dynamic>>[];
+      const monthNames = ['', 'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+      final currentMonth = DateTime.now().month;
+      for (int m = 1; m <= currentMonth; m++) {
+        final mRev = monthlyRev[m] ?? 0;
+        final mExp = monthlyExp[m] ?? 0;
+        months.add({
+          'month': monthNames[m],
+          'revenue': mRev,
+          'iva': mRev * 0.08,
+          'isr': mRev * 0.025,
+          'expenses': mExp,
+          'cfdi': mRev > 0 ? 'pendiente' : 'n/a',
+        });
+      }
+
       if (mounted) {
         setState(() {
           _revenueYtd = rev;
           _ivaWithheld = rev * 0.08;
           _isrWithheld = rev * 0.025;
           _expensesYtd = exp;
+          _monthlyData.clear();
+          _monthlyData.addAll(months);
           _loading = false;
         });
       }
@@ -522,6 +557,73 @@ class _TaxDeductionsCardState extends ConsumerState<_TaxDeductionsCard> {
                 style: GoogleFonts.nunito(fontSize: 11, color: const Color(0xFF7C3AED), height: 1.4),
               ),
             ),
+
+            // ── Monthly SAT History ──
+            if (_monthlyData.isNotEmpty) ...[
+              Divider(height: 20, color: colors.onSurface.withValues(alpha: 0.08)),
+              Text('HISTORIAL MENSUAL SAT',
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1,
+                  color: colors.onSurface.withValues(alpha: 0.4),
+                )),
+              const SizedBox(height: 8),
+              ...List.generate(_monthlyData.length, (i) {
+                final m = _monthlyData[i];
+                final rev = m['revenue'] as double;
+                final iva = m['iva'] as double;
+                final isr = m['isr'] as double;
+                final exp = m['expenses'] as double;
+                final cfdi = m['cfdi'] as String;
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 6),
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: colors.surfaceContainerHighest.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(m['month'] as String,
+                            style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w700, color: colors.onSurface)),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: cfdi == 'pendiente'
+                                  ? Colors.orange.withValues(alpha: 0.15)
+                                  : const Color(0xFF059669).withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              cfdi == 'pendiente' ? 'CFDI Pendiente' : cfdi == 'n/a' ? 'Sin actividad' : 'CFDI Emitido',
+                              style: GoogleFonts.poppins(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w700,
+                                color: cfdi == 'pendiente' ? Colors.orange : const Color(0xFF059669),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Expanded(child: _MiniStat(label: 'Ingreso', value: '\$${_fmt(rev)}', color: colors.onSurface)),
+                          Expanded(child: _MiniStat(label: 'IVA 8%', value: '\$${_fmt(iva)}', color: const Color(0xFF059669))),
+                          Expanded(child: _MiniStat(label: 'ISR 2.5%', value: '\$${_fmt(isr)}', color: const Color(0xFF059669))),
+                          Expanded(child: _MiniStat(label: 'Gastos', value: '\$${_fmt(exp)}', color: const Color(0xFF7C3AED))),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              }),
+            ],
 
             const SizedBox(height: 14),
 
@@ -651,6 +753,26 @@ class _TaxDeductionsCardState extends ConsumerState<_TaxDeductionsCard> {
           );
         },
       ),
+    );
+  }
+}
+
+class _MiniStat extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+  const _MiniStat({required this.label, required this.value, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label,
+          style: GoogleFonts.nunito(fontSize: 9, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5))),
+        Text(value,
+          style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: color)),
+      ],
     );
   }
 }
