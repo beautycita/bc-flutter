@@ -26,6 +26,24 @@ import 'subcategory_sheet.dart';
 import 'business/business_shell_screen.dart' show businessTabProvider;
 import 'admin/admin_shell_screen.dart' show adminTabProvider;
 import '../providers/feature_toggle_provider.dart';
+import '../services/supabase_client.dart';
+
+/// Fetches the saldo from profiles.saldo for the current user.
+final _saldoProvider = FutureProvider<double>((ref) async {
+  if (!SupabaseClientService.isInitialized) return 0;
+  final userId = SupabaseClientService.currentUserId;
+  if (userId == null) return 0;
+  try {
+    final data = await SupabaseClientService.client
+        .from('profiles')
+        .select('saldo')
+        .eq('id', userId)
+        .single();
+    return (data['saldo'] as num?)?.toDouble() ?? 0;
+  } catch (_) {
+    return 0;
+  }
+});
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -255,10 +273,46 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       ),
                       child: Column(
                         children: [
-                          // Top row with nav buttons
+                          // Top row with saldo badge + nav buttons
                           Row(
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
+                              // Saldo badge — shows if user has balance > 0
+                              Consumer(
+                                builder: (context, ref, _) {
+                                  final saldoAsync = ref.watch(_saldoProvider);
+                                  final saldo = saldoAsync.valueOrNull ?? 0.0;
+                                  if (saldo <= 0) return const SizedBox.shrink();
+                                  return Padding(
+                                    padding: const EdgeInsets.only(right: AppConstants.paddingSM),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withValues(alpha: 0.2),
+                                        borderRadius: BorderRadius.circular(AppConstants.radiusFull),
+                                        border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.account_balance_wallet_outlined,
+                                              size: 14, color: Colors.white.withValues(alpha: 0.9)),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            '\$${saldo.toStringAsFixed(0)}',
+                                            style: GoogleFonts.poppins(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w700,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                              const Spacer(),
                               // Explore feed button — gated by enable_feed toggle
                               Consumer(
                                 builder: (context, ref, _) {

@@ -206,6 +206,216 @@ class BusinessRevenueRow {
   }
 }
 
+/// A single commission record row.
+@immutable
+class CommissionRecord {
+  final String id;
+  final String businessId;
+  final String businessName;
+  final String source; // 'appointment' or 'product'
+  final double amount;
+  final String? referenceId;
+  final String period; // 'YYYY-MM'
+  final DateTime createdAt;
+
+  const CommissionRecord({
+    required this.id,
+    required this.businessId,
+    required this.businessName,
+    required this.source,
+    required this.amount,
+    this.referenceId,
+    required this.period,
+    required this.createdAt,
+  });
+
+  factory CommissionRecord.fromJson(Map<String, dynamic> json) {
+    return CommissionRecord(
+      id: json['id']?.toString() ?? '',
+      businessId: json['business_id']?.toString() ?? '',
+      businessName: json['business_name'] as String? ??
+          json['businesses']?['business_name'] as String? ?? 'Desconocido',
+      source: json['source'] as String? ?? 'appointment',
+      amount: (json['amount'] as num?)?.toDouble() ?? 0,
+      referenceId: json['reference_id'] as String?,
+      period: json['period'] as String? ?? '',
+      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ?? DateTime.now(),
+    );
+  }
+}
+
+/// A single payout record row.
+@immutable
+class PayoutRecord {
+  final String id;
+  final String businessId;
+  final String businessName;
+  final double amount;
+  final String status; // 'completed', 'pending', 'failed'
+  final String? referenceNumber;
+  final String? paymentMethod;
+  final String period;
+  final DateTime createdAt;
+
+  const PayoutRecord({
+    required this.id,
+    required this.businessId,
+    required this.businessName,
+    required this.amount,
+    required this.status,
+    this.referenceNumber,
+    this.paymentMethod,
+    required this.period,
+    required this.createdAt,
+  });
+
+  factory PayoutRecord.fromJson(Map<String, dynamic> json) {
+    return PayoutRecord(
+      id: json['id']?.toString() ?? '',
+      businessId: json['business_id']?.toString() ?? '',
+      businessName: json['business_name'] as String? ??
+          json['businesses']?['business_name'] as String? ?? 'Desconocido',
+      amount: (json['amount'] as num?)?.toDouble() ?? 0,
+      status: json['status'] as String? ?? 'pending',
+      referenceNumber: json['reference_number'] as String?,
+      paymentMethod: json['payment_method'] as String?,
+      period: json['period'] as String? ?? '',
+      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ?? DateTime.now(),
+    );
+  }
+}
+
+/// A single CFDI record.
+@immutable
+class CfdiRecord {
+  final String id;
+  final String businessId;
+  final String businessName;
+  final String? folio;
+  final String? uuidFiscal;
+  final String status; // 'timbrado', 'pendiente', 'cancelado'
+  final double subtotal;
+  final double iva;
+  final double total;
+  final String period;
+  final DateTime createdAt;
+
+  const CfdiRecord({
+    required this.id,
+    required this.businessId,
+    required this.businessName,
+    this.folio,
+    this.uuidFiscal,
+    required this.status,
+    required this.subtotal,
+    required this.iva,
+    required this.total,
+    required this.period,
+    required this.createdAt,
+  });
+
+  factory CfdiRecord.fromJson(Map<String, dynamic> json) {
+    return CfdiRecord(
+      id: json['id']?.toString() ?? '',
+      businessId: json['business_id']?.toString() ?? '',
+      businessName: json['business_name'] as String? ??
+          json['businesses']?['business_name'] as String? ?? 'Desconocido',
+      folio: json['folio'] as String?,
+      uuidFiscal: json['uuid_fiscal'] as String?,
+      status: json['status'] as String? ?? 'pendiente',
+      subtotal: (json['subtotal'] as num?)?.toDouble() ?? 0,
+      iva: (json['iva'] as num?)?.toDouble() ?? 0,
+      total: (json['total'] as num?)?.toDouble() ?? 0,
+      period: json['period'] as String? ?? '',
+      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ?? DateTime.now(),
+    );
+  }
+}
+
+/// Platform-level SAT declaration aggregate.
+@immutable
+class PlatformSatDeclaration {
+  final String id;
+  final String period;
+  final double totalRevenue;
+  final double ivaCollected;
+  final double isrCollected;
+  final double bankInterest;
+  final double uberReferrals;
+  final String status;
+  final DateTime createdAt;
+
+  const PlatformSatDeclaration({
+    required this.id,
+    required this.period,
+    required this.totalRevenue,
+    required this.ivaCollected,
+    required this.isrCollected,
+    required this.bankInterest,
+    required this.uberReferrals,
+    required this.status,
+    required this.createdAt,
+  });
+
+  factory PlatformSatDeclaration.fromJson(Map<String, dynamic> json) {
+    return PlatformSatDeclaration(
+      id: json['id']?.toString() ?? '',
+      period: json['period'] as String? ?? '',
+      totalRevenue: (json['total_revenue'] as num?)?.toDouble() ?? 0,
+      ivaCollected: (json['iva_collected'] as num?)?.toDouble() ?? 0,
+      isrCollected: (json['isr_collected'] as num?)?.toDouble() ?? 0,
+      bankInterest: (json['bank_interest'] as num?)?.toDouble() ?? 0,
+      uberReferrals: (json['uber_referrals'] as num?)?.toDouble() ?? 0,
+      status: json['status'] as String? ?? 'pendiente',
+      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ?? DateTime.now(),
+    );
+  }
+}
+
+/// Per-business SAT monthly report row.
+@immutable
+class SatMonthlyReport {
+  final String id;
+  final String businessId;
+  final String businessName;
+  final String period;
+  final double revenue;
+  final double ivaWithheld;
+  final double isrWithheld;
+  final double platformFees;
+  final double netPayout;
+  final DateTime createdAt;
+
+  const SatMonthlyReport({
+    required this.id,
+    required this.businessId,
+    required this.businessName,
+    required this.period,
+    required this.revenue,
+    required this.ivaWithheld,
+    required this.isrWithheld,
+    required this.platformFees,
+    required this.netPayout,
+    required this.createdAt,
+  });
+
+  factory SatMonthlyReport.fromJson(Map<String, dynamic> json) {
+    return SatMonthlyReport(
+      id: json['id']?.toString() ?? '',
+      businessId: json['business_id']?.toString() ?? '',
+      businessName: json['business_name'] as String? ??
+          json['businesses']?['business_name'] as String? ?? 'Desconocido',
+      period: json['period'] as String? ?? '',
+      revenue: (json['revenue'] as num?)?.toDouble() ?? 0,
+      ivaWithheld: (json['iva_withheld'] as num?)?.toDouble() ?? 0,
+      isrWithheld: (json['isr_withheld'] as num?)?.toDouble() ?? 0,
+      platformFees: (json['platform_fees'] as num?)?.toDouble() ?? 0,
+      netPayout: (json['net_payout'] as num?)?.toDouble() ?? 0,
+      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ?? DateTime.now(),
+    );
+  }
+}
+
 // ── Providers ────────────────────────────────────────────────────────────────
 
 /// CEO financial KPIs from v_platform_health and v_daily_revenue.
@@ -397,6 +607,111 @@ final businessRevenueProvider =
         .toList();
   } catch (e) {
     if (kDebugMode) debugPrint('Business revenue error: $e');
+    return [];
+  }
+});
+
+/// Commission records from commission_records table.
+final commissionRecordsProvider =
+    FutureProvider<List<CommissionRecord>>((ref) async {
+  if (!SupabaseClientService.isInitialized) return [];
+
+  try {
+    final data = await SupabaseClientService.client
+        .from('commission_records')
+        .select('*, businesses(business_name)')
+        .order('created_at', ascending: false)
+        .limit(500);
+
+    return (data as List)
+        .map((row) => CommissionRecord.fromJson(row))
+        .toList();
+  } catch (e) {
+    if (kDebugMode) debugPrint('Commission records error: $e');
+    return [];
+  }
+});
+
+/// Payout records from payout_records table.
+final payoutRecordsProvider =
+    FutureProvider<List<PayoutRecord>>((ref) async {
+  if (!SupabaseClientService.isInitialized) return [];
+
+  try {
+    final data = await SupabaseClientService.client
+        .from('payout_records')
+        .select('*, businesses(business_name)')
+        .order('created_at', ascending: false)
+        .limit(500);
+
+    return (data as List)
+        .map((row) => PayoutRecord.fromJson(row))
+        .toList();
+  } catch (e) {
+    if (kDebugMode) debugPrint('Payout records error: $e');
+    return [];
+  }
+});
+
+/// CFDI records from cfdi_records table.
+final cfdiRecordsProvider =
+    FutureProvider<List<CfdiRecord>>((ref) async {
+  if (!SupabaseClientService.isInitialized) return [];
+
+  try {
+    final data = await SupabaseClientService.client
+        .from('cfdi_records')
+        .select('*, businesses(business_name)')
+        .order('created_at', ascending: false)
+        .limit(500);
+
+    return (data as List)
+        .map((row) => CfdiRecord.fromJson(row))
+        .toList();
+  } catch (e) {
+    if (kDebugMode) debugPrint('CFDI records error: $e');
+    return [];
+  }
+});
+
+/// Platform-level SAT declarations.
+final platformSatDeclarationsProvider =
+    FutureProvider<List<PlatformSatDeclaration>>((ref) async {
+  if (!SupabaseClientService.isInitialized) return [];
+
+  try {
+    final data = await SupabaseClientService.client
+        .from('platform_sat_declarations')
+        .select()
+        .order('period', ascending: false)
+        .limit(24);
+
+    return (data as List)
+        .map((row) => PlatformSatDeclaration.fromJson(row))
+        .toList();
+  } catch (e) {
+    if (kDebugMode) debugPrint('Platform SAT declarations error: $e');
+    return [];
+  }
+});
+
+/// Per-business SAT monthly reports.
+final satMonthlyReportsProvider =
+    FutureProvider<List<SatMonthlyReport>>((ref) async {
+  if (!SupabaseClientService.isInitialized) return [];
+
+  try {
+    final data = await SupabaseClientService.client
+        .from('sat_monthly_reports')
+        .select('*, businesses(business_name)')
+        .order('period', ascending: false)
+        .limit(500);
+
+    return (data as List)
+        .map((row) => SatMonthlyReport.fromJson(row))
+        .toList();
+  } catch (e) {
+    if (kDebugMode) debugPrint('SAT monthly reports error: $e');
     return [];
   }
 });
