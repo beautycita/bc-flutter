@@ -432,6 +432,8 @@ class _TaxDeductionsCardState extends ConsumerState<_TaxDeductionsCard> {
   double _ivaWithheld = 0;
   double _isrWithheld = 0;
   double _expensesYtd = 0;
+  double _commissionServices = 0;
+  double _commissionProducts = 0;
   bool _loading = true;
   final List<Map<String, dynamic>> _monthlyData = [];
 
@@ -473,6 +475,25 @@ class _TaxDeductionsCardState extends ConsumerState<_TaxDeductionsCard> {
         exp += (r['amount'] as num?)?.toDouble() ?? 0;
       }
 
+      // Commission records YTD
+      final commRows = await SupabaseClientService.client
+          .from('commission_records')
+          .select('amount, source')
+          .eq('business_id', bizId)
+          .gte('created_at', '$year-01-01');
+
+      double commSvc = 0;
+      double commProd = 0;
+      for (final r in commRows) {
+        final amt = (r['amount'] as num?)?.toDouble() ?? 0;
+        final src = r['source'] as String? ?? '';
+        if (src == 'appointment') {
+          commSvc += amt;
+        } else if (src == 'product_sale') {
+          commProd += amt;
+        }
+      }
+
       // Build monthly breakdown
       final monthlyRev = <int, double>{};
       final monthlyExp = <int, double>{};
@@ -511,6 +532,8 @@ class _TaxDeductionsCardState extends ConsumerState<_TaxDeductionsCard> {
           _ivaWithheld = rev * 0.08;
           _isrWithheld = rev * 0.025;
           _expensesYtd = exp;
+          _commissionServices = commSvc;
+          _commissionProducts = commProd;
           _monthlyData.clear();
           _monthlyData.addAll(months);
           _loading = false;
@@ -678,6 +701,35 @@ class _TaxDeductionsCardState extends ConsumerState<_TaxDeductionsCard> {
                   }),
                 ],
               ),
+            ),
+
+            // ── Commission Transparency ──
+            Divider(height: 20, color: colors.onSurface.withValues(alpha: 0.08)),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEC4899).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.percent_rounded, size: 16, color: Color(0xFFEC4899)),
+                ),
+                const SizedBox(width: 8),
+                Text('Comisiones BeautyCita',
+                  style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w700, color: colors.onSurface)),
+              ],
+            ),
+            const SizedBox(height: 8),
+            _TaxRow(label: 'Comision BC (3% servicios)', value: '\$${_fmt(_commissionServices)}', color: const Color(0xFFEC4899)),
+            const SizedBox(height: 4),
+            _TaxRow(label: 'Comision BC (10% productos)', value: '\$${_fmt(_commissionProducts)}', color: const Color(0xFFEC4899)),
+            const SizedBox(height: 4),
+            _TaxRow(
+              label: 'Total comisiones ${DateTime.now().year}',
+              value: '\$${_fmt(_commissionServices + _commissionProducts)}',
+              color: const Color(0xFFEC4899),
+              bold: true,
             ),
 
             // ── Monthly SAT History ──

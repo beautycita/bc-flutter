@@ -1,9 +1,12 @@
+import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../config/constants.dart';
 import '../../providers/business_provider.dart';
 import '../../services/toast_service.dart';
@@ -218,21 +221,34 @@ class _QrContentState extends State<_QrContent> {
     );
   }
 
+  Future<File?> _captureQrToFile() async {
+    final boundary = _repaintKey.currentContext?.findRenderObject()
+        as RenderRepaintBoundary?;
+    if (boundary == null) throw Exception('Could not capture QR');
+
+    final image = await boundary.toImage(pixelRatio: 3.0);
+    final byteData =
+        await image.toByteData(format: ui.ImageByteFormat.png);
+    if (byteData == null) throw Exception('Could not convert to PNG');
+
+    final tempDir = await getTemporaryDirectory();
+    final file = File('${tempDir.path}/beautycita_qr.png');
+    await file.writeAsBytes(byteData.buffer.asUint8List());
+    return file;
+  }
+
   Future<void> _saveQrImage() async {
     setState(() => _saving = true);
     try {
-      final boundary = _repaintKey.currentContext?.findRenderObject()
-          as RenderRepaintBoundary?;
-      if (boundary == null) throw Exception('Could not capture QR');
+      final file = await _captureQrToFile();
+      if (file == null) throw Exception('Could not capture QR');
 
-      final image = await boundary.toImage(pixelRatio: 3.0);
-      final byteData =
-          await image.toByteData(format: ui.ImageByteFormat.png);
-      if (byteData == null) throw Exception('Could not convert to PNG');
-
-      // For now, show a message — full gallery save would need
-      // path_provider + image_gallery_saver packages
-      ToastService.showInfo('Captura de pantalla para guardar la imagen');
+      // Share the image file so the user can save it to gallery or files
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: 'QR de ${widget.businessName} - BeautyCita',
+      );
+      ToastService.showInfo('QR listo para guardar');
     } catch (e, stack) {
       ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
     } finally {
@@ -243,10 +259,9 @@ class _QrContentState extends State<_QrContent> {
   Future<void> _shareQr() async {
     setState(() => _saving = true);
     try {
-      // For sharing, we'd use share_plus package
-      // For now, copy URL to clipboard
-      // (share_plus not yet in deps)
-      ToastService.showInfo('URL: ${widget.qrUrl}');
+      await Share.share('Escanea para reservar: ${widget.qrUrl}');
+    } catch (e, stack) {
+      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
     } finally {
       if (mounted) setState(() => _saving = false);
     }

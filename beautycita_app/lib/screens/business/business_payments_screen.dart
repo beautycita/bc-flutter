@@ -54,6 +54,7 @@ class _BusinessPaymentsScreenState
   Widget build(BuildContext context) {
     final bizAsync = ref.watch(currentBusinessProvider);
     final paymentsAsync = ref.watch(businessPaymentsProvider);
+    final payoutsAsync = ref.watch(businessPayoutsProvider);
     final statsAsync = ref.watch(businessStatsProvider);
     final colors = Theme.of(context).colorScheme;
 
@@ -195,6 +196,60 @@ class _BusinessPaymentsScreenState
 
               return Column(
                 children: payments.map((p) => _PaymentCard(payment: p)).toList(),
+              );
+            },
+            loading: () => const Center(
+              child: Padding(
+                padding: EdgeInsets.all(32),
+                child: CircularProgressIndicator(),
+              ),
+            ),
+            error: (e, _) => Text('Error: $e',
+                style: GoogleFonts.nunito(color: colors.error)),
+          ),
+
+          const SizedBox(height: AppConstants.paddingLG),
+
+          // ── Payout History ──
+          Text(
+            'Historial de Pagos',
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: colors.onSurface,
+            ),
+          ),
+          const SizedBox(height: AppConstants.paddingSM),
+
+          payoutsAsync.when(
+            data: (payouts) {
+              if (payouts.isEmpty) {
+                return Card(
+                  elevation: 0,
+                  color: colors.surface,
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppConstants.paddingXL),
+                    child: Column(
+                      children: [
+                        Icon(Icons.account_balance_wallet_outlined,
+                            size: 48,
+                            color: colors.onSurface.withValues(alpha: 0.3)),
+                        const SizedBox(height: AppConstants.paddingSM),
+                        Text(
+                          'Sin pagos registrados',
+                          style: GoogleFonts.nunito(
+                            fontSize: 14,
+                            color: colors.onSurface.withValues(alpha: 0.5),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+              return Column(
+                children: payouts.map((p) => _PayoutCard(payout: p)).toList(),
               );
             },
             loading: () => const Center(
@@ -404,5 +459,147 @@ class _PaymentCard extends StatelessWidget {
       default:
         return Colors.grey;
     }
+  }
+}
+
+class _PayoutCard extends StatelessWidget {
+  final Map<String, dynamic> payout;
+  const _PayoutCard({required this.payout});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final amount = (payout['amount'] as num?)?.toDouble() ?? 0;
+    final status = payout['status'] as String? ?? 'pending';
+    final method = payout['method'] as String? ?? 'bank_transfer';
+    final reference = payout['reference_number'] as String? ?? '';
+    final month = payout['period_month'] as int?;
+    final year = payout['period_year'] as int?;
+    final processedAt = payout['processed_at'] as String?;
+    final createdAt = payout['created_at'] as String?;
+
+    String periodStr = '';
+    if (month != null && year != null) {
+      const monthNames = [
+        '', 'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
+        'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'
+      ];
+      periodStr = '${monthNames[month.clamp(1, 12)]} $year';
+    }
+
+    String dateStr = '';
+    final dateSource = processedAt ?? createdAt;
+    if (dateSource != null) {
+      final dt = DateTime.tryParse(dateSource);
+      if (dt != null) {
+        dateStr = '${dt.day}/${dt.month}/${dt.year}';
+      }
+    }
+
+    final statusColor = status == 'completed'
+        ? Colors.green
+        : status == 'pending'
+            ? Colors.orange
+            : Colors.grey;
+
+    final methodLabel = method == 'bank_transfer' ? 'Transferencia' : method;
+
+    return Card(
+      elevation: 0,
+      color: colors.surface,
+      margin: const EdgeInsets.only(bottom: AppConstants.paddingSM),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+        side: BorderSide(
+          color: colors.onSurface.withValues(alpha: 0.08),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppConstants.paddingMD),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(Icons.account_balance_rounded,
+                      color: statusColor, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '\$${amount.toStringAsFixed(2)} MXN',
+                        style: GoogleFonts.poppins(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: colors.onSurface,
+                        ),
+                      ),
+                      Text(
+                        '$methodLabel${periodStr.isNotEmpty ? ' • $periodStr' : ''}',
+                        style: GoogleFonts.nunito(
+                          fontSize: 12,
+                          color: colors.onSurface.withValues(alpha: 0.5),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    status == 'completed' ? 'Completado' : status == 'pending' ? 'Pendiente' : status,
+                    style: GoogleFonts.nunito(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: statusColor,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (reference.isNotEmpty || dateStr.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  if (reference.isNotEmpty)
+                    Expanded(
+                      child: Text(
+                        'Ref: $reference',
+                        style: GoogleFonts.nunito(
+                          fontSize: 11,
+                          color: colors.onSurface.withValues(alpha: 0.4),
+                        ),
+                      ),
+                    ),
+                  if (dateStr.isNotEmpty)
+                    Text(
+                      dateStr,
+                      style: GoogleFonts.nunito(
+                        fontSize: 11,
+                        color: colors.onSurface.withValues(alpha: 0.4),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 }

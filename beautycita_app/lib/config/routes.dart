@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:beautycita/services/supabase_client.dart';
 import 'package:beautycita/services/toast_service.dart';
 import 'package:beautycita/screens/splash_screen.dart';
 import 'package:beautycita/screens/auth_screen.dart';
@@ -269,6 +270,17 @@ class AppRoutes {
       GoRoute(
         path: business,
         name: 'business',
+        redirect: (context, state) async {
+          final userId = SupabaseClientService.currentUserId;
+          if (userId == null) return home;
+          final biz = await SupabaseClientService.client
+              .from('businesses')
+              .select('id')
+              .eq('owner_id', userId)
+              .maybeSingle();
+          if (biz == null) return home;
+          return null; // allow access
+        },
         pageBuilder: (context, state) => bcSweepPage(
           key: state.pageKey,
           child: const BusinessShellScreen(),
