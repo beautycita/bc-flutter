@@ -48,6 +48,11 @@ class BusinessDashboardScreen extends ConsumerWidget {
 
           const SizedBox(height: AppConstants.paddingLG),
 
+          // Outstanding Debt Warning
+          _DebtCard(),
+
+          const SizedBox(height: AppConstants.paddingMD),
+
           // Tax & Deductions Card
           _TaxDeductionsCard(),
 
@@ -350,6 +355,73 @@ class _AppointmentCard extends StatelessWidget {
 // Tax & Deductions Dashboard Card
 // ═══════════════════════════════════════════════════════════════════════════
 
+// ═══════════════════════════════════════════════════════════════════════════
+// Outstanding Debt Card — red warning when salon owes BC
+// ═══════════════════════════════════════════════════════════════════════════
+
+class _DebtCard extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final bizAsync = ref.watch(currentBusinessProvider);
+    return bizAsync.when(
+      data: (biz) {
+        if (biz == null) return const SizedBox.shrink();
+        final debt = (biz['outstanding_debt'] as num?)?.toDouble() ?? 0;
+        if (debt <= 0) return const SizedBox.shrink();
+
+        final colors = Theme.of(context).colorScheme;
+        return Card(
+          elevation: 0,
+          color: Colors.red.shade50,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(color: Colors.red.shade200),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade100,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(Icons.warning_amber_rounded, color: Colors.red.shade700, size: 24),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Saldo pendiente',
+                        style: GoogleFonts.poppins(
+                          fontSize: 13, fontWeight: FontWeight.w700, color: Colors.red.shade800)),
+                      const SizedBox(height: 2),
+                      Text('\$${NumberFormat('#,##0.00', 'es_MX').format(debt)} MXN',
+                        style: GoogleFonts.poppins(
+                          fontSize: 20, fontWeight: FontWeight.w800, color: Colors.red.shade700)),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Se descontara hasta 50% de cada servicio hasta saldar. '
+                        'Contacta soporte para detalles.',
+                        style: GoogleFonts.nunito(
+                          fontSize: 11, color: Colors.red.shade600, height: 1.3),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+    );
+  }
+}
+
 class _TaxDeductionsCard extends ConsumerStatefulWidget {
   @override
   ConsumerState<_TaxDeductionsCard> createState() => _TaxDeductionsCardState();
@@ -556,10 +628,55 @@ class _TaxDeductionsCardState extends ConsumerState<_TaxDeductionsCard> {
                 color: const Color(0xFF7C3AED).withValues(alpha: 0.06),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Text(
-                'Muebles, herramientas, gasolina, renta, internet — todo gasto de negocio con factura es 100% deducible. '
-                'Puedes gastar hasta \$${_fmt(deductionBudget)} mas y recibir el 100% de regreso via deducciones.',
-                style: GoogleFonts.nunito(fontSize: 11, color: const Color(0xFF7C3AED), height: 1.4),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Muebles, herramientas, gasolina, renta, internet — todo gasto de negocio con factura es 100% deducible. '
+                    'Puedes gastar hasta \$${_fmt(deductionBudget)} mas y recibir el 100% de regreso via deducciones.',
+                    style: GoogleFonts.nunito(fontSize: 11, color: const Color(0xFF7C3AED), height: 1.4),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(Icons.event_outlined, size: 14, color: const Color(0xFF7C3AED).withValues(alpha: 0.7)),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Fecha limite para deducciones ${DateTime.now().year}: 31 de Diciembre ${DateTime.now().year}',
+                        style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w700, color: const Color(0xFF7C3AED)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  // Days remaining progress
+                  Builder(builder: (context) {
+                    final now = DateTime.now();
+                    final yearEnd = DateTime(now.year, 12, 31);
+                    final yearStart = DateTime(now.year, 1, 1);
+                    final totalDays = yearEnd.difference(yearStart).inDays;
+                    final daysLeft = yearEnd.difference(now).inDays;
+                    final progress = 1.0 - (daysLeft / totalDays);
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: LinearProgressIndicator(
+                            value: progress,
+                            backgroundColor: const Color(0xFF7C3AED).withValues(alpha: 0.15),
+                            color: daysLeft < 60 ? Colors.red : const Color(0xFF7C3AED),
+                            minHeight: 6,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '$daysLeft dias restantes para deducir gastos de ${now.year}',
+                          style: GoogleFonts.nunito(fontSize: 10, color: const Color(0xFF7C3AED).withValues(alpha: 0.7)),
+                        ),
+                      ],
+                    );
+                  }),
+                ],
               ),
             ),
 

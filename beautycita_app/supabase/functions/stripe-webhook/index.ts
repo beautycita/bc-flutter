@@ -276,6 +276,55 @@ serve(async (req) => {
             }
           }
 
+          // --- Debt collection: deduct up to 50% of service fee if salon has debt ---
+          const businessId = paymentIntent.metadata?.business_id;
+          if (businessId) {
+            try {
+              const grossAmount = paymentIntent.amount / 100;
+              const commission = (paymentIntent.application_fee_amount ?? 0) / 100;
+              const ivaWithheld = parseFloat(paymentIntent.metadata?.iva_withheld ?? "0");
+              const isrWithheld = parseFloat(paymentIntent.metadata?.isr_withheld ?? "0");
+
+              const { data: debtResult } = await supabase.rpc("calculate_payout_with_debt", {
+                p_business_id: businessId,
+                p_gross_amount: grossAmount,
+                p_commission: commission,
+                p_iva_withheld: ivaWithheld,
+                p_isr_withheld: isrWithheld,
+              });
+
+              if (debtResult && debtResult.length > 0 && debtResult[0].debt_collected > 0) {
+                const collected = debtResult[0].debt_collected;
+                const remaining = debtResult[0].remaining_debt;
+                console.log(`[STRIPE-WEBHOOK] Debt collected: $${collected} from ${businessId}. Remaining: $${remaining}`);
+
+                // Log the debt payment
+                await supabase.from("debt_payments").insert({
+                  debt_id: null, // FIFO already applied in the RPC
+                  business_id: businessId,
+                  appointment_id: bookingId,
+                  amount_deducted: collected,
+                  payout_amount: debtResult[0].salon_payout,
+                  original_payout: grossAmount - commission - ivaWithheld - isrWithheld,
+                });
+
+                // Record commission for the collected debt amount
+                await supabase.from("commission_records").insert({
+                  business_id: businessId,
+                  appointment_id: bookingId,
+                  amount: collected,
+                  rate: 0,
+                  source: "debt_collection",
+                  period_month: new Date().getMonth() + 1,
+                  period_year: new Date().getFullYear(),
+                  status: "collected",
+                });
+              }
+            } catch (debtErr) {
+              console.error(`[STRIPE-WEBHOOK] Debt collection error (non-fatal):`, debtErr);
+            }
+          }
+
           // Send emails (non-blocking — don't fail the webhook)
           await sendBookingEmails(supabase, bookingId, paymentIntent);
         }
