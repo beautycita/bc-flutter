@@ -8,6 +8,8 @@ import 'package:intl/intl.dart';
 
 import '../../config/breakpoints.dart';
 import '../../config/web_theme.dart';
+import '../../providers/admin_finance_dashboard_provider.dart'
+    show commissionDetailProvider, CommissionDetailData, CommissionMonthlySummary;
 import '../../providers/admin_finance_provider.dart';
 import '../../widgets/kpi_card.dart';
 import '../../widgets/web_design_system.dart';
@@ -84,6 +86,13 @@ class FinancePage extends ConsumerWidget {
                 const SizedBox(height: 16),
                 _PlatformFeesTable(ref: ref),
               ],
+              const SizedBox(height: 24),
+
+              // Commission detail by month & source
+              _CommissionDetailSection(
+                ref: ref,
+                isDesktop: isDesktop,
+              ),
               const SizedBox(height: 24),
             ],
           ),
@@ -959,4 +968,289 @@ class _TableHeader extends StatelessWidget {
       ),
     );
   }
+}
+
+// ── Commission Detail by Month & Source ──────────────────────────────────
+
+class _CommissionDetailSection extends StatelessWidget {
+  const _CommissionDetailSection({
+    required this.ref,
+    required this.isDesktop,
+  });
+  final WidgetRef ref;
+  final bool isDesktop;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final dataAsync = ref.watch(commissionDetailProvider);
+
+    return WebCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: kWebPrimary.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.receipt_long_outlined,
+                    size: 18, color: kWebPrimary),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'Detalle de Comisiones por Mes',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: kWebTextPrimary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          dataAsync.when(
+            loading: () => const Center(
+              child: Padding(
+                padding: EdgeInsets.all(32),
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+            error: (_, __) => Center(
+              child: Text('Error al cargar comisiones',
+                  style: theme.textTheme.bodySmall),
+            ),
+            data: (data) {
+              if (data.months.isEmpty) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 24),
+                  child: Center(
+                    child: Column(
+                      children: [
+                        Icon(Icons.receipt_long_outlined,
+                            size: 40,
+                            color: colors.onSurface.withValues(alpha: 0.2)),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Sin registros de comisiones',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colors.onSurface.withValues(alpha: 0.4),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Summary KPIs
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _CommissionKpi(
+                          label: 'Total cobrado',
+                          amount: data.totalCollected,
+                          color: const Color(0xFF4CAF50),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _CommissionKpi(
+                          label: 'Pendiente de cobro',
+                          amount: data.totalPending,
+                          color: const Color(0xFFFF9800),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  // Monthly table
+                  if (isDesktop)
+                    _DesktopCommissionTable(months: data.months)
+                  else
+                    _MobileCommissionList(months: data.months),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CommissionKpi extends StatelessWidget {
+  const _CommissionKpi({
+    required this.label,
+    required this.amount,
+    required this.color,
+  });
+  final String label;
+  final double amount;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.15)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+              )),
+          Text(
+            '\$${_fmtCommission(amount)}',
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DesktopCommissionTable extends StatelessWidget {
+  const _DesktopCommissionTable({required this.months});
+  final List<CommissionMonthlySummary> months;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+
+    return DataTable(
+      columnSpacing: 24,
+      headingRowHeight: 40,
+      dataRowMinHeight: 40,
+      dataRowMaxHeight: 48,
+      headingTextStyle: theme.textTheme.labelMedium?.copyWith(
+        fontWeight: FontWeight.w600,
+        color: colors.onSurface.withValues(alpha: 0.7),
+      ),
+      dataTextStyle: theme.textTheme.bodySmall,
+      columns: const [
+        DataColumn(label: Text('Periodo')),
+        DataColumn(label: Text('Reservas (3%)'), numeric: true),
+        DataColumn(label: Text('# Reservas'), numeric: true),
+        DataColumn(label: Text('Productos (10%)'), numeric: true),
+        DataColumn(label: Text('# Productos'), numeric: true),
+        DataColumn(label: Text('Total'), numeric: true),
+      ],
+      rows: months.map((m) {
+        return DataRow(cells: [
+          DataCell(Text(m.period,
+              style: const TextStyle(fontWeight: FontWeight.w600))),
+          DataCell(Text('\$${_fmtCommission(m.appointmentCommissions)}')),
+          DataCell(Text('${m.appointmentCount}')),
+          DataCell(Text('\$${_fmtCommission(m.productCommissions)}')),
+          DataCell(Text('${m.productCount}')),
+          DataCell(Text(
+            '\$${_fmtCommission(m.total)}',
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          )),
+        ]);
+      }).toList(),
+    );
+  }
+}
+
+class _MobileCommissionList extends StatelessWidget {
+  const _MobileCommissionList({required this.months});
+  final List<CommissionMonthlySummary> months;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+
+    return Column(
+      children: [
+        for (var i = 0; i < months.length; i++) ...[
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: colors.surfaceContainerHighest.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: colors.outlineVariant),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(months[i].period,
+                        style: theme.textTheme.bodySmall
+                            ?.copyWith(fontWeight: FontWeight.w700)),
+                    Text('\$${_fmtCommission(months[i].total)}',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF4CAF50),
+                        )),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Reservas (3%)',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color:
+                                  colors.onSurface.withValues(alpha: 0.5),
+                            )),
+                        Text(
+                            '\$${_fmtCommission(months[i].appointmentCommissions)} (${months[i].appointmentCount})',
+                            style: theme.textTheme.bodySmall),
+                      ],
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text('Productos (10%)',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color:
+                                  colors.onSurface.withValues(alpha: 0.5),
+                            )),
+                        Text(
+                            '\$${_fmtCommission(months[i].productCommissions)} (${months[i].productCount})',
+                            style: theme.textTheme.bodySmall),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          if (i < months.length - 1) const SizedBox(height: 8),
+        ],
+      ],
+    );
+  }
+}
+
+String _fmtCommission(double amount) {
+  if (amount >= 1000000) return '${(amount / 1000000).toStringAsFixed(1)}M';
+  if (amount >= 100000) return '${(amount / 1000).toStringAsFixed(0)}k';
+  if (amount >= 1000) return NumberFormat('#,##0', 'es').format(amount.round());
+  return amount.toStringAsFixed(amount == amount.roundToDouble() ? 0 : 2);
 }
