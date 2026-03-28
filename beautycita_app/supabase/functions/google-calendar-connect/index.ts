@@ -128,6 +128,17 @@ Deno.serve(async (req: Request) => {
         return json({ error: "No staff record found. Only business owners can connect calendars." }, 403);
       }
 
+      // Verify caller is the business owner
+      const { data: biz, error: bizErr } = await supabase
+        .from("businesses")
+        .select("owner_id")
+        .eq("id", staffRecord.business_id)
+        .single();
+
+      if (bizErr || !biz || biz.owner_id !== user.id) {
+        return json({ error: "Only the business owner can connect calendars" }, 403);
+      }
+
       // Exchange authorization code for tokens
       const tokenResp = await fetch(GOOGLE_TOKEN_URL, {
         method: "POST",
@@ -197,12 +208,23 @@ Deno.serve(async (req: Request) => {
       // Get the staff record for this user
       const { data: staffRecord } = await supabase
         .from("staff")
-        .select("id")
+        .select("id, business_id")
         .eq("user_id", user.id)
         .single();
 
       if (!staffRecord) {
         return json({ error: "No staff record found" }, 403);
+      }
+
+      // Verify caller is the business owner
+      const { data: bizDisc, error: bizDiscErr } = await supabase
+        .from("businesses")
+        .select("owner_id")
+        .eq("id", staffRecord.business_id)
+        .single();
+
+      if (bizDiscErr || !bizDisc || bizDisc.owner_id !== user.id) {
+        return json({ error: "Only the business owner can disconnect calendars" }, 403);
       }
 
       // Delete the calendar connection

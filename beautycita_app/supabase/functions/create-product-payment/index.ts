@@ -89,7 +89,8 @@ serve(async (req) => {
           id,
           name,
           stripe_account_id,
-          onboarding_complete
+          onboarding_complete,
+          is_active
         )
       `)
       .eq("id", product_id)
@@ -109,7 +110,13 @@ serve(async (req) => {
       name: string;
       stripe_account_id: string | null;
       onboarding_complete: boolean;
+      is_active: boolean;
     };
+
+    // Verify business is active
+    if (!business.is_active) {
+      return json({ error: "This business is no longer active" }, 400);
+    }
 
     // Verify business is fully onboarded
     if (!business.onboarding_complete) {
