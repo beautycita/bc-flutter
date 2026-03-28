@@ -335,7 +335,7 @@ final adminFullActivityProvider =
 final adminUsersProvider = FutureProvider<List<AdminUser>>((ref) async {
   final response = await SupabaseClientService.client
       .from('profiles')
-      .select('id, username, full_name, phone, role, status, created_at, last_seen, avatar_url, birthday, gender, home_address, updated_at, registration_source, phone_verified')
+      .select('id, username, full_name, phone, role, status, created_at, last_seen, avatar_url, birthday, gender, home_address, updated_at, registration_source, phone_verified, saldo')
       .order('created_at', ascending: false);
 
   return (response as List)
@@ -459,6 +459,7 @@ class AdminUser {
   final String? homeAddress;
   final String? registrationSource;
   final bool phoneVerified;
+  final double saldo;
 
   const AdminUser({
     required this.id,
@@ -476,6 +477,7 @@ class AdminUser {
     this.homeAddress,
     this.registrationSource,
     this.phoneVerified = false,
+    this.saldo = 0.0,
   });
 
   /// Display name: prefer fullName over legacy user_XXXXX usernames.
@@ -522,6 +524,7 @@ class AdminUser {
       homeAddress: json['home_address'] as String?,
       registrationSource: json['registration_source'] as String?,
       phoneVerified: json['phone_verified'] as bool? ?? false,
+      saldo: (json['saldo'] as num?)?.toDouble() ?? 0.0,
     );
   }
 }

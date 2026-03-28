@@ -65,10 +65,6 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen>
   // For radius animation on the map
   late AnimationController _radiusPulse;
 
-  // Radius drag state
-  double _radiusDragFraction = 0.0;
-  bool _isDraggingRadius = false;
-
   @override
   void initState() {
     super.initState();
@@ -98,12 +94,6 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen>
     _notifInitialized = true;
   }
 
-  double _fractionForRadius(int km) {
-    final idx = _radiusStops.indexOf(_nearestStop(km));
-    if (idx < 0) return 0.0;
-    return idx / (_radiusStops.length - 1);
-  }
-
   @override
   Widget build(BuildContext context) {
     final prefsState = ref.watch(userPrefsProvider);
@@ -111,11 +101,6 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen>
     final ext = Theme.of(context).extension<BCThemeExtension>()!;
 
     _initNotifStates(prefsState);
-
-    // Sync drag fraction when not actively dragging
-    if (!_isDraggingRadius) {
-      _radiusDragFraction = _fractionForRadius(prefsState.searchRadiusKm);
-    }
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -201,163 +186,189 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen>
 
   Widget _buildPreferenceDials(
       UserPrefsState prefs, ColorScheme cs, BCThemeExtension ext) {
-    final budgetFraction = switch (prefs.priceComfort) {
-      'budget' => 0.33,
+    final budgetValue = switch (prefs.priceComfort) {
+      'budget' => 0.0,
       'premium' => 1.0,
-      _ => 0.66,
+      _ => 0.5,
     };
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: [
-        _PreferenceDial(
-          label: 'Presupuesto',
-          valueLabel: _priceLabel(prefs.priceComfort),
-          fraction: budgetFraction,
-          color: cs.primary,
-          onTap: () {
-            final next = switch (prefs.priceComfort) {
-              'budget' => 'moderate',
-              'moderate' => 'premium',
-              _ => 'budget',
-            };
-            ref.read(userPrefsProvider.notifier).setPriceComfort(next);
-            _shiftGradientColor();
-          },
-        ),
-        _PreferenceDial(
-          label: 'Calidad',
-          valueLabel: _qualityLabel(prefs.qualitySpeed),
-          fraction: prefs.qualitySpeed,
-          color: cs.secondary,
-          onTap: () {
-            final current = prefs.qualitySpeed;
-            final next = current < 0.35 ? 0.5 : current < 0.65 ? 1.0 : 0.0;
-            ref.read(userPrefsProvider.notifier).setQualitySpeed(next);
-            _shiftGradientColor();
-          },
-        ),
-        _PreferenceDial(
-          label: 'Explorar',
-          valueLabel: _exploreLabel(prefs.exploreLoyalty),
-          fraction: prefs.exploreLoyalty,
-          color: ext.infoColor,
-          onTap: () {
-            final current = prefs.exploreLoyalty;
-            final next = current < 0.35 ? 0.5 : current < 0.65 ? 1.0 : 0.0;
-            ref.read(userPrefsProvider.notifier).setExploreLoyalty(next);
-            _shiftGradientColor();
-          },
-        ),
-        // Radius dial -- drag-to-rotate instead of tap-to-cycle
-        _buildRadiusDial(prefs, ext),
-      ],
-    );
-  }
+    // Map radius to slider value (index into _radiusStops)
+    final radiusIdx = _radiusStops.indexOf(_nearestStop(prefs.searchRadiusKm));
+    final radiusSliderVal = (radiusIdx < 0 ? 0.0 : radiusIdx.toDouble());
 
-  Widget _buildRadiusDial(UserPrefsState prefs, BCThemeExtension ext) {
-    const size = AppConstants.largeTouchHeight; // 72
-    final cs = Theme.of(context).colorScheme;
-    final color = ext.successColor;
-
-    return GestureDetector(
-      onVerticalDragStart: (_) {
-        setState(() => _isDraggingRadius = true);
-      },
-      onVerticalDragUpdate: (details) {
-        setState(() {
-          // Drag UP = increase (negative dy), DOWN = decrease (positive dy)
-          _radiusDragFraction =
-              (_radiusDragFraction - details.delta.dy * 0.002)
-                  .clamp(0.0, 1.0);
-        });
-        // Live-update the actual radius as we drag
-        final idx = (_radiusDragFraction * (_radiusStops.length - 1)).round();
-        final newKm = _radiusStops[idx.clamp(0, _radiusStops.length - 1)];
-        if (newKm != prefs.searchRadiusKm) {
-          ref.read(userPrefsProvider.notifier).setSearchRadius(newKm);
-        }
-      },
-      onVerticalDragEnd: (_) {
-        // Snap to nearest stop
-        final idx = (_radiusDragFraction * (_radiusStops.length - 1)).round();
-        final snappedKm = _radiusStops[idx.clamp(0, _radiusStops.length - 1)];
-        ref.read(userPrefsProvider.notifier).setSearchRadius(snappedKm);
-        setState(() {
-          _radiusDragFraction = idx / (_radiusStops.length - 1);
-          _isDraggingRadius = false;
-        });
-        _shiftGradientColor();
-      },
+    return Container(
+      padding: const EdgeInsets.all(AppConstants.paddingMD),
+      decoration: BoxDecoration(
+        color: cs.surface,
+        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+        border: Border.all(color: cs.onSurface.withValues(alpha: 0.08)),
+      ),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          TweenAnimationBuilder<double>(
-            tween: Tween(end: _radiusDragFraction),
-            duration: _isDraggingRadius
-                ? Duration.zero
-                : const Duration(milliseconds: 600),
-            curve: Curves.easeOutCubic,
-            builder: (context, animatedFraction, child) {
-              return TweenAnimationBuilder<Color?>(
-                tween: ColorTween(end: color),
-                duration: const Duration(milliseconds: 500),
-                builder: (context, animatedColor, _) {
-                  final c = animatedColor ?? color;
-                  return Container(
-                    width: size,
-                    height: size,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        center: const Alignment(-0.3, -0.3),
-                        radius: 0.8,
-                        colors: [
-                          Colors.white.withValues(alpha: 0.15),
-                          Colors.transparent,
-                          Colors.black.withValues(alpha: 0.08),
-                        ],
-                        stops: const [0.0, 0.5, 1.0],
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.1),
-                          blurRadius: 8,
-                          offset: const Offset(0, 3),
-                        ),
-                        BoxShadow(
-                          color: Colors.white.withValues(alpha: 0.8),
-                          blurRadius: 2,
-                          offset: const Offset(0, -1),
-                        ),
-                      ],
-                      border: Border.all(
-                        color: cs.onSurface.withValues(alpha: 0.08),
-                        width: 1,
-                      ),
-                    ),
-                    child: CustomPaint(
-                      painter: _DialRingPainter(
-                        fraction: animatedFraction,
-                        trackColor: cs.surface,
-                        fillColor: c,
-                      ),
-                    ),
-                  );
-                },
-              );
+          Text(
+            'PREFERENCIAS',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: cs.onSurface.withValues(alpha: 0.5),
+                  letterSpacing: 1.0,
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+          const SizedBox(height: AppConstants.paddingMD),
+
+          // Budget slider
+          _buildSliderRow(
+            label: 'Presupuesto',
+            startLabel: '\$',
+            endLabel: '\$\$\$',
+            value: budgetValue,
+            divisions: 2,
+            activeColor: cs.primary,
+            valueLabel: _priceLabel(prefs.priceComfort),
+            onChanged: (v) {
+              final next = v < 0.33 ? 'budget' : v > 0.66 ? 'premium' : 'moderate';
+              ref.read(userPrefsProvider.notifier).setPriceComfort(next);
+              _shiftGradientColor();
             },
           ),
-          const SizedBox(height: AppConstants.paddingXS),
-          Text(
-            _approxRadiusLabel(prefs.searchRadiusKm),
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: cs.onSurface.withValues(alpha: 0.6),
-                ),
+          const SizedBox(height: AppConstants.paddingSM),
+
+          // Quality vs Speed slider
+          _buildSliderRow(
+            label: 'Calidad vs Rapidez',
+            startLabel: 'Rapido',
+            endLabel: 'Calidad',
+            value: prefs.qualitySpeed,
+            divisions: 2,
+            activeColor: cs.secondary,
+            valueLabel: _qualityLabel(prefs.qualitySpeed),
+            onChanged: (v) {
+              // Snap to 0, 0.5, 1.0
+              final snapped = v < 0.25 ? 0.0 : v < 0.75 ? 0.5 : 1.0;
+              ref.read(userPrefsProvider.notifier).setQualitySpeed(snapped);
+              _shiftGradientColor();
+            },
+          ),
+          const SizedBox(height: AppConstants.paddingSM),
+
+          // Explore vs Loyalty slider
+          _buildSliderRow(
+            label: 'Explorar vs Lealtad',
+            startLabel: 'Nuevo',
+            endLabel: 'Fiel',
+            value: prefs.exploreLoyalty,
+            divisions: 2,
+            activeColor: ext.infoColor,
+            valueLabel: _exploreLabel(prefs.exploreLoyalty),
+            onChanged: (v) {
+              final snapped = v < 0.25 ? 0.0 : v < 0.75 ? 0.5 : 1.0;
+              ref.read(userPrefsProvider.notifier).setExploreLoyalty(snapped);
+              _shiftGradientColor();
+            },
+          ),
+          const SizedBox(height: AppConstants.paddingSM),
+
+          // Search radius slider
+          _buildSliderRow(
+            label: 'Radio de busqueda',
+            startLabel: '10km',
+            endLabel: '100km',
+            value: radiusSliderVal,
+            divisions: _radiusStops.length - 1,
+            min: 0,
+            max: (_radiusStops.length - 1).toDouble(),
+            activeColor: ext.successColor,
+            valueLabel: _approxRadiusLabel(prefs.searchRadiusKm),
+            onChanged: (v) {
+              final idx = v.round().clamp(0, _radiusStops.length - 1);
+              ref.read(userPrefsProvider.notifier).setSearchRadius(_radiusStops[idx]);
+              _shiftGradientColor();
+            },
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildSliderRow({
+    required String label,
+    required String startLabel,
+    required String endLabel,
+    required double value,
+    required int divisions,
+    required Color activeColor,
+    required String valueLabel,
+    required ValueChanged<double> onChanged,
+    double min = 0.0,
+    double max = 1.0,
+  }) {
+    final cs = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              label,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: activeColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(AppConstants.radiusXS),
+              ),
+              child: Text(
+                valueLabel,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: activeColor,
+                    ),
+              ),
+            ),
+          ],
+        ),
+        Row(
+          children: [
+            Text(
+              startLabel,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: cs.onSurface.withValues(alpha: 0.5),
+                    fontSize: 11,
+                  ),
+            ),
+            Expanded(
+              child: SliderTheme(
+                data: SliderThemeData(
+                  activeTrackColor: activeColor,
+                  inactiveTrackColor: activeColor.withValues(alpha: 0.15),
+                  thumbColor: activeColor,
+                  overlayColor: activeColor.withValues(alpha: 0.12),
+                  trackHeight: 4,
+                  thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
+                ),
+                child: Slider(
+                  value: value.clamp(min, max),
+                  min: min,
+                  max: max,
+                  divisions: divisions,
+                  onChanged: onChanged,
+                ),
+              ),
+            ),
+            Text(
+              endLabel,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: cs.onSurface.withValues(alpha: 0.5),
+                    fontSize: 11,
+                  ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -948,219 +959,9 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen>
 // Private Widgets
 // ═══════════════════════════════════════════════════════════════════════════
 
-// ── Preference Dial ─────────────────────────────────────────────────────────
+// (_PreferenceDial removed — replaced by Slider widgets)
 
-class _PreferenceDial extends StatelessWidget {
-  final String label;
-  final String valueLabel;
-  final double fraction;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _PreferenceDial({
-    required this.label,
-    required this.valueLabel,
-    required this.fraction,
-    required this.color,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    const size = AppConstants.largeTouchHeight; // 72
-    final cs = Theme.of(context).colorScheme;
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TweenAnimationBuilder<double>(
-            tween: Tween(end: fraction),
-            duration: const Duration(milliseconds: 600),
-            curve: Curves.easeOutCubic,
-            builder: (context, animatedFraction, child) {
-              return TweenAnimationBuilder<Color?>(
-                tween: ColorTween(end: color),
-                duration: const Duration(milliseconds: 500),
-                builder: (context, animatedColor, _) {
-                  final c = animatedColor ?? color;
-                  return Container(
-                    width: size,
-                    height: size,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        center: const Alignment(-0.3, -0.3),
-                        radius: 0.8,
-                        colors: [
-                          Colors.white.withValues(alpha: 0.15),
-                          Colors.transparent,
-                          Colors.black.withValues(alpha: 0.08),
-                        ],
-                        stops: const [0.0, 0.5, 1.0],
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.1),
-                          blurRadius: 8,
-                          offset: const Offset(0, 3),
-                        ),
-                        BoxShadow(
-                          color: Colors.white.withValues(alpha: 0.8),
-                          blurRadius: 2,
-                          offset: const Offset(0, -1),
-                        ),
-                      ],
-                      border: Border.all(
-                        color: cs.onSurface.withValues(alpha: 0.08),
-                        width: 1,
-                      ),
-                    ),
-                    child: CustomPaint(
-                      painter: _DialRingPainter(
-                        fraction: animatedFraction,
-                        trackColor: cs.surface,
-                        fillColor: c,
-                      ),
-                    ),
-                  );
-                },
-              );
-            },
-          ),
-          const SizedBox(height: AppConstants.paddingXS),
-          Text(
-            valueLabel,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: cs.onSurface.withValues(alpha: 0.6),
-                ),
-          ),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: cs.onSurface.withValues(alpha: 0.4),
-                  fontSize: 10,
-                ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Dial Ring Painter ───────────────────────────────────────────────────────
-
-class _DialRingPainter extends CustomPainter {
-  final double fraction;
-  final Color trackColor;
-  final Color fillColor;
-
-  _DialRingPainter({
-    required this.fraction,
-    required this.trackColor,
-    required this.fillColor,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = (size.shortestSide / 2) - 4;
-    const strokeWidth = 5.0;
-
-    // Outer ring (subtle border with shadow feel)
-    final outerRingPaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.0
-      ..color = fillColor.withValues(alpha: 0.12);
-    canvas.drawCircle(center, radius + 3, outerRingPaint);
-
-    // Track
-    final trackPaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..color = trackColor
-      ..strokeCap = StrokeCap.round;
-    canvas.drawCircle(center, radius, trackPaint);
-
-    // Inset shadow ring (darker ring inside for depth)
-    final insetPaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.0
-      ..color = Colors.black.withValues(alpha: 0.05);
-    canvas.drawCircle(center, radius - strokeWidth / 2 - 1, insetPaint);
-
-    // Fill arc
-    final fillPaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..color = fillColor
-      ..strokeCap = StrokeCap.round;
-    final sweepAngle = 2 * math.pi * fraction.clamp(0.0, 1.0);
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius),
-      -math.pi / 2, // Start from top
-      sweepAngle,
-      false,
-      fillPaint,
-    );
-
-    // Notch indicator (raised bump at the end of the arc)
-    final notchAngle = -math.pi / 2 + sweepAngle;
-    final notchX = center.dx + radius * math.cos(notchAngle);
-    final notchY = center.dy + radius * math.sin(notchAngle);
-    final notchCenter = Offset(notchX, notchY);
-
-    // Notch shadow (gives raised feel)
-    final notchShadowPaint = Paint()
-      ..color = Colors.black.withValues(alpha: 0.15)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
-    canvas.drawCircle(
-      notchCenter + const Offset(0, 1),
-      5,
-      notchShadowPaint,
-    );
-
-    // Notch body
-    final notchPaint = Paint()
-      ..color = fillColor
-      ..style = PaintingStyle.fill;
-    canvas.drawCircle(notchCenter, 4.5, notchPaint);
-
-    // Notch highlight (top-left light reflection)
-    final notchHighlightPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.5)
-      ..style = PaintingStyle.fill;
-    canvas.drawCircle(
-      notchCenter + const Offset(-1, -1),
-      2,
-      notchHighlightPaint,
-    );
-
-    // Radial gradient fill for dial face (highlight top-left, shadow bottom-right)
-    final facePaint = Paint()
-      ..shader = RadialGradient(
-        center: const Alignment(-0.3, -0.3),
-        radius: 0.9,
-        colors: [
-          Colors.white.withValues(alpha: 0.06),
-          Colors.transparent,
-          Colors.black.withValues(alpha: 0.04),
-        ],
-        stops: const [0.0, 0.5, 1.0],
-      ).createShader(Rect.fromCircle(center: center, radius: radius - strokeWidth))
-      ..style = PaintingStyle.fill;
-    canvas.drawCircle(center, radius - strokeWidth, facePaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _DialRingPainter old) =>
-      old.fraction != fraction ||
-      old.trackColor != trackColor ||
-      old.fillColor != fillColor;
-}
+// (_DialRingPainter removed — replaced by Slider widgets)
 
 // ── Salon Scatter Dots ──────────────────────────────────────────────────────
 
