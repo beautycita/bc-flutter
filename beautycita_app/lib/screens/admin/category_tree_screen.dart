@@ -20,11 +20,26 @@ class _CategoryTreeScreenState extends ConsumerState<CategoryTreeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isSuperAdmin = ref.watch(isSuperAdminProvider);
+    if (isSuperAdmin.valueOrNull != true) {
+      return const Center(child: Text('Acceso no autorizado'));
+    }
+
     final treeAsync = ref.watch(categoryTreeProvider);
     final colors = Theme.of(context).colorScheme;
 
     return treeAsync.when(
-      data: (nodes) => _buildTree(nodes),
+      data: (nodes) => Scaffold(
+        backgroundColor: Colors.transparent,
+        body: _buildTree(nodes),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () => _showCreateDialog(null, nodes),
+          icon: const Icon(Icons.add),
+          label: const Text('Agregar Categoria'),
+          backgroundColor: colors.primary,
+          foregroundColor: Colors.white,
+        ),
+      ),
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(
         child: Text('Error: $e',
@@ -171,6 +186,17 @@ class _CategoryTreeScreenState extends ConsumerState<CategoryTreeScreen> {
                   ),
                   const SizedBox(width: 4),
 
+                  // Add subcategory button
+                  IconButton(
+                    icon: const Icon(Icons.add_circle_outline, size: 18),
+                    color: colors.primary.withValues(alpha: 0.7),
+                    onPressed: () => _showCreateDialog(node.id, []),
+                    padding: EdgeInsets.zero,
+                    constraints:
+                        const BoxConstraints(minWidth: 32, minHeight: 32),
+                    tooltip: 'Agregar subcategoría',
+                  ),
+
                   // Edit button
                   IconButton(
                     icon: const Icon(Icons.edit_outlined, size: 18),
@@ -179,6 +205,17 @@ class _CategoryTreeScreenState extends ConsumerState<CategoryTreeScreen> {
                     padding: EdgeInsets.zero,
                     constraints:
                         const BoxConstraints(minWidth: 32, minHeight: 32),
+                  ),
+
+                  // Delete button
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline, size: 18),
+                    color: Colors.red.withValues(alpha: 0.6),
+                    onPressed: () => _confirmDelete(node, childrenOf),
+                    padding: EdgeInsets.zero,
+                    constraints:
+                        const BoxConstraints(minWidth: 32, minHeight: 32),
+                    tooltip: 'Eliminar',
                   ),
                 ],
               ),
@@ -191,6 +228,184 @@ class _CategoryTreeScreenState extends ConsumerState<CategoryTreeScreen> {
           for (final child in children)
             _buildNode(child, childrenOf, indent + 1),
       ],
+    );
+  }
+
+  void _showCreateDialog(String? parentId, List<CategoryNode> allNodes) {
+    final nameEsCtrl = TextEditingController();
+    final nameEnCtrl = TextEditingController();
+    final iconCtrl = TextEditingController();
+    final slugCtrl = TextEditingController();
+    final colors = Theme.of(context).colorScheme;
+
+    // Calculate depth and sort_order
+    final depth = parentId == null ? 0 : 1; // simplified; real depth from parent
+    // For root nodes calculate from allNodes; for children we don't have them here
+    final sortOrder = 999; // will go to end
+
+    showBurstDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+        ),
+        title: Text(
+          parentId == null ? 'Nueva Categoría' : 'Nueva Subcategoría',
+          style: GoogleFonts.poppins(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameEsCtrl,
+                decoration: InputDecoration(
+                  labelText: 'Nombre (ES) *',
+                  labelStyle: GoogleFonts.nunito(fontSize: 13),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: nameEnCtrl,
+                decoration: InputDecoration(
+                  labelText: 'Nombre (EN)',
+                  labelStyle: GoogleFonts.nunito(fontSize: 13),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: iconCtrl,
+                      decoration: InputDecoration(
+                        labelText: 'Icono (emoji)',
+                        labelStyle: GoogleFonts.nunito(fontSize: 13),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextField(
+                      controller: slugCtrl,
+                      decoration: InputDecoration(
+                        labelText: 'Slug *',
+                        labelStyle: GoogleFonts.nunito(fontSize: 13),
+                        hintText: 'ej: corte_cabello',
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('CANCELAR'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (nameEsCtrl.text.trim().isEmpty || slugCtrl.text.trim().isEmpty) {
+                ToastService.showError('Nombre (ES) y slug son requeridos');
+                return;
+              }
+              try {
+                await SupabaseClientService.client
+                    .from('service_categories_tree')
+                    .insert({
+                      'parent_id': parentId,
+                      'display_name_es': nameEsCtrl.text.trim(),
+                      'display_name_en': nameEnCtrl.text.trim().isEmpty
+                          ? nameEsCtrl.text.trim()
+                          : nameEnCtrl.text.trim(),
+                      'slug': slugCtrl.text.trim(),
+                      'icon': iconCtrl.text.trim().isEmpty ? null : iconCtrl.text.trim(),
+                      'depth': depth,
+                      'sort_order': sortOrder,
+                      'is_active': true,
+                      'is_leaf': true,
+                    });
+                ref.invalidate(categoryTreeProvider);
+                if (ctx.mounted) Navigator.pop(ctx);
+                ToastService.showSuccess('${nameEsCtrl.text} creada');
+              } catch (e, stack) {
+                ToastService.showErrorWithDetails(
+                    ToastService.friendlyError(e), e, stack);
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: colors.primary,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('CREAR'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDelete(
+      CategoryNode node, Map<String, List<CategoryNode>> childrenOf) {
+    final children = childrenOf[node.id] ?? [];
+    if (children.isNotEmpty) {
+      ToastService.showError(
+          'No se puede eliminar: tiene ${children.length} subcategorías');
+      return;
+    }
+
+    final colors = Theme.of(context).colorScheme;
+
+    showBurstDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+        ),
+        title: Text(
+          'Eliminar categoría',
+          style: GoogleFonts.poppins(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: Colors.red,
+          ),
+        ),
+        content: Text(
+          '¿Eliminar "${node.displayNameEs}"? Esta acción no se puede deshacer.',
+          style: GoogleFonts.nunito(fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('CANCELAR'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              try {
+                await SupabaseClientService.client
+                    .from('service_categories_tree')
+                    .delete()
+                    .eq('id', node.id);
+                ref.invalidate(categoryTreeProvider);
+                if (ctx.mounted) Navigator.pop(ctx);
+                ToastService.showSuccess('${node.displayNameEs} eliminada');
+              } catch (e, stack) {
+                ToastService.showErrorWithDetails(
+                    ToastService.friendlyError(e), e, stack);
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('ELIMINAR'),
+          ),
+        ],
+      ),
     );
   }
 

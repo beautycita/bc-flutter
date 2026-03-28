@@ -123,6 +123,11 @@ class _ServiceProfileEditorScreenState
 
   @override
   Widget build(BuildContext context) {
+    final isSuperAdmin = ref.watch(isSuperAdminProvider);
+    if (isSuperAdmin.valueOrNull != true) {
+      return const Center(child: Text('Acceso no autorizado'));
+    }
+
     final profilesAsync = ref.watch(serviceProfilesProvider);
     final colors = Theme.of(context).colorScheme;
 

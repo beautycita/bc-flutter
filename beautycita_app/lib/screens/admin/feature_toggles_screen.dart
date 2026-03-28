@@ -54,6 +54,11 @@ class _FeatureTogglesScreenState
 
   @override
   Widget build(BuildContext context) {
+    final isSuperAdmin = ref.watch(isSuperAdminProvider);
+    if (isSuperAdmin.valueOrNull != true) {
+      return const Center(child: Text('Acceso no autorizado'));
+    }
+
     final togglesAsync = ref.watch(adminFeatureTogglesProvider);
     final colors = Theme.of(context).colorScheme;
 
