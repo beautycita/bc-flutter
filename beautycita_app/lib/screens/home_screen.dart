@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:beautycita/config/app_transitions.dart';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
@@ -18,7 +17,6 @@ import '../config/theme_extension.dart';
 import '../services/gesture_exclusion_service.dart';
 import '../services/updater_service.dart';
 import '../themes/category_icons.dart';
-import '../providers/theme_provider.dart';
 import '../themes/theme_variant.dart';
 import '../widgets/cinematic_question_text.dart';
 import '../widgets/video_map_background.dart';
@@ -262,8 +260,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             child: Stack(
               clipBehavior: Clip.none,
               children: [
-                // Gradient background with hidden color picker easter egg
-                _HeroColorPicker(
+                // Gradient background with brand gradient overlay
+                _HeroGradientBackground(
                   height: topSectionHeight,
                   child: SafeArea(
                     bottom: false,
@@ -467,200 +465,45 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 }
 
 /// Hidden color picker easter egg — multi-touch:
-/// Long-press activates. First finger left/right = hue (full 360).
-/// Second finger up/down = saturation.
-/// During drag: writes to lightweight liveHue/liveSat providers (no ThemeData rebuild).
-/// On release: commits to theme once.
-class _HeroColorPicker extends ConsumerStatefulWidget {
+/// Hero gradient background — brand gradient (pink→purple→blue) overlay on video.
+class _HeroGradientBackground extends StatelessWidget {
   final double height;
   final Widget child;
 
-  const _HeroColorPicker({required this.height, required this.child});
+  const _HeroGradientBackground({required this.height, required this.child});
 
-  @override
-  ConsumerState<_HeroColorPicker> createState() => _HeroColorPickerState();
-}
-
-class _HeroColorPickerState extends ConsumerState<_HeroColorPicker> {
-  bool _active = false;
-  int? _huePointer;
-  int? _satPointer;
-  double _hue = 0;
-  double _sat = 0.6;
-
-  Timer? _longPressTimer;
-  int? _candidatePointer;
-  Offset? _candidateStart;
-  static const _longPressDuration = Duration(seconds: 4);
-  static const _moveThreshold = 10.0;
-
-  @override
-  void dispose() {
-    _longPressTimer?.cancel();
-    super.dispose();
-  }
-
-  void _emit() {
-    ref.read(liveHueProvider.notifier).state = _hue;
-    ref.read(liveSatProvider.notifier).state = _sat;
-  }
-
-  void _updateHue(Offset localPos) {
-    final box = context.findRenderObject() as RenderBox?;
-    if (box == null) return;
-    _hue = (localPos.dx / box.size.width * 360).clamp(0.0, 360.0);
-    _emit();
-  }
-
-  void _updateSat(Offset localPos) {
-    final box = context.findRenderObject() as RenderBox?;
-    if (box == null) return;
-    _sat = (0.15 + 0.85 * (localPos.dy / box.size.height)).clamp(0.15, 1.0);
-    _emit();
-  }
-
-  void _finish() {
-    // Commit to theme (one-time ThemeData rebuild) and clear live state
-    ref.read(themeProvider.notifier).setCustomColorLive(_hue, _sat);
-    ref.read(themeProvider.notifier).saveCustomColor();
-    ref.read(liveHueProvider.notifier).state = null;
-    ref.read(liveSatProvider.notifier).state = null;
-    setState(() {
-      _active = false;
-      _huePointer = null;
-      _satPointer = null;
-    });
-  }
-
-  // Default gradient pair: pink 330° (#FF3399) → blue-violet 270° (#9933FF)
-  static const _hueOffset = -60.0; // hue2 = hue1 + offset
-
-  /// Build a gradient color pair from a hue + saturation.
-  /// Maintains the 60° offset between the two colors.
-  static (Color, Color) _gradientPair(double hue, double sat) {
-    final h1 = hue % 360;
-    var h2 = (hue + _hueOffset) % 360;
-    if (h2 < 0) h2 += 360;
-    final c1 = HSLColor.fromAHSL(1.0, h1, sat.clamp(0.5, 1.0), 0.45).toColor();
-    final c2 = HSLColor.fromAHSL(1.0, h2, sat.clamp(0.4, 0.9), 0.40).toColor();
-    return (c1, c2);
-  }
+  // Brand gradient colors
+  static const _brandPink = Color(0xFFEC4899);
+  static const _brandPurple = Color(0xFF9333EA);
+  static const _brandBlue = Color(0xFF3B82F6);
 
   @override
   Widget build(BuildContext context) {
-    final palette = Theme.of(context).colorScheme;
-    // During drag, compute gradient pair from live providers (no ThemeData).
-    final liveHue = ref.watch(liveHueProvider);
-    final liveSat = ref.watch(liveSatProvider);
-
-    // Watch theme state so gradient updates when _load() completes
-    ref.watch(themeProvider);
-
-    Color grad1, grad2;
-    if (liveHue != null && liveSat != null) {
-      // During picker drag, show live preview
-      (grad1, grad2) = _gradientPair(liveHue, liveSat);
-    } else {
-      // Use saved custom color if set, otherwise default
-      final notifier = ref.read(themeProvider.notifier);
-      final savedHue = notifier.customHue ?? 310.0;
-      final savedSat = notifier.customSat ?? 0.80;
-      (grad1, grad2) = _gradientPair(savedHue, savedSat);
-    }
-
-    return Listener(
-      onPointerDown: (e) {
-        if (!_active) {
-          _candidatePointer = e.pointer;
-          _candidateStart = e.localPosition;
-          _longPressTimer?.cancel();
-          _longPressTimer = Timer(_longPressDuration, () {
-            if (_candidatePointer == e.pointer) {
-              setState(() => _active = true);
-              HapticFeedback.lightImpact();
-              _huePointer = e.pointer;
-              final notifier = ref.read(themeProvider.notifier);
-              _hue = notifier.customHue ?? HSLColor.fromColor(palette.primary).hue;
-              _sat = notifier.customSat ?? 0.6;
-              _updateHue(e.localPosition);
-            }
-          });
-          return;
-        }
-        if (_huePointer != null && _satPointer == null) {
-          _satPointer = e.pointer;
-          HapticFeedback.selectionClick();
-          _updateSat(e.localPosition);
-        }
-      },
-      onPointerMove: (e) {
-        // Cancel activation if finger moves during the 4s hold
-        if (!_active && e.pointer == _candidatePointer && _candidateStart != null) {
-          if ((e.localPosition - _candidateStart!).distance > _moveThreshold) {
-            _longPressTimer?.cancel();
-            _candidatePointer = null;
-            _candidateStart = null;
-          }
-          return;
-        }
-        if (!_active) return;
-        if (e.pointer == _huePointer) {
-          _updateHue(e.localPosition);
-        } else if (e.pointer == _satPointer) {
-          _updateSat(e.localPosition);
-        }
-      },
-      onPointerUp: (e) {
-        if (!_active && e.pointer == _candidatePointer) {
-          _longPressTimer?.cancel();
-          _candidatePointer = null;
-          _candidateStart = null;
-          return;
-        }
-        if (e.pointer == _satPointer) {
-          _satPointer = null;
-        } else if (e.pointer == _huePointer) {
-          _finish();
-        }
-      },
-      onPointerCancel: (e) {
-        if (e.pointer == _candidatePointer) {
-          _longPressTimer?.cancel();
-          _candidatePointer = null;
-          _candidateStart = null;
-        }
-        if (e.pointer == _huePointer) {
-          _finish();
-        } else if (e.pointer == _satPointer) {
-          _satPointer = null;
-        }
-      },
-      child: SizedBox(
-        height: widget.height,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            // Looping video background
-            const VideoMapBackground(),
-            // Color gradient overlay (transparent enough to see video)
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    grad1.withValues(alpha: 0.7),
-                    Color.lerp(grad1, grad2, 0.5)!.withValues(alpha: 0.7),
-                    grad2.withValues(alpha: 0.7),
-                  ],
-                  stops: const [0.0, 0.5, 1.0],
-                  begin: const Alignment(-0.64, -0.77),
-                  end: const Alignment(0.64, 0.77),
-                ),
+    return SizedBox(
+      height: height,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Looping video background
+          const VideoMapBackground(),
+          // Brand gradient overlay (transparent enough to see video)
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  _brandPink.withValues(alpha: 0.7),
+                  _brandPurple.withValues(alpha: 0.7),
+                  _brandBlue.withValues(alpha: 0.7),
+                ],
+                stops: const [0.0, 0.5, 1.0],
+                begin: const Alignment(-0.64, -0.77),
+                end: const Alignment(0.64, 0.77),
               ),
             ),
-            // Content
-            widget.child,
-          ],
-        ),
+          ),
+          // Content
+          child,
+        ],
       ),
     );
   }
@@ -844,7 +687,7 @@ class _BrandShimmerTextState extends State<_BrandShimmerText>
   }
 }
 
-// Category card — watches liveHueProvider for instant color during drag.
+// Category card — uses theme category colors.
 class _CategoryCard extends ConsumerStatefulWidget {
   final ServiceCategory category;
   final int index;
@@ -897,28 +740,9 @@ class _CategoryCardState extends ConsumerState<_CategoryCard>
     final palette = Theme.of(context).colorScheme;
     final ext = Theme.of(context).extension<BCThemeExtension>()!;
 
-    // During drag: compute color from live hue (pure math, no ThemeData).
-    // Otherwise: use theme category color.
-    final liveHue = ref.watch(liveHueProvider);
-    Color categoryColor;
-    if (liveHue != null) {
-      final n = ref.read(themeProvider.notifier);
-      final offsets = n.categoryHueOffsets;
-      if (widget.index < offsets.length) {
-        final hueDelta = liveHue - n.basePrimaryHue;
-        var h = (n.basePrimaryHue + offsets[widget.index] + hueDelta) % 360;
-        if (h < 0) h += 360;
-        categoryColor = HSLColor.fromAHSL(
-          1.0, h, n.categorySaturations[widget.index], n.categoryLightnesses[widget.index],
-        ).toColor();
-      } else {
-        categoryColor = palette.primary;
-      }
-    } else {
-      categoryColor = ext.categoryColors.length > widget.index
-          ? ext.categoryColors[widget.index]
-          : palette.primary;
-    }
+    final categoryColor = ext.categoryColors.length > widget.index
+        ? ext.categoryColors[widget.index]
+        : palette.primary;
 
     return AnimatedBuilder(
       animation: _scaleAnimation,
