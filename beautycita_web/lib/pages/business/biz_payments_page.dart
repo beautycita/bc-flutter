@@ -134,6 +134,14 @@ class _PaymentsContent extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
 
+              // ── Payout History ──
+              _PayoutHistorySection(ref: ref, isMobile: isMobile),
+              const SizedBox(height: 24),
+
+              // ── Commission Breakdown ──
+              _CommissionBreakdownSection(ref: ref, isMobile: isMobile),
+              const SizedBox(height: 24),
+
               paymentsAsync.when(
                 loading: () => const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator(strokeWidth: 2))),
                 error: (_, __) => Center(child: Text('Error al cargar pagos', style: theme.textTheme.bodySmall?.copyWith(color: colors.error))),
@@ -460,6 +468,319 @@ class _PaymentMobileRow extends StatelessWidget {
             ),
           ),
           Text('\$${amount.toStringAsFixed(0)}', style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Payout History Section ───────────────────────────────────────────────────
+
+class _PayoutHistorySection extends ConsumerWidget {
+  const _PayoutHistorySection({required this.ref, required this.isMobile});
+  final WidgetRef ref;
+  final bool isMobile;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final payoutsAsync = ref.watch(businessPayoutRecordsProvider);
+    final theme = Theme.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        WebSectionHeader(
+          label: 'Depositos',
+          title: 'Historial de Pagos',
+          centered: false,
+          titleSize: 20,
+        ),
+        const SizedBox(height: 12),
+        payoutsAsync.when(
+          loading: () => const Center(
+            child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator(strokeWidth: 2)),
+          ),
+          error: (_, __) => Center(
+            child: Text('Error al cargar historial', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error)),
+          ),
+          data: (payouts) {
+            if (payouts.isEmpty) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 56,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          color: kWebPrimary.withValues(alpha: 0.06),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.account_balance_wallet_outlined, size: 28, color: kWebTextHint),
+                      ),
+                      const SizedBox(height: 8),
+                      Text('Sin depositos registrados', style: theme.textTheme.bodySmall?.copyWith(color: kWebTextHint)),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            if (isMobile) {
+              return WebCard(
+                padding: EdgeInsets.zero,
+                child: Column(
+                  children: [for (final p in payouts) _PayoutMobileRow(payout: p)],
+                ),
+              );
+            }
+
+            return WebCard(
+              padding: EdgeInsets.zero,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: DataTable(
+                  headingRowColor: WidgetStateProperty.all(kWebBackground),
+                  columns: const [
+                    DataColumn(label: Text('Fecha')),
+                    DataColumn(label: Text('Periodo')),
+                    DataColumn(label: Text('Metodo')),
+                    DataColumn(label: Text('Referencia')),
+                    DataColumn(label: Text('Estado')),
+                    DataColumn(label: Text('Monto'), numeric: true),
+                  ],
+                  rows: [for (final p in payouts) _buildPayoutRow(context, p)],
+                ),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  DataRow _buildPayoutRow(BuildContext context, Map<String, dynamic> p) {
+    final amount = (p['amount'] as num?)?.toDouble() ?? 0;
+    final method = p['method'] as String? ?? '';
+    final reference = p['reference'] as String? ?? '--';
+    final status = p['status'] as String? ?? '';
+    final period = p['period'] as String? ?? '--';
+    final createdAt = DateTime.tryParse(p['created_at'] as String? ?? '');
+    final dateStr = createdAt != null ? DateFormat('dd/MM/yy').format(createdAt) : '--';
+
+    final statusColor = switch (status) {
+      'completed' || 'paid' => const Color(0xFF4CAF50),
+      'pending' => const Color(0xFFFF9800),
+      'failed' => const Color(0xFFE53935),
+      _ => Colors.grey,
+    };
+
+    return DataRow(cells: [
+      DataCell(Text(dateStr, style: const TextStyle(fontSize: 13, fontFamily: 'monospace'))),
+      DataCell(Text(period)),
+      DataCell(Text(method)),
+      DataCell(Text(reference, style: const TextStyle(fontSize: 12, fontFamily: 'monospace'), overflow: TextOverflow.ellipsis)),
+      DataCell(
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+          decoration: BoxDecoration(color: statusColor.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(999)),
+          child: Text(status, style: TextStyle(fontSize: 12, color: statusColor, fontWeight: FontWeight.w600)),
+        ),
+      ),
+      DataCell(Text('\$${amount.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.w600))),
+    ]);
+  }
+}
+
+class _PayoutMobileRow extends StatelessWidget {
+  const _PayoutMobileRow({required this.payout});
+  final Map<String, dynamic> payout;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final amount = (payout['amount'] as num?)?.toDouble() ?? 0;
+    final status = payout['status'] as String? ?? '';
+    final method = payout['method'] as String? ?? '';
+    final period = payout['period'] as String? ?? '';
+    final reference = payout['reference'] as String? ?? '';
+    final createdAt = DateTime.tryParse(payout['created_at'] as String? ?? '');
+    final dateStr = createdAt != null ? DateFormat('dd/MM HH:mm').format(createdAt) : '--';
+
+    final statusColor = switch (status) {
+      'completed' || 'paid' => const Color(0xFF4CAF50),
+      'pending' => const Color(0xFFFF9800),
+      'failed' => const Color(0xFFE53935),
+      _ => Colors.grey,
+    };
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: kWebCardBorder))),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(dateStr, style: theme.textTheme.bodySmall?.copyWith(fontFamily: 'monospace')),
+                Text('$method · $period', style: theme.textTheme.labelSmall?.copyWith(color: kWebTextSecondary)),
+                if (reference.isNotEmpty)
+                  Text(reference, style: theme.textTheme.labelSmall?.copyWith(color: kWebTextHint, fontFamily: 'monospace')),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text('\$${amount.toStringAsFixed(2)}', style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                decoration: BoxDecoration(color: statusColor.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(999)),
+                child: Text(status, style: TextStyle(fontSize: 10, color: statusColor, fontWeight: FontWeight.w600)),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Commission Breakdown Section ─────────────────────────────────────────────
+
+class _CommissionBreakdownSection extends ConsumerWidget {
+  const _CommissionBreakdownSection({required this.ref, required this.isMobile});
+  final WidgetRef ref;
+  final bool isMobile;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final commissionsAsync = ref.watch(businessCommissionRecordsProvider);
+    final theme = Theme.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        WebSectionHeader(
+          label: 'Comisiones',
+          title: 'Desglose de Comisiones',
+          centered: false,
+          titleSize: 20,
+        ),
+        const SizedBox(height: 12),
+        commissionsAsync.when(
+          loading: () => const Center(
+            child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator(strokeWidth: 2)),
+          ),
+          error: (_, __) => Center(
+            child: Text('Error al cargar comisiones', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error)),
+          ),
+          data: (commissions) {
+            if (commissions.isEmpty) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 56,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          color: kWebSecondary.withValues(alpha: 0.06),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.pie_chart_outline, size: 28, color: kWebTextHint),
+                      ),
+                      const SizedBox(height: 8),
+                      Text('Sin comisiones registradas', style: theme.textTheme.bodySmall?.copyWith(color: kWebTextHint)),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            if (isMobile) {
+              return WebCard(
+                padding: EdgeInsets.zero,
+                child: Column(
+                  children: [for (final c in commissions) _CommissionMobileRow(commission: c)],
+                ),
+              );
+            }
+
+            return WebCard(
+              padding: EdgeInsets.zero,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: DataTable(
+                  headingRowColor: WidgetStateProperty.all(kWebBackground),
+                  columns: const [
+                    DataColumn(label: Text('Fecha')),
+                    DataColumn(label: Text('Servicio')),
+                    DataColumn(label: Text('Base'), numeric: true),
+                    DataColumn(label: Text('Tasa')),
+                    DataColumn(label: Text('Comision'), numeric: true),
+                  ],
+                  rows: [for (final c in commissions) _buildCommissionRow(context, c)],
+                ),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  DataRow _buildCommissionRow(BuildContext context, Map<String, dynamic> c) {
+    final baseAmount = (c['base_amount'] as num?)?.toDouble() ?? 0;
+    final rate = (c['rate'] as num?)?.toDouble() ?? 0;
+    final commission = (c['commission_amount'] as num?)?.toDouble() ?? 0;
+    final serviceName = c['service_name'] as String? ?? '--';
+    final createdAt = DateTime.tryParse(c['created_at'] as String? ?? '');
+    final dateStr = createdAt != null ? DateFormat('dd/MM/yy').format(createdAt) : '--';
+
+    return DataRow(cells: [
+      DataCell(Text(dateStr, style: const TextStyle(fontSize: 13, fontFamily: 'monospace'))),
+      DataCell(Text(serviceName, overflow: TextOverflow.ellipsis)),
+      DataCell(Text('\$${baseAmount.toStringAsFixed(2)}')),
+      DataCell(Text('${(rate * 100).toStringAsFixed(1)}%')),
+      DataCell(Text('\$${commission.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.w600))),
+    ]);
+  }
+}
+
+class _CommissionMobileRow extends StatelessWidget {
+  const _CommissionMobileRow({required this.commission});
+  final Map<String, dynamic> commission;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final baseAmount = (commission['base_amount'] as num?)?.toDouble() ?? 0;
+    final rate = (commission['rate'] as num?)?.toDouble() ?? 0;
+    final commissionAmt = (commission['commission_amount'] as num?)?.toDouble() ?? 0;
+    final serviceName = commission['service_name'] as String? ?? '--';
+    final createdAt = DateTime.tryParse(commission['created_at'] as String? ?? '');
+    final dateStr = createdAt != null ? DateFormat('dd/MM').format(createdAt) : '--';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: kWebCardBorder))),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(serviceName, style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis),
+                Text('$dateStr · Base: \$${baseAmount.toStringAsFixed(0)} · ${(rate * 100).toStringAsFixed(1)}%',
+                    style: theme.textTheme.labelSmall?.copyWith(color: kWebTextSecondary)),
+              ],
+            ),
+          ),
+          Text('\$${commissionAmt.toStringAsFixed(2)}', style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600, color: kWebSecondary)),
         ],
       ),
     );
