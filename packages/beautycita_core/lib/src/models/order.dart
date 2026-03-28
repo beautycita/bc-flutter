@@ -9,6 +9,7 @@ class Order {
   final double commissionAmount;
   final String? stripePaymentIntentId;
   final String status;
+  final String? trackingNumber;
   final Map<String, dynamic>? shippingAddress;
   final DateTime? shippedAt;
   final DateTime? deliveredAt;
@@ -26,6 +27,7 @@ class Order {
     required this.commissionAmount,
     this.stripePaymentIntentId,
     required this.status,
+    this.trackingNumber,
     this.shippingAddress,
     this.shippedAt,
     this.deliveredAt,
@@ -44,6 +46,7 @@ class Order {
         commissionAmount: (json['commission_amount'] as num).toDouble(),
         stripePaymentIntentId: json['stripe_payment_intent_id'] as String?,
         status: json['status'] as String,
+        trackingNumber: json['tracking_number'] as String?,
         shippingAddress: json['shipping_address'] as Map<String, dynamic>?,
         shippedAt: json['shipped_at'] != null
             ? DateTime.parse(json['shipped_at'] as String)
@@ -66,4 +69,11 @@ class Order {
 
   int get daysSinceOrder =>
       DateTime.now().difference(createdAt).inDays;
+
+  /// Days remaining before the 14-day shipping deadline.
+  int get shippingDeadlineDaysLeft =>
+      14 - DateTime.now().difference(createdAt).inDays;
+
+  bool get isShippingOverdue => shippingDeadlineDaysLeft < 0;
+  bool get isShippingUrgent => shippingDeadlineDaysLeft <= 3 && shippingDeadlineDaysLeft >= 0;
 }

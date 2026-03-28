@@ -236,17 +236,17 @@ class _OrderList extends StatelessWidget {
 // Order card
 // ---------------------------------------------------------------------------
 
-class _OrderCard extends StatefulWidget {
+class _OrderCard extends ConsumerStatefulWidget {
   final Order order;
   final Future<void> Function(Order)? onAction;
 
   const _OrderCard({required this.order, required this.onAction});
 
   @override
-  State<_OrderCard> createState() => _OrderCardState();
+  ConsumerState<_OrderCard> createState() => _OrderCardState();
 }
 
-class _OrderCardState extends State<_OrderCard> {
+class _OrderCardState extends ConsumerState<_OrderCard> {
   bool _loading = false;
 
   @override
@@ -359,6 +359,36 @@ class _OrderCardState extends State<_OrderCard> {
             ],
           ),
 
+          // Shipping deadline countdown for paid orders
+          if (order.isPaid) ...[
+            const SizedBox(height: AppConstants.paddingSM),
+            _ShippingDeadlineBar(order: order),
+          ],
+
+          // Tracking number display or entry
+          if (order.trackingNumber != null && order.trackingNumber!.isNotEmpty) ...[
+            const SizedBox(height: AppConstants.paddingSM),
+            Row(
+              children: [
+                Icon(Icons.local_shipping_outlined,
+                    size: 13, color: const Color(0xFF059669)),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    'Rastreo: ${order.trackingNumber}',
+                    style: GoogleFonts.nunito(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF059669),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ],
+
           // Shipping address snippet (if present)
           if (order.shippingAddress != null &&
               order.shippingAddress!.isNotEmpty) ...[
@@ -383,9 +413,36 @@ class _OrderCardState extends State<_OrderCard> {
             ),
           ],
 
+          // Tracking number entry button for paid orders without tracking
+          if (order.isPaid && (order.trackingNumber == null || order.trackingNumber!.isEmpty)) ...[
+            const SizedBox(height: AppConstants.paddingSM),
+            SizedBox(
+              width: double.infinity,
+              height: 38,
+              child: OutlinedButton.icon(
+                onPressed: () => _showTrackingNumberSheet(context, order),
+                icon: const Icon(Icons.qr_code_scanner_rounded, size: 16),
+                label: Text(
+                  'Ingresa numero de rastreo',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF3B82F6),
+                  side: const BorderSide(color: Color(0xFF3B82F6)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppConstants.radiusSM),
+                  ),
+                ),
+              ),
+            ),
+          ],
+
           // Action button
           if (widget.onAction != null) ...[
-            const SizedBox(height: AppConstants.paddingMD),
+            const SizedBox(height: AppConstants.paddingSM),
             SizedBox(
               width: double.infinity,
               height: 44,
@@ -438,6 +495,104 @@ class _OrderCardState extends State<_OrderCard> {
     );
   }
 
+  void _showTrackingNumberSheet(BuildContext context, Order order) {
+    final controller = TextEditingController(text: order.trackingNumber ?? '');
+    bool saving = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) {
+          final colors = Theme.of(ctx).colorScheme;
+          return Padding(
+            padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Numero de Rastreo',
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: colors.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Ingresa el numero de guia o rastreo del envio para que el cliente pueda seguir su pedido.',
+                  style: GoogleFonts.nunito(
+                    fontSize: 12,
+                    color: colors.onSurface.withValues(alpha: 0.5),
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: controller,
+                  style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600),
+                  textCapitalization: TextCapitalization.characters,
+                  decoration: InputDecoration(
+                    labelText: 'Numero de guia',
+                    hintText: 'Ej: 1Z999AA10123456784',
+                    prefixIcon: const Icon(Icons.local_shipping_outlined),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: colors.primary, width: 2),
+                    ),
+                  ),
+                  autofocus: true,
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: saving
+                      ? null
+                      : () async {
+                          final tracking = controller.text.trim();
+                          if (tracking.isEmpty) {
+                            ToastService.showWarning('Ingresa un numero de rastreo');
+                            return;
+                          }
+                          setSheetState(() => saving = true);
+                          try {
+                            final service = ref.read(orderServiceProvider);
+                            await service.updateTrackingNumber(order.id, tracking);
+                            ref.invalidate(businessOrdersProvider);
+                            ToastService.showSuccess('Numero de rastreo guardado');
+                            if (ctx.mounted) Navigator.pop(ctx);
+                          } catch (e) {
+                            ToastService.showErrorWithDetails('Error al guardar', e);
+                          } finally {
+                            if (ctx.mounted) setSheetState(() => saving = false);
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: colors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  child: saving
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : Text('Guardar', style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w600)),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   String _formatDate(DateTime dt) {
     final local = dt.toLocal();
     const months = [
@@ -454,6 +609,82 @@ class _OrderCardState extends State<_OrderCard> {
     if (addr['state'] != null) parts.add(addr['state'] as String);
     if (parts.isEmpty) return addr.values.first.toString();
     return parts.join(', ');
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Shipping deadline countdown bar
+// ---------------------------------------------------------------------------
+
+class _ShippingDeadlineBar extends StatelessWidget {
+  final Order order;
+  const _ShippingDeadlineBar({required this.order});
+
+  @override
+  Widget build(BuildContext context) {
+    final daysLeft = order.shippingDeadlineDaysLeft;
+    final isOverdue = order.isShippingOverdue;
+    final isUrgent = order.isShippingUrgent;
+    final progress = ((14 - daysLeft) / 14).clamp(0.0, 1.0);
+
+    final Color barColor;
+    final Color bgColor;
+    final String label;
+
+    if (isOverdue) {
+      barColor = const Color(0xFFDC2626);
+      bgColor = const Color(0xFFFEE2E2);
+      label = 'Vencido hace ${daysLeft.abs()} dia${daysLeft.abs() == 1 ? '' : 's'}';
+    } else if (isUrgent) {
+      barColor = const Color(0xFFF59E0B);
+      bgColor = const Color(0xFFFEF3C7);
+      label = '$daysLeft dia${daysLeft == 1 ? '' : 's'} para enviar';
+    } else {
+      barColor = const Color(0xFF059669);
+      bgColor = const Color(0xFFD1FAE5);
+      label = '$daysLeft dias para enviar';
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(AppConstants.radiusSM),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                isOverdue ? Icons.warning_amber_rounded : Icons.schedule_rounded,
+                size: 14,
+                color: barColor,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: GoogleFonts.nunito(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: barColor,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: progress,
+              backgroundColor: Colors.white.withValues(alpha: 0.6),
+              valueColor: AlwaysStoppedAnimation<Color>(barColor),
+              minHeight: 4,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

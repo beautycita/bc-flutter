@@ -53,6 +53,11 @@ class BusinessDashboardScreen extends ConsumerWidget {
 
           const SizedBox(height: AppConstants.paddingLG),
 
+          // CFDI Records section
+          _CfdiSection(),
+
+          const SizedBox(height: AppConstants.paddingLG),
+
           // Today's appointments
           Text(
             'Citas de Hoy',
@@ -807,6 +812,276 @@ class _TaxRow extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CFDI Records Section
+// ═══════════════════════════════════════════════════════════════════════════
+
+class _CfdiSection extends ConsumerStatefulWidget {
+  @override
+  ConsumerState<_CfdiSection> createState() => _CfdiSectionState();
+}
+
+class _CfdiSectionState extends ConsumerState<_CfdiSection> {
+  List<Map<String, dynamic>> _cfdiRecords = [];
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCfdis();
+  }
+
+  Future<void> _loadCfdis() async {
+    try {
+      final biz = await ref.read(currentBusinessProvider.future);
+      if (biz == null) return;
+      final bizId = biz['id'] as String;
+
+      final data = await SupabaseClientService.client
+          .from('cfdi_records')
+          .select()
+          .eq('business_id', bizId)
+          .order('created_at', ascending: false)
+          .limit(20);
+
+      if (mounted) {
+        setState(() {
+          _cfdiRecords = List<Map<String, dynamic>>.from(data);
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  String _fmt(double v) => NumberFormat('#,##0.00', 'es_MX').format(v);
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    if (_loading) {
+      return Card(
+        elevation: 0,
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Center(child: CircularProgressIndicator(strokeWidth: 2, color: colors.primary)),
+        ),
+      );
+    }
+
+    if (_cfdiRecords.isEmpty) {
+      return Card(
+        elevation: 0,
+        color: colors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: colors.onSurface.withValues(alpha: 0.08)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              Icon(Icons.receipt_long_outlined,
+                  size: 36, color: colors.onSurface.withValues(alpha: 0.25)),
+              const SizedBox(height: 8),
+              Text('Sin CFDI registrados',
+                  style: GoogleFonts.nunito(fontSize: 13, color: colors.onSurface.withValues(alpha: 0.5))),
+              Text('Los comprobantes fiscales apareceran aqui',
+                  style: GoogleFonts.nunito(fontSize: 11, color: colors.onSurface.withValues(alpha: 0.35))),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Card(
+      elevation: 0,
+      color: colors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: colors.onSurface.withValues(alpha: 0.08)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF3B82F6).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.receipt_long_outlined, size: 20, color: Color(0xFF3B82F6)),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Comprobantes Fiscales (CFDI)',
+                          style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w700, color: colors.onSurface)),
+                      Text('${_cfdiRecords.length} registro${_cfdiRecords.length == 1 ? '' : 's'}',
+                          style: GoogleFonts.nunito(fontSize: 11, color: colors.onSurface.withValues(alpha: 0.5))),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            ..._cfdiRecords.map((cfdi) {
+              final status = cfdi['status'] as String? ?? 'pendiente';
+              final folio = cfdi['folio'] as String?;
+              final period = cfdi['period'] as String? ?? '';
+              final subtotal = (cfdi['subtotal'] as num?)?.toDouble() ?? 0;
+              final total = (cfdi['total'] as num?)?.toDouble() ?? 0;
+              final uuidFiscal = cfdi['uuid_fiscal'] as String?;
+              final isTimbrado = status == 'timbrado';
+              final statusColor = isTimbrado ? const Color(0xFF059669) : const Color(0xFFF59E0B);
+
+              return GestureDetector(
+                onTap: () => _showCfdiDetail(context, cfdi),
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: colors.surfaceContainerHighest.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 28,
+                        height: 28,
+                        decoration: BoxDecoration(
+                          color: statusColor.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(7),
+                        ),
+                        child: Icon(
+                          isTimbrado ? Icons.verified : Icons.hourglass_bottom,
+                          size: 14,
+                          color: statusColor,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${folio != null ? 'Folio: $folio | ' : ''}$period',
+                              style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: colors.onSurface),
+                            ),
+                            Text(
+                              'Subtotal: \$${_fmt(subtotal)}',
+                              style: GoogleFonts.nunito(fontSize: 11, color: colors.onSurface.withValues(alpha: 0.5)),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text('\$${_fmt(total)}',
+                              style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: colors.onSurface)),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: statusColor.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              isTimbrado ? 'Timbrado' : 'Pendiente',
+                              style: GoogleFonts.poppins(fontSize: 9, fontWeight: FontWeight.w700, color: statusColor),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showCfdiDetail(BuildContext context, Map<String, dynamic> cfdi) {
+    final colors = Theme.of(context).colorScheme;
+    final folio = cfdi['folio'] as String?;
+    final uuidFiscal = cfdi['uuid_fiscal'] as String?;
+    final period = cfdi['period'] as String? ?? '';
+    final status = cfdi['status'] as String? ?? 'pendiente';
+    final subtotal = (cfdi['subtotal'] as num?)?.toDouble() ?? 0;
+    final iva = (cfdi['iva'] as num?)?.toDouble() ?? 0;
+    final total = (cfdi['total'] as num?)?.toDouble() ?? 0;
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Detalle CFDI',
+                style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700, color: colors.onSurface)),
+            const SizedBox(height: 16),
+            _CfdiDetailRow(label: 'Periodo', value: period),
+            _CfdiDetailRow(label: 'Estado', value: status == 'timbrado' ? 'Timbrado' : 'Pendiente'),
+            if (folio != null) _CfdiDetailRow(label: 'Folio', value: folio),
+            if (uuidFiscal != null) _CfdiDetailRow(label: 'UUID Fiscal', value: uuidFiscal),
+            const Divider(height: 20),
+            _CfdiDetailRow(label: 'Subtotal', value: '\$${_fmt(subtotal)}'),
+            _CfdiDetailRow(label: 'IVA', value: '\$${_fmt(iva)}'),
+            _CfdiDetailRow(label: 'Total', value: '\$${_fmt(total)}', bold: true),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CfdiDetailRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final bool bold;
+  const _CfdiDetailRow({required this.label, required this.value, this.bold = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: GoogleFonts.nunito(fontSize: 13, color: const Color(0xFF757575))),
+          Flexible(
+            child: Text(value,
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
+                  color: const Color(0xFF212121),
+                ),
+                textAlign: TextAlign.end),
+          ),
+        ],
+      ),
     );
   }
 }

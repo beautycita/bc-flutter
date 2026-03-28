@@ -41,6 +41,15 @@ class OrderService {
         .eq('id', orderId);
   }
 
+  /// Update tracking number on an order.
+  Future<void> updateTrackingNumber(String orderId, String trackingNumber) async {
+    if (!SupabaseClientService.isInitialized) return;
+    await SupabaseClientService.client
+        .from('orders')
+        .update({'tracking_number': trackingNumber})
+        .eq('id', orderId);
+  }
+
   /// Mark an order as delivered.
   Future<void> markDelivered(String orderId) async {
     if (!SupabaseClientService.isInitialized) return;
