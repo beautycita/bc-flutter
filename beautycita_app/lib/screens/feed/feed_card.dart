@@ -74,6 +74,16 @@ class _FeedCardState extends ConsumerState<FeedCard> {
     final palette = Theme.of(context).colorScheme;
     final item = widget.item;
 
+    // Product showcase gets a dedicated layout
+    if (item.isShowcase && item.hasProducts) {
+      return _ProductShowcaseCard(
+        item: item,
+        isSaved: _isSaved,
+        saveCount: _saveCount,
+        onSave: _toggleSave,
+      );
+    }
+
     return Card(
       margin: const EdgeInsets.symmetric(
         horizontal: AppConstants.screenPaddingHorizontal,
@@ -137,6 +147,299 @@ class _FeedCardState extends ConsumerState<FeedCard> {
             saveCount: _saveCount,
             serviceCategory: item.serviceCategory,
             onSave: _toggleSave,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Product Showcase Card ────────────────────────────────────────────────────
+// Dedicated layout for product showcase feed items. Shows product image large,
+// with brand, name, price overlay and a buy CTA.
+
+class _ProductShowcaseCard extends StatelessWidget {
+  final FeedItem item;
+  final bool isSaved;
+  final int saveCount;
+  final VoidCallback onSave;
+
+  const _ProductShowcaseCard({
+    required this.item,
+    required this.isSaved,
+    required this.saveCount,
+    required this.onSave,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = Theme.of(context).colorScheme;
+    final product = item.productTags.first;
+
+    return Card(
+      margin: const EdgeInsets.symmetric(
+        horizontal: AppConstants.screenPaddingHorizontal,
+        vertical: AppConstants.paddingSM,
+      ),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: palette.outlineVariant.withValues(alpha: 0.4),
+          width: 0.5,
+        ),
+      ),
+      color: palette.surface,
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Product image with gradient overlay ──
+          GestureDetector(
+            onTap: () => ProductDetailSheet.show(
+              context,
+              product: product,
+              salonName: item.businessName,
+            ),
+            child: AspectRatio(
+              aspectRatio: 1,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Image.network(
+                    product.photoUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => Container(
+                      color: palette.surfaceContainerHighest,
+                      child: Icon(Icons.shopping_bag_outlined,
+                          size: 48, color: palette.onSurface.withValues(alpha: 0.2)),
+                    ),
+                  ),
+                  // Gradient overlay at bottom for text readability
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    height: 120,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.transparent,
+                            Colors.black.withValues(alpha: 0.7),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Price badge top-right
+                  Positioned(
+                    top: 12,
+                    right: 12,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: palette.primary,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.2),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Text(
+                        '\$${product.price.toStringAsFixed(0)}',
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Brand + name at bottom
+                  Positioned(
+                    bottom: 12,
+                    left: 14,
+                    right: 14,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (product.brand != null)
+                          Text(
+                            product.brand!.toUpperCase(),
+                            style: GoogleFonts.poppins(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1.2,
+                              color: Colors.white.withValues(alpha: 0.7),
+                            ),
+                          ),
+                        Text(
+                          product.name,
+                          style: GoogleFonts.poppins(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                            height: 1.2,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Stock badge
+                  if (!product.inStock)
+                    Positioned(
+                      top: 12,
+                      left: 12,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade600,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text('Agotado',
+                            style: GoogleFonts.poppins(
+                                fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white)),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+
+          // ── Salon info + actions row ──
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),
+            child: Row(
+              children: [
+                // Salon avatar
+                CircleAvatar(
+                  radius: 14,
+                  backgroundColor: palette.primaryContainer,
+                  backgroundImage: item.businessPhotoUrl != null
+                      ? NetworkImage(item.businessPhotoUrl!)
+                      : null,
+                  child: item.businessPhotoUrl == null
+                      ? Text(
+                          item.businessName.isNotEmpty ? item.businessName[0].toUpperCase() : 'S',
+                          style: GoogleFonts.poppins(
+                              fontSize: 11, fontWeight: FontWeight.w700, color: palette.onPrimaryContainer),
+                        )
+                      : null,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    item.businessName,
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: palette.onSurface,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                // Category chip
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: palette.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    product.brand ?? 'Producto',
+                    style: GoogleFonts.nunito(
+                        fontSize: 11, fontWeight: FontWeight.w600, color: palette.onSurface.withValues(alpha: 0.6)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // ── Caption if present ──
+          if (item.caption != null && item.caption!.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 0, 14, 0),
+              child: Text(
+                item.caption!,
+                style: GoogleFonts.nunito(
+                  fontSize: 13,
+                  color: palette.onSurface.withValues(alpha: 0.65),
+                  height: 1.4,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+
+          // ── Buy + Save row ──
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
+            child: Row(
+              children: [
+                // Buy button
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => ProductDetailSheet.show(
+                      context,
+                      product: product,
+                      salonName: item.businessName,
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFEC4899), Color(0xFF9333EA)],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.shopping_bag_outlined, size: 16, color: Colors.white),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Ver Producto',
+                            style: GoogleFonts.poppins(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                // Save button
+                GestureDetector(
+                  onTap: onSave,
+                  child: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: isSaved
+                          ? Colors.red.withValues(alpha: 0.1)
+                          : palette.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      isSaved ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                      size: 20,
+                      color: isSaved ? Colors.red : palette.onSurface.withValues(alpha: 0.4),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),

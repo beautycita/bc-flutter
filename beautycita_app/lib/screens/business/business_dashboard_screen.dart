@@ -430,12 +430,12 @@ class _TaxDeductionsCardState extends ConsumerState<_TaxDeductionsCard> {
     final estimatedIvaTotal = _revenueYtd * 0.16;
     final estimatedIsrTotal = _revenueYtd * 0.10; // simplified estimate
     final estimatedTotalTax = estimatedIvaTotal + estimatedIsrTotal;
-    final taxStillOwed = (estimatedTotalTax - totalTaxPaid).clamp(0, double.infinity);
+    final taxStillOwed = (estimatedTotalTax - totalTaxPaid).clamp(0.0, double.infinity).toDouble();
 
     // Deduction budget: expenses reduce taxable income
     // The salon can deduct 100% of business expenses
     // Show how much more they could spend to offset remaining tax
-    final deductionBudget = (_revenueYtd - _expensesYtd).clamp(0, double.infinity);
+    final deductionBudget = (_revenueYtd - _expensesYtd).clamp(0.0, double.infinity).toDouble();
 
     return Card(
       elevation: 0,
