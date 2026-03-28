@@ -140,55 +140,57 @@ const kWhatsAppDarkGreen = Color(0xFF075E54);
 
 // ─── Palettes ──────────────────────────────────────────────────────────────
 
-/// 1. Rose & Gold — default palette, brand gradient (pink→purple→blue).
+/// 1. Lilac — default palette, brand gradient (pink→purple→blue) for hero only.
+/// Primary #C8A2C8 (lilac) used for buttons, toggles, accents, chips, indicators.
 const roseGoldPalette = BCPalette(
   id: 'rose_gold',
-  nameEs: 'Rosa y Oro',
-  nameEn: 'Rose & Gold',
+  nameEs: 'Lila',
+  nameEn: 'Lilac',
   brightness: Brightness.light,
-  primary: Color(0xFFEC4899),
+  primary: Color(0xFFC8A2C8),         // #C8A2C8 lilac
   onPrimary: Color(0xFFFFFFFF),
-  secondary: Color(0xFF9333EA),
+  secondary: Color(0xFFAA7EAA),       // deeper lilac for contrast
   onSecondary: Color(0xFFFFFFFF),
-  surface: Color(0xFFFFF8F0),
+  surface: Color(0xFFFCF8FC),         // lilac-tinted surface
   onSurface: Color(0xFF212121),
   scaffoldBackground: Color(0xFFFFFFFF),
   error: Color(0xFFD32F2F),
   onError: Color(0xFFFFFFFF),
-  cardColor: Color(0xFFFFF8F0),
+  cardColor: Color(0xFFFCF8FC),
   cardBorderColor: Color(0xFFEEEEEE),
   divider: Color(0xFFEEEEEE),
   textPrimary: Color(0xFF212121),
   textSecondary: Color(0xFF757575),
   textHint: Color(0xFF9E9E9E),
-  shimmerColor: Color(0xFF9333EA),
+  shimmerColor: Color(0xFFAA7EAA),
   success: Color(0xFF4CAF50),
   warning: Color(0xFFFFA000),
   info: Color(0xFF2196F3),
+  // Hero/header gradient stays as the brand gradient (pink→purple→blue)
   primaryGradient: LinearGradient(
     colors: [Color(0xFFEC4899), Color(0xFF9333EA), Color(0xFF3B82F6)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   ),
   accentGradient: LinearGradient(
-    colors: [Color(0xFFEC4899), Color(0xFF7E22CE)],
+    colors: [Color(0xFFC8A2C8), Color(0xFFAA7EAA)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   ),
   goldGradientStops: kGoldStops,
   goldGradientPositions: kGoldPositions,
   categoryColors: [
-    Color(0xFFE91E63), // nails
+    Color(0xFFD4A0D4), // nails — lilac tint
     Color(0xFF8D6E63), // hair
-    Color(0xFF9C27B0), // lashes_brows
-    Color(0xFFFF5252), // makeup
+    Color(0xFFB07EB0), // lashes_brows — deeper lilac
+    Color(0xFFE08080), // makeup
     Color(0xFF26A69A), // facial
-    Color(0xFF5C6BC0), // body_spa
+    Color(0xFF8A7CB8), // body_spa — purple-lilac
     Color(0xFFFFA726), // specialized
     Color(0xFF37474F), // barberia
   ],
-  cinematicPrimary: Color(0xFFEC4899),
-  cinematicAccent: Color(0xFF9333EA),
+  cinematicPrimary: Color(0xFFC8A2C8),
+  cinematicAccent: Color(0xFFAA7EAA),
   statusBarColor: Color(0x00000000),
   statusBarIconBrightness: Brightness.dark,
   navigationBarColor: Color(0xFFFFFFFF),
