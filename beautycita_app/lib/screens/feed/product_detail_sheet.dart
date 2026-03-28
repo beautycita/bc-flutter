@@ -4,6 +4,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:beautycita_core/models.dart' hide Provider;
 import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/screens/feed/feed_image_viewer.dart';
+import 'package:beautycita/services/toast_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ProductDetailSheet extends StatelessWidget {
   final FeedProductTag product;
@@ -183,12 +185,20 @@ class ProductDetailSheet extends StatelessWidget {
 
                   const SizedBox(height: AppConstants.paddingXL),
 
-                  // Comprar button (placeholder — wired to payment in Task 10)
+                  // Comprar — opens WhatsApp to salon to arrange purchase
                   SizedBox(
                     width: double.infinity,
                     height: AppConstants.minTouchHeight,
                     child: FilledButton.icon(
-                      onPressed: product.inStock ? () {} : null,
+                      onPressed: product.inStock ? () {
+                        final msg = Uri.encodeComponent(
+                          'Hola! Vi el producto "${product.name}" '
+                          '(\$${product.price.toStringAsFixed(0)}) en BeautyCita '
+                          'y me gustaria comprarlo.');
+                        final waUrl = 'https://wa.me/?text=$msg';
+                        launchUrl(Uri.parse(waUrl), mode: LaunchMode.externalApplication);
+                        ToastService.showSuccess('Abriendo WhatsApp...');
+                      } : null,
                       icon: const Icon(Icons.shopping_bag_outlined),
                       label: Text(
                         'Comprar',
