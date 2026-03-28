@@ -135,10 +135,9 @@ serve(async (req) => {
 
     const isAdmin = profile?.role === "admin" || profile?.role === "superadmin";
     const isOwner = appointment.businesses.owner_id === user.id;
-    const isClient = dispute.user_id === user.id;
 
-    if (!isAdmin && !isOwner && !isClient) {
-      return json({ error: "Not authorized to process this refund" }, 403);
+    if (!isAdmin && !isOwner) {
+      return json({ error: "Only the business owner or admin can process refunds" }, 403);
     }
 
     // No payment_intent_id — unpaid/test appointment

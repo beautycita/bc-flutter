@@ -81,15 +81,19 @@ Deno.serve(async (req) => {
       return json({ error: "business_id required" }, 400);
     }
 
-    // Lookup business
+    // Lookup business and verify caller is the owner
     const { data: business, error: bizErr } = await db
       .from("businesses")
-      .select("id, name, phone, whatsapp")
+      .select("id, name, phone, whatsapp, owner_id")
       .eq("id", business_id)
       .single();
 
     if (bizErr || !business) {
       return json({ error: "Business not found" }, 404);
+    }
+
+    if (business.owner_id !== user.id) {
+      return json({ error: "Not authorized for this business" }, 403);
     }
 
     // Find existing salon thread for this user + business

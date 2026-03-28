@@ -527,7 +527,16 @@ class _BusinessSettingsScreenState
                   value: day.isOpen,
                   onChanged: (v) {
                     setState(() {
-                      _hours[dayIndex] = day.copyWith(isOpen: v);
+                      if (v && !day.isOpen) {
+                        // Toggling ON — reset to reasonable defaults
+                        _hours[dayIndex] = day.copyWith(
+                          isOpen: true,
+                          open: const TimeOfDay(hour: 9, minute: 0),
+                          close: const TimeOfDay(hour: 19, minute: 0),
+                        );
+                      } else {
+                        _hours[dayIndex] = day.copyWith(isOpen: v);
+                      }
                     });
                   },
                   activeTrackColor: colors.primary,
