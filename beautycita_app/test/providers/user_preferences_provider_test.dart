@@ -20,6 +20,7 @@ void main() {
       expect(state.qualitySpeed, 0.7);
       expect(state.exploreLoyalty, 0.3);
       expect(state.onboardingComplete, isFalse);
+      expect(state.reduceAnimations, isFalse);
     });
 
     group('copyWith', () {
@@ -74,6 +75,22 @@ void main() {
         final updated = state.copyWith(onboardingComplete: true);
         expect(updated.onboardingComplete, isTrue);
       });
+
+      test('updates reduceAnimations', () {
+        const state = UserPrefsState();
+        final updated = state.copyWith(reduceAnimations: true);
+        expect(updated.reduceAnimations, isTrue);
+        // other fields unchanged
+        expect(updated.defaultTransport, 'car');
+        expect(updated.notificationsEnabled, isTrue);
+      });
+
+      test('reduceAnimations defaults to false in copyWith', () {
+        const state = UserPrefsState(reduceAnimations: true);
+        // copyWith without specifying reduceAnimations keeps existing value
+        final updated = state.copyWith(defaultTransport: 'uber');
+        expect(updated.reduceAnimations, isTrue);
+      });
     });
   });
 
@@ -96,6 +113,8 @@ void main() {
       when(() => mockPrefs.getQualitySpeed()).thenAnswer((_) async => 0.7);
       when(() => mockPrefs.getExploreLoyalty()).thenAnswer((_) async => 0.3);
       when(() => mockPrefs.getOnboardingComplete()).thenAnswer((_) async => false);
+      when(() => mockPrefs.getBool(any(), defaultValue: any(named: 'defaultValue')))
+          .thenAnswer((_) async => false);
 
       notifier = UserPrefsNotifier(mockPrefs);
     });
@@ -188,6 +207,30 @@ void main() {
         await notifier.setOnboardingComplete(true);
 
         expect(notifier.state.onboardingComplete, isTrue);
+      });
+    });
+
+    group('toggleReduceAnimations', () {
+      test('toggles from false to true', () async {
+        await Future<void>.delayed(Duration.zero); // let _load finish
+        when(() => mockPrefs.setBool(any(), any()))
+            .thenAnswer((_) async {});
+
+        expect(notifier.state.reduceAnimations, isFalse);
+        await notifier.toggleReduceAnimations();
+
+        expect(notifier.state.reduceAnimations, isTrue);
+      });
+
+      test('toggles from true back to false', () async {
+        await Future<void>.delayed(Duration.zero);
+        when(() => mockPrefs.setBool(any(), any()))
+            .thenAnswer((_) async {});
+
+        await notifier.toggleReduceAnimations(); // false → true
+        await notifier.toggleReduceAnimations(); // true → false
+
+        expect(notifier.state.reduceAnimations, isFalse);
       });
     });
   });
