@@ -953,6 +953,27 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
                       ),
                     ),
                   ],
+
+                  // Permanent delete — SUPERADMIN ONLY
+                  Consumer(
+                    builder: (context, ref, _) {
+                      final isSuperAdmin = ref.watch(isSuperAdminProvider).valueOrNull ?? false;
+                      if (!isSuperAdmin) return const SizedBox.shrink();
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Center(
+                          child: TextButton.icon(
+                            onPressed: () => _confirmPermanentDelete(context, user),
+                            icon: const Icon(Icons.delete_forever_rounded, size: 18, color: Colors.red),
+                            label: Text(
+                              'Eliminar Permanentemente',
+                              style: GoogleFonts.nunito(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.red),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                 ],
               ),
             ),
@@ -960,6 +981,100 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
         },
       ),
     );
+  }
+
+  Future<void> _confirmPermanentDelete(BuildContext ctx, AdminUser user) async {
+    // First confirmation
+    final first = await showDialog<bool>(
+      context: ctx,
+      builder: (c) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded, color: Colors.red, size: 28),
+            const SizedBox(width: 10),
+            Text('Eliminar Permanentemente', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700)),
+          ],
+        ),
+        content: Text(
+          'Vas a eliminar permanentemente a "${user.username}" (${user.fullName}).\n\n'
+          'Esto eliminara su cuenta, perfil, y todos los datos asociados. '
+          'Esta accion NO se puede deshacer.',
+          style: GoogleFonts.nunito(fontSize: 14, height: 1.4),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancelar')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(c, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            child: const Text('Si, eliminar'),
+          ),
+        ],
+      ),
+    );
+    if (first != true) return;
+
+    // Second confirmation — type username
+    final confirmCtrl = TextEditingController();
+    final second = await showDialog<bool>(
+      context: ctx,
+      builder: (c) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Confirmar Eliminacion', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.red)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Escribe "${user.username}" para confirmar:', style: GoogleFonts.nunito(fontSize: 14)),
+            const SizedBox(height: 12),
+            TextField(
+              controller: confirmCtrl,
+              decoration: InputDecoration(
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                hintText: user.username,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancelar')),
+          ElevatedButton(
+            onPressed: () {
+              if (confirmCtrl.text.trim() == user.username) {
+                Navigator.pop(c, true);
+              } else {
+                ToastService.showWarning('El nombre de usuario no coincide');
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            child: const Text('ELIMINAR'),
+          ),
+        ],
+      ),
+    );
+    if (second != true) return;
+
+    try {
+      await SupabaseClientService.client
+          .rpc('admin_delete_user', params: {'p_user_id': user.id});
+
+      await adminLogAction(
+        action: 'permanent_delete_user',
+        targetType: 'user',
+        targetId: user.id,
+        details: {
+          'username': user.username,
+          'full_name': user.fullName,
+          'role': user.role,
+          'reason': 'superadmin_permanent_delete',
+        },
+      );
+
+      ref.invalidate(adminUsersProvider);
+      if (mounted) Navigator.of(context).pop(); // Close the detail sheet
+      ToastService.showSuccess('Usuario eliminado permanentemente');
+    } catch (e) {
+      ToastService.showErrorWithDetails('Error al eliminar', e, StackTrace.current);
+    }
   }
 
   Future<void> _showSaldoEditDialog(
