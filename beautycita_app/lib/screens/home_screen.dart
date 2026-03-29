@@ -22,6 +22,7 @@ import '../themes/category_icons.dart';
 import '../themes/theme_variant.dart';
 import '../widgets/cinematic_question_text.dart';
 import '../widgets/video_map_background.dart';
+import 'onboarding_screen.dart';
 import 'subcategory_sheet.dart';
 import 'business/business_shell_screen.dart' show businessTabProvider;
 import 'admin/admin_shell_screen.dart' show adminTabProvider;
@@ -70,6 +71,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     _checkPushPrompt();
     WidgetsBinding.instance
         .addPostFrameCallback((_) => _checkReviewPrompt());
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => _checkOnboarding());
   }
 
   void _checkReviewPrompt() {
@@ -91,6 +94,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         );
       }
     });
+  }
+
+  Future<void> _checkOnboarding() async {
+    final shown = await OnboardingScreen.hasBeenShown();
+    if (!shown && mounted) {
+      await Navigator.of(context).push(
+        PageRouteBuilder(
+          opaque: true,
+          pageBuilder: (_, __, ___) => const OnboardingScreen(),
+          transitionsBuilder: (_, anim, __, child) =>
+              FadeTransition(opacity: anim, child: child),
+          transitionDuration: AppConstants.mediumAnimation,
+        ),
+      );
+    }
   }
 
   Future<void> _checkPushPrompt() async {
