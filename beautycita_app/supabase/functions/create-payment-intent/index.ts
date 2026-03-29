@@ -121,7 +121,15 @@ serve(async (req) => {
     }
 
     if (!business.stripe_account_id) {
-      return json({ error: "Business has not set up payment processing" }, 400);
+      return json({ error: "Este negocio no tiene pagos en linea configurados" }, 400);
+    }
+
+    // Reject fake/test Stripe account IDs before hitting the Stripe API
+    if (
+      business.stripe_account_id.startsWith("acct_test") ||
+      !business.stripe_account_id.startsWith("acct_")
+    ) {
+      return json({ error: "Este negocio no tiene pagos en linea configurados" }, 400);
     }
 
     // Calculate amounts

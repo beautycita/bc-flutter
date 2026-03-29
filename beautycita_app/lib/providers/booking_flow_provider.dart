@@ -370,6 +370,16 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
           final error = piResponse.data is Map
               ? piResponse.data['error'] ?? 'Payment error'
               : 'Payment error';
+          final errStr = error.toString().toLowerCase();
+          // Surface a user-friendly message for Stripe Connect config issues
+          if (errStr.contains('destination') ||
+              errStr.contains('account') ||
+              errStr.contains('connect') ||
+              errStr.contains('pagos en linea')) {
+            throw Exception(
+              'Este salon aun no ha configurado pagos en linea. Contacta al salon directamente.',
+            );
+          }
           throw Exception(error);
         }
 
