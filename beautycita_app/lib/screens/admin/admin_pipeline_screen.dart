@@ -1499,8 +1499,14 @@ class _FilterChipsRow extends StatelessWidget {
 
             // RP user filter chips
             ...rpUsersAsync.when(
-              loading: () => [const SizedBox.shrink()],
-              error: (_, _) => [const SizedBox.shrink()],
+              loading: () => [const Padding(
+                padding: EdgeInsets.all(8),
+                child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+              )],
+              error: (e, _) => [Padding(
+                padding: const EdgeInsets.all(8),
+                child: Text('Error', style: TextStyle(color: Colors.red.shade400, fontSize: 12)),
+              )],
               data: (rpUsers) => rpUsers.map((rp) {
                 final rpId = rp['id'] as String;
                 final rpName = rp['full_name'] as String? ??
@@ -2394,7 +2400,10 @@ class _PinDropDialogState extends State<_PinDropDialog> {
             const SizedBox(height: AppConstants.paddingSM),
 
             // Radius selector
-            Row(
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 Text(
                   'Radio:',
@@ -2404,28 +2413,23 @@ class _PinDropDialogState extends State<_PinDropDialog> {
                     color: colors.onSurface.withValues(alpha: 0.7),
                   ),
                 ),
-                const SizedBox(width: AppConstants.paddingSM),
                 ..._radiusOptions.map((r) {
                   final selected = _radius == r;
-                  return Padding(
-                    padding:
-                        const EdgeInsets.only(right: AppConstants.paddingXS),
-                    child: ChoiceChip(
-                      label: Text(
-                        '${r.toInt()} km',
-                        style: GoogleFonts.nunito(
-                          fontSize: 12,
-                          color: selected ? Colors.white : colors.onSurface,
-                        ),
+                  return ChoiceChip(
+                    label: Text(
+                      '${r.toInt()} km',
+                      style: GoogleFonts.nunito(
+                        fontSize: 12,
+                        color: selected ? Colors.white : colors.onSurface,
                       ),
-                      selected: selected,
-                      onSelected: (_) => setState(() => _radius = r),
-                      selectedColor: colors.primary,
-                      backgroundColor: colors.surfaceContainerHighest
-                          .withValues(alpha: 0.5),
-                      visualDensity: VisualDensity.compact,
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
                     ),
+                    selected: selected,
+                    onSelected: (_) => setState(() => _radius = r),
+                    selectedColor: colors.primary,
+                    backgroundColor: colors.surfaceContainerHighest
+                        .withValues(alpha: 0.5),
+                    visualDensity: VisualDensity.compact,
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
                   );
                 }),
               ],
