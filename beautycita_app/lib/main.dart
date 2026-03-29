@@ -105,7 +105,7 @@ Future<void> main() async {
       options.dsn = 'https://3ffa879e65080eaec1b7c016dd390e64@o4510248503869440.ingest.us.sentry.io/4510248532049921';
       options.tracesSampleRate = kDebugMode ? 1.0 : 0.2;
       options.environment = kDebugMode ? 'debug' : 'production';
-      options.release = 'beautycita@1.0.9';
+      options.release = 'beautycita@1.1.0';
       options.attachStacktrace = true;
       options.enableAutoNativeBreadcrumbs = true;
       options.anrEnabled = true;
