@@ -760,7 +760,10 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
                             ),
                           ),
                         ),
-                        error: (_, _) => const SizedBox.shrink(),
+                        error: (e, _) => Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Center(child: Text('Error al cargar', style: TextStyle(color: Colors.red.shade400, fontSize: 13))),
+                        ),
                       );
                     },
                   ),

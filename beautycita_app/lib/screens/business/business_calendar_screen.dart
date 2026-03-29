@@ -233,8 +233,17 @@ class _BusinessCalendarScreenState
                 ),
               );
             },
-            loading: () => const SizedBox.shrink(),
-            error: (e, st) => const SizedBox.shrink(),
+            loading: () => const SizedBox(
+              height: 40,
+              child: Padding(
+                padding: EdgeInsets.all(8),
+                child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))),
+              ),
+            ),
+            error: (e, _) => Padding(
+              padding: const EdgeInsets.all(8),
+              child: Center(child: Text('Error al cargar staff', style: TextStyle(color: Colors.red.shade400, fontSize: 13))),
+            ),
           ),
 
         if (_view == _CalView.day) const SizedBox(height: 4),

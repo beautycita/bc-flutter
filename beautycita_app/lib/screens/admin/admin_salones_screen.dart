@@ -875,63 +875,68 @@ class _DiscoveredSalonesTabState extends ConsumerState<_DiscoveredSalonesTab> {
     super.dispose();
   }
 
+  // Maps label → count for dropdown display
+  Map<String, int> _countryCounts = {};
+  Map<String, int> _stateCounts = {};
+  Map<String, int> _cityCounts = {};
+
   Future<void> _loadCountries() async {
     try {
       final data = await SupabaseClientService.client
-          .from('discovered_salons')
-          .select('country')
-          .not('country', 'is', null)
-          .order('country');
-      final set = <String>{};
-      for (final row in data) {
-        final c = row['country'] as String?;
-        if (c != null && c.isNotEmpty) set.add(c);
+          .rpc('discovered_salon_counts', params: {'p_group': 'country'});
+      final counts = <String, int>{};
+      final list = <String>[];
+      for (final row in data as List) {
+        final label = row['label'] as String?;
+        final cnt = (row['cnt'] as num?)?.toInt() ?? 0;
+        if (label != null && label.isNotEmpty) {
+          counts[label] = cnt;
+          list.add(label);
+        }
       }
-      if (mounted) setState(() => _countries = set.toList());
+      if (mounted) setState(() { _countries = list; _countryCounts = counts; });
     } catch (_) {}
   }
 
   Future<void> _loadStates(String country) async {
-    setState(() {
-      _states = [];
-      _cities = [];
-    });
+    setState(() { _states = []; _cities = []; _stateCounts = {}; _cityCounts = {}; });
     try {
       final data = await SupabaseClientService.client
-          .from('discovered_salons')
-          .select('location_state')
-          .eq('country', country)
-          .not('location_state', 'is', null)
-          .order('location_state');
-      final set = <String>{};
-      for (final row in data) {
-        final s = row['location_state'] as String?;
-        if (s != null && s.isNotEmpty) set.add(s);
+          .rpc('discovered_salon_counts', params: {'p_group': 'state', 'p_country': country});
+      final counts = <String, int>{};
+      final list = <String>[];
+      for (final row in data as List) {
+        final label = row['label'] as String?;
+        final cnt = (row['cnt'] as num?)?.toInt() ?? 0;
+        if (label != null && label.isNotEmpty) {
+          counts[label] = cnt;
+          list.add(label);
+        }
       }
-      if (mounted) setState(() => _states = set.toList());
+      if (mounted) setState(() { _states = list; _stateCounts = counts; });
     } catch (_) {}
   }
 
   Future<void> _loadCities(String state) async {
-    setState(() {
-      _cities = [];
-    });
+    setState(() { _cities = []; _cityCounts = {}; });
     try {
-      var q = SupabaseClientService.client
-          .from('discovered_salons')
-          .select('location_city')
-          .eq('location_state', state)
-          .not('location_city', 'is', null);
-      if (_countryFilter != null) {
-        q = q.eq('country', _countryFilter!);
+      final data = await SupabaseClientService.client
+          .rpc('discovered_salon_counts', params: {
+            'p_group': 'city',
+            'p_country': _countryFilter,
+            'p_state': state,
+          });
+      final counts = <String, int>{};
+      final list = <String>[];
+      for (final row in data as List) {
+        final label = row['label'] as String?;
+        final cnt = (row['cnt'] as num?)?.toInt() ?? 0;
+        if (label != null && label.isNotEmpty) {
+          counts[label] = cnt;
+          list.add(label);
+        }
       }
-      final data = await q.order('location_city');
-      final set = <String>{};
-      for (final row in data) {
-        final c = row['location_city'] as String?;
-        if (c != null && c.isNotEmpty) set.add(c);
-      }
-      if (mounted) setState(() => _cities = set.toList());
+      if (mounted) setState(() { _cities = list; _cityCounts = counts; });
     } catch (_) {}
   }
 
@@ -1015,32 +1020,41 @@ class _DiscoveredSalonesTabState extends ConsumerState<_DiscoveredSalonesTab> {
             ),
             child: Row(
               children: [
-                // Country dropdown chip
+                // Country dropdown chip with count
                 _DropdownChip(
-                  label: _countryFilter ?? 'Pais',
+                  label: _countryFilter != null
+                      ? '$_countryFilter (${_countryCounts[_countryFilter] ?? ''})'
+                      : 'Pais',
                   isActive: _countryFilter != null,
-                  options: _countries,
+                  options: _countries.map((c) => '$c (${_countryCounts[c] ?? 0})').toList(),
+                  optionValues: _countries,
                   onSelected: _setCountry,
                   onClear: () => _setCountry(null),
                   colors: colors,
                 ),
                 const SizedBox(width: 6),
-                // State dropdown chip
+                // State dropdown chip with count
                 _DropdownChip(
-                  label: _stateFilter ?? 'Estado',
+                  label: _stateFilter != null
+                      ? '$_stateFilter (${_stateCounts[_stateFilter] ?? ''})'
+                      : 'Estado',
                   isActive: _stateFilter != null,
-                  options: _states,
+                  options: _states.map((s) => '$s (${_stateCounts[s] ?? 0})').toList(),
+                  optionValues: _states,
                   onSelected: _setState,
                   onClear: () => _setState(null),
                   colors: colors,
                   enabled: _countryFilter != null,
                 ),
                 const SizedBox(width: 6),
-                // City dropdown chip
+                // City dropdown chip with count
                 _DropdownChip(
-                  label: _cityFilter ?? 'Ciudad',
+                  label: _cityFilter != null
+                      ? '$_cityFilter (${_cityCounts[_cityFilter] ?? ''})'
+                      : 'Ciudad',
                   isActive: _cityFilter != null,
-                  options: _cities,
+                  options: _cities.map((c) => '$c (${_cityCounts[c] ?? 0})').toList(),
+                  optionValues: _cities,
                   onSelected: _setCity,
                   onClear: () => _setCity(null),
                   colors: colors,
@@ -1330,6 +1344,7 @@ class _DropdownChip extends StatelessWidget {
   final String label;
   final bool isActive;
   final List<String> options;
+  final List<String>? optionValues; // actual values (if different from display labels)
   final ValueChanged<String?> onSelected;
   final VoidCallback onClear;
   final ColorScheme colors;
@@ -1339,6 +1354,7 @@ class _DropdownChip extends StatelessWidget {
     required this.label,
     required this.isActive,
     required this.options,
+    this.optionValues,
     required this.onSelected,
     required this.onClear,
     required this.colors,
@@ -1373,15 +1389,16 @@ class _DropdownChip extends StatelessWidget {
                   0,
                 ),
                 constraints: const BoxConstraints(maxHeight: 300),
-                items: options
-                    .map((o) => PopupMenuItem<String>(
-                          value: o,
-                          child: Text(
-                            o,
-                            style: GoogleFonts.nunito(fontSize: 13),
-                          ),
-                        ))
-                    .toList(),
+                items: List.generate(options.length, (i) {
+                  final display = options[i];
+                  final value = optionValues != null && i < optionValues!.length
+                      ? optionValues![i]
+                      : display;
+                  return PopupMenuItem<String>(
+                    value: value,
+                    child: Text(display, style: GoogleFonts.nunito(fontSize: 13)),
+                  );
+                }),
               ).then((value) {
                 if (value != null) onSelected(value);
               });

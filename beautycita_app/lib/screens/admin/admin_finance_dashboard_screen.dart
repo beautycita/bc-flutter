@@ -186,8 +186,14 @@ class _ResumenTab extends ConsumerWidget {
                 Expanded(child: _MiniStat(label: 'Negocios', value: '${kpis.totalBusinesses}', icon: Icons.store)),
               ],
             ),
-            loading: () => const SizedBox.shrink(),
-            error: (_, _) => const SizedBox.shrink(),
+            loading: () => const Padding(
+              padding: EdgeInsets.all(16),
+              child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))),
+            ),
+            error: (e, _) => Padding(
+              padding: const EdgeInsets.all(16),
+              child: Center(child: Text('Error al cargar', style: TextStyle(color: Colors.red.shade400, fontSize: 13))),
+            ),
           ),
 
           const SizedBox(height: AppConstants.paddingMD),
@@ -205,8 +211,14 @@ class _ResumenTab extends ConsumerWidget {
                     ),
                   )
                 : const SizedBox.shrink(),
-            loading: () => const SizedBox.shrink(),
-            error: (_, _) => const SizedBox.shrink(),
+            loading: () => const Padding(
+              padding: EdgeInsets.all(16),
+              child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))),
+            ),
+            error: (e, _) => Padding(
+              padding: const EdgeInsets.all(16),
+              child: Center(child: Text('Error al cargar', style: TextStyle(color: Colors.red.shade400, fontSize: 13))),
+            ),
           ),
 
           const SizedBox(height: AppConstants.paddingSM),
