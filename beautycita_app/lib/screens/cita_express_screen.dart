@@ -1329,20 +1329,6 @@ class _ConfirmView extends ConsumerWidget {
               .read(citaExpressProvider.notifier)
               .setPaymentMethod('cash_direct'),
         ),
-        const SizedBox(height: 8),
-
-        // Card option
-        _PaymentMethodTile(
-          icon: Icons.credit_card_rounded,
-          label: 'Tarjeta de credito/debito',
-          subtitle: 'Pago seguro con Stripe',
-          selected: selectedMethod == 'card',
-          colors: colors,
-          onTap: () => ref
-              .read(citaExpressProvider.notifier)
-              .setPaymentMethod('card'),
-        ),
-
         const SizedBox(height: AppConstants.paddingXL),
 
         // CONFIRMAR button
