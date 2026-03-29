@@ -250,7 +250,19 @@ class _ProductCheckoutSheetState extends State<ProductCheckoutSheet> {
       if (kDebugMode) debugPrint('[PRODUCT-CHECKOUT] Error: $e');
       if (mounted) {
         setState(() => _processing = false);
-        ToastService.showError('Error: ${e.toString().replaceAll('Exception: ', '')}');
+        final errMsg = e.toString().replaceAll('Exception: ', '');
+        // Detect Stripe Connect / destination account errors
+        final lc = errMsg.toLowerCase();
+        if (lc.contains('destination') ||
+            lc.contains('account') ||
+            lc.contains('connect') ||
+            lc.contains('pagos en linea')) {
+          ToastService.showError(
+            'Este salon aun no ha configurado pagos en linea. Contacta al salon directamente.',
+          );
+        } else {
+          ToastService.showError('Error: $errMsg');
+        }
       }
     }
   }
