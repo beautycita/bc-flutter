@@ -1152,6 +1152,7 @@ async function buildResponse(
     return {
       rank: i + 1,
       score: Math.round(c.score * 1000) / 1000,
+      is_discovered: false,
       business: {
         id: c.business_id,
         name: c.business_name,
