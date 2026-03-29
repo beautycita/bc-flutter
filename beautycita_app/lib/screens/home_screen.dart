@@ -416,10 +416,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 },
                               ),
                               _HeaderButton(
-                                icon: Icons.favorite_border_rounded,
-                                onTap: () => context.push('/favorites'),
-                              ),
-                              _HeaderButton(
                                 icon: Icons.settings_outlined,
                                 onTap: () => context.push('/settings'),
                               ),
