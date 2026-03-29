@@ -18,9 +18,23 @@ class BookingRepository {
     String? transportMode,
     String? staffId,
   }) async {
+    // Validate inputs
+    if (durationMinutes <= 0) throw Exception('Duracion invalida');
+    if (price != null && price < 0) throw Exception('Precio invalido');
+
     final userId = SupabaseClientService.currentUserId;
     if (userId == null) {
       throw Exception('User not authenticated');
+    }
+
+    // Verify salon is still active and verified
+    final biz = await SupabaseClientService.client
+        .from('businesses')
+        .select('is_active, is_verified, stripe_charges_enabled')
+        .eq('id', providerId)
+        .maybeSingle();
+    if (biz == null || biz['is_active'] != true || biz['is_verified'] != true) {
+      throw Exception('Este salon no esta disponible para reservas');
     }
 
     final endsAt = scheduledAt.add(Duration(minutes: durationMinutes));
