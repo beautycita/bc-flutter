@@ -982,7 +982,7 @@ final searchDiscoveredSalonsProvider = FutureProvider.family<List<Map<String, dy
     if (params['p_pin_lat'] != null) 'p_pin_lat': params['p_pin_lat'],
     if (params['p_pin_lng'] != null) 'p_pin_lng': params['p_pin_lng'],
     if (params['p_radius_km'] != null) 'p_radius_km': params['p_radius_km'],
-    'result_limit': params['result_limit'] ?? 50,
+    'result_limit': params['result_limit'] ?? (params['country_filter'] != null || params['state_filter'] != null ? 200 : 50),
     'result_offset': params['result_offset'] ?? 0,
   });
   var results = (response as List).cast<Map<String, dynamic>>();
@@ -992,6 +992,22 @@ final searchDiscoveredSalonsProvider = FutureProvider.family<List<Map<String, dy
       params['p_assigned_rp_id'] == null &&
       params['p_rp_status_filter'] == null) {
     results = results.where((s) => s['assigned_rp_id'] == null).toList();
+  }
+
+  // Client-side location filtering (country + state not in RPC)
+  final countryFilter = params['country_filter'] as String?;
+  final stateFilter = params['state_filter'] as String?;
+  if (countryFilter != null) {
+    results = results.where((s) {
+      final c = s['country'] as String?;
+      return c != null && c.toLowerCase() == countryFilter.toLowerCase();
+    }).toList();
+  }
+  if (stateFilter != null) {
+    results = results.where((s) {
+      final st = s['location_state'] as String?;
+      return st != null && st.toLowerCase() == stateFilter.toLowerCase();
+    }).toList();
   }
 
   return results;

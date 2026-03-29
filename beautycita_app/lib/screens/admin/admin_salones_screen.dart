@@ -840,11 +840,123 @@ class _DiscoveredSalonesTabState extends ConsumerState<_DiscoveredSalonesTab> {
   Timer? _debounce;
   String _query = '';
 
+  // Location filter state
+  String? _countryFilter;
+  String? _stateFilter;
+  String? _cityFilter;
+  bool _waVerifiedFilter = false;
+  bool _hasPhoneFilter = false;
+  String? _statusFilter;
+
+  // Dropdown options (loaded from DB)
+  List<String> _countries = [];
+  List<String> _states = [];
+  List<String> _cities = [];
+
+  static const _allDiscoveredStatuses = [
+    'discovered',
+    'selected',
+    'outreach_sent',
+    'registered',
+    'declined',
+    'unreachable',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCountries();
+  }
+
   @override
   void dispose() {
     _debounce?.cancel();
     _searchCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadCountries() async {
+    try {
+      final data = await SupabaseClientService.client
+          .from('discovered_salons')
+          .select('country')
+          .not('country', 'is', null)
+          .order('country');
+      final set = <String>{};
+      for (final row in data) {
+        final c = row['country'] as String?;
+        if (c != null && c.isNotEmpty) set.add(c);
+      }
+      if (mounted) setState(() => _countries = set.toList());
+    } catch (_) {}
+  }
+
+  Future<void> _loadStates(String country) async {
+    setState(() {
+      _states = [];
+      _cities = [];
+    });
+    try {
+      final data = await SupabaseClientService.client
+          .from('discovered_salons')
+          .select('location_state')
+          .eq('country', country)
+          .not('location_state', 'is', null)
+          .order('location_state');
+      final set = <String>{};
+      for (final row in data) {
+        final s = row['location_state'] as String?;
+        if (s != null && s.isNotEmpty) set.add(s);
+      }
+      if (mounted) setState(() => _states = set.toList());
+    } catch (_) {}
+  }
+
+  Future<void> _loadCities(String state) async {
+    setState(() {
+      _cities = [];
+    });
+    try {
+      var q = SupabaseClientService.client
+          .from('discovered_salons')
+          .select('location_city')
+          .eq('location_state', state)
+          .not('location_city', 'is', null);
+      if (_countryFilter != null) {
+        q = q.eq('country', _countryFilter!);
+      }
+      final data = await q.order('location_city');
+      final set = <String>{};
+      for (final row in data) {
+        final c = row['location_city'] as String?;
+        if (c != null && c.isNotEmpty) set.add(c);
+      }
+      if (mounted) setState(() => _cities = set.toList());
+    } catch (_) {}
+  }
+
+  void _setCountry(String? country) {
+    setState(() {
+      _countryFilter = country;
+      _stateFilter = null;
+      _cityFilter = null;
+      _states = [];
+      _cities = [];
+    });
+    if (country != null) _loadStates(country);
+  }
+
+  void _setState(String? state) {
+    setState(() {
+      _stateFilter = state;
+      _cityFilter = null;
+      _cities = [];
+    });
+    if (state != null) _loadCities(state);
+  }
+
+  void _setCity(String? city) {
+    setState(() => _cityFilter = city);
   }
 
   @override
@@ -855,7 +967,12 @@ class _DiscoveredSalonesTabState extends ConsumerState<_DiscoveredSalonesTab> {
       children: [
         // Search
         Padding(
-          padding: const EdgeInsets.all(AppConstants.paddingMD),
+          padding: const EdgeInsets.fromLTRB(
+            AppConstants.paddingMD,
+            AppConstants.paddingMD,
+            AppConstants.paddingMD,
+            0,
+          ),
           child: TextField(
             controller: _searchCtrl,
             decoration: InputDecoration(
@@ -886,6 +1003,147 @@ class _DiscoveredSalonesTabState extends ConsumerState<_DiscoveredSalonesTab> {
             },
           ),
         ),
+
+        // Filter chips row
+        SizedBox(
+          height: 44,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppConstants.paddingMD,
+              vertical: 4,
+            ),
+            child: Row(
+              children: [
+                // Country dropdown chip
+                _DropdownChip(
+                  label: _countryFilter ?? 'Pais',
+                  isActive: _countryFilter != null,
+                  options: _countries,
+                  onSelected: _setCountry,
+                  onClear: () => _setCountry(null),
+                  colors: colors,
+                ),
+                const SizedBox(width: 6),
+                // State dropdown chip
+                _DropdownChip(
+                  label: _stateFilter ?? 'Estado',
+                  isActive: _stateFilter != null,
+                  options: _states,
+                  onSelected: _setState,
+                  onClear: () => _setState(null),
+                  colors: colors,
+                  enabled: _countryFilter != null,
+                ),
+                const SizedBox(width: 6),
+                // City dropdown chip
+                _DropdownChip(
+                  label: _cityFilter ?? 'Ciudad',
+                  isActive: _cityFilter != null,
+                  options: _cities,
+                  onSelected: _setCity,
+                  onClear: () => _setCity(null),
+                  colors: colors,
+                  enabled: _stateFilter != null,
+                ),
+                const SizedBox(width: 6),
+                // WA Verified toggle
+                FilterChip(
+                  label: Text(
+                    'WA Verificado',
+                    style: GoogleFonts.nunito(
+                      fontSize: 12,
+                      color: _waVerifiedFilter ? Colors.white : colors.onSurface,
+                    ),
+                  ),
+                  selected: _waVerifiedFilter,
+                  onSelected: (_) => setState(() => _waVerifiedFilter = !_waVerifiedFilter),
+                  selectedColor: Colors.green[600],
+                  checkmarkColor: Colors.white,
+                  backgroundColor: colors.surfaceContainerHighest.withValues(alpha: 0.5),
+                  side: BorderSide(
+                    color: _waVerifiedFilter ? Colors.green : colors.onSurface.withValues(alpha: 0.15),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  visualDensity: VisualDensity.compact,
+                  showCheckmark: false,
+                  avatar: Icon(
+                    Icons.verified,
+                    size: 14,
+                    color: _waVerifiedFilter ? Colors.white : Colors.green,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                // Has Phone toggle
+                FilterChip(
+                  label: Text(
+                    'Con telefono',
+                    style: GoogleFonts.nunito(
+                      fontSize: 12,
+                      color: _hasPhoneFilter ? Colors.white : colors.onSurface,
+                    ),
+                  ),
+                  selected: _hasPhoneFilter,
+                  onSelected: (_) => setState(() => _hasPhoneFilter = !_hasPhoneFilter),
+                  selectedColor: Colors.blue[600],
+                  checkmarkColor: Colors.white,
+                  backgroundColor: colors.surfaceContainerHighest.withValues(alpha: 0.5),
+                  side: BorderSide(
+                    color: _hasPhoneFilter ? Colors.blue : colors.onSurface.withValues(alpha: 0.15),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  visualDensity: VisualDensity.compact,
+                  showCheckmark: false,
+                  avatar: Icon(
+                    Icons.phone,
+                    size: 14,
+                    color: _hasPhoneFilter ? Colors.white : Colors.blue,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                // Status chips
+                ..._allDiscoveredStatuses.map((s) {
+                  final selected = _statusFilter == s;
+                  final color = _statusColor(s);
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 4),
+                    child: FilterChip(
+                      label: Text(
+                        _statusLabel(s),
+                        style: GoogleFonts.nunito(
+                          fontSize: 12,
+                          color: selected ? Colors.white : colors.onSurface,
+                        ),
+                      ),
+                      selected: selected,
+                      onSelected: (_) => setState(() {
+                        _statusFilter = selected ? null : s;
+                      }),
+                      selectedColor: color,
+                      checkmarkColor: Colors.white,
+                      backgroundColor: colors.surfaceContainerHighest.withValues(alpha: 0.5),
+                      side: BorderSide(
+                        color: selected ? color : colors.onSurface.withValues(alpha: 0.15),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      visualDensity: VisualDensity.compact,
+                      showCheckmark: false,
+                      avatar: Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: selected ? Colors.white : color,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
+        ),
+
         // Results
         Expanded(
           child: FutureBuilder<List<Map<String, dynamic>>>(
@@ -898,74 +1156,96 @@ class _DiscoveredSalonesTabState extends ConsumerState<_DiscoveredSalonesTab> {
               if (salons.isEmpty) {
                 return Center(
                   child: Text(
-                    _query.isEmpty ? 'Cargando salones...' : 'Sin resultados',
+                    _query.isEmpty && _countryFilter == null && !_waVerifiedFilter && !_hasPhoneFilter && _statusFilter == null
+                        ? 'Cargando salones...'
+                        : 'Sin resultados',
                     style: GoogleFonts.nunito(color: colors.onSurface.withValues(alpha: 0.5)),
                   ),
                 );
               }
-              return ListView.separated(
-                padding: const EdgeInsets.symmetric(horizontal: AppConstants.paddingMD),
-                itemCount: salons.length,
-                separatorBuilder: (_, __) => const Divider(height: 1),
-                itemBuilder: (context, i) {
-                  final s = salons[i];
-                  final name = s['business_name'] as String? ?? '';
-                  final city = s['location_city'] as String? ?? '';
-                  final status = s['status'] as String? ?? 'discovered';
-                  final rating = s['rating_average'];
-                  final waVerified = s['whatsapp_verified'] == true;
-
-                  return ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: colors.primary.withValues(alpha: 0.1),
+              return Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: AppConstants.paddingLG),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
                       child: Text(
-                        name.isNotEmpty ? name[0].toUpperCase() : '?',
-                        style: GoogleFonts.poppins(
-                          fontWeight: FontWeight.w700,
-                          color: colors.primary,
-                        ),
-                      ),
-                    ),
-                    title: Text(
-                      name,
-                      style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    subtitle: Row(
-                      children: [
-                        Text(city, style: GoogleFonts.nunito(fontSize: 12)),
-                        if (rating != null) ...[
-                          const SizedBox(width: 8),
-                          Icon(Icons.star, size: 12, color: Colors.amber.shade700),
-                          Text(' $rating', style: GoogleFonts.nunito(fontSize: 12)),
-                        ],
-                        const SizedBox(width: 8),
-                        if (waVerified)
-                          const Icon(Icons.verified, size: 12, color: Colors.green),
-                      ],
-                    ),
-                    trailing: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: _statusColor(status).withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        _statusLabel(status),
+                        '${salons.length} salones',
                         style: GoogleFonts.nunito(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: _statusColor(status),
+                          fontSize: 12,
+                          color: colors.onSurface.withValues(alpha: 0.5),
                         ),
                       ),
                     ),
-                    onTap: () {
-                      // Open discovered salon detail
-                      showLeadDetailSheet(context, s);
-                    },
-                  );
-                },
+                  ),
+                  const SizedBox(height: 4),
+                  Expanded(
+                    child: ListView.separated(
+                      padding: const EdgeInsets.symmetric(horizontal: AppConstants.paddingMD),
+                      itemCount: salons.length,
+                      separatorBuilder: (_, _) => const Divider(height: 1),
+                      itemBuilder: (context, i) {
+                        final s = salons[i];
+                        final name = s['business_name'] as String? ?? '';
+                        final city = s['location_city'] as String? ?? '';
+                        final status = s['status'] as String? ?? 'discovered';
+                        final rating = s['rating_average'];
+                        final waVerified = s['whatsapp_verified'] == true;
+
+                        return ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: colors.primary.withValues(alpha: 0.1),
+                            child: Text(
+                              name.isNotEmpty ? name[0].toUpperCase() : '?',
+                              style: GoogleFonts.poppins(
+                                fontWeight: FontWeight.w700,
+                                color: colors.primary,
+                              ),
+                            ),
+                          ),
+                          title: Text(
+                            name,
+                            style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          subtitle: Row(
+                            children: [
+                              Text(city, style: GoogleFonts.nunito(fontSize: 12)),
+                              if (rating != null) ...[
+                                const SizedBox(width: 8),
+                                Icon(Icons.star, size: 12, color: Colors.amber.shade700),
+                                Text(' $rating', style: GoogleFonts.nunito(fontSize: 12)),
+                              ],
+                              const SizedBox(width: 8),
+                              if (waVerified)
+                                const Icon(Icons.verified, size: 12, color: Colors.green),
+                            ],
+                          ),
+                          trailing: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: _statusColor(status).withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              _statusLabel(status),
+                              style: GoogleFonts.nunito(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: _statusColor(status),
+                              ),
+                            ),
+                          ),
+                          onTap: () {
+                            // Open discovered salon detail
+                            showLeadDetailSheet(context, s);
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
               );
             },
           ),
@@ -978,16 +1258,40 @@ class _DiscoveredSalonesTabState extends ConsumerState<_DiscoveredSalonesTab> {
     try {
       var query = SupabaseClientService.client
           .from('discovered_salons')
-          .select('id, business_name, phone, whatsapp, location_city, location_state, status, rating_average, rating_count, whatsapp_verified, feature_image_url, matched_categories, interest_count')
+          .select('id, business_name, phone, whatsapp, location_city, location_state, country, status, rating_average, rating_count, whatsapp_verified, feature_image_url, matched_categories, interest_count')
           .not('latitude', 'is', null);
 
       if (_query.isNotEmpty) {
         query = query.ilike('business_name', '%$_query%');
       }
 
+      // Location cascading filters
+      if (_countryFilter != null) {
+        query = query.eq('country', _countryFilter!);
+      }
+      if (_stateFilter != null) {
+        query = query.eq('location_state', _stateFilter!);
+      }
+      if (_cityFilter != null) {
+        query = query.eq('location_city', _cityFilter!);
+      }
+
+      // Toggle filters
+      if (_waVerifiedFilter) {
+        query = query.eq('whatsapp_verified', true);
+      }
+      if (_hasPhoneFilter) {
+        query = query.not('phone', 'is', null).neq('phone', '');
+      }
+
+      // Status filter
+      if (_statusFilter != null) {
+        query = query.eq('status', _statusFilter!);
+      }
+
       final data = await query
           .order('interest_count', ascending: false)
-          .limit(100);
+          .limit(200);
       return List<Map<String, dynamic>>.from(data);
     } catch (e) {
       if (kDebugMode) debugPrint('[DiscoveredTab] Error: $e');
@@ -1016,4 +1320,115 @@ class _DiscoveredSalonesTabState extends ConsumerState<_DiscoveredSalonesTab> {
     'unreachable' => 'Inalcanzable',
     _ => status,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Reusable dropdown chip for location filters
+// ---------------------------------------------------------------------------
+
+class _DropdownChip extends StatelessWidget {
+  final String label;
+  final bool isActive;
+  final List<String> options;
+  final ValueChanged<String?> onSelected;
+  final VoidCallback onClear;
+  final ColorScheme colors;
+  final bool enabled;
+
+  const _DropdownChip({
+    required this.label,
+    required this.isActive,
+    required this.options,
+    required this.onSelected,
+    required this.onClear,
+    required this.colors,
+    this.enabled = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final bgColor = !enabled
+        ? colors.surfaceContainerHighest.withValues(alpha: 0.2)
+        : isActive
+            ? colors.primary
+            : colors.surfaceContainerHighest.withValues(alpha: 0.5);
+    final fgColor = !enabled
+        ? colors.onSurface.withValues(alpha: 0.25)
+        : isActive
+            ? Colors.white
+            : colors.onSurface;
+
+    return GestureDetector(
+      onTap: !enabled || options.isEmpty
+          ? null
+          : () {
+              final RenderBox box = context.findRenderObject() as RenderBox;
+              final offset = box.localToGlobal(Offset.zero);
+              showMenu<String>(
+                context: context,
+                position: RelativeRect.fromLTRB(
+                  offset.dx,
+                  offset.dy + box.size.height,
+                  offset.dx + box.size.width,
+                  0,
+                ),
+                constraints: const BoxConstraints(maxHeight: 300),
+                items: options
+                    .map((o) => PopupMenuItem<String>(
+                          value: o,
+                          child: Text(
+                            o,
+                            style: GoogleFonts.nunito(fontSize: 13),
+                          ),
+                        ))
+                    .toList(),
+              ).then((value) {
+                if (value != null) onSelected(value);
+              });
+            },
+      child: Container(
+        height: 32,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isActive
+                ? colors.primary
+                : colors.onSurface.withValues(alpha: 0.15),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.arrow_drop_down,
+              size: 16,
+              color: fgColor,
+            ),
+            const SizedBox(width: 2),
+            Text(
+              label,
+              style: GoogleFonts.nunito(
+                fontSize: 12,
+                color: fgColor,
+                fontWeight: isActive ? FontWeight.w700 : FontWeight.normal,
+              ),
+            ),
+            if (isActive) ...[
+              const SizedBox(width: 4),
+              GestureDetector(
+                onTap: onClear,
+                child: Icon(
+                  Icons.close,
+                  size: 14,
+                  color: fgColor,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
 }
