@@ -183,7 +183,7 @@ CustomTransitionPage<T> bcSweepPage<T>({
     key: key,
     child: child,
     transitionDuration: const Duration(milliseconds: 1200),
-    reverseTransitionDuration: const Duration(milliseconds: 850),
+    reverseTransitionDuration: const Duration(milliseconds: 300),
     transitionsBuilder: _doubleRadialBurstTransition,
   );
 }
