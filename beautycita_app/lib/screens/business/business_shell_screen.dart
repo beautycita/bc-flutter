@@ -157,7 +157,7 @@ class _BusinessContent extends ConsumerWidget {
       BusinessShellScreen._settingsTab,
     ];
     final children = <Widget>[
-      _DashboardTab(),
+      const _DashboardTab(),
       const BusinessCalendarScreen(),
       const BusinessStaffAnalyticsScreen(),
       const BusinessServicesScreen(),
@@ -221,14 +221,26 @@ class _BusinessContent extends ConsumerWidget {
 
 // -- Dashboard Tab with two stat cards + bar chart --
 
-class _DashboardTab extends ConsumerWidget {
+class _DashboardTab extends ConsumerStatefulWidget {
+  const _DashboardTab();
+
+  @override
+  ConsumerState<_DashboardTab> createState() => _DashboardTabState();
+}
+
+class _DashboardTabState extends ConsumerState<_DashboardTab>
+    with AutomaticKeepAliveClientMixin {
   static const _months = [
     'Enero','Febrero','Marzo','Abril','Mayo','Junio',
     'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre',
   ];
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
     final colors = Theme.of(context).colorScheme;
     final statsAsync = ref.watch(businessStatsProvider);
     final monthlyAsync = ref.watch(businessMonthlyDailyProvider);

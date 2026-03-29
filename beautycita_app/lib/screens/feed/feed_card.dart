@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -208,10 +209,16 @@ class _ProductShowcaseCard extends StatelessWidget {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  Image.network(
-                    product.photoUrl,
+                  CachedNetworkImage(
+                    imageUrl: product.photoUrl,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => Container(
+                    placeholder: (_, __) => Container(
+                      color: palette.surfaceContainerHighest,
+                      child: const Center(
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
+                    errorWidget: (_, __, ___) => Container(
                       color: palette.surfaceContainerHighest,
                       child: Icon(Icons.shopping_bag_outlined,
                           size: 48, color: palette.onSurface.withValues(alpha: 0.2)),
@@ -563,27 +570,20 @@ class _MainImage extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            // Main image
-            Image.network(
-              imageUrl,
+            // Main image (cached)
+            CachedNetworkImage(
+              imageUrl: imageUrl,
               fit: BoxFit.cover,
-              loadingBuilder: (_, child, progress) {
-                if (progress == null) return child;
-                return Container(
-                  color: palette.surfaceContainerHighest,
-                  child: Center(
-                    child: CircularProgressIndicator(
-                      value: progress.expectedTotalBytes != null
-                          ? progress.cumulativeBytesLoaded /
-                              progress.expectedTotalBytes!
-                          : null,
-                      strokeWidth: 2,
-                      color: palette.primary,
-                    ),
+              placeholder: (_, __) => Container(
+                color: palette.surfaceContainerHighest,
+                child: Center(
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: palette.primary,
                   ),
-                );
-              },
-              errorBuilder: (_, _, _) => Container(
+                ),
+              ),
+              errorWidget: (_, __, ___) => Container(
                 color: palette.surfaceContainerHighest,
                 child: Icon(
                   Icons.broken_image_outlined,

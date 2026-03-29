@@ -28,7 +28,11 @@ class BusinessCalendarScreen extends ConsumerStatefulWidget {
 enum _CalView { day, month }
 
 class _BusinessCalendarScreenState
-    extends ConsumerState<BusinessCalendarScreen> {
+    extends ConsumerState<BusinessCalendarScreen>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
   final _timelineKey = GlobalKey<_HorizontalTimelineState>();
   late DateTime _selectedDate;
   String? _staffFilter; // null = all staff
@@ -80,6 +84,7 @@ class _BusinessCalendarScreenState
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // Required by AutomaticKeepAliveClientMixin
     final range = _range;
     final colors = Theme.of(context).colorScheme;
 
