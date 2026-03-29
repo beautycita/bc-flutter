@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BeautyCita — Guía de Acceso API SAT (CFF Art. 30-B)</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: -apple-system, 'Segoe UI', sans-serif; background:#f9fafb; color:#1a1a2e; line-height:1.6; }
+.container { max-width:900px; margin:0 auto; padding:40px 24px; }
+h1 { font-size:28px; font-weight:800; margin-bottom:8px; }
+h1 span { background:linear-gradient(135deg,#ec4899,#9333ea,#3b82f6); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+.subtitle { color:#666; font-size:14px; margin-bottom:32px; }
+h2 { font-size:20px; font-weight:700; margin-top:32px; margin-bottom:12px; color:#1a1a2e; border-bottom:2px solid #e5e7eb; padding-bottom:6px; }
+h3 { font-size:16px; font-weight:600; margin-top:20px; margin-bottom:8px; color:#374151; }
+p { margin-bottom:12px; color:#4b5563; }
+code { background:#f3f4f6; padding:2px 6px; border-radius:4px; font-size:13px; font-family:'Fira Code',monospace; color:#9333ea; }
+pre { background:#1a1a2e; color:#e5e7eb; padding:16px; border-radius:10px; overflow-x:auto; font-size:13px; margin:12px 0; font-family:'Fira Code',monospace; line-height:1.5; }
+pre .comment { color:#6b7280; }
+pre .key { color:#ec4899; }
+pre .string { color:#34d399; }
+pre .number { color:#60a5fa; }
+table { width:100%; border-collapse:collapse; margin:12px 0; }
+th { background:#f3f4f6; text-align:left; padding:10px 12px; font-size:13px; font-weight:600; border-bottom:2px solid #e5e7eb; }
+td { padding:10px 12px; font-size:13px; border-bottom:1px solid #f3f4f6; }
+tr:hover td { background:#f9fafb; }
+.badge { display:inline-block; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:600; }
+.badge-get { background:#dbeafe; color:#1d4ed8; }
+.badge-required { background:#fef3c7; color:#92400e; }
+.badge-optional { background:#f3f4f6; color:#6b7280; }
+.warning { background:#fff7ed; border:1px solid #fed7aa; border-radius:10px; padding:14px 16px; margin:16px 0; }
+.warning strong { color:#c2410c; }
+.info { background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; padding:14px 16px; margin:16px 0; }
+.info strong { color:#1d4ed8; }
+.confidential { background:#fef2f2; border:2px solid #fca5a5; border-radius:10px; padding:20px; margin:24px 0; text-align:center; }
+.confidential h3 { color:#dc2626; margin:0 0 8px 0; }
+.footer { margin-top:48px; padding-top:16px; border-top:1px solid #e5e7eb; color:#9ca3af; font-size:12px; text-align:center; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1><span>BeautyCita</span> — API de Acceso SAT</h1>
+<p class="subtitle">Conforme al Código Fiscal de la Federación, Artículo 30-B (vigente abril 2026)</p>
+
+<div class="confidential">
+<h3>⚠️ DOCUMENTO CONFIDENCIAL</h3>
+<p>Este documento contiene credenciales de acceso al sistema. No distribuir fuera del SAT.<br>
+Cualquier acceso no autorizado será registrado y reportado.</p>
+</div>
+
+<h2>1. Información de la Plataforma</h2>
+<table>
+<tr><th>Campo</th><th>Valor</th></tr>
+<tr><td>Razón Social</td><td>BeautyCita S.A. de C.V.</td></tr>
+<tr><td>Domicilio</td><td>Puerto Vallarta, Jalisco, CP 48330</td></tr>
+<tr><td>Actividad</td><td>Plataforma digital de intermediación de servicios de belleza</td></tr>
+<tr><td>URL</td><td>https://beautycita.com</td></tr>
+<tr><td>Contacto Técnico</td><td>soporte@beautycita.com</td></tr>
+<tr><td>Teléfono</td><td>+52 (720) 677-7800</td></tr>
+</table>
+
+<h2>2. Autenticación</h2>
+<p>Todas las solicitudes requieren autenticación <strong>HMAC-SHA256</strong> mediante tres encabezados HTTP:</p>
+
+<table>
+<tr><th>Encabezado</th><th>Descripción</th><th>Ejemplo</th></tr>
+<tr><td><code>X-SAT-Key</code></td><td>Clave de API (identificador)</td><td><code>9670aba0...6e29</code></td></tr>
+<tr><td><code>X-SAT-Timestamp</code></td><td>Timestamp Unix en milisegundos</td><td><code>1711648000000</code></td></tr>
+<tr><td><code>X-SAT-Signature</code></td><td>Firma HMAC-SHA256</td><td><code>a1b2c3d4...ef90</code></td></tr>
+</table>
+
+<h3>Cálculo de la Firma</h3>
+<pre>
+<span class="comment">// La firma se calcula así:</span>
+payload = timestamp + método_HTTP + ruta_completa
+firma = HMAC-SHA256(<span class="key">secret</span>, payload)
+
+<span class="comment">// Ejemplo:</span>
+timestamp = <span class="string">"1711648000000"</span>
+método    = <span class="string">"GET"</span>
+ruta      = <span class="string">"/sat-access/transactions?from=2026-01-01&to=2026-03-31"</span>
+
+payload   = <span class="string">"1711648000000GET/sat-access/transactions?from=2026-01-01&to=2026-03-31"</span>
+firma     = HMAC-SHA256(secret, payload)  <span class="comment">→ hex string</span>
+</pre>
+
+<div class="warning">
+<strong>Ventana de tiempo:</strong> El timestamp debe estar dentro de un rango de <strong>5 minutos</strong> del servidor. Solicitudes fuera de este rango serán rechazadas para prevenir ataques de repetición.
+</div>
+
+<h3>Credenciales</h3>
+<pre>
+<span class="key">API Key:</span>    <span class="string">9670aba0502a39a533d7835aa8047371ff782403d4a9200d26af4a571f986e29</span>
+<span class="key">API Secret:</span> <span class="string">d9040c7de8530ee24f4eb9b71b49e77e643216a96c79a402f655aa895cb17fb0
+              b70bf9d2d6842ec97188320b413d089477f5b35457e648ff5001f1e202220ff8</span>
+</pre>
+
+<div class="warning">
+<strong>Seguridad:</strong> El <em>API Secret</em> nunca se transmite por la red. Solo se usa localmente para calcular la firma HMAC. No almacenar en texto plano en sistemas sin cifrado.
+</div>
+
+<h2>3. URL Base</h2>
+<pre>https://beautycita.com/supabase/functions/v1/sat-access</pre>
+
+<h2>4. Límites</h2>
+<table>
+<tr><th>Límite</th><th>Valor</th></tr>
+<tr><td>Solicitudes por hora</td><td>100</td></tr>
+<tr><td>Resultados por página</td><td>1,000 máximo</td></tr>
+<tr><td>Timeout</td><td>30 segundos</td></tr>
+</table>
+
+<h2>5. Endpoints</h2>
+
+<h3><span class="badge badge-get">GET</span> /transactions</h3>
+<p>Transacciones completadas con datos fiscales.</p>
+<table>
+<tr><th>Parámetro</th><th>Tipo</th><th>Requerido</th><th>Descripción</th></tr>
+<tr><td><code>from</code></td><td>YYYY-MM-DD</td><td><span class="badge badge-optional">Opcional</span></td><td>Fecha de inicio</td></tr>
+<tr><td><code>to</code></td><td>YYYY-MM-DD</td><td><span class="badge badge-optional">Opcional</span></td><td>Fecha de fin</td></tr>
+<tr><td><code>business_id</code></td><td>UUID</td><td><span class="badge badge-optional">Opcional</span></td><td>Filtrar por negocio</td></tr>
+<tr><td><code>rfc</code></td><td>String</td><td><span class="badge badge-optional">Opcional</span></td><td>Filtrar por RFC</td></tr>
+<tr><td><code>limit</code></td><td>Integer</td><td><span class="badge badge-optional">Opcional</span></td><td>Resultados por página (max 1000, default 100)</td></tr>
+<tr><td><code>offset</code></td><td>Integer</td><td><span class="badge badge-optional">Opcional</span></td><td>Paginación</td></tr>
+</table>
+
+<h4>Respuesta</h4>
+<pre>
+{
+  <span class="key">"data"</span>: [
+    {
+      <span class="key">"transaction_id"</span>: <span class="string">"uuid"</span>,
+      <span class="key">"business_id"</span>: <span class="string">"uuid"</span>,
+      <span class="key">"business_name"</span>: <span class="string">"Salon de Vallarta"</span>,
+      <span class="key">"business_rfc"</span>: <span class="string">"XAXX010101000"</span>,
+      <span class="key">"tax_regime"</span>: <span class="string">"RESICO"</span>,
+      <span class="key">"date"</span>: <span class="string">"2026-01-15T16:00:00Z"</span>,
+      <span class="key">"service"</span>: <span class="string">"Corte de Cabello"</span>,
+      <span class="key">"gross_amount"</span>: <span class="number">450.00</span>,
+      <span class="key">"payment_method"</span>: <span class="string">"card"</span>,
+      <span class="key">"isr_withheld"</span>: <span class="number">11.25</span>,
+      <span class="key">"iva_withheld"</span>: <span class="number">36.00</span>,
+      <span class="key">"tax_base"</span>: <span class="number">450.00</span>,
+      <span class="key">"provider_net"</span>: <span class="number">389.25</span>
+    }
+  ],
+  <span class="key">"pagination"</span>: { <span class="key">"limit"</span>: <span class="number">100</span>, <span class="key">"offset"</span>: <span class="number">0</span>, <span class="key">"total"</span>: <span class="number">57</span> }
+}
+</pre>
+
+<h3><span class="badge badge-get">GET</span> /withholdings</h3>
+<p>Registro de retenciones fiscales por período.</p>
+<table>
+<tr><th>Parámetro</th><th>Tipo</th><th>Requerido</th><th>Descripción</th></tr>
+<tr><td><code>period</code></td><td>YYYY-MM</td><td><span class="badge badge-required">Requerido</span></td><td>Período mensual</td></tr>
+<tr><td><code>business_id</code></td><td>UUID</td><td><span class="badge badge-optional">Opcional</span></td><td>Filtrar por negocio</td></tr>
+</table>
+
+<h3><span class="badge badge-get">GET</span> /providers</h3>
+<p>Información fiscal de proveedores registrados (con RFC).</p>
+<table>
+<tr><th>Parámetro</th><th>Tipo</th><th>Requerido</th><th>Descripción</th></tr>
+<tr><td><code>rfc</code></td><td>String</td><td><span class="badge badge-optional">Opcional</span></td><td>Buscar por RFC</td></tr>
+<tr><td><code>business_id</code></td><td>UUID</td><td><span class="badge badge-optional">Opcional</span></td><td>Buscar por ID</td></tr>
+</table>
+
+<h4>Respuesta</h4>
+<pre>
+{
+  <span class="key">"data"</span>: [
+    {
+      <span class="key">"id"</span>: <span class="string">"uuid"</span>,
+      <span class="key">"name"</span>: <span class="string">"Salon de Vallarta"</span>,
+      <span class="key">"rfc"</span>: <span class="string">"XAXX010101000"</span>,
+      <span class="key">"tax_regime"</span>: <span class="string">"RESICO"</span>,
+      <span class="key">"tax_residency"</span>: <span class="string">"MX"</span>,
+      <span class="key">"city"</span>: <span class="string">"Puerto Vallarta"</span>,
+      <span class="key">"state"</span>: <span class="string">"Jalisco"</span>,
+      <span class="key">"is_active"</span>: <span class="number">true</span>,
+      <span class="key">"created_at"</span>: <span class="string">"2025-12-01T00:00:00Z"</span>
+    }
+  ]
+}
+</pre>
+
+<h3><span class="badge badge-get">GET</span> /summary</h3>
+<p>Reporte mensual agregado por negocio.</p>
+<table>
+<tr><th>Parámetro</th><th>Tipo</th><th>Requerido</th><th>Descripción</th></tr>
+<tr><td><code>period</code></td><td>YYYY-MM</td><td><span class="badge badge-required">Requerido</span></td><td>Período mensual</td></tr>
+<tr><td><code>business_id</code></td><td>UUID</td><td><span class="badge badge-optional">Opcional</span></td><td>Filtrar por negocio</td></tr>
+</table>
+
+<h4>Respuesta</h4>
+<pre>
+{
+  <span class="key">"period"</span>: { <span class="key">"year"</span>: <span class="number">2026</span>, <span class="key">"month"</span>: <span class="number">1</span> },
+  <span class="key">"reports"</span>: [
+    {
+      <span class="key">"business_id"</span>: <span class="string">"uuid"</span>,
+      <span class="key">"total_transactions"</span>: <span class="number">19</span>,
+      <span class="key">"total_gross"</span>: <span class="number">7410.00</span>,
+      <span class="key">"isr_withheld"</span>: <span class="number">185.25</span>,
+      <span class="key">"iva_withheld"</span>: <span class="number">592.80</span>,
+      <span class="key">"platform_fees"</span>: <span class="number">222.30</span>,
+      <span class="key">"status"</span>: <span class="string">"submitted"</span>
+    }
+  ]
+}
+</pre>
+
+<h3><span class="badge badge-get">GET</span> /platform</h3>
+<p>Declaración agregada a nivel plataforma (BeautyCita total).</p>
+<table>
+<tr><th>Parámetro</th><th>Tipo</th><th>Requerido</th><th>Descripción</th></tr>
+<tr><td><code>period</code></td><td>YYYY-MM</td><td><span class="badge badge-required">Requerido</span></td><td>Período mensual</td></tr>
+</table>
+
+<h4>Respuesta</h4>
+<pre>
+{
+  <span class="key">"period"</span>: { <span class="key">"year"</span>: <span class="number">2026</span>, <span class="key">"month"</span>: <span class="number">1</span> },
+  <span class="key">"platform"</span>: {
+    <span class="key">"name"</span>: <span class="string">"BeautyCita S.A. de C.V."</span>,
+    <span class="key">"total_businesses"</span>: <span class="number">1</span>,
+    <span class="key">"total_transactions"</span>: <span class="number">19</span>,
+    <span class="key">"total_revenue"</span>: <span class="number">7410.00</span>,
+    <span class="key">"iva_collected"</span>: <span class="number">592.80</span>,
+    <span class="key">"isr_collected"</span>: <span class="number">185.25</span>,
+    <span class="key">"commissions_earned"</span>: <span class="number">222.30</span>,
+    <span class="key">"paid_to_sat"</span>: <span class="number">778.05</span>,
+    <span class="key">"status"</span>: <span class="string">"submitted"</span>
+  }
+}
+</pre>
+
+<h2>6. Códigos de Error</h2>
+<table>
+<tr><th>Código</th><th>Significado</th><th>Acción</th></tr>
+<tr><td><code>401</code></td><td>API key inválida o timestamp expirado</td><td>Verificar credenciales y sincronizar reloj</td></tr>
+<tr><td><code>403</code></td><td>Firma HMAC inválida</td><td>Verificar cálculo de firma</td></tr>
+<tr><td><code>429</code></td><td>Límite de solicitudes excedido</td><td>Esperar 1 hora</td></tr>
+<tr><td><code>500</code></td><td>Error interno del servidor</td><td>Contactar soporte técnico</td></tr>
+</table>
+
+<h2>7. Ejemplo Completo (Python)</h2>
+<pre>
+<span class="comment">import</span> hmac, hashlib, time, requests
+
+API_KEY    = <span class="string">"9670aba0502a39a533d7835aa8047371ff782403d4a9200d26af4a571f986e29"</span>
+API_SECRET = <span class="string">"d9040c7de8530ee24f4eb9b71b49e77e643216a96c79a402f655aa895cb17fb0b70bf9d2d6842ec97188320b413d089477f5b35457e648ff5001f1e202220ff8"</span>
+BASE_URL   = <span class="string">"https://beautycita.com/supabase/functions/v1/sat-access"</span>
+
+<span class="comment">def</span> sat_request(path, params={}):
+    url = f<span class="string">"{BASE_URL}/{path}"</span>
+    <span class="comment">if</span> params:
+        qs = <span class="string">"&"</span>.join(f<span class="string">"{k}={v}"</span> <span class="comment">for</span> k, v <span class="comment">in</span> params.items())
+        url += f<span class="string">"?{qs}"</span>
+
+    timestamp = str(int(time.time() * <span class="number">1000</span>))
+    sign_path = url.replace(BASE_URL.rsplit(<span class="string">"/"</span>, <span class="number">1</span>)[<span class="number">0</span>], <span class="string">""</span>)
+    payload = f<span class="string">"{timestamp}GET{sign_path}"</span>
+
+    signature = hmac.new(
+        API_SECRET.encode(),
+        payload.encode(),
+        hashlib.sha256
+    ).hexdigest()
+
+    headers = {
+        <span class="string">"X-SAT-Key"</span>: API_KEY,
+        <span class="string">"X-SAT-Timestamp"</span>: timestamp,
+        <span class="string">"X-SAT-Signature"</span>: signature,
+    }
+
+    <span class="comment">return</span> requests.get(url, headers=headers).json()
+
+<span class="comment"># Obtener transacciones de enero 2026</span>
+data = sat_request(<span class="string">"transactions"</span>, {<span class="string">"from"</span>: <span class="string">"2026-01-01"</span>, <span class="string">"to"</span>: <span class="string">"2026-01-31"</span>})
+print(data)
+
+<span class="comment"># Obtener resumen mensual</span>
+summary = sat_request(<span class="string">"summary"</span>, {<span class="string">"period"</span>: <span class="string">"2026-01"</span>})
+print(summary)
+
+<span class="comment"># Declaración de la plataforma</span>
+platform = sat_request(<span class="string">"platform"</span>, {<span class="string">"period"</span>: <span class="string">"2026-01"</span>})
+print(platform)
+</pre>
+
+<h2>8. Auditoría</h2>
+<p>Cada solicitud se registra en nuestra base de datos con:</p>
+<ul style="margin:8px 0 12px 24px; color:#4b5563;">
+<li>Dirección IP del solicitante</li>
+<li>Hash SHA-256 de la API key utilizada</li>
+<li>Endpoint y parámetros consultados</li>
+<li>Código de respuesta HTTP</li>
+<li>Resultado de la solicitud</li>
+<li>Timestamp UTC</li>
+</ul>
+<p>Los registros de auditoría se conservan indefinidamente conforme a la ley.</p>
+
+<div class="info">
+<strong>Rotación de credenciales:</strong> Las credenciales pueden ser rotadas a solicitud del SAT o por iniciativa de BeautyCita. Se proporcionará un período de transición de 30 días durante el cual ambas credenciales serán válidas.
+</div>
+
+<div class="footer">
+BeautyCita S.A. de C.V. — Puerto Vallarta, Jalisco — Documento generado: Marzo 2026<br>
+Versión API: 2.0 | Protocolo: HMAC-SHA256 | Cumplimiento: CFF Art. 30-B
+</div>
+
+</div>
+</body>
+</html>
