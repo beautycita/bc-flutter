@@ -133,6 +133,11 @@ class SettingsScreen extends ConsumerWidget {
             onTap: () => context.push('/my-bookings'),
           ),
           SettingsTile(
+            icon: Icons.favorite_rounded,
+            label: 'Mis favoritos',
+            onTap: () => context.push('/favorites'),
+          ),
+          SettingsTile(
             icon: Icons.credit_card_rounded,
             label: 'Metodos de pago',
             onTap: () => context.push('/settings/payment-methods'),

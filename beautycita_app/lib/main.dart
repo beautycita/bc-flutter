@@ -4,6 +4,7 @@ import 'package:beautycita/config/app_transitions.dart';
 import 'package:beautycita/providers/user_preferences_provider.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -33,7 +34,7 @@ import 'package:go_router/go_router.dart';
 /// Completes when Supabase is ready (or failed). Splash screen awaits this.
 final Completer<void> supabaseReady = Completer<void>();
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Initialize Spanish locale data for intl date formatting
@@ -86,9 +87,22 @@ void main() async {
     supabaseReady.complete(); // Complete even on error so splash doesn't hang
   });
 
-  runApp(
-    const ProviderScope(
-      child: BeautyCitaApp(),
+  // Sentry error reporting — captures crashes, unhandled exceptions, ANRs
+  await SentryFlutter.init(
+    (options) {
+      options.dsn = 'https://3ffa879e65080eaec1b7c016dd390e64@o4510248503869440.ingest.us.sentry.io/4510248532049921';
+      options.tracesSampleRate = kDebugMode ? 1.0 : 0.2;
+      options.environment = kDebugMode ? 'debug' : 'production';
+      options.release = 'beautycita@1.0.9';
+      options.attachStacktrace = true;
+      options.enableAutoNativeBreadcrumbs = true;
+      options.anrEnabled = true;
+      options.anrTimeoutInterval = const Duration(seconds: 5);
+    },
+    appRunner: () => runApp(
+      const ProviderScope(
+        child: BeautyCitaApp(),
+      ),
     ),
   );
 }

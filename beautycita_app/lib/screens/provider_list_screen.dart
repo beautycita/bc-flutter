@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:beautycita/models/provider.dart' as models;
 import 'package:beautycita/providers/provider_provider.dart';
 import 'package:beautycita/providers/chat_provider.dart';
+import 'package:beautycita/providers/favorites_provider.dart';
 import 'package:beautycita/config/constants.dart';
 import '../services/toast_service.dart';
 
@@ -182,7 +183,7 @@ class _ProviderCard extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Row 1: Name + Verified badge
+              // Row 1: Name + Verified badge + Favorite
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -259,6 +260,8 @@ class _ProviderCard extends ConsumerWidget {
                       ],
                     ),
                   ),
+                  // Favorite heart button
+                  _FavoriteHeartButton(businessId: provider.id),
                 ],
               ),
 
@@ -536,6 +539,37 @@ class _ContactButton extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Favorite Heart Button
+// ---------------------------------------------------------------------------
+
+class _FavoriteHeartButton extends ConsumerWidget {
+  final String businessId;
+
+  const _FavoriteHeartButton({required this.businessId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isFav = ref.watch(favoritesProvider).contains(businessId);
+    return IconButton(
+      icon: Icon(
+        isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+        color: isFav
+            ? Colors.redAccent
+            : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+        size: AppConstants.iconSizeMD,
+      ),
+      onPressed: () =>
+          ref.read(favoritesProvider.notifier).toggle(businessId),
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints(
+        minWidth: AppConstants.iconTouchTarget,
+        minHeight: AppConstants.iconTouchTarget,
       ),
     );
   }

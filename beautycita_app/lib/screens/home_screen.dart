@@ -26,6 +26,10 @@ import 'subcategory_sheet.dart';
 import 'business/business_shell_screen.dart' show businessTabProvider;
 import 'admin/admin_shell_screen.dart' show adminTabProvider;
 import '../providers/feature_toggle_provider.dart';
+import '../providers/review_prompt_provider.dart';
+import '../providers/search_history_provider.dart';
+import '../providers/booking_flow_provider.dart';
+import '../widgets/review_prompt_sheet.dart';
 import '../services/supabase_client.dart';
 
 /// Fetches the saldo from profiles.saldo for the current user.
@@ -56,6 +60,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   bool _exclusionSet = false;
   bool _updateDialogShown = false;
   bool _showPushPrompt = false;
+  bool _reviewPromptShown = false;
 
   @override
   void initState() {
@@ -63,6 +68,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     WidgetsBinding.instance
         .addPostFrameCallback((_) => _showApkUpdateIfNeeded());
     _checkPushPrompt();
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => _checkReviewPrompt());
+  }
+
+  void _checkReviewPrompt() {
+    if (_reviewPromptShown) return;
+    // Delay slightly to let providers initialize
+    Future.delayed(const Duration(seconds: 2), () {
+      if (!mounted || _reviewPromptShown) return;
+      final appt = ref.read(unreviewedAppointmentProvider).valueOrNull;
+      if (appt != null) {
+        _reviewPromptShown = true;
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          builder: (_) => ReviewPromptSheet(appointment: appt),
+        );
+      }
+    });
   }
 
   Future<void> _checkPushPrompt() async {
@@ -370,6 +398,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 },
                               ),
                               _HeaderButton(
+                                icon: Icons.favorite_border_rounded,
+                                onTap: () => context.push('/favorites'),
+                              ),
+                              _HeaderButton(
                                 icon: Icons.settings_outlined,
                                 onTap: () => context.push('/settings'),
                               ),
@@ -490,6 +522,63 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
               ),
             ),
+
+          // Recientes — recent search history chips
+          Consumer(
+            builder: (context, ref, _) {
+              final history = ref.watch(searchHistoryProvider);
+              if (history.isEmpty) return const SizedBox.shrink();
+              return Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppConstants.paddingMD,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Recientes',
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: palette.onSurface.withValues(alpha: 0.6),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    SizedBox(
+                      height: 38,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: history.length,
+                        separatorBuilder: (_, __) => const SizedBox(width: 8),
+                        itemBuilder: (context, index) {
+                          final entry = history[index];
+                          return ActionChip(
+                            label: Text(entry.serviceName),
+                            onPressed: () {
+                              ref
+                                  .read(bookingFlowProvider.notifier)
+                                  .selectService(
+                                      entry.serviceType, entry.serviceName);
+                              context.push('/book');
+                            },
+                            backgroundColor: palette.primary.withValues(alpha: 0.08),
+                            side: BorderSide.none,
+                            labelStyle: GoogleFonts.nunito(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: palette.primary,
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                ),
+              );
+            },
+          ),
 
           // Category Grid
           Expanded(
