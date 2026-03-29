@@ -7,7 +7,10 @@ import 'package:intl/intl.dart';
 import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/config/theme_extension.dart';
 import 'package:beautycita/models/booking.dart';
-import 'package:beautycita/providers/booking_provider.dart';
+import 'package:beautycita/providers/booking_provider.dart'
+    hide bookingRepositoryProvider;
+import 'package:beautycita/providers/booking_flow_provider.dart'
+    show bookingFlowProvider, bookingRepositoryProvider;
 import 'package:beautycita/services/supabase_client.dart';
 import 'package:go_router/go_router.dart';
 import 'package:beautycita/services/toast_service.dart';
@@ -316,6 +319,13 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
         ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
       }
     }
+  }
+
+  /// Rebook: pre-fill booking flow with same service and navigate.
+  void _rebookBooking(Booking booking) {
+    final notifier = ref.read(bookingFlowProvider.notifier);
+    notifier.rebookFrom(booking);
+    context.push('/book');
   }
 
   /// Open a dispute filing bottom sheet for a completed booking.
@@ -1384,6 +1394,40 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
                       horizontal: AppConstants.paddingSM,
                     ),
                     minimumSize: const Size(0, AppConstants.minTouchHeight - 16),
+                  ),
+                ),
+              ),
+            ],
+
+            // Rebook button for completed bookings
+            if (booking.status == 'completed') ...[
+              const SizedBox(height: AppConstants.paddingSM),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () => _rebookBooking(booking),
+                  icon: Icon(
+                    Icons.replay_rounded,
+                    size: AppConstants.iconSizeSM,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  label: Text(
+                    'Reservar Otra Vez',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    minimumSize:
+                        const Size(0, AppConstants.minTouchHeight - 8),
+                    shape: RoundedRectangleBorder(
+                      borderRadius:
+                          BorderRadius.circular(AppConstants.radiusLG),
+                    ),
                   ),
                 ),
               ),

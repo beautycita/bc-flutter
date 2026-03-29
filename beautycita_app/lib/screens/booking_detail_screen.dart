@@ -1,9 +1,15 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/foundation.dart';
+import 'package:flutter/rendering.dart';
 import 'package:beautycita/config/app_transitions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 import 'package:share_plus/share_plus.dart';
 import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/models/booking.dart';
@@ -53,6 +59,7 @@ class BookingDetailScreen extends ConsumerStatefulWidget {
 class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
   bool _isCancelling = false;
   bool _isUpdatingTransport = false;
+  final GlobalKey _receiptKey = GlobalKey();
 
   // Origin for route: starts null, initialized from profile or GPS on first
   // build when business location is available.
@@ -552,6 +559,12 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
                           booking: booking, bizLocation: bizLocation),
                       const SizedBox(height: AppConstants.paddingMD),
 
+                      // 5b. Receipt download for completed bookings
+                      if (booking.status == 'completed')
+                        _buildReceiptButton(booking),
+                      if (booking.status == 'completed')
+                        const SizedBox(height: AppConstants.paddingMD),
+
                       // 6. Origin Editor
                       _buildOriginEditor(textTheme),
                       const SizedBox(height: AppConstants.paddingMD),
@@ -1002,6 +1015,60 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
     );
   }
 
+  Widget _buildReceiptButton(Booking booking) {
+    return _actionButton(
+      color: Colors.teal.shade600,
+      icon: Icons.receipt_long_outlined,
+      label: 'Descargar Recibo',
+      onTap: () => _generateAndShareReceipt(booking),
+    );
+  }
+
+  Future<void> _generateAndShareReceipt(Booking booking) async {
+    // Show receipt in an overlay, capture, then dismiss
+    final overlay = Overlay.of(context);
+    final entry = OverlayEntry(
+      builder: (_) => Positioned(
+        left: -2000,
+        top: -2000,
+        child: RepaintBoundary(
+          key: _receiptKey,
+          child: _ReceiptWidget(booking: booking),
+        ),
+      ),
+    );
+    overlay.insert(entry);
+
+    // Wait for a frame to render
+    await Future.delayed(const Duration(milliseconds: 100));
+
+    try {
+      final boundary = _receiptKey.currentContext?.findRenderObject()
+          as RenderRepaintBoundary?;
+      if (boundary == null) throw Exception('No se pudo capturar el recibo');
+
+      final image = await boundary.toImage(pixelRatio: 3.0);
+      final byteData =
+          await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) throw Exception('No se pudo convertir a PNG');
+
+      final tempDir = await getTemporaryDirectory();
+      final file = File(
+          '${tempDir.path}/recibo_${booking.id.substring(0, 8)}.png');
+      await file.writeAsBytes(byteData.buffer.asUint8List());
+
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: 'Recibo de ${booking.serviceName} - BeautyCita',
+      );
+    } catch (e, stack) {
+      ToastService.showErrorWithDetails(
+          'No se pudo generar el recibo', e, stack);
+    } finally {
+      entry.remove();
+    }
+  }
+
   Widget _buildOriginEditor(TextTheme textTheme) {
     final colorScheme = Theme.of(context).colorScheme;
     final address = _originAddress ?? 'Seleccionar punto de partida';
@@ -1158,6 +1225,195 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
             ),
         ],
       ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Receipt Widget — rendered off-screen, captured as image, shared as PNG
+// ═══════════════════════════════════════════════════════════════════════════
+
+class _ReceiptWidget extends StatelessWidget {
+  final Booking booking;
+  const _ReceiptWidget({required this.booking});
+
+  @override
+  Widget build(BuildContext context) {
+    final refNumber = booking.id.length >= 8
+        ? booking.id.substring(0, 8).toUpperCase()
+        : booking.id.toUpperCase();
+    final dateFormatter = DateFormat("d 'de' MMMM yyyy, HH:mm", 'es');
+    final dateStr = dateFormatter.format(booking.scheduledAt);
+
+    final price = booking.price ?? 0;
+    final subtotal = price / 1.16; // IVA 16%
+    final iva = price - subtotal;
+
+    String paymentLabel;
+    switch (booking.paymentStatus) {
+      case 'paid':
+        paymentLabel = 'Tarjeta (pagado)';
+      case 'pending':
+        paymentLabel = 'Pendiente';
+      default:
+        paymentLabel = booking.paymentStatus ?? 'No especificado';
+    }
+
+    return Material(
+      color: Colors.white,
+      child: SizedBox(
+        width: 380,
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Logo area
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFec4899), Color(0xFF9333ea)],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Center(
+                  child: Text(
+                    'BC',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Recibo de Servicio',
+                style: GoogleFonts.poppins(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF1a1a1a),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Ref: $refNumber',
+                style: GoogleFonts.nunito(
+                  fontSize: 12,
+                  color: const Color(0xFF999999),
+                  letterSpacing: 1,
+                ),
+              ),
+
+              const SizedBox(height: 20),
+              const Divider(color: Color(0xFFEEEEEE)),
+              const SizedBox(height: 12),
+
+              // Salon
+              _receiptRow('Salon', booking.providerName ?? 'Proveedor'),
+              const SizedBox(height: 8),
+              _receiptRow('Servicio', booking.serviceName),
+              const SizedBox(height: 8),
+              _receiptRow('Fecha', dateStr),
+              const SizedBox(height: 8),
+              _receiptRow('Duracion', '${booking.durationMinutes} min'),
+              const SizedBox(height: 8),
+              _receiptRow('Metodo de pago', paymentLabel),
+
+              const SizedBox(height: 16),
+              const Divider(color: Color(0xFFEEEEEE)),
+              const SizedBox(height: 12),
+
+              // Price breakdown
+              _receiptRow('Subtotal',
+                  '\$${subtotal.toStringAsFixed(2)} MXN'),
+              const SizedBox(height: 6),
+              _receiptRow('IVA (16%)',
+                  '\$${iva.toStringAsFixed(2)} MXN'),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Total',
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF1a1a1a),
+                    ),
+                  ),
+                  Text(
+                    '\$${price.toStringAsFixed(2)} MXN',
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF1a1a1a),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 20),
+              const Divider(color: Color(0xFFEEEEEE)),
+              const SizedBox(height: 16),
+
+              // Footer
+              Text(
+                'BeautyCita S.A. de C.V.',
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF999999),
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                'beautycita.com',
+                style: GoogleFonts.nunito(
+                  fontSize: 10,
+                  color: const Color(0xFFBBBBBB),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _receiptRow(String label, String value) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Flexible(
+          flex: 2,
+          child: Text(
+            label,
+            style: GoogleFonts.nunito(
+              fontSize: 13,
+              color: const Color(0xFF666666),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Flexible(
+          flex: 3,
+          child: Text(
+            value,
+            style: GoogleFonts.nunito(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF1a1a1a),
+            ),
+            textAlign: TextAlign.right,
+          ),
+        ),
+      ],
     );
   }
 }

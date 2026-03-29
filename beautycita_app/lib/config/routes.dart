@@ -45,6 +45,8 @@ import 'package:beautycita/screens/press_screen.dart';
 import 'package:beautycita/screens/system_status_screen.dart';
 import 'package:beautycita/screens/report_problem_screen.dart';
 import 'package:beautycita/screens/business/portfolio_capture_screen.dart';
+import 'package:beautycita/screens/booking_confirmation_screen.dart';
+import 'package:beautycita/screens/favorites_screen.dart';
 import 'app_transitions.dart';
 
 
@@ -95,6 +97,8 @@ class AppRoutes {
   static const String systemStatus = '/system-status';
   static const String reportProblem = '/report-problem';
   static const String portfolioCapture = '/business/portfolio-capture';
+  static const String favorites = '/favorites';
+  static const String bookingConfirmed = '/booking-confirmed/:bookingId';
 
 
   static final GoRouter router = GoRouter(
@@ -551,6 +555,25 @@ class AppRoutes {
             ),
           );
         },
+      ),
+      GoRoute(
+        path: '/booking-confirmed/:bookingId',
+        name: 'booking-confirmed',
+        pageBuilder: (context, state) {
+          final bookingId = state.pathParameters['bookingId']!;
+          return bcSweepPage(
+            key: state.pageKey,
+            child: BookingConfirmationScreen(bookingId: bookingId),
+          );
+        },
+      ),
+      GoRoute(
+        path: favorites,
+        name: 'favorites',
+        pageBuilder: (context, state) => bcSweepPage(
+          key: state.pageKey,
+          child: const FavoritesScreen(),
+        ),
       ),
     ],
     errorPageBuilder: (context, state) => MaterialPage(

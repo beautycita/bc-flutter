@@ -44,7 +44,7 @@ class BookingFlowScreen extends ConsumerWidget {
             ref.read(bookingFlowProvider.notifier).advanceFromEmail(hasEmail: false);
           },
         ),
-      BookingFlowStep.booked => const ConfirmationScreen(),
+      BookingFlowStep.booked => _BookedRedirect(bookingId: state.bookingId),
       BookingFlowStep.error => _ErrorView(
           error: state.error ?? 'Error desconocido',
           onRetry: () =>
@@ -159,6 +159,29 @@ class _ErrorView extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Redirects to the dedicated BookingConfirmationScreen when booking completes.
+class _BookedRedirect extends ConsumerWidget {
+  final String? bookingId;
+  const _BookedRedirect({this.bookingId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (bookingId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted) {
+          // Reset flow state so going back doesn't loop
+          ref.read(bookingFlowProvider.notifier).reset();
+          context.go('/booking-confirmed/$bookingId');
+        }
+      });
+    }
+    return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      body: const Center(child: CircularProgressIndicator()),
     );
   }
 }
