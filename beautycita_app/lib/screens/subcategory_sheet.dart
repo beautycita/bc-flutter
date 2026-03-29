@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../models/category.dart';
 import '../config/constants.dart';
 import '../providers/booking_flow_provider.dart';
+import '../providers/search_history_provider.dart';
 
 String _getCategoryQuestion(String categoryId) {
   switch (categoryId) {
@@ -419,6 +420,13 @@ class _ServiceItemTileState extends ConsumerState<_ServiceItemTile> {
     ref
         .read(bookingFlowProvider.notifier)
         .selectService(widget.item.serviceType, widget.item.nameEs);
+
+    // Save to search history
+    ref.read(searchHistoryProvider.notifier).addEntry(
+          serviceType: widget.item.serviceType,
+          serviceName: widget.item.nameEs,
+          category: widget.item.subcategoryId,
+        );
   }
 
   @override

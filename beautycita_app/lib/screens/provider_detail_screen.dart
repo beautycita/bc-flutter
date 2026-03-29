@@ -10,6 +10,7 @@ import 'package:beautycita/config/constants.dart';
 import '../config/theme_extension.dart';
 import '../services/toast_service.dart';
 import '../providers/feature_toggle_provider.dart';
+import '../providers/favorites_provider.dart';
 
 class ProviderDetailScreen extends ConsumerWidget {
   final String providerId;
@@ -174,6 +175,9 @@ class ProviderDetailScreen extends ConsumerWidget {
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
+      actions: [
+        _DetailFavoriteButton(businessId: provider.id),
+      ],
       flexibleSpace: FlexibleSpaceBar(
         background: provider.photoUrl != null
             ? Image.network(
@@ -651,6 +655,37 @@ class ProviderDetailScreen extends ConsumerWidget {
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
+  }
+}
+
+// =============================================================================
+// Favorite button for detail app bar
+// =============================================================================
+
+class _DetailFavoriteButton extends ConsumerWidget {
+  final String businessId;
+
+  const _DetailFavoriteButton({required this.businessId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isFav = ref.watch(favoritesProvider).contains(businessId);
+    return Container(
+      margin: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.3),
+        shape: BoxShape.circle,
+      ),
+      child: IconButton(
+        icon: Icon(
+          isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+          color: isFav ? Colors.redAccent : Colors.white,
+          size: 24,
+        ),
+        onPressed: () =>
+            ref.read(favoritesProvider.notifier).toggle(businessId),
+      ),
+    );
   }
 }
 
