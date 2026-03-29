@@ -109,8 +109,14 @@ class _BusinessPaymentsScreenState
                 ],
               );
             },
-            loading: () => const SizedBox.shrink(),
-            error: (e, st) => const SizedBox.shrink(),
+            loading: () => const Padding(
+              padding: EdgeInsets.all(16),
+              child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))),
+            ),
+            error: (e, _) => Padding(
+              padding: const EdgeInsets.all(16),
+              child: Center(child: Text('Error al cargar', style: TextStyle(color: Colors.red.shade400, fontSize: 13))),
+            ),
           ),
 
           // Revenue summary
@@ -150,8 +156,14 @@ class _BusinessPaymentsScreenState
                 ),
               ),
             ),
-            loading: () => const SizedBox.shrink(),
-            error: (e, st) => const SizedBox.shrink(),
+            loading: () => const Padding(
+              padding: EdgeInsets.all(16),
+              child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))),
+            ),
+            error: (e, _) => Padding(
+              padding: const EdgeInsets.all(16),
+              child: Center(child: Text('Error al cargar', style: TextStyle(color: Colors.red.shade400, fontSize: 13))),
+            ),
           ),
 
           const SizedBox(height: AppConstants.paddingLG),

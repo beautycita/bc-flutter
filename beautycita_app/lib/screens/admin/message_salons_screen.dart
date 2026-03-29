@@ -197,7 +197,10 @@ class _MessageSalonsScreenState extends ConsumerState<MessageSalonsScreen> {
                   );
                 },
                 loading: () => const SizedBox(width: 200, height: 40, child: LinearProgressIndicator()),
-                error: (_, _) => const SizedBox.shrink(),
+                error: (e, _) => Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: Text('Error', style: TextStyle(color: Colors.red.shade400, fontSize: 12)),
+                ),
               ),
               FilterChip(
                 label: Text('WA verificado', style: GoogleFonts.nunito(fontSize: 12)),

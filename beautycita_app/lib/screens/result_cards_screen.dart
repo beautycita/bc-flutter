@@ -535,7 +535,7 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
 
     String staffText = staff.name;
     if (staff.experienceYears != null && staff.experienceYears! > 0) {
-      staffText += ' · ${staff.experienceYears} anos de experiencia';
+      staffText += ' · ${staff.experienceYears} años de experiencia';
     }
 
     return Text(
@@ -640,7 +640,7 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
     return Row(
       children: [
         Text(
-          '\$${result.service.price?.toStringAsFixed(0) ?? '—'} ${result.service.currency}',
+          '\$${result.service.price?.toStringAsFixed(0) ?? '—'} ${result.service.currency ?? 'MXN'}',
           style: GoogleFonts.poppins(
             fontSize: 20,
             fontWeight: FontWeight.w700,
