@@ -33,7 +33,7 @@ class UserPrefsState {
     this.qualitySpeed = 0.7,
     this.exploreLoyalty = 0.3,
     this.onboardingComplete = false,
-    this.reduceAnimations = false,
+    this.reduceAnimations = true,
   });
 
   UserPrefsState copyWith({

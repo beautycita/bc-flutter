@@ -149,8 +149,8 @@ class _CircleGlowPainter extends CustomPainter {
 /// Main navigation transition
 Route<T> gradientSweepRoute<T>(Widget page) {
   return PageRouteBuilder<T>(
-    transitionDuration: const Duration(milliseconds: 1200),
-    reverseTransitionDuration: const Duration(milliseconds: 100),
+    transitionDuration: const Duration(milliseconds: 250),
+    reverseTransitionDuration: const Duration(milliseconds: 250),
     pageBuilder: (context, animation, secondaryAnimation) => page,
     transitionsBuilder: _doubleRadialBurst,
   );
@@ -159,8 +159,8 @@ Route<T> gradientSweepRoute<T>(Widget page) {
 /// Detail views
 Route<T> radialBurstRoute<T>(Widget page, {Offset? origin}) {
   return PageRouteBuilder<T>(
-    transitionDuration: const Duration(milliseconds: 1200),
-    reverseTransitionDuration: const Duration(milliseconds: 100),
+    transitionDuration: const Duration(milliseconds: 250),
+    reverseTransitionDuration: const Duration(milliseconds: 250),
     pageBuilder: (context, animation, secondaryAnimation) => page,
     transitionsBuilder: _doubleRadialBurst,
   );
@@ -169,8 +169,8 @@ Route<T> radialBurstRoute<T>(Widget page, {Offset? origin}) {
 /// Tab/filter changes
 Route<T> diagonalSlashRoute<T>(Widget page) {
   return PageRouteBuilder<T>(
-    transitionDuration: const Duration(milliseconds: 1200),
-    reverseTransitionDuration: const Duration(milliseconds: 100),
+    transitionDuration: const Duration(milliseconds: 250),
+    reverseTransitionDuration: const Duration(milliseconds: 250),
     pageBuilder: (context, animation, secondaryAnimation) => page,
     transitionsBuilder: _doubleRadialBurst,
   );
