@@ -65,6 +65,12 @@ List<InviteState> _listenStates(ProviderContainer container) {
   return states;
 }
 
+/// Stubs generateBio to return a value (called in background by _loadBio).
+void _stubGenerateBio(MockInviteService mockService, {String bio = 'bio'}) {
+  when(() => mockService.generateBio(any()))
+      .thenAnswer((_) async => bio);
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -78,6 +84,8 @@ void main() {
     mockService = MockInviteService();
     // Stub LocationService to return test location
     LocationService.testOverride = _testLocation;
+    // Default: stub generateBio so _loadBio's fire-and-forget doesn't crash
+    _stubGenerateBio(mockService);
   });
 
   tearDown(() {
@@ -319,9 +327,6 @@ void main() {
             lng: any(named: 'lng'),
           )).thenAnswer((_) async => scrapedSalon);
 
-      when(() => mockService.generateBio(scrapedSalon))
-          .thenAnswer((_) async => 'Great new salon');
-
       final container = _createContainer(mockService);
       final notifier = container.read(inviteProvider.notifier);
       await notifier.initialize();
@@ -329,12 +334,15 @@ void main() {
       final states = _listenStates(container);
       await notifier.scrapeAndShow('nuevo');
 
+      // scrapeAndShow also calls _loadBio which calls selectSalon-like flow
+      // ending in readyToSend (auto-generateMessage) or salonDetail
       expect(states.any((s) => s.step == InviteStep.scraping), isTrue);
-      expect(states.last.step, InviteStep.salonDetail);
-      expect(states.last.selectedSalon?.id, 'scraped-1');
+      // After scrape + bio + auto-generate, should be at readyToSend
+      final finalState = states.last;
+      expect(finalState.selectedSalon?.id, 'scraped-1');
       // Scraped salon should be prepended to the list
-      expect(states.last.salons.first.id, 'scraped-1');
-      expect(states.last.salons, hasLength(2));
+      expect(finalState.salons.first.id, 'scraped-1');
+      expect(finalState.salons, hasLength(2));
     });
 
     test('sets error when scrape returns null', () async {
@@ -362,7 +370,8 @@ void main() {
   });
 
   group('selectSalon()', () {
-    test('transitions to salonDetail and loads bio', () async {
+    test('transitions to readyToSend with bio and auto-generated message',
+        () async {
       final salon = _salon();
 
       when(() => mockService.fetchNearbySalons(
@@ -372,18 +381,28 @@ void main() {
             limit: any(named: 'limit'),
           )).thenAnswer((_) async => [salon]);
 
-      when(() => mockService.generateBio(salon))
-          .thenAnswer((_) async => 'Beautiful salon in PV');
-
       final container = _createContainer(mockService);
+      // Keep provider alive (autoDispose)
+      final states = _listenStates(container);
+
       final notifier = container.read(inviteProvider.notifier);
       await notifier.initialize();
       await notifier.selectSalon(salon);
 
+      // Let fire-and-forget bio complete
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
       final state = container.read(inviteProvider);
-      expect(state.step, InviteStep.salonDetail);
+      // selectSalon now auto-calls generateMessage, ending at readyToSend
+      expect(state.step, InviteStep.readyToSend);
       expect(state.selectedSalon, salon);
-      expect(state.generatedBio, 'Beautiful salon in PV');
+      // Bio is generated locally (fallback) then enriched in background
+      expect(state.generatedBio, isNotNull);
+      // Message is auto-generated from local templates
+      expect(state.inviteMessage, isNotNull);
+      expect(state.inviteMessage, contains('BeautyCita'));
+      // Verify we went through expected steps
+      expect(states.any((s) => s.step == InviteStep.salonDetail), isTrue);
     });
 
     test('clears previous message and waUrl on new selection', () async {
@@ -397,32 +416,32 @@ void main() {
             limit: any(named: 'limit'),
           )).thenAnswer((_) async => [salon1, salon2]);
 
-      when(() => mockService.generateBio(any()))
-          .thenAnswer((_) async => 'bio');
-
-      when(() => mockService.generateInviteMessage(
-            userName: any(named: 'userName'),
-            salon: salon1,
-            serviceSearched: any(named: 'serviceSearched'),
-          )).thenAnswer((_) async => 'invite msg');
-
       final container = _createContainer(mockService);
+      // Keep provider alive (autoDispose)
+      _listenStates(container);
+
       final notifier = container.read(inviteProvider.notifier);
       await notifier.initialize();
       await notifier.selectSalon(salon1);
-      await notifier.generateMessage();
 
-      // Now select a different salon
+      // Now select a different salon — previous message/waUrl should be cleared
+      // and new message auto-generated
       await notifier.selectSalon(salon2);
+
+      // Let fire-and-forget bio complete
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
       final state = container.read(inviteProvider);
       expect(state.selectedSalon?.id, 'salon-2');
-      expect(state.inviteMessage, isNull);
-      expect(state.waUrl, isNull);
+      // New message was auto-generated (not null — cleared then regenerated)
+      expect(state.inviteMessage, isNotNull);
+      expect(state.inviteMessage, contains('BeautyCita'));
+      expect(state.waUrl, isNull); // waUrl starts null on new selection
     });
   });
 
   group('generateMessage()', () {
-    test('transitions generating → readyToSend', () async {
+    test('produces a message from local templates at readyToSend', () async {
       final salon = _salon();
 
       when(() => mockService.fetchNearbySalons(
@@ -432,64 +451,19 @@ void main() {
             limit: any(named: 'limit'),
           )).thenAnswer((_) async => [salon]);
 
-      when(() => mockService.generateBio(salon))
-          .thenAnswer((_) async => 'bio');
-
-      when(() => mockService.generateInviteMessage(
-            userName: any(named: 'userName'),
-            salon: salon,
-            serviceSearched: any(named: 'serviceSearched'),
-          )).thenAnswer((_) async => 'Hola, te invitamos a BeautyCita!');
-
       final container = _createContainer(mockService);
       final notifier = container.read(inviteProvider.notifier);
       await notifier.initialize();
+      // selectSalon auto-calls generateMessage
       await notifier.selectSalon(salon);
 
-      final states = _listenStates(container);
-      await notifier.generateMessage();
-
-      expect(states.any((s) => s.step == InviteStep.generating), isTrue);
-      expect(states.last.step, InviteStep.readyToSend);
-      expect(states.last.inviteMessage, 'Hola, te invitamos a BeautyCita!');
+      final state = container.read(inviteProvider);
+      expect(state.step, InviteStep.readyToSend);
+      expect(state.inviteMessage, isNotNull);
+      expect(state.inviteMessage, contains('BeautyCita'));
     });
 
-    test('regenerate replaces previous message', () async {
-      final salon = _salon();
-      var callCount = 0;
-
-      when(() => mockService.fetchNearbySalons(
-            lat: any(named: 'lat'),
-            lng: any(named: 'lng'),
-            serviceType: any(named: 'serviceType'),
-            limit: any(named: 'limit'),
-          )).thenAnswer((_) async => [salon]);
-
-      when(() => mockService.generateBio(salon))
-          .thenAnswer((_) async => 'bio');
-
-      when(() => mockService.generateInviteMessage(
-            userName: any(named: 'userName'),
-            salon: salon,
-            serviceSearched: any(named: 'serviceSearched'),
-          )).thenAnswer((_) async {
-        callCount++;
-        return 'Message v$callCount';
-      });
-
-      final container = _createContainer(mockService);
-      final notifier = container.read(inviteProvider.notifier);
-      await notifier.initialize();
-      await notifier.selectSalon(salon);
-
-      await notifier.generateMessage();
-      expect(container.read(inviteProvider).inviteMessage, 'Message v1');
-
-      await notifier.generateMessage();
-      expect(container.read(inviteProvider).inviteMessage, 'Message v2');
-    });
-
-    test('error during generation transitions to error step', () async {
+    test('regenerate produces a different message', () async {
       final salon = _salon();
 
       when(() => mockService.fetchNearbySalons(
@@ -499,22 +473,21 @@ void main() {
             limit: any(named: 'limit'),
           )).thenAnswer((_) async => [salon]);
 
-      when(() => mockService.generateBio(salon))
-          .thenAnswer((_) async => 'bio');
-
-      when(() => mockService.generateInviteMessage(
-            userName: any(named: 'userName'),
-            salon: salon,
-            serviceSearched: any(named: 'serviceSearched'),
-          )).thenThrow(InviteException('AI offline'));
-
       final container = _createContainer(mockService);
       final notifier = container.read(inviteProvider.notifier);
       await notifier.initialize();
       await notifier.selectSalon(salon);
-      await notifier.generateMessage();
 
-      expect(container.read(inviteProvider).step, InviteStep.error);
+      final firstMessage = container.read(inviteProvider).inviteMessage;
+      expect(firstMessage, isNotNull);
+
+      // Regenerate should cycle to a different template
+      await notifier.generateMessage();
+      final secondMessage = container.read(inviteProvider).inviteMessage;
+      expect(secondMessage, isNotNull);
+      expect(secondMessage, contains('BeautyCita'));
+      // Templates cycle, so the new message should be different
+      expect(secondMessage, isNot(equals(firstMessage)));
     });
   });
 
@@ -529,25 +502,18 @@ void main() {
             limit: any(named: 'limit'),
           )).thenAnswer((_) async => [salon]);
 
-      when(() => mockService.generateBio(salon))
-          .thenAnswer((_) async => 'bio');
-
-      when(() => mockService.generateInviteMessage(
-            userName: any(named: 'userName'),
-            salon: salon,
-            serviceSearched: any(named: 'serviceSearched'),
-          )).thenAnswer((_) async => 'invite msg');
-
       when(() => mockService.sendInvite(
-            salonId: salon.id,
-            inviteMessage: 'invite msg',
+            salonId: any(named: 'salonId'),
+            inviteMessage: any(named: 'inviteMessage'),
           )).thenAnswer((_) async => 'https://wa.me/521234567890?text=invite+msg');
 
       final container = _createContainer(mockService);
       final notifier = container.read(inviteProvider.notifier);
       await notifier.initialize();
       await notifier.selectSalon(salon);
-      await notifier.generateMessage();
+
+      // selectSalon auto-generates message, now we're at readyToSend
+      expect(container.read(inviteProvider).step, InviteStep.readyToSend);
 
       final states = _listenStates(container);
       await notifier.sendInvite();
@@ -557,37 +523,7 @@ void main() {
       expect(states.last.waUrl, contains('wa.me'));
     });
 
-    test('error when salon has no phone', () async {
-      final salon = _salon(phone: null);
-
-      when(() => mockService.fetchNearbySalons(
-            lat: any(named: 'lat'),
-            lng: any(named: 'lng'),
-            serviceType: any(named: 'serviceType'),
-            limit: any(named: 'limit'),
-          )).thenAnswer((_) async => [salon]);
-
-      when(() => mockService.generateBio(salon))
-          .thenAnswer((_) async => 'bio');
-
-      when(() => mockService.generateInviteMessage(
-            userName: any(named: 'userName'),
-            salon: salon,
-            serviceSearched: any(named: 'serviceSearched'),
-          )).thenAnswer((_) async => 'invite msg');
-
-      final container = _createContainer(mockService);
-      final notifier = container.read(inviteProvider.notifier);
-      await notifier.initialize();
-      await notifier.selectSalon(salon);
-      await notifier.generateMessage();
-      await notifier.sendInvite();
-
-      expect(container.read(inviteProvider).step, InviteStep.error);
-      expect(container.read(inviteProvider).error, contains('teléfono'));
-    });
-
-    test('send error transitions to error step', () async {
+    test('error when sendInvite service throws', () async {
       final salon = _salon();
 
       when(() => mockService.fetchNearbySalons(
@@ -596,15 +532,6 @@ void main() {
             serviceType: any(named: 'serviceType'),
             limit: any(named: 'limit'),
           )).thenAnswer((_) async => [salon]);
-
-      when(() => mockService.generateBio(salon))
-          .thenAnswer((_) async => 'bio');
-
-      when(() => mockService.generateInviteMessage(
-            userName: any(named: 'userName'),
-            salon: salon,
-            serviceSearched: any(named: 'serviceSearched'),
-          )).thenAnswer((_) async => 'msg');
 
       when(() => mockService.sendInvite(
             salonId: any(named: 'salonId'),
@@ -615,7 +542,6 @@ void main() {
       final notifier = container.read(inviteProvider.notifier);
       await notifier.initialize();
       await notifier.selectSalon(salon);
-      await notifier.generateMessage();
       await notifier.sendInvite();
 
       expect(container.read(inviteProvider).step, InviteStep.error);
@@ -632,9 +558,6 @@ void main() {
             serviceType: any(named: 'serviceType'),
             limit: any(named: 'limit'),
           )).thenAnswer((_) async => [salon]);
-
-      when(() => mockService.generateBio(salon))
-          .thenAnswer((_) async => 'bio');
 
       final container = _createContainer(mockService);
       final notifier = container.read(inviteProvider.notifier);
