@@ -98,6 +98,17 @@ Future<void> main() async {
       options.enableAutoNativeBreadcrumbs = true;
       options.anrEnabled = true;
       options.anrTimeoutInterval = const Duration(seconds: 5);
+      // Do not send PII (emails, user IPs, etc.) to Sentry
+      options.sendDefaultPii = false;
+      options.beforeSend = (SentryEvent event, Hint hint) {
+        // Strip user PII from events — keep only anonymous id
+        if (event.user != null) {
+          return event.copyWith(
+            user: SentryUser(id: event.user?.id),
+          );
+        }
+        return event;
+      };
     },
     appRunner: () => runApp(
       const ProviderScope(

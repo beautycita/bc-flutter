@@ -12,6 +12,69 @@ import '../models/chat_message.dart';
 class AphroditeService {
   static const _uuid = Uuid();
 
+  /// Max file size for image uploads (10 MB).
+  static const int _maxImageBytes = 10 * 1024 * 1024;
+
+  /// Max length for style prompts sent to AI.
+  static const int _maxStylePromptLength = 200;
+
+  /// JPEG magic bytes (FF D8).
+  static const List<int> _jpegMagic = [0xFF, 0xD8];
+
+  /// PNG magic bytes (89 50 4E 47).
+  static const List<int> _pngMagic = [0x89, 0x50, 0x4E, 0x47];
+
+  /// Validates that [bytes] is a valid image (JPEG or PNG) under the size limit.
+  /// Throws [AphroditeException] on failure.
+  static void _validateImage(Uint8List bytes) {
+    if (bytes.isEmpty) {
+      throw AphroditeException('La imagen esta vacia');
+    }
+    if (bytes.length > _maxImageBytes) {
+      throw AphroditeException(
+        'La imagen excede el limite de 10 MB (${(bytes.length / 1024 / 1024).toStringAsFixed(1)} MB)',
+      );
+    }
+    // Check magic bytes
+    final isJpeg = bytes.length >= 2 &&
+        bytes[0] == _jpegMagic[0] &&
+        bytes[1] == _jpegMagic[1];
+    final isPng = bytes.length >= 4 &&
+        bytes[0] == _pngMagic[0] &&
+        bytes[1] == _pngMagic[1] &&
+        bytes[2] == _pngMagic[2] &&
+        bytes[3] == _pngMagic[3];
+    if (!isJpeg && !isPng) {
+      throw AphroditeException('Formato de imagen no soportado. Usa JPEG o PNG.');
+    }
+  }
+
+  /// Regex allowing alphanumeric, spaces, basic punctuation, and Spanish characters.
+  static final RegExp _allowedPromptChars = RegExp(
+    r"^[a-zA-Z0-9\sáéíóúüñÁÉÍÓÚÜÑ.,;:!?¡¿()\-_/#+@&%']+$",
+  );
+
+  /// Sanitizes a style prompt: trims, limits length, strips HTML/script tags,
+  /// and allows only safe characters (alphanumeric + basic punctuation + Spanish).
+  static String _sanitizeStylePrompt(String raw) {
+    // Strip HTML/script tags
+    var cleaned = raw.replaceAll(RegExp(r'<[^>]*>'), '');
+    // Trim and limit length
+    cleaned = cleaned.trim();
+    if (cleaned.length > _maxStylePromptLength) {
+      cleaned = cleaned.substring(0, _maxStylePromptLength);
+    }
+    // Reject if it contains non-allowed characters
+    if (cleaned.isNotEmpty && !_allowedPromptChars.hasMatch(cleaned)) {
+      // Remove disallowed characters instead of rejecting entirely
+      cleaned = cleaned.replaceAll(
+        RegExp(r'[^a-zA-Z0-9\sáéíóúüñÁÉÍÓÚÜÑ.,;:!?¡¿()\-_/#+@&%\x27"]'),
+        '',
+      );
+    }
+    return cleaned;
+  }
+
   /// Sends a text message to Aphrodite.
   /// The edge function handles thread creation, message saving, and AI response.
   /// Returns the AI response message.
@@ -61,6 +124,15 @@ class AphroditeService {
     String stylePrompt, {
     String toolType = 'hair_color',
   }) async {
+    // Validate image size and format before uploading
+    _validateImage(imageBytes);
+
+    // Sanitize the style prompt
+    stylePrompt = _sanitizeStylePrompt(stylePrompt);
+    if (stylePrompt.isEmpty) {
+      throw AphroditeException('El prompt de estilo no puede estar vacio');
+    }
+
     final client = SupabaseClientService.client;
     final now = DateTime.now().toUtc();
 
