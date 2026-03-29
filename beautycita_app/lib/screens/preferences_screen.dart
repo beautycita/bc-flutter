@@ -228,7 +228,7 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen>
             onChanged: (v) {
               final next = v < 0.33 ? 'budget' : v > 0.66 ? 'premium' : 'moderate';
               ref.read(userPrefsProvider.notifier).setPriceComfort(next);
-              _shiftGradientColor();
+
             },
           ),
           const SizedBox(height: AppConstants.paddingSM),
@@ -246,7 +246,7 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen>
               // Snap to 0, 0.5, 1.0
               final snapped = v < 0.25 ? 0.0 : v < 0.75 ? 0.5 : 1.0;
               ref.read(userPrefsProvider.notifier).setQualitySpeed(snapped);
-              _shiftGradientColor();
+
             },
           ),
           const SizedBox(height: AppConstants.paddingSM),
@@ -263,7 +263,7 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen>
             onChanged: (v) {
               final snapped = v < 0.25 ? 0.0 : v < 0.75 ? 0.5 : 1.0;
               ref.read(userPrefsProvider.notifier).setExploreLoyalty(snapped);
-              _shiftGradientColor();
+
             },
           ),
           const SizedBox(height: AppConstants.paddingSM),
@@ -282,7 +282,7 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen>
             onChanged: (v) {
               final idx = v.round().clamp(0, _radiusStops.length - 1);
               ref.read(userPrefsProvider.notifier).setSearchRadius(_radiusStops[idx]);
-              _shiftGradientColor();
+
             },
           ),
         ],
@@ -921,16 +921,6 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen>
     }
   }
 
-  // ── Color shift on preference change ──
-
-  void _shiftGradientColor() {
-    final rng = math.Random();
-    final hue = rng.nextDouble() * 360;
-    // Keep saturation high for vibrant colors
-    final sat = 0.7 + (rng.nextDouble() * 0.3); // 0.7-1.0
-    ref.read(themeProvider.notifier).setCustomColorLive(hue, sat);
-    ref.read(themeProvider.notifier).saveCustomColor();
-  }
 
   // ── Helpers ──
 
