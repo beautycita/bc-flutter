@@ -103,6 +103,35 @@ class MediaItem {
 
 /// Service for media operations: save to gallery, share, delete, CRUD on user_media.
 class MediaService {
+  /// Max upload size (10 MB).
+  static const int _maxUploadBytes = 10 * 1024 * 1024;
+
+  /// JPEG magic bytes (FF D8).
+  static const List<int> _jpegMagic = [0xFF, 0xD8];
+
+  /// PNG magic bytes (89 50 4E 47).
+  static const List<int> _pngMagic = [0x89, 0x50, 0x4E, 0x47];
+
+  /// Validates that [bytes] is a supported image under the size limit.
+  static void _validateUpload(Uint8List bytes) {
+    if (bytes.isEmpty) throw Exception('El archivo esta vacio');
+    if (bytes.length > _maxUploadBytes) {
+      throw Exception(
+        'El archivo excede el limite de 10 MB (${(bytes.length / 1024 / 1024).toStringAsFixed(1)} MB)',
+      );
+    }
+    final isJpeg = bytes.length >= 2 &&
+        bytes[0] == _jpegMagic[0] &&
+        bytes[1] == _jpegMagic[1];
+    final isPng = bytes.length >= 4 &&
+        bytes[0] == _pngMagic[0] &&
+        bytes[1] == _pngMagic[1] &&
+        bytes[2] == _pngMagic[2] &&
+        bytes[3] == _pngMagic[3];
+    if (!isJpeg && !isPng) {
+      throw Exception('Formato no soportado. Usa JPEG o PNG.');
+    }
+  }
   /// Save a LightX result to user_media and device gallery.
   /// Returns the created MediaItem.
   Future<MediaItem?> saveLightXResult({
@@ -213,6 +242,10 @@ class MediaService {
     String? description,
   }) async {
     if (kDebugMode) debugPrint('MediaService.uploadMedia: called with ${bytes.length} bytes, section=$section');
+
+    // Validate file size and format before uploading
+    _validateUpload(bytes);
+
     if (!SupabaseClientService.isInitialized) {
       if (kDebugMode) debugPrint('MediaService.uploadMedia: Supabase not initialized');
       return null;

@@ -5,6 +5,22 @@ import '../models/chat_message.dart';
 import '../services/aphrodite_service.dart';
 import '../services/supabase_client.dart';
 
+/// Max chat message length (2000 chars). Messages longer than this are truncated.
+const int _maxMessageLength = 2000;
+
+/// Sanitizes a chat message: strips HTML tags and limits length.
+String _sanitizeMessage(String raw) {
+  // Strip HTML/script tags
+  var cleaned = raw.replaceAll(RegExp(r'<[^>]*>'), '');
+  // Trim whitespace
+  cleaned = cleaned.trim();
+  // Limit length
+  if (cleaned.length > _maxMessageLength) {
+    cleaned = cleaned.substring(0, _maxMessageLength);
+  }
+  return cleaned;
+}
+
 /// Total unread count across all non-archived threads for the current user.
 final totalUnreadProvider = StreamProvider<int>((ref) {
   if (!SupabaseClientService.isInitialized) return Stream.value(0);
@@ -94,6 +110,8 @@ class SendMessageNotifier extends StateNotifier<AsyncValue<ChatMessage?>> {
   SendMessageNotifier(this._service) : super(const AsyncValue.data(null));
 
   Future<ChatMessage?> send(String threadId, String text) async {
+    text = _sanitizeMessage(text);
+    if (text.isEmpty) return null;
     state = const AsyncValue.loading();
     try {
       final msg = await _service.sendMessage(threadId, text);
@@ -166,6 +184,8 @@ class SendSupportMessageNotifier extends StateNotifier<AsyncValue<void>> {
   SendSupportMessageNotifier() : super(const AsyncValue.data(null));
 
   Future<bool> send(String threadId, String message) async {
+    message = _sanitizeMessage(message);
+    if (message.isEmpty) return false;
     state = const AsyncValue.loading();
     try {
       final client = SupabaseClientService.client;
@@ -212,6 +232,8 @@ class SendSalonMessageNotifier extends StateNotifier<AsyncValue<void>> {
   SendSalonMessageNotifier() : super(const AsyncValue.data(null));
 
   Future<bool> send(String threadId, String message) async {
+    message = _sanitizeMessage(message);
+    if (message.isEmpty) return false;
     state = const AsyncValue.loading();
     try {
       final client = SupabaseClientService.client;
@@ -256,6 +278,8 @@ class SendErosMessageNotifier extends StateNotifier<AsyncValue<void>> {
   SendErosMessageNotifier() : super(const AsyncValue.data(null));
 
   Future<bool> send(String threadId, String message) async {
+    message = _sanitizeMessage(message);
+    if (message.isEmpty) return false;
     state = const AsyncValue.loading();
     try {
       final client = SupabaseClientService.client;
