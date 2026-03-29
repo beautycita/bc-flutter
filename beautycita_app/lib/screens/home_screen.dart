@@ -6,6 +6,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/category.dart';
 import '../providers/category_provider.dart';
@@ -15,6 +16,7 @@ import '../providers/chat_provider.dart';
 import '../config/constants.dart';
 import '../config/theme_extension.dart';
 import '../services/gesture_exclusion_service.dart';
+import '../services/notification_service.dart';
 import '../services/updater_service.dart';
 import '../themes/category_icons.dart';
 import '../themes/theme_variant.dart';
@@ -53,12 +55,35 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   bool _exclusionSet = false;
   bool _updateDialogShown = false;
+  bool _showPushPrompt = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance
         .addPostFrameCallback((_) => _showApkUpdateIfNeeded());
+    _checkPushPrompt();
+  }
+
+  Future<void> _checkPushPrompt() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool('push_prompt_shown') == true) return;
+    if (mounted) setState(() => _showPushPrompt = true);
+  }
+
+  Future<void> _onActivatePush() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('push_prompt_shown', true);
+    try {
+      await NotificationService().initialize();
+    } catch (_) {}
+    if (mounted) setState(() => _showPushPrompt = false);
+  }
+
+  Future<void> _dismissPushPrompt() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('push_prompt_shown', true);
+    if (mounted) setState(() => _showPushPrompt = false);
   }
 
   void _showApkUpdateIfNeeded() {
@@ -400,6 +425,71 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
             ),
           ),
+
+          // Push notification prompt (one-time)
+          if (_showPushPrompt)
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppConstants.paddingMD,
+              ),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppConstants.paddingMD,
+                  vertical: AppConstants.paddingSM,
+                ),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFEC4899), Color(0xFF9333EA)],
+                  ),
+                  borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.notifications_active_rounded,
+                        color: Colors.white, size: 22),
+                    const SizedBox(width: AppConstants.paddingSM),
+                    Expanded(
+                      child: Text(
+                        'Activa notificaciones para no perder tus citas',
+                        style: GoogleFonts.nunito(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppConstants.paddingSM),
+                    GestureDetector(
+                      onTap: _onActivatePush,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(AppConstants.radiusFull),
+                        ),
+                        child: Text(
+                          'Activar',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF9333EA),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    GestureDetector(
+                      onTap: _dismissPushPrompt,
+                      child: const Icon(Icons.close_rounded,
+                          color: Colors.white70, size: 20),
+                    ),
+                  ],
+                ),
+              ),
+            ),
 
           // Category Grid
           Expanded(
