@@ -150,7 +150,7 @@ class _CircleGlowPainter extends CustomPainter {
 Route<T> gradientSweepRoute<T>(Widget page) {
   return PageRouteBuilder<T>(
     transitionDuration: const Duration(milliseconds: 1200),
-    reverseTransitionDuration: const Duration(milliseconds: 300),
+    reverseTransitionDuration: const Duration(milliseconds: 100),
     pageBuilder: (context, animation, secondaryAnimation) => page,
     transitionsBuilder: _doubleRadialBurst,
   );
@@ -160,7 +160,7 @@ Route<T> gradientSweepRoute<T>(Widget page) {
 Route<T> radialBurstRoute<T>(Widget page, {Offset? origin}) {
   return PageRouteBuilder<T>(
     transitionDuration: const Duration(milliseconds: 1200),
-    reverseTransitionDuration: const Duration(milliseconds: 300),
+    reverseTransitionDuration: const Duration(milliseconds: 100),
     pageBuilder: (context, animation, secondaryAnimation) => page,
     transitionsBuilder: _doubleRadialBurst,
   );
@@ -170,7 +170,7 @@ Route<T> radialBurstRoute<T>(Widget page, {Offset? origin}) {
 Route<T> diagonalSlashRoute<T>(Widget page) {
   return PageRouteBuilder<T>(
     transitionDuration: const Duration(milliseconds: 1200),
-    reverseTransitionDuration: const Duration(milliseconds: 300),
+    reverseTransitionDuration: const Duration(milliseconds: 100),
     pageBuilder: (context, animation, secondaryAnimation) => page,
     transitionsBuilder: _doubleRadialBurst,
   );
