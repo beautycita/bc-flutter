@@ -34,6 +34,11 @@ class _QrScanScreenState extends State<QrScanScreen> with SingleTickerProviderSt
     super.dispose();
   }
 
+  static final _uuidRegex = RegExp(
+    r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+    caseSensitive: false,
+  );
+
   /// Parse Cita Express walk-in QR: https://beautycita.com/cita-express/{bizId}
   String? _parseExpressQr(String rawValue) {
     final uri = Uri.tryParse(rawValue);
@@ -41,11 +46,11 @@ class _QrScanScreenState extends State<QrScanScreen> with SingleTickerProviderSt
     // Handle both https://beautycita.com/cita-express/ID and beautycita://cita-express/ID
     if (uri.path.startsWith('/cita-express/')) {
       final bizId = uri.path.replaceFirst('/cita-express/', '');
-      if (bizId.isNotEmpty) return bizId;
+      if (bizId.isNotEmpty && _uuidRegex.hasMatch(bizId)) return bizId;
     }
     if (uri.scheme == 'beautycita' && uri.host == 'cita-express') {
       final bizId = uri.pathSegments.isNotEmpty ? uri.pathSegments.first : '';
-      if (bizId.isNotEmpty) return bizId;
+      if (bizId.isNotEmpty && _uuidRegex.hasMatch(bizId)) return bizId;
     }
     return null;
   }

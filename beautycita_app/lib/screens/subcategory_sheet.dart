@@ -9,6 +9,7 @@ import '../models/category.dart';
 import '../config/constants.dart';
 import '../providers/booking_flow_provider.dart';
 import '../providers/search_history_provider.dart';
+import '../services/toast_service.dart';
 
 String _getCategoryQuestion(String categoryId) {
   switch (categoryId) {
@@ -189,8 +190,8 @@ class _SubcategoryPillState extends State<_SubcategoryPill> {
   bool _isPressed = false;
 
   bool _hasItems() {
-    return widget.subcategory.items != null &&
-        widget.subcategory.items!.isNotEmpty;
+    final items = widget.subcategory.items;
+    return items != null && items.isNotEmpty;
   }
 
   void _handleTap(BuildContext context) {
@@ -362,9 +363,10 @@ class _ServiceItemsSheet extends StatelessWidget {
                 child: ListView.builder(
                   controller: scrollController,
                   padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-                  itemCount: subcategory.items?.length ?? 0,
+                  itemCount: (subcategory.items ?? []).length,
                   itemBuilder: (context, index) {
-                    final item = subcategory.items![index];
+                    final items = subcategory.items ?? [];
+                    final item = items[index];
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 8),
                       child: _ServiceItemTile(
@@ -413,13 +415,19 @@ class _ServiceItemTileState extends ConsumerState<_ServiceItemTile> {
   bool _isPressed = false;
 
   void _handleTap(BuildContext context) {
+    final serviceType = widget.item.serviceType;
+    if (serviceType.isEmpty) {
+      ToastService.showWarning('Servicio no disponible');
+      return;
+    }
+
     Navigator.of(context).pop();
     Navigator.of(context).pop();
     context.push('/book');
 
     ref
         .read(bookingFlowProvider.notifier)
-        .selectService(widget.item.serviceType, widget.item.nameEs);
+        .selectService(serviceType, widget.item.nameEs);
 
     // Save to search history
     ref.read(searchHistoryProvider.notifier).addEntry(
