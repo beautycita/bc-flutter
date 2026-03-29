@@ -450,7 +450,9 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
       ToastService.showSuccess('Cita cancelada');
       if (mounted) {
         await showShredderTransition(context, onComplete: () {
-          if (mounted) context.pop();
+          if (mounted) {
+            _showCancellationConfirm(booking);
+          }
         });
       }
     } catch (e, stack) {
@@ -458,6 +460,134 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
     } finally {
       if (mounted) setState(() => _isCancelling = false);
     }
+  }
+
+  void _showCancellationConfirm(Booking booking) {
+    final ref8 = booking.id.length >= 8
+        ? booking.id.substring(0, 8).toUpperCase()
+        : booking.id.toUpperCase();
+    final dateStr = _formatDate(booking.scheduledAt);
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppConstants.radiusLG),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(AppConstants.paddingLG),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.cancel_rounded,
+                  size: 36,
+                  color: Colors.red.shade400,
+                ),
+              ),
+              const SizedBox(height: AppConstants.paddingMD),
+              Text(
+                'Cita Cancelada',
+                style: Theme.of(ctx).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: Colors.red.shade600,
+                    ),
+              ),
+              const SizedBox(height: AppConstants.paddingMD),
+              _confirmRow(ctx, 'Referencia', ref8),
+              _confirmRow(ctx, 'Servicio', booking.serviceName),
+              if (booking.providerName != null)
+                _confirmRow(ctx, 'Salon', booking.providerName!),
+              _confirmRow(ctx, 'Fecha original', dateStr),
+              const SizedBox(height: AppConstants.paddingMD),
+              Row(
+                children: [
+                  Icon(Icons.chat_bubble_outline,
+                      size: 16,
+                      color: Theme.of(ctx)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.4)),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Enviamos confirmacion por WhatsApp',
+                      style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(ctx)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.5),
+                          ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppConstants.paddingLG),
+              SizedBox(
+                width: double.infinity,
+                height: AppConstants.minTouchHeight,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(ctx).pop(); // close dialog
+                    if (mounted) context.pop(); // pop booking detail
+                  },
+                  style: ElevatedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius:
+                          BorderRadius.circular(AppConstants.radiusLG),
+                    ),
+                  ),
+                  child: const Text(
+                    'Cerrar',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _confirmRow(BuildContext ctx, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 110,
+            child: Text(
+              label,
+              style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(ctx)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.5),
+                    fontWeight: FontWeight.w500,
+                  ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   // ── Build ──
