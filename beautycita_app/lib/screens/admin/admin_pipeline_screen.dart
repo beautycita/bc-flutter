@@ -186,6 +186,14 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
   bool _selectionMode = false;
   bool _metricsExpanded = false;
 
+  // Location filters
+  String? _countryFilter;
+  String? _stateFilter;
+  String? _cityFilter;
+  List<String> _countries = [];
+  List<String> _states = [];
+  List<String> _cities = [];
+
   bool get _hasGeoFilter => _pinLat != null && _pinLng != null;
 
   /// Stable string key for the family provider (Map has reference equality,
@@ -203,6 +211,9 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
     if (_rpStatusFilter != null) parts.add('rps:$_rpStatusFilter');
     if (_assignedRpId != null) parts.add('rp:$_assignedRpId');
     if (_hasGeoFilter) parts.add('geo:$_pinLat,$_pinLng,$_radiusKm');
+    if (_countryFilter != null) parts.add('country:$_countryFilter');
+    if (_stateFilter != null) parts.add('state:$_stateFilter');
+    if (_cityFilter != null) parts.add('city:$_cityFilter');
     return parts.join('|');
   }
 
@@ -221,13 +232,104 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
         if (_pinLat != null) 'p_pin_lat': _pinLat,
         if (_pinLng != null) 'p_pin_lng': _pinLng,
         if (_hasGeoFilter) 'p_radius_km': _radiusKm,
+        if (_cityFilter != null) 'city_filter': _cityFilter,
+        if (_countryFilter != null) 'country_filter': _countryFilter,
+        if (_stateFilter != null) 'state_filter': _stateFilter,
       };
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCountries();
+  }
 
   @override
   void dispose() {
     _debounce?.cancel();
     _searchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadCountries() async {
+    try {
+      final data = await SupabaseClientService.client
+          .from('discovered_salons')
+          .select('country')
+          .not('country', 'is', null)
+          .order('country');
+      final set = <String>{};
+      for (final row in data) {
+        final c = row['country'] as String?;
+        if (c != null && c.isNotEmpty) set.add(c);
+      }
+      if (mounted) setState(() => _countries = set.toList());
+    } catch (_) {}
+  }
+
+  Future<void> _loadStates(String country) async {
+    setState(() {
+      _states = [];
+      _cities = [];
+    });
+    try {
+      final data = await SupabaseClientService.client
+          .from('discovered_salons')
+          .select('location_state')
+          .eq('country', country)
+          .not('location_state', 'is', null)
+          .order('location_state');
+      final set = <String>{};
+      for (final row in data) {
+        final s = row['location_state'] as String?;
+        if (s != null && s.isNotEmpty) set.add(s);
+      }
+      if (mounted) setState(() => _states = set.toList());
+    } catch (_) {}
+  }
+
+  Future<void> _loadCities(String state) async {
+    setState(() => _cities = []);
+    try {
+      var q = SupabaseClientService.client
+          .from('discovered_salons')
+          .select('location_city')
+          .eq('location_state', state)
+          .not('location_city', 'is', null);
+      if (_countryFilter != null) {
+        q = q.eq('country', _countryFilter!);
+      }
+      final data = await q.order('location_city');
+      final set = <String>{};
+      for (final row in data) {
+        final c = row['location_city'] as String?;
+        if (c != null && c.isNotEmpty) set.add(c);
+      }
+      if (mounted) setState(() => _cities = set.toList());
+    } catch (_) {}
+  }
+
+  void _setCountryFilter(String? country) {
+    setState(() {
+      _countryFilter = country;
+      _stateFilter = null;
+      _cityFilter = null;
+      _states = [];
+      _cities = [];
+    });
+    if (country != null) _loadStates(country);
+  }
+
+  void _setStateFilter(String? state) {
+    setState(() {
+      _stateFilter = state;
+      _cityFilter = null;
+      _cities = [];
+    });
+    if (state != null) _loadCities(state);
+  }
+
+  void _setCityFilter(String? city) {
+    setState(() => _cityFilter = city);
   }
 
   void _onSearchChanged(String value) {
@@ -640,6 +742,15 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
               rpStatusFilter: _rpStatusFilter,
               assignedRpId: _assignedRpId,
               rpUsersAsync: ref.watch(rpUsersProvider),
+              countryFilter: _countryFilter,
+              stateFilter: _stateFilter,
+              cityFilter: _cityFilter,
+              countries: _countries,
+              states: _states,
+              cities: _cities,
+              onCountrySelect: _setCountryFilter,
+              onStateSelect: _setStateFilter,
+              onCitySelect: _setCityFilter,
               onStatusToggle: (s) {
                 setState(() {
                   if (_statusFilters.contains(s)) {
@@ -1129,6 +1240,15 @@ class _FilterChipsRow extends StatelessWidget {
   final String? rpStatusFilter;
   final String? assignedRpId;
   final AsyncValue<List<Map<String, dynamic>>> rpUsersAsync;
+  final String? countryFilter;
+  final String? stateFilter;
+  final String? cityFilter;
+  final List<String> countries;
+  final List<String> states;
+  final List<String> cities;
+  final void Function(String?) onCountrySelect;
+  final void Function(String?) onStateSelect;
+  final void Function(String?) onCitySelect;
   final void Function(String) onStatusToggle;
   final VoidCallback onWhatsappToggle;
   final VoidCallback onInterestToggle;
@@ -1144,6 +1264,15 @@ class _FilterChipsRow extends StatelessWidget {
     required this.rpStatusFilter,
     required this.assignedRpId,
     required this.rpUsersAsync,
+    required this.countryFilter,
+    required this.stateFilter,
+    required this.cityFilter,
+    required this.countries,
+    required this.states,
+    required this.cities,
+    required this.onCountrySelect,
+    required this.onStateSelect,
+    required this.onCitySelect,
     required this.onStatusToggle,
     required this.onWhatsappToggle,
     required this.onInterestToggle,
@@ -1163,6 +1292,36 @@ class _FilterChipsRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: AppConstants.paddingMD),
         child: Row(
           children: [
+            // Location dropdown chips
+            _PipelineDropdownChip(
+              label: countryFilter ?? 'Pais',
+              isActive: countryFilter != null,
+              options: countries,
+              onSelected: onCountrySelect,
+              onClear: () => onCountrySelect(null),
+              colors: colors,
+            ),
+            const SizedBox(width: AppConstants.paddingXS),
+            _PipelineDropdownChip(
+              label: stateFilter ?? 'Estado',
+              isActive: stateFilter != null,
+              options: states,
+              onSelected: onStateSelect,
+              onClear: () => onStateSelect(null),
+              colors: colors,
+              enabled: countryFilter != null,
+            ),
+            const SizedBox(width: AppConstants.paddingXS),
+            _PipelineDropdownChip(
+              label: cityFilter ?? 'Ciudad',
+              isActive: cityFilter != null,
+              options: cities,
+              onSelected: onCitySelect,
+              onClear: () => onCitySelect(null),
+              colors: colors,
+              enabled: stateFilter != null,
+            ),
+            const SizedBox(width: AppConstants.paddingSM),
             // Status chips
             ..._allStatuses.map((s) {
               final selected = statusFilters.contains(s);
@@ -1381,6 +1540,109 @@ class _FilterChipsRow extends StatelessWidget {
                 );
               }).toList(),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Pipeline dropdown chip (location filters)
+// ---------------------------------------------------------------------------
+
+class _PipelineDropdownChip extends StatelessWidget {
+  final String label;
+  final bool isActive;
+  final List<String> options;
+  final ValueChanged<String?> onSelected;
+  final VoidCallback onClear;
+  final ColorScheme colors;
+  final bool enabled;
+
+  const _PipelineDropdownChip({
+    required this.label,
+    required this.isActive,
+    required this.options,
+    required this.onSelected,
+    required this.onClear,
+    required this.colors,
+    this.enabled = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final bgColor = !enabled
+        ? colors.surfaceContainerHighest.withValues(alpha: 0.2)
+        : isActive
+            ? colors.primary
+            : colors.surfaceContainerHighest.withValues(alpha: 0.5);
+    final fgColor = !enabled
+        ? colors.onSurface.withValues(alpha: 0.25)
+        : isActive
+            ? Colors.white
+            : colors.onSurface;
+
+    return GestureDetector(
+      onTap: !enabled || options.isEmpty
+          ? null
+          : () {
+              final RenderBox box = context.findRenderObject() as RenderBox;
+              final offset = box.localToGlobal(Offset.zero);
+              showMenu<String>(
+                context: context,
+                position: RelativeRect.fromLTRB(
+                  offset.dx,
+                  offset.dy + box.size.height,
+                  offset.dx + box.size.width,
+                  0,
+                ),
+                constraints: const BoxConstraints(maxHeight: 300),
+                items: options
+                    .map((o) => PopupMenuItem<String>(
+                          value: o,
+                          child: Text(
+                            o,
+                            style: GoogleFonts.nunito(fontSize: 13),
+                          ),
+                        ))
+                    .toList(),
+              ).then((value) {
+                if (value != null) onSelected(value);
+              });
+            },
+      child: Container(
+        height: 32,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isActive
+                ? colors.primary
+                : colors.onSurface.withValues(alpha: 0.15),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.arrow_drop_down, size: 16, color: fgColor),
+            const SizedBox(width: 2),
+            Text(
+              label,
+              style: GoogleFonts.nunito(
+                fontSize: 12,
+                color: fgColor,
+                fontWeight: isActive ? FontWeight.w700 : FontWeight.normal,
+              ),
+            ),
+            if (isActive) ...[
+              const SizedBox(width: 4),
+              GestureDetector(
+                onTap: onClear,
+                child: Icon(Icons.close, size: 14, color: fgColor),
+              ),
+            ],
           ],
         ),
       ),
