@@ -95,6 +95,23 @@ class _ProductCheckoutSheetState extends State<ProductCheckoutSheet> {
 
     setState(() => _processing = true);
 
+    // Fresh stock check before proceeding to payment
+    try {
+      final freshProduct = await SupabaseClientService.client
+          .from('products')
+          .select('in_stock')
+          .eq('id', widget.productId)
+          .maybeSingle();
+      if (freshProduct == null || freshProduct['in_stock'] != true) {
+        ToastService.showError('Este producto ya no esta disponible');
+        if (mounted) setState(() => _processing = false);
+        return;
+      }
+    } catch (e) {
+      if (kDebugMode) debugPrint('[PRODUCT-CHECKOUT] Stock check failed: $e');
+      // Continue — edge function will also validate
+    }
+
     final shippingAddress = {
       'name': _nameCtrl.text.trim(),
       'street': _streetCtrl.text.trim(),

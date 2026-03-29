@@ -77,6 +77,18 @@ Future<void> main() async {
     // Initialize push notifications after Supabase is ready
     await NotificationService().initialize();
     if (kDebugMode) debugPrint('[Init] Notifications initialized');
+    // Cancel any orphaned pending bookings older than 30 minutes
+    if (SupabaseClientService.currentUserId != null) {
+      SupabaseClientService.client
+          .from('appointments')
+          .update({'status': 'cancelled_customer'})
+          .eq('user_id', SupabaseClientService.currentUserId!)
+          .eq('status', 'pending')
+          .eq('payment_status', 'pending')
+          .lt('created_at', DateTime.now().subtract(const Duration(minutes: 30)).toUtc().toIso8601String())
+          .then((_) {})
+          .catchError((_) {});
+    }
     // Auto-sync registered MX salons to Android contacts (non-blocking)
     ContactMatchService.autoSyncRegisteredSalons();
     PresenceService.instance.start();

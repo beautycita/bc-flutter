@@ -1,3 +1,6 @@
+// TODO: Add server-side cron job to auto-cancel orphaned pending bookings
+// (status=pending, payment_status=pending, created_at > 30 min ago).
+// Client-side cleanup is in main.dart but a cron is needed for reliability.
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' show Color, ThemeMode;
 import 'package:flutter_dotenv/flutter_dotenv.dart';

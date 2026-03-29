@@ -3023,6 +3023,27 @@ class _WalkinSheetState extends ConsumerState<_WalkinSheet> {
           _date.year, _date.month, _date.day, _time.hour, _time.minute);
       final endsAt = startsAt.add(Duration(minutes: duration));
 
+      // Prevent past date walk-ins (15 min grace period)
+      if (startsAt.isBefore(DateTime.now().subtract(const Duration(minutes: 15)))) {
+        ToastService.showWarning('No puedes crear citas en el pasado');
+        return;
+      }
+
+      // Check for overlapping appointments on the same staff member
+      if (_staffId != null) {
+        final conflicts = await SupabaseClientService.client
+            .from('appointments')
+            .select('id')
+            .eq('staff_id', _staffId!)
+            .not('status', 'in', '(cancelled_customer,cancelled_business)')
+            .lt('starts_at', endsAt.toUtc().toIso8601String())
+            .gt('ends_at', startsAt.toUtc().toIso8601String());
+        if ((conflicts as List).isNotEmpty) {
+          ToastService.showWarning('Este horario ya tiene una cita programada');
+          return;
+        }
+      }
+
       final data = <String, dynamic>{
         'business_id': biz['id'],
         'service_name': serviceName,
