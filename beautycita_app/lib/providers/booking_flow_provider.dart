@@ -6,6 +6,7 @@ import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:beautycita/services/toast_service.dart';
 import '../models/curate_result.dart';
 import '../models/follow_up_question.dart';
+import '../models/booking.dart';
 import '../repositories/booking_repository.dart';
 import '../services/curate_service.dart';
 import '../services/follow_up_service.dart';
@@ -513,6 +514,18 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
     }
 
     state = state.copyWith(step: BookingFlowStep.booked);
+  }
+
+  /// Pre-fill the booking flow from a previous booking (rebook).
+  /// Sets service type and jumps straight to location + engine fetch.
+  Future<void> rebookFrom(Booking booking) async {
+    state = BookingFlowState(
+      step: BookingFlowStep.loading,
+      serviceType: booking.serviceType ?? '',
+      serviceName: booking.serviceName,
+      transportMode: booking.transportMode,
+    );
+    await _acquireLocationAndFetch();
   }
 
   /// Reset back to category selection.
