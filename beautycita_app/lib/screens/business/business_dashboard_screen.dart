@@ -567,17 +567,20 @@ class _TaxDeductionsCardState extends ConsumerState<_TaxDeductionsCard> {
       );
     }
 
-    final totalTaxPaid = _ivaWithheld + _isrWithheld;
-    // Estimated total tax obligation: IVA 16% + ISR ~10% estimate on net
-    final estimatedIvaTotal = _revenueYtd * 0.16;
-    final estimatedIsrTotal = _revenueYtd * 0.10; // simplified estimate
-    final estimatedTotalTax = estimatedIvaTotal + estimatedIsrTotal;
-    final taxStillOwed = (estimatedTotalTax - totalTaxPaid).clamp(0.0, double.infinity).toDouble();
+    final totalTaxPaidByBC = _ivaWithheld + _isrWithheld;
 
-    // Deduction budget: expenses reduce taxable income
-    // The salon can deduct 100% of business expenses
-    // Show how much more they could spend to offset remaining tax
-    final deductionBudget = (_revenueYtd - _expensesYtd).clamp(0.0, double.infinity).toDouble();
+    // BeautyCita retains half of IVA (8%) and partial ISR (2.5%) per law.
+    // The salon MUST pay the other half directly to SAT.
+    // IVA: full 16%, BC retains 8%, salon owes 8%
+    // ISR: varies by income bracket, BC retains 2.5%, salon owes the rest
+    final salonIvaObligation = _ivaWithheld; // same 8% — the other half
+    final salonIsrEstimate = _revenueYtd * 0.075; // rough estimate of remaining ISR
+    final salonTotalOwed = salonIvaObligation + salonIsrEstimate;
+
+    // Deduction budget: expenses reduce TAXABLE INCOME, which reduces the salon's
+    // remaining ISR obligation. Only valid IF the salon pays their half.
+    final taxableIncome = (_revenueYtd - _expensesYtd).clamp(0.0, double.infinity).toDouble();
+    final deductionBudget = taxableIncome;
 
     return Card(
       elevation: 0,
@@ -628,21 +631,48 @@ class _TaxDeductionsCardState extends ConsumerState<_TaxDeductionsCard> {
             _TaxRow(label: 'Ingresos registrados', value: '\$${_fmt(_revenueYtd)}', color: colors.onSurface, bold: true),
             const SizedBox(height: 8),
 
-            // Taxes withheld by BeautyCita
-            _TaxRow(label: 'IVA retenido por BC (8%)', value: '\$${_fmt(_ivaWithheld)}', color: const Color(0xFF059669)),
+            // What BeautyCita already paid to SAT on their behalf
+            _TaxRow(label: 'IVA retenido por BC (50% de 16%)', value: '\$${_fmt(_ivaWithheld)}', color: const Color(0xFF059669)),
             const SizedBox(height: 4),
-            _TaxRow(label: 'ISR retenido por BC (2.5%)', value: '\$${_fmt(_isrWithheld)}', color: const Color(0xFF059669)),
+            _TaxRow(label: 'ISR retenido por BC (Art. 113-A)', value: '\$${_fmt(_isrWithheld)}', color: const Color(0xFF059669)),
             const SizedBox(height: 4),
-            _TaxRow(label: 'Total impuestos pagados', value: '\$${_fmt(totalTaxPaid)}', color: const Color(0xFF059669), bold: true),
+            _TaxRow(label: 'Total pagado por BC a SAT', value: '\$${_fmt(totalTaxPaidByBC)}', color: const Color(0xFF059669), bold: true),
 
             Divider(height: 20, color: colors.onSurface.withValues(alpha: 0.08)),
 
-            // Estimated remaining
-            _TaxRow(label: 'IVA pendiente estimado (8%)', value: '\$${_fmt(estimatedIvaTotal - _ivaWithheld)}', color: Colors.orange),
+            // ⚠️ What the salon STILL OWES SAT directly
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.orange.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.orange.withValues(alpha: 0.2)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.warning_amber_rounded, size: 16, color: Colors.orange[700]),
+                      const SizedBox(width: 6),
+                      Text('TU OBLIGACION DIRECTA CON SAT',
+                        style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.5, color: Colors.orange[800])),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'BeautyCita retiene solo la mitad. Tu debes pagar el resto directamente al SAT.',
+                    style: GoogleFonts.nunito(fontSize: 11, color: Colors.orange[700], height: 1.3),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            _TaxRow(label: 'IVA que TU debes (otro 8%)', value: '\$${_fmt(salonIvaObligation)}', color: Colors.orange),
             const SizedBox(height: 4),
-            _TaxRow(label: 'ISR pendiente estimado', value: '\$${_fmt(estimatedIsrTotal - _isrWithheld)}', color: Colors.orange),
+            _TaxRow(label: 'ISR estimado que TU debes', value: '\$${_fmt(salonIsrEstimate)}', color: Colors.orange),
             const SizedBox(height: 4),
-            _TaxRow(label: 'Total estimado por pagar', value: '\$${_fmt(taxStillOwed)}', color: Colors.orange, bold: true),
+            _TaxRow(label: 'Total estimado que debes a SAT', value: '\$${_fmt(salonTotalOwed)}', color: Colors.orange, bold: true),
 
             Divider(height: 20, color: colors.onSurface.withValues(alpha: 0.08)),
 
@@ -669,7 +699,9 @@ class _TaxDeductionsCardState extends ConsumerState<_TaxDeductionsCard> {
                 children: [
                   Text(
                     'Muebles, herramientas, gasolina, renta, internet — todo gasto de negocio con factura es 100% deducible. '
-                    'Puedes gastar hasta \$${_fmt(deductionBudget)} mas y recibir el 100% de regreso via deducciones.',
+                    'Puedes gastar hasta \$${_fmt(deductionBudget)} mas para reducir tu ISR.\n\n'
+                    'IMPORTANTE: Este calculo asume que pagas tu mitad de impuestos al SAT. '
+                    'Si no pagas, las deducciones no aplican.',
                     style: GoogleFonts.nunito(fontSize: 11, color: const Color(0xFF7C3AED), height: 1.4),
                   ),
                   const SizedBox(height: 8),
