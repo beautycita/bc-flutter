@@ -74,6 +74,8 @@ class _BookingConfirmationScreenState
         return 'Tarjeta';
       case 'oxxo':
         return 'OXXO';
+      case 'saldo':
+        return 'Saldo';
       case 'cash':
       case 'cash_direct':
         return 'Efectivo';
