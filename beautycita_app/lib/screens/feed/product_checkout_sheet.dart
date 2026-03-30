@@ -72,9 +72,34 @@ class _ProductCheckoutSheetState extends State<ProductCheckoutSheet> {
 
   bool _processing = false;
   String? _orderId;
+  String _paymentMethod = 'card'; // 'card' or 'saldo'
+  double _userSaldo = 0;
 
   double get _total => widget.price * widget.quantity;
   double get _commission => (_total * 0.10 * 100).roundToDouble() / 100;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSaldo();
+  }
+
+  Future<void> _loadSaldo() async {
+    final userId = SupabaseClientService.currentUserId;
+    if (userId == null) return;
+    final data = await SupabaseClientService.client
+        .from('profiles')
+        .select('saldo')
+        .eq('id', userId)
+        .maybeSingle();
+    final saldo = (data?['saldo'] as num?)?.toDouble() ?? 0;
+    if (mounted) {
+      setState(() {
+        _userSaldo = saldo;
+        if (saldo >= _total) _paymentMethod = 'saldo';
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -122,6 +147,12 @@ class _ProductCheckoutSheetState extends State<ProductCheckoutSheet> {
     };
 
     try {
+      // Saldo path — bypass Stripe entirely
+      if (_paymentMethod == 'saldo') {
+        await _payWithSaldo(shippingAddress);
+        return;
+      }
+
       // Call edge function
       final response =
           await SupabaseClientService.client.functions.invoke(
@@ -272,6 +303,48 @@ class _ProductCheckoutSheetState extends State<ProductCheckoutSheet> {
   }
 
   // ---------------------------------------------------------------------------
+  // Saldo payment — no Stripe
+  // ---------------------------------------------------------------------------
+  Future<void> _payWithSaldo(Map<String, String> shippingAddress) async {
+    final userId = SupabaseClientService.currentUserId;
+    if (userId == null) throw Exception('No autenticado');
+
+    if (_userSaldo < _total) {
+      throw Exception('Saldo insuficiente');
+    }
+
+    // Deduct saldo
+    await SupabaseClientService.client
+        .from('profiles')
+        .update({'saldo': _userSaldo - _total})
+        .eq('id', userId);
+
+    // Create order
+    final orderResult =
+        await SupabaseClientService.client.from('orders').insert({
+      'buyer_id': userId,
+      'business_id': widget.businessId,
+      'product_id': widget.productId,
+      'product_name': widget.productName,
+      'quantity': widget.quantity,
+      'total_amount': _total,
+      'commission_amount': _commission,
+      'status': 'paid',
+      'payment_method': 'saldo',
+      'shipping_address': shippingAddress,
+    }).select('id').single();
+
+    _orderId = orderResult['id'] as String;
+
+    if (mounted) {
+      setState(() {
+        _step = 2;
+        _processing = false;
+      });
+    }
+  }
+
+  // ---------------------------------------------------------------------------
   // Build
   // ---------------------------------------------------------------------------
   @override
@@ -385,7 +458,60 @@ class _ProductCheckoutSheetState extends State<ProductCheckoutSheet> {
           // Order summary mini
           _orderSummaryCard(palette),
 
-          const SizedBox(height: AppConstants.paddingLG),
+          const SizedBox(height: AppConstants.paddingMD),
+
+          // Payment method selector
+          if (_userSaldo >= _total) ...[
+            GestureDetector(
+              onTap: () => setState(() => _paymentMethod = 'saldo'),
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+                  border: Border.all(
+                    color: _paymentMethod == 'saldo' ? palette.primary : palette.outline.withValues(alpha: 0.3),
+                    width: _paymentMethod == 'saldo' ? 2 : 1,
+                  ),
+                  color: _paymentMethod == 'saldo' ? palette.primary.withValues(alpha: 0.05) : null,
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.account_balance_wallet, color: palette.primary, size: 20),
+                    const SizedBox(width: 10),
+                    Text('Pagar con saldo', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600)),
+                    const Spacer(),
+                    Text('\$${_userSaldo.toStringAsFixed(0)} disponible',
+                        style: GoogleFonts.nunito(fontSize: 13, color: palette.onSurface.withValues(alpha: 0.5))),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            GestureDetector(
+              onTap: () => setState(() => _paymentMethod = 'card'),
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+                  border: Border.all(
+                    color: _paymentMethod == 'card' ? palette.primary : palette.outline.withValues(alpha: 0.3),
+                    width: _paymentMethod == 'card' ? 2 : 1,
+                  ),
+                  color: _paymentMethod == 'card' ? palette.primary.withValues(alpha: 0.05) : null,
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.credit_card, color: palette.primary, size: 20),
+                    const SizedBox(width: 10),
+                    Text('Tarjeta / OXXO', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: AppConstants.paddingSM),
+          ],
+
+          const SizedBox(height: AppConstants.paddingSM),
 
           // Continue button
           SizedBox(
