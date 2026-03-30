@@ -90,7 +90,7 @@ class _BookingDetailContentState extends State<BookingDetailContent> {
       BCSupabase.client.functions.invoke(
         'cancel-notification',
         body: {'appointment_id': booking.id},
-      ).catchError((e) => debugPrint('[Cancel] Notification error: $e'));
+      ).then((_) {}).catchError((e) { debugPrint('[Cancel] Notification error: $e'); });
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

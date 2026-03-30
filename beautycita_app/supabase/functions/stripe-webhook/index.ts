@@ -171,7 +171,7 @@ serve(async (req) => {
               commission_amount: (paymentIntent.application_fee_amount ?? 0) / 100,
               stripe_payment_intent_id: paymentIntent.id,
               status: "paid",
-              shipping_address: JSON.parse(metadata.shipping_address ?? "null"),
+              shipping_address: (() => { try { return JSON.parse(metadata.shipping_address ?? "null"); } catch { return null; } })(),
             });
 
             if (orderError) {
@@ -242,7 +242,7 @@ serve(async (req) => {
           provider_net: parseFloat(paymentIntent.metadata.provider_net ?? "0"),
         } : {};
 
-        // Update booking: mark as paid and confirmed
+        // Update booking: mark as paid and confirmed (only if not cancelled since check)
         const { error: updateError } = await supabase
           .from("appointments")
           .update({
@@ -253,7 +253,8 @@ serve(async (req) => {
             updated_at: new Date().toISOString(),
             ...taxFields,
           })
-          .eq("id", bookingId);
+          .eq("id", bookingId)
+          .not("status", "in", "(cancelled_customer,cancelled_business)");
 
         if (updateError) {
           console.error(`[STRIPE-WEBHOOK] Failed to update booking payment: ${updateError.message}`);
@@ -434,7 +435,7 @@ serve(async (req) => {
           .from("appointments")
           .select("id")
           .eq("payment_intent_id", paymentIntentId)
-          .single();
+          .maybeSingle();
 
         if (booking) {
           await supabase
