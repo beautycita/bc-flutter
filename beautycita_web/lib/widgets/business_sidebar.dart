@@ -35,6 +35,12 @@ const _navItems = <_NavItem>[
   _NavItem(label: 'QR Walk-in', icon: Icons.qr_code_2_outlined, route: WebRoutes.negocioQr),
   _NavItem(label: 'Resenas', icon: Icons.reviews_outlined, route: WebRoutes.negocioReviews),
   _NavItem(label: 'Tienda', icon: Icons.storefront_outlined, route: WebRoutes.negocioPos),
+  _NavItem(label: 'Ordenes', icon: Icons.shopping_bag_outlined, route: WebRoutes.negocioOrders),
+  _NavDivider(),
+  _NavItem(label: 'Clientes', icon: Icons.contacts_outlined, route: WebRoutes.negocioClients),
+  _NavItem(label: 'Marketing', icon: Icons.campaign_outlined, route: WebRoutes.negocioMarketing),
+  _NavItem(label: 'Tarjetas Regalo', icon: Icons.card_giftcard_outlined, route: WebRoutes.negocioGiftCards),
+  _NavItem(label: 'Analiticas', icon: Icons.bar_chart_outlined, route: WebRoutes.negocioAnalytics),
   _NavDivider(),
   _NavItem(label: 'Configuracion', icon: Icons.settings_outlined, route: WebRoutes.negocioSettings),
 ];
