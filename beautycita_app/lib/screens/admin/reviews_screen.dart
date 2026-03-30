@@ -271,6 +271,116 @@ class _ReviewsScreenState extends ConsumerState<ReviewsScreen> {
     );
   }
 
+  void _showReviewDetail(Map<String, dynamic> review) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.7,
+        maxChildSize: 0.9,
+        builder: (ctx, scrollController) {
+          final bizData = review['businesses'] as Map<String, dynamic>?;
+          final tags = review['review_tags'];
+          String tagsStr = '—';
+          if (tags != null) {
+            if (tags is List) {
+              tagsStr = tags.join(', ');
+            } else {
+              tagsStr = tags.toString();
+            }
+          }
+          final rawDate = review['created_at'] as String? ?? '';
+          String dateStr = rawDate;
+          final dtParsed = DateTime.tryParse(rawDate)?.toLocal();
+          if (dtParsed != null) {
+            dateStr = '${dtParsed.day}/${dtParsed.month}/${dtParsed.year} '
+                '${dtParsed.hour.toString().padLeft(2, '0')}:'
+                '${dtParsed.minute.toString().padLeft(2, '0')}';
+          }
+          return ListView(
+            controller: scrollController,
+            padding: const EdgeInsets.all(20),
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text('Detalle Resena',
+                  style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 16),
+              _ReviewDetailRow('ID', review['id']?.toString()),
+              _ReviewDetailRow('Calificacion', review['rating']?.toString()),
+              _ReviewDetailRow('Comentario', review['comment'] as String?),
+              _ReviewDetailRow('Tipo de servicio', review['service_type'] as String?),
+              _ReviewDetailRow('Negocio', bizData?['name'] as String?),
+              _ReviewDetailRow('Negocio ID', review['business_id']?.toString()),
+              _ReviewDetailRow('Usuario ID', review['user_id']?.toString()),
+              _ReviewDetailRow('Creado', dateStr),
+              _ReviewDetailRow('Visible', review['is_visible']?.toString()),
+              _ReviewDetailRow('Etiquetas', tagsStr),
+              if (bizData != null) ...[
+                const Divider(height: 24),
+                Text('Datos del negocio',
+                    style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600,
+                        color: Colors.grey[600])),
+                const SizedBox(height: 8),
+                ...bizData.entries.map(
+                  (e) => _ReviewDetailRow(e.key, e.value?.toString()),
+                ),
+              ],
+              // Dump all raw keys not already shown above
+              const Divider(height: 24),
+              Text('Todos los campos',
+                  style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600,
+                      color: Colors.grey[600])),
+              const SizedBox(height: 8),
+              ...review.entries
+                  .where((e) => e.key != 'businesses')
+                  .map((e) => _ReviewDetailRow(e.key, e.value?.toString())),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _ReviewDetailRow(String label, String? value) => Padding(
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 130,
+          child: Text(
+            label,
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[600],
+            ),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value ?? '—',
+            style: GoogleFonts.nunito(fontSize: 13),
+          ),
+        ),
+      ],
+    ),
+  );
+
   Widget _buildReviewCard(Map<String, dynamic> review) {
     final rating = (review['rating'] as num?)?.toDouble() ?? 0;
     final comment = review['comment'] as String? ?? '';
@@ -282,7 +392,9 @@ class _ReviewsScreenState extends ConsumerState<ReviewsScreen> {
     final bizData = review['businesses'] as Map<String, dynamic>?;
     final bizName = bizData?['name'] as String? ?? 'Salon desconocido';
 
-    return Container(
+    return GestureDetector(
+      onTap: () => _showReviewDetail(review),
+      child: Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -363,6 +475,7 @@ class _ReviewsScreenState extends ConsumerState<ReviewsScreen> {
           ],
         ],
       ),
+    ),
     );
   }
 }

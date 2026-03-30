@@ -741,61 +741,103 @@ class _DebtTile extends StatelessWidget {
   final DateFormat dateFmt;
   const _DebtTile({required this.debt, required this.mxn, required this.dateFmt});
 
+  static final _detailFmt = DateFormat('dd/MM/yyyy HH:mm');
+
   @override
   Widget build(BuildContext context) {
     final isPending = debt.isPending;
     final statusColor = isPending ? const Color(0xFFDC2626) : const Color(0xFF059669);
     final statusLabel = isPending ? 'Pendiente' : 'Saldada';
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 6),
-      padding: const EdgeInsets.all(AppConstants.paddingSM),
-      decoration: BoxDecoration(
-        color: isPending ? const Color(0xFFFEF2F2) : Colors.white,
-        borderRadius: BorderRadius.circular(AppConstants.radiusSM),
-        border: isPending ? Border.all(color: const Color(0xFFFCA5A5), width: 0.5) : null,
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 4, offset: const Offset(0, 1)),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(debt.businessName,
-                    style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF212121)),
-                    maxLines: 1, overflow: TextOverflow.ellipsis),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(AppConstants.radiusFull),
-                ),
-                child: Text(statusLabel,
-                    style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w700, color: statusColor)),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Row(
-            children: [
-              Expanded(child: _MiniLabel(label: 'Original', value: mxn.format(debt.originalAmount))),
-              Expanded(child: _MiniLabel(label: 'Restante', value: mxn.format(debt.remainingAmount))),
-              Expanded(child: _MiniLabel(label: 'Creada', value: dateFmt.format(debt.createdAt.toLocal()))),
-              if (debt.clearedAt != null)
-                Expanded(child: _MiniLabel(label: 'Saldada', value: dateFmt.format(debt.clearedAt!.toLocal()))),
-            ],
-          ),
-          if (debt.reason != null && debt.reason!.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(debt.reason!,
-                style: GoogleFonts.nunito(fontSize: 11, fontStyle: FontStyle.italic, color: const Color(0xFF757575)),
-                maxLines: 2, overflow: TextOverflow.ellipsis),
+    return GestureDetector(
+      onTap: () => _showDetail(context),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 6),
+        padding: const EdgeInsets.all(AppConstants.paddingSM),
+        decoration: BoxDecoration(
+          color: isPending ? const Color(0xFFFEF2F2) : Colors.white,
+          borderRadius: BorderRadius.circular(AppConstants.radiusSM),
+          border: isPending ? Border.all(color: const Color(0xFFFCA5A5), width: 0.5) : null,
+          boxShadow: [
+            BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 4, offset: const Offset(0, 1)),
           ],
-        ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(debt.businessName,
+                      style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF212121)),
+                      maxLines: 1, overflow: TextOverflow.ellipsis),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(AppConstants.radiusFull),
+                  ),
+                  child: Text(statusLabel,
+                      style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w700, color: statusColor)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Expanded(child: _MiniLabel(label: 'Original', value: mxn.format(debt.originalAmount))),
+                Expanded(child: _MiniLabel(label: 'Restante', value: mxn.format(debt.remainingAmount))),
+                Expanded(child: _MiniLabel(label: 'Creada', value: dateFmt.format(debt.createdAt.toLocal()))),
+                if (debt.clearedAt != null)
+                  Expanded(child: _MiniLabel(label: 'Saldada', value: dateFmt.format(debt.clearedAt!.toLocal()))),
+              ],
+            ),
+            if (debt.reason != null && debt.reason!.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(debt.reason!,
+                  style: GoogleFonts.nunito(fontSize: 11, fontStyle: FontStyle.italic, color: const Color(0xFF757575)),
+                  maxLines: 2, overflow: TextOverflow.ellipsis),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showDetail(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.6,
+        maxChildSize: 0.9,
+        builder: (ctx, scrollController) => ListView(
+          controller: scrollController,
+          padding: const EdgeInsets.all(20),
+          children: [
+            Center(child: Container(width: 40, height: 4,
+                decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)))),
+            const SizedBox(height: 16),
+            Text('Detalle Deuda',
+                style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 16),
+            _FinDetailRow('ID', debt.id),
+            _FinDetailRow('Negocio ID', debt.businessId),
+            _FinDetailRow('Negocio', debt.businessName),
+            _FinDetailRow('Monto original', mxn.format(debt.originalAmount)),
+            _FinDetailRow('Monto restante', mxn.format(debt.remainingAmount)),
+            _FinDetailRow('Razon', debt.reason),
+            _FinDetailRow('Estado', debt.isPending ? 'Pendiente' : 'Saldada'),
+            _FinDetailRow('Creada', _detailFmt.format(debt.createdAt.toLocal())),
+            _FinDetailRow('Saldada', debt.clearedAt != null
+                ? _detailFmt.format(debt.clearedAt!.toLocal()) : null),
+          ],
+        ),
       ),
     );
   }
@@ -807,49 +849,87 @@ class _DebtPaymentTile extends StatelessWidget {
   final DateFormat dateFmt;
   const _DebtPaymentTile({required this.payment, required this.mxn, required this.dateFmt});
 
+  static final _detailFmt = DateFormat('dd/MM/yyyy HH:mm');
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 6),
-      padding: const EdgeInsets.all(AppConstants.paddingSM),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(AppConstants.radiusSM),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 4, offset: const Offset(0, 1)),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: const Color(0xFF059669).withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(8),
+    return GestureDetector(
+      onTap: () => _showDetail(context),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 6),
+        padding: const EdgeInsets.all(AppConstants.paddingSM),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(AppConstants.radiusSM),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 4, offset: const Offset(0, 1)),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: const Color(0xFF059669).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.payments_outlined, size: 16, color: Color(0xFF059669)),
             ),
-            child: const Icon(Icons.payments_outlined, size: 16, color: Color(0xFF059669)),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(payment.businessName,
-                    style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF212121)),
-                    maxLines: 1, overflow: TextOverflow.ellipsis),
-                Text(dateFmt.format(payment.createdAt.toLocal()),
-                    style: GoogleFonts.nunito(fontSize: 11, color: const Color(0xFF9E9E9E))),
-                if (payment.note != null && payment.note!.isNotEmpty)
-                  Text(payment.note!,
-                      style: GoogleFonts.nunito(fontSize: 11, color: const Color(0xFF757575)),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(payment.businessName,
+                      style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF212121)),
                       maxLines: 1, overflow: TextOverflow.ellipsis),
-              ],
+                  Text(dateFmt.format(payment.createdAt.toLocal()),
+                      style: GoogleFonts.nunito(fontSize: 11, color: const Color(0xFF9E9E9E))),
+                  if (payment.note != null && payment.note!.isNotEmpty)
+                    Text(payment.note!,
+                        style: GoogleFonts.nunito(fontSize: 11, color: const Color(0xFF757575)),
+                        maxLines: 1, overflow: TextOverflow.ellipsis),
+                ],
+              ),
             ),
-          ),
           Text(mxn.format(payment.amount),
               style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF059669))),
         ],
+      ),
+    ),
+    );
+  }
+
+  void _showDetail(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.6,
+        maxChildSize: 0.9,
+        builder: (ctx, scrollController) => ListView(
+          controller: scrollController,
+          padding: const EdgeInsets.all(20),
+          children: [
+            Center(child: Container(width: 40, height: 4,
+                decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)))),
+            const SizedBox(height: 16),
+            Text('Detalle Pago de Deuda',
+                style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 16),
+            _FinDetailRow('ID', payment.id),
+            _FinDetailRow('Deuda ID', payment.debtId),
+            _FinDetailRow('Negocio', payment.businessName),
+            _FinDetailRow('Monto', mxn.format(payment.amount)),
+            _FinDetailRow('Nota', payment.note),
+            _FinDetailRow('Creado', _detailFmt.format(payment.createdAt.toLocal())),
+          ],
+        ),
       ),
     );
   }
@@ -869,47 +949,85 @@ class _CommissionRecordTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isAppt = record.source == 'appointment';
-    return Container(
-      margin: const EdgeInsets.only(bottom: 6),
-      padding: const EdgeInsets.all(AppConstants.paddingSM),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(AppConstants.radiusSM),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 4, offset: const Offset(0, 1)),
-        ],
+    return GestureDetector(
+      onTap: () => _showDetail(context),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 6),
+        padding: const EdgeInsets.all(AppConstants.paddingSM),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(AppConstants.radiusSM),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 4, offset: const Offset(0, 1)),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: (isAppt ? const Color(0xFF8B5CF6) : const Color(0xFFF59E0B)).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                isAppt ? Icons.event : Icons.shopping_bag,
+                size: 16,
+                color: isAppt ? const Color(0xFF8B5CF6) : const Color(0xFFF59E0B),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(record.businessName,
+                      style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF212121)),
+                      maxLines: 1, overflow: TextOverflow.ellipsis),
+                  Text('${isAppt ? 'Cita' : 'Producto'} | ${_dateFmt.format(record.createdAt)}',
+                      style: GoogleFonts.nunito(fontSize: 11, color: const Color(0xFF9E9E9E))),
+                ],
+              ),
+            ),
+            Text(mxn.format(record.amount),
+                style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF059669))),
+          ],
+        ),
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: (isAppt ? const Color(0xFF8B5CF6) : const Color(0xFFF59E0B)).withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(
-              isAppt ? Icons.event : Icons.shopping_bag,
-              size: 16,
-              color: isAppt ? const Color(0xFF8B5CF6) : const Color(0xFFF59E0B),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(record.businessName,
-                    style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF212121)),
-                    maxLines: 1, overflow: TextOverflow.ellipsis),
-                Text('${isAppt ? 'Cita' : 'Producto'} | ${_dateFmt.format(record.createdAt)}',
-                    style: GoogleFonts.nunito(fontSize: 11, color: const Color(0xFF9E9E9E))),
-              ],
-            ),
-          ),
-          Text(mxn.format(record.amount),
-              style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF059669))),
-        ],
+    );
+  }
+
+  void _showDetail(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.6,
+        maxChildSize: 0.9,
+        builder: (ctx, scrollController) => ListView(
+          controller: scrollController,
+          padding: const EdgeInsets.all(20),
+          children: [
+            Center(child: Container(width: 40, height: 4,
+                decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)))),
+            const SizedBox(height: 16),
+            Text('Detalle Comision',
+                style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 16),
+            _FinDetailRow('ID', record.id),
+            _FinDetailRow('Negocio ID', record.businessId),
+            _FinDetailRow('Negocio', record.businessName),
+            _FinDetailRow('Fuente', record.source),
+            _FinDetailRow('Monto', mxn.format(record.amount)),
+            _FinDetailRow('Referencia ID', record.referenceId),
+            _FinDetailRow('Periodo', record.period),
+            _FinDetailRow('Creado', _dateFmt.format(record.createdAt.toLocal())),
+          ],
+        ),
       ),
     );
   }
@@ -920,7 +1038,7 @@ class _PayoutTile extends StatelessWidget {
   final NumberFormat mxn;
   const _PayoutTile({required this.payout, required this.mxn});
 
-  static final _dateFmt = DateFormat('dd/MM/yyyy');
+  static final _dateFmt = DateFormat('dd/MM/yyyy HH:mm');
 
   @override
   Widget build(BuildContext context) {
@@ -928,51 +1046,90 @@ class _PayoutTile extends StatelessWidget {
     final statusColor = isPending ? const Color(0xFFF59E0B) : const Color(0xFF059669);
     final statusLabel = isPending ? 'Pendiente' : 'Completado';
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 6),
-      padding: const EdgeInsets.all(AppConstants.paddingSM),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(AppConstants.radiusSM),
-        border: isPending ? Border.all(color: const Color(0xFFFDE68A), width: 0.5) : null,
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 4, offset: const Offset(0, 1)),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return GestureDetector(
+      onTap: () => _showDetail(context),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 6),
+        padding: const EdgeInsets.all(AppConstants.paddingSM),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(AppConstants.radiusSM),
+          border: isPending ? Border.all(color: const Color(0xFFFDE68A), width: 0.5) : null,
+          boxShadow: [
+            BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 4, offset: const Offset(0, 1)),
+          ],
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(payout.businessName,
+                      style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF212121)),
+                      maxLines: 1, overflow: TextOverflow.ellipsis),
+                  Text('${_dateFmt.format(payout.createdAt)} | ${payout.period}',
+                      style: GoogleFonts.nunito(fontSize: 11, color: const Color(0xFF9E9E9E))),
+                  if (payout.referenceNumber != null && payout.referenceNumber!.isNotEmpty)
+                    Text('Ref: ${payout.referenceNumber}',
+                        style: GoogleFonts.nunito(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFF757575))),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(payout.businessName,
-                    style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF212121)),
-                    maxLines: 1, overflow: TextOverflow.ellipsis),
-                Text('${_dateFmt.format(payout.createdAt)} | ${payout.period}',
-                    style: GoogleFonts.nunito(fontSize: 11, color: const Color(0xFF9E9E9E))),
-                if (payout.referenceNumber != null && payout.referenceNumber!.isNotEmpty)
-                  Text('Ref: ${payout.referenceNumber}',
-                      style: GoogleFonts.nunito(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFF757575))),
+                Text(mxn.format(payout.amount),
+                    style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF212121))),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(AppConstants.radiusFull),
+                  ),
+                  child: Text(statusLabel,
+                      style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w700, color: statusColor)),
+                ),
               ],
             ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(mxn.format(payout.amount),
-                  style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF212121))),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(AppConstants.radiusFull),
-                ),
-                child: Text(statusLabel,
-                    style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w700, color: statusColor)),
-              ),
-            ],
-          ),
-        ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showDetail(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.6,
+        maxChildSize: 0.9,
+        builder: (ctx, scrollController) => ListView(
+          controller: scrollController,
+          padding: const EdgeInsets.all(20),
+          children: [
+            Center(child: Container(width: 40, height: 4,
+                decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)))),
+            const SizedBox(height: 16),
+            Text('Detalle Pago',
+                style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 16),
+            _FinDetailRow('ID', payout.id),
+            _FinDetailRow('Negocio ID', payout.businessId),
+            _FinDetailRow('Negocio', payout.businessName),
+            _FinDetailRow('Monto', mxn.format(payout.amount)),
+            _FinDetailRow('Metodo', payout.paymentMethod),
+            _FinDetailRow('Referencia', payout.referenceNumber),
+            _FinDetailRow('Periodo', payout.period),
+            _FinDetailRow('Estado', payout.status),
+            _FinDetailRow('Creado', _dateFmt.format(payout.createdAt.toLocal())),
+          ],
+        ),
       ),
     );
   }
@@ -1051,28 +1208,39 @@ class _CfdiTile extends StatelessWidget {
     );
   }
 
+  static final _dateFmt = DateFormat('dd/MM/yyyy HH:mm');
+
   void _showCfdiDetail(BuildContext context) {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (ctx) {
-        final colors = Theme.of(ctx).colorScheme;
-        return Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+      builder: (ctx) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.65,
+        maxChildSize: 0.9,
+        builder: (ctx, scrollController) {
+          final colors = Theme.of(ctx).colorScheme;
+          return ListView(
+            controller: scrollController,
+            padding: const EdgeInsets.all(20),
             children: [
-              Text('Detalle CFDI',
-                  style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700, color: colors.onSurface)),
+              Center(child: Container(width: 40, height: 4,
+                  decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)))),
               const SizedBox(height: 16),
-              _DetailRow(label: 'Negocio', value: record.businessName),
-              _DetailRow(label: 'Periodo', value: record.period),
-              if (record.folio != null) _DetailRow(label: 'Folio', value: record.folio!),
+              Text('Detalle CFDI',
+                  style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700, color: colors.onSurface)),
+              const SizedBox(height: 16),
+              _FinDetailRow('ID', record.id),
+              _FinDetailRow('Negocio ID', record.businessId),
+              _FinDetailRow('Negocio', record.businessName),
+              _FinDetailRow('Periodo', record.period),
+              _FinDetailRow('Estado', record.status),
+              _FinDetailRow('Folio', record.folio),
+              _FinDetailRow('UUID Fiscal', record.uuidFiscal),
               if (record.uuidFiscal != null) ...[
-                _DetailRow(label: 'UUID Fiscal', value: record.uuidFiscal!),
                 const SizedBox(height: 4),
                 GestureDetector(
                   onTap: () {
@@ -1084,16 +1252,18 @@ class _CfdiTile extends StatelessWidget {
                   child: Text('Copiar UUID',
                       style: GoogleFonts.nunito(fontSize: 12, color: colors.primary, fontWeight: FontWeight.w600)),
                 ),
+                const SizedBox(height: 8),
               ],
               const Divider(height: 20),
-              _DetailRow(label: 'Subtotal', value: mxn.format(record.subtotal)),
-              _DetailRow(label: 'IVA', value: mxn.format(record.iva)),
-              _DetailRow(label: 'Total', value: mxn.format(record.total), bold: true),
+              _FinDetailRow('Subtotal', mxn.format(record.subtotal)),
+              _FinDetailRow('IVA', mxn.format(record.iva)),
+              _FinDetailRow('Total', mxn.format(record.total)),
+              _FinDetailRow('Creado', _dateFmt.format(record.createdAt.toLocal())),
               const SizedBox(height: 20),
             ],
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }
@@ -1201,34 +1371,32 @@ class _SatReportTile extends StatelessWidget {
   }
 }
 
-class _DetailRow extends StatelessWidget {
-  final String label;
-  final String value;
-  final bool bold;
-  const _DetailRow({required this.label, required this.value, this.bold = false});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: GoogleFonts.nunito(fontSize: 13, color: const Color(0xFF757575))),
-          Flexible(
-            child: Text(value,
-                style: GoogleFonts.poppins(
-                  fontSize: 13,
-                  fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
-                  color: const Color(0xFF212121),
-                ),
-                textAlign: TextAlign.end),
+/// Free function used in detail sheets across the finance dashboard tiles.
+Widget _FinDetailRow(String label, String? value) => Padding(
+  padding: const EdgeInsets.only(bottom: 8),
+  child: Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      SizedBox(
+        width: 130,
+        child: Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey[600],
           ),
-        ],
+        ),
       ),
-    );
-  }
-}
+      Expanded(
+        child: Text(
+          value ?? '—',
+          style: GoogleFonts.nunito(fontSize: 13),
+        ),
+      ),
+    ],
+  ),
+);
 
 class _MiniLabel extends StatelessWidget {
   final String label;

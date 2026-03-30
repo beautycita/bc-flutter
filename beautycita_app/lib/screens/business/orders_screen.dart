@@ -236,6 +236,32 @@ class _OrderList extends StatelessWidget {
 // Order card
 // ---------------------------------------------------------------------------
 
+Widget _OrderDetailRow(String label, String? value) => Padding(
+  padding: const EdgeInsets.only(bottom: 8),
+  child: Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      SizedBox(
+        width: 130,
+        child: Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey[600],
+          ),
+        ),
+      ),
+      Expanded(
+        child: Text(
+          value ?? '—',
+          style: GoogleFonts.nunito(fontSize: 13),
+        ),
+      ),
+    ],
+  ),
+);
+
 class _OrderCard extends ConsumerStatefulWidget {
   final Order order;
   final Future<void> Function(Order)? onAction;
@@ -249,12 +275,71 @@ class _OrderCard extends ConsumerStatefulWidget {
 class _OrderCardState extends ConsumerState<_OrderCard> {
   bool _loading = false;
 
+  void _showOrderDetail(BuildContext context, Order order) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.7,
+        maxChildSize: 0.95,
+        builder: (ctx, scrollController) {
+          String fmtDt(DateTime? dt) {
+            if (dt == null) return '—';
+            final local = dt.toLocal();
+            return '${local.day}/${local.month.toString().padLeft(2,'0')}/${local.year} '
+                '${local.hour.toString().padLeft(2,'0')}:${local.minute.toString().padLeft(2,'0')}';
+          }
+          String fmtAddr(Map<String, dynamic>? addr) {
+            if (addr == null) return '—';
+            final sb = StringBuffer();
+            addr.forEach((k, v) { sb.write('$k: $v\n'); });
+            return sb.toString().trim();
+          }
+          return ListView(
+            controller: scrollController,
+            padding: const EdgeInsets.all(20),
+            children: [
+              Center(child: Container(width: 40, height: 4,
+                  decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)))),
+              const SizedBox(height: 16),
+              Text('Detalle Pedido',
+                  style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 16),
+              _OrderDetailRow('ID', order.id),
+              _OrderDetailRow('Comprador ID', order.buyerId),
+              _OrderDetailRow('Negocio ID', order.businessId),
+              _OrderDetailRow('Producto ID', order.productId),
+              _OrderDetailRow('Producto', order.productName),
+              _OrderDetailRow('Cantidad', order.quantity.toString()),
+              _OrderDetailRow('Total', '\$${order.totalAmount.toStringAsFixed(2)} MXN'),
+              _OrderDetailRow('Comision', '\$${order.commissionAmount.toStringAsFixed(2)} MXN'),
+              _OrderDetailRow('Estado', order.status),
+              _OrderDetailRow('Rastreo', order.trackingNumber),
+              _OrderDetailRow('Stripe PI', order.stripePaymentIntentId),
+              _OrderDetailRow('Direccion', fmtAddr(order.shippingAddress)),
+              _OrderDetailRow('Creado', fmtDt(order.createdAt)),
+              _OrderDetailRow('Enviado', fmtDt(order.shippedAt)),
+              _OrderDetailRow('Entregado', fmtDt(order.deliveredAt)),
+              _OrderDetailRow('Reembolsado', fmtDt(order.refundedAt)),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final order = widget.order;
 
-    return Container(
+    return GestureDetector(
+      onTap: () => _showOrderDetail(context, order),
+      child: Container(
       padding: const EdgeInsets.all(AppConstants.paddingMD),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -492,6 +577,7 @@ class _OrderCardState extends ConsumerState<_OrderCard> {
           ],
         ],
       ),
+    ),
     );
   }
 
