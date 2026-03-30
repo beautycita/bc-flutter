@@ -202,10 +202,55 @@ serve(async (req) => {
       return json({ error: "Failed to save report" }, 500);
     }
 
+    // Also generate/update per-business sat_monthly_reports
+    for (const provider of providerBreakdown) {
+      await supabase.from("sat_monthly_reports").upsert({
+        business_id: provider.business_id,
+        period_year: year,
+        period_month: month,
+        total_transactions: provider.transactions,
+        total_gross: provider.gross,
+        total_isr_withheld: provider.isr_withheld,
+        total_iva_withheld: provider.iva_withheld,
+        total_platform_fees: provider.platform_fees,
+        status: "generated",
+        generated_at: new Date().toISOString(),
+      }, {
+        onConflict: "period_year,period_month,business_id",
+      }).catch((e: Error) => console.error(`[SAT-REPORTING] Per-biz upsert error: ${e.message}`));
+    }
+
+    // Generate platform-level declaration
+    // Count unique businesses, sum commissions, compute totals
+    const { data: commissions } = await supabase
+      .from("commission_records")
+      .select("amount")
+      .eq("period_year", year)
+      .eq("period_month", month);
+    const totalCommissions = (commissions ?? []).reduce((sum: number, c: { amount: number }) => sum + Number(c.amount), 0);
+
+    await supabase.from("platform_sat_declarations").upsert({
+      period_year: year,
+      period_month: month,
+      total_businesses: providerBreakdown.length,
+      total_transactions: records.length,
+      total_revenue_all: totalGross,
+      total_iva_collected: totalIvaWithheld,
+      total_isr_collected: totalIsrWithheld,
+      total_commissions_earned: round2(totalCommissions),
+      total_paid_to_sat: round2(totalIsrWithheld + totalIvaWithheld),
+      status: "generated",
+      generated_at: new Date().toISOString(),
+    }, {
+      onConflict: "period_year,period_month",
+    }).catch((e: Error) => console.error(`[SAT-REPORTING] Platform declaration error: ${e.message}`));
+
     console.log(`[SAT-REPORTING] Generated report for ${year}-${String(month).padStart(2, "0")}`);
     console.log(`  Transactions: ${records.length}`);
     console.log(`  ISR withheld: $${totalIsrWithheld} MXN`);
     console.log(`  IVA withheld: $${totalIvaWithheld} MXN`);
+    console.log(`  Commissions: $${round2(totalCommissions)} MXN`);
+    console.log(`  Businesses: ${providerBreakdown.length}`);
 
     return json(reportData);
 

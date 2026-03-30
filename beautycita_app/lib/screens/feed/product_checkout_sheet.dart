@@ -336,6 +336,18 @@ class _ProductCheckoutSheetState extends State<ProductCheckoutSheet> {
 
     _orderId = orderResult['id'] as String;
 
+    // Record commission (10% product)
+    SupabaseClientService.client.from('commission_records').insert({
+      'business_id': widget.businessId,
+      'order_id': _orderId,
+      'amount': _commission,
+      'rate': 0.10,
+      'source': 'product_sale',
+      'period_month': DateTime.now().month,
+      'period_year': DateTime.now().year,
+      'status': 'collected',
+    }).then((_) {}).catchError((_) {});
+
     if (mounted) {
       setState(() {
         _step = 2;

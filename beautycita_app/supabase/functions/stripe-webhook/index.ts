@@ -317,14 +317,44 @@ serve(async (req) => {
             }
           }
 
-          // --- Debt collection: deduct up to 50% of service fee if salon has debt ---
+          // --- Record commission + debt collection ---
           const businessId = paymentIntent.metadata?.business_id;
           if (businessId) {
+            const grossAmount = paymentIntent.amount / 100;
+            const commission = (paymentIntent.application_fee_amount ?? 0) / 100;
+            const ivaWithheld = parseFloat(paymentIntent.metadata?.iva_withheld ?? "0");
+            const isrWithheld = parseFloat(paymentIntent.metadata?.isr_withheld ?? "0");
+            const isProduct = paymentIntent.metadata?.type === "product";
+
+            // Record commission for EVERY payment (3% services, 10% products)
             try {
-              const grossAmount = paymentIntent.amount / 100;
-              const commission = (paymentIntent.application_fee_amount ?? 0) / 100;
-              const ivaWithheld = parseFloat(paymentIntent.metadata?.iva_withheld ?? "0");
-              const isrWithheld = parseFloat(paymentIntent.metadata?.isr_withheld ?? "0");
+              const { data: existingComm } = await supabase
+                .from("commission_records")
+                .select("id")
+                .eq("appointment_id", bookingId)
+                .in("source", ["appointment", "product_sale"])
+                .maybeSingle();
+
+              if (!existingComm && commission > 0) {
+                await supabase.from("commission_records").insert({
+                  business_id: businessId,
+                  appointment_id: isProduct ? null : bookingId,
+                  order_id: isProduct ? bookingId : null,
+                  amount: commission,
+                  rate: isProduct ? 0.10 : 0.03,
+                  source: isProduct ? "product_sale" : "appointment",
+                  period_month: new Date().getMonth() + 1,
+                  period_year: new Date().getFullYear(),
+                  status: "collected",
+                });
+                console.log(`[STRIPE-WEBHOOK] Commission recorded: $${commission} (${isProduct ? "product 10%" : "service 3%"}) for ${businessId}`);
+              }
+            } catch (commErr) {
+              console.error(`[STRIPE-WEBHOOK] Commission record error (non-fatal):`, commErr);
+            }
+
+            // Debt collection: deduct up to 50% of service fee if salon has debt
+            try {
 
               const { data: debtResult } = await supabase.rpc("calculate_payout_with_debt", {
                 p_business_id: businessId,
