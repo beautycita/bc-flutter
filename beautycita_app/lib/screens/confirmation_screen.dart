@@ -10,6 +10,7 @@ import '../models/curate_result.dart';
 import '../providers/booking_flow_provider.dart';
 import '../providers/payment_methods_provider.dart';
 import '../providers/profile_provider.dart';
+import '../services/supabase_client.dart';
 import '../widgets/cinematic_question_text.dart';
 import '../widgets/phone_verify_gate_sheet.dart';
 
@@ -94,6 +95,7 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
               _PaymentMethodSelector(
                 selected: state.paymentMethod,
                 onSelect: (method) => notifier.selectPaymentMethod(method),
+                servicePrice: result.service.price ?? 0,
               ),
             ],
             const SizedBox(height: AppConstants.paddingXL),
@@ -458,13 +460,26 @@ class _PriceBreakdown extends StatelessWidget {
 // Payment method selector
 // ---------------------------------------------------------------------------
 
+final _userSaldoProvider = FutureProvider<double>((ref) async {
+  final userId = SupabaseClientService.currentUserId;
+  if (userId == null) return 0;
+  final data = await SupabaseClientService.client
+      .from('profiles')
+      .select('saldo')
+      .eq('id', userId)
+      .maybeSingle();
+  return (data?['saldo'] as num?)?.toDouble() ?? 0;
+});
+
 class _PaymentMethodSelector extends ConsumerStatefulWidget {
   final String selected;
   final ValueChanged<String> onSelect;
+  final double servicePrice;
 
   const _PaymentMethodSelector({
     required this.selected,
     required this.onSelect,
+    required this.servicePrice,
   });
 
   @override
@@ -479,10 +494,16 @@ class _PaymentMethodSelectorState extends ConsumerState<_PaymentMethodSelector> 
     final cards = ref.watch(paymentMethodsProvider).cards;
     final hasCards = cards.isNotEmpty;
 
-    // Smart preselection: card if user has saved cards, otherwise cash
+    // Check user saldo
+    final saldoAsync = ref.watch(_userSaldoProvider);
+    final saldo = saldoAsync.valueOrNull ?? 0.0;
+    final servicePrice = widget.servicePrice ?? 0;
+    final hasSaldo = saldo >= servicePrice && servicePrice > 0;
+
+    // Smart preselection: saldo first, card if user has saved cards, otherwise oxxo
     if (!_didAutoSelect) {
       _didAutoSelect = true;
-      final preferred = hasCards ? 'card' : 'oxxo';
+      final preferred = hasSaldo ? 'saldo' : (hasCards ? 'card' : 'oxxo');
       if (widget.selected != preferred) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           widget.onSelect(preferred);
@@ -490,24 +511,39 @@ class _PaymentMethodSelectorState extends ConsumerState<_PaymentMethodSelector> 
       }
     }
 
-    return Row(
+    return Column(
       children: [
-        _PaymentMethodCard(
-          icon: Icons.credit_card,
-          label: 'Tarjeta',
-          subtitle: 'Pago inmediato',
-          method: 'card',
-          isSelected: widget.selected == 'card',
-          onTap: () => widget.onSelect('card'),
-        ),
-        const SizedBox(width: 10),
-        _PaymentMethodCard(
-          icon: Icons.store,
-          label: 'Efectivo',
-          subtitle: 'OXXO, 7-Eleven',
-          method: 'oxxo',
-          isSelected: widget.selected == 'oxxo',
-          onTap: () => widget.onSelect('oxxo'),
+        if (hasSaldo) ...[
+          _PaymentMethodCard(
+            icon: Icons.account_balance_wallet,
+            label: 'Saldo',
+            subtitle: '\$${saldo.toStringAsFixed(0)} disponible',
+            method: 'saldo',
+            isSelected: widget.selected == 'saldo',
+            onTap: () => widget.onSelect('saldo'),
+          ),
+          const SizedBox(height: 10),
+        ],
+        Row(
+          children: [
+            _PaymentMethodCard(
+              icon: Icons.credit_card,
+              label: 'Tarjeta',
+              subtitle: 'Pago inmediato',
+              method: 'card',
+              isSelected: widget.selected == 'card',
+              onTap: () => widget.onSelect('card'),
+            ),
+            const SizedBox(width: 10),
+            _PaymentMethodCard(
+              icon: Icons.store,
+              label: 'Efectivo',
+              subtitle: 'OXXO, 7-Eleven',
+              method: 'oxxo',
+              isSelected: widget.selected == 'oxxo',
+              onTap: () => widget.onSelect('oxxo'),
+            ),
+          ],
         ),
       ],
     );

@@ -298,6 +298,8 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
 
     try {
       switch (state.paymentMethod) {
+        case 'saldo':
+          await _confirmWithSaldo(result);
         case 'oxxo':
           await _confirmStripe(result, oxxoOnly: true);
         default: // card
@@ -488,6 +490,76 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
     );
   }
 
+
+  /// Pay with saldo (user credit balance) — no Stripe involved.
+  Future<void> _confirmWithSaldo(ResultCard result) async {
+    final price = result.service.price ?? 0;
+    final userId = SupabaseClientService.currentUserId;
+    if (userId == null) throw Exception('No autenticado');
+
+    // Verify saldo is sufficient
+    final profile = await SupabaseClientService.client
+        .from('profiles')
+        .select('saldo')
+        .eq('id', userId)
+        .single();
+    final saldo = (profile['saldo'] as num?)?.toDouble() ?? 0;
+    if (saldo < price) {
+      throw Exception('Saldo insuficiente (\$${saldo.toStringAsFixed(0)} < \$${price.toStringAsFixed(0)})');
+    }
+
+    // Create booking
+    final booking = await _bookingRepo.createBooking(
+      providerId: result.business.id,
+      providerServiceId: result.service.id ?? '',
+      serviceName: result.service.name,
+      category: state.serviceType ?? '',
+      scheduledAt: result.slot!.startTime,
+      durationMinutes: result.service.durationMinutes,
+      price: price,
+      paymentStatus: 'paid',
+      paymentMethod: 'saldo',
+      transportMode: state.transportMode,
+    );
+
+    // Deduct saldo
+    await SupabaseClientService.client
+        .from('profiles')
+        .update({'saldo': saldo - price})
+        .eq('id', userId);
+
+    // Mark as confirmed
+    await SupabaseClientService.client
+        .from('appointments')
+        .update({
+          'status': 'confirmed',
+          'payment_status': 'paid',
+          'paid_at': DateTime.now().toUtc().toIso8601String(),
+        })
+        .eq('id', booking.id);
+
+    // Calculate tax withholdings
+    final taxBase = price / 1.16;
+    final isrWithheld = taxBase * 0.025;
+    final ivaWithheld = taxBase * 0.08;
+    final providerNet = price - isrWithheld - ivaWithheld;
+    await SupabaseClientService.client
+        .from('appointments')
+        .update({
+          'tax_base': double.parse(taxBase.toStringAsFixed(2)),
+          'isr_withheld': double.parse(isrWithheld.toStringAsFixed(2)),
+          'iva_withheld': double.parse(ivaWithheld.toStringAsFixed(2)),
+          'provider_net': double.parse(providerNet.toStringAsFixed(2)),
+        })
+        .eq('id', booking.id);
+
+    _sendBookingNotifications(booking.id);
+
+    state = state.copyWith(
+      step: BookingFlowStep.emailVerification,
+      bookingId: booking.id,
+    );
+  }
 
   /// Fire-and-forget booking notifications (push + multi-channel receipt).
   void _sendBookingNotifications(String bookingId) {
