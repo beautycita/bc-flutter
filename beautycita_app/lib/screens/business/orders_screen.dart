@@ -5,6 +5,8 @@ import 'package:beautycita_core/models.dart' hide Provider;
 import '../../config/constants.dart';
 import '../../providers/order_provider.dart';
 import '../../services/toast_service.dart';
+// ignore: depend_on_referenced_packages
+import 'package:beautycita/widgets/admin/admin_widgets.dart';
 
 class OrdersScreen extends ConsumerStatefulWidget {
   const OrdersScreen({super.key});
@@ -16,6 +18,16 @@ class OrdersScreen extends ConsumerStatefulWidget {
 class _OrdersScreenState extends ConsumerState<OrdersScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final _searchCtrl = TextEditingController();
+  String _searchQuery = '';
+  String? _sortField;
+  bool _sortAscending = false;
+
+  static const _sortOptions = [
+    SortOption('created_at', 'Fecha'),
+    SortOption('total_amount', 'Monto'),
+    SortOption('status', 'Estado'),
+  ];
 
   @override
   void initState() {
@@ -26,7 +38,67 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
   @override
   void dispose() {
     _tabController.dispose();
+    _searchCtrl.dispose();
     super.dispose();
+  }
+
+  List<Order> _applyFilters(List<Order> orders) {
+    var result = orders.where((o) {
+      if (_searchQuery.isEmpty) return true;
+      final q = _searchQuery.toLowerCase();
+      return o.productName.toLowerCase().contains(q) ||
+          o.id.toLowerCase().contains(q);
+    }).toList();
+
+    if (_sortField != null) {
+      result.sort((a, b) {
+        dynamic va;
+        dynamic vb;
+        switch (_sortField) {
+          case 'created_at':
+            va = a.createdAt;
+            vb = b.createdAt;
+            break;
+          case 'total_amount':
+            va = a.totalAmount;
+            vb = b.totalAmount;
+            break;
+          case 'status':
+            va = a.status;
+            vb = b.status;
+            break;
+        }
+        int cmp;
+        if (va is DateTime && vb is DateTime) {
+          cmp = va.compareTo(vb);
+        } else if (va is num && vb is num) {
+          cmp = va.compareTo(vb);
+        } else {
+          cmp = (va?.toString() ?? '').compareTo(vb?.toString() ?? '');
+        }
+        return _sortAscending ? cmp : -cmp;
+      });
+    }
+
+    return result;
+  }
+
+  void _exportOrdersCsv(BuildContext context, List<Order> orders) {
+    CsvExporter.export<Order>(
+      context: context,
+      filename: 'pedidos',
+      columns: [
+        CsvColumn('ID', (o) => o.id),
+        CsvColumn('Producto', (o) => o.productName),
+        CsvColumn('Cantidad', (o) => o.quantity.toString()),
+        CsvColumn('Monto', (o) => o.totalAmount.toStringAsFixed(2)),
+        CsvColumn('Estado', (o) => o.status),
+        CsvColumn('Rastreo', (o) => o.trackingNumber ?? ''),
+        CsvColumn('Creado', (o) => o.createdAt.toIso8601String()),
+        CsvColumn('Enviado', (o) => o.shippedAt?.toIso8601String() ?? ''),
+      ],
+      items: orders,
+    );
   }
 
   @override
@@ -63,18 +135,48 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
             ),
           ),
 
+          // AdminToolbar
+          ordersAsync.maybeWhen(
+            data: (orders) => Padding(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppConstants.paddingMD, vertical: 4),
+              child: AdminToolbar(
+                showSearch: true,
+                searchHint: 'Buscar producto o ID...',
+                searchController: _searchCtrl,
+                onSearchChanged: (v) => setState(() => _searchQuery = v),
+                showSort: true,
+                sortOptions: _sortOptions,
+                currentSortField: _sortField,
+                sortAscending: _sortAscending,
+                onSortChanged: (field) => setState(() {
+                  if (_sortField == field) {
+                    _sortAscending = !_sortAscending;
+                  } else {
+                    _sortField = field;
+                    _sortAscending = false;
+                  }
+                }),
+                showExport: true,
+                onExport: () => _exportOrdersCsv(context, _applyFilters(orders)),
+                totalCount: orders.length,
+              ),
+            ),
+            orElse: () => const SizedBox.shrink(),
+          ),
+
           // Tab views
           Expanded(
             child: ordersAsync.when(
               data: (orders) {
-                final pending =
-                    orders.where((o) => o.isPaid).toList();
-                final shipped =
-                    orders.where((o) => o.isShipped).toList();
-                final completed = orders
+                final pending = _applyFilters(
+                    orders.where((o) => o.isPaid).toList());
+                final shipped = _applyFilters(
+                    orders.where((o) => o.isShipped).toList());
+                final completed = _applyFilters(orders
                     .where((o) =>
                         o.isDelivered || o.isRefunded || o.isCancelled)
-                    .toList();
+                    .toList());
 
                 return TabBarView(
                   controller: _tabController,

@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/constants.dart';
 import '../../providers/business_provider.dart';
+// ignore: depend_on_referenced_packages
+import 'package:beautycita/widgets/admin/admin_widgets.dart';
 
 /// Staff productivity analytics panel for the business portal.
 class BusinessStaffAnalyticsScreen extends ConsumerStatefulWidget {
@@ -17,6 +19,35 @@ class BusinessStaffAnalyticsScreen extends ConsumerStatefulWidget {
 class _BusinessStaffAnalyticsScreenState
     extends ConsumerState<BusinessStaffAnalyticsScreen> {
   String _period = 'week';
+
+  Widget _exportButton(BuildContext context) {
+    final dataAsync = ref.watch(staffProductivityProvider(_period));
+    return dataAsync.maybeWhen(
+      data: (data) => IconButton(
+        icon: const Icon(Icons.download_rounded, size: 20),
+        tooltip: 'Exportar CSV',
+        color: Theme.of(context).colorScheme.primary,
+        onPressed: () => _exportStaffCsv(context, data),
+      ),
+      orElse: () => const SizedBox.shrink(),
+    );
+  }
+
+  void _exportStaffCsv(BuildContext context, StaffProductivityData data) {
+    CsvExporter.export<StaffProductivityEntry>(
+      context: context,
+      filename: 'rendimiento_staff',
+      columns: [
+        CsvColumn('Nombre', (e) => e.firstName),
+        CsvColumn('Ingresos', (e) => e.revenue.toStringAsFixed(2)),
+        CsvColumn('Citas', (e) => e.completedAppointments.toString()),
+        CsvColumn('Horas', (e) => e.hoursWorked.toStringAsFixed(1)),
+        CsvColumn('Rating', (e) => e.allTimeRating > 0 ? e.allTimeRating.toStringAsFixed(1) : ''),
+        CsvColumn('No-Shows', (e) => e.noShows.toString()),
+      ],
+      items: data.entries,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -56,6 +87,8 @@ class _BusinessStaffAnalyticsScreenState
                   textStyle: GoogleFonts.nunito(fontSize: 12),
                 ),
               ),
+              const SizedBox(width: 8),
+              _exportButton(context),
             ],
           ),
 
@@ -74,6 +107,10 @@ class _BusinessStaffAnalyticsScreenState
 
                   // Revenue breakdown bar chart
                   _RevenueChart(data: data),
+                  const SizedBox(height: AppConstants.paddingMD),
+
+                  // Revenue TrendChart (sorted by revenue)
+                  _StaffRevenueTrendChart(data: data),
                   const SizedBox(height: AppConstants.paddingMD),
 
                   // Hours breakdown
@@ -704,6 +741,39 @@ class _StaffRankingTable extends StatelessWidget {
           for (var i = 0; i < sorted.length; i++)
             _RankingRow(entry: sorted[i], rank: i + 1),
         ],
+      ),
+    );
+  }
+}
+
+// -- Staff revenue TrendChart (bar chart) --
+
+class _StaffRevenueTrendChart extends StatelessWidget {
+  final StaffProductivityData data;
+  const _StaffRevenueTrendChart({required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final sorted = [...data.entries]
+      ..sort((a, b) => b.revenue.compareTo(a.revenue));
+
+    if (sorted.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.all(AppConstants.paddingMD),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+        border: Border.all(color: colors.primary.withValues(alpha: 0.1)),
+      ),
+      child: TrendChart(
+        title: 'Ingresos por Estilista',
+        type: TrendChartType.bar,
+        color: colors.primary,
+        height: 160,
+        valuePrefix: '\$',
+        data: sorted.map((e) => TrendPoint(e.firstName, e.revenue)).toList(),
       ),
     );
   }

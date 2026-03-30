@@ -53,8 +53,8 @@ final _analyticsProvider = FutureProvider<_AnalyticsData>((ref) async {
         .then((r) => List<Map<String, dynamic>>.from(r)),
   ]);
 
-  final appointments = results[0] as List<Map<String, dynamic>>;
-  final reviews = results[1] as List<Map<String, dynamic>>;
+  final appointments = results[0];
+  final reviews = results[1];
 
   // --- Engine Performance ---
   final totalAppts = appointments.length;

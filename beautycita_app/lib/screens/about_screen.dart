@@ -661,6 +661,13 @@ class _FooterSection extends StatelessWidget {
               color: colorScheme.onSurface,
             ),
           ),
+          Text(
+            'RFC: BEA260313MI8',
+            style: GoogleFonts.nunito(
+              fontSize: 12,
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
           const SizedBox(height: AppConstants.paddingXS),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,

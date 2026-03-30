@@ -10,20 +10,100 @@ import '../../providers/feature_toggle_provider.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 import '../../widgets/aphrodite_copy_field.dart';
+import 'package:beautycita/widgets/admin/admin_widgets.dart';
 
-class BusinessServicesScreen extends ConsumerWidget {
+class BusinessServicesScreen extends ConsumerStatefulWidget {
   const BusinessServicesScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<BusinessServicesScreen> createState() =>
+      _BusinessServicesScreenState();
+}
+
+class _BusinessServicesScreenState
+    extends ConsumerState<BusinessServicesScreen> {
+  final _searchCtrl = TextEditingController();
+  String _searchQuery = '';
+  String? _sortField;
+  bool _sortAscending = true;
+
+  static const _sortOptions = [
+    SortOption('name', 'Nombre'),
+    SortOption('price', 'Precio'),
+    SortOption('duration_minutes', 'Duracion'),
+    SortOption('category', 'Categoria'),
+  ];
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  List<Map<String, dynamic>> _applyFilters(
+      List<Map<String, dynamic>> services) {
+    var result = services.where((s) {
+      if (_searchQuery.isEmpty) return true;
+      final name = (s['name'] as String? ?? '').toLowerCase();
+      return name.contains(_searchQuery.toLowerCase());
+    }).toList();
+
+    if (_sortField != null) {
+      result.sort((a, b) {
+        final va = a[_sortField];
+        final vb = b[_sortField];
+        int cmp;
+        if (va is num && vb is num) {
+          cmp = va.compareTo(vb);
+        } else {
+          cmp = (va?.toString() ?? '').compareTo(vb?.toString() ?? '');
+        }
+        return _sortAscending ? cmp : -cmp;
+      });
+    }
+
+    return result;
+  }
+
+  void _exportCsv(
+      BuildContext context, List<Map<String, dynamic>> services) {
+    CsvExporter.exportMaps(
+      context: context,
+      filename: 'servicios',
+      headers: [
+        'Nombre',
+        'Categoria',
+        'Precio',
+        'Duracion',
+        'Buffer',
+        'Activo',
+        'Creado'
+      ],
+      keys: [
+        'name',
+        'category',
+        'price',
+        'duration_minutes',
+        'buffer_minutes',
+        'is_active',
+        'created_at'
+      ],
+      items: services,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final servicesAsync = ref.watch(businessServicesProvider);
     final colors = Theme.of(context).colorScheme;
 
     return servicesAsync.when(
       data: (services) {
-        // Group by category
+        final filtered = _applyFilters(services);
+
+        // Group filtered results by category
         final grouped = <String, List<Map<String, dynamic>>>{};
-        for (final s in services) {
+        for (final s in filtered) {
           final cat = s['category'] as String? ?? 'General';
           grouped.putIfAbsent(cat, () => []).add(s);
         }
@@ -34,71 +114,110 @@ class BusinessServicesScreen extends ConsumerWidget {
             onPressed: () => _showServiceForm(context, ref, null),
             child: const Icon(Icons.add_rounded),
           ),
-          body: services.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.design_services_outlined,
-                          size: 48,
-                          color: colors.onSurface.withValues(alpha: 0.3)),
-                      const SizedBox(height: AppConstants.paddingSM),
-                      Text(
-                        'No hay servicios registrados',
-                        style: GoogleFonts.nunito(
-                          fontSize: 14,
-                          color: colors.onSurface.withValues(alpha: 0.5),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Toca + para agregar tu primer servicio',
-                        style: GoogleFonts.nunito(
-                          fontSize: 12,
-                          color: colors.onSurface.withValues(alpha: 0.35),
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-              : RefreshIndicator(
-                  onRefresh: () async {
-                    ref.invalidate(businessServicesProvider);
-                  },
-                  child: ListView(
-                    padding: const EdgeInsets.all(AppConstants.paddingMD),
-                    children: [
-                      for (final entry in grouped.entries) ...[
-                        Padding(
-                          padding: const EdgeInsets.only(
-                              top: AppConstants.paddingMD,
-                              bottom: AppConstants.paddingSM),
-                          child: Text(
-                            entry.key.toUpperCase(),
-                            style: GoogleFonts.poppins(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 1.2,
-                              color:
-                                  colors.onSurface.withValues(alpha: 0.4),
-                            ),
-                          ),
-                        ),
-                        for (final service in entry.value)
-                          _ServiceCard(
-                            service: service,
-                            onEdit: () =>
-                                _showServiceForm(context, ref, service),
-                            onToggle: () =>
-                                _toggleActive(context, ref, service),
-                            onDelete: () =>
-                                _deleteService(context, ref, service),
-                          ),
-                      ],
-                      const SizedBox(height: 80), // FAB clearance
-                    ],
-                  ),
+          body: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                    AppConstants.paddingMD,
+                    AppConstants.paddingMD,
+                    AppConstants.paddingMD,
+                    0),
+                child: AdminToolbar(
+                  showSearch: true,
+                  searchHint: 'Buscar servicio...',
+                  searchController: _searchCtrl,
+                  onSearchChanged: (v) => setState(() => _searchQuery = v),
+                  showSort: true,
+                  sortOptions: _sortOptions,
+                  currentSortField: _sortField,
+                  sortAscending: _sortAscending,
+                  onSortChanged: (field) => setState(() {
+                    if (_sortField == field) {
+                      _sortAscending = !_sortAscending;
+                    } else {
+                      _sortField = field;
+                      _sortAscending = true;
+                    }
+                  }),
+                  showExport: true,
+                  onExport: () => _exportCsv(context, filtered),
+                  totalCount: services.length,
+                  filteredCount: filtered.length,
                 ),
+              ),
+              Expanded(
+                child: services.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.design_services_outlined,
+                                size: 48,
+                                color:
+                                    colors.onSurface.withValues(alpha: 0.3)),
+                            const SizedBox(height: AppConstants.paddingSM),
+                            Text(
+                              'No hay servicios registrados',
+                              style: GoogleFonts.nunito(
+                                fontSize: 14,
+                                color:
+                                    colors.onSurface.withValues(alpha: 0.5),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Toca + para agregar tu primer servicio',
+                              style: GoogleFonts.nunito(
+                                fontSize: 12,
+                                color:
+                                    colors.onSurface.withValues(alpha: 0.35),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : RefreshIndicator(
+                        onRefresh: () async {
+                          ref.invalidate(businessServicesProvider);
+                        },
+                        child: ListView(
+                          padding:
+                              const EdgeInsets.all(AppConstants.paddingMD),
+                          children: [
+                            for (final entry in grouped.entries) ...[
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                    top: AppConstants.paddingMD,
+                                    bottom: AppConstants.paddingSM),
+                                child: Text(
+                                  entry.key.toUpperCase(),
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 1.2,
+                                    color: colors.onSurface
+                                        .withValues(alpha: 0.4),
+                                  ),
+                                ),
+                              ),
+                              for (final service in entry.value)
+                                _ServiceCard(
+                                  service: service,
+                                  onEdit: () =>
+                                      _showServiceForm(context, ref, service),
+                                  onToggle: () =>
+                                      _toggleActive(context, ref, service),
+                                  onDelete: () =>
+                                      _deleteService(context, ref, service),
+                                ),
+                            ],
+                            const SizedBox(height: 80), // FAB clearance
+                          ],
+                        ),
+                      ),
+              ),
+            ],
+          ),
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -109,8 +228,8 @@ class BusinessServicesScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _toggleActive(
-      BuildContext context, WidgetRef ref, Map<String, dynamic> service) async {
+  Future<void> _toggleActive(BuildContext context, WidgetRef ref,
+      Map<String, dynamic> service) async {
     final id = service['id'] as String;
     final current = service['is_active'] as bool? ?? true;
     try {
@@ -119,12 +238,13 @@ class BusinessServicesScreen extends ConsumerWidget {
           .update({'is_active': !current}).eq('id', id);
       ref.invalidate(businessServicesProvider);
     } catch (e, stack) {
-      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
+      ToastService.showErrorWithDetails(
+          ToastService.friendlyError(e), e, stack);
     }
   }
 
-  Future<void> _deleteService(
-      BuildContext context, WidgetRef ref, Map<String, dynamic> service) async {
+  Future<void> _deleteService(BuildContext context, WidgetRef ref,
+      Map<String, dynamic> service) async {
     final id = service['id'] as String;
     final name = service['name'] as String? ?? 'Servicio';
 
@@ -141,7 +261,8 @@ class BusinessServicesScreen extends ConsumerWidget {
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             child: Text('Eliminar',
-                style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.error)),
           ),
         ],
       ),
@@ -158,7 +279,8 @@ class BusinessServicesScreen extends ConsumerWidget {
       ToastService.showSuccess('Servicio eliminado');
       if (context.mounted) await showShredderTransition(context);
     } catch (e, stack) {
-      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
+      ToastService.showErrorWithDetails(
+          ToastService.friendlyError(e), e, stack);
     }
   }
 
