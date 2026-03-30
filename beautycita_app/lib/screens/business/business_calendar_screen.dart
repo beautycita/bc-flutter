@@ -2800,8 +2800,8 @@ class _WalkinSheetState extends ConsumerState<_WalkinSheet> {
                       final d = await showDatePicker(
                         context: context,
                         initialDate: _date,
-                        firstDate: DateTime(2026),
-                        lastDate: DateTime(2030),
+                        firstDate: DateTime.now().subtract(const Duration(minutes: 15)),
+                        lastDate: DateTime.now().add(const Duration(days: 365)),
                       );
                       if (d != null) setState(() => _date = d);
                     },
@@ -3022,7 +3022,11 @@ class _WalkinSheetState extends ConsumerState<_WalkinSheet> {
         serviceName = _customServiceCtrl.text.trim();
       } else {
         final services = await ref.read(businessServicesProvider.future);
-        final service = services.firstWhere((s) => s['id'] == _serviceId);
+        final service = services.where((s) => s['id'] == _serviceId).firstOrNull;
+        if (service == null) {
+          ToastService.showWarning('Servicio no encontrado');
+          return;
+        }
         duration = service['duration_minutes'] as int? ?? 60;
         price = (service['price'] as num?)?.toDouble() ?? 0;
         serviceName = service['name'] as String;
@@ -3053,6 +3057,12 @@ class _WalkinSheetState extends ConsumerState<_WalkinSheet> {
         }
       }
 
+      // Calculate tax withholdings (LISR Art. 113-A: ISR 2.5%, LIVA Art. 18-J: IVA 8%)
+      final taxBase = price / 1.16; // Remove IVA to get base
+      final isrWithheld = taxBase * 0.025;
+      final ivaWithheld = taxBase * 0.08;
+      final providerNet = price - isrWithheld - ivaWithheld;
+
       final data = <String, dynamic>{
         'business_id': biz['id'],
         'service_name': serviceName,
@@ -3060,6 +3070,10 @@ class _WalkinSheetState extends ConsumerState<_WalkinSheet> {
         'starts_at': startsAt.toUtc().toIso8601String(),
         'ends_at': endsAt.toUtc().toIso8601String(),
         'price': price,
+        'tax_base': double.parse(taxBase.toStringAsFixed(2)),
+        'isr_withheld': double.parse(isrWithheld.toStringAsFixed(2)),
+        'iva_withheld': double.parse(ivaWithheld.toStringAsFixed(2)),
+        'provider_net': double.parse(providerNet.toStringAsFixed(2)),
         'status': 'confirmed',
         'payment_method': 'cash_direct',
         'payment_status': 'paid',

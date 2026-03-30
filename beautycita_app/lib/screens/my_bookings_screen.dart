@@ -307,6 +307,11 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
         final repo = ref.read(bookingRepositoryProvider);
         await repo.cancelBooking(booking.id);
 
+        // Send cancel notification (fire-and-forget)
+        SupabaseClientService.client.functions
+            .invoke('cancel-notification', body: {'appointment_id': booking.id})
+            .catchError((_) {});
+
         // Refresh data.
         ref.invalidate(userBookingsProvider);
         ref.invalidate(upcomingBookingsProvider);

@@ -249,6 +249,7 @@ class AppRoutes {
       GoRoute(
         path: rpCentro,
         name: 'rp-centro',
+        redirect: (context, state) => state.extra is Map<String, dynamic> ? null : home,
         pageBuilder: (context, state) {
           final salon = state.extra as Map<String, dynamic>;
           return bcSweepPage(
@@ -260,6 +261,7 @@ class AppRoutes {
       GoRoute(
         path: rpChat,
         name: 'rp-chat',
+        redirect: (context, state) => state.extra is Map<String, dynamic> ? null : home,
         pageBuilder: (context, state) {
           final args = state.extra as Map<String, dynamic>;
           return bcSweepPage(
@@ -378,6 +380,7 @@ class AppRoutes {
       GoRoute(
         path: discoveredSalon,
         name: 'discovered-salon',
+        redirect: (context, state) => state.extra is DiscoveredSalon ? null : home,
         pageBuilder: (context, state) {
           final salon = state.extra as DiscoveredSalon;
           return bcSweepPage(
@@ -459,6 +462,7 @@ class AppRoutes {
       GoRoute(
         path: discoveredSalonConfirm,
         name: 'discovered-salon-confirm',
+        redirect: (context, state) => state.extra is Map<String, dynamic> ? null : home,
         pageBuilder: (context, state) {
           final salonData = state.extra as Map<String, dynamic>;
           return bcSweepPage(

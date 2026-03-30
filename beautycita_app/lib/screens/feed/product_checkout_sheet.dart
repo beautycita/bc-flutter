@@ -139,10 +139,14 @@ class _ProductCheckoutSheetState extends State<ProductCheckoutSheet> {
         throw Exception(data['error'] as String);
       }
 
-      final clientSecret = data['client_secret'] as String;
-      final customerId = data['customer_id'] as String;
-      final ephemeralKey = data['ephemeral_key'] as String;
-      final paymentIntentId = data['payment_intent_id'] as String;
+      final clientSecret = data['client_secret'] as String? ?? '';
+      final customerId = data['customer_id'] as String? ?? '';
+      final ephemeralKey = data['ephemeral_key'] as String? ?? '';
+      final paymentIntentId = data['payment_intent_id'] as String? ?? '';
+
+      if (clientSecret.isEmpty || customerId.isEmpty || ephemeralKey.isEmpty) {
+        throw Exception('Error al procesar el pago. Intenta de nuevo.');
+      }
       final commissionAmount =
           (data['commission'] as num?)?.toDouble() ?? _commission;
 

@@ -16,6 +16,7 @@ class Booking {
   final String? businessPhone;
   final String? transportMode;
   final String? paymentStatus;
+  final String? paymentMethod;
   final double? depositAmount;
   final DateTime? updatedAt;
 
@@ -37,6 +38,7 @@ class Booking {
     this.businessPhone,
     this.transportMode,
     this.paymentStatus,
+    this.paymentMethod,
     this.depositAmount,
     this.updatedAt,
   });
@@ -79,6 +81,7 @@ class Booking {
       businessPhone: businessPhone,
       transportMode: json['transport_mode'] as String?,
       paymentStatus: json['payment_status'] as String?,
+      paymentMethod: json['payment_method'] as String?,
       depositAmount: (json['deposit_amount'] as num?)?.toDouble(),
       updatedAt: json['updated_at'] != null
           ? DateTime.parse(json['updated_at'] as String)
@@ -103,6 +106,7 @@ class Booking {
       'created_at': createdAt.toIso8601String(),
       'transport_mode': transportMode,
       'payment_status': paymentStatus,
+      'payment_method': paymentMethod,
       'deposit_amount': depositAmount,
     };
   }
@@ -112,6 +116,7 @@ class Booking {
     String? notes,
     String? transportMode,
     String? paymentStatus,
+    String? paymentMethod,
   }) {
     return Booking(
       id: id,
@@ -131,6 +136,7 @@ class Booking {
       businessPhone: businessPhone,
       transportMode: transportMode ?? this.transportMode,
       paymentStatus: paymentStatus ?? this.paymentStatus,
+      paymentMethod: paymentMethod ?? this.paymentMethod,
       depositAmount: depositAmount,
       updatedAt: updatedAt,
     );

@@ -93,7 +93,7 @@ class UserPrefsNotifier extends StateNotifier<UserPrefsState> {
       final qualitySpeed = await _prefs.getQualitySpeed();
       final exploreLoyalty = await _prefs.getExploreLoyalty();
       final onboardingComplete = await _prefs.getOnboardingComplete();
-      final reduceAnimations = await _prefs.getBool('pref_reduce_animations') ?? false;
+      final reduceAnimations = await _prefs.getBool('pref_reduce_animations') ?? true;
       state = UserPrefsState(
         defaultTransport: transport,
         notificationsEnabled: notifications,
