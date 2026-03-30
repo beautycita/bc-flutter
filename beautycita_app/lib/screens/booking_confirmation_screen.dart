@@ -75,6 +75,7 @@ class _BookingConfirmationScreenState
       case 'oxxo':
         return 'OXXO';
       case 'cash':
+      case 'cash_direct':
         return 'Efectivo';
       default:
         return method ?? 'No especificado';
@@ -291,9 +292,7 @@ class _BookingConfirmationScreenState
                           Icons.credit_card_outlined,
                           Colors.purple.shade600,
                           'Metodo de pago',
-                          _paymentLabel(booking.paymentStatus == 'paid'
-                              ? 'card'
-                              : null),
+                          _paymentLabel(booking.paymentMethod),
                         ),
                       ],
                     ),

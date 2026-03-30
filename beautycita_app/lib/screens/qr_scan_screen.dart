@@ -79,8 +79,9 @@ class _QrScanScreenState extends State<QrScanScreen> with SingleTickerProviderSt
     // Check for Cita Express walk-in QR first
     final expressId = _parseExpressQr(rawValue);
     if (expressId != null) {
+      if (!mounted) return;
       setState(() { _isProcessing = true; });
-      if (mounted) context.go('/cita-express/$expressId');
+      context.go('/cita-express/$expressId');
       return;
     }
 

@@ -1000,7 +1000,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
           ],
         ),
         content: Text(
-          'Vas a eliminar permanentemente a "${user.username}" (${user.fullName}).\n\n'
+          'Vas a eliminar permanentemente a "${user.username}" (${user.fullName ?? 'Sin nombre'}).\n\n'
           'Esto eliminara su cuenta, perfil, y todos los datos asociados. '
           'Esta accion NO se puede deshacer.',
           style: GoogleFonts.nunito(fontSize: 14, height: 1.4),
@@ -1054,7 +1054,16 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
         ],
       ),
     );
+    confirmCtrl.dispose();
     if (second != true) return;
+
+    // Show loading indicator
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
 
     try {
       await SupabaseClientService.client
@@ -1073,9 +1082,13 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
       );
 
       ref.invalidate(adminUsersProvider);
-      if (mounted) Navigator.of(context).pop(); // Close the detail sheet
+      if (mounted) {
+        Navigator.of(context).pop(); // Close loading
+        Navigator.of(context).pop(); // Close the detail sheet
+      }
       ToastService.showSuccess('Usuario eliminado permanentemente');
     } catch (e) {
+      if (mounted) Navigator.of(context).pop(); // Close loading
       ToastService.showErrorWithDetails('Error al eliminar', e, StackTrace.current);
     }
   }

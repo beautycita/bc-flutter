@@ -234,7 +234,7 @@ class CommissionRecord {
       id: json['id']?.toString() ?? '',
       businessId: json['business_id']?.toString() ?? '',
       businessName: json['business_name'] as String? ??
-          json['businesses']?['business_name'] as String? ?? 'Desconocido',
+          json['businesses']?['name'] as String? ?? 'Desconocido',
       source: json['source'] as String? ?? 'appointment',
       amount: (json['amount'] as num?)?.toDouble() ?? 0,
       referenceId: json['reference_id'] as String?,
@@ -274,7 +274,7 @@ class PayoutRecord {
       id: json['id']?.toString() ?? '',
       businessId: json['business_id']?.toString() ?? '',
       businessName: json['business_name'] as String? ??
-          json['businesses']?['business_name'] as String? ?? 'Desconocido',
+          json['businesses']?['name'] as String? ?? 'Desconocido',
       amount: (json['amount'] as num?)?.toDouble() ?? 0,
       status: json['status'] as String? ?? 'pending',
       referenceNumber: json['reference_number'] as String?,
@@ -319,7 +319,7 @@ class CfdiRecord {
       id: json['id']?.toString() ?? '',
       businessId: json['business_id']?.toString() ?? '',
       businessName: json['business_name'] as String? ??
-          json['businesses']?['business_name'] as String? ?? 'Desconocido',
+          json['businesses']?['name'] as String? ?? 'Desconocido',
       folio: json['folio'] as String?,
       uuidFiscal: json['uuid_fiscal'] as String?,
       status: json['status'] as String? ?? 'pendiente',
@@ -404,7 +404,7 @@ class SatMonthlyReport {
       id: json['id']?.toString() ?? '',
       businessId: json['business_id']?.toString() ?? '',
       businessName: json['business_name'] as String? ??
-          json['businesses']?['business_name'] as String? ?? 'Desconocido',
+          json['businesses']?['name'] as String? ?? 'Desconocido',
       period: json['period'] as String? ?? '',
       revenue: (json['revenue'] as num?)?.toDouble() ?? 0,
       ivaWithheld: (json['iva_withheld'] as num?)?.toDouble() ?? 0,
@@ -481,7 +481,11 @@ class DebtPayment {
       id: json['id']?.toString() ?? '',
       debtId: json['debt_id']?.toString() ?? json['salon_debt_id']?.toString() ?? '',
       businessName: json['business_name'] as String? ??
-          (json['salon_debts'] is Map ? json['salon_debts']['business_name'] as String? : null) ??
+          (json['salon_debts'] is Map
+              ? (json['salon_debts']['businesses'] is Map
+                  ? json['salon_debts']['businesses']['name'] as String?
+                  : json['salon_debts']['business_name'] as String?)
+              : null) ??
           'Desconocido',
       amount: (json['amount'] as num?)?.toDouble() ?? 0,
       note: json['note'] as String?,
@@ -716,7 +720,7 @@ final commissionRecordsProvider =
   try {
     final data = await SupabaseClientService.client
         .from('commission_records')
-        .select('*, businesses(business_name)')
+        .select('*, businesses(name)')
         .order('created_at', ascending: false)
         .limit(500);
 
@@ -737,7 +741,7 @@ final payoutRecordsProvider =
   try {
     final data = await SupabaseClientService.client
         .from('payout_records')
-        .select('*, businesses(business_name)')
+        .select('*, businesses(name)')
         .order('created_at', ascending: false)
         .limit(500);
 
@@ -758,7 +762,7 @@ final cfdiRecordsProvider =
   try {
     final data = await SupabaseClientService.client
         .from('cfdi_records')
-        .select('*, businesses(business_name)')
+        .select('*, businesses(name)')
         .order('created_at', ascending: false)
         .limit(500);
 
@@ -800,7 +804,7 @@ final satMonthlyReportsProvider =
   try {
     final data = await SupabaseClientService.client
         .from('sat_monthly_reports')
-        .select('*, businesses(business_name)')
+        .select('*, businesses(name)')
         .order('period', ascending: false)
         .limit(500);
 
