@@ -736,3 +736,115 @@ class _SvcAgg {
   double total = 0;
   _SvcAgg(this.serviceType);
 }
+
+// ---------------------------------------------------------------------------
+// Staff commissions
+// ---------------------------------------------------------------------------
+
+/// Commission summary per staff member for the current month.
+class StaffCommissionSummary {
+  final String staffId;
+  final String firstName;
+  final double pendingAmount;
+  final double paidAmount;
+  final int pendingCount;
+  final int paidCount;
+
+  const StaffCommissionSummary({
+    required this.staffId,
+    required this.firstName,
+    required this.pendingAmount,
+    required this.paidAmount,
+    required this.pendingCount,
+    required this.paidCount,
+  });
+
+  double get totalAmount => pendingAmount + paidAmount;
+}
+
+class StaffCommissionsData {
+  final List<StaffCommissionSummary> entries;
+  final double totalPending;
+  final double totalPaid;
+
+  const StaffCommissionsData({
+    required this.entries,
+    required this.totalPending,
+    required this.totalPaid,
+  });
+
+  static StaffCommissionsData empty() => const StaffCommissionsData(
+        entries: [],
+        totalPending: 0,
+        totalPaid: 0,
+      );
+
+  double get totalMonth => totalPending + totalPaid;
+}
+
+final staffCommissionsProvider =
+    FutureProvider<StaffCommissionsData>((ref) async {
+  final biz = await ref.watch(currentBusinessProvider.future);
+  if (biz == null) return StaffCommissionsData.empty();
+
+  final bizId = biz['id'] as String;
+  final now = DateTime.now();
+  final firstOfMonth = DateTime(now.year, now.month, 1).toIso8601String();
+
+  // Load all commissions for this month
+  final rows = await SupabaseClientService.client
+      .from('staff_commissions')
+      .select('staff_id, amount, status')
+      .eq('business_id', bizId)
+      .gte('created_at', firstOfMonth);
+
+  // Load staff names
+  final staffRows = await SupabaseClientService.client
+      .from('staff')
+      .select('id, first_name')
+      .eq('business_id', bizId);
+
+  final staffNames = <String, String>{};
+  for (final s in (staffRows as List)) {
+    final m = s as Map<String, dynamic>;
+    staffNames[m['id'] as String] = m['first_name'] as String? ?? '';
+  }
+
+  // Aggregate
+  final map = <String, ({double pending, double paid, int pendingCount, int paidCount})>{};
+  for (final r in (rows as List)) {
+    final m = r as Map<String, dynamic>;
+    final sid = m['staff_id'] as String;
+    final amt = (m['amount'] as num?)?.toDouble() ?? 0;
+    final status = m['status'] as String? ?? 'pending';
+    final prev = map[sid] ?? (pending: 0.0, paid: 0.0, pendingCount: 0, paidCount: 0);
+    if (status == 'paid') {
+      map[sid] = (pending: prev.pending, paid: prev.paid + amt, pendingCount: prev.pendingCount, paidCount: prev.paidCount + 1);
+    } else {
+      map[sid] = (pending: prev.pending + amt, paid: prev.paid, pendingCount: prev.pendingCount + 1, paidCount: prev.paidCount);
+    }
+  }
+
+  final entries = map.entries.map((e) => StaffCommissionSummary(
+        staffId: e.key,
+        firstName: staffNames[e.key] ?? e.key.substring(0, 6),
+        pendingAmount: e.value.pending,
+        paidAmount: e.value.paid,
+        pendingCount: e.value.pendingCount,
+        paidCount: e.value.paidCount,
+      )).toList()
+    ..sort((a, b) => b.totalAmount.compareTo(a.totalAmount));
+
+  double totalPending = 0;
+  double totalPaid = 0;
+  for (final e in entries) {
+    totalPending += e.pendingAmount;
+    totalPaid += e.paidAmount;
+  }
+
+  return StaffCommissionsData(
+    entries: entries,
+    totalPending: totalPending,
+    totalPaid: totalPaid,
+  );
+});

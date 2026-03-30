@@ -13,6 +13,7 @@ import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 import 'admin_pipeline_screen.dart';
 import 'admin_salon_detail_screen.dart';
+import 'applications_screen.dart';
 import 'pipeline_lead_detail_sheet.dart';
 
 const _salonExportColumns = [
@@ -28,7 +29,7 @@ const _salonExportColumns = [
   ExportColumn('total_reviews', 'Resenas'),
 ];
 
-/// Wrapper with Registrados / Descubiertos tabs.
+/// Wrapper with Registrados / Descubiertos / Pipeline / Aplicaciones tabs.
 class AdminSalonesScreen extends StatelessWidget {
   const AdminSalonesScreen({super.key});
 
@@ -36,7 +37,7 @@ class AdminSalonesScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     return DefaultTabController(
-      length: 3,
+      length: 4,
       child: Column(
         children: [
           TabBar(
@@ -48,6 +49,7 @@ class AdminSalonesScreen extends StatelessWidget {
               Tab(text: 'Registrados'),
               Tab(text: 'Descubiertos'),
               Tab(text: 'Pipeline'),
+              Tab(text: 'Aplicaciones'),
             ],
           ),
           const Expanded(
@@ -56,6 +58,7 @@ class AdminSalonesScreen extends StatelessWidget {
                 _RegisteredSalonesTab(),
                 _DiscoveredSalonesTab(),
                 AdminPipelineScreen(),
+                ApplicationsScreen(),
               ],
             ),
           ),

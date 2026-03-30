@@ -283,6 +283,7 @@ class _ClientCard extends StatelessWidget {
     final spent = (client['total_spent'] as num?)?.toDouble() ?? 0;
     final lastVisit = DateTime.tryParse(client['last_visit_at']?.toString() ?? '');
     final noShows = client['no_show_count'] as int? ?? 0;
+    final loyaltyPoints = client['loyalty_points'] as int? ?? 0;
     final tags = (client['tags'] as List?)?.cast<String>() ?? [];
     final phone = client['phone'] as String?;
     final notes = client['notes'] as String?;
@@ -342,6 +343,12 @@ class _ClientCard extends StatelessWidget {
                       if (lastVisit != null) ...[
                         const SizedBox(width: 8),
                         Text(_timeAgo(lastVisit), style: GoogleFonts.nunito(fontSize: 11, color: colors.onSurface.withValues(alpha: 0.4))),
+                      ],
+                      if (loyaltyPoints > 0) ...[
+                        const SizedBox(width: 8),
+                        Icon(Icons.stars_rounded, size: 12, color: Colors.amber[700]),
+                        const SizedBox(width: 2),
+                        Text('$loyaltyPoints pts', style: GoogleFonts.nunito(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.amber[700])),
                       ],
                     ],
                   ),

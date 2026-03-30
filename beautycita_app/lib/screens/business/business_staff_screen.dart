@@ -191,6 +191,8 @@ class _StaffCard extends StatelessWidget {
     final isActive = staff['is_active'] as bool? ?? true;
     final experience = staff['experience_years'] as int? ?? 0;
     final avatarUrl = staff['avatar_url'] as String?;
+    final commissionRate =
+        (staff['commission_rate'] as num?)?.toDouble() ?? 0;
 
     String expLabel;
     if (experience == 0) {
@@ -284,6 +286,25 @@ class _StaffCard extends StatelessWidget {
                 color: colors.onSurface.withValues(alpha: 0.5),
               ),
             ),
+            if (commissionRate > 0) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF059669).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  '${commissionRate.toStringAsFixed(0)}%',
+                  style: GoogleFonts.nunito(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF059669),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
         trailing: Switch(
@@ -880,6 +901,7 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
   late final TextEditingController _lastCtrl;
   late final TextEditingController _phoneCtrl;
   late final TextEditingController _expCtrl;
+  late double _commissionRate;
   bool _savingProfile = false;
 
   @override
@@ -893,6 +915,8 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
         TextEditingController(text: widget.staff['phone'] as String? ?? '');
     _expCtrl = TextEditingController(
         text: (widget.staff['experience_years'] as int?)?.toString() ?? '0');
+    _commissionRate =
+        (widget.staff['commission_rate'] as num?)?.toDouble() ?? 0;
   }
 
   @override
@@ -1148,6 +1172,74 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
               ],
             ),
             const SizedBox(height: 12),
+            // Commission rate slider
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.percent_rounded,
+                        size: 16,
+                        color: colors.onSurface.withValues(alpha: 0.5)),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Comision',
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: colors.onSurface.withValues(alpha: 0.7),
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: _commissionRate > 0
+                            ? colors.primary.withValues(alpha: 0.1)
+                            : colors.onSurface.withValues(alpha: 0.06),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        _commissionRate > 0
+                            ? '${_commissionRate.toStringAsFixed(0)}%'
+                            : 'Sin comision',
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: _commissionRate > 0
+                              ? colors.primary
+                              : colors.onSurface.withValues(alpha: 0.4),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                Slider(
+                  value: _commissionRate,
+                  min: 0,
+                  max: 50,
+                  divisions: 50,
+                  activeColor: colors.primary,
+                  inactiveColor: colors.primary.withValues(alpha: 0.12),
+                  onChanged: (v) => setState(() => _commissionRate = v),
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('0%',
+                        style: GoogleFonts.nunito(
+                            fontSize: 10,
+                            color: colors.onSurface.withValues(alpha: 0.4))),
+                    Text('50%',
+                        style: GoogleFonts.nunito(
+                            fontSize: 10,
+                            color: colors.onSurface.withValues(alpha: 0.4))),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
             ElevatedButton(
               onPressed: _savingProfile ? null : () => _saveProfile(staffId),
               child: _savingProfile
@@ -1172,6 +1264,7 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
         'phone':
             _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
         'experience_years': int.tryParse(_expCtrl.text.trim()) ?? 0,
+        'commission_rate': _commissionRate,
       }).eq('id', staffId);
       ref.invalidate(businessStaffProvider);
       ToastService.showSuccess('Perfil actualizado');
