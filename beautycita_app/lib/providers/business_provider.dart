@@ -661,3 +661,78 @@ class BusinessStats {
         totalReviews: 0,
       );
 }
+
+// ---------------------------------------------------------------------------
+// Service revenue breakdown
+// ---------------------------------------------------------------------------
+
+class ServiceRevenueEntry {
+  final String serviceName;
+  final String? serviceType;
+  final int bookings;
+  final double revenue;
+  final double avgPrice;
+
+  const ServiceRevenueEntry({
+    required this.serviceName,
+    required this.serviceType,
+    required this.bookings,
+    required this.revenue,
+    required this.avgPrice,
+  });
+}
+
+/// Revenue breakdown by service for the business.
+/// period: 'month' or 'year'
+final serviceRevenueProvider = FutureProvider.family<
+    List<ServiceRevenueEntry>, String>(
+  (ref, period) async {
+    final biz = await ref.watch(currentBusinessProvider.future);
+    if (biz == null) return [];
+
+    final bizId = biz['id'] as String;
+    final now = DateTime.now();
+    final DateTime periodStart;
+    if (period == 'year') {
+      periodStart = DateTime(now.year, 1, 1);
+    } else {
+      periodStart = DateTime(now.year, now.month, 1);
+    }
+
+    final rows = await SupabaseClientService.client
+        .from('appointments')
+        .select('service_name, service_type, price')
+        .eq('business_id', bizId)
+        .inFilter('status', ['completed', 'confirmed'])
+        .eq('payment_status', 'paid')
+        .gte('starts_at', periodStart.toIso8601String());
+
+    // Aggregate by service_name
+    final map = <String, _SvcAgg>{};
+    for (final r in rows) {
+      final name = r['service_name'] as String? ?? 'Otro';
+      final price = (r['price'] as num?)?.toDouble() ?? 0;
+      final entry = map.putIfAbsent(name, () => _SvcAgg(r['service_type'] as String?));
+      entry.count++;
+      entry.total += price;
+    }
+
+    final result = map.entries.map((e) => ServiceRevenueEntry(
+      serviceName: e.key,
+      serviceType: e.value.serviceType,
+      bookings: e.value.count,
+      revenue: e.value.total,
+      avgPrice: e.value.count > 0 ? e.value.total / e.value.count : 0,
+    )).toList()
+      ..sort((a, b) => b.revenue.compareTo(a.revenue));
+
+    return result;
+  },
+);
+
+class _SvcAgg {
+  final String? serviceType;
+  int count = 0;
+  double total = 0;
+  _SvcAgg(this.serviceType);
+}

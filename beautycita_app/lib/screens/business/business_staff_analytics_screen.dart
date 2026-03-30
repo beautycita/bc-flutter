@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import '../../config/constants.dart';
 import '../../providers/business_provider.dart';
 // ignore: depend_on_referenced_packages
@@ -134,8 +135,137 @@ class _BusinessStaffAnalyticsScreenState
               ),
             ),
           ),
+
+          // ── Service Revenue Breakdown ──
+          const SizedBox(height: AppConstants.paddingLG),
+          _ServiceRevenueSection(),
         ],
       ),
+    );
+  }
+}
+
+// -- Service revenue breakdown --
+
+class _ServiceRevenueSection extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = Theme.of(context).colorScheme;
+    final monthData = ref.watch(serviceRevenueProvider('month'));
+    final fmt = NumberFormat('#,##0', 'es_MX');
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEC4899).withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.pie_chart_outline, size: 20, color: Color(0xFFEC4899)),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text('Ingresos por Servicio',
+                  style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700)),
+            ),
+            // Export
+            monthData.maybeWhen(
+              data: (data) => IconButton(
+                icon: const Icon(Icons.download_rounded, size: 20),
+                color: colors.primary,
+                onPressed: () => CsvExporter.export<ServiceRevenueEntry>(
+                  context: context,
+                  filename: 'ingresos_servicios',
+                  columns: [
+                    CsvColumn('Servicio', (e) => e.serviceName),
+                    CsvColumn('Citas', (e) => e.bookings.toString()),
+                    CsvColumn('Ingresos', (e) => e.revenue.toStringAsFixed(2)),
+                    CsvColumn('Precio Promedio', (e) => e.avgPrice.toStringAsFixed(2)),
+                  ],
+                  items: data,
+                ),
+              ),
+              orElse: () => const SizedBox.shrink(),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+
+        monthData.when(
+          loading: () => const SizedBox(height: 100, child: Center(child: CircularProgressIndicator(strokeWidth: 2))),
+          error: (e, _) => Text('Error: $e', style: GoogleFonts.nunito(color: colors.error)),
+          data: (services) {
+            if (services.isEmpty) {
+              return Padding(
+                padding: const EdgeInsets.all(20),
+                child: Text('Sin datos de servicios este mes',
+                    style: GoogleFonts.nunito(color: colors.onSurface.withValues(alpha: 0.5))),
+              );
+            }
+
+            // Bar chart
+            final chartData = services.take(8).map((s) =>
+                TrendPoint(s.serviceName.length > 12 ? '${s.serviceName.substring(0, 10)}..' : s.serviceName, s.revenue)).toList();
+
+            final totalRevenue = services.fold(0.0, (sum, s) => sum + s.revenue);
+
+            return Column(
+              children: [
+                TrendChart(
+                  data: chartData,
+                  type: TrendChartType.bar,
+                  color: const Color(0xFFEC4899),
+                  height: 160,
+                  valuePrefix: '\$',
+                ),
+                const SizedBox(height: 12),
+
+                // Service rows
+                ...services.map((s) {
+                  final pct = totalRevenue > 0 ? (s.revenue / totalRevenue * 100) : 0.0;
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 6),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: colors.outline.withValues(alpha: 0.1)),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(s.serviceName, style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600),
+                                  maxLines: 1, overflow: TextOverflow.ellipsis),
+                              Text('${s.bookings} citas · promedio \$${fmt.format(s.avgPrice)}',
+                                  style: GoogleFonts.nunito(fontSize: 11, color: colors.onSurface.withValues(alpha: 0.5))),
+                            ],
+                          ),
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text('\$${fmt.format(s.revenue)}',
+                                style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w700, color: const Color(0xFF059669))),
+                            Text('${pct.toStringAsFixed(1)}%',
+                                style: GoogleFonts.nunito(fontSize: 11, color: colors.onSurface.withValues(alpha: 0.4))),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+              ],
+            );
+          },
+        ),
+      ],
     );
   }
 }
