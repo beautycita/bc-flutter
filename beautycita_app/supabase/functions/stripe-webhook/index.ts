@@ -193,7 +193,47 @@ serve(async (req) => {
 
         console.log(`[STRIPE-WEBHOOK] Payment succeeded for booking ${bookingId}`);
 
-        // Check for tax withholding metadata
+        // Check if the booking is still valid (not cancelled, not expired)
+        const { data: booking } = await supabase
+          .from("appointments")
+          .select("id, status, user_id, price, starts_at")
+          .eq("id", bookingId)
+          .maybeSingle();
+
+        if (!booking || booking.status === "cancelled_customer" || booking.status === "cancelled_business") {
+          // Booking was cancelled while OXXO payment was pending — credit saldo
+          const userId = booking?.user_id || metadata.user_id;
+          const amount = paymentIntent.amount / 100;
+          console.log(`[STRIPE-WEBHOOK] Booking ${bookingId} cancelled — crediting $${amount} to saldo for user ${userId}`);
+
+          if (userId) {
+            await supabase.rpc("increment_saldo", { p_user_id: userId, p_amount: amount });
+            // TODO: Send notification to user about saldo credit
+          }
+          break;
+        }
+
+        // Check if appointment time has passed (OXXO paid too late)
+        const apptTime = new Date(booking.starts_at);
+        if (apptTime < new Date()) {
+          const userId = booking.user_id || metadata.user_id;
+          const amount = paymentIntent.amount / 100;
+          console.log(`[STRIPE-WEBHOOK] Booking ${bookingId} time passed — crediting $${amount} to saldo for user ${userId}`);
+
+          // Cancel the expired booking
+          await supabase.from("appointments").update({
+            status: "cancelled_customer",
+            payment_status: "refunded_to_saldo",
+            updated_at: new Date().toISOString(),
+          }).eq("id", bookingId);
+
+          if (userId) {
+            await supabase.rpc("increment_saldo", { p_user_id: userId, p_amount: amount });
+          }
+          break;
+        }
+
+        // Booking is valid — proceed with normal payment confirmation
         const hasTaxWithholding = paymentIntent.metadata?.tax_withholding === "true";
         const taxFields = hasTaxWithholding ? {
           isr_withheld: parseFloat(paymentIntent.metadata.isr_withheld ?? "0"),
