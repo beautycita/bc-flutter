@@ -362,6 +362,32 @@ class _StatusBanner extends StatelessWidget {
   }
 }
 
+Widget _PaymentsDetailRow(String label, String? value) => Padding(
+  padding: const EdgeInsets.only(bottom: 8),
+  child: Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      SizedBox(
+        width: 130,
+        child: Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey[600],
+          ),
+        ),
+      ),
+      Expanded(
+        child: Text(
+          value ?? '—',
+          style: GoogleFonts.nunito(fontSize: 13),
+        ),
+      ),
+    ],
+  ),
+);
+
 class _PaymentCard extends StatelessWidget {
   final Map<String, dynamic> payment;
   const _PaymentCard({required this.payment});
@@ -386,7 +412,9 @@ class _PaymentCard extends StatelessWidget {
     final typeLabel = _typeLabel(type);
     final statusColor = _statusColor(status);
 
-    return Card(
+    return GestureDetector(
+      onTap: () => _showDetail(context),
+      child: Card(
       elevation: 0,
       color: colors.surface,
       margin: const EdgeInsets.only(bottom: AppConstants.paddingSM),
@@ -439,6 +467,49 @@ class _PaymentCard extends StatelessWidget {
               color: statusColor,
             ),
           ),
+        ),
+      ),
+    ),
+    );
+  }
+
+  void _showDetail(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.6,
+        maxChildSize: 0.9,
+        builder: (ctx, scrollController) => ListView(
+          controller: scrollController,
+          padding: const EdgeInsets.all(20),
+          children: [
+            Center(child: Container(width: 40, height: 4,
+                decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)))),
+            const SizedBox(height: 16),
+            Text('Detalle Transaccion',
+                style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 16),
+            ...payment.entries.map((e) {
+              String val;
+              if (e.value == null) {
+                val = '—';
+              } else if (e.key.endsWith('_at') && e.value is String) {
+                final dt = DateTime.tryParse(e.value as String)?.toLocal();
+                val = dt != null
+                    ? '${dt.day}/${dt.month.toString().padLeft(2,'0')}/${dt.year} '
+                      '${dt.hour.toString().padLeft(2,'0')}:${dt.minute.toString().padLeft(2,'0')}'
+                    : e.value.toString();
+              } else {
+                val = e.value.toString();
+              }
+              return _PaymentsDetailRow(e.key, val);
+            }),
+          ],
         ),
       ),
     );
@@ -516,99 +587,144 @@ class _PayoutCard extends StatelessWidget {
 
     final methodLabel = method == 'bank_transfer' ? 'Transferencia' : method;
 
-    return Card(
-      elevation: 0,
-      color: colors.surface,
-      margin: const EdgeInsets.only(bottom: AppConstants.paddingSM),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-        side: BorderSide(
-          color: colors.onSurface.withValues(alpha: 0.08),
+    return GestureDetector(
+      onTap: () => _showDetail(context, payout),
+      child: Card(
+        elevation: 0,
+        color: colors.surface,
+        margin: const EdgeInsets.only(bottom: AppConstants.paddingSM),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+          side: BorderSide(
+            color: colors.onSurface.withValues(alpha: 0.08),
+          ),
         ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(AppConstants.paddingMD),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(Icons.account_balance_rounded,
-                      color: statusColor, size: 20),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '\$${amount.toStringAsFixed(2)} MXN',
-                        style: GoogleFonts.poppins(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: colors.onSurface,
-                        ),
-                      ),
-                      Text(
-                        '$methodLabel${periodStr.isNotEmpty ? ' • $periodStr' : ''}',
-                        style: GoogleFonts.nunito(
-                          fontSize: 12,
-                          color: colors.onSurface.withValues(alpha: 0.5),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    status == 'completed' ? 'Completado' : status == 'pending' ? 'Pendiente' : status,
-                    style: GoogleFonts.nunito(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: statusColor,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            if (reference.isNotEmpty || dateStr.isNotEmpty) ...[
-              const SizedBox(height: 8),
+        child: Padding(
+          padding: const EdgeInsets.all(AppConstants.paddingMD),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               Row(
                 children: [
-                  if (reference.isNotEmpty)
-                    Expanded(
-                      child: Text(
-                        'Ref: $reference',
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: statusColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(Icons.account_balance_rounded,
+                        color: statusColor, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '\$${amount.toStringAsFixed(2)} MXN',
+                          style: GoogleFonts.poppins(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: colors.onSurface,
+                          ),
+                        ),
+                        Text(
+                          '$methodLabel${periodStr.isNotEmpty ? ' • $periodStr' : ''}',
+                          style: GoogleFonts.nunito(
+                            fontSize: 12,
+                            color: colors.onSurface.withValues(alpha: 0.5),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: statusColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      status == 'completed' ? 'Completado' : status == 'pending' ? 'Pendiente' : status,
+                      style: GoogleFonts.nunito(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: statusColor,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              if (reference.isNotEmpty || dateStr.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    if (reference.isNotEmpty)
+                      Expanded(
+                        child: Text(
+                          'Ref: $reference',
+                          style: GoogleFonts.nunito(
+                            fontSize: 11,
+                            color: colors.onSurface.withValues(alpha: 0.4),
+                          ),
+                        ),
+                      ),
+                    if (dateStr.isNotEmpty)
+                      Text(
+                        dateStr,
                         style: GoogleFonts.nunito(
                           fontSize: 11,
                           color: colors.onSurface.withValues(alpha: 0.4),
                         ),
                       ),
-                    ),
-                  if (dateStr.isNotEmpty)
-                    Text(
-                      dateStr,
-                      style: GoogleFonts.nunito(
-                        fontSize: 11,
-                        color: colors.onSurface.withValues(alpha: 0.4),
-                      ),
-                    ),
-                ],
-              ),
+                  ],
+                ),
+              ],
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showDetail(BuildContext context, Map<String, dynamic> data) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.6,
+        maxChildSize: 0.9,
+        builder: (ctx, scrollController) => ListView(
+          controller: scrollController,
+          padding: const EdgeInsets.all(20),
+          children: [
+            Center(child: Container(width: 40, height: 4,
+                decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)))),
+            const SizedBox(height: 16),
+            Text('Detalle Pago / Retiro',
+                style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 16),
+            ...data.entries.map((e) {
+              String val;
+              if (e.value == null) {
+                val = '—';
+              } else if (e.key.endsWith('_at') && e.value is String) {
+                final dt = DateTime.tryParse(e.value as String)?.toLocal();
+                val = dt != null
+                    ? '${dt.day}/${dt.month.toString().padLeft(2,'0')}/${dt.year} '
+                      '${dt.hour.toString().padLeft(2,'0')}:${dt.minute.toString().padLeft(2,'0')}'
+                    : e.value.toString();
+              } else {
+                val = e.value.toString();
+              }
+              return _PaymentsDetailRow(e.key, val);
+            }),
           ],
         ),
       ),
