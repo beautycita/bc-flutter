@@ -364,15 +364,19 @@ class _ProductCheckoutSheetState extends State<ProductCheckoutSheet> {
     final palette = Theme.of(context).colorScheme;
     final mq = MediaQuery.of(context);
 
-    return Container(
-      margin: EdgeInsets.only(top: mq.size.height * 0.08),
-      decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        borderRadius: const BorderRadius.vertical(
-          top: Radius.circular(AppConstants.radiusLG),
+    return AnimatedPadding(
+      duration: const Duration(milliseconds: 150),
+      padding: EdgeInsets.only(bottom: mq.viewInsets.bottom),
+      child: Container(
+        margin: EdgeInsets.only(top: mq.size.height * 0.08),
+        constraints: BoxConstraints(maxHeight: mq.size.height * 0.92 - mq.viewInsets.bottom),
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(AppConstants.radiusLG),
+          ),
         ),
-      ),
-      child: Column(
+        child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           // Drag handle
@@ -389,6 +393,7 @@ class _ProductCheckoutSheetState extends State<ProductCheckoutSheet> {
 
           Flexible(
             child: SingleChildScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               padding: EdgeInsets.fromLTRB(
                 AppConstants.screenPaddingHorizontal,
                 AppConstants.paddingLG,
@@ -404,6 +409,7 @@ class _ProductCheckoutSheetState extends State<ProductCheckoutSheet> {
             ),
           ),
         ],
+      ),
       ),
     );
   }
