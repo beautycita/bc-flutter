@@ -7,6 +7,7 @@ import '../../providers/business_provider.dart';
 import '../../providers/feature_toggle_provider.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
+import 'business_closures_screen.dart';
 
 class BusinessSettingsScreen extends ConsumerStatefulWidget {
   const BusinessSettingsScreen({super.key});
@@ -344,6 +345,14 @@ class _BusinessSettingsScreenState
             _SectionHeader(label: 'HORARIO DE OPERACION'),
             const SizedBox(height: AppConstants.paddingSM),
             _buildHoursEditor(colors),
+
+            // ---------- Closures / Holidays ----------
+            const SizedBox(height: AppConstants.paddingLG),
+            Container(
+              decoration: _cardDecoration(colors),
+              padding: const EdgeInsets.all(16),
+              child: const BusinessClosuresSection(),
+            ),
 
             // ---------- Policies ----------
             const SizedBox(height: AppConstants.paddingLG),
