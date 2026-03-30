@@ -121,12 +121,39 @@ class BookingRepository {
         .toList();
   }
 
-  /// Cancel a booking by setting its status to 'cancelled_customer'.
+  /// Cancel a booking and refund to saldo if it was paid.
   Future<void> cancelBooking(String bookingId) async {
+    // Fetch booking to check payment status
+    final booking = await SupabaseClientService.client
+        .from('appointments')
+        .select('id, user_id, price, payment_status, payment_method')
+        .eq('id', bookingId)
+        .maybeSingle();
+
+    // Update status
     await SupabaseClientService.client
         .from('appointments')
-        .update({'status': 'cancelled_customer'})
+        .update({
+          'status': 'cancelled_customer',
+          'payment_status': booking?['payment_status'] == 'paid' ? 'refunded_to_saldo' : booking?['payment_status'],
+          'updated_at': DateTime.now().toUtc().toIso8601String(),
+        })
         .eq('id', bookingId);
+
+    // Refund to saldo if paid (any method)
+    if (booking != null &&
+        booking['payment_status'] == 'paid' &&
+        (booking['price'] as num?)?.toDouble() != null &&
+        (booking['price'] as num).toDouble() > 0) {
+      final userId = booking['user_id'] as String?;
+      final amount = (booking['price'] as num).toDouble();
+      if (userId != null) {
+        await SupabaseClientService.client.rpc(
+          'increment_saldo',
+          params: {'p_user_id': userId, 'p_amount': amount},
+        );
+      }
+    }
   }
 
   /// Update the status of a booking.

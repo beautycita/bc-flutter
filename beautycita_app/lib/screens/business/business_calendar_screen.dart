@@ -347,9 +347,42 @@ class _BusinessCalendarScreenState
     }
 
     try {
-      await SupabaseClientService.client
-          .from('appointments')
-          .update({'status': action}).eq('id', id);
+      // If business is cancelling a paid appointment, refund to saldo
+      if (action == 'cancelled_business') {
+        final apptData = await SupabaseClientService.client
+            .from('appointments')
+            .select('user_id, price, payment_status')
+            .eq('id', id)
+            .maybeSingle();
+
+        await SupabaseClientService.client
+            .from('appointments')
+            .update({
+              'status': action,
+              'payment_status': apptData?['payment_status'] == 'paid' ? 'refunded_to_saldo' : apptData?['payment_status'],
+              'updated_at': DateTime.now().toUtc().toIso8601String(),
+            })
+            .eq('id', id);
+
+        if (apptData != null &&
+            apptData['payment_status'] == 'paid' &&
+            (apptData['price'] as num?)?.toDouble() != null &&
+            (apptData['price'] as num).toDouble() > 0) {
+          final userId = apptData['user_id'] as String?;
+          final amount = (apptData['price'] as num).toDouble();
+          if (userId != null) {
+            await SupabaseClientService.client.rpc(
+              'increment_saldo',
+              params: {'p_user_id': userId, 'p_amount': amount},
+            );
+          }
+        }
+      } else {
+        await SupabaseClientService.client
+            .from('appointments')
+            .update({'status': action}).eq('id', id);
+      }
+
       _refresh();
       ToastService.showSuccess('Cita actualizada');
       if (action == 'cancelled_business' && mounted) {
