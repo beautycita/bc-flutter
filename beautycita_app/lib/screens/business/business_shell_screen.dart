@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../config/constants.dart';
 import '../../providers/business_provider.dart';
 import '../../providers/feature_toggle_provider.dart';
+import 'business_dashboard_screen.dart';
 import 'business_calendar_screen.dart';
 import 'business_services_screen.dart';
 import 'business_staff_screen.dart';
@@ -157,7 +158,7 @@ class _BusinessContent extends ConsumerWidget {
       BusinessShellScreen._settingsTab,
     ];
     final children = <Widget>[
-      const _DashboardTab(),
+      const BusinessDashboardScreen(),
       const BusinessCalendarScreen(),
       const BusinessStaffAnalyticsScreen(),
       const BusinessServicesScreen(),
