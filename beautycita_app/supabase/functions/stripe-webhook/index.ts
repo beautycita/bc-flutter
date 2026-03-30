@@ -433,7 +433,7 @@ serve(async (req) => {
         // Find the booking by payment intent
         const { data: booking } = await supabase
           .from("appointments")
-          .select("id")
+          .select("id, user_id, price")
           .eq("payment_intent_id", paymentIntentId)
           .maybeSingle();
 
@@ -441,11 +441,22 @@ serve(async (req) => {
           await supabase
             .from("appointments")
             .update({
-              payment_status: "refunded",
+              payment_status: "refunded_to_saldo",
               refunded_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
             })
             .eq("id", booking.id);
+
+          // Credit refund to user saldo
+          const refundUserId = booking.user_id;
+          const refundAmount = (booking.price as number) ?? charge.amount_refunded / 100;
+          if (refundUserId && refundAmount > 0) {
+            await supabase.rpc("increment_saldo", {
+              p_user_id: refundUserId,
+              p_amount: refundAmount,
+            });
+            console.log(`[STRIPE-WEBHOOK] Credited $${refundAmount} to saldo for user ${refundUserId}`);
+          }
 
           // Idempotency: skip refund payment record if one already exists
           const { data: existingRefund } = await supabase

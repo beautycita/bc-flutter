@@ -43,30 +43,18 @@ class _BookingDetailContentState extends State<BookingDetailContent> {
         'updated_at': now,
       }).eq('id', booking.id);
 
-      // If payment was made, trigger refund via edge function
-      if (booking.paymentStatus == 'paid') {
+      // If payment was made, refund to user saldo
+      if (booking.paymentStatus == 'paid' && booking.amount > 0) {
         try {
-          // Create a dispute-like record or call refund directly
-          // First check if there's an existing dispute for this appointment
-          final disputes = await BCSupabase.client
-              .from(BCTables.disputes)
-              .select('id')
-              .eq('appointment_id', booking.id)
-              .limit(1);
-
-          if ((disputes as List).isNotEmpty) {
-            await BCSupabase.client.functions.invoke(
-              'process-dispute-refund',
-              body: {'dispute_id': disputes[0]['id']},
-            );
-          } else {
-            // Update payment status to refund_pending for manual processing
-            await BCSupabase.client.from(BCTables.appointments).update({
-              'payment_status': 'refund_pending',
-            }).eq('id', booking.id);
-          }
+          await BCSupabase.client.rpc(
+            'increment_saldo',
+            params: {'p_user_id': booking.clientId, 'p_amount': booking.amount},
+          );
+          await BCSupabase.client.from(BCTables.appointments).update({
+            'payment_status': 'refunded_to_saldo',
+          }).eq('id', booking.id);
         } catch (refundErr) {
-          debugPrint('Refund after cancel failed: $refundErr');
+          debugPrint('Saldo refund after cancel failed: $refundErr');
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
