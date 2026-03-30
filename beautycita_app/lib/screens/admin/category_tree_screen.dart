@@ -155,7 +155,7 @@ class _CategoryTreeScreenState extends ConsumerState<CategoryTreeScreen> {
                         ),
                         if (node.isLeaf && node.serviceType != null)
                           Text(
-                            node.serviceType!,
+                            node.displayNameEs,
                             style: GoogleFonts.nunito(
                               fontSize: 11,
                               color: colors.onSurface.withValues(alpha: 0.5),
@@ -498,7 +498,7 @@ class _CategoryTreeScreenState extends ConsumerState<CategoryTreeScreen> {
                             style: GoogleFonts.nunito(
                                 fontSize: 13,
                                 color: colors.onSurface.withValues(alpha: 0.5))),
-                        Text(node.serviceType!,
+                        Text(node.displayNameEs,
                             style: GoogleFonts.nunito(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600)),

@@ -110,7 +110,7 @@ class _ServiceProfileEditorScreenState
           .eq('service_type', _editing!.serviceType);
 
       ref.invalidate(serviceProfilesProvider);
-      ToastService.showSuccess('${_editing!.serviceType} guardado');
+      ToastService.showSuccess('${_editing!.displayNameEs} guardado');
       if (mounted) {
         setState(() => _editing = null);
       }
@@ -307,7 +307,7 @@ class _ServiceProfileEditorScreenState
             ),
             Expanded(
               child: Text(
-                _formatLabel(p.serviceType),
+                p.displayNameEs,
                 style: GoogleFonts.poppins(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
@@ -832,7 +832,7 @@ class _ServiceTile extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                profile.serviceType.replaceAll('_', ' '),
+                profile.displayNameEs,
                 style: GoogleFonts.nunito(
                   fontSize: 14,
                   color: colors.onSurface,

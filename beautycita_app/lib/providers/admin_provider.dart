@@ -621,8 +621,12 @@ class EngineSetting {
   }
 }
 
+String _formatServiceType(String st) =>
+    st.split('_').map((w) => w.isEmpty ? '' : '${w[0].toUpperCase()}${w.substring(1)}').join(' ');
+
 class ServiceProfileAdmin {
   final String serviceType;
+  final String displayNameEs;
   final String? category;
   final String? subcategory;
   final bool isActive;
@@ -649,6 +653,7 @@ class ServiceProfileAdmin {
 
   const ServiceProfileAdmin({
     required this.serviceType,
+    required this.displayNameEs,
     this.category,
     this.subcategory,
     required this.isActive,
@@ -677,6 +682,7 @@ class ServiceProfileAdmin {
   factory ServiceProfileAdmin.fromJson(Map<String, dynamic> json) {
     return ServiceProfileAdmin(
       serviceType: json['service_type'] as String,
+      displayNameEs: json['display_name_es'] as String? ?? _formatServiceType(json['service_type'] as String),
       category: json['category'] as String?,
       subcategory: json['subcategory'] as String?,
       isActive: json['is_active'] as bool? ?? true,

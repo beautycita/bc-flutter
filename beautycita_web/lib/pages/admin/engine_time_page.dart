@@ -353,7 +353,7 @@ class _MatrixRow extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.all(8),
               child: Text(
-                serviceType,
+                serviceType.split('_').map((w) => w.isEmpty ? '' : '${w[0].toUpperCase()}${w.substring(1)}').join(' '),
                 style: theme.textTheme.bodySmall?.copyWith(
                   fontWeight: FontWeight.w500,
                 ),
@@ -501,7 +501,7 @@ class _CellEditDialogState extends State<_CellEditDialog> {
 
     return AlertDialog(
       title: Text(
-        '${widget.rule.serviceType} — ${_dayLabels[widget.rule.dayOfWeek]}',
+        '${widget.rule.serviceType.split('_').map((w) => w.isEmpty ? '' : '${w[0].toUpperCase()}${w.substring(1)}').join(' ')} — ${_dayLabels[widget.rule.dayOfWeek]}',
       ),
       content: SizedBox(
         width: 360,

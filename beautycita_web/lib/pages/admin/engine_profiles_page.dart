@@ -395,7 +395,7 @@ class _ProfileTileState extends State<_ProfileTile> {
               ),
               const SizedBox(height: 2),
               Text(
-                widget.profile.serviceType,
+                widget.profile.name,
                 style: theme.textTheme.labelSmall?.copyWith(
                   color: colors.onSurface.withValues(alpha: 0.5),
                 ),
@@ -441,7 +441,7 @@ class _ProfileEditor extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'Tipo: ${profile.serviceType}',
+            'Tipo: ${profile.name}',
             style: theme.textTheme.bodyMedium?.copyWith(
               color: colors.onSurface.withValues(alpha: 0.6),
             ),
