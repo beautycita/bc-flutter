@@ -2073,7 +2073,7 @@ class _RescheduleDialogState extends State<_RescheduleDialog> {
       BCSupabase.client.functions.invoke(
         'reschedule-notification',
         body: {'appointment_id': widget.appointmentId},
-      ).catchError((e) => debugPrint('[Reschedule] Notification error: $e'));
+      ).then((_) {}).catchError((e) { debugPrint('[Reschedule] Notification error: $e'); });
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
