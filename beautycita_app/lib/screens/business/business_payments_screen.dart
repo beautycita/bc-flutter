@@ -8,6 +8,8 @@ import '../../config/constants.dart';
 import '../../providers/business_provider.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
+// ignore: depend_on_referenced_packages
+import 'package:beautycita/widgets/admin/admin_widgets.dart';
 
 class BusinessPaymentsScreen extends ConsumerStatefulWidget {
   const BusinessPaymentsScreen({super.key});
@@ -20,6 +22,41 @@ class BusinessPaymentsScreen extends ConsumerStatefulWidget {
 class _BusinessPaymentsScreenState
     extends ConsumerState<BusinessPaymentsScreen> {
   bool _syncedStripe = false;
+  DateTime? _txDateFrom;
+  DateTime? _txDateTo;
+
+  List<Map<String, dynamic>> _filterTransactions(List<Map<String, dynamic>> payments) {
+    if (_txDateFrom == null && _txDateTo == null) return payments;
+    return payments.where((p) {
+      final createdAt = p['created_at'] as String?;
+      if (createdAt == null) return true;
+      final dt = DateTime.tryParse(createdAt);
+      if (dt == null) return true;
+      if (_txDateFrom != null && dt.isBefore(_txDateFrom!)) return false;
+      if (_txDateTo != null && dt.isAfter(_txDateTo!.add(const Duration(days: 1)))) return false;
+      return true;
+    }).toList();
+  }
+
+  void _exportTransactionsCsv(BuildContext context, List<Map<String, dynamic>> payments) {
+    CsvExporter.exportMaps(
+      context: context,
+      filename: 'transacciones',
+      headers: ['Fecha', 'Tipo', 'Monto', 'Estado', 'Referencia'],
+      keys: ['created_at', 'type', 'amount', 'status', 'reference'],
+      items: payments,
+    );
+  }
+
+  void _exportPayoutsCsv(BuildContext context, List<Map<String, dynamic>> payouts) {
+    CsvExporter.exportMaps(
+      context: context,
+      filename: 'pagos',
+      headers: ['Fecha', 'Monto', 'Metodo', 'Referencia', 'Estado'],
+      keys: ['created_at', 'amount', 'method', 'reference', 'status'],
+      items: payouts,
+    );
+  }
 
   @override
   void initState() {
@@ -181,33 +218,58 @@ class _BusinessPaymentsScreenState
 
           paymentsAsync.when(
             data: (payments) {
-              if (payments.isEmpty) {
-                return Card(
-                  elevation: 0,
-                  color: colors.surface,
-                  child: Padding(
-                    padding: const EdgeInsets.all(AppConstants.paddingXL),
-                    child: Column(
-                      children: [
-                        Icon(Icons.receipt_long_outlined,
-                            size: 48,
-                            color: colors.onSurface.withValues(alpha: 0.3)),
-                        const SizedBox(height: AppConstants.paddingSM),
-                        Text(
-                          'Sin transacciones',
-                          style: GoogleFonts.nunito(
-                            fontSize: 14,
-                            color: colors.onSurface.withValues(alpha: 0.5),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }
-
+              final filtered = _filterTransactions(payments);
+              // AdminToolbar: date range + export for transactions
               return Column(
-                children: payments.map((p) => _PaymentCard(payment: p)).toList(),
+                children: [
+                  AdminToolbar(
+                    showDateRange: true,
+                    dateFrom: _txDateFrom,
+                    dateTo: _txDateTo,
+                    onDateRangeTap: () async {
+                      final range = await showAdminDateRangePicker(context,
+                          initialFrom: _txDateFrom, initialTo: _txDateTo);
+                      if (range != null) {
+                        setState(() {
+                          _txDateFrom = range.start;
+                          _txDateTo = range.end;
+                        });
+                      }
+                    },
+                    onDateRangeClear: () => setState(() {
+                      _txDateFrom = null;
+                      _txDateTo = null;
+                    }),
+                    showExport: true,
+                    onExport: () => _exportTransactionsCsv(context, filtered),
+                    totalCount: payments.length,
+                    filteredCount: filtered.length,
+                  ),
+                  if (filtered.isEmpty) ...[ Card(
+                    elevation: 0,
+                    color: colors.surface,
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppConstants.paddingXL),
+                      child: Column(
+                        children: [
+                          Icon(Icons.receipt_long_outlined,
+                              size: 48,
+                              color: colors.onSurface.withValues(alpha: 0.3)),
+                          const SizedBox(height: AppConstants.paddingSM),
+                          Text(
+                            'Sin transacciones',
+                            style: GoogleFonts.nunito(
+                              fontSize: 14,
+                              color: colors.onSurface.withValues(alpha: 0.5),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )]
+                  else
+                    ...filtered.map((p) => _PaymentCard(payment: p)),
+                ],
               );
             },
             loading: () => const Center(
@@ -220,16 +282,33 @@ class _BusinessPaymentsScreenState
                 style: GoogleFonts.nunito(color: colors.error)),
           ),
 
+          // placeholder when block below needs to stay distinct
           const SizedBox(height: AppConstants.paddingLG),
 
           // ── Payout History ──
-          Text(
-            'Historial de Pagos',
-            style: GoogleFonts.poppins(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: colors.onSurface,
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Historial de Pagos',
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: colors.onSurface,
+                  ),
+                ),
+              ),
+              payoutsAsync.when(
+                data: (payouts) => IconButton(
+                  icon: const Icon(Icons.download_rounded, size: 20),
+                  tooltip: 'Exportar pagos CSV',
+                  color: colors.primary,
+                  onPressed: () => _exportPayoutsCsv(context, payouts),
+                ),
+                loading: () => const SizedBox.shrink(),
+                error: (_, __) => const SizedBox.shrink(),
+              ),
+            ],
           ),
           const SizedBox(height: AppConstants.paddingSM),
 

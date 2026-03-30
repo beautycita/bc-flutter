@@ -8,6 +8,8 @@ import '../../providers/business_provider.dart';
 import '../../providers/feature_toggle_provider.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
+// ignore: depend_on_referenced_packages
+import 'package:beautycita/widgets/admin/admin_widgets.dart';
 
 class BusinessDisputesScreen extends ConsumerStatefulWidget {
   const BusinessDisputesScreen({super.key});
@@ -20,6 +22,76 @@ class BusinessDisputesScreen extends ConsumerStatefulWidget {
 class _BusinessDisputesScreenState
     extends ConsumerState<BusinessDisputesScreen> {
   String? _statusFilter; // null = all
+  final _searchCtrl = TextEditingController();
+  String _searchQuery = '';
+  String? _sortField;
+  bool _sortAscending = false;
+  DateTime? _dateFrom;
+  DateTime? _dateTo;
+
+  static const _sortOptions = [
+    SortOption('created_at', 'Fecha'),
+    SortOption('status', 'Estado'),
+    SortOption('amount', 'Monto'),
+  ];
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  List<Map<String, dynamic>> _applyFilters(List<Map<String, dynamic>> disputes) {
+    var result = disputes.where((d) {
+      final q = _searchQuery.toLowerCase();
+      if (q.isNotEmpty) {
+        final customer = (d['customer_name'] as String? ?? '').toLowerCase();
+        final reason = (d['reason'] as String? ?? '').toLowerCase();
+        if (!customer.contains(q) && !reason.contains(q)) return false;
+      }
+      if (_dateFrom != null) {
+        final createdAt = d['created_at'] as String?;
+        if (createdAt != null) {
+          final dt = DateTime.tryParse(createdAt);
+          if (dt != null && dt.isBefore(_dateFrom!)) return false;
+        }
+      }
+      if (_dateTo != null) {
+        final createdAt = d['created_at'] as String?;
+        if (createdAt != null) {
+          final dt = DateTime.tryParse(createdAt);
+          if (dt != null && dt.isAfter(_dateTo!.add(const Duration(days: 1)))) return false;
+        }
+      }
+      return true;
+    }).toList();
+
+    if (_sortField != null) {
+      result.sort((a, b) {
+        dynamic va = a[_sortField];
+        dynamic vb = b[_sortField];
+        int cmp;
+        if (va is num && vb is num) {
+          cmp = va.compareTo(vb);
+        } else {
+          cmp = (va?.toString() ?? '').compareTo(vb?.toString() ?? '');
+        }
+        return _sortAscending ? cmp : -cmp;
+      });
+    }
+
+    return result;
+  }
+
+  void _exportCsv(BuildContext context, List<Map<String, dynamic>> disputes) {
+    CsvExporter.exportMaps(
+      context: context,
+      filename: 'disputas',
+      headers: ['ID', 'Cliente', 'Razon', 'Monto', 'Estado', 'Creado', 'Resuelto'],
+      keys: ['id', 'customer_name', 'reason', 'amount', 'status', 'created_at', 'resolved_at'],
+      items: disputes,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,17 +110,58 @@ class _BusinessDisputesScreenState
       backgroundColor: Colors.transparent,
       body: disputesAsync.when(
         data: (disputes) {
-          final filtered = _statusFilter == null
+          // Apply status filter first, then search/sort/date filters
+          final statusFiltered = _statusFilter == null
               ? disputes
-              : disputes
-                  .where((d) => d['status'] == _statusFilter)
-                  .toList();
+              : disputes.where((d) => d['status'] == _statusFilter).toList();
+          final filtered = _applyFilters(statusFiltered);
 
           return RefreshIndicator(
             onRefresh: () async => ref.invalidate(businessDisputesProvider),
             child: ListView(
               padding: const EdgeInsets.all(AppConstants.paddingMD),
               children: [
+                // AdminToolbar: search, sort, date range, export
+                AdminToolbar(
+                  showSearch: true,
+                  searchHint: 'Buscar por cliente o motivo...',
+                  searchController: _searchCtrl,
+                  onSearchChanged: (v) => setState(() => _searchQuery = v),
+                  showSort: true,
+                  sortOptions: _sortOptions,
+                  currentSortField: _sortField,
+                  sortAscending: _sortAscending,
+                  onSortChanged: (field) => setState(() {
+                    if (_sortField == field) {
+                      _sortAscending = !_sortAscending;
+                    } else {
+                      _sortField = field;
+                      _sortAscending = false;
+                    }
+                  }),
+                  showDateRange: true,
+                  dateFrom: _dateFrom,
+                  dateTo: _dateTo,
+                  onDateRangeTap: () async {
+                    final range = await showAdminDateRangePicker(context,
+                        initialFrom: _dateFrom, initialTo: _dateTo);
+                    if (range != null) {
+                      setState(() {
+                        _dateFrom = range.start;
+                        _dateTo = range.end;
+                      });
+                    }
+                  },
+                  onDateRangeClear: () => setState(() {
+                    _dateFrom = null;
+                    _dateTo = null;
+                  }),
+                  showExport: true,
+                  onExport: () => _exportCsv(context, filtered),
+                  totalCount: disputes.length,
+                  filteredCount: filtered.length,
+                ),
+
                 // Status filter chips
                 Wrap(
                   spacing: 8,

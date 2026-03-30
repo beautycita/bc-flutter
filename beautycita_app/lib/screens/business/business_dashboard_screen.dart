@@ -6,6 +6,7 @@ import '../../config/constants.dart';
 import '../../providers/business_provider.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
+import 'package:beautycita/widgets/admin/admin_widgets.dart';
 
 class BusinessDashboardScreen extends ConsumerWidget {
   const BusinessDashboardScreen({super.key});
@@ -613,6 +614,12 @@ class _TaxDeductionsCardState extends ConsumerState<_TaxDeductionsCard> {
                     ],
                   ),
                 ),
+                IconButton(
+                  icon: const Icon(Icons.download_rounded, size: 20),
+                  tooltip: 'Exportar CSV',
+                  color: colors.primary,
+                  onPressed: () => _exportTaxCsv(context),
+                ),
               ],
             ),
             const SizedBox(height: 16),
@@ -805,6 +812,22 @@ class _TaxDeductionsCardState extends ConsumerState<_TaxDeductionsCard> {
               }),
             ],
 
+            // ── Revenue Trend Chart ──
+            if (_monthlyData.isNotEmpty) ...[
+              Divider(height: 20, color: colors.onSurface.withValues(alpha: 0.08)),
+              TrendChart(
+                title: 'Ingresos Mensuales',
+                type: TrendChartType.bar,
+                color: const Color(0xFF059669),
+                height: 160,
+                valuePrefix: '\$',
+                data: _monthlyData.map((m) => TrendPoint(
+                  m['month'] as String,
+                  (m['revenue'] as double),
+                )).toList(),
+              ),
+            ],
+
             const SizedBox(height: 14),
 
             // Add expense button
@@ -826,6 +849,16 @@ class _TaxDeductionsCardState extends ConsumerState<_TaxDeductionsCard> {
           ],
         ),
       ),
+    );
+  }
+
+  void _exportTaxCsv(BuildContext context) {
+    CsvExporter.exportMaps(
+      context: context,
+      filename: 'impuestos_deducciones',
+      headers: ['Mes', 'Ingresos', 'IVA 8%', 'ISR 2.5%', 'Gastos', 'CFDI'],
+      keys: ['month', 'revenue', 'iva', 'isr', 'expenses', 'cfdi'],
+      items: _monthlyData,
     );
   }
 

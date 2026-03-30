@@ -699,9 +699,10 @@ const _privacySections = [
   _Section(
     heading: '1. Identidad y domicilio del responsable',
     body:
-        'Responsable: BeautyCita S.A. de C.V.\n'
-        'Domicilio: Plaza Caracol local 27, Puerto Vallarta, Jalisco, '
-        'C.P. 48330, Mexico.\n'
+        'Responsable: BEAUTYCITA, Sociedad Anonima de Capital Variable\n'
+        'RFC: BEA260313MI8\n'
+        'Domicilio fiscal: Avenida Manuel Corona, Alazan 11A, '
+        'C.P. 48290, Jalisco, Mexico.\n'
         'Correo del departamento de datos personales: legal@beautycita.com\n'
         'Telefono: +52 (720) 677-7800\n\n'
         'BeautyCita opera como plataforma digital de intermediacion de '

@@ -318,7 +318,8 @@ async function handlePlatformDeclaration(
   return {
     period: { year, month },
     platform: {
-      name: "BeautyCita S.A. de C.V.",
+      name: "BEAUTYCITA, SOCIEDAD ANONIMA DE CAPITAL VARIABLE",
+      rfc: "BEA260313MI8",
       total_businesses: data.total_businesses,
       total_transactions: data.total_transactions,
       total_revenue: data.total_revenue_all,
