@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../config/constants.dart';
 import '../../providers/business_provider.dart';
 import '../../providers/feature_toggle_provider.dart';
+import 'business_clients_screen.dart';
 import 'business_dashboard_screen.dart';
 import 'business_calendar_screen.dart';
 import 'business_services_screen.dart';
@@ -30,6 +31,7 @@ class BusinessShellScreen extends ConsumerWidget {
     _BizTab(icon: Icons.analytics_rounded, label: 'Rendimiento'),
     _BizTab(icon: Icons.design_services_rounded, label: 'Servicios'),
     _BizTab(icon: Icons.people_rounded, label: 'Equipo'),
+    _BizTab(icon: Icons.contacts_rounded, label: 'Clientes'),
     _BizTab(icon: Icons.gavel_rounded, label: 'Disputas'),
     _BizTab(icon: Icons.qr_code_rounded, label: 'QR Walk-in'),
     _BizTab(icon: Icons.payments_rounded, label: 'Pagos'),
@@ -163,6 +165,7 @@ class _BusinessContent extends ConsumerWidget {
       const BusinessStaffAnalyticsScreen(),
       const BusinessServicesScreen(),
       const BusinessStaffScreen(),
+      const BusinessClientsScreen(),
       const BusinessDisputesScreen(),
       const BusinessQrScreen(),
       const BusinessPaymentsScreen(),
