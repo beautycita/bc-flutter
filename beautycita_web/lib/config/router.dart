@@ -5,6 +5,10 @@ import 'package:beautycita_core/supabase.dart';
 
 import '../providers/auth_provider.dart';
 
+import '../pages/admin/admin_chat_page.dart';
+import '../pages/admin/admin_notification_templates_page.dart';
+import '../pages/admin/admin_rp_tracking_page.dart';
+import '../pages/admin/admin_tax_reports_page.dart';
 import '../pages/admin/analytics_page.dart';
 import '../pages/admin/bookings_page.dart';
 import '../pages/admin/config_page.dart';
@@ -23,10 +27,15 @@ import '../pages/admin/applications_page.dart';
 import '../pages/admin/salons_page.dart';
 import '../pages/admin/toggles_page.dart';
 import '../pages/admin/users_page.dart';
+import '../pages/business/biz_analytics_page.dart';
 import '../pages/business/biz_calendar_page.dart';
 import '../pages/business/biz_calendar_sync_page.dart';
+import '../pages/business/biz_clients_page.dart';
 import '../pages/business/biz_dashboard_page.dart';
 import '../pages/business/biz_disputes_page.dart';
+import '../pages/business/biz_gift_cards_page.dart';
+import '../pages/business/biz_marketing_page.dart';
+import '../pages/business/biz_orders_page.dart';
 import '../pages/business/biz_payments_page.dart';
 import '../pages/business/biz_services_page.dart';
 import '../pages/business/biz_qr_page.dart';
@@ -87,6 +96,10 @@ abstract final class WebRoutes {
   static const String adminOperations = '/admin/operations';
   static const String adminConfig = '/admin/config';
   static const String adminToggles = '/admin/toggles';
+  static const String adminTaxReports = '/admin/tax-reports';
+  static const String adminRpTracking = '/admin/rp-tracking';
+  static const String adminNotificationTemplates = '/admin/notification-templates';
+  static const String adminChat = '/admin/chat';
 
   // Business
   static const String negocio = '/negocio';
@@ -100,6 +113,11 @@ abstract final class WebRoutes {
   static const String negocioReviews = '/negocio/reviews';
   static const String negocioCalendarSync = '/negocio/calendar-sync';
   static const String negocioPos = '/negocio/pos';
+  static const String negocioClients = '/negocio/clients';
+  static const String negocioMarketing = '/negocio/marketing';
+  static const String negocioGiftCards = '/negocio/gift-cards';
+  static const String negocioAnalytics = '/negocio/analytics';
+  static const String negocioOrders = '/negocio/orders';
 
   // Client
   static const String explorar = '/explorar';
@@ -345,6 +363,23 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: 'toggles',
                 builder: (context, state) => const TogglesPage(),
               ),
+              GoRoute(
+                path: 'tax-reports',
+                builder: (context, state) => const AdminTaxReportsPage(),
+              ),
+              GoRoute(
+                path: 'rp-tracking',
+                builder: (context, state) => const AdminRpTrackingPage(),
+              ),
+              GoRoute(
+                path: 'notification-templates',
+                builder: (context, state) =>
+                    const AdminNotificationTemplatesPage(),
+              ),
+              GoRoute(
+                path: 'chat',
+                builder: (context, state) => const AdminChatPage(),
+              ),
             ],
           ),
         ],
@@ -450,6 +485,26 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: 'pos',
                 builder: (context, state) => const BizPosPage(),
+              ),
+              GoRoute(
+                path: 'clients',
+                builder: (context, state) => const BizClientsPage(),
+              ),
+              GoRoute(
+                path: 'marketing',
+                builder: (context, state) => const BizMarketingPage(),
+              ),
+              GoRoute(
+                path: 'gift-cards',
+                builder: (context, state) => const BizGiftCardsPage(),
+              ),
+              GoRoute(
+                path: 'analytics',
+                builder: (context, state) => const BizAnalyticsPage(),
+              ),
+              GoRoute(
+                path: 'orders',
+                builder: (context, state) => const BizOrdersPage(),
               ),
             ],
           ),

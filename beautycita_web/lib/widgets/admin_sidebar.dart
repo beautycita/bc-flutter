@@ -42,6 +42,11 @@ const _navItems = <_NavItem>[
   _NavDivider(),
   _NavItem(label: 'Config', icon: Icons.build_outlined, route: WebRoutes.adminConfig),
   _NavItem(label: 'Toggles', icon: Icons.toggle_on_outlined, route: WebRoutes.adminToggles),
+  _NavDivider(),
+  _NavItem(label: 'Fiscal', icon: Icons.account_balance_wallet_outlined, route: WebRoutes.adminTaxReports),
+  _NavItem(label: 'RPs', icon: Icons.badge_outlined, route: WebRoutes.adminRpTracking),
+  _NavItem(label: 'Plantillas', icon: Icons.notifications_none_outlined, route: WebRoutes.adminNotificationTemplates),
+  _NavItem(label: 'Chat Admin', icon: Icons.forum_outlined, route: WebRoutes.adminChat),
 ];
 
 /// Reusable admin sidebar content.

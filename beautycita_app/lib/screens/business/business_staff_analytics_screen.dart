@@ -144,7 +144,7 @@ class _BusinessStaffAnalyticsScreenState
 
           // ── Comisiones ──
           const SizedBox(height: AppConstants.paddingLG),
-          _CommissionsSection(),
+          const _CommissionsSection(),
         ],
       ),
     );
@@ -279,6 +279,8 @@ class _ServiceRevenueSection extends ConsumerWidget {
 // -- Commissions section --
 
 class _CommissionsSection extends ConsumerWidget {
+  const _CommissionsSection();
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).colorScheme;

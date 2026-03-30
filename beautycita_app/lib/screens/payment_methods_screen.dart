@@ -216,6 +216,11 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen>
             },
           ),
 
+          // ── Tarjeta de regalo ──
+          _animated(0, const _GiftCardRedemptionTile()),
+
+          const SizedBox(height: AppConstants.paddingMD),
+
           // ── Tarjetas guardadas ──
           _animated(0, Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -631,6 +636,227 @@ class _CashInfoStep extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Gift card redemption tile (stateful: enter code → redeem → credits saldo)
+// ---------------------------------------------------------------------------
+
+class _GiftCardRedemptionTile extends ConsumerStatefulWidget {
+  const _GiftCardRedemptionTile();
+
+  @override
+  ConsumerState<_GiftCardRedemptionTile> createState() =>
+      _GiftCardRedemptionTileState();
+}
+
+class _GiftCardRedemptionTileState
+    extends ConsumerState<_GiftCardRedemptionTile> {
+  bool _expanded = false;
+  final _codeCtrl = TextEditingController();
+  bool _loading = false;
+
+  @override
+  void dispose() {
+    _codeCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _redeem() async {
+    final code = _codeCtrl.text.trim().toUpperCase();
+    if (code.isEmpty) {
+      ToastService.showError('Ingresa el codigo');
+      return;
+    }
+    setState(() => _loading = true);
+    try {
+      final userId = SupabaseClientService.currentUserId;
+      if (userId == null) {
+        ToastService.showError('Debes iniciar sesion');
+        return;
+      }
+
+      final data = await SupabaseClientService.client
+          .from('gift_cards')
+          .select()
+          .eq('code', code)
+          .maybeSingle();
+
+      if (data == null) {
+        ToastService.showError('Codigo no encontrado');
+        return;
+      }
+
+      final isActive = data['is_active'] as bool? ?? false;
+      final redeemedAt = data['redeemed_at'] as String?;
+      final expiresAt = data['expires_at'] as String?;
+      final remaining = (data['remaining_amount'] as num?)?.toDouble() ?? 0;
+
+      if (!isActive || redeemedAt != null) {
+        ToastService.showError('Esta tarjeta ya fue canjeada');
+        return;
+      }
+      if (expiresAt != null &&
+          DateTime.tryParse(expiresAt)?.isBefore(DateTime.now()) == true) {
+        ToastService.showError('Esta tarjeta ha vencido');
+        return;
+      }
+      if (remaining <= 0) {
+        ToastService.showError('Esta tarjeta no tiene saldo');
+        return;
+      }
+
+      await SupabaseClientService.client.from('gift_cards').update({
+        'redeemed_by': userId,
+        'redeemed_at': DateTime.now().toUtc().toIso8601String(),
+        'remaining_amount': 0,
+        'is_active': false,
+      }).eq('id', data['id'] as String);
+
+      await SupabaseClientService.client.rpc(
+        'increment_saldo',
+        params: {'p_user_id': userId, 'p_amount': remaining},
+      );
+
+      _codeCtrl.clear();
+      setState(() => _expanded = false);
+      ref.invalidate(_saldoProvider);
+
+      if (mounted) {
+        ToastService.showSuccess(
+            '\$${remaining.toStringAsFixed(2)} MXN acreditados a tu saldo');
+      }
+    } catch (e) {
+      ToastService.showError('Error: $e');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SectionHeader(label: 'Tarjeta de regalo'),
+        GestureDetector(
+          onTap: () => setState(() => _expanded = !_expanded),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: colors.surface,
+              borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+              border: Border.all(
+                  color: colors.outline.withValues(alpha: 0.15)),
+              boxShadow: [
+                BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3))
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEC4899).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.card_giftcard_rounded,
+                      color: Color(0xFFEC4899), size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text('Canjear tarjeta de regalo',
+                      style: GoogleFonts.poppins(
+                          fontSize: 14, fontWeight: FontWeight.w600)),
+                ),
+                Icon(
+                  _expanded
+                      ? Icons.keyboard_arrow_up_rounded
+                      : Icons.keyboard_arrow_down_rounded,
+                  color: colors.onSurface.withValues(alpha: 0.4),
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (_expanded)
+          Container(
+            margin: const EdgeInsets.only(top: 4),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: colors.surface,
+              borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+              border: Border.all(
+                  color: colors.outline.withValues(alpha: 0.15)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Ingresa el codigo de tu tarjeta',
+                    style: GoogleFonts.nunito(
+                        fontSize: 13,
+                        color: colors.onSurface.withValues(alpha: 0.6))),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _codeCtrl,
+                        textCapitalization: TextCapitalization.characters,
+                        style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 2),
+                        decoration: InputDecoration(
+                          hintText: 'XXXXXXXX',
+                          hintStyle: GoogleFonts.poppins(
+                              fontSize: 16,
+                              letterSpacing: 2,
+                              color: colors.onSurface.withValues(alpha: 0.3)),
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10)),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    SizedBox(
+                      height: 48,
+                      child: FilledButton(
+                        onPressed: _loading ? null : _redeem,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFFEC4899),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10)),
+                          padding:
+                              const EdgeInsets.symmetric(horizontal: 16),
+                        ),
+                        child: _loading
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: Colors.white))
+                            : Text('Canjear',
+                                style: GoogleFonts.poppins(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 }

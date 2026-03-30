@@ -418,6 +418,7 @@ class _ClientDetailSheetState extends State<_ClientDetailSheet> {
   late final TextEditingController _notesCtrl;
   late final TextEditingController _tagsCtrl;
   bool _saving = false;
+  bool _redeemingPoints = false;
 
   @override
   void initState() {
@@ -464,6 +465,79 @@ class _ClientDetailSheetState extends State<_ClientDetailSheet> {
     }
   }
 
+  Future<void> _redeemPoints() async {
+    final userId = widget.client['user_id'] as String?;
+    if (userId == null) {
+      ToastService.showError('Cliente sin cuenta registrada');
+      return;
+    }
+    final points = widget.client['loyalty_points'] as int? ?? 0;
+    if (points < 100) {
+      ToastService.showError('Se necesitan al menos 100 puntos');
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Canjear puntos',
+            style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
+        content: Text(
+          'Canjear 100 puntos por \$50 MXN de saldo para ${widget.client['client_name'] ?? 'este cliente'}?',
+          style: GoogleFonts.nunito(fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Canjear'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    setState(() => _redeemingPoints = true);
+    try {
+      // Deduct 100 points from business_clients
+      await SupabaseClientService.client
+          .from('business_clients')
+          .update({
+            'loyalty_points': points - 100,
+            'updated_at': DateTime.now().toUtc().toIso8601String(),
+          })
+          .eq('id', widget.client['id']);
+
+      // Record loyalty transaction
+      await SupabaseClientService.client.from('loyalty_transactions').insert({
+        'business_id': widget.bizId,
+        'user_id': userId,
+        'points': -100,
+        'type': 'redeemed',
+        'source': 'redemption',
+      });
+
+      // Credit $50 saldo to user
+      await SupabaseClientService.client.rpc(
+        'increment_saldo',
+        params: {'p_user_id': userId, 'p_amount': 50.0},
+      );
+
+      widget.onUpdated();
+      if (mounted) {
+        Navigator.pop(context);
+        ToastService.showSuccess('\$50 MXN acreditados al cliente');
+      }
+    } catch (e) {
+      ToastService.showError('Error: $e');
+    } finally {
+      if (mounted) setState(() => _redeemingPoints = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = widget.client;
@@ -474,6 +548,7 @@ class _ClientDetailSheetState extends State<_ClientDetailSheet> {
     final visits = c['total_visits'] as int? ?? 0;
     final spent = (c['total_spent'] as num?)?.toDouble() ?? 0;
     final noShows = c['no_show_count'] as int? ?? 0;
+    final loyaltyPoints = c['loyalty_points'] as int? ?? 0;
     final firstVisit = DateTime.tryParse(c['first_visit_at']?.toString() ?? '');
     final lastVisit = DateTime.tryParse(c['last_visit_at']?.toString() ?? '');
     final birthday = c['birthday'] as String?;
@@ -525,6 +600,61 @@ class _ClientDetailSheetState extends State<_ClientDetailSheet> {
               const SizedBox(width: 8),
               _StatPill(label: 'No-shows', value: '$noShows', color: noShows > 0 ? Colors.red : colors.onSurface.withValues(alpha: 0.4)),
             ],
+          ),
+          const SizedBox(height: 8),
+
+          // Loyalty points row
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.amber.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.amber.withValues(alpha: 0.2)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.stars_rounded, color: Colors.amber[700], size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('$loyaltyPoints puntos de lealtad',
+                          style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.amber[800])),
+                      Text('100 puntos = \$50 MXN de descuento',
+                          style: GoogleFonts.nunito(
+                              fontSize: 11,
+                              color: Colors.amber[700])),
+                    ],
+                  ),
+                ),
+                if (loyaltyPoints >= 100)
+                  SizedBox(
+                    height: 34,
+                    child: FilledButton(
+                      onPressed: _redeemingPoints ? null : _redeemPoints,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.amber[700],
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
+                      ),
+                      child: _redeemingPoints
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: Colors.white))
+                          : Text('Canjear',
+                              style: GoogleFonts.poppins(
+                                  fontSize: 13, fontWeight: FontWeight.w700)),
+                    ),
+                  ),
+              ],
+            ),
           ),
           const SizedBox(height: 16),
 
