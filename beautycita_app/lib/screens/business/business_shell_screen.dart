@@ -12,10 +12,12 @@ import 'business_calendar_screen.dart';
 import 'business_services_screen.dart';
 import 'business_staff_screen.dart';
 import 'business_disputes_screen.dart';
+import 'business_marketing_screen.dart';
 import 'business_qr_screen.dart';
 import 'business_payments_screen.dart';
 import 'business_settings_screen.dart';
 import 'business_staff_analytics_screen.dart';
+import 'business_gift_cards_screen.dart';
 import 'orders_screen.dart';
 import 'pos_management_screen.dart';
 
@@ -33,8 +35,10 @@ class BusinessShellScreen extends ConsumerWidget {
     _BizTab(icon: Icons.people_rounded, label: 'Equipo'),
     _BizTab(icon: Icons.contacts_rounded, label: 'Clientes'),
     _BizTab(icon: Icons.gavel_rounded, label: 'Disputas'),
+    _BizTab(icon: Icons.campaign_rounded, label: 'Marketing'),
     _BizTab(icon: Icons.qr_code_rounded, label: 'QR Walk-in'),
     _BizTab(icon: Icons.payments_rounded, label: 'Pagos'),
+    _BizTab(icon: Icons.card_giftcard_rounded, label: 'Regalos'),
   ];
 
   /// POS-gated tabs (only when enable_pos is on).
@@ -167,8 +171,10 @@ class _BusinessContent extends ConsumerWidget {
       const BusinessStaffScreen(),
       const BusinessClientsScreen(),
       const BusinessDisputesScreen(),
+      const BusinessMarketingScreen(),
       const BusinessQrScreen(),
       const BusinessPaymentsScreen(),
+      const BusinessGiftCardsScreen(),
       if (posEnabled) ...[
         const OrdersScreen(),
         const PosManagementScreen(),

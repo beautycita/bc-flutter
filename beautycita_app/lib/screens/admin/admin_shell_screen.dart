@@ -4,25 +4,18 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/constants.dart';
 import '../../providers/admin_provider.dart';
-import 'service_profile_editor_screen.dart';
-import 'engine_settings_editor_screen.dart';
-import 'category_tree_screen.dart';
-import 'time_rules_screen.dart';
-import 'admin_pipeline_screen.dart';
 import 'admin_salones_screen.dart';
-import 'analytics_screen.dart';
-import 'notification_templates_screen.dart';
+import 'admin_rp_tracking_screen.dart';
+import 'admin_tax_reports_screen.dart';
+import 'admin_executive_dashboard_screen.dart';
+import 'admin_engine_screen.dart';
+import 'admin_system_screen.dart';
 import 'dashboard_screen.dart';
 import 'users_screen.dart';
 import 'disputes_screen.dart';
 import 'bookings_screen.dart';
-import 'feature_toggles_screen.dart';
 import 'reviews_screen.dart';
 import 'admin_chat_screen.dart';
-import 'admin_tax_reports_screen.dart';
-import 'admin_finance_dashboard_screen.dart';
-import 'admin_operations_dashboard_screen.dart';
-import 'admin_rp_tracking_screen.dart';
 
 /// Index of the currently selected admin tab.
 final adminTabProvider = StateProvider<int>((ref) => 0);
@@ -37,23 +30,17 @@ class AdminShellScreen extends ConsumerWidget {
     _AdminTab(icon: Icons.calendar_today, label: 'Citas', section: 'Gestion'),
     _AdminTab(icon: Icons.gavel, label: 'Disputas', section: 'Gestion'),
     _AdminTab(icon: Icons.store, label: 'Salones', section: 'Gestion'),
-    _AdminTab(icon: Icons.analytics, label: 'Analitica', section: 'Gestion'),
     _AdminTab(icon: Icons.rate_review, label: 'Resenas', section: 'Gestion'),
     _AdminTab(icon: Icons.chat_rounded, label: 'Chat', section: 'Gestion'),
     _AdminTab(icon: Icons.directions_walk, label: 'RP Tracking', section: 'Gestion'),
     _AdminTab(icon: Icons.receipt_long, label: 'Retenciones SAT', section: 'Finanzas'),
-    _AdminTab(icon: Icons.account_balance, label: 'Finanzas CEO', section: 'Finanzas'),
-    _AdminTab(icon: Icons.monitor_heart, label: 'Operaciones', section: 'Finanzas'),
+    _AdminTab(icon: Icons.bar_chart, label: 'Executive', section: 'Finanzas'),
   ];
 
   /// Tabs visible ONLY to superadmin — system config.
   static const _superAdminTabs = <_AdminTab>[
-    _AdminTab(icon: Icons.tune, label: 'Perfiles de Servicio', section: 'Motor'),
-    _AdminTab(icon: Icons.settings, label: 'Configuracion Global', section: 'Motor'),
-    _AdminTab(icon: Icons.account_tree, label: 'Arbol de Categorias', section: 'Motor'),
-    _AdminTab(icon: Icons.schedule, label: 'Reglas de Tiempo', section: 'Motor'),
-    _AdminTab(icon: Icons.notifications, label: 'Notificaciones', section: 'Sistema'),
-    _AdminTab(icon: Icons.toggle_on, label: 'Feature Toggles', section: 'Sistema'),
+    _AdminTab(icon: Icons.tune, label: 'Motor', section: 'Superadmin'),
+    _AdminTab(icon: Icons.settings, label: 'Sistema', section: 'Superadmin'),
   ];
 
   @override
@@ -214,8 +201,6 @@ class _AdminContent extends ConsumerWidget {
         return const DisputesScreen();
       case 'Salones':
         return const AdminSalonesScreen();
-      case 'Analitica':
-        return const AnalyticsScreen();
       case 'Resenas':
         return const ReviewsScreen();
       case 'Chat':
@@ -224,22 +209,12 @@ class _AdminContent extends ConsumerWidget {
         return const AdminRpTrackingScreen();
       case 'Retenciones SAT':
         return const AdminTaxReportsScreen();
-      case 'Perfiles de Servicio':
-        return const ServiceProfileEditorScreen();
-      case 'Configuracion Global':
-        return const EngineSettingsEditorScreen();
-      case 'Arbol de Categorias':
-        return const CategoryTreeScreen();
-      case 'Reglas de Tiempo':
-        return const TimeRulesScreen();
-      case 'Notificaciones':
-        return const NotificationTemplatesScreen();
-      case 'Feature Toggles':
-        return const FeatureTogglesScreen();
-      case 'Finanzas CEO':
-        return const AdminFinanceDashboardScreen();
-      case 'Operaciones':
-        return const AdminOperationsDashboardScreen();
+      case 'Executive':
+        return const AdminExecutiveDashboardScreen();
+      case 'Motor':
+        return const AdminEngineScreen();
+      case 'Sistema':
+        return const AdminSystemScreen();
       default:
         return _PlaceholderTab(
           icon: tab.icon,

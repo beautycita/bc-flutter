@@ -5,6 +5,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../config/constants.dart';
 import '../../providers/business_provider.dart';
+import '../../services/supabase_client.dart';
+import '../../services/toast_service.dart';
 // ignore: depend_on_referenced_packages
 import 'package:beautycita/widgets/admin/admin_widgets.dart';
 
@@ -139,6 +141,10 @@ class _BusinessStaffAnalyticsScreenState
           // ── Service Revenue Breakdown ──
           const SizedBox(height: AppConstants.paddingLG),
           _ServiceRevenueSection(),
+
+          // ── Comisiones ──
+          const SizedBox(height: AppConstants.paddingLG),
+          _CommissionsSection(),
         ],
       ),
     );
@@ -266,6 +272,351 @@ class _ServiceRevenueSection extends ConsumerWidget {
           },
         ),
       ],
+    );
+  }
+}
+
+// -- Commissions section --
+
+class _CommissionsSection extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = Theme.of(context).colorScheme;
+    final commissionsAsync = ref.watch(staffCommissionsProvider);
+    final fmt = NumberFormat('#,##0.00', 'es_MX');
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF059669).withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.percent_rounded,
+                  size: 20, color: Color(0xFF059669)),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Comisiones',
+                      style: GoogleFonts.poppins(
+                          fontSize: 16, fontWeight: FontWeight.w700)),
+                  Text('Mes actual',
+                      style: GoogleFonts.nunito(
+                          fontSize: 11,
+                          color: colors.onSurface.withValues(alpha: 0.5))),
+                ],
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.refresh_rounded, size: 20),
+              color: colors.primary,
+              onPressed: () => ref.invalidate(staffCommissionsProvider),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+
+        commissionsAsync.when(
+          loading: () => const SizedBox(
+              height: 80,
+              child: Center(
+                  child: CircularProgressIndicator(strokeWidth: 2))),
+          error: (e, _) => Text('Error: $e',
+              style: GoogleFonts.nunito(color: colors.error)),
+          data: (data) {
+            if (data.entries.isEmpty) {
+              return Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius:
+                      BorderRadius.circular(AppConstants.radiusMD),
+                  border: Border.all(
+                      color: colors.outline.withValues(alpha: 0.1)),
+                ),
+                child: Column(
+                  children: [
+                    Icon(Icons.percent_rounded,
+                        size: 36,
+                        color: colors.primary.withValues(alpha: 0.2)),
+                    const SizedBox(height: 8),
+                    Text('Sin comisiones este mes',
+                        style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF757575))),
+                    const SizedBox(height: 4),
+                    Text(
+                        'Asigna un % de comision a tu personal para empezar.',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.nunito(
+                            fontSize: 12,
+                            color: const Color(0xFF9E9E9E))),
+                  ],
+                ),
+              );
+            }
+
+            return Column(
+              children: [
+                // Summary totals row
+                Row(
+                  children: [
+                    Expanded(
+                      child: _CommissionSummaryCard(
+                        label: 'Por pagar',
+                        amount: data.totalPending,
+                        color: const Color(0xFFFF8F00),
+                        icon: Icons.hourglass_top_rounded,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _CommissionSummaryCard(
+                        label: 'Pagado',
+                        amount: data.totalPaid,
+                        color: const Color(0xFF059669),
+                        icon: Icons.check_circle_outline_rounded,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _CommissionSummaryCard(
+                        label: 'Total mes',
+                        amount: data.totalMonth,
+                        color: colors.primary,
+                        icon: Icons.summarize_rounded,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // Per-staff rows
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius:
+                        BorderRadius.circular(AppConstants.radiusMD),
+                    border: Border.all(
+                        color: colors.outline.withValues(alpha: 0.1)),
+                  ),
+                  child: Column(
+                    children: [
+                      for (var i = 0; i < data.entries.length; i++) ...[
+                        if (i > 0) const Divider(height: 1),
+                        _CommissionStaffRow(
+                          entry: data.entries[i],
+                          fmt: fmt,
+                          colors: colors,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class _CommissionSummaryCard extends StatelessWidget {
+  final String label;
+  final double amount;
+  final Color color;
+  final IconData icon;
+
+  const _CommissionSummaryCard({
+    required this.label,
+    required this.amount,
+    required this.color,
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final fmt = NumberFormat('#,##0', 'es_MX');
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+        border: Border.all(color: color.withValues(alpha: 0.15)),
+        boxShadow: [
+          BoxShadow(
+              color: color.withValues(alpha: 0.06),
+              blurRadius: 8,
+              offset: const Offset(0, 2)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 14, color: color),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(label,
+                    style: GoogleFonts.poppins(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF9E9E9E)),
+                    overflow: TextOverflow.ellipsis),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text('\$${fmt.format(amount)}',
+              style: GoogleFonts.poppins(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: color)),
+        ],
+      ),
+    );
+  }
+}
+
+class _CommissionStaffRow extends ConsumerStatefulWidget {
+  final StaffCommissionSummary entry;
+  final NumberFormat fmt;
+  final ColorScheme colors;
+
+  const _CommissionStaffRow({
+    required this.entry,
+    required this.fmt,
+    required this.colors,
+  });
+
+  @override
+  ConsumerState<_CommissionStaffRow> createState() =>
+      _CommissionStaffRowState();
+}
+
+class _CommissionStaffRowState
+    extends ConsumerState<_CommissionStaffRow> {
+  bool _marking = false;
+
+  Future<void> _markPaid() async {
+    setState(() => _marking = true);
+    try {
+      final bizAsync = ref.read(currentBusinessProvider);
+      final bizId = bizAsync.valueOrNull?['id'] as String?;
+      if (bizId == null) return;
+
+      await SupabaseClientService.client
+          .from('staff_commissions')
+          .update({'status': 'paid', 'paid_at': DateTime.now().toIso8601String()})
+          .eq('staff_id', widget.entry.staffId)
+          .eq('business_id', bizId)
+          .eq('status', 'pending');
+
+      ref.invalidate(staffCommissionsProvider);
+      ToastService.showSuccess('Comision marcada como pagada');
+    } catch (e, stack) {
+      ToastService.showErrorWithDetails(
+          ToastService.friendlyError(e), e, stack);
+    } finally {
+      if (mounted) setState(() => _marking = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final entry = widget.entry;
+    final fmt = widget.fmt;
+    final colors = widget.colors;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      child: Row(
+        children: [
+          // Avatar initial
+          CircleAvatar(
+            radius: 18,
+            backgroundColor: colors.primary.withValues(alpha: 0.1),
+            child: Text(
+              entry.firstName.isNotEmpty
+                  ? entry.firstName[0].toUpperCase()
+                  : '?',
+              style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                  color: colors.primary),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(entry.firstName,
+                    style: GoogleFonts.poppins(
+                        fontSize: 13, fontWeight: FontWeight.w600)),
+                Text(
+                  '${entry.pendingCount + entry.paidCount} citas'
+                  '${entry.pendingCount > 0 ? ' · ${entry.pendingCount} pendientes' : ''}',
+                  style: GoogleFonts.nunito(
+                      fontSize: 11,
+                      color: colors.onSurface.withValues(alpha: 0.5)),
+                ),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              if (entry.pendingAmount > 0)
+                Text('\$${fmt.format(entry.pendingAmount)}',
+                    style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFFFF8F00))),
+              if (entry.paidAmount > 0)
+                Text('\$${fmt.format(entry.paidAmount)} pagado',
+                    style: GoogleFonts.nunito(
+                        fontSize: 10,
+                        color: const Color(0xFF059669))),
+            ],
+          ),
+          if (entry.pendingAmount > 0) ...[
+            const SizedBox(width: 8),
+            SizedBox(
+              height: 30,
+              child: _marking
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2))
+                  : TextButton(
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 0),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        foregroundColor: const Color(0xFF059669),
+                      ),
+                      onPressed: _markPaid,
+                      child: Text('Pagar',
+                          style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600)),
+                    ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

@@ -36,6 +36,7 @@ class _BusinessSettingsScreenState
   bool _acceptWalkins = false;
   bool _depositRequired = false;
   String _noShowPolicy = 'forfeit_deposit';
+  int _reminderHours = 2;
   bool _initialized = false;
   bool _saving = false;
 
@@ -113,6 +114,7 @@ class _BusinessSettingsScreenState
     _acceptWalkins = biz['accept_walkins'] as bool? ?? false;
     _depositRequired = biz['deposit_required'] as bool? ?? false;
     _noShowPolicy = biz['no_show_policy'] as String? ?? 'forfeit_deposit';
+    _reminderHours = biz['reminder_hours'] as int? ?? 2;
 
     // Parse hours JSON
     final hoursRaw = biz['hours'];
@@ -468,6 +470,71 @@ class _BusinessSettingsScreenState
             ),
             ], // end enable_deposit_required gate
 
+            // ---------- Recordatorios ----------
+            const SizedBox(height: AppConstants.paddingLG),
+            _SectionHeader(label: 'RECORDATORIOS'),
+            const SizedBox(height: AppConstants.paddingSM),
+            Container(
+              decoration: _cardDecoration(colors),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 16, vertical: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Enviar recordatorio',
+                    style: GoogleFonts.poppins(
+                        fontSize: 14, fontWeight: FontWeight.w500),
+                  ),
+                  Text(
+                    'Notificacion al cliente antes de su cita',
+                    style: GoogleFonts.nunito(
+                        fontSize: 12,
+                        color: colors.onSurface.withValues(alpha: 0.5)),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [1, 2, 4, 12, 24].map((h) {
+                      final selected = _reminderHours == h;
+                      final label = h == 1
+                          ? '1 hora'
+                          : h < 24
+                              ? '$h horas'
+                              : '24 horas';
+                      return ChoiceChip(
+                        label: Text(label,
+                            style: GoogleFonts.poppins(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              color: selected
+                                  ? Colors.white
+                                  : colors.onSurface
+                                      .withValues(alpha: 0.7),
+                            )),
+                        selected: selected,
+                        selectedColor: colors.primary,
+                        backgroundColor:
+                            colors.onSurface.withValues(alpha: 0.06),
+                        onSelected: (_) =>
+                            setState(() => _reminderHours = h),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                          side: BorderSide(
+                            color: selected
+                                ? colors.primary
+                                : colors.onSurface
+                                    .withValues(alpha: 0.1),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
+            ),
+
             const SizedBox(height: AppConstants.paddingXL),
             ElevatedButton(
               onPressed: _saving ? null : () => _save(biz['id'] as String),
@@ -660,6 +727,7 @@ class _BusinessSettingsScreenState
             ? (int.tryParse(_depositPctCtrl.text.trim()) ?? 0)
             : 0,
         'no_show_policy': _noShowPolicy,
+        'reminder_hours': _reminderHours,
         'hours': _buildHoursJson(),
       }).eq('id', bizId);
 
