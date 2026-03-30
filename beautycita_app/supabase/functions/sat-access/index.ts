@@ -28,7 +28,13 @@ const RATE_LIMIT_WINDOW_MS = 3_600_000; // 1 hour
 const TIMESTAMP_TOLERANCE_MS = 300_000; // 5 minutes
 
 serve(async (req) => {
-  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  // Top-level safety: if anything fails before auth, return 401 not 500
+  let supabase: ReturnType<typeof createClient>;
+  try {
+    supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  } catch {
+    return json({ error: "Service unavailable" }, 503);
+  }
 
   const url = new URL(req.url);
   const endpoint = url.pathname + url.search;
@@ -44,14 +50,14 @@ serve(async (req) => {
 
     // Verify API key
     if (!SAT_API_KEY || !SAT_API_SECRET || apiKey !== SAT_API_KEY) {
-      await logAccess(supabase, endpoint, null, 401, ipAddress, apiKey, "invalid_key");
+      logAccess(supabase, endpoint, null, 401, ipAddress, apiKey, "invalid_key").catch(() => {});
       return json({ error: "Invalid or missing API key" }, 401);
     }
 
     // Verify timestamp (prevent replay attacks — 5 minute window)
     const ts = parseInt(timestamp);
     if (!ts || Math.abs(Date.now() - ts) > TIMESTAMP_TOLERANCE_MS) {
-      await logAccess(supabase, endpoint, null, 401, ipAddress, apiKey, "expired_timestamp");
+      logAccess(supabase, endpoint, null, 401, ipAddress, apiKey, "expired_timestamp").catch(() => {});
       return json({ error: "Timestamp expired or invalid. Must be within 5 minutes." }, 401);
     }
 
@@ -77,7 +83,7 @@ serve(async (req) => {
       .join("");
 
     if (signature !== expectedSignature) {
-      await logAccess(supabase, endpoint, null, 403, ipAddress, apiKey, "invalid_signature");
+      logAccess(supabase, endpoint, null, 403, ipAddress, apiKey, "invalid_signature").catch(() => {});
       return json({ error: "Invalid signature" }, 403);
     }
 
@@ -87,7 +93,7 @@ serve(async (req) => {
       rateLimitWindow.shift();
     }
     if (rateLimitWindow.length >= RATE_LIMIT_MAX) {
-      await logAccess(supabase, endpoint, null, 429, ipAddress, apiKey, "rate_limited");
+      logAccess(supabase, endpoint, null, 429, ipAddress, apiKey, "rate_limited").catch(() => {});
       return json({ error: "Rate limit exceeded (100/hour)" }, 429);
     }
     rateLimitWindow.push(now);
@@ -130,12 +136,12 @@ serve(async (req) => {
         };
     }
 
-    await logAccess(supabase, endpoint, params, 200, ipAddress, apiKey, "success");
+    logAccess(supabase, endpoint, params, 200, ipAddress, apiKey, "success");
     return json(result);
 
   } catch (err) {
     console.error("[SAT-ACCESS] Error:", (err as Error).message);
-    await logAccess(supabase, endpoint, null, 500, ipAddress, "", "error").catch(() => {});
+    logAccess(supabase, endpoint, null, 500, ipAddress, "", "error").catch(() => {});
     return json({ error: "Internal server error" }, 500);
   }
 });
