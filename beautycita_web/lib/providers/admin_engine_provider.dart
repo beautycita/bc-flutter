@@ -73,7 +73,7 @@ class ServiceProfile {
   static ServiceProfile fromMap(Map<String, dynamic> row) {
     return ServiceProfile(
       id: row['id'] as String? ?? '',
-      name: row['name'] as String? ?? '',
+      name: row['display_name_es'] as String? ?? row['service_type'] as String? ?? '',
       serviceType: row['service_type'] as String? ?? '',
       qualityWeight: (row['quality_weight'] as num?)?.toInt() ?? 50,
       distanceWeight: (row['distance_weight'] as num?)?.toInt() ?? 50,
