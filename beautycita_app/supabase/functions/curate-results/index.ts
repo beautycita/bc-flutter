@@ -565,11 +565,15 @@ function buildOverrideWindow(
     we.setHours(e, 0, 0, 0);
   }
 
-  // Flat preferences for override windows
+  // Weighted preferences: prefer center of window (peak at mid-point)
   const prefs = new Map<string, number>();
   const cursor = new Date(ws);
+  const windowMid = (ws.getTime() + we.getTime()) / 2;
+  const windowHalf = Math.max((we.getTime() - ws.getTime()) / 2, 3_600_000);
   while (cursor <= we) {
-    prefs.set(cursor.toISOString(), 0.7);
+    const distFromMid = Math.abs(cursor.getTime() - windowMid);
+    const pref = 0.5 + 0.4 * (1.0 - distFromMid / windowHalf);
+    prefs.set(cursor.toISOString(), Math.round(pref * 100) / 100);
     cursor.setHours(cursor.getHours() + 1);
   }
 
