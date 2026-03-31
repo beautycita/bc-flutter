@@ -36,7 +36,7 @@ class _BusinessSettingsScreenState
   bool _acceptWalkins = false;
   bool _depositRequired = false;
   String _noShowPolicy = 'forfeit_deposit';
-  int _reminderHours = 2;
+  Set<int> _reminderHoursList = {24, 1};
   bool _initialized = false;
   bool _saving = false;
 
@@ -114,7 +114,12 @@ class _BusinessSettingsScreenState
     _acceptWalkins = biz['accept_walkins'] as bool? ?? false;
     _depositRequired = biz['deposit_required'] as bool? ?? false;
     _noShowPolicy = biz['no_show_policy'] as String? ?? 'forfeit_deposit';
-    _reminderHours = biz['reminder_hours'] as int? ?? 2;
+    final reminderRaw = biz['reminder_hours_list'];
+    if (reminderRaw is List && reminderRaw.isNotEmpty) {
+      _reminderHoursList = reminderRaw.map((e) => e as int).toSet();
+    } else {
+      _reminderHoursList = {24, 1};
+    }
 
     // Parse hours JSON
     final hoursRaw = biz['hours'];
@@ -482,12 +487,12 @@ class _BusinessSettingsScreenState
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Enviar recordatorio',
+                    'Enviar recordatorios',
                     style: GoogleFonts.poppins(
                         fontSize: 14, fontWeight: FontWeight.w500),
                   ),
                   Text(
-                    'Notificacion al cliente antes de su cita',
+                    'Selecciona hasta 2 horarios para recordar al cliente',
                     style: GoogleFonts.nunito(
                         fontSize: 12,
                         color: colors.onSurface.withValues(alpha: 0.5)),
@@ -497,13 +502,13 @@ class _BusinessSettingsScreenState
                     spacing: 8,
                     runSpacing: 8,
                     children: [1, 2, 4, 12, 24].map((h) {
-                      final selected = _reminderHours == h;
+                      final selected = _reminderHoursList.contains(h);
                       final label = h == 1
                           ? '1 hora'
                           : h < 24
                               ? '$h horas'
                               : '24 horas';
-                      return ChoiceChip(
+                      return FilterChip(
                         label: Text(label,
                             style: GoogleFonts.poppins(
                               fontSize: 13,
@@ -517,8 +522,20 @@ class _BusinessSettingsScreenState
                         selectedColor: colors.primary,
                         backgroundColor:
                             colors.onSurface.withValues(alpha: 0.06),
-                        onSelected: (_) =>
-                            setState(() => _reminderHours = h),
+                        checkmarkColor: Colors.white,
+                        onSelected: (on) {
+                          setState(() {
+                            if (on) {
+                              if (_reminderHoursList.length < 2) {
+                                _reminderHoursList.add(h);
+                              } else {
+                                ToastService.showInfo('Maximo 2 recordatorios');
+                              }
+                            } else {
+                              _reminderHoursList.remove(h);
+                            }
+                          });
+                        },
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(20),
                           side: BorderSide(
@@ -531,6 +548,17 @@ class _BusinessSettingsScreenState
                       );
                     }).toList(),
                   ),
+                  if (_reminderHoursList.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Builder(builder: (_) {
+                      final sorted = _reminderHoursList.toList()..sort((a, b) => b.compareTo(a));
+                      final labels = sorted.map((h) => h == 1 ? '1 hora antes' : h < 24 ? '$h horas antes' : '24 horas antes');
+                      return Text(
+                        'Activos: ${labels.join(' + ')}',
+                        style: GoogleFonts.nunito(fontSize: 11, fontWeight: FontWeight.w600, color: colors.primary),
+                      );
+                    }),
+                  ],
                 ],
               ),
             ),
@@ -727,7 +755,7 @@ class _BusinessSettingsScreenState
             ? (int.tryParse(_depositPctCtrl.text.trim()) ?? 0)
             : 0,
         'no_show_policy': _noShowPolicy,
-        'reminder_hours': _reminderHours,
+        'reminder_hours_list': _reminderHoursList.toList(),
         'hours': _buildHoursJson(),
       }).eq('id', bizId);
 
