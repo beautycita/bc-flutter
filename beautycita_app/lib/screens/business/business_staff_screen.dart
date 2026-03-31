@@ -12,6 +12,7 @@ import '../../providers/feature_toggle_provider.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 import '../../widgets/aphrodite_copy_field.dart';
+import '../../widgets/bc_image_editor.dart';
 import 'package:image_cropper/image_cropper.dart' show CropAspectRatioPreset;
 import '../../widgets/bc_image_editor.dart';
 
@@ -912,6 +913,8 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
   late final TextEditingController _expCtrl;
   late double _commissionRate;
   bool _savingProfile = false;
+  File? _newAvatarFile;
+  bool _avatarDeleted = false;
 
   @override
   void initState() {
@@ -1127,6 +1130,42 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Avatar management
+            Center(
+              child: GestureDetector(
+                onTap: _showAvatarOptions,
+                child: Stack(
+                  children: [
+                    CircleAvatar(
+                      radius: 40,
+                      backgroundColor: colors.primary.withValues(alpha: 0.1),
+                      backgroundImage: _newAvatarFile != null
+                          ? FileImage(_newAvatarFile!)
+                          : (!_avatarDeleted && widget.staff['avatar_url'] != null)
+                              ? NetworkImage(widget.staff['avatar_url'] as String) as ImageProvider
+                              : null,
+                      child: (_newAvatarFile == null && (_avatarDeleted || widget.staff['avatar_url'] == null))
+                          ? Icon(Icons.person, size: 40, color: colors.primary.withValues(alpha: 0.5))
+                          : null,
+                    ),
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: colors.primary,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                        child: const Icon(Icons.camera_alt, size: 14, color: Colors.white),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
@@ -1264,17 +1303,114 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
     );
   }
 
+  Future<String?> _uploadFile(File file, String path) async {
+    final bytes = await file.readAsBytes();
+    await SupabaseClientService.client.storage
+        .from('staff-media')
+        .uploadBinary(path, bytes, fileOptions: const FileOptions(upsert: true));
+    return SupabaseClientService.client.storage.from('staff-media').getPublicUrl(path);
+  }
+
+  void _showAvatarOptions() {
+    final hasAvatar = _newAvatarFile != null || (!_avatarDeleted && widget.staff['avatar_url'] != null);
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Elegir de galeria'),
+              onTap: () async {
+                Navigator.pop(ctx);
+                final picked = await ImagePicker().pickImage(
+                  source: ImageSource.gallery,
+                  maxWidth: 1024,
+                  maxHeight: 1024,
+                  imageQuality: 85,
+                );
+                if (picked != null && mounted) {
+                  final edited = await editImage(context, imageFile: File(picked.path), showWatermarkOption: false);
+                  if (edited != null && mounted) {
+                    setState(() {
+                      _newAvatarFile = edited;
+                      _avatarDeleted = false;
+                    });
+                  }
+                }
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt_outlined),
+              title: const Text('Tomar foto'),
+              onTap: () async {
+                Navigator.pop(ctx);
+                final picked = await ImagePicker().pickImage(
+                  source: ImageSource.camera,
+                  preferredCameraDevice: CameraDevice.rear,
+                  maxWidth: 1024,
+                  maxHeight: 1024,
+                  imageQuality: 85,
+                );
+                if (picked != null && mounted) {
+                  final edited = await editImage(context, imageFile: File(picked.path), showWatermarkOption: false);
+                  if (edited != null && mounted) {
+                    setState(() {
+                      _newAvatarFile = edited;
+                      _avatarDeleted = false;
+                    });
+                  }
+                }
+              },
+            ),
+            if (hasAvatar)
+              ListTile(
+                leading: Icon(Icons.delete_outline, color: Colors.red.shade400),
+                title: Text('Eliminar foto', style: TextStyle(color: Colors.red.shade400)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  setState(() {
+                    _newAvatarFile = null;
+                    _avatarDeleted = true;
+                  });
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _saveProfile(String staffId) async {
     setState(() => _savingProfile = true);
     try {
-      await SupabaseClientService.client.from('staff').update({
+      String? avatarUrl;
+
+      // Handle avatar upload/delete
+      if (_newAvatarFile != null) {
+        final path = 'staff-media/$staffId/avatar_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        avatarUrl = await _uploadFile(_newAvatarFile!, path);
+      } else if (_avatarDeleted) {
+        avatarUrl = ''; // Will set to null in DB
+      }
+
+      final updates = <String, dynamic>{
         'first_name': _firstCtrl.text.trim(),
         'last_name': _lastCtrl.text.trim(),
-        'phone':
-            _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
+        'phone': _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
         'experience_years': int.tryParse(_expCtrl.text.trim()) ?? 0,
         'commission_rate': _commissionRate,
-      }).eq('id', staffId);
+      };
+
+      if (avatarUrl != null) {
+        updates['avatar_url'] = avatarUrl.isEmpty ? null : avatarUrl;
+      }
+
+      await SupabaseClientService.client.from('staff').update(updates).eq('id', staffId);
       ref.invalidate(businessStaffProvider);
       ToastService.showSuccess('Perfil actualizado');
     } catch (e, stack) {
