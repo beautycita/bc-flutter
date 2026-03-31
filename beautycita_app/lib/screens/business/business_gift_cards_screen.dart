@@ -713,8 +713,11 @@ class _CreateGiftCardSheetState extends ConsumerState<_CreateGiftCardSheet> {
   final _buyerCtrl = TextEditingController();
   final _recipientCtrl = TextEditingController();
   final _messageCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
   DateTime? _expiresAt;
   bool _saving = false;
+  String _issueMode = 'salon'; // 'salon' (physical/cash) or 'online' (Stripe)
+  bool _isVirtual = true; // virtual (email) or physical (copy code)
 
   @override
   void dispose() {
@@ -745,7 +748,93 @@ class _CreateGiftCardSheetState extends ConsumerState<_CreateGiftCardSheet> {
 
     setState(() => _saving = true);
     try {
-      // Create payment via Stripe
+      if (_issueMode == 'salon') {
+        // Salon-issued: cash already collected, create card directly
+        // BC 3% charged to salon via commission record
+        final code = _generateCode();
+        await SupabaseClientService.client.from('gift_cards').insert({
+          'business_id': widget.bizId,
+          'code': code,
+          'amount': amount,
+          'remaining_amount': amount,
+          'buyer_name': _buyerCtrl.text.trim().isEmpty ? null : _buyerCtrl.text.trim(),
+          'recipient_name': _recipientCtrl.text.trim().isEmpty ? null : _recipientCtrl.text.trim(),
+          'message': _messageCtrl.text.trim().isEmpty ? null : _messageCtrl.text.trim(),
+          'expires_at': _expiresAt?.toUtc().toIso8601String(),
+          'is_active': true,
+        });
+
+        // Record 3% commission charged to salon
+        final bcCommission = amount * 0.03;
+        await SupabaseClientService.client.from('commission_records').insert({
+          'business_id': widget.bizId,
+          'amount': double.parse(bcCommission.toStringAsFixed(2)),
+          'rate': 0.03,
+          'source': 'gift_card',
+          'period_month': DateTime.now().month,
+          'period_year': DateTime.now().year,
+          'status': 'collected',
+        });
+
+        // If virtual, send email with code
+        if (_isVirtual && _emailCtrl.text.trim().isNotEmpty) {
+          SupabaseClientService.client.functions.invoke('send-email', body: {
+            'to': _emailCtrl.text.trim(),
+            'subject': 'Tarjeta de Regalo BeautyCita — \$${amount.toStringAsFixed(0)} MXN',
+            'text': 'Tienes una tarjeta de regalo!\n\n'
+                'Monto: \$${amount.toStringAsFixed(0)} MXN\n'
+                'Codigo: $code\n'
+                '${_messageCtrl.text.trim().isNotEmpty ? 'Mensaje: ${_messageCtrl.text.trim()}\n' : ''}'
+                '\nCanjea tu codigo en la app BeautyCita o en beautycita.com',
+          }).then((_) {}).catchError((_) {});
+        }
+
+        widget.onCreated();
+        if (mounted) {
+          Navigator.pop(context);
+          // Show code prominently so salon can copy it for physical card
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: Text('Tarjeta creada', style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('\$${amount.toStringAsFixed(0)} MXN', style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.w800, color: const Color(0xFF059669))),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF3E8FF),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: SelectableText(code, style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.w800, letterSpacing: 4, color: const Color(0xFF7C3AED))),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(_isVirtual ? 'Codigo enviado por email' : 'Copia este codigo a la tarjeta fisica',
+                      style: GoogleFonts.nunito(fontSize: 13, color: Colors.grey)),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Clipboard.setData(ClipboardData(text: code));
+                    ToastService.showSuccess('Codigo copiado');
+                  },
+                  child: const Text('Copiar codigo'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Cerrar'),
+                ),
+              ],
+            ),
+          );
+        }
+        return;
+      }
+
+      // Online mode: Create payment via Stripe
       final response = await SupabaseClientService.client.functions.invoke(
         'create-gift-card-payment',
         body: {
@@ -831,11 +920,64 @@ class _CreateGiftCardSheetState extends ConsumerState<_CreateGiftCardSheet> {
               style: GoogleFonts.poppins(
                   fontSize: 18, fontWeight: FontWeight.w700)),
           const SizedBox(height: 4),
-          Text('Se genera un codigo de 8 caracteres automaticamente.',
-              style: GoogleFonts.nunito(
-                  fontSize: 13,
-                  color: colors.onSurface.withValues(alpha: 0.5))),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
+
+          // Issue mode selector
+          SegmentedButton<String>(
+            segments: const [
+              ButtonSegment(value: 'salon', icon: Icon(Icons.store, size: 16), label: Text('Desde salon')),
+              ButtonSegment(value: 'online', icon: Icon(Icons.credit_card, size: 16), label: Text('Venta en linea')),
+            ],
+            selected: {_issueMode},
+            onSelectionChanged: (v) => setState(() => _issueMode = v.first),
+            style: SegmentedButton.styleFrom(textStyle: GoogleFonts.poppins(fontSize: 12)),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _issueMode == 'salon'
+                ? 'El cliente paga en efectivo. BC cobra 3% al salon.'
+                : 'El cliente paga en linea. BC cobra 3% al comprador.',
+            style: GoogleFonts.nunito(fontSize: 12, color: colors.onSurface.withValues(alpha: 0.5)),
+          ),
+          const SizedBox(height: 12),
+
+          // Physical vs Virtual toggle
+          Row(
+            children: [
+              Expanded(
+                child: ChoiceChip(
+                  label: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.email_outlined, size: 14, color: _isVirtual ? Colors.white : colors.onSurface),
+                      const SizedBox(width: 4),
+                      Text('Virtual (email)'),
+                    ],
+                  ),
+                  selected: _isVirtual,
+                  selectedColor: colors.primary,
+                  onSelected: (_) => setState(() => _isVirtual = true),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ChoiceChip(
+                  label: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.card_giftcard, size: 14, color: !_isVirtual ? Colors.white : colors.onSurface),
+                      const SizedBox(width: 4),
+                      Text('Fisica (codigo)'),
+                    ],
+                  ),
+                  selected: !_isVirtual,
+                  selectedColor: colors.primary,
+                  onSelected: (_) => setState(() => _isVirtual = false),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
 
           _Field(
             label: 'Monto (MXN) *',
@@ -856,6 +998,15 @@ class _CreateGiftCardSheetState extends ConsumerState<_CreateGiftCardSheet> {
             controller: _recipientCtrl,
             hint: 'Maria Lopez',
           ),
+          if (_isVirtual) ...[
+            const SizedBox(height: 12),
+            _Field(
+              label: 'Email del destinatario',
+              controller: _emailCtrl,
+              hint: 'maria@ejemplo.com',
+              keyboardType: TextInputType.emailAddress,
+            ),
+          ],
           const SizedBox(height: 12),
           _Field(
             label: 'Mensaje (opcional)',
