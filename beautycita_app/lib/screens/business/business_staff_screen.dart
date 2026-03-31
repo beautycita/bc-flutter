@@ -197,6 +197,33 @@ class _StaffCard extends StatelessWidget {
     final avatarUrl = staff['avatar_url'] as String?;
     final commissionRate =
         (staff['commission_rate'] as num?)?.toDouble() ?? 0;
+    final position = staff['position'] as String? ?? 'stylist';
+
+    String positionLabel;
+    Color positionColor;
+    IconData positionIcon;
+    switch (position) {
+      case 'owner':
+        positionLabel = 'Dueno';
+        positionColor = const Color(0xFFD97706);
+        positionIcon = Icons.star_rounded;
+      case 'manager':
+        positionLabel = 'Gerente';
+        positionColor = const Color(0xFF7C3AED);
+        positionIcon = Icons.manage_accounts;
+      case 'receptionist':
+        positionLabel = 'Recepcionista';
+        positionColor = const Color(0xFF2563EB);
+        positionIcon = Icons.support_agent;
+      case 'assistant':
+        positionLabel = 'Asistente';
+        positionColor = const Color(0xFF6B7280);
+        positionIcon = Icons.person_outline;
+      default:
+        positionLabel = 'Estilista';
+        positionColor = const Color(0xFFEC4899);
+        positionIcon = Icons.content_cut;
+    }
 
     String expLabel;
     if (experience == 0) {
@@ -253,24 +280,29 @@ class _StaffCard extends StatelessWidget {
         ),
         subtitle: Row(
           children: [
-            if (isOwner) ...[
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                decoration: BoxDecoration(
-                  color: colors.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  'Dueno',
-                  style: GoogleFonts.nunito(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
-                    color: colors.primary,
-                  ),
-                ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+              decoration: BoxDecoration(
+                color: positionColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(4),
               ),
-              const SizedBox(width: 8),
-            ],
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(positionIcon, size: 10, color: positionColor),
+                  const SizedBox(width: 3),
+                  Text(
+                    positionLabel,
+                    style: GoogleFonts.nunito(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      color: positionColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
             if (rating > 0) ...[
               const Icon(Icons.star_rounded, size: 14, color: Colors.amber),
               const SizedBox(width: 2),
@@ -411,6 +443,7 @@ class _AddStaffSheetState extends ConsumerState<_AddStaffSheet> {
   final _expCtrl = TextEditingController(text: '0');
   final _bioCtrl = TextEditingController();
   bool _saving = false;
+  String _position = 'stylist';
   File? _avatarFile;
   final List<File> _portfolioFiles = [];
   final _picker = ImagePicker();
@@ -803,6 +836,21 @@ class _AddStaffSheetState extends ConsumerState<_AddStaffSheet> {
               ],
               const SizedBox(height: AppConstants.paddingSM),
 
+              // Position selector
+              DropdownButtonFormField<String>(
+                value: _position,
+                decoration: _styledInput('Posicion',
+                    prefixIcon: const Icon(Icons.badge_outlined, size: 20)),
+                items: const [
+                  DropdownMenuItem(value: 'stylist', child: Text('Estilista')),
+                  DropdownMenuItem(value: 'receptionist', child: Text('Recepcionista')),
+                  DropdownMenuItem(value: 'manager', child: Text('Gerente')),
+                  DropdownMenuItem(value: 'assistant', child: Text('Asistente')),
+                ],
+                onChanged: (v) => setState(() => _position = v ?? 'stylist'),
+              ),
+              const SizedBox(height: AppConstants.paddingSM),
+
               // Experience (number only, 0-50)
               Row(
                 children: [
@@ -1023,6 +1071,7 @@ class _AddStaffSheetState extends ConsumerState<_AddStaffSheet> {
         'bio': _bioCtrl.text.trim().isEmpty ? null : _bioCtrl.text.trim(),
         'avatar_url': avatarUrl,
         'portfolio_urls': portfolioUrls,
+        'position': _position,
         'is_active': true,
       };
 
@@ -1118,6 +1167,7 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
   late final TextEditingController _phoneCtrl;
   late final TextEditingController _expCtrl;
   late double _commissionRate;
+  late String _position;
   bool _savingProfile = false;
   File? _newAvatarFile;
   bool _avatarDeleted = false;
@@ -1135,6 +1185,7 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
         text: (widget.staff['experience_years'] as int?)?.toString() ?? '0');
     _commissionRate =
         (widget.staff['commission_rate'] as num?)?.toDouble() ?? 0;
+    _position = widget.staff['position'] as String? ?? 'stylist';
   }
 
   @override
@@ -1372,6 +1423,20 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
               ),
             ),
             const SizedBox(height: 12),
+            // Position
+            DropdownButtonFormField<String>(
+              value: _position,
+              decoration: const InputDecoration(labelText: 'Posicion', isDense: true),
+              items: const [
+                DropdownMenuItem(value: 'owner', child: Text('Dueno')),
+                DropdownMenuItem(value: 'manager', child: Text('Gerente')),
+                DropdownMenuItem(value: 'receptionist', child: Text('Recepcionista')),
+                DropdownMenuItem(value: 'stylist', child: Text('Estilista')),
+                DropdownMenuItem(value: 'assistant', child: Text('Asistente')),
+              ],
+              onChanged: (v) => setState(() => _position = v ?? _position),
+            ),
+            const SizedBox(height: 8),
             Row(
               children: [
                 Expanded(
@@ -1610,6 +1675,7 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
         'phone': _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
         'experience_years': int.tryParse(_expCtrl.text.trim()) ?? 0,
         'commission_rate': _commissionRate,
+        'position': _position,
       };
 
       if (avatarUrl != null) {
