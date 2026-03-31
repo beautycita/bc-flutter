@@ -460,9 +460,10 @@ class _TaxDeductionsCardState extends ConsumerState<_TaxDeductionsCard> {
       // Revenue YTD from completed appointments
       final revenueRows = await SupabaseClientService.client
           .from('appointments')
-          .select('price')
+          .select('price, starts_at')
           .eq('business_id', bizId)
-          .eq('status', 'completed')
+          .inFilter('status', ['completed', 'confirmed'])
+          .eq('payment_status', 'paid')
           .gte('starts_at', '$year-01-01');
 
       double rev = 0;
@@ -473,7 +474,7 @@ class _TaxDeductionsCardState extends ConsumerState<_TaxDeductionsCard> {
       // Expenses YTD
       final expRows = await SupabaseClientService.client
           .from('business_expenses')
-          .select('amount')
+          .select('amount, month')
           .eq('business_id', bizId)
           .eq('year', year);
 
@@ -487,7 +488,7 @@ class _TaxDeductionsCardState extends ConsumerState<_TaxDeductionsCard> {
           .from('commission_records')
           .select('amount, source')
           .eq('business_id', bizId)
-          .gte('created_at', '$year-01-01');
+          .gte('created_at', '$year-01-01T00:00:00Z');
 
       double commSvc = 0;
       double commProd = 0;
@@ -1081,16 +1082,46 @@ class _CfdiSectionState extends ConsumerState<_CfdiSection> {
       if (biz == null) return;
       final bizId = biz['id'] as String;
 
+      // Use tax_withholdings as CFDI proxy (real CFDIs need PAC integration)
+      // Group by month to show monthly summary
+      final now = DateTime.now();
+      final threeMonthsAgo = DateTime(now.year, now.month - 2, 1);
+
       final data = await SupabaseClientService.client
-          .from('cfdi_records')
-          .select()
+          .from('tax_withholdings')
+          .select('period_year, period_month, gross_amount, isr_withheld, iva_withheld')
           .eq('business_id', bizId)
-          .order('created_at', ascending: false)
-          .limit(20);
+          .gte('created_at', threeMonthsAgo.toIso8601String())
+          .order('created_at', ascending: false);
+
+      // Aggregate by month
+      final monthMap = <String, Map<String, dynamic>>{};
+      for (final r in (data as List)) {
+        final key = '${r['period_year']}-${r['period_month']}';
+        final existing = monthMap[key] ?? {
+          'period_year': r['period_year'],
+          'period_month': r['period_month'],
+          'total_gross': 0.0,
+          'total_isr': 0.0,
+          'total_iva': 0.0,
+          'count': 0,
+        };
+        existing['total_gross'] = (existing['total_gross'] as double) + ((r['gross_amount'] as num?)?.toDouble() ?? 0);
+        existing['total_isr'] = (existing['total_isr'] as double) + ((r['isr_withheld'] as num?)?.toDouble() ?? 0);
+        existing['total_iva'] = (existing['total_iva'] as double) + ((r['iva_withheld'] as num?)?.toDouble() ?? 0);
+        existing['count'] = (existing['count'] as int) + 1;
+        monthMap[key] = existing;
+      }
 
       if (mounted) {
         setState(() {
-          _cfdiRecords = List<Map<String, dynamic>>.from(data);
+          _cfdiRecords = monthMap.values.toList()
+            ..sort((a, b) {
+              final ya = a['period_year'] as int;
+              final yb = b['period_year'] as int;
+              if (ya != yb) return yb.compareTo(ya);
+              return (b['period_month'] as int).compareTo(a['period_month'] as int);
+            });
           _loading = false;
         });
       }
@@ -1178,19 +1209,17 @@ class _CfdiSectionState extends ConsumerState<_CfdiSection> {
             ),
             const SizedBox(height: 12),
 
-            ..._cfdiRecords.map((cfdi) {
-              final status = cfdi['status'] as String? ?? 'pendiente';
-              final folio = cfdi['folio'] as String?;
-              final period = cfdi['period'] as String? ?? '';
-              final subtotal = (cfdi['subtotal'] as num?)?.toDouble() ?? 0;
-              final total = (cfdi['total'] as num?)?.toDouble() ?? 0;
-              final uuidFiscal = cfdi['uuid_fiscal'] as String?;
-              final isTimbrado = status == 'timbrado';
-              final statusColor = isTimbrado ? const Color(0xFF059669) : const Color(0xFFF59E0B);
+            ..._cfdiRecords.map((rec) {
+              const monthNames = ['', 'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+              final year = rec['period_year'] as int? ?? 0;
+              final month = rec['period_month'] as int? ?? 0;
+              final gross = (rec['total_gross'] as double?) ?? 0;
+              final isr = (rec['total_isr'] as double?) ?? 0;
+              final iva = (rec['total_iva'] as double?) ?? 0;
+              final count = rec['count'] as int? ?? 0;
+              final monthLabel = month > 0 && month <= 12 ? monthNames[month] : '?';
 
-              return GestureDetector(
-                onTap: () => _showCfdiDetail(context, cfdi),
-                child: Container(
+              return Container(
                   margin: const EdgeInsets.only(bottom: 8),
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
@@ -1203,14 +1232,10 @@ class _CfdiSectionState extends ConsumerState<_CfdiSection> {
                         width: 28,
                         height: 28,
                         decoration: BoxDecoration(
-                          color: statusColor.withValues(alpha: 0.12),
+                          color: const Color(0xFF3B82F6).withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(7),
                         ),
-                        child: Icon(
-                          isTimbrado ? Icons.verified : Icons.hourglass_bottom,
-                          size: 14,
-                          color: statusColor,
-                        ),
+                        child: const Icon(Icons.receipt_outlined, size: 14, color: Color(0xFF3B82F6)),
                       ),
                       const SizedBox(width: 8),
                       Expanded(
@@ -1218,11 +1243,11 @@ class _CfdiSectionState extends ConsumerState<_CfdiSection> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              '${folio != null ? 'Folio: $folio | ' : ''}$period',
+                              '$monthLabel $year — $count transacciones',
                               style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: colors.onSurface),
                             ),
                             Text(
-                              'Subtotal: \$${_fmt(subtotal)}',
+                              'ISR: \$${_fmt(isr)} | IVA: \$${_fmt(iva)}',
                               style: GoogleFonts.nunito(fontSize: 11, color: colors.onSurface.withValues(alpha: 0.5)),
                             ),
                           ],
@@ -1231,24 +1256,23 @@ class _CfdiSectionState extends ConsumerState<_CfdiSection> {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          Text('\$${_fmt(total)}',
+                          Text('\$${_fmt(gross)}',
                               style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: colors.onSurface)),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                             decoration: BoxDecoration(
-                              color: statusColor.withValues(alpha: 0.12),
+                              color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
-                              isTimbrado ? 'Timbrado' : 'Pendiente',
-                              style: GoogleFonts.poppins(fontSize: 9, fontWeight: FontWeight.w700, color: statusColor),
+                              'CFDI pendiente',
+                              style: GoogleFonts.poppins(fontSize: 9, fontWeight: FontWeight.w700, color: const Color(0xFFF59E0B)),
                             ),
                           ),
                         ],
                       ),
                     ],
                   ),
-                ),
               );
             }),
           ],
