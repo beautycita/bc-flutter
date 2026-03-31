@@ -408,11 +408,29 @@ class _ToolViewState extends ConsumerState<_ToolView>
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = e.toString();
+          _error = _friendlyStudioError(e.toString());
           _isProcessing = false;
         });
       }
     }
+  }
+
+  /// Maps raw API/network errors to user-friendly Spanish messages.
+  static String _friendlyStudioError(String raw) {
+    final lower = raw.toLowerCase();
+    if (lower.contains('network') ||
+        lower.contains('timeout') ||
+        lower.contains('connection') ||
+        lower.contains('socket')) {
+      return 'Error de conexion. Verifica tu internet e intenta de nuevo.';
+    }
+    if (lower.contains('face') || lower.contains('detect')) {
+      return 'No se detecto un rostro claro. Intenta con mejor iluminacion.';
+    }
+    if (lower.contains('limit') || lower.contains('rate') || lower.contains('quota')) {
+      return 'Demasiados intentos. Espera un momento.';
+    }
+    return 'Error al procesar la imagen. Intenta de nuevo.';
   }
 
   void _autoSave(String resultUrl, String toolType, String stylePrompt) async {
@@ -619,12 +637,33 @@ class _ToolViewState extends ConsumerState<_ToolView>
                 color: Colors.red.shade50,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Text(
-                _error!,
-                style: GoogleFonts.nunito(fontSize: 13, color: Colors.red.shade700),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.error_outline, size: 18, color: Colors.red.shade700),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _error!,
+                      style: GoogleFonts.nunito(fontSize: 13, color: Colors.red.shade700),
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: _imageBytes != null ? _process : null,
+                icon: const Icon(Icons.refresh_rounded, size: 18),
+                label: Text(
+                  'Reintentar',
+                  style: GoogleFonts.nunito(fontSize: 13, fontWeight: FontWeight.w700),
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
           ],
 
           // Process button
@@ -1013,11 +1052,29 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = e.toString();
+          _error = _friendlyStudioError(e.toString());
           _isProcessing = false;
         });
       }
     }
+  }
+
+  /// Maps raw API/network errors to user-friendly Spanish messages.
+  static String _friendlyStudioError(String raw) {
+    final lower = raw.toLowerCase();
+    if (lower.contains('network') ||
+        lower.contains('timeout') ||
+        lower.contains('connection') ||
+        lower.contains('socket')) {
+      return 'Error de conexion. Verifica tu internet e intenta de nuevo.';
+    }
+    if (lower.contains('face') || lower.contains('detect')) {
+      return 'No se detecto un rostro claro. Intenta con mejor iluminacion.';
+    }
+    if (lower.contains('limit') || lower.contains('rate') || lower.contains('quota')) {
+      return 'Demasiados intentos. Espera un momento.';
+    }
+    return 'Error al procesar la imagen. Intenta de nuevo.';
   }
 
   void _autoSave(String resultUrl) async {
@@ -1290,12 +1347,33 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
                 color: Colors.red.shade50,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Text(
-                _error!,
-                style: GoogleFonts.nunito(fontSize: 13, color: Colors.red.shade700),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.error_outline, size: 18, color: Colors.red.shade700),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _error!,
+                      style: GoogleFonts.nunito(fontSize: 13, color: Colors.red.shade700),
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: _canProcess ? _process : null,
+                icon: const Icon(Icons.refresh_rounded, size: 18),
+                label: Text(
+                  'Reintentar',
+                  style: GoogleFonts.nunito(fontSize: 13, fontWeight: FontWeight.w700),
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
           ],
 
           // Process button

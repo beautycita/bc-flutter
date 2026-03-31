@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -9,6 +11,7 @@ import 'package:image_picker/image_picker.dart';
 import '../config/constants.dart';
 import '../services/media_service.dart';
 import 'package:beautycita/services/toast_service.dart';
+import 'bc_image_editor.dart';
 
 /// Singleton MediaService provider (for image picker library tab).
 final _mediaServiceProvider = Provider<MediaService>((ref) => MediaService());
@@ -51,9 +54,12 @@ class BCImagePickerResult {
 
 /// Shows the BC image picker as a modal bottom sheet.
 /// Returns [BCImagePickerResult] if user selects an image, null if dismissed.
+///
+/// Set [preferFrontCamera] to true for selfie contexts (virtual studio, avatar).
 Future<BCImagePickerResult?> showBCImagePicker({
   required BuildContext context,
   required WidgetRef ref,
+  bool preferFrontCamera = false,
 }) {
   return showModalBottomSheet<BCImagePickerResult>(
     context: context,
@@ -63,14 +69,21 @@ Future<BCImagePickerResult?> showBCImagePicker({
         top: Radius.circular(AppConstants.radiusXL),
       ),
     ),
-    builder: (ctx) => _BCImagePickerBody(ref: ref),
+    builder: (ctx) => _BCImagePickerBody(
+      ref: ref,
+      preferFrontCamera: preferFrontCamera,
+    ),
   );
 }
 
 class _BCImagePickerBody extends StatefulWidget {
   final WidgetRef ref;
+  final bool preferFrontCamera;
 
-  const _BCImagePickerBody({required this.ref});
+  const _BCImagePickerBody({
+    required this.ref,
+    this.preferFrontCamera = false,
+  });
 
   @override
   State<_BCImagePickerBody> createState() => _BCImagePickerBodyState();
@@ -386,7 +399,14 @@ class _BCImagePickerBodyState extends State<_BCImagePickerBody> {
       if (kDebugMode) debugPrint('BCImagePicker: picked file = ${file?.path}');
 
       if (file != null && mounted) {
-        final bytes = await file.readAsBytes();
+        // Pass through editor (crop)
+        final edited = await editImage(
+          context,
+          imageFile: File(file.path),
+          showWatermarkOption: false,
+        );
+        if (edited == null || !mounted) return;
+        final bytes = await edited.readAsBytes();
         if (kDebugMode) debugPrint('BCImagePicker: read ${bytes.length} bytes');
         if (!mounted) {
           if (kDebugMode) debugPrint('BCImagePicker: not mounted after readAsBytes');
@@ -416,11 +436,20 @@ class _BCImagePickerBodyState extends State<_BCImagePickerBody> {
         maxWidth: 2048,
         maxHeight: 2048,
         imageQuality: 90,
-        preferredCameraDevice: CameraDevice.front,
+        preferredCameraDevice: widget.preferFrontCamera
+            ? CameraDevice.front
+            : CameraDevice.rear,
       );
 
       if (file != null && mounted) {
-        final bytes = await file.readAsBytes();
+        // Pass through editor (crop)
+        final edited = await editImage(
+          context,
+          imageFile: File(file.path),
+          showWatermarkOption: false,
+        );
+        if (edited == null || !mounted) return;
+        final bytes = await edited.readAsBytes();
         HapticFeedback.lightImpact();
         if (!mounted) return;
         Navigator.of(context).pop(BCImagePickerResult(

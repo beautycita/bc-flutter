@@ -70,7 +70,7 @@
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>BeautyCita necesita tu ubicación para encontrar salones cercanos</string>
 	<key>NSCameraUsageDescription</key>
-	<string>BeautyCita necesita acceso a la cámara para escanear códigos QR</string>
+	<string>BeautyCita necesita la camara para tomar fotos de perfil, portafolio y escanear codigos QR</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>BeautyCita necesita acceso a tus fotos para seleccionar imágenes de perfil</string>
 	<key>NSFaceIDUsageDescription</key>

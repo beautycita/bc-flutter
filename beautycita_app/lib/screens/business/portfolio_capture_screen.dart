@@ -8,6 +8,7 @@ import '../../config/constants.dart';
 import '../../providers/business_provider.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
+import '../../widgets/bc_image_editor.dart';
 
 class PortfolioCaptureScreen extends ConsumerStatefulWidget {
   final String? staffId;
@@ -97,18 +98,32 @@ class _PortfolioCaptureScreenState
         maxWidth: 1200,
         maxHeight: 1200,
         imageQuality: 85,
+        preferredCameraDevice: CameraDevice.rear,
       );
       if (picked == null || !mounted) return;
+
+      // Get salon name for watermark
+      final biz = ref.read(currentBusinessProvider).value;
+      final salonName = biz?['name'] as String? ?? 'BeautyCita';
+
+      final edited = await editImage(
+        context,
+        imageFile: File(picked.path),
+        watermarkText: salonName,
+        showWatermarkOption: true,
+      );
+      if (edited == null || !mounted) return;
+
       setState(() {
         if (isBefore) {
-          _beforePhoto = File(picked.path);
+          _beforePhoto = edited;
           _beforeSkipped = false;
         } else {
-          _afterPhoto = File(picked.path);
+          _afterPhoto = edited;
         }
       });
     } catch (e) {
-      if (mounted) ToastService.showError('Error al abrir la cámara');
+      if (mounted) ToastService.showError('Error al abrir la camara');
     }
   }
 
