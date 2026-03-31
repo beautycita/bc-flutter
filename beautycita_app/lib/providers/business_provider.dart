@@ -25,6 +25,40 @@ final isBusinessOwnerProvider = FutureProvider.autoDispose<bool>((ref) async {
   return (biz['is_verified'] as bool? ?? false) && (biz['is_active'] as bool? ?? false);
 });
 
+/// Staff position for the current user at the current business.
+///
+/// Returns the position string ('owner', 'manager', 'receptionist',
+/// 'assistant', 'stylist') or null when the user is not found as a staff
+/// member (e.g. they are the business owner with no staff record).
+///
+/// IMPORTANT: The business OWNER always has full access regardless of this
+/// value. Check [isBusinessOwnerProvider] first; only use this provider for
+/// non-owner staff permission filtering.
+final currentStaffPositionProvider =
+    FutureProvider.autoDispose<String?>((ref) async {
+  final userId = SupabaseClientService.currentUserId;
+  if (userId == null) return null;
+
+  // If the user is the business owner, short-circuit — they have full access.
+  // (currentBusinessProvider queries businesses WHERE owner_id = userId.)
+  final biz = await ref.watch(currentBusinessProvider.future);
+  if (biz != null) {
+    // User has a business record as owner — return 'owner' directly.
+    return 'owner';
+  }
+
+  // Non-owner: look up their staff record. We need the business_id first —
+  // find any active staff row tied to this user_id.
+  final staffRow = await SupabaseClientService.client
+      .from('staff')
+      .select('position')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .maybeSingle();
+
+  return staffRow?['position'] as String?;
+});
+
 /// Application status for the current user's business registration.
 /// Returns null if no application, or a string: 'pending', 'approved', 'rejected'.
 final applicationStatusProvider = FutureProvider.autoDispose<String?>((ref) async {

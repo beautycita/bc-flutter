@@ -445,17 +445,20 @@ class CitaExpressNotifier extends StateNotifier<CitaExpressState> {
         windowEnd = DateTime(endDay.year, endDay.month, endDay.day, 23, 59, 59);
       }
 
-      // Find staff who can perform this service
+      // Find staff who can perform this service.
+      // Only owner and stylist positions are bookable — receptionists,
+      // managers, and assistants must never appear in client-facing booking flows.
       final staffRows = await client
           .from('staff_services')
           .select(
             'staff_id, custom_price, custom_duration, '
             'staff!inner(id, first_name, last_name, avatar_url, '
-            'average_rating, total_reviews)',
+            'average_rating, total_reviews, position)',
           )
           .eq('service_id', serviceId)
           .eq('staff.is_active', true)
-          .eq('staff.accept_online_booking', true);
+          .eq('staff.accept_online_booking', true)
+          .inFilter('staff.position', ['owner', 'stylist']);
 
       if ((staffRows as List).isEmpty) {
         state = state.copyWith(step: CitaExpressStep.noSlotsToday);
