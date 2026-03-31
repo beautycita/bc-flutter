@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../config/constants.dart';
 import '../../providers/business_provider.dart';
 import '../../providers/feature_toggle_provider.dart';
+// currentStaffPositionProvider lives in business_provider.dart
 import 'business_clients_screen.dart';
 import 'business_dashboard_screen.dart';
 import 'business_calendar_screen.dart';
@@ -23,10 +24,52 @@ import 'pos_management_screen.dart';
 
 final businessTabProvider = StateProvider<int>((ref) => 0);
 
+// ---------------------------------------------------------------------------
+// Position-based tab permission matrix
+// ---------------------------------------------------------------------------
+
+/// Which tab labels are visible for each staff position.
+/// Owners bypass this entirely and see all tabs.
+const _positionTabAllowlist = <String, Set<String>>{
+  // Manager: everything except SAT Retenciones is handled via feature toggles;
+  // here we simply give full access — future billing/SAT tabs can be added
+  // to a denylist when those screens are built.
+  'manager': {
+    'Inicio',
+    'Calendario',
+    'Rendimiento',
+    'Servicios',
+    'Equipo',
+    'Clientes',
+    'Disputas',
+    'Marketing',
+    'QR Walk-in',
+    'Pagos',
+    'Regalos',
+    'Pedidos',
+    'Tienda',
+    'Ajustes',
+  },
+  'receptionist': {
+    'Inicio',
+    'Calendario',
+    'Clientes',
+    'QR Walk-in',
+    'Pagos',
+  },
+  'stylist': {
+    'Calendario',
+    'Pagos',
+  },
+  'assistant': {
+    'Calendario',
+  },
+};
+
 class BusinessShellScreen extends ConsumerWidget {
   const BusinessShellScreen({super.key});
 
-  /// Core tabs (always visible).
+  /// Core tabs (always visible to owners; filtered for other positions).
   static const _coreTabs = <_BizTab>[
     _BizTab(icon: Icons.dashboard_rounded, label: 'Inicio'),
     _BizTab(icon: Icons.calendar_month_rounded, label: 'Calendario'),
@@ -157,13 +200,20 @@ class _BusinessContent extends ConsumerWidget {
     final posEnabled = toggles.isEnabled('enable_pos');
     final colors = Theme.of(context).colorScheme;
 
-    // Build dynamic tab + children lists based on feature toggles
-    final tabs = <_BizTab>[
+    // Resolve the current user's position. Owners always get full access;
+    // null position (no staff record) also defaults to full access because
+    // the shell already guards against non-owners via currentBusinessProvider.
+    final positionAsync = ref.watch(currentStaffPositionProvider);
+    final position = positionAsync.valueOrNull; // null = loading or owner
+
+    // Build full tab + children lists (feature-toggle gated).
+    // Each entry in allTabChildren must be kept in sync with allTabs.
+    final allTabs = <_BizTab>[
       ...BusinessShellScreen._coreTabs,
       if (posEnabled) ...BusinessShellScreen._posTabs,
       BusinessShellScreen._settingsTab,
     ];
-    final children = <Widget>[
+    final allChildren = <Widget>[
       const BusinessDashboardScreen(),
       const BusinessCalendarScreen(),
       const BusinessStaffAnalyticsScreen(),
@@ -182,7 +232,35 @@ class _BusinessContent extends ConsumerWidget {
       const BusinessSettingsScreen(),
     ];
 
+    assert(allTabs.length == allChildren.length,
+        'Tab/children count mismatch: ${allTabs.length} vs ${allChildren.length}');
+
+    // Apply position-based filtering.
+    // 'owner' (or null — the panel guard means null implies owner access)
+    // gets the full list. All other positions use the allowlist.
+    final allowlist = (position == null || position == 'owner')
+        ? null // null = show all
+        : _positionTabAllowlist[position];
+
+    final tabs = <_BizTab>[];
+    final children = <Widget>[];
+    for (var i = 0; i < allTabs.length; i++) {
+      if (allowlist == null || allowlist.contains(allTabs[i].label)) {
+        tabs.add(allTabs[i]);
+        children.add(allChildren[i]);
+      }
+    }
+
+    // If the current selectedTab index is now out of range (e.g. after a
+    // position change removes tabs), clamp and reset the provider so the
+    // selected tab is always valid.
     final safeTab = selectedTab.clamp(0, tabs.length - 1);
+    if (safeTab != selectedTab) {
+      // Schedule reset after build to avoid mutating state during build.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(businessTabProvider.notifier).state = safeTab;
+      });
+    }
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F3FF),
