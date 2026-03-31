@@ -457,18 +457,22 @@ class _TaxDeductionsCardState extends ConsumerState<_TaxDeductionsCard> {
       final bizId = biz['id'] as String;
       final year = DateTime.now().year;
 
-      // Revenue YTD from completed appointments
+      // Revenue + actual tax withholdings YTD from paid appointments
       final revenueRows = await SupabaseClientService.client
           .from('appointments')
-          .select('price, starts_at')
+          .select('price, starts_at, isr_withheld, iva_withheld')
           .eq('business_id', bizId)
           .inFilter('status', ['completed', 'confirmed'])
           .eq('payment_status', 'paid')
           .gte('starts_at', '$year-01-01');
 
       double rev = 0;
+      double actualIsr = 0;
+      double actualIva = 0;
       for (final r in revenueRows) {
         rev += (r['price'] as num?)?.toDouble() ?? 0;
+        actualIsr += (r['isr_withheld'] as num?)?.toDouble() ?? 0;
+        actualIva += (r['iva_withheld'] as num?)?.toDouble() ?? 0;
       }
 
       // Expenses YTD
@@ -537,8 +541,8 @@ class _TaxDeductionsCardState extends ConsumerState<_TaxDeductionsCard> {
       if (mounted) {
         setState(() {
           _revenueYtd = rev;
-          _ivaWithheld = rev * 0.08;
-          _isrWithheld = rev * 0.025;
+          _ivaWithheld = actualIva;
+          _isrWithheld = actualIsr;
           _expensesYtd = exp;
           _commissionServices = commSvc;
           _commissionProducts = commProd;
