@@ -598,18 +598,23 @@ const _termsSections = [
         'disposicion de los proveedores un desglose de retenciones en su panel.',
   ),
   _Section(
-    heading: '4b. Pagos en efectivo y obligaciones fiscales del proveedor',
+    heading: '4b. Pagos en efectivo registrados en la plataforma',
     body:
-        'Cuando el servicio se paga en efectivo directamente al proveedor '
-        '(incluyendo pagos mediante OXXO o QR de walk-in), BeautyCita actua '
-        'unicamente como intermediario de la reserva y no procesa el pago.\n\n'
-        'En estos casos, BeautyCita NO tiene obligacion de retener ISR ni IVA '
-        'sobre dichos montos. El proveedor de servicios es el unico responsable '
-        'de declarar y enterar los impuestos correspondientes a los ingresos '
-        'recibidos en efectivo o por medios directos, conforme a su regimen '
-        'fiscal aplicable.\n\n'
-        'Al registrarse como proveedor en la plataforma, el estilista o salon '
-        'acepta esta responsabilidad fiscal sobre transacciones en efectivo.',
+        'Toda transaccion registrada en BeautyCita — incluyendo pagos en '
+        'efectivo, OXXO, y walk-ins registrados via Cita Express o '
+        'calendario manual — esta sujeta a:\n\n'
+        '- Comision BeautyCita del 3% sobre el monto del servicio.\n'
+        '- Retencion de ISR (2.5%) e IVA (8%) conforme a LISR Art. 113-A '
+        'y LIVA Art. 18-J.\n\n'
+        'Cuando el pago es en efectivo, el salon cobra directamente al '
+        'cliente. La comision del 3% y las retenciones fiscales se cargan '
+        'a la cuenta del salon en BeautyCita y se deducen del proximo pago '
+        'via Stripe o se acumulan como saldo pendiente.\n\n'
+        'Las obligaciones fiscales se liquidan inmediatamente al registrar '
+        'la transaccion. BeautyCita entera al SAT las retenciones '
+        'correspondientes independientemente del metodo de pago.\n\n'
+        'Transacciones en efectivo NO registradas en la plataforma son '
+        'responsabilidad exclusiva del proveedor.',
   ),
   _Section(
     heading: '4c. Punto de Venta (POS)',
