@@ -3137,6 +3137,47 @@ class _WalkinSheetState extends ConsumerState<_WalkinSheet> {
 
       await SupabaseClientService.client.from('appointments').insert(data);
 
+      final bizId = biz['id'] as String;
+      final commission = price * 0.03;
+
+      // Record 3% BC commission (charged to salon — cash collected by them)
+      SupabaseClientService.client.from('commission_records').insert({
+        'business_id': bizId,
+        'amount': double.parse(commission.toStringAsFixed(2)),
+        'rate': 0.03,
+        'source': 'appointment',
+        'period_month': DateTime.now().month,
+        'period_year': DateTime.now().year,
+        'status': 'collected',
+      }).then((_) {}).catchError((_) {});
+
+      // Record tax withholding in ledger
+      SupabaseClientService.client.from('tax_withholdings').insert({
+        'business_id': bizId,
+        'payment_type': 'cash_direct',
+        'jurisdiction': 'MX',
+        'gross_amount': price,
+        'tax_base': double.parse(taxBase.toStringAsFixed(2)),
+        'iva_portion': double.parse((price - taxBase).toStringAsFixed(2)),
+        'platform_fee': double.parse(commission.toStringAsFixed(2)),
+        'isr_rate': 0.025,
+        'iva_rate': 0.08,
+        'isr_withheld': double.parse(isrWithheld.toStringAsFixed(2)),
+        'iva_withheld': double.parse(ivaWithheld.toStringAsFixed(2)),
+        'provider_net': double.parse(providerNet.toStringAsFixed(2)),
+        'period_year': DateTime.now().year,
+        'period_month': DateTime.now().month,
+      }).then((_) {}).catchError((_) {});
+
+      // Debt collection on cash payments too
+      SupabaseClientService.client.rpc('calculate_payout_with_debt', params: {
+        'p_business_id': bizId,
+        'p_gross_amount': price,
+        'p_commission': commission,
+        'p_iva_withheld': ivaWithheld,
+        'p_isr_withheld': isrWithheld,
+      }).then((_) {}).catchError((_) {});
+
       widget.onSaved();
       if (mounted) Navigator.pop(context);
     } catch (e, stack) {

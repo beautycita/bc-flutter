@@ -237,9 +237,10 @@ class CitaExpressNotifier extends StateNotifier<CitaExpressState> {
     state = state.copyWith(step: CitaExpressStep.booking);
 
     try {
-      // Cash direct: no Stripe processing, booking is confirmed immediately.
-      // The stylist collects cash — BeautyCita has no tax retention obligation.
+      // Cash direct: no Stripe processing, booking confirmed immediately.
+      // BC still charges 3% commission + tax withholdings on ALL registered transactions.
       final isCashDirect = state.paymentMethod == 'cash_direct';
+      final price = result.service.price ?? 0;
 
       final booking = await _bookingRepo.createBooking(
         providerId: result.business.id,
@@ -248,11 +249,68 @@ class CitaExpressNotifier extends StateNotifier<CitaExpressState> {
         category: state.selectedServiceType ?? '',
         scheduledAt: result.slot!.startTime,
         durationMinutes: result.service.durationMinutes,
-        price: result.service.price ?? 0,
+        price: price,
         paymentMethod: state.paymentMethod,
         paymentStatus: isCashDirect ? 'paid' : null,
         staffId: result.staff?.id,
       );
+
+      // For cash payments: record commission + tax withholding
+      if (isCashDirect && price > 0) {
+        final bizId = result.business.id;
+        final taxBase = price / 1.16;
+        final isrWithheld = taxBase * 0.025;
+        final ivaWithheld = taxBase * 0.08;
+        final commission = price * 0.03;
+
+        // Update appointment with tax fields
+        SupabaseClientService.client.from('appointments').update({
+          'tax_base': double.parse(taxBase.toStringAsFixed(2)),
+          'isr_withheld': double.parse(isrWithheld.toStringAsFixed(2)),
+          'iva_withheld': double.parse(ivaWithheld.toStringAsFixed(2)),
+          'provider_net': double.parse((price - isrWithheld - ivaWithheld).toStringAsFixed(2)),
+        }).eq('id', booking.id).then((_) {}).catchError((_) {});
+
+        // Record commission
+        SupabaseClientService.client.from('commission_records').insert({
+          'business_id': bizId,
+          'appointment_id': booking.id,
+          'amount': double.parse(commission.toStringAsFixed(2)),
+          'rate': 0.03,
+          'source': 'appointment',
+          'period_month': DateTime.now().month,
+          'period_year': DateTime.now().year,
+          'status': 'collected',
+        }).then((_) {}).catchError((_) {});
+
+        // Record tax withholding
+        SupabaseClientService.client.from('tax_withholdings').insert({
+          'appointment_id': booking.id,
+          'business_id': bizId,
+          'payment_type': 'cash_direct',
+          'jurisdiction': 'MX',
+          'gross_amount': price,
+          'tax_base': double.parse(taxBase.toStringAsFixed(2)),
+          'iva_portion': double.parse((price - taxBase).toStringAsFixed(2)),
+          'platform_fee': double.parse(commission.toStringAsFixed(2)),
+          'isr_rate': 0.025,
+          'iva_rate': 0.08,
+          'isr_withheld': double.parse(isrWithheld.toStringAsFixed(2)),
+          'iva_withheld': double.parse(ivaWithheld.toStringAsFixed(2)),
+          'provider_net': double.parse((price - isrWithheld - ivaWithheld).toStringAsFixed(2)),
+          'period_year': DateTime.now().year,
+          'period_month': DateTime.now().month,
+        }).then((_) {}).catchError((_) {});
+
+        // Debt collection
+        SupabaseClientService.client.rpc('calculate_payout_with_debt', params: {
+          'p_business_id': bizId,
+          'p_gross_amount': price,
+          'p_commission': commission,
+          'p_iva_withheld': ivaWithheld,
+          'p_isr_withheld': isrWithheld,
+        }).then((_) {}).catchError((_) {});
+      }
 
       state = state.copyWith(
         step: CitaExpressStep.booked,
