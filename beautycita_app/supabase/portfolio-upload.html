@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>BeautyCita — Portafolio</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #faf5ff; min-height: 100vh; }
+  .container { max-width: 420px; margin: 0 auto; padding: 20px; }
+  .logo { text-align: center; padding: 20px 0 10px; }
+  .logo h1 { font-size: 22px; color: #7c3aed; font-weight: 700; }
+  .logo p { font-size: 13px; color: #9ca3af; margin-top: 4px; }
+  .card { background: white; border-radius: 16px; padding: 24px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+  .pin-input { display: flex; gap: 10px; justify-content: center; margin: 16px 0; }
+  .pin-input input { width: 52px; height: 56px; text-align: center; font-size: 24px; font-weight: 700; border: 2px solid #e5e7eb; border-radius: 12px; outline: none; color: #7c3aed; }
+  .pin-input input:focus { border-color: #7c3aed; }
+  .btn { width: 100%; padding: 14px; border: none; border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer; }
+  .btn-primary { background: #7c3aed; color: white; }
+  .btn-primary:disabled { background: #d8b4fe; cursor: not-allowed; }
+  .btn-outline { background: white; color: #7c3aed; border: 2px solid #7c3aed; }
+  .btn-pink { background: #ec4899; color: white; }
+  .btn-green { background: #059669; color: white; }
+  .photo-grid { display: flex; flex-direction: column; gap: 12px; }
+  .photo-pair { background: #f9fafb; border-radius: 12px; padding: 12px; border: 1px solid #f3f4f6; }
+  .photo-pair.incomplete { border-color: #fbbf24; background: #fffbeb; }
+  .photo-row { display: flex; gap: 8px; margin: 8px 0; }
+  .photo-slot { flex: 1; aspect-ratio: 1; border-radius: 10px; overflow: hidden; position: relative; background: #f3f4f6; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .photo-slot img { width: 100%; height: 100%; object-fit: cover; }
+  .photo-slot .placeholder { color: #9ca3af; font-size: 12px; text-align: center; }
+  .photo-slot .label { position: absolute; top: 4px; left: 4px; background: rgba(0,0,0,0.6); color: white; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 600; }
+  .meta { font-size: 12px; color: #6b7280; margin-bottom: 4px; }
+  .meta strong { color: #374151; }
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; }
+  .toggle-label { font-size: 13px; color: #374151; }
+  .toggle { position: relative; width: 44px; height: 24px; background: #d1d5db; border-radius: 12px; cursor: pointer; transition: background 0.2s; }
+  .toggle.on { background: #059669; }
+  .toggle::after { content: ''; position: absolute; width: 20px; height: 20px; background: white; border-radius: 50%; top: 2px; left: 2px; transition: transform 0.2s; }
+  .toggle.on::after { transform: translateX(20px); }
+  .new-section { margin-top: 8px; }
+  .input { width: 100%; padding: 10px 14px; border: 1px solid #e5e7eb; border-radius: 10px; font-size: 14px; outline: none; }
+  .input:focus { border-color: #7c3aed; }
+  .hidden { display: none; }
+  .error { color: #ef4444; font-size: 13px; text-align: center; margin-top: 8px; }
+  .staff-name { font-size: 18px; font-weight: 700; color: #1f2937; }
+  .salon-name { font-size: 13px; color: #9ca3af; }
+  .loading { text-align: center; padding: 40px; color: #9ca3af; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="logo">
+    <h1>BeautyCita</h1>
+    <p>Portafolio — Antes y Despues</p>
+  </div>
+
+  <!-- PIN Entry -->
+  <div id="pin-screen" class="card">
+    <p style="text-align:center; font-size:14px; color:#6b7280; margin-bottom:12px;">Ingresa tu PIN de 4 digitos</p>
+    <div class="pin-input">
+      <input type="tel" maxlength="1" id="p1" autofocus>
+      <input type="tel" maxlength="1" id="p2">
+      <input type="tel" maxlength="1" id="p3">
+      <input type="tel" maxlength="1" id="p4">
+    </div>
+    <button class="btn btn-primary" id="verify-btn" disabled onclick="verifyPin()">Entrar</button>
+    <div id="pin-error" class="error hidden"></div>
+  </div>
+
+  <!-- Main upload screen -->
+  <div id="upload-screen" class="hidden">
+    <div class="card">
+      <div id="staff-info"></div>
+    </div>
+
+    <!-- New photo pair -->
+    <div class="card new-section">
+      <p style="font-weight:600; margin-bottom:8px;">Nueva foto</p>
+      <input class="input" id="service-name" placeholder="Servicio (ej: Balayage, Corte)" style="margin-bottom:8px;">
+      <input class="input" id="client-name" placeholder="Nombre del cliente (opcional)" style="margin-bottom:12px;">
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-pink" style="flex:1" onclick="takePhoto(true)">Antes</button>
+        <button class="btn btn-green" style="flex:1" onclick="takePhoto(false)">Despues</button>
+      </div>
+    </div>
+
+    <!-- Existing photos -->
+    <div id="photos-list" class="photo-grid" style="margin-top:16px;"></div>
+  </div>
+</div>
+
+<input type="file" id="camera-input" accept="image/*" capture="environment" class="hidden">
+
+<script>
+const API = 'https://beautycita.com/supabase/functions/v1/portfolio-upload';
+const params = new URLSearchParams(window.location.search);
+const token = params.get('token') || '';
+let staffId = '';
+let currentPhotoId = null;
+let isBefore = true;
+
+// PIN auto-advance
+document.querySelectorAll('.pin-input input').forEach((inp, i, all) => {
+  inp.addEventListener('input', () => {
+    if (inp.value.length === 1 && i < 3) all[i + 1].focus();
+    const full = [...all].every(p => p.value.length === 1);
+    document.getElementById('verify-btn').disabled = !full;
+  });
+  inp.addEventListener('keydown', (e) => {
+    if (e.key === 'Backspace' && !inp.value && i > 0) all[i - 1].focus();
+  });
+});
+
+async function verifyPin() {
+  const pin = ['p1','p2','p3','p4'].map(id => document.getElementById(id).value).join('');
+  const errEl = document.getElementById('pin-error');
+  errEl.classList.add('hidden');
+
+  try {
+    const res = await fetch(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'verify', token, pin }),
+    });
+    const data = await res.json();
+    if (!res.ok) { errEl.textContent = data.error || 'Error'; errEl.classList.remove('hidden'); return; }
+
+    staffId = data.staff_id;
+    document.getElementById('staff-info').innerHTML = `
+      <div class="staff-name">${data.staff_name}</div>
+      <div class="salon-name">${data.salon_name}</div>
+    `;
+
+    renderPhotos(data.photos || []);
+    document.getElementById('pin-screen').classList.add('hidden');
+    document.getElementById('upload-screen').classList.remove('hidden');
+  } catch (e) {
+    errEl.textContent = 'Error de conexion'; errEl.classList.remove('hidden');
+  }
+}
+
+function renderPhotos(photos) {
+  const el = document.getElementById('photos-list');
+  if (!photos.length) { el.innerHTML = '<p style="text-align:center;color:#9ca3af;font-size:13px;">Sin fotos recientes</p>'; return; }
+
+  el.innerHTML = photos.map(p => {
+    const complete = p.is_complete;
+    return `
+      <div class="photo-pair ${complete ? '' : 'incomplete'}">
+        <div class="meta"><strong>${p.service_name || 'Sin servicio'}</strong> ${p.client_name ? '— ' + p.client_name : ''}</div>
+        <div class="meta">${new Date(p.created_at).toLocaleDateString('es-MX', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' })}</div>
+        <div class="photo-row">
+          <div class="photo-slot" ${!p.before_url ? `onclick="addToExisting('${p.id}', true)"` : ''}>
+            ${p.before_url ? `<img src="${p.before_url}">` : '<div class="placeholder">+ Antes</div>'}
+            <span class="label">ANTES</span>
+          </div>
+          <div class="photo-slot" ${!p.after_url ? `onclick="addToExisting('${p.id}', false)"` : ''}>
+            ${p.after_url ? `<img src="${p.after_url}">` : '<div class="placeholder">+ Despues</div>'}
+            <span class="label">DESPUES</span>
+          </div>
+        </div>
+        <div class="toggle-row">
+          <span class="toggle-label">Publicar en feed</span>
+          <div class="toggle ${p.publish_to_feed ? 'on' : ''}" onclick="toggleFeed('${p.id}', ${!p.publish_to_feed})"></div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function takePhoto(before) {
+  isBefore = before;
+  currentPhotoId = null;
+  document.getElementById('camera-input').click();
+}
+
+function addToExisting(photoId, before) {
+  isBefore = before;
+  currentPhotoId = photoId;
+  document.getElementById('camera-input').click();
+}
+
+document.getElementById('camera-input').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  // Convert to base64
+  const reader = new FileReader();
+  reader.onload = async () => {
+    const base64 = reader.result.split(',')[1];
+
+    try {
+      const res = await fetch(API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'upload',
+          staff_id: staffId,
+          photo_id: currentPhotoId,
+          image: base64,
+          is_before: isBefore,
+          service_name: document.getElementById('service-name').value || null,
+          client_name: document.getElementById('client-name').value || null,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        // Refresh photos
+        const pin = ['p1','p2','p3','p4'].map(id => document.getElementById(id).value).join('');
+        const refresh = await fetch(API, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'verify', token, pin }),
+        });
+        const rData = await refresh.json();
+        if (refresh.ok) renderPhotos(rData.photos || []);
+      }
+    } catch (err) {
+      alert('Error al subir foto');
+    }
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+});
+
+async function toggleFeed(photoId, publish) {
+  try {
+    await fetch(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'toggle_feed', photo_id: photoId, publish }),
+    });
+    // Toggle visually
+    event.target.classList.toggle('on');
+  } catch (_) {}
+}
+</script>
+</body>
+</html>
