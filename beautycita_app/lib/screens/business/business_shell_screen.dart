@@ -57,13 +57,10 @@ const _positionTabAllowlist = <String, Set<String>>{
     'QR Walk-in',
     'Pagos',
   },
-  'stylist': {
-    'Calendario',
-    'Pagos',
-  },
-  'assistant': {
-    'Calendario',
-  },
+  // Stylists (apprentices) and assistants do NOT access the business panel.
+  // They receive monthly email reports instead.
+  'stylist': <String>{},
+  'assistant': <String>{},
 };
 
 class BusinessShellScreen extends ConsumerWidget {
@@ -242,6 +239,46 @@ class _BusinessContent extends ConsumerWidget {
         ? null // null = show all
         : _positionTabAllowlist[position];
 
+    // Stylists and assistants don't access the panel — show info screen
+    if (allowlist != null && allowlist.isEmpty) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFF5F3FF),
+        appBar: AppBar(
+          title: Text('BeautyCita', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.mail_outline_rounded, size: 64,
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)),
+                const SizedBox(height: 16),
+                Text('Panel no disponible',
+                    style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 8),
+                Text(
+                  'Como miembro del equipo, recibes un reporte mensual por email con tus servicios, '
+                  'comisiones y pagos. Para mas informacion, consulta con la recepcion del salon.',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.nunito(fontSize: 14, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6), height: 1.4),
+                ),
+                const SizedBox(height: 24),
+                FilledButton.icon(
+                  onPressed: () => context.go('/home'),
+                  icon: const Icon(Icons.home_outlined, size: 18),
+                  label: const Text('Volver al inicio'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     final tabs = <_BizTab>[];
     final children = <Widget>[];
     for (var i = 0; i < allTabs.length; i++) {
@@ -251,9 +288,6 @@ class _BusinessContent extends ConsumerWidget {
       }
     }
 
-    // If the current selectedTab index is now out of range (e.g. after a
-    // position change removes tabs), clamp and reset the provider so the
-    // selected tab is always valid.
     final safeTab = selectedTab.clamp(0, tabs.length - 1);
     if (safeTab != selectedTab) {
       // Schedule reset after build to avoid mutating state during build.
