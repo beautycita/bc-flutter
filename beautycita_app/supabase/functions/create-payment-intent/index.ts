@@ -185,6 +185,34 @@ serve(async (req) => {
       applicationFeeAmount = platformFee;
     }
 
+    // Check for outstanding salon debt — collect up to 50% of service fee
+    let debtCollected = 0;
+    try {
+      const { data: debtData } = await supabase
+        .from("salon_debts")
+        .select("remaining_amount")
+        .eq("business_id", business.id)
+        .gt("remaining_amount", 0);
+
+      const totalDebt = (debtData ?? []).reduce(
+        (sum: number, d: { remaining_amount: number }) => sum + Number(d.remaining_amount), 0
+      );
+
+      if (totalDebt > 0) {
+        const maxDeduction = Math.min(chargeAmount * 0.50, totalDebt);
+        const netAfterFees = chargeAmount - (applicationFeeAmount / 100);
+        debtCollected = Math.min(maxDeduction, netAfterFees);
+        debtCollected = Math.round(debtCollected * 100) / 100;
+
+        if (debtCollected > 0) {
+          applicationFeeAmount += Math.round(debtCollected * 100);
+          console.log(`[PAYMENT] Collecting $${debtCollected} debt from ${business.id} (total debt: $${totalDebt})`);
+        }
+      }
+    } catch (debtErr) {
+      console.error("[PAYMENT] Debt check error (non-fatal):", debtErr);
+    }
+
     // Get or create Stripe customer
     let stripeCustomerId: string | undefined;
 
@@ -248,6 +276,10 @@ serve(async (req) => {
       deposit_amount: depositAmount.toString(),
       full_price: servicePrice.toString(),
     };
+
+    if (debtCollected > 0) {
+      metadata.debt_collected = debtCollected.toString();
+    }
 
     if (taxInfo) {
       metadata.tax_withholding = "true";
