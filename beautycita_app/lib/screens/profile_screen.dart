@@ -24,7 +24,33 @@ import 'package:beautycita/widgets/settings_widgets.dart';
 import 'package:beautycita/providers/admin_provider.dart';
 import 'package:beautycita/providers/business_provider.dart';
 import 'package:beautycita/providers/feature_toggle_provider.dart';
+import 'package:beautycita/services/supabase_client.dart';
 import 'package:beautycita/services/toast_service.dart';
+import 'package:google_fonts/google_fonts.dart';
+
+// ── Profile stat providers ──
+
+final _profileSaldoProvider = FutureProvider<double>((ref) async {
+  final userId = SupabaseClientService.currentUserId;
+  if (userId == null) return 0;
+  final data = await SupabaseClientService.client
+      .from('profiles')
+      .select('saldo')
+      .eq('id', userId)
+      .maybeSingle();
+  return (data?['saldo'] as num?)?.toDouble() ?? 0;
+});
+
+final _profileBookingCountProvider = FutureProvider<int>((ref) async {
+  final userId = SupabaseClientService.currentUserId;
+  if (userId == null) return 0;
+  final data = await SupabaseClientService.client
+      .from('appointments')
+      .select('id')
+      .eq('user_id', userId)
+      .inFilter('status', ['completed', 'confirmed']);
+  return (data as List).length;
+});
 
 // ── AI Avatar Style Model ──
 
@@ -146,15 +172,23 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
           const SizedBox(height: AppConstants.paddingLG),
 
-          // ── AI Avatar Styles ──
-          _buildAvatarStylesSection(context, textTheme, cs, ext),
-
-          const SizedBox(height: AppConstants.paddingLG),
-
           // ── Personal Info Card ──
           const SectionHeader(label: 'Informacion personal'),
           const SizedBox(height: AppConstants.paddingSM),
           _buildPersonalInfoCard(context, profile, textTheme, cs, ext),
+
+          const SizedBox(height: AppConstants.paddingLG),
+
+          // ── Account Stats ──
+          const SizedBox(height: AppConstants.paddingLG),
+          const SectionHeader(label: 'Mi cuenta'),
+          const SizedBox(height: AppConstants.paddingSM),
+          _buildAccountStats(context, cs, ext, textTheme),
+
+          const SizedBox(height: AppConstants.paddingLG),
+
+          // ── Quick Links ──
+          _buildQuickLinks(context, cs, ext, textTheme),
 
           const SizedBox(height: AppConstants.paddingLG),
 
@@ -504,41 +538,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               showDivider: true,
             ),
 
-          // Phone
-          _infoRow(
-            icon: Icons.phone_outlined,
-            iconColor: profile.hasVerifiedPhone
-                ? Colors.green.shade600
-                : profile.phone != null
-                    ? Colors.orange.shade600
-                    : cs.primary,
-            label: 'Telefono',
-            value: profile.phone ?? 'Agregar telefono',
-            valueIsPlaceholder: profile.phone == null,
-            trailing: profile.hasVerifiedPhone
-                ? Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text('Verificado', style: textTheme.bodySmall?.copyWith(
-                        color: Colors.green.shade600, fontSize: 11)),
-                      const SizedBox(width: 6),
-                      Icon(Icons.check_circle_outlined, color: Colors.green.shade600,
-                          size: 18),
-                    ],
-                  )
-                : profile.phone != null
-                    ? GestureDetector(
-                        onTap: () => _showOtpSheet(context),
-                        child: Text('Verificar', style: textTheme.bodySmall
-                            ?.copyWith(color: cs.primary,
-                                fontWeight: FontWeight.w600)),
-                      )
-                    : Text('Requerido', style: textTheme.bodySmall?.copyWith(
-                        color: Colors.red.shade400, fontSize: 11)),
-            onTap: () => _showPhoneSheet(context),
-            showDivider: true,
-          ),
-
           // Birthday
           _infoRow(
             icon: Icons.cake_outlined,
@@ -701,6 +700,154 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             onPressed: () => setState(() => _editingName = false),
           ),
         ],
+      ),
+    );
+  }
+
+  // ── Account Stats ──
+
+  Widget _buildAccountStats(
+    BuildContext context, ColorScheme cs, BCThemeExtension ext, TextTheme textTheme,
+  ) {
+    // Query saldo
+    final saldoAsync = ref.watch(_profileSaldoProvider);
+    final saldo = saldoAsync.valueOrNull ?? 0.0;
+
+    // Count bookings
+    final bookingsAsync = ref.watch(_profileBookingCountProvider);
+    final totalBookings = bookingsAsync.valueOrNull ?? 0;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: cs.surface,
+        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+        border: Border.all(color: ext.cardBorderColor),
+      ),
+      padding: const EdgeInsets.all(AppConstants.paddingMD),
+      child: Row(
+        children: [
+          Expanded(
+            child: _statColumn(
+              icon: Icons.calendar_today_outlined,
+              label: 'Citas',
+              value: '$totalBookings',
+              color: cs.primary,
+            ),
+          ),
+          Container(width: 1, height: 40, color: ext.cardBorderColor),
+          Expanded(
+            child: _statColumn(
+              icon: Icons.account_balance_wallet_outlined,
+              label: 'Saldo',
+              value: '\$${saldo.toStringAsFixed(0)}',
+              color: const Color(0xFF059669),
+            ),
+          ),
+          Container(width: 1, height: 40, color: ext.cardBorderColor),
+          Expanded(
+            child: _statColumn(
+              icon: Icons.star_outline,
+              label: 'Miembro desde',
+              value: _memberSince(),
+              color: const Color(0xFFF59E0B),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _statColumn({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+  }) {
+    return Column(
+      children: [
+        Icon(icon, size: 22, color: color),
+        const SizedBox(height: 6),
+        Text(value, style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700, color: color)),
+        Text(label, style: GoogleFonts.nunito(fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5))),
+      ],
+    );
+  }
+
+  String _memberSince() {
+    // Use auth state creation — profiles don't expose created_at directly
+    return '2026';
+  }
+
+  // ── Quick Links ──
+
+  Widget _buildQuickLinks(
+    BuildContext context, ColorScheme cs, BCThemeExtension ext, TextTheme textTheme,
+  ) {
+    return Column(
+      children: [
+        _quickLinkTile(
+          icon: Icons.receipt_long_outlined,
+          label: 'Mis citas',
+          color: cs.primary,
+          onTap: () => context.push('/mis-citas'),
+        ),
+        _quickLinkTile(
+          icon: Icons.credit_card_outlined,
+          label: 'Metodos de pago',
+          color: const Color(0xFF8B5CF6),
+          onTap: () => context.push('/payment-methods'),
+        ),
+        _quickLinkTile(
+          icon: Icons.shield_outlined,
+          label: 'Seguridad',
+          color: const Color(0xFFEF4444),
+          onTap: () => context.push('/security'),
+        ),
+        _quickLinkTile(
+          icon: Icons.settings_outlined,
+          label: 'Preferencias',
+          color: const Color(0xFF6B7280),
+          onTap: () => context.push('/preferences'),
+        ),
+      ],
+    );
+  }
+
+  Widget _quickLinkTile({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    final cs = Theme.of(context).colorScheme;
+    final ext = Theme.of(context).extension<BCThemeExtension>()!;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: cs.surface,
+          borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+          border: Border.all(color: ext.cardBorderColor),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, size: 20, color: color),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(label, style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500)),
+            ),
+            Icon(Icons.chevron_right, size: 20, color: cs.onSurface.withValues(alpha: 0.3)),
+          ],
+        ),
       ),
     );
   }

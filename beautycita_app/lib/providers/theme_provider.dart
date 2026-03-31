@@ -97,13 +97,11 @@ class ThemeNotifier extends StateNotifier<ThemeState> {
         ? allPalettes[savedId]!
         : state.palette;
 
-    // If no custom color was saved, derive from palette primary so the whole
-    // theme matches the home-screen header gradient from the very first frame.
-    // Without this, the header gradient is bright (computed at lightness 0.45)
-    // but buttons/text use the raw dark palette.primary — they look mismatched
-    // until the user touches the hero color changer.
+    // Default to lila/lilac (#C8A2C8) gradient for all installations.
+    // This is the brand color — locked, not user-changeable.
     if (_customHue == null || _customSat == null) {
-      final hsl = HSLColor.fromColor(palette.primary);
+      const lilaColor = Color(0xFFC8A2C8);
+      final hsl = HSLColor.fromColor(lilaColor);
       _customHue = hsl.hue;
       _customSat = hsl.saturation;
     }
