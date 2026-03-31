@@ -555,13 +555,22 @@ const _termsSections = [
         'Eres responsable de la seguridad de tu dispositivo y la actividad en tu cuenta.',
   ),
   _Section(
-    heading: '3. Reservas',
+    heading: '3. Reservas y derecho de desistimiento',
     body:
         'Al confirmar una reserva aceptas los terminos del salon, incluyendo '
         'politicas de cancelacion y depositos. BeautyCita no es responsable por '
         'la calidad o resultado de los servicios del salon.\n\n'
-        'Cancelaciones gratuitas hasta 24 horas antes de la cita. '
-        'Cancelaciones tardias pueden resultar en cargo del deposito.',
+        'DERECHO DE DESISTIMIENTO (PROFECO): Conforme a la legislacion mexicana '
+        'de proteccion al consumidor (LPCAC), tienes derecho a cancelar '
+        'cualquier reserva de servicio o compra de producto realizada en linea '
+        'dentro de los 5 (cinco) dias habiles posteriores al pago y obtener un '
+        'reembolso completo a tu saldo en la plataforma, sin necesidad de '
+        'justificacion. Para ejercer este derecho, contacta a '
+        'legal@beautycita.com o usa la opcion de cancelacion en la app.\n\n'
+        'Cancelaciones fuera del periodo de 5 dias: gratuitas hasta 24 horas '
+        'antes de la cita. Cancelaciones tardias pueden resultar en cargo '
+        'del deposito segun la politica del salon.\n\n'
+        'Todos los reembolsos se acreditan a tu saldo en BeautyCita.',
   ),
   _Section(
     heading: '4. Pagos',
@@ -582,8 +591,8 @@ const _termsSections = [
         '- Sin RFC: ISR 20% + IVA 16% del monto bruto.\n\n'
         'Las retenciones se deducen automaticamente del pago al proveedor. '
         'El cliente paga el precio publicado sin cambio. El proveedor recibe '
-        'el monto neto despues de la comision de plataforma del 10% por cada '
-        'reserva completada y las retenciones.\n\n'
+        'el monto neto despues de la comision de plataforma (3% por servicios, '
+        '10% por productos) y las retenciones fiscales.\n\n'
         'BeautyCita entera las retenciones al SAT (Servicio de Administracion '
         'Tributaria) mediante declaraciones informativas mensuales y pone a '
         'disposicion de los proveedores un desglose de retenciones en su panel.',
@@ -629,6 +638,85 @@ const _termsSections = [
         'pendientes seran completados antes de la desactivacion.',
   ),
   _Section(
+    heading: '4d. Tarjetas de regalo',
+    body:
+        'BeautyCita permite a los salones crear y distribuir tarjetas de regalo '
+        'digitales canjeables por servicios o productos.\n\n'
+        'TERMINOS DE USO:\n'
+        '- Vigencia: Las tarjetas de regalo tienen una vigencia maxima de 3 '
+        '(tres) anos a partir de su fecha de emision, conforme a la '
+        'legislacion mexicana. El salon puede establecer una vigencia menor.\n'
+        '- Canje: El codigo de la tarjeta se canjea en la app y se acredita '
+        'al saldo del usuario. El saldo puede usarse para reservar servicios '
+        'o comprar productos.\n'
+        '- Reembolso: El saldo no utilizado de una tarjeta de regalo puede ser '
+        'reembolsado al comprador original previa solicitud a '
+        'legal@beautycita.com.\n'
+        '- No transferible: La tarjeta es personal del destinatario una vez '
+        'canjeada.\n'
+        '- Tarjetas perdidas: BeautyCita no es responsable por codigos '
+        'perdidos o compartidos con terceros. El salon emisor puede verificar '
+        'el estado del codigo.\n'
+        '- Sin valor en efectivo: Las tarjetas no son convertibles a efectivo '
+        'ni canjeables en establecimientos fisicos fuera de la plataforma.',
+  ),
+  _Section(
+    heading: '4e. Programa de lealtad',
+    body:
+        'BeautyCita ofrece un programa de lealtad por salon que permite a los '
+        'clientes acumular puntos con cada visita.\n\n'
+        'TERMINOS:\n'
+        '- Acumulacion: 1 punto por cada \$10 MXN gastados en servicios pagados '
+        'a traves de la plataforma. Los puntos se otorgan automaticamente al '
+        'completar la cita.\n'
+        '- Canje: 100 puntos pueden canjearse por \$50 MXN de credito al saldo '
+        'del usuario. El canje se realiza desde la ficha del cliente en la app.\n'
+        '- Vigencia: Los puntos no tienen fecha de expiracion mientras la '
+        'cuenta del usuario permanezca activa.\n'
+        '- Cuenta inactiva: Si la cuenta se elimina, los puntos acumulados se '
+        'pierden y no son reembolsables.\n'
+        '- No transferible: Los puntos son personales y no pueden transferirse '
+        'entre usuarios.\n'
+        '- Modificacion: BeautyCita se reserva el derecho de modificar las '
+        'tasas de acumulacion y canje con previo aviso de 30 dias.',
+  ),
+  _Section(
+    heading: '4f. Acuerdo de vendedor (proveedores de servicios)',
+    body:
+        'Al registrarse como proveedor de servicios en BeautyCita, el salon '
+        'o profesional acepta los siguientes terminos:\n\n'
+        'COMISIONES:\n'
+        '- Servicios: BeautyCita cobra una comision del 3% sobre cada reserva '
+        'de servicio completada y pagada a traves de la plataforma.\n'
+        '- Productos (POS): Comision del 10% sobre cada venta de producto.\n'
+        '- La comision se deduce automaticamente del pago antes de la '
+        'transferencia al proveedor.\n\n'
+        'PAGOS:\n'
+        '- Pagos por tarjeta/saldo: procesados por Stripe, transferidos al '
+        'proveedor segun el calendario de Stripe Connect (tipicamente 2-7 '
+        'dias habiles).\n'
+        '- Pagos en efectivo: el proveedor cobra directamente al cliente.\n\n'
+        'OBLIGACIONES FISCALES:\n'
+        '- BeautyCita retiene ISR (2.5%) e IVA (8%) conforme a LISR Art. '
+        '113-A y LIVA Art. 18-J.\n'
+        '- El proveedor es responsable de pagar la otra mitad de sus '
+        'obligaciones fiscales directamente al SAT.\n'
+        '- El proveedor debe declarar ingresos en efectivo en su regimen '
+        'fiscal correspondiente.\n\n'
+        'DATOS DE CLIENTES:\n'
+        '- El salon accede a nombre y telefono del cliente para coordinar la '
+        'cita. Esta informacion es confidencial y no puede usarse para fines '
+        'de marketing fuera de BeautyCita.\n\n'
+        'TERMINACION:\n'
+        '- El proveedor puede cerrar su cuenta en cualquier momento desde '
+        'Configuracion.\n'
+        '- BeautyCita puede suspender o cerrar la cuenta del proveedor por '
+        'incumplimiento de estos terminos, con aviso previo de 15 dias '
+        'habiles, excepto en casos de fraude o abuso.\n'
+        '- Los pedidos y citas pendientes se completaran antes de la '
+        'desactivacion.',
+  ),
+  _Section(
     heading: '5. Transporte',
     body:
         'La integracion con Uber es opcional. Al vincular tu cuenta, autorizas a '
@@ -650,10 +738,20 @@ const _termsSections = [
         'contenido ilegal u ofensivo.',
   ),
   _Section(
-    heading: '8. Disputas',
+    heading: '8. Disputas y resolucion de conflictos',
     body:
-        'En conflictos entre cliente y salon, BeautyCita puede mediar y emitir '
-        'reembolsos parciales o totales cuando lo considere justo.',
+        'En conflictos entre cliente y salon, BeautyCita media la resolucion:\n\n'
+        '1. El cliente presenta la disputa desde la app o via legal@beautycita.com.\n'
+        '2. BeautyCita notifica al salon y solicita su respuesta.\n'
+        '3. Plazo de respuesta: BeautyCita respondera dentro de 10 (diez) dias '
+        'habiles a partir de la recepcion de la disputa.\n'
+        '4. Plazo de resolucion: La resolucion final se emitira dentro de 20 '
+        '(veinte) dias habiles.\n'
+        '5. Reembolsos: parciales o totales, acreditados al saldo del cliente.\n\n'
+        'ESCALAMIENTO A PROFECO: Si no estas satisfecho con la resolucion de '
+        'BeautyCita, puedes presentar una queja ante la Procuraduria Federal '
+        'del Consumidor (PROFECO) en www.gob.mx/profeco o llamando al '
+        'telefono del consumidor 55 5568 8722.',
   ),
   _Section(
     heading: '9. Propiedad intelectual',
@@ -842,6 +940,11 @@ const _privacySections = [
         'Transferencia internacional con clausulas contractuales.\n\n'
         'K) CLOUDFLARE R2: almacenamiento de archivos multimedia. '
         'Transferencia internacional con clausulas contractuales.\n\n'
+        'L) SENTRY, INC. (EE.UU.): reportes de errores y estabilidad de la '
+        'plataforma. Sentry no recibe informacion personal identificable — '
+        'solo datos tecnicos anonimizados (tipo de error, version de app, '
+        'modelo de dispositivo). Transferencia internacional con clausulas '
+        'contractuales.\n\n'
         'BeautyCita NO vende, comercializa ni renta sus datos personales '
         'a terceros bajo ninguna circunstancia.',
   ),
@@ -1015,7 +1118,7 @@ const _privacySections = [
         'consentimiento expreso se obtiene al momento de utilizar la '
         'funcion de estudio virtual, mediante confirmacion explicita '
         'en pantalla antes del procesamiento.\n\n'
-        'Fecha de ultima actualizacion: 19 de marzo de 2026.',
+        'Fecha de ultima actualizacion: 30 de marzo de 2026.',
   ),
 ];
 
