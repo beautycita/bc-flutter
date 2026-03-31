@@ -100,8 +100,9 @@ final businessStatsProvider =
   final monthRevenue = client
       .from('appointments').select('price')
       .eq('business_id', bizId)
-      .eq('status', 'completed')
-      .gte('created_at', firstOfMonth);
+      .inFilter('status', ['completed', 'confirmed'])
+      .eq('payment_status', 'paid')
+      .gte('starts_at', firstOfMonth);
   final pendingQ = client
       .from('appointments').select('id')
       .eq('business_id', bizId)
