@@ -12,6 +12,8 @@ import '../../providers/feature_toggle_provider.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 import '../../widgets/aphrodite_copy_field.dart';
+import 'package:image_cropper/image_cropper.dart' show CropAspectRatioPreset;
+import '../../widgets/bc_image_editor.dart';
 
 class BusinessStaffScreen extends ConsumerWidget {
   const BusinessStaffScreen({super.key});
@@ -430,12 +432,19 @@ class _AddStaffSheetState extends ConsumerState<_AddStaffSheet> {
   Future<void> _pickAvatar() async {
     final picked = await _picker.pickImage(
       source: ImageSource.gallery,
-      maxWidth: 512,
-      maxHeight: 512,
-      imageQuality: 80,
+      maxWidth: 1024,
+      maxHeight: 1024,
+      imageQuality: 85,
     );
-    if (picked != null) {
-      setState(() => _avatarFile = File(picked.path));
+    if (picked == null || !mounted) return;
+    final edited = await editImage(
+      context,
+      imageFile: File(picked.path),
+      showWatermarkOption: false,
+      initialAspect: CropAspectRatioPreset.square,
+    );
+    if (edited != null && mounted) {
+      setState(() => _avatarFile = edited);
     }
   }
 
