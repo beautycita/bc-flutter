@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../config/constants.dart';
 import '../../providers/business_provider.dart';
+import 'package:flutter_stripe/flutter_stripe.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 import '../../widgets/admin/admin_widgets.dart';
@@ -744,32 +745,62 @@ class _CreateGiftCardSheetState extends ConsumerState<_CreateGiftCardSheet> {
 
     setState(() => _saving = true);
     try {
-      final code = _generateCode();
-      await SupabaseClientService.client.from('gift_cards').insert({
-        'business_id': widget.bizId,
-        'code': code,
-        'amount': amount,
-        'remaining_amount': amount,
-        'buyer_name': _buyerCtrl.text.trim().isEmpty
-            ? null
-            : _buyerCtrl.text.trim(),
-        'recipient_name': _recipientCtrl.text.trim().isEmpty
-            ? null
-            : _recipientCtrl.text.trim(),
-        'message': _messageCtrl.text.trim().isEmpty
-            ? null
-            : _messageCtrl.text.trim(),
-        'expires_at': _expiresAt?.toUtc().toIso8601String(),
-        'is_active': true,
-      });
+      // Create payment via Stripe
+      final response = await SupabaseClientService.client.functions.invoke(
+        'create-gift-card-payment',
+        body: {
+          'business_id': widget.bizId,
+          'amount': amount,
+          'buyer_name': _buyerCtrl.text.trim().isEmpty ? null : _buyerCtrl.text.trim(),
+          'recipient_name': _recipientCtrl.text.trim().isEmpty ? null : _recipientCtrl.text.trim(),
+          'message': _messageCtrl.text.trim().isEmpty ? null : _messageCtrl.text.trim(),
+          'expires_at': _expiresAt?.toUtc().toIso8601String(),
+        },
+      );
 
+      final data = response.data as Map<String, dynamic>;
+      if (data.containsKey('error')) {
+        throw Exception(data['error'] as String);
+      }
+
+      final clientSecret = data['client_secret'] as String? ?? '';
+      final customerId = data['customer_id'] as String? ?? '';
+      final ephemeralKey = data['ephemeral_key'] as String? ?? '';
+      final giftCardCode = data['gift_card_code'] as String? ?? '';
+
+      if (clientSecret.isEmpty) {
+        throw Exception('Error al procesar el pago');
+      }
+
+      // Present Stripe PaymentSheet
+      await Stripe.instance.initPaymentSheet(
+        paymentSheetParameters: SetupPaymentSheetParameters(
+          paymentIntentClientSecret: clientSecret,
+          customerId: customerId,
+          customerEphemeralKeySecret: ephemeralKey,
+          merchantDisplayName: 'BeautyCita — Tarjeta de Regalo',
+          returnURL: 'beautycita://stripe-redirect',
+          style: ThemeMode.light,
+        ),
+      );
+      await Stripe.instance.presentPaymentSheet();
+
+      // Payment succeeded — gift card will be created by webhook
       widget.onCreated();
       if (mounted) {
         Navigator.pop(context);
-        ToastService.showSuccess('Tarjeta creada: $code');
+        ToastService.showSuccess('Tarjeta de regalo creada: $giftCardCode (\$${amount.toStringAsFixed(0)} MXN)');
       }
+    } on StripeException {
+      // User cancelled payment sheet
+      if (mounted) ToastService.showInfo('Pago cancelado');
     } catch (e) {
-      ToastService.showError('Error: $e');
+      final errMsg = e.toString().replaceAll('Exception: ', '');
+      if (errMsg.toLowerCase().contains('pagos en linea') || errMsg.toLowerCase().contains('destination')) {
+        ToastService.showError('Este salon no tiene pagos en linea configurados');
+      } else {
+        ToastService.showError('Error: $errMsg');
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
