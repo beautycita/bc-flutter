@@ -149,6 +149,53 @@ serve(async (req) => {
         const paymentIntent = event.data.object as Stripe.PaymentIntent;
         const metadata = paymentIntent.metadata ?? {};
 
+        // --- Gift card payments ---
+        if (metadata.type === "gift_card") {
+          const { data: existingCard } = await supabase
+            .from("gift_cards")
+            .select("id")
+            .eq("code", metadata.gift_card_code)
+            .maybeSingle();
+
+          if (existingCard) {
+            console.log(`[STRIPE-WEBHOOK] Gift card ${metadata.gift_card_code} already exists, skipping`);
+          } else {
+            const gcAmount = parseFloat(metadata.gift_card_amount ?? "0");
+            const { error: gcError } = await supabase.from("gift_cards").insert({
+              business_id: metadata.business_id,
+              code: metadata.gift_card_code,
+              amount: gcAmount,
+              remaining_amount: gcAmount,
+              buyer_name: metadata.buyer_name || null,
+              recipient_name: metadata.recipient_name || null,
+              message: metadata.message || null,
+              expires_at: metadata.expires_at || null,
+              is_active: true,
+            });
+
+            if (gcError) {
+              console.error(`[STRIPE-WEBHOOK] Failed to create gift card: ${gcError.message}`);
+            } else {
+              console.log(`[STRIPE-WEBHOOK] Gift card created: ${metadata.gift_card_code} ($${gcAmount})`);
+            }
+
+            // Record commission
+            const commission = (paymentIntent.application_fee_amount ?? 0) / 100;
+            if (commission > 0) {
+              await supabase.from("commission_records").insert({
+                business_id: metadata.business_id,
+                amount: commission,
+                rate: 0.03,
+                source: "gift_card",
+                period_month: new Date().getMonth() + 1,
+                period_year: new Date().getFullYear(),
+                status: "collected",
+              }).catch((e: Error) => console.error(`[STRIPE-WEBHOOK] Gift card commission error: ${e.message}`));
+            }
+          }
+          break;
+        }
+
         // --- Product order payments (marketplace) ---
         if (metadata.payment_type === "product") {
           // Idempotency: skip if order already exists for this payment intent
