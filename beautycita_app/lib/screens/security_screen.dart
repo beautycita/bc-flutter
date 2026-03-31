@@ -4,8 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/config/theme_extension.dart';
+import 'package:beautycita/providers/profile_provider.dart';
 import 'package:beautycita/providers/security_provider.dart';
 import 'package:beautycita/services/toast_service.dart';
+import 'package:beautycita/widgets/phone_verify_gate_sheet.dart';
 import 'package:beautycita/services/updater_service.dart';
 import 'package:beautycita/widgets/settings_widgets.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -151,6 +153,43 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen>
                       : null,
               onTap: sec.isEmailAdded ? null : () => _showEmailSheet(context),
             ),
+
+            const Divider(height: 1, color: Color(0xFFF5F0EB)),
+
+            // Phone
+            Consumer(builder: (ctx, ref, _) {
+              final profile = ref.watch(profileProvider);
+              final hasPhone = profile.phone != null;
+              final verified = profile.hasVerifiedPhone;
+              return SettingsTile(
+                icon: Icons.phone_outlined,
+                iconColor: verified ? Colors.green.shade600 : hasPhone ? Colors.orange.shade600 : null,
+                label: hasPhone ? (profile.phone ?? 'Telefono') : 'Agregar telefono',
+                trailing: verified
+                    ? Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('Verificado', style: TextStyle(fontSize: 11, color: Colors.green.shade600, fontWeight: FontWeight.w600)),
+                          const SizedBox(width: 6),
+                          Icon(Icons.check_circle_outlined, color: Colors.green.shade600, size: 20),
+                        ],
+                      )
+                    : hasPhone
+                        ? GestureDetector(
+                            onTap: () => _showOtpSheet(context),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: Colors.orange.shade50,
+                                borderRadius: BorderRadius.circular(AppConstants.radiusXS),
+                              ),
+                              child: Text('Verificar', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.orange.shade700)),
+                            ),
+                          )
+                        : Text('Requerido', style: TextStyle(fontSize: 11, color: Colors.red.shade400)),
+                onTap: hasPhone ? null : () => _showPhoneSheet(context),
+              );
+            }),
 
             const Divider(height: 1, color: Color(0xFFF5F0EB)),
 
@@ -329,6 +368,63 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen>
 
   /// Google users can always add a password (email verified by Google).
   /// Email-only users need confirmed email first.
+  void _showPhoneSheet(BuildContext context) {
+    final controller = TextEditingController();
+    showBurstBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => Padding(
+        padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(context).viewInsets.bottom + 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Agregar telefono', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 4),
+            Text('Ingresa tu numero de 10 digitos', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5))),
+            const SizedBox(height: 16),
+            TextField(
+              controller: controller,
+              keyboardType: TextInputType.phone,
+              autofocus: true,
+              decoration: InputDecoration(
+                prefixText: '+52 ',
+                hintText: '3221234567',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: () {
+                  final phone = controller.text.trim();
+                  if (phone.length < 10) {
+                    ToastService.showWarning('Ingresa un numero de 10 digitos');
+                    return;
+                  }
+                  final fullPhone = '+52$phone';
+                  ref.read(profileProvider.notifier).updatePhone(fullPhone);
+                  Navigator.pop(context);
+                  ToastService.showSuccess('Telefono guardado. Ahora verificalo.');
+                },
+                child: const Text('Guardar'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showOtpSheet(BuildContext context) {
+    showBurstBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => const PhoneVerifyGateSheet(),
+    );
+  }
+
   bool _canAddPassword(SecurityState sec) {
     if (sec.isGoogleLinked) return true;
     return sec.isEmailConfirmed;
