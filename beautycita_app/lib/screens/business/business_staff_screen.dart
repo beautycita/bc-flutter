@@ -12,6 +12,7 @@ import '../../providers/business_provider.dart';
 import '../../providers/feature_toggle_provider.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../widgets/aphrodite_copy_field.dart';
 import '../../widgets/bc_image_editor.dart';
 import 'package:image_cropper/image_cropper.dart' show CropAspectRatioPreset;
@@ -1295,6 +1296,11 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
 
               const SizedBox(height: AppConstants.paddingLG),
 
+              // ---------- Portfolio QR ----------
+              _buildPortfolioQrSection(context, staffId),
+
+              const SizedBox(height: AppConstants.paddingLG),
+
               // ---------- Schedule section ----------
               _sectionHeader('HORARIO SEMANAL'),
               const SizedBox(height: AppConstants.paddingSM),
@@ -1690,6 +1696,114 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
     } finally {
       if (mounted) setState(() => _savingProfile = false);
     }
+  }
+
+  // ---- Portfolio QR section ----
+
+  Widget _buildPortfolioQrSection(BuildContext context, String staffId) {
+    final colors = Theme.of(context).colorScheme;
+    final qrToken = widget.staff['upload_qr_token'] as String? ?? '';
+    final pin = widget.staff['upload_pin'] as String? ?? '----';
+    final uploadUrl = 'https://beautycita.com/portfolio-upload?token=$qrToken';
+
+    return Card(
+      elevation: 0,
+      color: colors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+        side: BorderSide(color: colors.onSurface.withValues(alpha: 0.08)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppConstants.paddingMD),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEC4899).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.camera_alt_outlined, size: 20, color: Color(0xFFEC4899)),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('QR Portafolio', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w700)),
+                      Text('Escanear para subir antes/despues', style: GoogleFonts.nunito(fontSize: 12, color: colors.onSurface.withValues(alpha: 0.5))),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            // PIN display
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF3E8FF),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.lock_outline, size: 16, color: Color(0xFF7C3AED)),
+                  const SizedBox(width: 8),
+                  Text('PIN: ', style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF7C3AED))),
+                  Text(pin, style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w800, letterSpacing: 8, color: const Color(0xFF7C3AED))),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: () async {
+                      // Regenerate PIN
+                      final newPin = (1000 + DateTime.now().millisecondsSinceEpoch % 9000).toString();
+                      await SupabaseClientService.client.from('staff').update({'upload_pin': newPin}).eq('id', staffId);
+                      ref.invalidate(businessStaffProvider);
+                      ToastService.showSuccess('PIN actualizado: $newPin');
+                    },
+                    child: const Icon(Icons.refresh, size: 18, color: Color(0xFF7C3AED)),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+
+            // Share / Copy link buttons
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      // Share QR link
+                      Share.share(
+                        'Sube tus fotos antes/despues en: $uploadUrl\nPIN: $pin',
+                        subject: 'Portafolio BeautyCita',
+                      );
+                    },
+                    icon: const Icon(Icons.share, size: 16),
+                    label: const Text('Compartir enlace'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Clipboard.setData(ClipboardData(text: uploadUrl));
+                      ToastService.showSuccess('Enlace copiado');
+                    },
+                    icon: const Icon(Icons.copy, size: 16),
+                    label: const Text('Copiar enlace'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   // ---- Schedule editor ----
