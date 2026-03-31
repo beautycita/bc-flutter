@@ -369,12 +369,30 @@ class _BusinessCalendarScreenState
             (apptData['price'] as num?)?.toDouble() != null &&
             (apptData['price'] as num).toDouble() > 0) {
           final userId = apptData['user_id'] as String?;
-          final amount = (apptData['price'] as num).toDouble();
+          final price = (apptData['price'] as num).toDouble();
+          final bcCommission = price * 0.03;
+
+          // Customer gets full refund (salon cancelled, not their fault)
           if (userId != null) {
             await SupabaseClientService.client.rpc(
               'increment_saldo',
-              params: {'p_user_id': userId, 'p_amount': amount},
+              params: {'p_user_id': userId, 'p_amount': price},
             );
+          }
+
+          // BC still charges 3% — billed to salon (commission record)
+          final biz = await ref.read(currentBusinessProvider.future);
+          if (biz != null) {
+            SupabaseClientService.client.from('commission_records').insert({
+              'business_id': biz['id'],
+              'appointment_id': id,
+              'amount': double.parse(bcCommission.toStringAsFixed(2)),
+              'rate': 0.03,
+              'source': 'salon_cancellation',
+              'period_month': DateTime.now().month,
+              'period_year': DateTime.now().year,
+              'status': 'collected',
+            }).then((_) {}).catchError((_) {});
           }
         }
       } else {

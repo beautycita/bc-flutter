@@ -199,6 +199,23 @@ class BookingRepository {
       }
     }
 
+    // Record the 3% commission BC kept on cancellation (audit trail)
+    if (isPaid && bcCommission > 0) {
+      final bizId = booking['business_id'] as String?;
+      if (bizId != null) {
+        await SupabaseClientService.client.from('commission_records').insert({
+          'business_id': bizId,
+          'appointment_id': bookingId,
+          'amount': double.parse(bcCommission.toStringAsFixed(2)),
+          'rate': 0.03,
+          'source': 'cancellation',
+          'period_month': DateTime.now().month,
+          'period_year': DateTime.now().year,
+          'status': 'collected',
+        }).then((_) {}).catchError((_) {});
+      }
+    }
+
     return CancelResult(
       refundAmount: refundAmount,
       depositForfeited: depositForfeited,
