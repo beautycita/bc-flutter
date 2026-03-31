@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:beautycita/config/app_transitions.dart';
 import 'package:flutter/material.dart';
@@ -406,6 +407,7 @@ class _AddStaffSheetState extends ConsumerState<_AddStaffSheet> {
   final _firstCtrl = TextEditingController();
   final _lastCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
   final _expCtrl = TextEditingController(text: '0');
   final _bioCtrl = TextEditingController();
   bool _saving = false;
@@ -413,14 +415,78 @@ class _AddStaffSheetState extends ConsumerState<_AddStaffSheet> {
   final List<File> _portfolioFiles = [];
   final _picker = ImagePicker();
 
+  // Existing stylist detection
+  Map<String, dynamic>? _matchedStylist;
+  bool _linkAccount = false;
+  Timer? _debounce;
+
   @override
   void dispose() {
     _firstCtrl.dispose();
     _lastCtrl.dispose();
     _phoneCtrl.dispose();
+    _emailCtrl.dispose();
     _expCtrl.dispose();
     _bioCtrl.dispose();
+    _debounce?.cancel();
     super.dispose();
+  }
+
+  void _onPhoneOrEmailChanged(String _) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 600), _lookupStylist);
+  }
+
+  Future<void> _lookupStylist() async {
+    final phone = _phoneCtrl.text.trim();
+    final email = _emailCtrl.text.trim();
+    if (phone.length < 8 && email.length < 5) {
+      if (_matchedStylist != null) setState(() => _matchedStylist = null);
+      return;
+    }
+
+    try {
+      Map<String, dynamic>? match;
+
+      // Search by phone first
+      if (phone.length >= 8) {
+        final result = await SupabaseClientService.client
+            .from('profiles')
+            .select('id, username, full_name, phone, avatar_url, role')
+            .eq('phone', phone)
+            .eq('role', 'stylist')
+            .maybeSingle();
+        if (result != null) match = result;
+      }
+
+      // Search by email if no phone match
+      if (match == null && email.length >= 5) {
+        final result = await SupabaseClientService.client
+            .from('profiles')
+            .select('id, username, full_name, phone, avatar_url, role')
+            .eq('role', 'stylist')
+            .maybeSingle();
+        // Email is in auth.users, not profiles. Check via edge function or skip.
+        // For now, only phone matching works reliably.
+      }
+
+      if (mounted) {
+        setState(() {
+          _matchedStylist = match;
+          if (match != null) {
+            // Auto-fill from matched profile
+            final name = match['full_name'] as String? ?? '';
+            if (_firstCtrl.text.isEmpty && name.isNotEmpty) {
+              final parts = name.split(' ');
+              _firstCtrl.text = parts.first;
+              if (parts.length > 1) _lastCtrl.text = parts.sublist(1).join(' ');
+            }
+          }
+        });
+      }
+    } catch (_) {
+      // Lookup failed silently — not critical
+    }
   }
 
   String get _expDisplayLabel {
@@ -625,13 +691,116 @@ class _AddStaffSheetState extends ConsumerState<_AddStaffSheet> {
               ),
               const SizedBox(height: AppConstants.paddingSM),
 
-              // Phone
+              // Phone (with stylist lookup)
               TextField(
                 controller: _phoneCtrl,
                 keyboardType: TextInputType.phone,
+                onChanged: _onPhoneOrEmailChanged,
                 decoration: _styledInput('Telefono',
                     prefixIcon: const Icon(Icons.phone_rounded, size: 20)),
               ),
+              const SizedBox(height: AppConstants.paddingSM),
+
+              // Email (with stylist lookup)
+              TextField(
+                controller: _emailCtrl,
+                keyboardType: TextInputType.emailAddress,
+                onChanged: _onPhoneOrEmailChanged,
+                decoration: _styledInput('Email (opcional)',
+                    prefixIcon: const Icon(Icons.email_outlined, size: 20)),
+              ),
+
+              // Matched stylist banner
+              if (_matchedStylist != null) ...[
+                const SizedBox(height: AppConstants.paddingSM),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF059669).withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+                    border: Border.all(color: const Color(0xFF059669).withValues(alpha: 0.3)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.person_search, size: 18, color: const Color(0xFF059669)),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Estilista encontrado en BeautyCita',
+                              style: GoogleFonts.poppins(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF059669),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 18,
+                            backgroundColor: colors.primary.withValues(alpha: 0.1),
+                            backgroundImage: _matchedStylist!['avatar_url'] != null
+                                ? NetworkImage(_matchedStylist!['avatar_url'] as String)
+                                : null,
+                            child: _matchedStylist!['avatar_url'] == null
+                                ? Icon(Icons.person, size: 18, color: colors.primary)
+                                : null,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _matchedStylist!['full_name'] as String? ??
+                                      _matchedStylist!['username'] as String? ??
+                                      'Estilista',
+                                  style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600),
+                                ),
+                                Text(
+                                  '@${_matchedStylist!['username'] ?? ''}',
+                                  style: GoogleFonts.nunito(fontSize: 12, color: colors.onSurface.withValues(alpha: 0.5)),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              _linkAccount
+                                  ? 'Enviar solicitud de vinculacion'
+                                  : 'Agregar sin vincular su cuenta de BC?',
+                              style: GoogleFonts.nunito(fontSize: 12, color: colors.onSurface.withValues(alpha: 0.6)),
+                            ),
+                          ),
+                          Switch(
+                            value: _linkAccount,
+                            onChanged: (v) => setState(() => _linkAccount = v),
+                            activeColor: const Color(0xFF059669),
+                          ),
+                        ],
+                      ),
+                      Text(
+                        _linkAccount
+                            ? 'Se enviara una solicitud. El estilista debe aceptar para vincular.'
+                            : 'Sin vincular: solo un registro interno para tu negocio',
+                        style: GoogleFonts.nunito(fontSize: 11, fontStyle: FontStyle.italic,
+                            color: colors.onSurface.withValues(alpha: 0.4)),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: AppConstants.paddingSM),
 
               // Experience (number only, 0-50)
@@ -840,19 +1009,56 @@ class _AddStaffSheetState extends ConsumerState<_AddStaffSheet> {
         if (url != null) portfolioUrls.add(url);
       }
 
-      await SupabaseClientService.client.from('staff').insert({
+      final staffData = <String, dynamic>{
         'business_id': bizId,
         'first_name': first,
         'last_name': _lastCtrl.text.trim(),
         'phone': _phoneCtrl.text.trim().isEmpty
             ? null
             : _phoneCtrl.text.trim(),
+        'email': _emailCtrl.text.trim().isEmpty
+            ? null
+            : _emailCtrl.text.trim(),
         'experience_years': int.tryParse(_expCtrl.text.trim()) ?? 0,
         'bio': _bioCtrl.text.trim().isEmpty ? null : _bioCtrl.text.trim(),
         'avatar_url': avatarUrl,
         'portfolio_urls': portfolioUrls,
         'is_active': true,
-      });
+      };
+
+      // Use their avatar if we don't have one and they're a matched stylist
+      if (_matchedStylist != null && avatarUrl == null && _matchedStylist!['avatar_url'] != null) {
+        staffData['avatar_url'] = _matchedStylist!['avatar_url'];
+      }
+
+      final inserted = await SupabaseClientService.client
+          .from('staff')
+          .insert(staffData)
+          .select('id')
+          .single();
+
+      // If linking requested, create a link request (stylist must accept)
+      if (_linkAccount && _matchedStylist != null) {
+        await SupabaseClientService.client.from('staff_link_requests').insert({
+          'business_id': bizId,
+          'staff_id': inserted['id'],
+          'stylist_user_id': _matchedStylist!['id'],
+          'status': 'pending',
+        });
+
+        // Send push notification to the stylist
+        SupabaseClientService.client.functions.invoke(
+          'send-push-notification',
+          body: {
+            'type': 'staff_link_request',
+            'user_id': _matchedStylist!['id'],
+            'title': 'Solicitud de salon',
+            'body': '${_firstCtrl.text.trim()} quiere agregarte como miembro de su equipo. Acepta o rechaza desde tu app.',
+          },
+        ).then((_) {}).catchError((_) {});
+
+        ToastService.showSuccess('Solicitud enviada al estilista');
+      }
 
       widget.onSaved();
       if (mounted) Navigator.pop(context);
