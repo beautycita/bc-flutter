@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BeautyCita — Revenue Simulator</title>
+<style>
+  :root { --bg: #0a0a0f; --surface: #14141f; --surface2: #1e1e2e; --border: #2a2a3a; --text: #e8e8f0; --muted: #6b6b8a; --accent: #C8A2C8; --green: #4ade80; --red: #f87171; --gold: #fbbf24; --blue: #60a5fa; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.5; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+  h1 { font-size: 28px; font-weight: 700; margin-bottom: 4px; }
+  h1 span { color: var(--accent); }
+  .subtitle { color: var(--muted); font-size: 14px; margin-bottom: 24px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
+  .card h2 { font-size: 14px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 14px; }
+  .input-group { margin-bottom: 14px; }
+  .input-group label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+  .input-group .row { display: flex; align-items: center; gap: 10px; }
+  input[type="range"] { flex: 1; accent-color: var(--accent); height: 6px; }
+  .val { min-width: 90px; text-align: right; font-weight: 700; font-size: 15px; color: var(--accent); font-family: 'Courier New', monospace; }
+  .results { grid-column: 1 / -1; }
+  .results-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+  .result-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 16px; text-align: center; }
+  .result-card .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); }
+  .result-card .value { font-size: 24px; font-weight: 800; margin-top: 4px; font-family: 'Courier New', monospace; }
+  .result-card .sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .green { color: var(--green); }
+  .gold { color: var(--gold); }
+  .blue { color: var(--blue); }
+  .red { color: var(--red); }
+  .accent { color: var(--accent); }
+  .divider { border-top: 1px solid var(--border); margin: 20px 0; }
+  .formula { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 14px; font-family: 'Courier New', monospace; font-size: 12px; color: var(--muted); margin-top: 12px; line-height: 1.8; }
+  .formula span { color: var(--accent); }
+  .presets { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .preset-btn { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 6px 14px; cursor: pointer; font-size: 12px; color: var(--text); transition: all 0.2s; }
+  .preset-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .note { font-size: 11px; color: var(--muted); margin-top: 6px; font-style: italic; }
+  .breakdown { margin-top: 16px; }
+  .breakdown table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .breakdown th { text-align: left; padding: 6px 8px; color: var(--muted); font-weight: 500; border-bottom: 1px solid var(--border); }
+  .breakdown td { padding: 6px 8px; border-bottom: 1px solid rgba(42,42,58,0.5); }
+  .breakdown td:last-child { text-align: right; font-family: 'Courier New', monospace; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>BeautyCita <span>Revenue Simulator</span></h1>
+  <p class="subtitle">RFC: BEA260313MI8 · 3% commission on all transactions · ISR 2.5% + IVA 8% withholding</p>
+
+  <div class="presets">
+    <button class="preset-btn" onclick="preset('launch')">Launch (50 salons)</button>
+    <button class="preset-btn" onclick="preset('growth')">Growth (500 salons)</button>
+    <button class="preset-btn" onclick="preset('scale')">Scale (5,000 salons)</button>
+    <button class="preset-btn" onclick="preset('agendapro')">AgendaPro (8,000 MX)</button>
+    <button class="preset-btn" onclick="preset('fresha')">Fresha Scale (250K daily)</button>
+    <button class="preset-btn" onclick="preset('dream')">Unicorn (50K salons)</button>
+  </div>
+
+  <div class="grid">
+    <!-- Inputs: Platform -->
+    <div class="card">
+      <h2>Platform Variables</h2>
+      <div class="input-group">
+        <label>N — Active Salons</label>
+        <div class="row"><input type="range" id="salons" min="10" max="100000" value="500" step="10" oninput="calc()"><span class="val" id="salonsVal"></span></div>
+      </div>
+      <div class="input-group">
+        <label>Y — Avg Daily Bookings per Salon</label>
+        <div class="row"><input type="range" id="dailyBookings" min="1" max="50" value="8" step="1" oninput="calc()"><span class="val" id="dailyBookingsVal"></span></div>
+      </div>
+      <div class="input-group">
+        <label>Z — Avg Service Price (MXN)</label>
+        <div class="row"><input type="range" id="avgPrice" min="50" max="3000" value="500" step="10" oninput="calc()"><span class="val" id="avgPriceVal"></span></div>
+      </div>
+      <div class="input-group">
+        <label>Cash vs Digital Payment Split (%&nbsp;digital)</label>
+        <div class="row"><input type="range" id="digitalPct" min="5" max="100" value="40" step="1" oninput="calc()"><span class="val" id="digitalPctVal"></span></div>
+        <p class="note">Mexico avg: ~35-40% digital payments in beauty. Rest is cash registered on BC.</p>
+      </div>
+      <div class="input-group">
+        <label>Product Sales (% of service revenue)</label>
+        <div class="row"><input type="range" id="productPct" min="0" max="30" value="8" step="1" oninput="calc()"><span class="val" id="productPctVal"></span></div>
+      </div>
+    </div>
+
+    <!-- Inputs: Financial -->
+    <div class="card">
+      <h2>Financial Variables</h2>
+      <div class="input-group">
+        <label>Cancellation Rate (%)</label>
+        <div class="row"><input type="range" id="cancelRate" min="0" max="30" value="12" step="1" oninput="calc()"><span class="val" id="cancelRateVal"></span></div>
+        <p class="note">Industry avg: 10-15%. BC keeps 3% on cancellations too.</p>
+      </div>
+      <div class="input-group">
+        <label>R — Tax Retention Float (days held)</label>
+        <div class="row"><input type="range" id="taxHoldDays" min="1" max="46" value="30" step="1" oninput="calc()"><span class="val" id="taxHoldDaysVal"></span></div>
+        <p class="note">ISR+IVA withheld → paid to SAT by 17th of following month. Avg ~30 days float.</p>
+      </div>
+      <div class="input-group">
+        <label>W — Bank Interest Rate (annual %)</label>
+        <div class="row"><input type="range" id="bankRate" min="0" max="15" value="9.5" step="0.1" oninput="calc()"><span class="val" id="bankRateVal"></span></div>
+        <p class="note">Mexico CETES 2026: ~9-10%. Money market fund on retained taxes.</p>
+      </div>
+      <div class="input-group">
+        <label>T — Active App Users</label>
+        <div class="row"><input type="range" id="activeUsers" min="1000" max="250000000" value="50000" step="1000" oninput="calc()"><span class="val" id="activeUsersVal"></span></div>
+      </div>
+      <div class="input-group">
+        <label>Ad Revenue (CPM in MXN per 1000 impressions)</label>
+        <div class="row"><input type="range" id="adCpm" min="0" max="200" value="45" step="1" oninput="calc()"><span class="val" id="adCpmVal"></span></div>
+        <p class="note">Mexico avg CPM: $30-60 MXN. Premium beauty vertical: $40-80 MXN.</p>
+      </div>
+      <div class="input-group">
+        <label>Avg Monthly Ad Impressions per User</label>
+        <div class="row"><input type="range" id="impressionsPerUser" min="10" max="500" value="120" step="5" oninput="calc()"><span class="val" id="impressionsPerUserVal"></span></div>
+        <p class="note">Avg app user sees 80-150 ads/month. Beauty = high engagement vertical.</p>
+      </div>
+      <div class="input-group">
+        <label>% Users with Dormant Saldo</label>
+        <div class="row"><input type="range" id="saldoPct" min="0" max="50" value="15" step="1" oninput="calc()"><span class="val" id="saldoPctVal"></span></div>
+        <p class="note">Refund credits, partial gift cards, promo credits that sit unused.</p>
+      </div>
+      <div class="input-group">
+        <label>Avg Dormant Saldo per User (MXN)</label>
+        <div class="row"><input type="range" id="avgSaldo" min="20" max="500" value="180" step="10" oninput="calc()"><span class="val" id="avgSaldoVal"></span></div>
+        <p class="note">Typical: $100-300 MXN from cancel refunds, gift card remainders, promo credits.</p>
+      </div>
+      <div class="input-group">
+        <label>Annual Saldo Expiry Rate (%)</label>
+        <div class="row"><input type="range" id="saldoExpiryRate" min="0" max="50" value="15" step="1" oninput="calc()"><span class="val" id="saldoExpiryRateVal"></span></div>
+        <p class="note">% of dormant saldo that expires at year-end. Industry gift card breakage: 5-15%. Saldo (refund credits) likely lower: 10-20%.</p>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div class="card results">
+      <h2>Monthly Revenue Output</h2>
+      <div class="results-grid">
+        <div class="result-card">
+          <div class="label">Gross Platform Volume (GPV)</div>
+          <div class="value green" id="gpv">—</div>
+          <div class="sub" id="gpvSub"></div>
+        </div>
+        <div class="result-card">
+          <div class="label">BC Commission Revenue (3%)</div>
+          <div class="value accent" id="commission">—</div>
+          <div class="sub" id="commSub"></div>
+        </div>
+        <div class="result-card">
+          <div class="label">Product Commission (10%)</div>
+          <div class="value accent" id="productComm">—</div>
+          <div class="sub" id="prodSub"></div>
+        </div>
+        <div class="result-card">
+          <div class="label">Tax Float Interest</div>
+          <div class="value gold" id="interest">—</div>
+          <div class="sub" id="intSub"></div>
+        </div>
+        <div class="result-card">
+          <div class="label">Cancellation Revenue (3%)</div>
+          <div class="value blue" id="cancelRev">—</div>
+          <div class="sub" id="cancelSub"></div>
+        </div>
+        <div class="result-card">
+          <div class="label">Ad Revenue</div>
+          <div class="value blue" id="adRev">—</div>
+          <div class="sub" id="adSub"></div>
+        </div>
+        <div class="result-card" style="border: 2px solid var(--green);">
+          <div class="label">TOTAL MONTHLY BC REVENUE</div>
+          <div class="value green" id="totalRev" style="font-size:28px;">—</div>
+          <div class="sub" id="totalSub"></div>
+        </div>
+        <div class="result-card" style="border: 2px solid var(--gold);">
+          <div class="label">ANNUAL BC REVENUE</div>
+          <div class="value gold" id="annualRev" style="font-size:28px;">—</div>
+          <div class="sub" id="annualSub"></div>
+        </div>
+      </div>
+
+      <div class="breakdown">
+        <table>
+          <thead><tr><th>Line Item</th><th>Monthly</th></tr></thead>
+          <tbody id="breakdownBody"></tbody>
+        </table>
+      </div>
+
+      <div class="formula" id="formulaBox"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const fmt = (n) => {
+  if (n >= 1e9) return '$' + (n/1e9).toFixed(2) + 'B';
+  if (n >= 1e6) return '$' + (n/1e6).toFixed(2) + 'M';
+  if (n >= 1e3) return '$' + (n/1e3).toFixed(1) + 'K';
+  return '$' + n.toFixed(0);
+};
+const fmtMxn = (n) => fmt(n) + ' MXN';
+const fmtNum = (n) => n >= 1e6 ? (n/1e6).toFixed(1) + 'M' : n >= 1e3 ? (n/1e3).toFixed(0) + 'K' : n.toString();
+
+function calc() {
+  const N = +document.getElementById('salons').value;
+  const Y = +document.getElementById('dailyBookings').value;
+  const Z = +document.getElementById('avgPrice').value;
+  const digitalPct = +document.getElementById('digitalPct').value / 100;
+  const productPct = +document.getElementById('productPct').value / 100;
+  const cancelRate = +document.getElementById('cancelRate').value / 100;
+  const taxHoldDays = +document.getElementById('taxHoldDays').value;
+  const bankRate = +document.getElementById('bankRate').value / 100;
+  const T = +document.getElementById('activeUsers').value;
+  const adCpm = +document.getElementById('adCpm').value;
+  const impressions = +document.getElementById('impressionsPerUser').value;
+  const saldoPct = +document.getElementById('saldoPct').value / 100;
+  const avgSaldo = +document.getElementById('avgSaldo').value;
+  const saldoExpiryRate = +document.getElementById('saldoExpiryRate').value / 100;
+
+  // Update display values
+  document.getElementById('salonsVal').textContent = fmtNum(N);
+  document.getElementById('dailyBookingsVal').textContent = Y;
+  document.getElementById('avgPriceVal').textContent = '$' + Z;
+  document.getElementById('digitalPctVal').textContent = (digitalPct*100).toFixed(0) + '%';
+  document.getElementById('productPctVal').textContent = (productPct*100).toFixed(0) + '%';
+  document.getElementById('cancelRateVal').textContent = (cancelRate*100).toFixed(0) + '%';
+  document.getElementById('taxHoldDaysVal').textContent = taxHoldDays + 'd';
+  document.getElementById('bankRateVal').textContent = (bankRate*100).toFixed(1) + '%';
+  document.getElementById('activeUsersVal').textContent = fmtNum(T);
+  document.getElementById('adCpmVal').textContent = '$' + adCpm;
+  document.getElementById('impressionsPerUserVal').textContent = impressions;
+  document.getElementById('saldoPctVal').textContent = (saldoPct*100).toFixed(0) + '%';
+  document.getElementById('avgSaldoVal').textContent = '$' + avgSaldo;
+  document.getElementById('saldoExpiryRateVal').textContent = (saldoExpiryRate*100).toFixed(0) + '%';
+
+  // === CALCULATIONS ===
+  const workingDays = 26; // avg working days/month for salons
+  const monthlyBookings = N * Y * workingDays;
+  const monthlyServiceGPV = monthlyBookings * Z;
+  const monthlyProductGPV = monthlyServiceGPV * productPct;
+  const totalGPV = monthlyServiceGPV + monthlyProductGPV;
+
+  // Commission: 3% on ALL service transactions (digital + cash registered on BC)
+  const serviceCommission = monthlyServiceGPV * 0.03;
+  // Product: 10% commission
+  const productCommission = monthlyProductGPV * 0.10;
+
+  // Cancellations: cancelRate of bookings cancel, BC keeps 3% on each
+  const cancelledGPV = monthlyServiceGPV * cancelRate;
+  const cancelCommission = cancelledGPV * 0.03;
+
+  // Tax withholding float: ISR 2.5% + IVA 8% = 10.5% of tax base
+  // Tax base = GPV / 1.16
+  const taxBase = monthlyServiceGPV / 1.16;
+  const monthlyTaxRetained = taxBase * 0.025 + taxBase * 0.08; // ISR + IVA
+  // Interest on avg balance held for taxHoldDays
+  const avgTaxBalance = monthlyTaxRetained * (taxHoldDays / 30);
+  const monthlyInterest = avgTaxBalance * (bankRate / 12);
+
+  // Stripe processing: only on digital payments. BC pays ~3.6% + $3 MXN to Stripe
+  // But Stripe fees are passed to the salon's payout, not BC's cost.
+  // application_fee_amount goes to BC, Stripe fees come from the rest.
+  // So BC's net on digital = full 3% commission (Stripe fees are salon's problem)
+  // On cash: full 3% commission (no Stripe fees)
+
+  // Ad revenue
+  const monthlyImpressions = T * impressions;
+  const adRevenue = (monthlyImpressions / 1000) * adCpm;
+
+  // Saldo float: dormant saldo earns interest while sitting in BC's account
+  const usersWithSaldo = T * saldoPct;
+  const totalDormantSaldo = usersWithSaldo * avgSaldo;
+  const saldoFloatInterest = totalDormantSaldo * (bankRate / 12);
+
+  // Saldo expiry: annual breakage → monthly. Pure revenue.
+  const annualSaldoExpiry = totalDormantSaldo * saldoExpiryRate;
+  const monthlySaldoExpiry = annualSaldoExpiry / 12;
+
+  // Uber referral: ~8% of bookings use Uber transport option
+  // Uber pays flat per-ride referral (negotiated), NOT percentage.
+  // Estimate: $8-15 MXN per ride referred. Conservative: $10 MXN.
+  const uberUsagePct = 0.08;
+  const uberPerRideReferral = 10; // MXN flat per ride (negotiated deal, speculative)
+  const monthlyUberRides = monthlyBookings * uberUsagePct;
+  const uberReferralRevenue = monthlyUberRides * uberPerRideReferral;
+
+  // Featured listings: salons pay to boost visibility in search results
+  // ~5-10% of salons pay $200-500/month for premium placement
+  const featuredPct = 0.06; // 6% of salons subscribe
+  const featuredPrice = 350; // MXN/month avg
+  const featuredRevenue = N * featuredPct * featuredPrice;
+
+  // Subscription tier: premium salon plan with advanced features
+  // Analytics pro, marketing automation, CRM advanced, priority support
+  // ~15-25% of salons upgrade. $500-1500/month.
+  const subPct = 0.12; // 12% conversion (pessimistic)
+  const subPrice = 799; // MXN/month
+  const subscriptionRevenue = N * subPct * subPrice;
+
+  // Brand partnerships: beauty brands pay for feed placement
+  // 2-5 brand deals/month at scale, $10K-50K MXN each
+  const brandDeals = Math.min(Math.floor(N / 2000), 8); // scales with platform size
+  const avgBrandDeal = 25000; // MXN per brand partnership/month
+  const brandRevenue = brandDeals * avgBrandDeal;
+
+  // TOTALS
+  const totalMonthly = serviceCommission + productCommission + cancelCommission + monthlyInterest + saldoFloatInterest + monthlySaldoExpiry + adRevenue + uberReferralRevenue + featuredRevenue + subscriptionRevenue + brandRevenue;
+  const totalAnnual = totalMonthly * 12;
+
+  // Render
+  document.getElementById('gpv').textContent = fmtMxn(totalGPV);
+  document.getElementById('gpvSub').textContent = fmtNum(monthlyBookings) + ' bookings/month';
+
+  document.getElementById('commission').textContent = fmtMxn(serviceCommission);
+  document.getElementById('commSub').textContent = '3% of ' + fmtMxn(monthlyServiceGPV) + ' services';
+
+  document.getElementById('productComm').textContent = fmtMxn(productCommission);
+  document.getElementById('prodSub').textContent = '10% of ' + fmtMxn(monthlyProductGPV) + ' products';
+
+  document.getElementById('interest').textContent = fmtMxn(monthlyInterest);
+  document.getElementById('intSub').textContent = fmtMxn(avgTaxBalance) + ' avg balance × ' + (bankRate*100).toFixed(1) + '%/yr';
+
+  document.getElementById('cancelRev').textContent = fmtMxn(cancelCommission);
+  document.getElementById('cancelSub').textContent = (cancelRate*100).toFixed(0) + '% cancel rate × 3%';
+
+  document.getElementById('adRev').textContent = fmtMxn(adRevenue);
+  document.getElementById('adSub').textContent = fmtNum(monthlyImpressions) + ' impressions × $' + adCpm + ' CPM';
+
+  document.getElementById('totalRev').textContent = fmtMxn(totalMonthly);
+  document.getElementById('totalSub').textContent = fmtMxn(totalMonthly / N) + ' per salon';
+
+  document.getElementById('annualRev').textContent = fmtMxn(totalAnnual);
+  document.getElementById('annualSub').textContent = totalAnnual >= 1e6 ? (totalAnnual/20/1e6).toFixed(1) + 'M USD approx' : '';
+
+  // Breakdown table
+  const rows = [
+    ['Gross Platform Volume (GPV)', fmtMxn(totalGPV)],
+    ['├ Service GPV (' + fmtNum(monthlyBookings) + ' bookings × $' + Z + ')', fmtMxn(monthlyServiceGPV)],
+    ['├ Product GPV (' + (productPct*100) + '% of services)', fmtMxn(monthlyProductGPV)],
+    ['├ Cancelled GPV (' + (cancelRate*100) + '% of services)', fmtMxn(cancelledGPV)],
+    ['', ''],
+    ['BC Revenue Streams', ''],
+    ['├ Service commission (3% × all bookings)', fmtMxn(serviceCommission)],
+    ['├ Product commission (10% × products)', fmtMxn(productCommission)],
+    ['├ Cancellation commission (3% × cancelled)', fmtMxn(cancelCommission)],
+    ['├ Tax float interest (' + taxHoldDays + 'd avg @ ' + (bankRate*100).toFixed(1) + '%)', fmtMxn(monthlyInterest)],
+    ['├ Saldo float interest (' + fmtNum(usersWithSaldo) + ' users × $' + avgSaldo + ' avg)', fmtMxn(saldoFloatInterest)],
+    ['├ Saldo expiry/breakage (' + (saldoExpiryRate*100) + '% of $' + fmtNum(totalDormantSaldo) + ' dormant/yr)', fmtMxn(monthlySaldoExpiry)],
+    ['├ Ad revenue (' + fmtNum(T) + ' users × ' + impressions + ' imp × $' + adCpm + ' CPM)', fmtMxn(adRevenue)],
+    ['├ Uber referral (' + fmtNum(monthlyUberRides) + ' rides × $' + uberPerRideReferral + ' flat/ride)', fmtMxn(uberReferralRevenue)],
+    ['├ Featured listings (' + (featuredPct*100) + '% of ' + fmtNum(N) + ' salons × $' + featuredPrice + ')', fmtMxn(featuredRevenue)],
+    ['├ Premium subscriptions (' + (subPct*100) + '% of ' + fmtNum(N) + ' × $' + subPrice + '/mo)', fmtMxn(subscriptionRevenue)],
+    ['├ Brand partnerships (' + brandDeals + ' deals × $' + fmtNum(avgBrandDeal) + ')', fmtMxn(brandRevenue)],
+    ['', ''],
+    ['Saldo Holdings', ''],
+    ['├ Users with dormant saldo', fmtNum(usersWithSaldo)],
+    ['├ Total dormant saldo (BC holds this money)', fmtMxn(totalDormantSaldo)],
+    ['├ Annual expiry (pure revenue)', fmtMxn(annualSaldoExpiry)],
+    ['', ''],
+    ['Tax Withholdings (held for SAT, not revenue)', ''],
+    ['├ ISR retained (2.5% of tax base)', fmtMxn(taxBase * 0.025)],
+    ['├ IVA retained (8% of tax base)', fmtMxn(taxBase * 0.08)],
+    ['├ Total monthly tax retained', fmtMxn(monthlyTaxRetained)],
+    ['├ Avg tax balance (float)', fmtMxn(avgTaxBalance)],
+    ['', ''],
+    ['Operational Costs (estimates)', ''],
+    ['├ Stripe fees (~2.9%+$3 on digital, salon pays)', '$0 (salon cost)'],
+    ['├ WA/SMS notifications (~$0.30/booking)', fmtMxn(monthlyBookings * 0.30)],
+    ['├ Infrastructure (servers, DB, CDN)', fmtMxn(Math.max(15000, N * 8))],
+    ['├ SAT compliance (CFDI ~$0.25/timbre)', fmtMxn(monthlyBookings * 0.25)],
+    ['', ''],
+    ['', ''],
+    ['TOTAL MONTHLY BC REVENUE', fmtMxn(totalMonthly)],
+    ['NET MONTHLY (revenue - est. costs)', fmtMxn(totalMonthly - monthlyBookings*0.30 - Math.max(15000,N*8) - monthlyBookings*0.25)],
+    ['NET ANNUAL', fmtMxn((totalMonthly - monthlyBookings*0.30 - Math.max(15000,N*8) - monthlyBookings*0.25) * 12)],
+  ];
+
+  document.getElementById('breakdownBody').innerHTML = rows.map(r =>
+    r[0] === '' ? '<tr><td colspan="2" style="height:8px"></td></tr>' :
+    r[1] === '' ? '<tr><td colspan="2" style="color:var(--accent);font-weight:700;padding-top:8px">' + r[0] + '</td></tr>' :
+    '<tr><td>' + r[0] + '</td><td>' + r[1] + '</td></tr>'
+  ).join('');
+
+  // Formula
+  document.getElementById('formulaBox').innerHTML =
+    '<strong>Formula:</strong><br>' +
+    'GPV = <span>N</span>(' + N + ') × <span>Y</span>(' + Y + ') × 26d × <span>Z</span>($' + Z + ') = ' + fmtMxn(monthlyServiceGPV) + '<br>' +
+    'Commission = GPV × 3% = ' + fmtMxn(serviceCommission) + '<br>' +
+    'Products = GPV × ' + (productPct*100) + '% × 10% = ' + fmtMxn(productCommission) + '<br>' +
+    'Cancel = GPV × ' + (cancelRate*100) + '% × 3% = ' + fmtMxn(cancelCommission) + '<br>' +
+    'Tax Float = (GPV/1.16 × 10.5%) × ' + taxHoldDays + '/30 × ' + (bankRate*100).toFixed(1) + '%/12 = ' + fmtMxn(monthlyInterest) + '<br>' +
+    'Saldo Float = ' + fmtNum(usersWithSaldo) + ' users × $' + avgSaldo + ' × ' + (bankRate*100).toFixed(1) + '%/12 = ' + fmtMxn(saldoFloatInterest) + '<br>' +
+    'Saldo Expiry = ' + fmtMxn(totalDormantSaldo) + ' × ' + (saldoExpiryRate*100) + '% / 12 = ' + fmtMxn(monthlySaldoExpiry) + '<br>' +
+    'Ads = <span>T</span>(' + fmtNum(T) + ') × ' + impressions + ' × $' + adCpm + '/1000 = ' + fmtMxn(adRevenue) + '<br>' +
+    'Uber = ' + fmtNum(monthlyUberRides) + ' rides × $' + uberPerRideReferral + '/ride = ' + fmtMxn(uberReferralRevenue) + '<br>' +
+    'Featured = ' + fmtNum(N) + ' × ' + (featuredPct*100) + '% × $' + featuredPrice + ' = ' + fmtMxn(featuredRevenue) + '<br>' +
+    'Subscriptions = ' + fmtNum(N) + ' × ' + (subPct*100) + '% × $' + subPrice + ' = ' + fmtMxn(subscriptionRevenue) + '<br>' +
+    'Brands = ' + brandDeals + ' × $' + fmtNum(avgBrandDeal) + ' = ' + fmtMxn(brandRevenue) + '<br>' +
+    '<strong style="color:var(--green)">TOTAL = ' + fmtMxn(totalMonthly) + '/month = ' + fmtMxn(totalAnnual) + '/year</strong>';
+}
+
+function preset(name) {
+  const p = {
+    launch:    { salons: 50,    daily: 6,  price: 400,  digital: 25, product: 5,  cancel: 15, hold: 30, rate: 9.5, users: 5000,      cpm: 35, imp: 80 },
+    growth:    { salons: 500,   daily: 8,  price: 450,  digital: 35, product: 8,  cancel: 12, hold: 30, rate: 9.5, users: 50000,     cpm: 45, imp: 100 },
+    scale:     { salons: 5000,  daily: 10, price: 500,  digital: 40, product: 10, cancel: 12, hold: 30, rate: 9.5, users: 500000,    cpm: 55, imp: 120 },
+    agendapro: { salons: 8000,  daily: 12, price: 520,  digital: 45, product: 12, cancel: 10, hold: 30, rate: 9.5, users: 1200000,   cpm: 60, imp: 130 },
+    fresha:    { salons: 25000, daily: 10, price: 500,  digital: 50, product: 10, cancel: 10, hold: 35, rate: 9.5, users: 10000000,  cpm: 65, imp: 140 },
+    dream:     { salons: 50000, daily: 12, price: 550,  digital: 55, product: 15, cancel: 8,  hold: 40, rate: 9.5, users: 50000000,  cpm: 70, imp: 150 },
+  };
+  const s = p[name];
+  document.getElementById('salons').value = s.salons;
+  document.getElementById('dailyBookings').value = s.daily;
+  document.getElementById('avgPrice').value = s.price;
+  document.getElementById('digitalPct').value = s.digital;
+  document.getElementById('productPct').value = s.product;
+  document.getElementById('cancelRate').value = s.cancel;
+  document.getElementById('taxHoldDays').value = s.hold;
+  document.getElementById('bankRate').value = s.rate;
+  document.getElementById('activeUsers').value = s.users;
+  document.getElementById('adCpm').value = s.cpm;
+  document.getElementById('impressionsPerUser').value = s.imp;
+  calc();
+}
+
+// Init
+calc();
+</script>
+</body>
+</html>
