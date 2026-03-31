@@ -13,6 +13,10 @@ import '../../providers/feature_toggle_provider.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import '../../widgets/aphrodite_copy_field.dart';
 import '../../widgets/bc_image_editor.dart';
 import 'package:image_cropper/image_cropper.dart' show CropAspectRatioPreset;
@@ -1704,6 +1708,9 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
     final colors = Theme.of(context).colorScheme;
     final qrToken = widget.staff['upload_qr_token'] as String? ?? '';
     final pin = widget.staff['upload_pin'] as String? ?? '----';
+    final firstName = widget.staff['first_name'] as String? ?? '';
+    final lastName = widget.staff['last_name'] as String? ?? '';
+    final staffName = '$firstName $lastName'.trim();
     final uploadUrl = 'https://beautycita.com/portfolio-upload?token=$qrToken';
 
     return Card(
@@ -1740,6 +1747,30 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
                 ),
               ],
             ),
+            const SizedBox(height: 16),
+
+            // QR Code
+            Center(
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: colors.onSurface.withValues(alpha: 0.08)),
+                ),
+                child: QrImageView(
+                  data: uploadUrl,
+                  version: QrVersions.auto,
+                  size: 180,
+                  backgroundColor: Colors.white,
+                  foregroundColor: const Color(0xFF1a1a2e),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Center(
+              child: Text(staffName, style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: colors.onSurface.withValues(alpha: 0.7))),
+            ),
             const SizedBox(height: 12),
 
             // PIN display
@@ -1758,7 +1789,6 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
                   const Spacer(),
                   GestureDetector(
                     onTap: () async {
-                      // Regenerate PIN
                       final newPin = (1000 + DateTime.now().millisecondsSinceEpoch % 9000).toString();
                       await SupabaseClientService.client.from('staff').update({'upload_pin': newPin}).eq('id', staffId);
                       ref.invalidate(businessStaffProvider);
@@ -1771,31 +1801,39 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
             ),
             const SizedBox(height: 10),
 
-            // Share / Copy link buttons
+            // Buttons: Print, Share, Copy
             Row(
               children: [
                 Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      // Share QR link
-                      Share.share(
-                        'Sube tus fotos antes/despues en: $uploadUrl\nPIN: $pin',
-                        subject: 'Portafolio BeautyCita',
-                      );
-                    },
-                    icon: const Icon(Icons.share, size: 16),
-                    label: const Text('Compartir enlace'),
+                  child: FilledButton.icon(
+                    onPressed: () => _printQrCode(context, uploadUrl, staffName),
+                    icon: const Icon(Icons.print, size: 16),
+                    label: const Text('Imprimir'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF7C3AED),
+                    ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 6),
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () {
-                      Clipboard.setData(ClipboardData(text: uploadUrl));
-                      ToastService.showSuccess('Enlace copiado');
+                      Share.share('Sube tus fotos antes/despues en: $uploadUrl\nPIN: $pin', subject: 'Portafolio BeautyCita');
                     },
-                    icon: const Icon(Icons.copy, size: 16),
-                    label: const Text('Copiar enlace'),
+                    icon: const Icon(Icons.share, size: 16),
+                    label: const Text('Compartir'),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                IconButton(
+                  onPressed: () {
+                    Clipboard.setData(ClipboardData(text: uploadUrl));
+                    ToastService.showSuccess('Enlace copiado');
+                  },
+                  icon: const Icon(Icons.copy, size: 18),
+                  tooltip: 'Copiar enlace',
+                  style: IconButton.styleFrom(
+                    side: BorderSide(color: colors.outline.withValues(alpha: 0.3)),
                   ),
                 ),
               ],
@@ -1804,6 +1842,59 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
         ),
       ),
     );
+  }
+
+  Future<void> _printQrCode(BuildContext context, String url, String staffName) async {
+    final doc = pw.Document();
+
+    // Generate QR as image bytes
+    final qrPainter = QrPainter(
+      data: url,
+      version: QrVersions.auto,
+    );
+    final picData = await qrPainter.toImageData(600);
+    if (picData == null) return;
+    final qrImage = pw.MemoryImage(picData.buffer.asUint8List());
+
+    doc.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.letter,
+        build: (pw.Context ctx) {
+          return pw.Center(
+            child: pw.Container(
+              width: PdfPageFormat.letter.width / 2,
+              height: PdfPageFormat.letter.height / 2,
+              padding: const pw.EdgeInsets.all(24),
+              child: pw.Column(
+                mainAxisAlignment: pw.MainAxisAlignment.center,
+                children: [
+                  pw.Text('BeautyCita', style: pw.TextStyle(fontSize: 28, fontWeight: pw.FontWeight.bold)),
+                  pw.SizedBox(height: 8),
+                  pw.Text('Portafolio — Antes y Despues', style: const pw.TextStyle(fontSize: 14)),
+                  pw.SizedBox(height: 24),
+                  pw.Image(qrImage, width: 200, height: 200),
+                  pw.SizedBox(height: 16),
+                  pw.Text(staffName, style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+                  pw.SizedBox(height: 12),
+                  pw.Text(
+                    'Escanea este codigo con tu celular para subir\nfotos de tu trabajo (antes y despues).',
+                    textAlign: pw.TextAlign.center,
+                    style: const pw.TextStyle(fontSize: 11),
+                  ),
+                  pw.SizedBox(height: 8),
+                  pw.Text(
+                    'Necesitaras tu PIN para acceder.',
+                    style: pw.TextStyle(fontSize: 10, fontStyle: pw.FontStyle.italic),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+
+    await Printing.layoutPdf(onLayout: (_) => doc.save());
   }
 
   // ---- Schedule editor ----
