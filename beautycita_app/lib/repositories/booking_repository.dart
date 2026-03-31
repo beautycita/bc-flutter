@@ -121,39 +121,90 @@ class BookingRepository {
         .toList();
   }
 
-  /// Cancel a booking and refund to saldo if it was paid.
-  Future<void> cancelBooking(String bookingId) async {
-    // Fetch booking to check payment status
+  /// Cancel a booking with cancellation policy enforcement.
+  ///
+  /// Rules:
+  /// - If cancelled BEFORE the salon's cancellation_hours deadline → full refund minus BC 3% commission
+  /// - If cancelled AFTER the deadline → deposit forfeited, remaining refunded minus BC 3% commission
+  /// - BC's 3% commission is NEVER refunded
+  /// - Returns a CancelResult with what happened
+  Future<CancelResult> cancelBooking(String bookingId) async {
+    // Fetch booking + business cancellation policy
     final booking = await SupabaseClientService.client
         .from('appointments')
-        .select('id, user_id, price, payment_status, payment_method')
+        .select('id, user_id, price, payment_status, payment_method, starts_at, business_id, businesses(cancellation_hours, deposit_percentage, deposit_required)')
         .eq('id', bookingId)
         .maybeSingle();
 
-    // Update status
+    if (booking == null) return CancelResult(refundAmount: 0, depositForfeited: 0, commissionKept: 0, isFreeCancel: true);
+
+    final price = (booking['price'] as num?)?.toDouble() ?? 0;
+    final isPaid = booking['payment_status'] == 'paid';
+    final startsAt = DateTime.tryParse(booking['starts_at'] as String? ?? '');
+    final biz = booking['businesses'] as Map<String, dynamic>?;
+    final cancellationHours = biz?['cancellation_hours'] as int? ?? 24;
+    final depositRequired = biz?['deposit_required'] as bool? ?? false;
+    final depositPct = (biz?['deposit_percentage'] as num?)?.toDouble() ?? 0;
+
+    // Calculate time until appointment
+    final now = DateTime.now().toUtc();
+    final hoursUntilAppt = startsAt != null ? startsAt.toUtc().difference(now).inHours : 999;
+    final isFreeCancel = hoursUntilAppt >= cancellationHours;
+
+    // BC 3% commission is NEVER refunded
+    final bcCommission = price * 0.03;
+
+    double refundAmount;
+    double depositForfeited = 0;
+
+    if (!isPaid || price <= 0) {
+      // Not paid — just cancel, no money to move
+      refundAmount = 0;
+    } else if (isFreeCancel) {
+      // Cancelled within free window — full refund minus BC commission
+      refundAmount = price - bcCommission;
+    } else if (depositRequired && depositPct > 0) {
+      // Late cancel — deposit forfeited, refund the rest minus BC commission
+      final depositAmount = price * (depositPct / 100);
+      depositForfeited = depositAmount;
+      refundAmount = (price - depositAmount - bcCommission).clamp(0, double.infinity);
+    } else {
+      // Late cancel, no deposit policy — full refund minus BC commission
+      refundAmount = price - bcCommission;
+    }
+
+    // Update appointment status
+    String paymentStatus = booking['payment_status'] as String? ?? 'unpaid';
+    if (isPaid) {
+      paymentStatus = refundAmount > 0 ? 'refunded_to_saldo' : 'deposit_forfeited';
+    }
+
     await SupabaseClientService.client
         .from('appointments')
         .update({
           'status': 'cancelled_customer',
-          'payment_status': booking?['payment_status'] == 'paid' ? 'refunded_to_saldo' : booking?['payment_status'],
-          'updated_at': DateTime.now().toUtc().toIso8601String(),
+          'payment_status': paymentStatus,
+          'updated_at': now.toIso8601String(),
         })
         .eq('id', bookingId);
 
-    // Refund to saldo if paid (any method)
-    if (booking != null &&
-        booking['payment_status'] == 'paid' &&
-        (booking['price'] as num?)?.toDouble() != null &&
-        (booking['price'] as num).toDouble() > 0) {
+    // Refund to saldo (the calculated amount, not full price)
+    if (isPaid && refundAmount > 0) {
       final userId = booking['user_id'] as String?;
-      final amount = (booking['price'] as num).toDouble();
       if (userId != null) {
         await SupabaseClientService.client.rpc(
           'increment_saldo',
-          params: {'p_user_id': userId, 'p_amount': amount},
+          params: {'p_user_id': userId, 'p_amount': double.parse(refundAmount.toStringAsFixed(2))},
         );
       }
     }
+
+    return CancelResult(
+      refundAmount: refundAmount,
+      depositForfeited: depositForfeited,
+      commissionKept: isPaid ? bcCommission : 0,
+      isFreeCancel: isFreeCancel,
+    );
   }
 
   /// Update the status of a booking.
@@ -191,4 +242,19 @@ class BookingRepository {
         .update({'transport_mode': mode})
         .eq('id', id);
   }
+}
+
+/// Result of a booking cancellation.
+class CancelResult {
+  final double refundAmount;
+  final double depositForfeited;
+  final double commissionKept;
+  final bool isFreeCancel;
+
+  const CancelResult({
+    required this.refundAmount,
+    required this.depositForfeited,
+    required this.commissionKept,
+    required this.isFreeCancel,
+  });
 }

@@ -441,7 +441,7 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
 
     try {
       final repo = ref.read(bookingRepositoryProvider);
-      await repo.cancelBooking(booking.id);
+      final result = await repo.cancelBooking(booking.id);
 
       // Send cancel notification (fire-and-forget)
       SupabaseClientService.client.functions
@@ -452,7 +452,16 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
       ref.invalidate(userBookingsProvider);
       ref.invalidate(upcomingBookingsProvider);
 
-      ToastService.showSuccess('Cita cancelada');
+      if (result.refundAmount > 0) {
+        ToastService.showSuccess(
+          'Cita cancelada — \$${result.refundAmount.toStringAsFixed(0)} reembolsado a tu saldo'
+          '${result.depositForfeited > 0 ? ' (deposito de \$${result.depositForfeited.toStringAsFixed(0)} no reembolsable)' : ''}',
+        );
+      } else if (result.depositForfeited > 0) {
+        ToastService.showWarning('Cita cancelada — deposito de \$${result.depositForfeited.toStringAsFixed(0)} no reembolsable');
+      } else {
+        ToastService.showSuccess('Cita cancelada');
+      }
       if (mounted) {
         await showShredderTransition(context, onComplete: () {
           if (mounted) {
