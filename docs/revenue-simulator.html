@@ -70,11 +70,11 @@
       </div>
       <div class="input-group">
         <label>Y — Avg Daily Bookings per Salon</label>
-        <div class="row"><input type="range" id="dailyBookings" min="1" max="50" value="8" step="1" oninput="calc()"><span class="val" id="dailyBookingsVal"></span></div>
+        <div class="row"><input type="range" id="dailyBookings" min="1" max="50" value="6" step="1" oninput="calc()"><span class="val" id="dailyBookingsVal"></span></div>
       </div>
       <div class="input-group">
         <label>Z — Avg Service Price (MXN)</label>
-        <div class="row"><input type="range" id="avgPrice" min="50" max="3000" value="500" step="10" oninput="calc()"><span class="val" id="avgPriceVal"></span></div>
+        <div class="row"><input type="range" id="avgPrice" min="50" max="3000" value="380" step="10" oninput="calc()"><span class="val" id="avgPriceVal"></span></div>
       </div>
       <div class="input-group">
         <label>Cash vs Digital Payment Split (%&nbsp;digital)</label>
@@ -102,8 +102,8 @@
       </div>
       <div class="input-group">
         <label>W — Bank Interest Rate (annual %)</label>
-        <div class="row"><input type="range" id="bankRate" min="0" max="15" value="9.5" step="0.1" oninput="calc()"><span class="val" id="bankRateVal"></span></div>
-        <p class="note">Mexico CETES 2026: ~9-10%. Money market fund on retained taxes.</p>
+        <div class="row"><input type="range" id="bankRate" min="0" max="12" value="6.8" step="0.1" oninput="calc()"><span class="val" id="bankRateVal"></span></div>
+        <p class="note">CETES 28-day March 2026: 6.81%. After ISR on capital (0.9%): ~5.9% net.</p>
       </div>
       <div class="input-group">
         <label>T — Active App Users</label>
@@ -111,13 +111,13 @@
       </div>
       <div class="input-group">
         <label>Ad Revenue (CPM in MXN per 1000 impressions)</label>
-        <div class="row"><input type="range" id="adCpm" min="0" max="200" value="45" step="1" oninput="calc()"><span class="val" id="adCpmVal"></span></div>
-        <p class="note">Mexico avg CPM: $30-60 MXN. Premium beauty vertical: $40-80 MXN.</p>
+        <div class="row"><input type="range" id="adCpm" min="0" max="200" value="32" step="1" oninput="calc()"><span class="val" id="adCpmVal"></span></div>
+        <p class="note">Mexico publisher CPM: $25-40 MXN. FB advertiser CPM: $78 MXN but publishers earn 30-50% of that.</p>
       </div>
       <div class="input-group">
         <label>Avg Monthly Ad Impressions per User</label>
-        <div class="row"><input type="range" id="impressionsPerUser" min="10" max="500" value="120" step="5" oninput="calc()"><span class="val" id="impressionsPerUserVal"></span></div>
-        <p class="note">Avg app user sees 80-150 ads/month. Beauty = high engagement vertical.</p>
+        <div class="row"><input type="range" id="impressionsPerUser" min="10" max="500" value="85" step="5" oninput="calc()"><span class="val" id="impressionsPerUserVal"></span></div>
+        <p class="note">Avg beauty app: 10-12 sessions/month × 5-8 ads = 50-96 impressions. 85 = moderate engagement.</p>
       </div>
       <div class="input-group">
         <label>% Users with Dormant Saldo</label>
@@ -296,7 +296,7 @@ function calc() {
   // Subscription tier: premium salon plan with advanced features
   // Analytics pro, marketing automation, CRM advanced, priority support
   // ~15-25% of salons upgrade. $500-1500/month.
-  const subPct = 0.12; // 12% conversion (pessimistic)
+  const subPct = 0.05; // 5% conversion (industry SaaS: 2-5%)
   const subPrice = 799; // MXN/month
   const subscriptionRevenue = N * subPct * subPrice;
 
@@ -404,12 +404,12 @@ function calc() {
 
 function preset(name) {
   const p = {
-    launch:    { salons: 50,    daily: 6,  price: 400,  digital: 25, product: 5,  cancel: 15, hold: 30, rate: 9.5, users: 5000,      cpm: 35, imp: 80 },
-    growth:    { salons: 500,   daily: 8,  price: 450,  digital: 35, product: 8,  cancel: 12, hold: 30, rate: 9.5, users: 50000,     cpm: 45, imp: 100 },
-    scale:     { salons: 5000,  daily: 10, price: 500,  digital: 40, product: 10, cancel: 12, hold: 30, rate: 9.5, users: 500000,    cpm: 55, imp: 120 },
-    agendapro: { salons: 8000,  daily: 12, price: 520,  digital: 45, product: 12, cancel: 10, hold: 30, rate: 9.5, users: 1200000,   cpm: 60, imp: 130 },
-    fresha:    { salons: 25000, daily: 10, price: 500,  digital: 50, product: 10, cancel: 10, hold: 35, rate: 9.5, users: 10000000,  cpm: 65, imp: 140 },
-    dream:     { salons: 50000, daily: 12, price: 550,  digital: 55, product: 15, cancel: 8,  hold: 40, rate: 9.5, users: 50000000,  cpm: 70, imp: 150 },
+    launch:    { salons: 50,    daily: 4,  price: 350,  digital: 25, product: 3,  cancel: 15, hold: 30, rate: 6.8, users: 3000,      cpm: 25, imp: 60 },
+    growth:    { salons: 500,   daily: 6,  price: 380,  digital: 35, product: 6,  cancel: 12, hold: 30, rate: 6.8, users: 40000,     cpm: 30, imp: 80 },
+    scale:     { salons: 5000,  daily: 8,  price: 400,  digital: 40, product: 8,  cancel: 12, hold: 30, rate: 6.8, users: 400000,    cpm: 35, imp: 90 },
+    agendapro: { salons: 8000,  daily: 10, price: 420,  digital: 45, product: 10, cancel: 10, hold: 30, rate: 6.8, users: 1000000,   cpm: 38, imp: 95 },
+    fresha:    { salons: 25000, daily: 10, price: 450,  digital: 50, product: 10, cancel: 10, hold: 35, rate: 6.8, users: 8000000,   cpm: 42, imp: 100 },
+    dream:     { salons: 50000, daily: 12, price: 500,  digital: 55, product: 12, cancel: 8,  hold: 40, rate: 6.8, users: 40000000,  cpm: 50, imp: 120 },
   };
   const s = p[name];
   document.getElementById('salons').value = s.salons;
