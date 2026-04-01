@@ -64,8 +64,6 @@ class _ConfigPageState extends ConsumerState<ConfigPage> {
       builder: (context, constraints) {
         final width = constraints.maxWidth;
         final isMobile = WebBreakpoints.isMobile(width);
-        final isDesktop = WebBreakpoints.isDesktop(width);
-
         return SingleChildScrollView(
           padding: EdgeInsets.symmetric(
             horizontal: isMobile ? 16.0 : 24.0,

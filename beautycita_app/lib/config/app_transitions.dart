@@ -435,7 +435,6 @@ class _ShredderPainter extends CustomPainter {
 
     // Stage margins
     const mx = 20.0, mt = 20.0, mb = 40.0;
-    final pW = w - mx * 2;
     final pH = h - mt - mb;
 
     // Shredder bar position

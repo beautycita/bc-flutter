@@ -20,7 +20,6 @@ import 'package:printing/printing.dart';
 import '../../widgets/aphrodite_copy_field.dart';
 import '../../widgets/bc_image_editor.dart';
 import 'package:image_cropper/image_cropper.dart' show CropAspectRatioPreset;
-import '../../widgets/bc_image_editor.dart';
 
 class BusinessStaffScreen extends ConsumerWidget {
   const BusinessStaffScreen({super.key});
@@ -497,16 +496,8 @@ class _AddStaffSheetState extends ConsumerState<_AddStaffSheet> {
         if (result != null) match = result;
       }
 
-      // Search by email if no phone match
-      if (match == null && email.length >= 5) {
-        final result = await SupabaseClientService.client
-            .from('profiles')
-            .select('id, username, full_name, phone, avatar_url, role')
-            .eq('role', 'stylist')
-            .maybeSingle();
-        // Email is in auth.users, not profiles. Check via edge function or skip.
-        // For now, only phone matching works reliably.
-      }
+      // Email lookup not implemented: email lives in auth.users, not profiles.
+      // Only phone matching is currently supported.
 
       if (mounted) {
         setState(() {

@@ -640,7 +640,7 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
     return Row(
       children: [
         Text(
-          '\$${result.service.price?.toStringAsFixed(0) ?? '—'} ${result.service.currency ?? 'MXN'}',
+          '\$${result.service.price?.toStringAsFixed(0) ?? '—'} ${result.service.currency}',
           style: GoogleFonts.poppins(
             fontSize: 20,
             fontWeight: FontWeight.w700,

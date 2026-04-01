@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:convert';
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:html' as html;
+import 'dart:js_interop';
+
+import 'package:web/web.dart' as web;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -72,12 +74,16 @@ class _BizCalendarSyncPageState extends ConsumerState<BizCalendarSyncPage> {
 
       // Trigger browser download
       final bytes = utf8.encode(ics);
-      final blob = html.Blob([bytes], 'text/calendar');
-      final url = html.Url.createObjectUrlFromBlob(blob);
-      html.AnchorElement(href: url)
-        ..setAttribute('download', 'beautycita-calendar.ics')
-        ..click();
-      html.Url.revokeObjectUrl(url);
+      final blob = web.Blob(
+        [bytes.toJS].toJS,
+        web.BlobPropertyBag(type: 'text/calendar'),
+      );
+      final url = web.URL.createObjectURL(blob);
+      (web.document.createElement('a') as web.HTMLAnchorElement
+            ..href = url
+            ..download = 'beautycita-calendar.ics')
+          .click();
+      web.URL.revokeObjectURL(url);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -104,20 +110,33 @@ class _BizCalendarSyncPageState extends ConsumerState<BizCalendarSyncPage> {
 
   Future<void> _importICS() async {
     // Use file input to select .ics file
-    final input = html.FileUploadInputElement()..accept = '.ics,.ical';
+    final input = web.document.createElement('input') as web.HTMLInputElement
+      ..type = 'file'
+      ..accept = '.ics,.ical';
+
+    final changeCompleter = Completer<void>();
+    input.addEventListener(
+      'change',
+      (web.Event _) => changeCompleter.complete(),
+    );
     input.click();
-    await input.onChange.first;
+    await changeCompleter.future;
 
     final files = input.files;
-    if (files == null || files.isEmpty) return;
+    if (files == null || files.length == 0) return;
 
     setState(() => _isImporting = true);
     try {
-      final file = files.first;
-      final reader = html.FileReader();
+      final file = files.item(0)!;
+      final reader = web.FileReader();
+      final loadCompleter = Completer<void>();
+      reader.addEventListener(
+        'load',
+        (web.Event _) => loadCompleter.complete(),
+      );
       reader.readAsText(file);
-      await reader.onLoad.first;
-      final content = reader.result as String;
+      await loadCompleter.future;
+      final content = (reader.result as JSString).toDart;
 
       final response = await BCSupabase.client.functions.invoke(
         'calendar-ics',

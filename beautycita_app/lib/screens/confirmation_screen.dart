@@ -497,7 +497,7 @@ class _PaymentMethodSelectorState extends ConsumerState<_PaymentMethodSelector> 
     // Check user saldo
     final saldoAsync = ref.watch(_userSaldoProvider);
     final saldo = saldoAsync.valueOrNull ?? 0.0;
-    final servicePrice = widget.servicePrice ?? 0;
+    final servicePrice = widget.servicePrice;
     final hasSaldo = saldo >= servicePrice && servicePrice > 0;
 
     // Smart preselection: saldo first, card if user has saved cards, otherwise oxxo

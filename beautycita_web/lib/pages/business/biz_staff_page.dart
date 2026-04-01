@@ -1761,8 +1761,10 @@ class _StaffEditFormState extends ConsumerState<_StaffEditForm> {
       ref.invalidate(staffServicesProvider(staffId));
       if (mounted) {
         ref.read(_staffEditModeProvider.notifier).state = false;
-        // Update the selected staff in panel
-        final updated = await BCSupabase.client.from(BCTables.staff).select().eq('id', staffId).maybeSingle();
+      }
+      // Update the selected staff in panel (await outside mounted check)
+      final updated = await BCSupabase.client.from(BCTables.staff).select().eq('id', staffId).maybeSingle();
+      if (mounted) {
         if (updated != null) {
           ref.read(selectedStaffProvider.notifier).state = updated;
         }

@@ -2,7 +2,6 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
 
 /// A simple, self-contained trend chart (line or bar) with no external dependencies.
 /// Uses CustomPainter for maximum performance and zero package bloat.

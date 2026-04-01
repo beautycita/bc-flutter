@@ -358,8 +358,6 @@ class _CategoryTreeScreenState extends ConsumerState<CategoryTreeScreen> {
       return;
     }
 
-    final colors = Theme.of(context).colorScheme;
-
     showBurstDialog(
       context: context,
       builder: (ctx) => AlertDialog(

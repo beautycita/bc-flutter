@@ -1,7 +1,9 @@
 import 'dart:convert';
-import 'dart:html' as html;
+import 'dart:js_interop';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
+
+import 'package:web/web.dart' as web;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -87,12 +89,10 @@ class _QrContentState extends ConsumerState<_QrContent> {
 
       final bytes = byteData.buffer.asUint8List();
       final base64 = base64Encode(bytes);
-      final anchor = html.AnchorElement(
-        href: 'data:image/png;base64,$base64',
-      )
-        ..setAttribute('download', 'qr-walkin-$_bizId.png')
-        ..click();
-      anchor.remove();
+      final anchor = web.document.createElement('a') as web.HTMLAnchorElement
+        ..href = 'data:image/png;base64,$base64'
+        ..download = 'qr-walkin-$_bizId.png';
+      anchor.click();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

@@ -9,7 +9,7 @@ import 'package:intl/intl.dart';
 import '../../config/breakpoints.dart';
 import '../../config/web_theme.dart';
 import '../../providers/admin_finance_dashboard_provider.dart'
-    show commissionDetailProvider, CommissionDetailData, CommissionMonthlySummary;
+    show commissionDetailProvider, CommissionMonthlySummary;
 import '../../providers/admin_finance_provider.dart';
 import '../../widgets/kpi_card.dart';
 import '../../widgets/web_design_system.dart';

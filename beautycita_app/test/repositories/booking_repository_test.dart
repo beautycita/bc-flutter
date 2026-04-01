@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:beautycita/models/booking.dart';
+import 'package:beautycita/repositories/booking_repository.dart' show CancelResult;
 import '../helpers/test_mocks.dart';
 import '../helpers/model_fixtures.dart';
 
@@ -132,7 +133,12 @@ void main() {
     group('cancelBooking', () {
       test('calls cancel with booking ID', () async {
         when(() => repo.cancelBooking(any()))
-            .thenAnswer((_) async {});
+            .thenAnswer((_) async => CancelResult(
+                  refundAmount: 0,
+                  depositForfeited: 0,
+                  commissionKept: 0,
+                  isFreeCancel: true,
+                ));
 
         await repo.cancelBooking('booking-1');
         verify(() => repo.cancelBooking('booking-1')).called(1);

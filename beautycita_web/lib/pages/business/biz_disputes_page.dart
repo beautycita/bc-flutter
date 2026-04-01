@@ -8,7 +8,6 @@ import '../../config/breakpoints.dart';
 import '../../config/web_theme.dart';
 import '../../providers/business_portal_provider.dart';
 import '../../providers/demo_providers.dart';
-import '../../widgets/web_design_system.dart';
 
 /// Selected dispute for detail panel.
 final selectedDisputeProvider =
