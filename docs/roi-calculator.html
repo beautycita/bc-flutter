@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BeautyCita — Calculadora ROI para Salones</title>
+<meta name="description" content="Calcula cuanto ahorra tu salon con BeautyCita. Compara costos vs AgendaPro. Reduce no-shows, cumple con SAT, y paga solo 3% por transaccion.">
+<style>
+  :root { --bg: #0a0a0f; --surface: #14141f; --surface2: #1e1e2e; --border: #2a2a3a; --text: #e8e8f0; --muted: #6b6b8a; --accent: #C8A2C8; --green: #4ade80; --red: #f87171; --gold: #fbbf24; --blue: #60a5fa; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.5; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+  h1 { font-size: 28px; font-weight: 700; margin-bottom: 4px; }
+  h1 span { color: var(--accent); }
+  .subtitle { color: var(--muted); font-size: 14px; margin-bottom: 24px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
+  .card h2 { font-size: 14px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 14px; }
+  .input-group { margin-bottom: 14px; }
+  .input-group label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+  .input-group .row { display: flex; align-items: center; gap: 10px; }
+  input[type="range"] { flex: 1; accent-color: var(--accent); height: 6px; }
+  .val { min-width: 90px; text-align: right; font-weight: 700; font-size: 15px; color: var(--accent); font-family: 'Courier New', monospace; }
+  .results { grid-column: 1 / -1; }
+  .results-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+  .result-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 16px; text-align: center; }
+  .result-card .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); }
+  .result-card .value { font-size: 24px; font-weight: 800; margin-top: 4px; font-family: 'Courier New', monospace; }
+  .result-card .sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .green { color: var(--green); }
+  .gold { color: var(--gold); }
+  .blue { color: var(--blue); }
+  .red { color: var(--red); }
+  .accent { color: var(--accent); }
+  .divider { border-top: 1px solid var(--border); margin: 20px 0; }
+  .note { font-size: 11px; color: var(--muted); margin-top: 6px; font-style: italic; }
+  .presets { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .preset-btn { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 6px 14px; cursor: pointer; font-size: 12px; color: var(--text); transition: all 0.2s; }
+  .preset-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Hero number */
+  .hero-number { text-align: center; margin: 24px 0; }
+  .hero-number .amount { font-size: 56px; font-weight: 900; color: var(--green); font-family: 'Courier New', monospace; line-height: 1; }
+  .hero-number .hero-label { font-size: 16px; color: var(--muted); margin-top: 8px; text-transform: uppercase; letter-spacing: 1px; }
+  @media (max-width: 768px) { .hero-number .amount { font-size: 36px; } }
+
+  /* Comparison bar */
+  .compare-bar { display: flex; align-items: stretch; gap: 0; border-radius: 12px; overflow: hidden; margin: 16px 0; height: 56px; }
+  .bar-segment { display: flex; align-items: center; justify-content: center; flex-direction: column; padding: 8px 16px; font-size: 12px; font-weight: 600; transition: flex 0.5s ease; }
+  .bar-bc { background: linear-gradient(135deg, #ec4899, #9333ea); color: white; }
+  .bar-ap { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
+  .bar-segment .bar-amount { font-size: 16px; font-weight: 800; font-family: 'Courier New', monospace; }
+
+  /* Breakdown */
+  .breakdown { margin-top: 16px; }
+  .breakdown table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .breakdown th { text-align: left; padding: 6px 8px; color: var(--muted); font-weight: 500; border-bottom: 1px solid var(--border); }
+  .breakdown td { padding: 6px 8px; border-bottom: 1px solid rgba(42,42,58,0.5); }
+  .breakdown td:last-child { text-align: right; font-family: 'Courier New', monospace; font-weight: 600; }
+
+  /* CTA */
+  .cta-section { text-align: center; margin-top: 32px; }
+  .cta-btn { display: inline-block; background: linear-gradient(135deg, #ec4899, #9333ea, #3b82f6); color: white; font-size: 18px; font-weight: 700; padding: 16px 40px; border-radius: 14px; text-decoration: none; border: none; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
+  .cta-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(147, 51, 234, 0.3); }
+  .cta-sub { color: var(--muted); font-size: 13px; margin-top: 12px; }
+
+  /* Winner badge */
+  .winner-badge { display: inline-block; background: var(--green); color: var(--bg); font-size: 11px; font-weight: 800; padding: 3px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .loser-badge { display: inline-block; background: var(--red); color: white; font-size: 11px; font-weight: 800; padding: 3px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  /* Bonus card */
+  .bonus-card { background: rgba(74,222,128,0.05); border: 1px solid rgba(74,222,128,0.2); border-radius: 12px; padding: 16px; text-align: center; margin-top: 12px; }
+  .bonus-card .bonus-icon { font-size: 24px; margin-bottom: 4px; }
+  .bonus-card .bonus-text { font-size: 14px; color: var(--green); font-weight: 600; }
+  .bonus-card .bonus-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>BeautyCita <span>Calculadora ROI</span></h1>
+  <p class="subtitle">Ingresa los numeros de tu salon y mira cuanto ahorras con BeautyCita vs seguir como estas (o vs AgendaPro).</p>
+
+  <div class="presets">
+    <button class="preset-btn" onclick="preset('small')">Salon chico (1 estilista)</button>
+    <button class="preset-btn" onclick="preset('medium')">Salon mediano (3 estilistas)</button>
+    <button class="preset-btn" onclick="preset('large')">Salon grande (6+ estilistas)</button>
+    <button class="preset-btn" onclick="preset('barber')">Barberia</button>
+    <button class="preset-btn" onclick="preset('spa')">Spa / Estetica</button>
+  </div>
+
+  <div class="grid">
+    <!-- Inputs -->
+    <div class="card">
+      <h2>Tu salon hoy</h2>
+      <div class="input-group">
+        <label>Clientes por dia</label>
+        <div class="row"><input type="range" id="clients" min="1" max="50" value="10" step="1" oninput="calc()"><span class="val" id="clientsVal"></span></div>
+      </div>
+      <div class="input-group">
+        <label>Precio promedio del servicio (MXN)</label>
+        <div class="row"><input type="range" id="price" min="100" max="2000" value="400" step="25" oninput="calc()"><span class="val" id="priceVal"></span></div>
+      </div>
+      <div class="input-group">
+        <label>Tasa de no-show actual (%)</label>
+        <div class="row"><input type="range" id="noshow" min="0" max="30" value="15" step="1" oninput="calc()"><span class="val" id="noshowVal"></span></div>
+        <p class="note">Promedio industria Mexico: 12-18%. Los depositos de BeautyCita lo reducen a ~5%.</p>
+      </div>
+      <div class="input-group">
+        <label>Dias de trabajo al mes</label>
+        <div class="row"><input type="range" id="days" min="15" max="30" value="26" step="1" oninput="calc()"><span class="val" id="daysVal"></span></div>
+      </div>
+    </div>
+
+    <!-- Visual comparison -->
+    <div class="card">
+      <h2>Comparacion de costos mensuales</h2>
+
+      <div style="margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <span style="font-size: 14px; font-weight: 600;">BeautyCita <span style="color: var(--accent);">(3% por transaccion)</span></span>
+          <span class="val" id="bcCostDisplay" style="min-width: auto;">—</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <span style="font-size: 14px; font-weight: 600;">AgendaPro <span style="color: var(--muted);">($49 USD/mes fijo)</span></span>
+          <span class="val" id="apCostDisplay" style="min-width: auto; color: var(--muted);">—</span>
+        </div>
+      </div>
+
+      <div class="compare-bar" id="compareBar">
+        <div class="bar-segment bar-bc" id="barBc">
+          <span style="font-size:11px;">BeautyCita</span>
+          <span class="bar-amount" id="barBcAmt">—</span>
+        </div>
+        <div class="bar-segment bar-ap" id="barAp">
+          <span style="font-size:11px;">AgendaPro</span>
+          <span class="bar-amount" id="barApAmt">—</span>
+        </div>
+      </div>
+      <div style="text-align: center; margin-top: 8px;">
+        <span id="winnerBadge"></span>
+        <span id="winnerText" style="font-size: 13px; margin-left: 8px;"></span>
+      </div>
+
+      <div class="divider"></div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div class="result-card">
+          <div class="label">BC: costo por cliente</div>
+          <div class="value accent" id="bcPerClient">—</div>
+        </div>
+        <div class="result-card">
+          <div class="label">AP: costo por cliente</div>
+          <div class="value" style="color: var(--muted);" id="apPerClient">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div class="card results">
+      <h2>Impacto mensual de BeautyCita en tu salon</h2>
+
+      <!-- Hero -->
+      <div class="hero-number">
+        <div class="amount" id="heroAmount">—</div>
+        <div class="hero-label">Ahorro mensual estimado</div>
+      </div>
+
+      <div class="results-grid">
+        <div class="result-card">
+          <div class="label">Ingreso mensual actual</div>
+          <div class="value accent" id="currentRev">—</div>
+          <div class="sub" id="currentRevSub"></div>
+        </div>
+        <div class="result-card">
+          <div class="label">Perdida por no-shows (hoy)</div>
+          <div class="value red" id="noshowLoss">—</div>
+          <div class="sub" id="noshowLossSub"></div>
+        </div>
+        <div class="result-card">
+          <div class="label">Perdida con BeautyCita (~5%)</div>
+          <div class="value gold" id="bcNoshowLoss">—</div>
+          <div class="sub">Depositos reducen no-shows drasticamente</div>
+        </div>
+        <div class="result-card">
+          <div class="label">Ahorro en no-shows</div>
+          <div class="value green" id="noshowSaving">—</div>
+          <div class="sub" id="noshowSavingSub"></div>
+        </div>
+        <div class="result-card">
+          <div class="label">Costo BeautyCita (3%)</div>
+          <div class="value accent" id="bcCost">—</div>
+          <div class="sub">Solo pagas cuando cobras</div>
+        </div>
+        <div class="result-card" style="border: 2px solid var(--green);">
+          <div class="label">Ahorro neto</div>
+          <div class="value green" id="netSaving" style="font-size: 28px;">—</div>
+          <div class="sub" id="netSavingSub"></div>
+        </div>
+        <div class="result-card">
+          <div class="label">Equivalente a</div>
+          <div class="value blue" id="equivalent">—</div>
+          <div class="sub">clientes adicionales gratis cada mes</div>
+        </div>
+        <div class="result-card" style="border: 2px solid var(--gold);">
+          <div class="label">Ahorro anual</div>
+          <div class="value gold" id="annualSaving" style="font-size: 28px;">—</div>
+          <div class="sub" id="annualSavingSub"></div>
+        </div>
+      </div>
+
+      <!-- Bonus -->
+      <div class="bonus-card">
+        <div class="bonus-text">Cumplimiento fiscal SAT incluido sin costo extra</div>
+        <div class="bonus-sub">Retenciones ISR/IVA automaticas. Acceso Art. 30-B. Sin contador adicional.</div>
+      </div>
+
+      <!-- Breakdown -->
+      <div class="breakdown">
+        <table>
+          <thead><tr><th>Concepto</th><th>Monto</th></tr></thead>
+          <tbody id="breakdownBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- CTA -->
+  <div class="cta-section">
+    <a href="https://beautycita.com" class="cta-btn">Registra tu salon gratis — beautycita.com</a>
+    <div style="margin-top: 16px; display: flex; justify-content: center; gap: 16px; flex-wrap: wrap;">
+      <a href="https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/apk/beautycita-arm64.apk" style="color: var(--accent); text-decoration: none; font-size: 13px; border: 1px solid var(--border); border-radius: 8px; padding: 8px 16px;">Descargar APK Android</a>
+      <a href="https://beautycita.com/bc/comparacion.html" style="color: var(--accent); text-decoration: none; font-size: 13px; border: 1px solid var(--border); border-radius: 8px; padding: 8px 16px;">BC vs Competencia</a>
+    </div>
+    <p class="cta-sub">Sin tarjeta de credito. Sin contratos. Solo 3% cuando cobras.</p>
+  </div>
+</div>
+
+<script>
+const fmt = (n) => '$' + n.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+const fmtMxn = (n) => fmt(n) + ' MXN';
+
+const USD_TO_MXN = 20; // approximate
+
+function calc() {
+  const clients = +document.getElementById('clients').value;
+  const price = +document.getElementById('price').value;
+  const noshowRate = +document.getElementById('noshow').value / 100;
+  const days = +document.getElementById('days').value;
+
+  // Display values
+  document.getElementById('clientsVal').textContent = clients;
+  document.getElementById('priceVal').textContent = fmt(price);
+  document.getElementById('noshowVal').textContent = (noshowRate * 100).toFixed(0) + '%';
+  document.getElementById('daysVal').textContent = days + 'd';
+
+  // Calculations
+  const grossMonthly = clients * price * days;
+  const noshowLoss = grossMonthly * noshowRate;
+  const actualRevenue = grossMonthly - noshowLoss;
+
+  // With BeautyCita: no-show drops to ~5%
+  const bcNoshowRate = 0.05;
+  const bcNoshowLoss = grossMonthly * bcNoshowRate;
+  const bcRevenue = grossMonthly - bcNoshowLoss;
+
+  // Savings from reduced no-shows
+  const noshowSaving = noshowLoss - bcNoshowLoss;
+
+  // BC cost: 3% on revenue collected through platform
+  const bcCost = bcRevenue * 0.03;
+
+  // Net saving
+  const netSaving = noshowSaving - bcCost;
+
+  // Equivalent free clients
+  const equivalentClients = price > 0 ? Math.round(netSaving / price) : 0;
+
+  // AgendaPro comparison
+  const apCostUSD = 49;
+  const apCostMXN = apCostUSD * USD_TO_MXN; // $980 MXN
+  const totalMonthlyClients = clients * days;
+
+  const bcPerClient = totalMonthlyClients > 0 ? bcCost / totalMonthlyClients : 0;
+  const apPerClient = totalMonthlyClients > 0 ? apCostMXN / totalMonthlyClients : 0;
+
+  // Render results
+  document.getElementById('currentRev').textContent = fmtMxn(grossMonthly);
+  document.getElementById('currentRevSub').textContent = clients + ' clientes x ' + fmt(price) + ' x ' + days + ' dias';
+
+  document.getElementById('noshowLoss').textContent = '-' + fmtMxn(noshowLoss);
+  document.getElementById('noshowLossSub').textContent = (noshowRate * 100).toFixed(0) + '% de tus citas se pierden';
+
+  document.getElementById('bcNoshowLoss').textContent = '-' + fmtMxn(bcNoshowLoss);
+
+  document.getElementById('noshowSaving').textContent = '+' + fmtMxn(noshowSaving);
+  document.getElementById('noshowSavingSub').textContent = 'Recuperas ' + (((noshowRate - bcNoshowRate) * 100).toFixed(0)) + '% de citas perdidas';
+
+  document.getElementById('bcCost').textContent = '-' + fmtMxn(bcCost);
+
+  document.getElementById('netSaving').textContent = (netSaving >= 0 ? '+' : '') + fmtMxn(netSaving);
+  document.getElementById('netSavingSub').textContent = netSaving >= 0 ? 'Tu salon gana mas con BeautyCita' : 'Considera ajustar tus precios';
+
+  document.getElementById('equivalent').textContent = equivalentClients;
+
+  document.getElementById('annualSaving').textContent = (netSaving >= 0 ? '+' : '') + fmtMxn(netSaving * 12);
+  document.getElementById('annualSavingSub').textContent = 'En 12 meses';
+
+  // Hero
+  document.getElementById('heroAmount').textContent = (netSaving >= 0 ? '+' : '') + fmtMxn(netSaving);
+  document.getElementById('heroAmount').style.color = netSaving >= 0 ? 'var(--green)' : 'var(--red)';
+
+  // Comparison bar
+  document.getElementById('bcCostDisplay').textContent = fmtMxn(bcCost);
+  document.getElementById('apCostDisplay').textContent = fmtMxn(apCostMXN);
+
+  const maxCost = Math.max(bcCost, apCostMXN, 1);
+  const bcPct = Math.max((bcCost / maxCost) * 50, 15);
+  const apPct = Math.max((apCostMXN / maxCost) * 50, 15);
+  document.getElementById('barBc').style.flex = bcPct;
+  document.getElementById('barAp').style.flex = apPct;
+  document.getElementById('barBcAmt').textContent = fmtMxn(bcCost);
+  document.getElementById('barApAmt').textContent = fmtMxn(apCostMXN);
+
+  const bcCheaper = bcCost < apCostMXN;
+  const diff = Math.abs(bcCost - apCostMXN);
+  document.getElementById('winnerBadge').innerHTML = bcCheaper
+    ? '<span class="winner-badge">BC gana</span>'
+    : '<span class="loser-badge">AP mas barato</span>';
+  document.getElementById('winnerText').textContent = bcCheaper
+    ? 'BeautyCita te ahorra ' + fmtMxn(diff) + '/mes vs AgendaPro'
+    : 'AgendaPro es ' + fmtMxn(diff) + '/mes mas barato (pero sin retenciones SAT, sin AI, sin WhatsApp)';
+
+  document.getElementById('bcPerClient').textContent = '$' + bcPerClient.toFixed(1);
+  document.getElementById('apPerClient').textContent = '$' + apPerClient.toFixed(1);
+
+  // Breakdown
+  const rows = [
+    ['Situacion actual', ''],
+    ['  Ingreso bruto mensual (' + clients + ' x ' + fmt(price) + ' x ' + days + 'd)', fmtMxn(grossMonthly)],
+    ['  Perdida por no-shows (' + (noshowRate * 100).toFixed(0) + '%)', '-' + fmtMxn(noshowLoss)],
+    ['  Ingreso real (despues de no-shows)', fmtMxn(actualRevenue)],
+    ['', ''],
+    ['Con BeautyCita', ''],
+    ['  Ingreso bruto mensual', fmtMxn(grossMonthly)],
+    ['  Perdida por no-shows (5% con depositos)', '-' + fmtMxn(bcNoshowLoss)],
+    ['  Ingreso con BC', fmtMxn(bcRevenue)],
+    ['  Comision BeautyCita (3%)', '-' + fmtMxn(bcCost)],
+    ['  Ingreso neto con BC', fmtMxn(bcRevenue - bcCost)],
+    ['', ''],
+    ['Resultado', ''],
+    ['  Ahorro en no-shows', '+' + fmtMxn(noshowSaving)],
+    ['  Menos comision BC', '-' + fmtMxn(bcCost)],
+    ['  AHORRO NETO MENSUAL', (netSaving >= 0 ? '+' : '') + fmtMxn(netSaving)],
+    ['  AHORRO NETO ANUAL', (netSaving >= 0 ? '+' : '') + fmtMxn(netSaving * 12)],
+    ['', ''],
+    ['Comparacion vs AgendaPro ($49 USD/mes)', ''],
+    ['  Costo AgendaPro (fijo)', fmtMxn(apCostMXN)],
+    ['  Costo BeautyCita (3% variable)', fmtMxn(bcCost)],
+    ['  Diferencia', (bcCheaper ? 'BC ahorra ' : 'AP ahorra ') + fmtMxn(diff) + '/mes'],
+    ['  Costo BC por cliente', '$' + bcPerClient.toFixed(2) + ' MXN'],
+    ['  Costo AP por cliente', '$' + apPerClient.toFixed(2) + ' MXN'],
+    ['', ''],
+    ['Extras incluidos en BeautyCita (sin costo)', ''],
+    ['  Retenciones ISR/IVA automaticas', 'Incluido'],
+    ['  WhatsApp integrado', 'Incluido'],
+    ['  Reserva inteligente AI', 'Incluido'],
+    ['  Portafolio QR estilistas', 'Incluido'],
+    ['  Pagos OXXO/efectivo', 'Incluido'],
+  ];
+
+  document.getElementById('breakdownBody').innerHTML = rows.map(r =>
+    r[0] === '' ? '<tr><td colspan="2" style="height:8px"></td></tr>' :
+    r[1] === '' ? '<tr><td colspan="2" style="color:var(--accent);font-weight:700;padding-top:8px">' + r[0] + '</td></tr>' :
+    '<tr><td>' + r[0] + '</td><td>' + r[1] + '</td></tr>'
+  ).join('');
+}
+
+function preset(name) {
+  const p = {
+    small:  { clients: 5,  price: 300, noshow: 18, days: 26 },
+    medium: { clients: 12, price: 400, noshow: 15, days: 26 },
+    large:  { clients: 25, price: 450, noshow: 12, days: 26 },
+    barber: { clients: 15, price: 200, noshow: 20, days: 28 },
+    spa:    { clients: 8,  price: 800, noshow: 10, days: 24 },
+  };
+  const s = p[name];
+  document.getElementById('clients').value = s.clients;
+  document.getElementById('price').value = s.price;
+  document.getElementById('noshow').value = s.noshow;
+  document.getElementById('days').value = s.days;
+  calc();
+}
+
+// Init
+calc();
+</script>
+</body>
+</html>
