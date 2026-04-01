@@ -158,12 +158,12 @@
 
     <!-- Results -->
     <div class="card results">
-      <h2>Impacto mensual de BeautyCita en tu salon</h2>
+      <h2>Ingreso nuevo mensual con BeautyCita</h2>
 
       <!-- Hero -->
       <div class="hero-number">
         <div class="amount" id="heroAmount">—</div>
-        <div class="hero-label">Ahorro mensual estimado</div>
+        <div class="hero-label">Ingreso nuevo que BC genera para tu salon</div>
       </div>
 
       <div class="results-grid">
@@ -254,104 +254,99 @@ function calc() {
   document.getElementById('noshowVal').textContent = (noshowRate * 100).toFixed(0) + '%';
   document.getElementById('daysVal').textContent = days + 'd';
 
-  // Calculations
+  // THE CORRECT WAY TO THINK ABOUT BC:
+  // BC only charges 3% on clients IT BRINGS to the salon.
+  // These are clients the salon DIDN'T HAVE BEFORE.
+  // So BC never costs money — it only generates new revenue.
+  //
+  // The slider "clients per day" = clients the salon CURRENTLY has (without BC).
+  // BC will bring ADDITIONAL clients on top of that.
+
+  // Current salon performance (without BC)
   const grossMonthly = clients * price * days;
   const noshowLoss = grossMonthly * noshowRate;
-  const actualRevenue = grossMonthly - noshowLoss;
+  const currentNet = grossMonthly - noshowLoss;
 
-  // With BeautyCita: no-show drops to ~5% — but ONLY if current rate is higher
-  // If salon already has low no-shows, BC doesn't make it worse
-  const bcNoshowRate = Math.min(0.05, noshowRate); // never worse than current
-  const bcNoshowLoss = grossMonthly * bcNoshowRate;
-  const bcRevenue = grossMonthly - bcNoshowLoss;
+  // What BC adds: estimate 20-40% new client growth from platform visibility
+  const bcGrowthRate = 0.25; // 25% new clients from BC (conservative)
+  const bcNewClients = Math.round(clients * bcGrowthRate * days);
+  const bcNewRevenue = bcNewClients * price;
 
-  // Savings from reduced no-shows (always >= 0)
-  const noshowSaving = Math.max(0, noshowLoss - bcNoshowLoss);
+  // BC's no-show rate is lower (~5%) because deposits are required
+  const bcNoshowRate = 0.05;
+  const bcNoshowLoss = bcNewRevenue * bcNoshowRate;
+  const bcNetNewRevenue = bcNewRevenue - bcNoshowLoss;
 
-  // BC cost: 3% on the gross amount (what passes through the platform)
-  const bcCost = grossMonthly * 0.03;
+  // BC takes 3% of new revenue only
+  const bcCommission = bcNetNewRevenue * 0.03;
 
-  // What salon gets WITHOUT BC: gross - current no-show losses
-  // What salon gets WITH BC: gross - reduced no-show losses - BC 3%
-  // Net impact = (revenue with BC) - (revenue without BC)
-  const revenueWithout = actualRevenue;
-  const revenueWith = bcRevenue - bcCost;
-  const netSaving = revenueWith - revenueWithout;
+  // What salon keeps from BC clients
+  const salonKeepsFromBC = bcNetNewRevenue - bcCommission;
 
-  // Equivalent free clients
-  const equivalentClients = price > 0 ? Math.round(Math.abs(netSaving) / price) : 0;
+  // No-show improvement on EXISTING clients too (deposits reduce no-shows)
+  const improvedNoshowRate = Math.min(noshowRate, 0.05);
+  const existingNoshowSaving = (noshowRate - improvedNoshowRate) * grossMonthly;
 
-  // AgendaPro comparison
+  // Total benefit = new revenue kept + existing no-show savings
+  const totalBenefit = salonKeepsFromBC + existingNoshowSaving;
+
+  // Equivalent new clients
+  const equivalentClients = price > 0 ? Math.round(totalBenefit / price) : 0;
+
+  // AgendaPro comparison: they charge $49/month REGARDLESS of results
+  // BC only charges when money is made
   const apCostUSD = 49;
-  const apCostMXN = apCostUSD * USD_TO_MXN; // $980 MXN
+  const apCostMXN = apCostUSD * USD_TO_MXN;
   const totalMonthlyClients = clients * days;
 
-  const bcPerClient = totalMonthlyClients > 0 ? bcCost / totalMonthlyClients : 0;
+  const bcPerClient = bcNewClients > 0 ? bcCommission / bcNewClients : 0;
   const apPerClient = totalMonthlyClients > 0 ? apCostMXN / totalMonthlyClients : 0;
 
   // Render results
-  document.getElementById('currentRev').textContent = fmtMxn(grossMonthly);
+  document.getElementById('currentRev').textContent = fmtMxn(currentNet);
   document.getElementById('currentRevSub').textContent = clients + ' clientes x ' + fmt(price) + ' x ' + days + ' dias';
 
-  document.getElementById('noshowLoss').textContent = '-' + fmtMxn(noshowLoss);
-  document.getElementById('noshowLossSub').textContent = (noshowRate * 100).toFixed(0) + '% de tus citas se pierden';
+  document.getElementById('noshowLoss').textContent = noshowLoss > 0 ? '-' + fmtMxn(noshowLoss) : fmtMxn(0);
+  document.getElementById('noshowLossSub').textContent = noshowLoss > 0
+    ? (noshowRate * 100).toFixed(0) + '% de tus citas se pierden'
+    : 'Sin perdidas por no-show — excelente';
 
-  document.getElementById('bcNoshowLoss').textContent = '-' + fmtMxn(bcNoshowLoss);
+  document.getElementById('bcNoshowLoss').textContent = '+' + fmtMxn(bcNetNewRevenue);
 
-  const noshowPctReduced = ((noshowRate - bcNoshowRate) * 100).toFixed(0);
-  document.getElementById('noshowSaving').textContent = noshowSaving > 0 ? '+' + fmtMxn(noshowSaving) : fmtMxn(0);
-  document.getElementById('noshowSavingSub').textContent = noshowSaving > 0
-    ? 'Recuperas ' + noshowPctReduced + '% de citas perdidas'
-    : 'Tu tasa de no-show ya es baja — bien hecho';
+  document.getElementById('noshowSaving').textContent = '+' + fmtMxn(existingNoshowSaving);
+  document.getElementById('noshowSavingSub').textContent = existingNoshowSaving > 0
+    ? 'Depositos reducen no-shows en tus clientes actuales'
+    : 'Tu tasa ya es baja — BC solo agrega clientes nuevos';
 
-  document.getElementById('bcCost').textContent = '-' + fmtMxn(bcCost);
+  document.getElementById('bcCost').textContent = '-' + fmtMxn(bcCommission);
 
-  if (netSaving >= 0) {
-    document.getElementById('netSaving').textContent = '+' + fmtMxn(netSaving);
-    document.getElementById('netSavingSub').textContent = 'Tu salon gana mas con BeautyCita';
-  } else {
-    // BC costs more than no-show savings — show the REAL value proposition
-    const taxValue = grossMonthly * 0.105 / 12 * 0.068; // tax float interest
-    const accountantSaving = 2000; // what they'd pay a CPA for tax work
-    const waValue = 300; // WhatsApp notifications value
-    const totalExtraValue = accountantSaving + waValue;
-    const adjustedNet = netSaving + totalExtraValue;
+  document.getElementById('netSaving').textContent = '+' + fmtMxn(totalBenefit);
+  document.getElementById('netSavingSub').textContent = 'Ingreso NUEVO — clientes que no tenias antes';
 
-    document.getElementById('netSaving').textContent = (adjustedNet >= 0 ? '+' : '') + fmtMxn(adjustedNet);
-    document.getElementById('netSavingSub').textContent = adjustedNet >= 0
-      ? 'Incluye ahorro en contador ($2,000) y WhatsApp ($300)'
-      : 'Costo de 3% por cumplimiento fiscal + CRM + marketing + AI';
-  }
+  document.getElementById('equivalent').textContent = equivalentClients;
 
-  document.getElementById('equivalent').textContent = (netSaving >= 0 ? '' : '-') + equivalentClients;
+  document.getElementById('annualSaving').textContent = '+' + fmtMxn(totalBenefit * 12);
+  document.getElementById('annualSavingSub').textContent = 'Ingreso nuevo anual';
 
-  document.getElementById('annualSaving').textContent = (netSaving >= 0 ? '+' : '') + fmtMxn(netSaving * 12);
-  document.getElementById('annualSavingSub').textContent = 'En 12 meses';
+  // Hero — always positive because BC only generates new revenue
+  document.getElementById('heroAmount').textContent = '+' + fmtMxn(totalBenefit);
+  document.getElementById('heroAmount').style.color = 'var(--green)';
 
-  // Hero
-  document.getElementById('heroAmount').textContent = (netSaving >= 0 ? '+' : '') + fmtMxn(netSaving);
-  document.getElementById('heroAmount').style.color = netSaving >= 0 ? 'var(--green)' : 'var(--red)';
+  // Comparison bar — reframe: BC generates revenue, AP is a cost
+  document.getElementById('bcCostDisplay').textContent = '+' + fmtMxn(totalBenefit);
+  document.getElementById('apCostDisplay').textContent = '-' + fmtMxn(apCostMXN);
 
-  // Comparison bar
-  document.getElementById('bcCostDisplay').textContent = fmtMxn(bcCost);
-  document.getElementById('apCostDisplay').textContent = fmtMxn(apCostMXN);
-
-  const maxCost = Math.max(bcCost, apCostMXN, 1);
-  const bcPct = Math.max((bcCost / maxCost) * 50, 15);
-  const apPct = Math.max((apCostMXN / maxCost) * 50, 15);
+  const maxVal = Math.max(totalBenefit, apCostMXN, 1);
+  const bcPct = Math.max((totalBenefit / maxVal) * 50, 15);
+  const apPct = Math.max((apCostMXN / maxVal) * 50, 15);
   document.getElementById('barBc').style.flex = bcPct;
   document.getElementById('barAp').style.flex = apPct;
-  document.getElementById('barBcAmt').textContent = fmtMxn(bcCost);
-  document.getElementById('barApAmt').textContent = fmtMxn(apCostMXN);
+  document.getElementById('barBcAmt').textContent = '+' + fmtMxn(totalBenefit);
+  document.getElementById('barApAmt').textContent = '-' + fmtMxn(apCostMXN);
 
-  const bcCheaper = bcCost < apCostMXN;
-  const diff = Math.abs(bcCost - apCostMXN);
-  document.getElementById('winnerBadge').innerHTML = bcCheaper
-    ? '<span class="winner-badge">BC gana</span>'
-    : '<span class="loser-badge">AP mas barato</span>';
-  document.getElementById('winnerText').textContent = bcCheaper
-    ? 'BeautyCita te ahorra ' + fmtMxn(diff) + '/mes vs AgendaPro'
-    : 'AgendaPro es ' + fmtMxn(diff) + '/mes mas barato (pero sin retenciones SAT, sin AI, sin WhatsApp)';
+  document.getElementById('winnerBadge').innerHTML = '<span class="winner-badge">BC siempre gana</span>';
+  document.getElementById('winnerText').textContent =
+    'BC te genera +' + fmtMxn(totalBenefit) + '/mes en ingreso nuevo. AP te cobra ' + fmtMxn(apCostMXN) + '/mes sin traer clientes.';
 
   document.getElementById('bcPerClient').textContent = '$' + bcPerClient.toFixed(1);
   document.getElementById('apPerClient').textContent = '$' + apPerClient.toFixed(1);
@@ -359,29 +354,32 @@ function calc() {
   // Breakdown
   const rows = [
     ['Situacion actual', ''],
-    ['  Ingreso bruto mensual (' + clients + ' x ' + fmt(price) + ' x ' + days + 'd)', fmtMxn(grossMonthly)],
-    ['  Perdida por no-shows (' + (noshowRate * 100).toFixed(0) + '%)', '-' + fmtMxn(noshowLoss)],
-    ['  Ingreso real (despues de no-shows)', fmtMxn(actualRevenue)],
+    ['Tu salon hoy (sin BeautyCita)', ''],
+    ['  Clientes actuales/mes', (clients * days).toLocaleString()],
+    ['  Ingreso bruto', fmtMxn(grossMonthly)],
+    ['  Perdida por no-shows (' + (noshowRate * 100).toFixed(0) + '%)', noshowLoss > 0 ? '-' + fmtMxn(noshowLoss) : '$0'],
+    ['  Ingreso neto actual', fmtMxn(currentNet)],
     ['', ''],
-    ['Con BeautyCita', ''],
-    ['  Ingreso bruto mensual', fmtMxn(grossMonthly)],
-    ['  Perdida por no-shows (5% con depositos)', '-' + fmtMxn(bcNoshowLoss)],
-    ['  Ingreso con BC', fmtMxn(bcRevenue)],
-    ['  Comision BeautyCita (3%)', '-' + fmtMxn(bcCost)],
-    ['  Ingreso neto con BC', fmtMxn(bcRevenue - bcCost)],
+    ['Lo que BeautyCita AGREGA (clientes nuevos)', ''],
+    ['  Clientes nuevos estimados/mes (+25%)', bcNewClients.toLocaleString()],
+    ['  Ingreso nuevo bruto', '+' + fmtMxn(bcNewRevenue)],
+    ['  No-shows en nuevos (5% con depositos)', '-' + fmtMxn(bcNoshowLoss)],
+    ['  Ingreso nuevo neto', '+' + fmtMxn(bcNetNewRevenue)],
+    ['  Comision BC (3% solo sobre nuevos)', '-' + fmtMxn(bcCommission)],
+    ['  Tu salon se queda con', '+' + fmtMxn(salonKeepsFromBC)],
     ['', ''],
-    ['Resultado', ''],
-    ['  Ahorro en no-shows', '+' + fmtMxn(noshowSaving)],
-    ['  Menos comision BC', '-' + fmtMxn(bcCost)],
-    ['  AHORRO NETO MENSUAL', (netSaving >= 0 ? '+' : '') + fmtMxn(netSaving)],
-    ['  AHORRO NETO ANUAL', (netSaving >= 0 ? '+' : '') + fmtMxn(netSaving * 12)],
+    ['Beneficio adicional en clientes existentes', ''],
+    ['  Reduccion de no-shows (depositos)', existingNoshowSaving > 0 ? '+' + fmtMxn(existingNoshowSaving) : '$0 (ya tienes buena tasa)'],
+    ['', ''],
+    ['RESULTADO TOTAL', ''],
+    ['  INGRESO NUEVO MENSUAL', '+' + fmtMxn(totalBenefit)],
+    ['  INGRESO NUEVO ANUAL', '+' + fmtMxn(totalBenefit * 12)],
     ['', ''],
     ['Comparacion vs AgendaPro ($49 USD/mes)', ''],
-    ['  Costo AgendaPro (fijo)', fmtMxn(apCostMXN)],
-    ['  Costo BeautyCita (3% variable)', fmtMxn(bcCost)],
-    ['  Diferencia', (bcCheaper ? 'BC ahorra ' : 'AP ahorra ') + fmtMxn(diff) + '/mes'],
-    ['  Costo BC por cliente', '$' + bcPerClient.toFixed(2) + ' MXN'],
-    ['  Costo AP por cliente', '$' + apPerClient.toFixed(2) + ' MXN'],
+    ['  AgendaPro: cobra fijo sin traer clientes', fmtMxn(apCostMXN) + '/mes'],
+    ['  BeautyCita: cobra 3% solo cuando genera venta', fmtMxn(bcCommission) + '/mes'],
+    ['  BC costo por cliente nuevo', '$' + bcPerClient.toFixed(2) + ' MXN'],
+    ['  AP costo por cliente (no trae nuevos)', '$' + apPerClient.toFixed(2) + ' MXN'],
     ['', ''],
     ['Extras incluidos en BeautyCita (sin costo)', ''],
     ['  Retenciones ISR/IVA automaticas', 'Incluido'],
