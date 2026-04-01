@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BeautyCita — Cumplimiento Fiscal SAT</title>
+<style>
+  :root { --bg: #0a0a0f; --surface: #14141f; --surface2: #1e1e2e; --border: #2a2a3a; --text: #e8e8f0; --muted: #6b6b8a; --accent: #C8A2C8; --green: #4ade80; --red: #f87171; --gold: #fbbf24; --blue: #60a5fa; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; }
+  .container { max-width: 900px; margin: 0 auto; padding: 24px; }
+  h1 { font-size: 28px; font-weight: 700; margin-bottom: 4px; }
+  h1 span { color: var(--accent); }
+  .subtitle { color: var(--muted); font-size: 14px; margin-bottom: 32px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 24px; margin-bottom: 20px; }
+  .card h2 { font-size: 16px; font-weight: 700; color: var(--accent); margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }
+  .card h2 .num { background: var(--accent); color: var(--bg); width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 800; flex-shrink: 0; }
+  ul { list-style: none; padding: 0; }
+  ul li { padding: 8px 0; padding-left: 20px; position: relative; font-size: 14px; border-bottom: 1px solid rgba(42,42,58,0.4); }
+  ul li:last-child { border-bottom: none; }
+  ul li::before { content: ''; position: absolute; left: 0; top: 16px; width: 8px; height: 8px; border-radius: 50%; }
+  .check-list li::before { background: var(--green); }
+  .todo-list li::before { background: var(--gold); }
+  .green { color: var(--green); }
+  .gold { color: var(--gold); }
+  .blue { color: var(--blue); }
+  .red { color: var(--red); }
+  .accent { color: var(--accent); }
+  .highlight { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin: 16px 0; text-align: center; }
+  .highlight .big { font-size: 32px; font-weight: 800; font-family: 'Courier New', monospace; }
+  .highlight .sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+  /* Timeline */
+  .timeline { display: flex; gap: 0; margin: 16px 0; flex-wrap: wrap; }
+  .timeline-item { flex: 1; min-width: 200px; position: relative; padding: 16px; background: var(--surface2); border: 1px solid var(--border); text-align: center; }
+  .timeline-item:first-child { border-radius: 12px 0 0 12px; }
+  .timeline-item:last-child { border-radius: 0 12px 12px 0; }
+  .timeline-item .date { font-size: 24px; font-weight: 800; font-family: 'Courier New', monospace; }
+  .timeline-item .desc { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .timeline-item.t-blue .date { color: var(--blue); }
+  .timeline-item.t-gold .date { color: var(--gold); }
+  .timeline-item.t-red .date { color: var(--red); }
+  @media (max-width: 600px) { .timeline { flex-direction: column; } .timeline-item { border-radius: 0 !important; } .timeline-item:first-child { border-radius: 12px 12px 0 0 !important; } .timeline-item:last-child { border-radius: 0 0 12px 12px !important; } }
+
+  /* FAQ */
+  .faq-item { margin-bottom: 16px; }
+  .faq-q { font-weight: 700; font-size: 14px; color: var(--accent); margin-bottom: 4px; }
+  .faq-a { font-size: 14px; color: var(--text); padding-left: 16px; border-left: 3px solid var(--border); }
+
+  .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border); text-align: center; font-size: 12px; color: var(--muted); line-height: 1.8; }
+  .footer strong { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>BeautyCita <span>te ayuda con tus obligaciones fiscales</span></h1>
+  <p class="subtitle">Todo lo que necesitas saber sobre retenciones, declaraciones y cumplimiento SAT como salon en BeautyCita.</p>
+
+  <!-- SECTION 1: Que hace BC -->
+  <div class="card">
+    <h2><span class="num">1</span> Que hace BeautyCita por ti</h2>
+    <ul class="check-list">
+      <li><strong class="green">Retiene ISR (2.5%)</strong> e <strong class="green">IVA (8%)</strong> automaticamente de cada transaccion digital</li>
+      <li><strong class="green">Entera las retenciones al SAT</strong> cada mes antes del dia 17 — tu no tienes que hacer nada</li>
+      <li>Te da acceso a tu <strong class="green">desglose de retenciones</strong> en tiempo real desde tu panel de salon</li>
+      <li>Genera <strong class="green">reportes mensuales</strong> listos para entregarle a tu contador</li>
+      <li>Cumple con el <strong class="green">Art. 30-B del CFF</strong> — acceso en tiempo real de la informacion al SAT</li>
+    </ul>
+
+    <div class="highlight">
+      <div class="big green">Automatico</div>
+      <div class="sub">No tienes que calcular nada. BeautyCita retiene y paga por ti.</div>
+    </div>
+  </div>
+
+  <!-- SECTION 2: Que debes hacer tu -->
+  <div class="card">
+    <h2><span class="num">2</span> Que debes hacer tu (la otra mitad)</h2>
+    <ul class="todo-list">
+      <li><strong class="gold">Pagar el otro 8% de IVA</strong> directamente al SAT en tu declaracion mensual</li>
+      <li><strong class="gold">Declarar tu ISR restante</strong> en tu declaracion anual (lo que ganas menos deducciones)</li>
+      <li><strong class="gold">Registrar gastos deducibles:</strong> muebles, herramientas, renta del local, gasolina, productos profesionales</li>
+      <li><strong class="gold">Emitir facturas (CFDI)</strong> por tus servicios — BeautyCita integrara esto pronto con SW Sapien para que lo hagas en un tap</li>
+    </ul>
+  </div>
+
+  <!-- SECTION 3: Calendario fiscal -->
+  <div class="card">
+    <h2><span class="num">3</span> Calendario fiscal</h2>
+    <p style="font-size:14px;color:var(--muted);margin-bottom:16px;">Cada mes, estas son las fechas clave despues de que BeautyCita procesa tus pagos:</p>
+
+    <div class="timeline">
+      <div class="timeline-item t-blue">
+        <div class="date">Dia 10</div>
+        <div class="desc">del mes siguiente<br><strong style="color:var(--blue)">Declaracion informativa</strong><br>BeautyCita envia el reporte al SAT</div>
+      </div>
+      <div class="timeline-item t-gold">
+        <div class="date">Dia 17</div>
+        <div class="desc">del mes siguiente<br><strong style="color:var(--gold)">Pago de retenciones</strong><br>BeautyCita paga ISR + IVA retenidos</div>
+      </div>
+      <div class="timeline-item t-red">
+        <div class="date">31 Dic</div>
+        <div class="desc">de cada ano<br><strong style="color:var(--red)">Fecha limite deducciones</strong><br>Registra todos tus gastos antes de esta fecha</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 4: Cuanto te cuesta -->
+  <div class="card">
+    <h2><span class="num">4</span> Cuanto te cuesta</h2>
+
+    <div class="highlight">
+      <div class="big accent">$0 pesos</div>
+      <div class="sub">El cumplimiento fiscal es parte del servicio de BeautyCita. Sin costo adicional.</div>
+    </div>
+
+    <p style="font-size:14px;margin-top:12px;">La comision del <strong class="accent">3%</strong> por transaccion ya cubre todo:</p>
+    <ul class="check-list">
+      <li>Procesamiento de pagos digitales (tarjeta, transferencia)</li>
+      <li>Notificaciones por WhatsApp a ti y a tu clienta</li>
+      <li>Retencion y entero de impuestos al SAT</li>
+      <li>Reportes mensuales para tu contador</li>
+      <li>Soporte tecnico y atencion</li>
+    </ul>
+  </div>
+
+  <!-- SECTION 5: FAQ -->
+  <div class="card">
+    <h2><span class="num">5</span> Preguntas frecuentes</h2>
+
+    <div class="faq-item">
+      <div class="faq-q">"Que pasa si no tengo RFC?"</div>
+      <div class="faq-a">Si no proporcionas tu RFC, por ley estamos obligados a retener la tasa maxima: <strong class="red">20% ISR + 16% IVA</strong>. Eso es mucho dinero. Registrate en el SAT (es gratis y toma un dia) y compartenos tu RFC para que solo pagues <strong class="green">2.5% ISR + 8% IVA</strong>.</div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">"BeautyCita reemplaza a mi contador?"</div>
+      <div class="faq-a"><strong class="gold">No.</strong> BeautyCita <em>complementa</em> a tu contador. Le damos datos precisos, reportes claros y retenciones ya enteradas. Tu contador usa esa informacion para hacer tu declaracion anual y maximizar tus deducciones. Somos su mejor amigo, no su reemplazo.</div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">"Puedo ver mis retenciones?"</div>
+      <div class="faq-a"><strong class="green">Si.</strong> Entra a tu panel de salon > Dashboard > <strong>Impuestos y Deducciones</strong>. Ahi veras el desglose por mes: cuanto se retuvo de ISR, cuanto de IVA, y cuando se entero al SAT. Tambien puedes descargar el reporte en PDF para tu contador.</div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">"Que regimen fiscal me conviene?"</div>
+      <div class="faq-a">La mayoria de los salones operan bajo el <strong class="accent">Regimen Simplificado de Confianza (RESICO)</strong> si facturan menos de $3.5M anuales, o <strong class="accent">Actividad Empresarial</strong> si facturan mas. Tu contador puede orientarte. BeautyCita funciona con cualquier regimen.</div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">"Cobran por el servicio fiscal?"</div>
+      <div class="faq-a"><strong class="green">No.</strong> El cumplimiento fiscal esta incluido en la comision del 3%. Cero cargos adicionales. Cero sorpresas. Es parte del valor de estar en BeautyCita.</div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <strong>BEAUTYCITA S.A. de C.V.</strong><br>
+    RFC: BEA260313MI8<br>
+    beautycita.com
+  </div>
+</div>
+</body>
+</html>
