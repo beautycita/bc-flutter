@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BeautyCita — Traction Dashboard</title>
+<title>BeautyCita — Panel de Traccion</title>
 <style>
   :root { --bg: #0a0a0f; --surface: #14141f; --surface2: #1e1e2e; --border: #2a2a3a; --text: #e8e8f0; --muted: #6b6b8a; --accent: #C8A2C8; --green: #4ade80; --red: #f87171; --gold: #fbbf24; --blue: #60a5fa; --pink: #ec4899; --purple: #9333ea; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -41,7 +41,7 @@
   /* Launching badge */
   .launching { position: relative; }
   .launching .value { color: var(--muted); font-size: 24px; }
-  .launching::after { content: 'LAUNCHING'; position: absolute; top: 10px; right: 10px; font-size: 9px; letter-spacing: 1px; background: var(--surface2); border: 1px solid var(--border); color: var(--gold); padding: 2px 6px; border-radius: 4px; }
+  .launching::after { content: 'POR LANZAR'; position: absolute; top: 10px; right: 10px; font-size: 9px; letter-spacing: 1px; background: var(--surface2); border: 1px solid var(--border); color: var(--gold); padding: 2px 6px; border-radius: 4px; }
 
   /* Live badge */
   .live-badge { display: inline-block; background: var(--green); color: var(--bg); font-size: 10px; font-weight: 700; letter-spacing: 1px; padding: 2px 8px; border-radius: 4px; vertical-align: middle; margin-left: 6px; }
@@ -64,62 +64,62 @@
 </head>
 <body>
 <div class="container">
-  <h1>BeautyCita <span>Traction Dashboard</span></h1>
-  <p class="subtitle">RFC: BEA260313MI8 &middot; BEAUTYCITA S.A. de C.V. &middot; Real numbers, no projections</p>
+  <h1>BeautyCita <span>Panel de Traccion</span></h1>
+  <p class="subtitle">RFC: BEA260313MI8 &middot; BEAUTYCITA S.A. de C.V. &middot; Numeros reales, sin proyecciones</p>
   <div class="nav-links">
-    <a href="/bc/pitch-deck.html">Pitch Deck</a>
-    <a href="/bc/revenue-simulator.html">Revenue Simulator</a>
+    <a href="/bc/pitch-deck.html">Presentacion</a>
+    <a href="/bc/revenue-simulator.html">Simulador de Ingresos</a>
   </div>
 
   <!-- DISCOVERY -->
-  <div class="section-label">Market Discovery</div>
+  <div class="section-label">Descubrimiento de Mercado</div>
   <div class="grid">
     <div class="card highlight">
       <div class="value green" id="v-discovered">67,220</div>
-      <div class="label">Discovered Salons</div>
+      <div class="label">Salones Descubiertos</div>
       <div class="note">Google Maps + Facebook + Bing</div>
     </div>
     <div class="card">
       <div class="value accent" id="v-mexico">53,360</div>
-      <div class="label">Mexico Salons</div>
+      <div class="label">Salones en Mexico</div>
     </div>
     <div class="card">
       <div class="value gold" id="v-whatsapp">6,334</div>
-      <div class="label">WhatsApp Verified</div>
+      <div class="label">WhatsApp Verificados</div>
     </div>
     <div class="card">
       <div class="value blue" id="v-cities">371</div>
-      <div class="label">Cities Covered</div>
+      <div class="label">Ciudades Cubiertas</div>
     </div>
     <div class="card">
       <div class="value blue" id="v-states">32</div>
-      <div class="label">States Covered</div>
+      <div class="label">Estados Cubiertos</div>
     </div>
   </div>
 
   <!-- PLATFORM ACTIVITY -->
-  <div class="section-label">Platform Activity</div>
+  <div class="section-label">Actividad de la Plataforma</div>
   <div class="grid">
     <div class="card launching">
       <div class="value" id="v-salons">0</div>
-      <div class="label">Registered Salons</div>
+      <div class="label">Salones Registrados</div>
     </div>
     <div class="card launching">
       <div class="value" id="v-users">0</div>
-      <div class="label">Active Users</div>
+      <div class="label">Usuarios Activos</div>
     </div>
     <div class="card launching">
       <div class="value" id="v-bookings">0</div>
-      <div class="label">Total Bookings</div>
+      <div class="label">Reservas Totales</div>
     </div>
     <div class="card launching">
       <div class="value" id="v-gpv">$0</div>
-      <div class="label">GPV (Gross Platform Volume)</div>
+      <div class="label">GPV (Volumen Bruto de Plataforma)</div>
     </div>
   </div>
 
   <!-- PLATFORM BUILD -->
-  <div class="section-label">Platform Build</div>
+  <div class="section-label">Construccion de la Plataforma</div>
   <div class="grid">
     <div class="card">
       <div class="value accent" id="v-edge">55+</div>
@@ -127,35 +127,35 @@
     </div>
     <div class="card">
       <div class="value accent" id="v-screens">90+</div>
-      <div class="label">Mobile App Screens</div>
+      <div class="label">Pantallas App Movil</div>
     </div>
     <div class="card">
       <div class="value accent" id="v-pages">58+</div>
-      <div class="label">Web App Pages</div>
+      <div class="label">Paginas App Web</div>
     </div>
   </div>
 
   <!-- COMPLIANCE & LEGAL -->
-  <div class="section-label">Compliance &amp; Legal</div>
+  <div class="section-label">Cumplimiento y Legal</div>
   <div class="grid">
     <div class="card highlight-gold">
-      <div class="value green" id="v-sat">Live<span class="live-badge">LIVE</span></div>
+      <div class="value green" id="v-sat">Activo<span class="live-badge">EN VIVO</span></div>
       <div class="label">SAT API</div>
-      <div class="note">CFF Art. 30-B compliant</div>
+      <div class="note">Conforme al CFF Art. 30-B</div>
     </div>
     <div class="card">
       <div class="value gold" id="v-rfc">BEA260313MI8</div>
       <div class="label">RFC</div>
     </div>
     <div class="card">
-      <div class="value green" id="v-entity">Active</div>
-      <div class="label">Legal Entity</div>
-      <div class="note">Since March 30, 2026</div>
+      <div class="value green" id="v-entity">Activa</div>
+      <div class="label">Entidad Legal</div>
+      <div class="note">Desde 30 de marzo, 2026</div>
     </div>
   </div>
 
   <div class="footer">
-    Data as of April 2026. Updated manually.<br>
+    Datos a abril 2026. Actualizado manualmente.<br>
     BEAUTYCITA S.A. de C.V. &middot; beautycita.com
   </div>
 </div>

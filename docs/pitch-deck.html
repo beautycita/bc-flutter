@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BeautyCita — Investor Pitch</title>
+<title>BeautyCita — Presentacion para Inversionistas</title>
 <style>
   :root { --bg: #0a0a0f; --surface: #14141f; --surface2: #1e1e2e; --border: #2a2a3a; --text: #e8e8f0; --muted: #6b6b8a; --accent: #C8A2C8; --green: #4ade80; --red: #f87171; --gold: #fbbf24; --blue: #60a5fa; --pink: #ec4899; --purple: #9333ea; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -88,163 +88,163 @@
   <div class="hero">
     <div class="rfc">RFC: BEA260313MI8</div>
     <h1>BeautyCita <span>Reservas Inteligentes de Belleza</span></h1>
-    <p class="tagline">The intelligent beauty booking agent for Mexico</p>
+    <p class="tagline">El agente inteligente de reservas de belleza para Mexico</p>
     <div class="hero-buttons">
-      <a href="https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/apk/beautycita-arm64-v8a-release.apk" class="btn btn-primary">Download APK</a>
-      <a href="/bc/revenue-simulator.html" class="btn btn-outline">Revenue Simulator</a>
-      <a href="/bc/traction.html" class="btn btn-outline">Live Traction</a>
+      <a href="https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/apk/beautycita-arm64-v8a-release.apk" class="btn btn-primary">Descargar APK</a>
+      <a href="/bc/revenue-simulator.html" class="btn btn-outline">Simulador de Ingresos</a>
+      <a href="/bc/traction.html" class="btn btn-outline">Traccion en Vivo</a>
     </div>
   </div>
 
   <!-- 1. PROBLEM -->
   <div class="section">
-    <h2>01 &mdash; Problem</h2>
-    <h3>600K+ salons. <span>Zero infrastructure.</span></h3>
-    <p>Mexico has over 600,000 beauty salons. The vast majority run on paper agendas, WhatsApp messages, and phone calls. No-show rates sit at 10-20%. There are no tax compliance tools built for the beauty sector. The only digital competitor, AgendaPro, charges salons $29-129/month &mdash; a non-starter for 95% of Mexican salons earning under $50K MXN/month.</p>
+    <h2>01 &mdash; Problema</h2>
+    <h3>600K+ salones. <span>Cero infraestructura.</span></h3>
+    <p>Mexico tiene mas de 600,000 salones de belleza. La gran mayoria opera con agendas de papel, mensajes de WhatsApp y llamadas telefonicas. La tasa de no-show es del 10-20%. No existen herramientas de cumplimiento fiscal diseñadas para el sector belleza. El unico competidor digital, AgendaPro, cobra a los salones $29-129 USD/mes &mdash; inviable para el 95% de los salones mexicanos que facturan menos de $50K MXN/mes.</p>
     <div class="stat-row">
-      <div class="stat"><div class="val accent">600K+</div><div class="lbl">Salons in Mexico</div></div>
-      <div class="stat"><div class="val red">10-20%</div><div class="lbl">No-show rate</div></div>
-      <div class="stat"><div class="val gold">&lt;10%</div><div class="lbl">Digital penetration</div></div>
-      <div class="stat"><div class="val blue">$29-129</div><div class="lbl">AgendaPro monthly fee</div></div>
+      <div class="stat"><div class="val accent">600K+</div><div class="lbl">Salones en Mexico</div></div>
+      <div class="stat"><div class="val red">10-20%</div><div class="lbl">Tasa de no-show</div></div>
+      <div class="stat"><div class="val gold">&lt;10%</div><div class="lbl">Penetracion digital</div></div>
+      <div class="stat"><div class="val blue">$29-129</div><div class="lbl">Cuota mensual AgendaPro</div></div>
     </div>
   </div>
 
   <!-- 2. SOLUTION -->
   <div class="section">
-    <h2>02 &mdash; Solution</h2>
-    <h3>AI booking agent. <span>Not another app.</span></h3>
-    <p>BeautyCita is not a booking app &mdash; it is an intelligent booking agent. The customer selects a service type, the engine returns the top 3 best options with a pre-selected time slot, and the customer books with one tap. 4-6 taps, under 30 seconds, zero keyboard input.</p>
-    <p>For the salon, BeautyCita replaces 5+ tools for free: CRM, marketing, payments, appointment management, and tax compliance. BeautyCita earns 3% per transaction &mdash; no monthly fees, no setup costs, no contracts.</p>
+    <h2>02 &mdash; Solucion</h2>
+    <h3>Agente de reservas con IA. <span>No otra app mas.</span></h3>
+    <p>BeautyCita no es una app de reservas &mdash; es un agente inteligente de reservas. El cliente selecciona un tipo de servicio, el motor devuelve las 3 mejores opciones con un horario preseleccionado, y el cliente reserva con un toque. 4-6 toques, menos de 30 segundos, cero teclado.</p>
+    <p>Para el salon, BeautyCita reemplaza 5+ herramientas gratis: CRM, marketing, pagos, gestion de citas y cumplimiento fiscal. BeautyCita gana 3% por transaccion &mdash; sin cuotas mensuales, sin costos de instalacion, sin contratos.</p>
     <ul class="feature-list green">
-      <li>Intelligent service-type-aware booking engine (200-400ms response)</li>
-      <li>Time inference &mdash; no calendar pickers, no time grids</li>
-      <li>Built-in ISR/IVA withholding with SAT real-time API</li>
-      <li>Stripe Connect payments + cash registration</li>
-      <li>WhatsApp-first salon onboarding (60 seconds)</li>
-      <li>Free for salons &mdash; always. BC earns on transactions.</li>
+      <li>Motor de reservas inteligente por tipo de servicio (respuesta en 200-400ms)</li>
+      <li>Inferencia de tiempo &mdash; sin selectores de calendario, sin grillas de horarios</li>
+      <li>Retenciones ISR/IVA integradas con API del SAT en tiempo real</li>
+      <li>Pagos con Stripe Connect + registro de efectivo</li>
+      <li>Onboarding de salones via WhatsApp (60 segundos)</li>
+      <li>Gratis para salones &mdash; siempre. BC gana por transacciones.</li>
     </ul>
   </div>
 
   <!-- 3. MARKET -->
   <div class="section">
-    <h2>03 &mdash; Market</h2>
-    <h3>$12B market. <span>Wide open.</span></h3>
-    <p>The Mexico beauty and personal care market is valued at approximately $12 billion USD. With 600K+ salons and digital penetration below 10%, the opportunity is massive. LATAM beauty tech has grown 180% since 2020, and Mexico is the largest Spanish-speaking market by GDP.</p>
+    <h2>03 &mdash; Mercado</h2>
+    <h3>Mercado de $12B USD. <span>Totalmente abierto.</span></h3>
+    <p>El mercado de belleza y cuidado personal en Mexico tiene un valor aproximado de $12 mil millones USD. Con 600K+ salones y penetracion digital menor al 10%, la oportunidad es enorme. La tecnologia de belleza en LATAM ha crecido 180% desde 2020, y Mexico es el mercado hispanohablante mas grande por PIB.</p>
     <div class="stat-row">
-      <div class="stat"><div class="val green">~$12B</div><div class="lbl">Mexico beauty market (USD)</div></div>
-      <div class="stat"><div class="val accent">600K+</div><div class="lbl">Total salons</div></div>
-      <div class="stat"><div class="val gold">180%</div><div class="lbl">LATAM beauty tech growth</div></div>
-      <div class="stat"><div class="val blue">#1</div><div class="lbl">Largest LatAm market (GDP)</div></div>
+      <div class="stat"><div class="val green">~$12B</div><div class="lbl">Mercado belleza Mexico (USD)</div></div>
+      <div class="stat"><div class="val accent">600K+</div><div class="lbl">Salones totales</div></div>
+      <div class="stat"><div class="val gold">180%</div><div class="lbl">Crecimiento beauty tech LATAM</div></div>
+      <div class="stat"><div class="val blue">#1</div><div class="lbl">Mayor mercado LatAm (PIB)</div></div>
     </div>
   </div>
 
   <!-- 4. REVENUE MODEL -->
   <div class="section">
-    <h2>04 &mdash; Revenue Model</h2>
-    <h3>Seven revenue streams. <span>Day one.</span></h3>
+    <h2>04 &mdash; Modelo de Ingresos</h2>
+    <h3>Siete fuentes de ingreso. <span>Desde el dia uno.</span></h3>
     <table class="rev-table">
-      <thead><tr><th>Stream</th><th>Rate</th></tr></thead>
+      <thead><tr><th>Fuente</th><th>Tasa</th></tr></thead>
       <tbody>
-        <tr><td>Service transactions (card, saldo, cash registered)</td><td>3%</td></tr>
-        <tr><td>Product sales through platform</td><td>10%</td></tr>
-        <tr><td>Tax retention float interest (ISR + IVA held ~30 days)</td><td>~6.8% APY</td></tr>
-        <tr><td>In-app advertising (beauty brands, local businesses)</td><td>CPM $25-50</td></tr>
-        <tr><td>Gift cards &amp; saldo breakage</td><td>5-15% expiry</td></tr>
-        <tr><td>Featured salon listings</td><td>$200-500/mo</td></tr>
-        <tr><td>Premium salon subscriptions</td><td>$799/mo</td></tr>
+        <tr><td>Transacciones de servicios (tarjeta, saldo, efectivo registrado)</td><td>3%</td></tr>
+        <tr><td>Venta de productos en la plataforma</td><td>10%</td></tr>
+        <tr><td>Intereses del float de retenciones fiscales (ISR + IVA retenidos ~30 dias)</td><td>~6.8% anual</td></tr>
+        <tr><td>Publicidad in-app (marcas de belleza, negocios locales)</td><td>CPM $25-50</td></tr>
+        <tr><td>Breakage de gift cards y saldo</td><td>5-15% expiracion</td></tr>
+        <tr><td>Listados destacados de salones</td><td>$200-500 MXN/mes</td></tr>
+        <tr><td>Suscripciones premium para salones</td><td>$799 MXN/mes</td></tr>
       </tbody>
     </table>
-    <p class="muted" style="margin-top:12px;">See the <a href="/bc/revenue-simulator.html" style="color:var(--accent);">interactive Revenue Simulator</a> for projections at any scale.</p>
+    <p class="muted" style="margin-top:12px;">Consulta el <a href="/bc/revenue-simulator.html" style="color:var(--accent);">Simulador de Ingresos interactivo</a> para proyecciones a cualquier escala.</p>
   </div>
 
   <!-- 5. TRACTION -->
   <div class="section">
-    <h2>05 &mdash; Traction</h2>
-    <h3>67,000 salons discovered. <span>Platform built.</span></h3>
-    <p>Before writing a single line of marketing copy, we scraped and verified the market. The platform is fully built and SAT-compliant from day one.</p>
+    <h2>05 &mdash; Traccion</h2>
+    <h3>67,000 salones descubiertos. <span>Plataforma construida.</span></h3>
+    <p>Antes de escribir una sola linea de marketing, scrapeamos y verificamos el mercado. La plataforma esta completamente construida y cumple con el SAT desde el dia uno.</p>
     <div class="stat-row">
-      <div class="stat"><div class="val green">67,220</div><div class="lbl">Salons discovered</div></div>
-      <div class="stat"><div class="val accent">53,360</div><div class="lbl">In Mexico</div></div>
-      <div class="stat"><div class="val gold">6,334</div><div class="lbl">WhatsApp verified</div></div>
-      <div class="stat"><div class="val blue">371</div><div class="lbl">Cities covered</div></div>
+      <div class="stat"><div class="val green">67,220</div><div class="lbl">Salones descubiertos</div></div>
+      <div class="stat"><div class="val accent">53,360</div><div class="lbl">En Mexico</div></div>
+      <div class="stat"><div class="val gold">6,334</div><div class="lbl">WhatsApp verificados</div></div>
+      <div class="stat"><div class="val blue">371</div><div class="lbl">Ciudades cubiertas</div></div>
     </div>
     <ul class="feature-list accent" style="margin-top:16px;">
-      <li>RFC obtained March 2026 &mdash; legal entity active</li>
-      <li>Full platform built: 90+ mobile screens, 58+ web pages, 55+ edge functions</li>
-      <li>SAT-compliant ISR/IVA withholding from day one (CFF Art. 30-B)</li>
-      <li>Stripe Connect integration live</li>
-      <li>Self-hosted Supabase on dedicated infrastructure</li>
+      <li>RFC obtenido marzo 2026 &mdash; entidad legal activa</li>
+      <li>Plataforma completa: 90+ pantallas moviles, 58+ paginas web, 55+ edge functions</li>
+      <li>Retenciones ISR/IVA conformes al SAT desde el dia uno (CFF Art. 30-B)</li>
+      <li>Integracion Stripe Connect en vivo</li>
+      <li>Supabase auto-hospedado en infraestructura dedicada</li>
     </ul>
   </div>
 
   <!-- 6. COMPETITIVE ADVANTAGE -->
   <div class="section">
-    <h2>06 &mdash; Competitive Advantage</h2>
-    <h3>The only platform with <span>built-in tax compliance.</span></h3>
-    <p>AgendaPro (Chile, YC W21, $35M Series B) is the only real competitor in Mexico with ~8,000 salons. They charge $29-129/month and have zero tax compliance features. BeautyCita is free for salons, has intelligent booking (vs. static search), and is the only platform in Mexico with ISR/IVA withholding and SAT real-time API integration.</p>
+    <h2>06 &mdash; Ventaja Competitiva</h2>
+    <h3>La unica plataforma con <span>cumplimiento fiscal integrado.</span></h3>
+    <p>AgendaPro (Chile, YC W21, $35M Serie B) es el unico competidor real en Mexico con ~8,000 salones. Cobran $29-129 USD/mes y no tienen ninguna funcion de cumplimiento fiscal. BeautyCita es gratis para salones, tiene reservas inteligentes (vs. busqueda estatica), y es la unica plataforma en Mexico con retenciones ISR/IVA e integracion con la API del SAT en tiempo real.</p>
     <div class="card-grid">
       <div class="card">
         <div class="num green">$0</div>
-        <div class="label">Cost for salons (vs $29-129/mo AgendaPro)</div>
+        <div class="label">Costo para salones (vs $29-129/mes AgendaPro)</div>
       </div>
       <div class="card">
         <div class="num accent">AI</div>
-        <div class="label">Intelligent booking engine (vs static directory)</div>
+        <div class="label">Motor de reservas inteligente (vs directorio estatico)</div>
       </div>
       <div class="card">
         <div class="num gold">SAT</div>
-        <div class="label">Built-in ISR/IVA withholding (only in Mexico)</div>
+        <div class="label">Retenciones ISR/IVA integradas (unico en Mexico)</div>
       </div>
       <div class="card">
         <div class="num blue">Full</div>
-        <div class="label">Complete financial stack: payments, tax, CRM</div>
+        <div class="label">Stack financiero completo: pagos, impuestos, CRM</div>
       </div>
     </div>
   </div>
 
   <!-- 7. TECH STACK -->
   <div class="section">
-    <h2>07 &mdash; Tech Stack</h2>
-    <h3>Production-grade. <span>Single operator.</span></h3>
+    <h2>07 &mdash; Stack Tecnologico</h2>
+    <h3>Grado produccion. <span>Un solo operador.</span></h3>
     <div class="tech-grid">
       <div class="tech-item"><strong>Flutter</strong> &mdash; Android, iOS, Web (WASM)</div>
-      <div class="tech-item"><strong>Supabase</strong> &mdash; Self-hosted, PostgreSQL</div>
-      <div class="tech-item"><strong>Stripe Connect</strong> &mdash; Payments + payouts</div>
-      <div class="tech-item"><strong>55+ Edge Functions</strong> &mdash; Deno runtime</div>
-      <div class="tech-item"><strong>AI</strong> &mdash; GPT-4o integration</div>
-      <div class="tech-item"><strong>Cloudflare R2</strong> &mdash; Media storage + CDN</div>
-      <div class="tech-item"><strong>Nginx + Docker</strong> &mdash; Dedicated VPS</div>
-      <div class="tech-item"><strong>Grafana</strong> &mdash; Monitoring + alerting</div>
-      <div class="tech-item"><strong>SAT API</strong> &mdash; Real-time tax compliance</div>
-      <div class="tech-item"><strong>WhatsApp API</strong> &mdash; Notifications + onboarding</div>
-      <div class="tech-item"><strong>SW Sapien</strong> &mdash; CFDI invoicing (PAC)</div>
-      <div class="tech-item"><strong>Honeypot</strong> &mdash; 13-category security system</div>
+      <div class="tech-item"><strong>Supabase</strong> &mdash; Auto-hospedado, PostgreSQL</div>
+      <div class="tech-item"><strong>Stripe Connect</strong> &mdash; Pagos + dispersiones</div>
+      <div class="tech-item"><strong>55+ Edge Functions</strong> &mdash; Runtime Deno</div>
+      <div class="tech-item"><strong>AI</strong> &mdash; Integracion GPT-4o</div>
+      <div class="tech-item"><strong>Cloudflare R2</strong> &mdash; Almacenamiento de medios + CDN</div>
+      <div class="tech-item"><strong>Nginx + Docker</strong> &mdash; VPS dedicado</div>
+      <div class="tech-item"><strong>Grafana</strong> &mdash; Monitoreo + alertas</div>
+      <div class="tech-item"><strong>SAT API</strong> &mdash; Cumplimiento fiscal en tiempo real</div>
+      <div class="tech-item"><strong>WhatsApp API</strong> &mdash; Notificaciones + onboarding</div>
+      <div class="tech-item"><strong>SW Sapien</strong> &mdash; Facturacion CFDI (PAC)</div>
+      <div class="tech-item"><strong>Honeypot</strong> &mdash; Sistema de seguridad de 13 categorias</div>
     </div>
   </div>
 
   <!-- 8. TEAM -->
   <div class="section">
-    <h2>08 &mdash; Team</h2>
-    <h3>Sole founder. <span>Full stack.</span></h3>
-    <p>Kriket &mdash; sole founder and operator of BeautyCita S.A. de C.V. Built the entire platform: mobile app, web app, backend, infrastructure, scraper network, tax compliance system, and business operations. Operator of a retail chain (De Mar y Luna) and multiple vacation rental properties in Mexico.</p>
-    <p>Legal entity: <strong>BEAUTYCITA S.A. de C.V.</strong><br>
+    <h2>08 &mdash; Equipo</h2>
+    <h3>Fundador unico. <span>Full stack.</span></h3>
+    <p>Kriket &mdash; fundador y operador unico de BeautyCita S.A. de C.V. Construyo toda la plataforma: app movil, app web, backend, infraestructura, red de scrapers, sistema de cumplimiento fiscal y operaciones del negocio. Operador de una cadena retail (De Mar y Luna) y multiples propiedades de renta vacacional en Mexico.</p>
+    <p>Entidad legal: <strong>BEAUTYCITA S.A. de C.V.</strong><br>
     RFC: <strong>BEA260313MI8</strong><br>
-    Domicile: Puerto Vallarta, Jalisco, Mexico<br>
-    Phone: +52 (720) 677-7800</p>
+    Domicilio: Puerto Vallarta, Jalisco, Mexico<br>
+    Telefono: +52 (720) 677-7800</p>
   </div>
 
   <!-- 9. NEXT -->
   <div class="section">
-    <h2>09 &mdash; Next Steps</h2>
+    <h2>09 &mdash; Siguientes Pasos</h2>
     <div class="ask-box">
-      <h3>Ready for Launch</h3>
-      <p>Platform built. RFC obtained. 67,000+ salons discovered. Tax compliance from day one. The first salon that registers will be the first real proof point. Everything after that is execution.</p>
+      <h3>Listos para el Lanzamiento</h3>
+      <p>Plataforma construida. RFC obtenido. 67,000+ salones descubiertos. Cumplimiento fiscal desde el dia uno. El primer salon que se registre sera la primera prueba real. Todo lo demas es ejecucion.</p>
     </div>
   </div>
 
   <div class="footer">
     BEAUTYCITA S.A. de C.V. &middot; RFC BEA260313MI8 &middot; Puerto Vallarta, Jalisco &middot; beautycita.com<br>
-    Confidential &mdash; March 2026
+    Confidencial &mdash; Marzo 2026
   </div>
 
 </div>
