@@ -118,6 +118,7 @@ class _CalendarToolbar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
     final isDemo = ref.watch(isDemoProvider);
 
     final str = DateFormat('EEEE, d MMMM', 'es').format(date);

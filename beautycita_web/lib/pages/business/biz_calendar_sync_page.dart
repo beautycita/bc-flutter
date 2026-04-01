@@ -115,10 +115,8 @@ class _BizCalendarSyncPageState extends ConsumerState<BizCalendarSyncPage> {
       ..accept = '.ics,.ical';
 
     final changeCompleter = Completer<void>();
-    input.addEventListener(
-      'change',
-      (web.Event _) => changeCompleter.complete(),
-    );
+    void onInputChange(web.Event _) => changeCompleter.complete();
+    input.addEventListener('change', onInputChange.toJS);
     input.click();
     await changeCompleter.future;
 
@@ -130,10 +128,8 @@ class _BizCalendarSyncPageState extends ConsumerState<BizCalendarSyncPage> {
       final file = files.item(0)!;
       final reader = web.FileReader();
       final loadCompleter = Completer<void>();
-      reader.addEventListener(
-        'load',
-        (web.Event _) => loadCompleter.complete(),
-      );
+      void onReaderLoad(web.Event _) => loadCompleter.complete();
+      reader.addEventListener('load', onReaderLoad.toJS);
       reader.readAsText(file);
       await loadCompleter.future;
       final content = (reader.result as JSString).toDart;
@@ -588,8 +584,6 @@ class _GoogleCalendarCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return WebCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

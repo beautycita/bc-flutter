@@ -34,7 +34,7 @@ serve(async (req) => {
 
   if (bizErr) {
     console.error(`[SALON-PAGE] DB error: ${bizErr.message}`);
-    return new Response(`DB Error: ${bizErr.message}`, { status: 500 });
+    return new Response("Service temporarily unavailable", { status: 500 });
   }
 
   // Check active/verified after fetch (avoids RLS complications)

@@ -699,7 +699,6 @@ class _TaxDeductionsCard extends StatelessWidget {
   void _showRegistrarGastoDialog(BuildContext context, WidgetRef ref) {
     final conceptoController = TextEditingController();
     final montoController = TextEditingController();
-    final theme = Theme.of(context);
 
     showDialog(
       context: context,

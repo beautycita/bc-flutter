@@ -103,7 +103,6 @@ class _PosOptInState extends ConsumerState<_PosOptIn> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colors = theme.colorScheme;
     final isDemo = ref.watch(isDemoProvider);
 
     return Center(
@@ -529,7 +528,6 @@ class _StatChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colors = theme.colorScheme;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),

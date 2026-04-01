@@ -155,13 +155,13 @@ Deno.serve(async (req) => {
       res.ok ? 200 : 502,
     );
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
+    console.error(`[BPI-ADMIN] Error: ${err instanceof Error ? err.message : err}`);
     return json(
       {
         ok: false,
         action,
         service,
-        error: `Failed to reach beautypi: ${message}`,
+        error: "Service temporarily unavailable",
       },
       502,
     );

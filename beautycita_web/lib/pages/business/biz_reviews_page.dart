@@ -277,7 +277,6 @@ class _ReviewCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colors = theme.colorScheme;
     final rating = (review['rating'] as num?)?.toInt() ?? 0;
     final text = review['text'] as String? ?? review['comment'] as String? ?? '';
     final customerName = review['customer_name'] as String? ?? 'Cliente';
