@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BeautyCita vs La Competencia — Compara y decide</title>
+<meta name="description" content="Compara BeautyCita con AgendaPro, Fresha y Booksy. Software de reservas para salones de belleza en Mexico. Gratis, con retenciones SAT y reserva inteligente.">
+<style>
+  :root { --bg: #0a0a0f; --surface: #14141f; --surface2: #1e1e2e; --border: #2a2a3a; --text: #e8e8f0; --muted: #6b6b8a; --accent: #C8A2C8; --green: #4ade80; --red: #f87171; --gold: #fbbf24; --blue: #60a5fa; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.5; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+  h1 { font-size: 28px; font-weight: 700; margin-bottom: 4px; }
+  h1 span { color: var(--accent); }
+  .subtitle { color: var(--muted); font-size: 14px; margin-bottom: 24px; }
+  .lang-toggle { position: absolute; top: 20px; right: 24px; }
+  .lang-btn { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 6px 14px; cursor: pointer; font-size: 12px; color: var(--text); transition: all 0.2s; }
+  .lang-btn:hover, .lang-btn.active { border-color: var(--accent); color: var(--accent); }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px; margin-bottom: 16px; }
+  .card h2 { font-size: 14px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 14px; }
+
+  /* Table styles */
+  .comparison-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .comparison-table thead th { padding: 10px 12px; text-align: center; font-weight: 700; font-size: 14px; border-bottom: 2px solid var(--border); position: sticky; top: 0; background: var(--surface); }
+  .comparison-table thead th:first-child { text-align: left; width: 220px; }
+  .comparison-table thead th.bc-col { color: var(--accent); font-size: 16px; }
+  .comparison-table thead th.comp-col { color: var(--muted); }
+  .comparison-table tbody tr { border-bottom: 1px solid rgba(42,42,58,0.5); transition: background 0.15s; }
+  .comparison-table tbody tr:hover { background: var(--surface2); }
+  .comparison-table td { padding: 10px 12px; text-align: center; vertical-align: middle; }
+  .comparison-table td:first-child { text-align: left; font-weight: 500; color: var(--text); }
+  .comparison-table td.bc-cell { font-weight: 600; }
+
+  /* Cell highlights */
+  .yes { color: var(--green); font-weight: 700; }
+  .no { color: var(--muted); }
+  .partial { color: var(--gold); }
+  .free { color: var(--green); font-weight: 700; }
+  .paid { color: var(--muted); }
+  .advantage { background: rgba(74, 222, 128, 0.06); }
+
+  /* Feature icon */
+  .check::before { content: '\2713 '; }
+  .cross::before { content: '\2717 '; }
+
+  /* CTA */
+  .cta-section { text-align: center; margin-top: 32px; }
+  .cta-btn { display: inline-block; background: linear-gradient(135deg, #ec4899, #9333ea, #3b82f6); color: white; font-size: 18px; font-weight: 700; padding: 16px 40px; border-radius: 14px; text-decoration: none; border: none; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
+  .cta-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(147, 51, 234, 0.3); }
+  .cta-sub { color: var(--muted); font-size: 13px; margin-top: 12px; }
+  .cta-links { margin-top: 16px; display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; }
+  .cta-links a { color: var(--accent); text-decoration: none; font-size: 13px; border: 1px solid var(--border); border-radius: 8px; padding: 8px 16px; transition: all 0.2s; }
+  .cta-links a:hover { border-color: var(--accent); background: var(--surface2); }
+
+  /* Fine print */
+  .fine-print { color: var(--muted); font-size: 11px; margin-top: 24px; font-style: italic; line-height: 1.6; max-width: 900px; margin-left: auto; margin-right: auto; text-align: center; }
+
+  /* Responsive */
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  @media (max-width: 768px) {
+    .comparison-table { font-size: 12px; }
+    .comparison-table thead th { font-size: 12px; padding: 8px 6px; }
+    .comparison-table thead th.bc-col { font-size: 13px; }
+    .comparison-table td { padding: 8px 6px; }
+    .comparison-table td:first-child { width: 140px; min-width: 140px; }
+    h1 { font-size: 22px; }
+    .lang-toggle { position: static; margin-bottom: 16px; }
+  }
+
+  /* Category row */
+  .cat-row td { color: var(--accent) !important; font-weight: 700 !important; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border) !important; padding-top: 16px !important; }
+</style>
+</head>
+<body>
+<div class="container" style="position: relative;">
+  <div class="lang-toggle">
+    <button class="lang-btn active" id="btnEs" onclick="setLang('es')">ES</button>
+    <button class="lang-btn" id="btnEn" onclick="setLang('en')">EN</button>
+  </div>
+
+  <h1>BeautyCita <span data-es="vs La Competencia" data-en="vs The Competition">vs La Competencia</span></h1>
+  <p class="subtitle" data-es="Compara y decide. Datos reales, sin letra chiquita." data-en="Compare and decide. Real data, no fine print.">Compara y decide. Datos reales, sin letra chiquita.</p>
+
+  <div class="card">
+    <h2 data-es="Comparacion de funciones" data-en="Feature comparison">Comparacion de funciones</h2>
+    <div class="table-wrap">
+      <table class="comparison-table">
+        <thead>
+          <tr>
+            <th data-es="Funcion" data-en="Feature">Funcion</th>
+            <th class="bc-col">BeautyCita</th>
+            <th class="comp-col">AgendaPro</th>
+            <th class="comp-col">Fresha</th>
+            <th class="comp-col">Booksy</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Pricing -->
+          <tr class="cat-row"><td colspan="5" data-es="Precios y costos" data-en="Pricing &amp; costs">Precios y costos</td></tr>
+          <tr class="advantage">
+            <td data-es="Costo mensual" data-en="Monthly cost">Costo mensual</td>
+            <td class="bc-cell free">Gratis</td>
+            <td class="paid">$29-129 USD</td>
+            <td class="paid">Gratis*</td>
+            <td class="paid">$29-49 USD</td>
+          </tr>
+          <tr>
+            <td data-es="Comision por transaccion" data-en="Transaction fee">Comision por transaccion</td>
+            <td class="bc-cell">3%</td>
+            <td>0% <span class="no" style="font-size:11px">(subscription)</span></td>
+            <td>2.19% + $0.20</td>
+            <td>0% <span class="no" style="font-size:11px">(subscription)</span></td>
+          </tr>
+
+          <!-- Fiscal / Compliance -->
+          <tr class="cat-row"><td colspan="5" data-es="Cumplimiento fiscal" data-en="Tax compliance">Cumplimiento fiscal</td></tr>
+          <tr class="advantage">
+            <td data-es="Retenciones ISR/IVA" data-en="ISR/IVA withholding">Retenciones ISR/IVA</td>
+            <td class="bc-cell yes check" data-es="Si, automatico" data-en="Yes, automatic">Si, automatico</td>
+            <td class="no cross">No</td>
+            <td class="no cross">No</td>
+            <td class="no cross">No</td>
+          </tr>
+          <tr class="advantage">
+            <td data-es="Acceso SAT Art. 30-B" data-en="SAT Art. 30-B access">Acceso SAT Art. 30-B</td>
+            <td class="bc-cell yes check" data-es="Si" data-en="Yes">Si</td>
+            <td class="no cross">No</td>
+            <td class="no cross">No</td>
+            <td class="no cross">No</td>
+          </tr>
+
+          <!-- Intelligence -->
+          <tr class="cat-row"><td colspan="5" data-es="Inteligencia y AI" data-en="Intelligence &amp; AI">Inteligencia y AI</td></tr>
+          <tr class="advantage">
+            <td data-es="Reserva inteligente (AI)" data-en="Smart booking (AI)">Reserva inteligente (AI)</td>
+            <td class="bc-cell yes check" data-es="Si" data-en="Yes">Si</td>
+            <td class="no cross">No</td>
+            <td class="no cross">No</td>
+            <td class="no cross">No</td>
+          </tr>
+          <tr class="advantage">
+            <td data-es="Chat AI (asistente)" data-en="AI chat (assistant)">Chat AI (asistente)</td>
+            <td class="bc-cell yes check" data-es="Si" data-en="Yes">Si</td>
+            <td class="no cross">No</td>
+            <td class="no cross">No</td>
+            <td class="no cross">No</td>
+          </tr>
+
+          <!-- Marketing & CRM -->
+          <tr class="cat-row"><td colspan="5" data-es="Marketing y CRM" data-en="Marketing &amp; CRM">Marketing y CRM</td></tr>
+          <tr>
+            <td data-es="CRM con lealtad" data-en="CRM with loyalty">CRM con lealtad</td>
+            <td class="bc-cell yes check" data-es="Si" data-en="Yes">Si</td>
+            <td class="yes check" data-es="Si" data-en="Yes">Si</td>
+            <td class="partial" data-es="Si (basico)" data-en="Yes (basic)">Si (basico)</td>
+            <td class="no cross">No</td>
+          </tr>
+          <tr class="advantage">
+            <td data-es="Marketing automatico" data-en="Auto marketing">Marketing automatico</td>
+            <td class="bc-cell yes" data-es="Si (5 triggers)" data-en="Yes (5 triggers)">Si (5 triggers)</td>
+            <td data-es="Si (email)" data-en="Yes (email)">Si (email)</td>
+            <td data-es="Si (email)" data-en="Yes (email)">Si (email)</td>
+            <td class="paid" data-es="SMS ($)" data-en="SMS ($)">SMS ($)</td>
+          </tr>
+          <tr>
+            <td>Gift cards</td>
+            <td class="bc-cell yes" data-es="Si (Stripe)" data-en="Yes (Stripe)">Si (Stripe)</td>
+            <td class="yes" data-es="Si" data-en="Yes">Si</td>
+            <td class="yes" data-es="Si" data-en="Yes">Si</td>
+            <td class="no cross">No</td>
+          </tr>
+
+          <!-- Tools -->
+          <tr class="cat-row"><td colspan="5" data-es="Herramientas unicas" data-en="Unique tools">Herramientas unicas</td></tr>
+          <tr class="advantage">
+            <td data-es="Portafolio QR (estilistas)" data-en="QR portfolio (stylists)">Portafolio QR (estilistas)</td>
+            <td class="bc-cell yes check" data-es="Si" data-en="Yes">Si</td>
+            <td class="no cross">No</td>
+            <td class="no cross">No</td>
+            <td class="no cross">No</td>
+          </tr>
+          <tr class="advantage">
+            <td data-es="Studio virtual" data-en="Virtual studio">Studio virtual</td>
+            <td class="bc-cell yes" data-es="Si (4 tools)" data-en="Yes (4 tools)">Si (4 tools)</td>
+            <td class="no cross">No</td>
+            <td class="no cross">No</td>
+            <td class="no cross">No</td>
+          </tr>
+
+          <!-- Payments -->
+          <tr class="cat-row"><td colspan="5" data-es="Pagos" data-en="Payments">Pagos</td></tr>
+          <tr class="advantage">
+            <td data-es="Pagos con saldo" data-en="Balance payments">Pagos con saldo</td>
+            <td class="bc-cell yes check" data-es="Si" data-en="Yes">Si</td>
+            <td class="no cross">No</td>
+            <td class="no cross">No</td>
+            <td class="no cross">No</td>
+          </tr>
+          <tr class="advantage">
+            <td>OXXO / efectivo</td>
+            <td class="bc-cell yes check" data-es="Si" data-en="Yes">Si</td>
+            <td class="partial" data-es="Parcial" data-en="Partial">Parcial</td>
+            <td class="no cross">No</td>
+            <td class="no cross">No</td>
+          </tr>
+
+          <!-- Operations -->
+          <tr class="cat-row"><td colspan="5" data-es="Operaciones" data-en="Operations">Operaciones</td></tr>
+          <tr>
+            <td data-es="Multi-ubicacion" data-en="Multi-location">Multi-ubicacion</td>
+            <td class="bc-cell partial" data-es="Proximo" data-en="Coming soon">Proximo</td>
+            <td class="yes check" data-es="Si" data-en="Yes">Si</td>
+            <td class="yes check" data-es="Si" data-en="Yes">Si</td>
+            <td class="yes check" data-es="Si" data-en="Yes">Si</td>
+          </tr>
+          <tr class="advantage">
+            <td data-es="WhatsApp integrado" data-en="WhatsApp integrated">WhatsApp integrado</td>
+            <td class="bc-cell yes" data-es="Si (incluido)" data-en="Yes (included)">Si (incluido)</td>
+            <td class="paid" data-es="Extra ($)" data-en="Extra ($)">Extra ($)</td>
+            <td class="no cross">No</td>
+            <td class="no cross">No</td>
+          </tr>
+          <tr>
+            <td data-es="Soporte en espanol" data-en="Spanish support">Soporte en espanol</td>
+            <td class="bc-cell yes check" data-es="Si" data-en="Yes">Si</td>
+            <td class="yes check" data-es="Si" data-en="Yes">Si</td>
+            <td class="partial" data-es="Parcial" data-en="Partial">Parcial</td>
+            <td class="partial" data-es="Parcial" data-en="Partial">Parcial</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Summary card -->
+  <div class="card" style="border: 1px solid var(--green); background: rgba(74,222,128,0.03);">
+    <h2 style="color: var(--green);" data-es="Resumen: por que BeautyCita" data-en="Summary: why BeautyCita">Resumen: por que BeautyCita</h2>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;">
+      <div style="background: var(--surface2); border-radius: 12px; padding: 16px; text-align: center;">
+        <div style="font-size: 32px; font-weight: 800; color: var(--green);">$0</div>
+        <div style="font-size: 12px; color: var(--muted);" data-es="costo mensual" data-en="monthly cost">costo mensual</div>
+      </div>
+      <div style="background: var(--surface2); border-radius: 12px; padding: 16px; text-align: center;">
+        <div style="font-size: 32px; font-weight: 800; color: var(--green);">SAT</div>
+        <div style="font-size: 12px; color: var(--muted);" data-es="retenciones automaticas incluidas" data-en="automatic withholdings included">retenciones automaticas incluidas</div>
+      </div>
+      <div style="background: var(--surface2); border-radius: 12px; padding: 16px; text-align: center;">
+        <div style="font-size: 32px; font-weight: 800; color: var(--green);">AI</div>
+        <div style="font-size: 12px; color: var(--muted);" data-es="reserva inteligente unica" data-en="unique smart booking">reserva inteligente unica</div>
+      </div>
+      <div style="background: var(--surface2); border-radius: 12px; padding: 16px; text-align: center;">
+        <div style="font-size: 32px; font-weight: 800; color: var(--green);">WA</div>
+        <div style="font-size: 12px; color: var(--muted);" data-es="WhatsApp incluido sin costo" data-en="WhatsApp included free">WhatsApp incluido sin costo</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CTA -->
+  <div class="cta-section">
+    <a href="https://beautycita.com" class="cta-btn" data-es="Registra tu salon gratis — beautycita.com" data-en="Register your salon free — beautycita.com">Registra tu salon gratis — beautycita.com</a>
+    <div class="cta-links">
+      <a href="https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/apk/beautycita-arm64.apk" data-es="Descargar APK Android" data-en="Download Android APK">Descargar APK Android</a>
+      <a href="https://beautycita.com/bc/roi-calculator.html" data-es="Calcula tu ROI" data-en="Calculate your ROI">Calcula tu ROI</a>
+    </div>
+    <p class="cta-sub" data-es="Sin tarjeta de credito. Sin contratos. Solo 3% cuando cobras." data-en="No credit card. No contracts. Just 3% when you get paid.">Sin tarjeta de credito. Sin contratos. Solo 3% cuando cobras.</p>
+  </div>
+
+  <!-- Fine print -->
+  <p class="fine-print" data-es="* Fresha es gratis pero cobra por transaccion (2.19% + $0.20 por pago procesado). AgendaPro y Booksy cobran suscripciones mensuales sin importar tu volumen. Datos actualizados a marzo 2026. Precios sujetos a cambios por los proveedores." data-en="* Fresha is free but charges per transaction (2.19% + $0.20 per payment processed). AgendaPro and Booksy charge monthly subscriptions regardless of volume. Data current as of March 2026. Prices subject to change by providers.">* Fresha es gratis pero cobra por transaccion (2.19% + $0.20 por pago procesado). AgendaPro y Booksy cobran suscripciones mensuales sin importar tu volumen. Datos actualizados a marzo 2026. Precios sujetos a cambios por los proveedores.</p>
+</div>
+
+<script>
+let currentLang = 'es';
+
+function setLang(lang) {
+  currentLang = lang;
+  document.getElementById('btnEs').classList.toggle('active', lang === 'es');
+  document.getElementById('btnEn').classList.toggle('active', lang === 'en');
+  document.querySelectorAll('[data-' + lang + ']').forEach(el => {
+    el.textContent = el.getAttribute('data-' + lang);
+  });
+}
+</script>
+</body>
+</html>
