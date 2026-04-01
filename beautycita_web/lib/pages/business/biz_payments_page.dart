@@ -377,8 +377,6 @@ class _PaymentsTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-
     return DataTable(
       headingRowColor: WidgetStateProperty.all(kWebBackground),
       columns: const [

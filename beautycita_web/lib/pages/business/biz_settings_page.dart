@@ -211,7 +211,6 @@ class _SettingsContentState extends ConsumerState<_SettingsContent> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final isDemo = ref.watch(isDemoProvider);
     final dayNames = ['Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado', 'Domingo'];
 

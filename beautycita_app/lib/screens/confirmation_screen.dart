@@ -494,16 +494,17 @@ class _PaymentMethodSelectorState extends ConsumerState<_PaymentMethodSelector> 
     final cards = ref.watch(paymentMethodsProvider).cards;
     final hasCards = cards.isNotEmpty;
 
-    // Check user saldo
+    // Saldo is applied automatically — not a choice
     final saldoAsync = ref.watch(_userSaldoProvider);
     final saldo = saldoAsync.valueOrNull ?? 0.0;
     final servicePrice = widget.servicePrice;
-    final hasSaldo = saldo >= servicePrice && servicePrice > 0;
+    final coversFullPrice = saldo >= servicePrice && servicePrice > 0;
+    final hasPartialSaldo = saldo > 0 && saldo < servicePrice;
 
-    // Smart preselection: saldo first, card if user has saved cards, otherwise oxxo
+    // If saldo covers full price, auto-select saldo. Otherwise card/oxxo for the remainder.
     if (!_didAutoSelect) {
       _didAutoSelect = true;
-      final preferred = hasSaldo ? 'saldo' : (hasCards ? 'card' : 'oxxo');
+      final preferred = coversFullPrice ? 'saldo' : (hasCards ? 'card' : 'oxxo');
       if (widget.selected != preferred) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           widget.onSelect(preferred);
@@ -511,19 +512,54 @@ class _PaymentMethodSelectorState extends ConsumerState<_PaymentMethodSelector> 
       }
     }
 
+    final remaining = coversFullPrice ? 0.0 : (servicePrice - saldo);
+
     return Column(
       children: [
-        if (hasSaldo) ...[
-          _PaymentMethodCard(
-            icon: Icons.account_balance_wallet,
-            label: 'Saldo',
-            subtitle: '\$${saldo.toStringAsFixed(0)} disponible',
-            method: 'saldo',
-            isSelected: widget.selected == 'saldo',
-            onTap: () => widget.onSelect('saldo'),
+        // Saldo applied automatically — show info banner, not a selectable option
+        if (saldo > 0) ...[
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF059669).withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFF059669).withValues(alpha: 0.2)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.account_balance_wallet, size: 20, color: Color(0xFF059669)),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        coversFullPrice
+                            ? 'Saldo aplicado: \$${servicePrice.toStringAsFixed(0)} MXN'
+                            : 'Saldo aplicado: \$${saldo.toStringAsFixed(0)} MXN',
+                        style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF059669)),
+                      ),
+                      if (!coversFullPrice)
+                        Text(
+                          'Resta: \$${remaining.toStringAsFixed(0)} MXN por cobrar',
+                          style: GoogleFonts.nunito(fontSize: 12, color: const Color(0xFF059669).withValues(alpha: 0.7)),
+                        ),
+                      if (coversFullPrice)
+                        Text(
+                          'Cubre el total — no se cobra tarjeta',
+                          style: GoogleFonts.nunito(fontSize: 12, color: const Color(0xFF059669).withValues(alpha: 0.7)),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 10),
         ],
+
+        // Only show card/oxxo if saldo doesn't cover full price
+        if (!coversFullPrice)
         Row(
           children: [
             _PaymentMethodCard(

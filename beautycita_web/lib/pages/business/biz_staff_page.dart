@@ -97,7 +97,6 @@ class _StaffList extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final colors = theme.colorScheme;
     final isDemo = ref.watch(isDemoProvider);
 
     // Detect if owner has a staff record
@@ -1151,7 +1150,6 @@ class _StaffEditFormState extends ConsumerState<_StaffEditForm> {
 
   // Schedule state: 0-indexed (0=Mon ... 6=Sun)
   List<_DaySchedule>? _schedule;
-  bool _scheduleModified = false;
 
   // Service assignment state
   Set<String> _assignedServiceIds = {};
@@ -1378,7 +1376,6 @@ class _StaffEditFormState extends ConsumerState<_StaffEditForm> {
                         onChanged: (s) {
                           setState(() {
                             _schedule![i] = s;
-                            _scheduleModified = true;
                           });
                         },
                         onAddBreak: () {
@@ -1387,14 +1384,12 @@ class _StaffEditFormState extends ConsumerState<_StaffEditForm> {
                             _schedule![i] = _schedule![i].copyWith(
                               breaks: [..._schedule![i].breaks, smartBreak],
                             );
-                            _scheduleModified = true;
                           });
                         },
                         onRemoveBreak: (bi) {
                           setState(() {
                             final newBreaks = List<_BreakWindow>.from(_schedule![i].breaks)..removeAt(bi);
                             _schedule![i] = _schedule![i].copyWith(breaks: newBreaks);
-                            _scheduleModified = true;
                           });
                         },
                         onBreakChanged: (bi, bw) {
@@ -1402,7 +1397,6 @@ class _StaffEditFormState extends ConsumerState<_StaffEditForm> {
                             final newBreaks = List<_BreakWindow>.from(_schedule![i].breaks);
                             newBreaks[bi] = bw;
                             _schedule![i] = _schedule![i].copyWith(breaks: newBreaks);
-                            _scheduleModified = true;
                           });
                         },
                       ),
