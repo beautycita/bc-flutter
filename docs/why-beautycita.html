@@ -1,0 +1,1306 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BeautyCita vs La Competencia — Por que no hay comparacion</title>
+<meta name="description" content="$8,200+ MXN en herramientas. $0 de suscripcion. 3% por transaccion. BeautyCita destruye a la competencia.">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #14141f;
+    --surface2: #1e1e2e;
+    --border: #2a2a3a;
+    --text: #e8e8f0;
+    --muted: #6b6b8a;
+    --accent: #C8A2C8;
+    --green: #4ade80;
+    --red: #f87171;
+    --gold: #fbbf24;
+    --blue: #60a5fa;
+    --pink: #ec4899;
+    --purple: #9333ea;
+    --gradient: linear-gradient(135deg, #ec4899, #9333ea, #3b82f6);
+    --gradient-text: linear-gradient(135deg, #ec4899, #9333ea, #3b82f6);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+
+  /* ===== HERO ===== */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 60px 24px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(ellipse at 30% 50%, rgba(147,51,234,0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 70% 50%, rgba(236,72,153,0.06) 0%, transparent 50%);
+    animation: heroGlow 8s ease-in-out infinite alternate;
+  }
+
+  @keyframes heroGlow {
+    0% { transform: translate(0, 0) scale(1); }
+    100% { transform: translate(-2%, 1%) scale(1.05); }
+  }
+
+  .hero-content { position: relative; z-index: 1; }
+
+  .hero-price {
+    font-size: clamp(32px, 5vw, 64px);
+    font-weight: 900;
+    letter-spacing: -1px;
+    line-height: 1.1;
+    margin-bottom: 16px;
+  }
+
+  .hero-price .amount {
+    background: var(--gradient-text);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-price .free {
+    color: var(--green);
+    -webkit-text-fill-color: var(--green);
+    text-shadow: 0 0 40px rgba(74,222,128,0.3);
+  }
+
+  .hero-price .rate {
+    color: var(--gold);
+    -webkit-text-fill-color: var(--gold);
+  }
+
+  .hero-sub {
+    font-size: clamp(16px, 2.2vw, 24px);
+    color: var(--muted);
+    max-width: 800px;
+    margin: 0 auto 32px;
+    line-height: 1.5;
+  }
+
+  .hero-rfc {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    display: inline-block;
+    padding: 8px 24px;
+    border-radius: 100px;
+  }
+
+  .hero-arrow {
+    margin-top: 48px;
+    animation: bounce 2s infinite;
+    color: var(--muted);
+    font-size: 28px;
+  }
+
+  @keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(12px); }
+  }
+
+  /* ===== ANIMATED COUNTERS ===== */
+  .counter-bar {
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 32px 24px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .counter-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    max-width: 1100px;
+    margin: 0 auto;
+    text-align: center;
+  }
+
+  .counter-item .number {
+    font-size: clamp(28px, 4vw, 48px);
+    font-weight: 900;
+    font-family: 'Courier New', monospace;
+    background: var(--gradient-text);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .counter-item .label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  /* ===== SECTION LAYOUT ===== */
+  .section {
+    padding: 80px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-number {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 4px;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  .section-title {
+    font-size: clamp(28px, 3.5vw, 44px);
+    font-weight: 900;
+    margin-bottom: 40px;
+    letter-spacing: -0.5px;
+  }
+
+  .section-title .highlight {
+    background: var(--gradient-text);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .comparison {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 32px;
+  }
+
+  /* THEM side */
+  .them {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    position: relative;
+    opacity: 0.7;
+  }
+
+  .them::before {
+    content: 'ELLOS';
+    position: absolute;
+    top: -12px;
+    left: 20px;
+    background: var(--bg);
+    padding: 2px 14px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--red);
+    border: 1px solid var(--red);
+    border-radius: 100px;
+    font-weight: 700;
+  }
+
+  .them-names {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .them-names .price-tag {
+    color: var(--red);
+    font-weight: 700;
+    font-family: 'Courier New', monospace;
+  }
+
+  .them ul {
+    list-style: none;
+    padding: 0;
+  }
+
+  .them li {
+    font-size: 14px;
+    color: #6b6b8a;
+    padding: 5px 0;
+    padding-left: 22px;
+    position: relative;
+  }
+
+  .them li::before {
+    content: '\2717';
+    position: absolute;
+    left: 0;
+    color: var(--red);
+    font-weight: 700;
+  }
+
+  /* BC side */
+  .bc {
+    background: linear-gradient(135deg, rgba(147,51,234,0.06), rgba(236,72,153,0.04));
+    border: 1px solid rgba(147,51,234,0.3);
+    border-radius: 16px;
+    padding: 28px;
+    position: relative;
+  }
+
+  .bc::before {
+    content: 'BEAUTYCITA';
+    position: absolute;
+    top: -12px;
+    left: 20px;
+    background: var(--gradient);
+    padding: 2px 14px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: white;
+    border-radius: 100px;
+    font-weight: 700;
+  }
+
+  .bc-included {
+    font-size: 13px;
+    color: var(--green);
+    font-weight: 700;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(74,222,128,0.2);
+  }
+
+  .bc ul {
+    list-style: none;
+    padding: 0;
+  }
+
+  .bc li {
+    font-size: 14px;
+    color: var(--text);
+    padding: 5px 0;
+    padding-left: 22px;
+    position: relative;
+  }
+
+  .bc li::before {
+    content: '\2713';
+    position: absolute;
+    left: 0;
+    color: var(--green);
+    font-weight: 700;
+  }
+
+  /* VERDICT */
+  .verdict {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 4px solid;
+    border-image: var(--gradient) 1;
+    border-radius: 0 12px 12px 0;
+    padding: 20px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .verdict-text {
+    font-size: clamp(16px, 2vw, 20px);
+    font-weight: 800;
+    font-style: italic;
+    color: var(--text);
+  }
+
+  .verdict-text::before { content: '\201C'; color: var(--accent); }
+  .verdict-text::after { content: '\201D'; color: var(--accent); }
+
+  .verdict-price {
+    text-align: right;
+  }
+
+  .verdict-price .their-price {
+    font-size: 13px;
+    color: var(--red);
+    text-decoration: line-through;
+    font-family: 'Courier New', monospace;
+  }
+
+  .verdict-price .bc-price {
+    font-size: 22px;
+    font-weight: 900;
+    color: var(--green);
+    font-family: 'Courier New', monospace;
+  }
+
+  /* NOBODY section variant */
+  .nobody {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    text-align: center;
+    opacity: 0.5;
+  }
+
+  .nobody-text {
+    font-size: 18px;
+    color: var(--muted);
+    font-style: italic;
+  }
+
+  .nobody-text strong {
+    color: var(--red);
+  }
+
+  /* ===== SCOREBOARD ===== */
+  .scoreboard { padding: 80px 0 40px; }
+
+  .scoreboard-title {
+    font-size: clamp(32px, 4vw, 52px);
+    font-weight: 900;
+    text-align: center;
+    margin-bottom: 48px;
+    letter-spacing: -1px;
+  }
+
+  .scoreboard-title .highlight {
+    background: var(--gradient-text);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .score-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+
+  .score-table thead th {
+    padding: 14px 16px;
+    text-align: center;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    border-bottom: 2px solid var(--border);
+    font-weight: 600;
+  }
+
+  .score-table thead th:first-child {
+    text-align: left;
+  }
+
+  .score-table thead th:last-child {
+    background: linear-gradient(135deg, rgba(147,51,234,0.1), rgba(236,72,153,0.08));
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  .score-table tbody td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    text-align: center;
+  }
+
+  .score-table tbody td:first-child {
+    text-align: left;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .score-table tbody td:last-child {
+    background: linear-gradient(135deg, rgba(147,51,234,0.04), rgba(236,72,153,0.03));
+  }
+
+  .check { color: var(--green); font-size: 18px; font-weight: 700; }
+  .cross { color: var(--red); font-size: 18px; font-weight: 700; opacity: 0.6; }
+  .partial { color: var(--gold); font-size: 14px; }
+
+  /* ===== SAVINGS BOX ===== */
+  .savings {
+    background: var(--surface);
+    border: 2px solid var(--green);
+    border-radius: 20px;
+    padding: 48px;
+    text-align: center;
+    margin: 48px 0;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .savings::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at center, rgba(74,222,128,0.06) 0%, transparent 70%);
+  }
+
+  .savings-content { position: relative; z-index: 1; }
+
+  .savings-row {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 32px;
+    align-items: center;
+    margin-bottom: 24px;
+  }
+
+  .savings-item {
+    text-align: center;
+  }
+
+  .savings-item .amount {
+    font-size: clamp(32px, 4vw, 56px);
+    font-weight: 900;
+    font-family: 'Courier New', monospace;
+  }
+
+  .savings-item .amount.red { color: var(--red); text-decoration: line-through; text-decoration-thickness: 3px; }
+  .savings-item .amount.green { color: var(--green); text-shadow: 0 0 30px rgba(74,222,128,0.3); }
+
+  .savings-item .desc {
+    font-size: 14px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  .savings-vs {
+    font-size: 24px;
+    color: var(--muted);
+    font-weight: 700;
+  }
+
+  .savings-percent {
+    font-size: clamp(40px, 6vw, 72px);
+    font-weight: 900;
+    background: var(--gradient-text);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1;
+  }
+
+  .savings-percent-label {
+    font-size: 18px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+
+  /* ===== CLOSING ===== */
+  .closing {
+    text-align: center;
+    padding: 80px 24px 60px;
+  }
+
+  .closing-quote {
+    font-size: clamp(20px, 3vw, 32px);
+    font-weight: 800;
+    font-style: italic;
+    color: var(--text);
+    max-width: 900px;
+    margin: 0 auto 40px;
+    line-height: 1.4;
+  }
+
+  .closing-quote .em {
+    background: var(--gradient-text);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .cta-buttons {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 32px;
+  }
+
+  .cta-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 16px 32px;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 700;
+    text-decoration: none;
+    transition: all 0.3s;
+    cursor: pointer;
+    border: none;
+  }
+
+  .cta-btn.primary {
+    background: var(--gradient);
+    color: white;
+  }
+
+  .cta-btn.primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(147,51,234,0.3);
+  }
+
+  .cta-btn.secondary {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+
+  .cta-btn.secondary:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .footer {
+    text-align: center;
+    padding: 32px 24px;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 768px) {
+    .comparison { grid-template-columns: 1fr; }
+    .counter-grid { grid-template-columns: repeat(2, 1fr); }
+    .savings-row { grid-template-columns: 1fr; gap: 16px; }
+    .savings-vs { display: none; }
+    .verdict { flex-direction: column; text-align: center; }
+    .verdict-price { text-align: center; }
+  }
+
+  /* ===== SCROLL REVEAL ===== */
+  .reveal {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== HERO ===== -->
+<div class="hero">
+  <div class="hero-content">
+    <div class="hero-price">
+      <span class="amount">$8,200+ MXN</span> en herramientas.<br>
+      <span class="free">$0 de suscripcion.</span><br>
+      <span class="rate">3% por transaccion.</span>
+    </div>
+    <p class="hero-sub">
+      Lo que la competencia vende por partes a precio premium,<br>
+      BeautyCita te lo regala completo.
+    </p>
+    <div class="hero-rfc">BEAUTYCITA S.A. de C.V. &middot; RFC: BEA260313MI8</div>
+    <div class="hero-arrow">&darr;</div>
+  </div>
+</div>
+
+<!-- ===== COUNTER BAR ===== -->
+<div class="counter-bar">
+  <div class="counter-grid">
+    <div class="counter-item">
+      <div class="number" data-target="11" data-suffix="">0</div>
+      <div class="label">Categorias incluidas</div>
+    </div>
+    <div class="counter-item">
+      <div class="number" data-target="8200" data-prefix="$" data-suffix="+">0</div>
+      <div class="label">MXN/mes valor herramientas</div>
+    </div>
+    <div class="counter-item">
+      <div class="number" data-target="0" data-prefix="$">0</div>
+      <div class="label">Suscripcion mensual BC</div>
+    </div>
+    <div class="counter-item">
+      <div class="number" data-target="85" data-suffix="%">0</div>
+      <div class="label">Ahorro vs competencia</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SECTION 1: APPOINTMENT MANAGEMENT ===== -->
+<div class="section">
+  <div class="container reveal">
+    <div class="section-number">Seccion 01</div>
+    <div class="section-title">Gestion de <span class="highlight">Citas</span></div>
+
+    <div class="comparison">
+      <div class="them">
+        <div class="them-names">
+          AgendaPro <span class="price-tag">$49-129 USD/mes</span><br>
+          Booksy <span class="price-tag">$29-49 USD/mes</span>
+        </div>
+        <ul>
+          <li>Calendario basico con CRUD</li>
+          <li>Arrastrar manualmente para reagendar</li>
+          <li>Recordatorios por email (WhatsApp cuesta extra en AgendaPro)</li>
+          <li>Sin control de acceso por rol</li>
+          <li>Sin calculo de impuestos en citas</li>
+        </ul>
+      </div>
+      <div class="bc">
+        <div class="bc-included">Incluido en el 3% &mdash; sin costo adicional</div>
+        <ul>
+          <li>Calendario mission-control: vistas dia/semana/mes con citas codificadas por color segun tipo de servicio</li>
+          <li>Reagendar con drag-and-drop + auto-notificacion al cliente Y estilista por WhatsApp (incluido, no extra)</li>
+          <li>5 puestos de personal (dueño/gerente/recepcionista/estilista/asistente) con acceso por permisos</li>
+          <li>Registro de walk-ins con calculo instantaneo de retencion fiscal</li>
+          <li>Deteccion de conflictos para prevenir doble reserva</li>
+          <li>Respeto de horario comercial: el motor no ofrece citas fuera de operacion</li>
+          <li>Gestion de dias festivos y cierres integrada con el motor de reservas</li>
+          <li>Notas de cliente, historial y preferencias visibles durante la agenda</li>
+          <li>2 recordatorios configurables (24h + 1h default) via WhatsApp/push/email</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="verdict">
+      <div class="verdict-text">Ellos te venden un calendario. Nosotros te damos un centro de mando.</div>
+      <div class="verdict-price">
+        <div class="their-price">AgendaPro Basic: $980 MXN/mes</div>
+        <div class="bc-price">BC: $0</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SECTION 2: INTELLIGENT BOOKING ENGINE ===== -->
+<div class="section">
+  <div class="container reveal">
+    <div class="section-number">Seccion 02</div>
+    <div class="section-title">Motor de Reservas <span class="highlight">Inteligente</span></div>
+
+    <div class="comparison">
+      <div class="nobody">
+        <div class="nobody-text"><strong>Nadie tiene esto.</strong><br>No AgendaPro. No Fresha. No Booksy. Nadie.</div>
+      </div>
+      <div class="bc">
+        <div class="bc-included">Solo en BeautyCita &mdash; sin costo</div>
+        <ul>
+          <li>El cliente toca tipo de servicio &rarr; motor IA ejecuta pipeline de 6 pasos en 200ms</li>
+          <li>Califica candidatos por proximidad, disponibilidad, rating, precio, portafolio</li>
+          <li>Devuelve los mejores 3 resultados curados con reserva de un toque</li>
+          <li>Inferencia de tiempo: sin selector de calendario &mdash; el motor adivina el mejor horario del contexto</li>
+          <li>Ponderacion bell-curve de slots: preferencias mañana/tarde/noche respetadas</li>
+          <li>Seleccion de transporte con programacion de Uber ida y vuelta</li>
+          <li>Preguntas de seguimiento refinan resultados (ej. "natural o dramatico?" para pestañas)</li>
+          <li>4-6 toques, menos de 30 segundos, cero teclado</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="verdict">
+      <div class="verdict-text">Ellos te hacen buscar. Nosotros te damos la respuesta.</div>
+      <div class="verdict-price">
+        <div class="their-price">Nadie lo tiene a ningun precio</div>
+        <div class="bc-price">BC: $0</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SECTION 3: TAX COMPLIANCE ===== -->
+<div class="section">
+  <div class="container reveal">
+    <div class="section-number">Seccion 03</div>
+    <div class="section-title">Servicio <span class="highlight">Fiscal</span></div>
+
+    <div class="comparison">
+      <div class="them">
+        <div class="them-names">
+          Competencia: <span class="price-tag">No existe</span><br>
+          Contador externo: <span class="price-tag">$2,000-5,000 MXN/mes</span>
+        </div>
+        <ul>
+          <li>Ningun salon booking platform en Mexico maneja retencion ISR/IVA</li>
+          <li>Calculo manual de ISR/IVA por tu contador</li>
+          <li>Declaraciones mensuales al SAT manuales</li>
+          <li>Tracking de deducciones en Excel</li>
+          <li>Sin integracion con tu sistema de citas</li>
+        </ul>
+      </div>
+      <div class="bc">
+        <div class="bc-included">Incluido en el 3% &mdash; servicio fiscal automatico</div>
+        <ul>
+          <li>Retencion automatica ISR 2.5% + IVA 8% en CADA transaccion (tarjeta, saldo, walk-in efectivo)</li>
+          <li>Reportes mensuales al SAT auto-generados con desglose por negocio</li>
+          <li>Declaraciones a nivel plataforma ante el SAT</li>
+          <li>Acceso API SAT en tiempo real (CFF Art. 30-B) &mdash; autenticado HMAC-SHA256</li>
+          <li>Dashboard mostrando: "BC retuvo $X" vs "Tu debes $Y al SAT"</li>
+          <li>Tracker de presupuesto de deducciones: "Puedes gastar $Z mas este año"</li>
+          <li>Registro de gastos con cuenta regresiva de fecha limite</li>
+          <li>Recordatorios de fecha de declaracion (dia 10 y 17 del mes siguiente)</li>
+          <li>Integracion CFDI en camino (SW Sapien PAC)</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="verdict">
+      <div class="verdict-text">Tu contador cobra $3,000/mes por hacer la mitad de lo que nosotros hacemos automaticamente. Nosotros cobramos $0.</div>
+      <div class="verdict-price">
+        <div class="their-price">Contador: $2,000-5,000/mes</div>
+        <div class="bc-price">BC: $0</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SECTION 4: CLIENT CRM + LOYALTY ===== -->
+<div class="section">
+  <div class="container reveal">
+    <div class="section-number">Seccion 04</div>
+    <div class="section-title">CRM de Clientes + <span class="highlight">Lealtad</span></div>
+
+    <div class="comparison">
+      <div class="them">
+        <div class="them-names">
+          AgendaPro Premium <span class="price-tag">$79 USD/mes</span><br>
+          Fresha <span class="price-tag">incluido basico</span>
+        </div>
+        <ul>
+          <li>Lista basica de clientes con datos de contacto</li>
+          <li>Conteo de visitas</li>
+          <li>Sin puntos de lealtad</li>
+          <li>Sin etiquetas personalizadas</li>
+          <li>Sin notas privadas por salon</li>
+          <li>Sin auto-poblado de datos</li>
+        </ul>
+      </div>
+      <div class="bc">
+        <div class="bc-included">Incluido en el 3% &mdash; CRM completo</div>
+        <ul>
+          <li>Auto-poblado desde citas completadas (cero entrada manual)</li>
+          <li>Conteo de visitas, total gastado, ultima visita, primera visita</li>
+          <li>Conteo de no-shows por cliente</li>
+          <li>Etiquetas personalizadas (VIP, fiel, prefiere martes...)</li>
+          <li>Notas privadas por cliente (alergias, preferencias, etc.)</li>
+          <li>Puntos de lealtad: gana 1pt por $10, canjea 100pts = $50 saldo</li>
+          <li>Busqueda, orden, filtro por fecha, exportar CSV</li>
+          <li>Tracking de cumpleaños para triggers de marketing</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="verdict">
+      <div class="verdict-text">Ellos te dan una lista de contactos. Nosotros te damos un motor de relaciones.</div>
+      <div class="verdict-price">
+        <div class="their-price">AgendaPro Premium: $1,580 MXN/mes</div>
+        <div class="bc-price">BC: $0</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SECTION 5: MARKETING AUTOMATION ===== -->
+<div class="section">
+  <div class="container reveal">
+    <div class="section-number">Seccion 05</div>
+    <div class="section-title">Automatizacion de <span class="highlight">Marketing</span></div>
+
+    <div class="comparison">
+      <div class="them">
+        <div class="them-names">
+          AgendaPro <span class="price-tag">$79+ USD/mes</span><br>
+          Fresha <span class="price-tag">basico incluido</span> &middot; Booksy <span class="price-tag">SMS extra</span>
+        </div>
+        <ul>
+          <li>Campañas email manuales</li>
+          <li>SMS con costo adicional</li>
+          <li>Sin triggers automatizados</li>
+          <li>Sin integracion WhatsApp (o con costo extra)</li>
+        </ul>
+      </div>
+      <div class="bc">
+        <div class="bc-included">Incluido en el 3% &mdash; marketing automatizado</div>
+        <ul>
+          <li>5 tipos de triggers automaticos: agradecimiento post-cita, solicitud de reseña, seguimiento no-show, saludo de cumpleaños, re-engagement de clientes inactivos</li>
+          <li>Configurable por trigger: delay (1h a 30 dias), canal (push/WhatsApp/ambos), plantilla personalizada</li>
+          <li>Variables de plantilla: {cliente}, {servicio}, {salon}</li>
+          <li>Log de actividad mostrando cada mensaje enviado</li>
+          <li>WhatsApp incluido &mdash; no extra</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="verdict">
+      <div class="verdict-text">Ellos te cobran por enviar emails. Nosotros automatizamos todo tu ciclo de vida del cliente.</div>
+      <div class="verdict-price">
+        <div class="their-price">AgendaPro + Mailchimp: $2,000+ MXN/mes</div>
+        <div class="bc-price">BC: $0</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SECTION 6: STAFF MANAGEMENT ===== -->
+<div class="section">
+  <div class="container reveal">
+    <div class="section-number">Seccion 06</div>
+    <div class="section-title">Gestion de <span class="highlight">Personal</span> + Productividad</div>
+
+    <div class="comparison">
+      <div class="them">
+        <div class="them-names">
+          AgendaPro Pro <span class="price-tag">$129 USD/mes</span><br>
+          Vagaro <span class="price-tag">$85 USD/mes</span>
+        </div>
+        <ul>
+          <li>Lista de personal con horarios</li>
+          <li>Tracking de comisiones basico</li>
+          <li>Sin permisos por puesto</li>
+          <li>Sin sistema de portafolio</li>
+          <li>Sin reportes mensuales para staff</li>
+        </ul>
+      </div>
+      <div class="bc">
+        <div class="bc-included">Incluido en el 3% &mdash; gestion completa de equipo</div>
+        <ul>
+          <li>5 puestos: dueño (acceso total), gerente (sin banca/SAT), recepcionista (calendario/clientes/QR/pagos), estilista (cero acceso panel &mdash; recibe reportes email), asistente (cero acceso)</li>
+          <li>Slider de comision por staff (0-50%)</li>
+          <li>Comisiones auto-calculadas en citas completadas via trigger DB</li>
+          <li>Tracking pendiente/pagado con boton "Pagar" de un toque</li>
+          <li>Analytics de staff: ingresos por estilista, citas, horas, rating, no-shows, tabla de ranking</li>
+          <li>Desglose de ingresos por servicio: cuales servicios generan dinero</li>
+          <li>Codigo QR con PIN por staff para subir fotos de portafolio (sin necesidad de app)</li>
+          <li>Galeria antes/despues vinculada al feed del salon</li>
+          <li>Reporte mensual por email a estilistas: servicios, comisiones, desglose de pagos</li>
+          <li>Vinculacion de cuenta basada en consentimiento (estilista debe aceptar invitacion)</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="verdict">
+      <div class="verdict-text">Ellos te dejan listar tu staff. Nosotros te dejamos dirigir tu equipo.</div>
+      <div class="verdict-price">
+        <div class="their-price">AgendaPro Pro: $2,580 MXN/mes</div>
+        <div class="bc-price">BC: $0</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SECTION 7: PAYMENT PROCESSING ===== -->
+<div class="section">
+  <div class="container reveal">
+    <div class="section-number">Seccion 07</div>
+    <div class="section-title">Procesamiento de <span class="highlight">Pagos</span></div>
+
+    <div class="comparison">
+      <div class="them">
+        <div class="them-names">
+          Fresha <span class="price-tag">2.19% + $0.20 por transaccion</span><br>
+          AgendaPro <span class="price-tag">via Stripe estandar</span>
+        </div>
+        <ul>
+          <li>Solo pagos con tarjeta</li>
+          <li>Sin sistema de saldo/credito</li>
+          <li>Sin tracking de OXXO/efectivo</li>
+          <li>Sin aplicacion automatica de saldo</li>
+          <li>Sin cobranza de deudas</li>
+          <li>Sin tarjetas de regalo respaldadas con dinero real</li>
+        </ul>
+      </div>
+      <div class="bc">
+        <div class="bc-included">Incluido en el 3% &mdash; gestion completa de dinero</div>
+        <ul>
+          <li>Stripe Connect para pagos con tarjeta</li>
+          <li>Sistema de saldo: auto-aplicado antes de cobro con tarjeta (no opcional &mdash; tu credito se usa primero)</li>
+          <li>Pagos en efectivo OXXO/7-Eleven</li>
+          <li>Tracking de walk-in en efectivo con cumplimiento fiscal total</li>
+          <li>Reembolso a saldo en todas las cancelaciones (comision BC 3% nunca se devuelve)</li>
+          <li>Politica de cancelacion: gratis antes del limite, deposito perdido despues</li>
+          <li>Cobranza de deudas: hasta 50% del servicio deducido al momento del pago via application_fee de Stripe</li>
+          <li>Tarjetas de regalo: respaldadas por Stripe (online) o emitidas por el salon (efectivo), fisicas + virtuales, envio por email</li>
+          <li>Cada movimiento de dinero rastreado en commission_records con auditoria</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="verdict">
+      <div class="verdict-text">Ellos procesan tus pagos. Nosotros administramos todo tu flujo de dinero.</div>
+      <div class="verdict-price">
+        <div class="their-price">Fresha: 2.24% (sin impuestos, sin saldo, sin cobranza)</div>
+        <div class="bc-price">BC: 3% (todo incluido)</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SECTION 8: WALK-IN QR ===== -->
+<div class="section">
+  <div class="container reveal">
+    <div class="section-number">Seccion 08</div>
+    <div class="section-title">QR Walk-in <span class="highlight">(Cita Express)</span></div>
+
+    <div class="comparison">
+      <div class="nobody">
+        <div class="nobody-text"><strong>Nadie tiene esto.</strong><br>Cero competidores. Cero alternativas.</div>
+      </div>
+      <div class="bc">
+        <div class="bc-included">Solo en BeautyCita &mdash; sin costo</div>
+        <ul>
+          <li>El salon imprime un codigo QR en la pared</li>
+          <li>El cliente escanea con la camara de cualquier celular (sin app necesaria)</li>
+          <li>Selecciona servicio, ve disponibilidad en vivo desde el RPC find_available_slots</li>
+          <li>Reserva y paga (efectivo o saldo) al instante</li>
+          <li>Walk-in se convierte en cita rastreada con cumplimiento fiscal</li>
+          <li>Comision + ISR + IVA calculados automaticamente</li>
+          <li>Aparece en el calendario del salon inmediatamente</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="verdict">
+      <div class="verdict-text">Un pedazo de papel en tu pared que convierte walk-ins en citas administradas y fiscalmente cumplidas. $0 hardware. $0 software. $0 cuota mensual.</div>
+      <div class="verdict-price">
+        <div class="their-price">No existe en ningun competidor</div>
+        <div class="bc-price">BC: $0</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SECTION 9: PORTFOLIO + STOREFRONT ===== -->
+<div class="section">
+  <div class="container reveal">
+    <div class="section-number">Seccion 09</div>
+    <div class="section-title">Portafolio + <span class="highlight">Storefront</span> Reservable</div>
+
+    <div class="comparison">
+      <div class="them">
+        <div class="them-names">
+          StyleSeat <span class="price-tag">$35 USD/mes</span><br>
+          Squarespace <span class="price-tag">$33 USD/mes + plugin reservas</span>
+        </div>
+        <ul>
+          <li>Pagina de portafolio estatica</li>
+          <li>Widget de reservas separado (otra suscripcion)</li>
+          <li>Sin integracion de productos</li>
+          <li>Sin sistema de subida antes/despues para estilistas</li>
+        </ul>
+      </div>
+      <div class="bc">
+        <div class="bc-included">Incluido en el 3% &mdash; storefront completo</div>
+        <ul>
+          <li>beautycita.com/salon/{slug} &mdash; URL compartible para Instagram, Google, tarjetas de presentacion</li>
+          <li>Galeria antes/despues de fotos subidas por estilistas via QR</li>
+          <li>Lista completa de servicios con precios, duraciones, "Reservar" de un toque por servicio</li>
+          <li>Seccion de staff con avatares y experiencia</li>
+          <li>Reseñas de clientes con ratings de estrellas</li>
+          <li>Catalogo de productos (si POS habilitado)</li>
+          <li>Links sociales (Instagram, Facebook, TikTok)</li>
+          <li>Horario del negocio visible</li>
+          <li>Barra fija inferior: Reservar + WhatsApp &mdash; siempre visible</li>
+          <li>OG meta tags para previews en redes sociales</li>
+          <li>Diseño mobile-first responsivo</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="verdict">
+      <div class="verdict-text">Ellos te venden un sitio web. Nosotros te damos un storefront que reserva.</div>
+      <div class="verdict-price">
+        <div class="their-price">StyleSeat + Squarespace: $1,360 MXN/mes</div>
+        <div class="bc-price">BC: $0</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SECTION 10: GOOGLE CALENDAR SYNC ===== -->
+<div class="section">
+  <div class="container reveal">
+    <div class="section-number">Seccion 10</div>
+    <div class="section-title">Sincronizacion <span class="highlight">Google Calendar</span></div>
+
+    <div class="comparison">
+      <div class="them">
+        <div class="them-names">
+          Calendly <span class="price-tag">$240-800 MXN/mes</span><br>
+          Acuity <span class="price-tag">$320-900 MXN/mes</span>
+        </div>
+        <ul>
+          <li>Sync de una via o dos vias</li>
+          <li>Sin inteligencia de reservas en citas sincronizadas</li>
+          <li>Sin retencion fiscal en reservas externas</li>
+        </ul>
+      </div>
+      <div class="bc">
+        <div class="bc-included">Incluido en el 3% &mdash; sync nativo</div>
+        <ul>
+          <li>Conexion Google Calendar via OAuth</li>
+          <li>Citas externas bloquean slots en BC (sin doble reserva)</li>
+          <li>Citas BC aparecen en Google Calendar</li>
+          <li>El dueño del salon ve todo en un solo lugar</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="verdict">
+      <div class="verdict-text">Ellos te cobran por conectar dos calendarios. Nosotros lo hacemos gratis porque tu agenda deberia simplemente funcionar.</div>
+      <div class="verdict-price">
+        <div class="their-price">Calendly Pro: $480 MXN/mes</div>
+        <div class="bc-price">BC: $0</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SECTION 11: AI FEATURES ===== -->
+<div class="section">
+  <div class="container reveal">
+    <div class="section-number">Seccion 11</div>
+    <div class="section-title">Inteligencia <span class="highlight">Artificial</span></div>
+
+    <div class="comparison">
+      <div class="nobody">
+        <div class="nobody-text"><strong>Nadie en belleza tiene esto.</strong><br>Zero. Zilch. Nada.</div>
+      </div>
+      <div class="bc">
+        <div class="bc-included">Solo en BeautyCita &mdash; IA integrada</div>
+        <ul>
+          <li>Aphrodite AI: asesora de belleza (GPT-4o), con personalidad, bilingue ES/EN</li>
+          <li>Eros AI: agente de soporte (GPT-4o-mini), maneja FAQs y escala a humano</li>
+          <li>Virtual Studio: 4 herramientas IA &mdash; prueba de color de cabello, preview de peinado, headshot profesional, face swap</li>
+          <li>Bios de staff y descripciones de servicios generadas por IA</li>
+          <li>Inferencia inteligente de tiempo: sin picker de calendario necesario</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="verdict">
+      <div class="verdict-text">Mientras ellos construyen apps CRUD, nosotros construimos un concierge de belleza con IA.</div>
+      <div class="verdict-price">
+        <div class="their-price">No existe en ningun competidor</div>
+        <div class="bc-price">BC: $0</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SCOREBOARD ===== -->
+<div class="scoreboard">
+  <div class="container reveal">
+    <div class="scoreboard-title"><span class="highlight">Marcador</span> Final</div>
+
+    <div style="overflow-x: auto;">
+      <table class="score-table">
+        <thead>
+          <tr>
+            <th>Categoria</th>
+            <th>AgendaPro</th>
+            <th>Fresha</th>
+            <th>Booksy</th>
+            <th>BeautyCita</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Gestion de citas avanzada</td>
+            <td><span class="partial">Parcial</span></td>
+            <td><span class="partial">Parcial</span></td>
+            <td><span class="partial">Parcial</span></td>
+            <td><span class="check">&check;</span></td>
+          </tr>
+          <tr>
+            <td>Motor de reservas inteligente</td>
+            <td><span class="cross">&cross;</span></td>
+            <td><span class="cross">&cross;</span></td>
+            <td><span class="cross">&cross;</span></td>
+            <td><span class="check">&check;</span></td>
+          </tr>
+          <tr>
+            <td>Cumplimiento fiscal (ISR/IVA)</td>
+            <td><span class="cross">&cross;</span></td>
+            <td><span class="cross">&cross;</span></td>
+            <td><span class="cross">&cross;</span></td>
+            <td><span class="check">&check;</span></td>
+          </tr>
+          <tr>
+            <td>CRM + lealtad completo</td>
+            <td><span class="partial">Parcial</span></td>
+            <td><span class="partial">Parcial</span></td>
+            <td><span class="cross">&cross;</span></td>
+            <td><span class="check">&check;</span></td>
+          </tr>
+          <tr>
+            <td>Marketing automatizado + WA</td>
+            <td><span class="partial">Extra $$</span></td>
+            <td><span class="partial">Basico</span></td>
+            <td><span class="partial">Extra $$</span></td>
+            <td><span class="check">&check;</span></td>
+          </tr>
+          <tr>
+            <td>Gestion staff + permisos + portafolio</td>
+            <td><span class="partial">Parcial</span></td>
+            <td><span class="cross">&cross;</span></td>
+            <td><span class="cross">&cross;</span></td>
+            <td><span class="check">&check;</span></td>
+          </tr>
+          <tr>
+            <td>Pagos: saldo, OXXO, gift cards, deudas</td>
+            <td><span class="cross">&cross;</span></td>
+            <td><span class="partial">Solo tarjeta</span></td>
+            <td><span class="cross">&cross;</span></td>
+            <td><span class="check">&check;</span></td>
+          </tr>
+          <tr>
+            <td>Walk-in QR (Cita Express)</td>
+            <td><span class="cross">&cross;</span></td>
+            <td><span class="cross">&cross;</span></td>
+            <td><span class="cross">&cross;</span></td>
+            <td><span class="check">&check;</span></td>
+          </tr>
+          <tr>
+            <td>Storefront reservable</td>
+            <td><span class="cross">&cross;</span></td>
+            <td><span class="partial">Basico</span></td>
+            <td><span class="partial">Basico</span></td>
+            <td><span class="check">&check;</span></td>
+          </tr>
+          <tr>
+            <td>Google Calendar sync</td>
+            <td><span class="partial">Extra $$</span></td>
+            <td><span class="check">&check;</span></td>
+            <td><span class="partial">Extra $$</span></td>
+            <td><span class="check">&check;</span></td>
+          </tr>
+          <tr>
+            <td>IA: asesora, soporte, virtual studio</td>
+            <td><span class="cross">&cross;</span></td>
+            <td><span class="cross">&cross;</span></td>
+            <td><span class="cross">&cross;</span></td>
+            <td><span class="check">&check;</span></td>
+          </tr>
+          <tr style="border-top: 2px solid var(--accent);">
+            <td style="font-weight:900;">COSTO MENSUAL</td>
+            <td style="color:var(--red);font-weight:800;font-family:'Courier New',monospace;">$2,580+</td>
+            <td style="color:var(--red);font-weight:800;font-family:'Courier New',monospace;">$1,200+</td>
+            <td style="color:var(--red);font-weight:800;font-family:'Courier New',monospace;">$980+</td>
+            <td style="color:var(--green);font-weight:900;font-size:18px;font-family:'Courier New',monospace;">$0</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- SAVINGS BOX -->
+    <div class="savings">
+      <div class="savings-content">
+        <div class="savings-row">
+          <div class="savings-item">
+            <div class="amount red">$8,200 - $11,700</div>
+            <div class="desc">MXN/mes si compras todo por separado</div>
+          </div>
+          <div class="savings-vs">vs</div>
+          <div class="savings-item">
+            <div class="amount green">~$1,710</div>
+            <div class="desc">MXN/mes con BC (3% al volumen promedio de salon)</div>
+          </div>
+        </div>
+        <div class="savings-percent">79-85%</div>
+        <div class="savings-percent-label">Ahorro mensual</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== CLOSING ===== -->
+<div class="closing">
+  <div class="container reveal">
+    <p class="closing-quote">
+      No hay competencia.<br>
+      Hay <span class="em">imitadores que cobran por partes</span><br>
+      lo que nosotros <span class="em">regalamos completo.</span>
+    </p>
+
+    <div class="cta-buttons">
+      <a href="https://beautycita.com" class="cta-btn primary">Registra tu salon</a>
+      <a href="https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/apk/beautycita-arm64.apk" class="cta-btn secondary">Descarga la app</a>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  BeautyCita S.A. de C.V. &middot; RFC: BEA260313MI8 &middot; Puerto Vallarta, Jalisco &middot; beautycita.com
+</div>
+
+<script>
+// ===== ANIMATED COUNTERS =====
+function animateCounters() {
+  const counters = document.querySelectorAll('.counter-item .number');
+  counters.forEach(counter => {
+    const target = parseInt(counter.dataset.target);
+    const prefix = counter.dataset.prefix || '';
+    const suffix = counter.dataset.suffix || '';
+    const duration = 2000;
+    const start = performance.now();
+
+    function update(now) {
+      const elapsed = now - start;
+      const progress = Math.min(elapsed / duration, 1);
+      // ease out cubic
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const current = Math.round(target * eased);
+      counter.textContent = prefix + current.toLocaleString() + suffix;
+      if (progress < 1) requestAnimationFrame(update);
+    }
+    requestAnimationFrame(update);
+  });
+}
+
+// ===== SCROLL REVEAL =====
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+    }
+  });
+}, { threshold: 0.1 });
+
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+// ===== COUNTER BAR OBSERVER =====
+const counterObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      animateCounters();
+      counterObserver.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.3 });
+
+counterObserver.observe(document.querySelector('.counter-bar'));
+</script>
+</body>
+</html>
