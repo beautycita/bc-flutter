@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BeautyCita — Revenue Simulator</title>
+<title>BeautyCita — Simulador de Ingresos</title>
 <style>
   :root { --bg: #0a0a0f; --surface: #14141f; --surface2: #1e1e2e; --border: #2a2a3a; --text: #e8e8f0; --muted: #6b6b8a; --accent: #C8A2C8; --green: #4ade80; --red: #f87171; --gold: #fbbf24; --blue: #60a5fa; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -48,135 +48,135 @@
 </head>
 <body>
 <div class="container">
-  <h1>BeautyCita <span>Revenue Simulator</span></h1>
-  <p class="subtitle">RFC: BEA260313MI8 · 3% commission on all transactions · ISR 2.5% + IVA 8% withholding</p>
+  <h1>BeautyCita <span>Simulador de Ingresos</span></h1>
+  <p class="subtitle">RFC: BEA260313MI8 · 3% comision en todas las transacciones · ISR 2.5% + IVA 8% retenciones</p>
 
   <div class="presets">
-    <button class="preset-btn" onclick="preset('launch')">Launch (50 salons)</button>
-    <button class="preset-btn" onclick="preset('growth')">Growth (500 salons)</button>
-    <button class="preset-btn" onclick="preset('scale')">Scale (5,000 salons)</button>
+    <button class="preset-btn" onclick="preset('launch')">Lanzamiento (50 salones)</button>
+    <button class="preset-btn" onclick="preset('growth')">Crecimiento (500 salones)</button>
+    <button class="preset-btn" onclick="preset('scale')">Escala (5,000 salones)</button>
     <button class="preset-btn" onclick="preset('agendapro')">AgendaPro (8,000 MX)</button>
-    <button class="preset-btn" onclick="preset('fresha')">Fresha Scale (250K daily)</button>
-    <button class="preset-btn" onclick="preset('dream')">Unicorn (50K salons)</button>
+    <button class="preset-btn" onclick="preset('fresha')">Escala Fresha (250K diarias)</button>
+    <button class="preset-btn" onclick="preset('dream')">Unicornio (50K salones)</button>
   </div>
 
   <div class="grid">
     <!-- Inputs: Platform -->
     <div class="card">
-      <h2>Platform Variables</h2>
+      <h2>Variables de Plataforma</h2>
       <div class="input-group">
-        <label>N — Active Salons</label>
+        <label>N — Salones activos</label>
         <div class="row"><input type="range" id="salons" min="10" max="100000" value="500" step="10" oninput="calc()"><span class="val" id="salonsVal"></span></div>
       </div>
       <div class="input-group">
-        <label>Y — Avg Daily Bookings per Salon</label>
+        <label>Y — Reservas diarias promedio por salon</label>
         <div class="row"><input type="range" id="dailyBookings" min="1" max="50" value="6" step="1" oninput="calc()"><span class="val" id="dailyBookingsVal"></span></div>
       </div>
       <div class="input-group">
-        <label>Z — Avg Service Price (MXN)</label>
+        <label>Z — Precio promedio de servicio (MXN)</label>
         <div class="row"><input type="range" id="avgPrice" min="50" max="3000" value="380" step="10" oninput="calc()"><span class="val" id="avgPriceVal"></span></div>
       </div>
       <div class="input-group">
-        <label>Cash vs Digital Payment Split (%&nbsp;digital)</label>
+        <label>Division efectivo vs digital (%&nbsp;digital)</label>
         <div class="row"><input type="range" id="digitalPct" min="5" max="100" value="40" step="1" oninput="calc()"><span class="val" id="digitalPctVal"></span></div>
-        <p class="note">Mexico avg: ~35-40% digital payments in beauty. Rest is cash registered on BC.</p>
+        <p class="note">Promedio Mexico: ~35-40% pagos digitales en belleza. El resto es efectivo registrado en BC.</p>
       </div>
       <div class="input-group">
-        <label>Product Sales (% of service revenue)</label>
+        <label>Venta de productos (% del ingreso por servicios)</label>
         <div class="row"><input type="range" id="productPct" min="0" max="30" value="8" step="1" oninput="calc()"><span class="val" id="productPctVal"></span></div>
       </div>
     </div>
 
     <!-- Inputs: Financial -->
     <div class="card">
-      <h2>Financial Variables</h2>
+      <h2>Variables Financieras</h2>
       <div class="input-group">
-        <label>Cancellation Rate (%)</label>
+        <label>Tasa de cancelacion (%)</label>
         <div class="row"><input type="range" id="cancelRate" min="0" max="30" value="12" step="1" oninput="calc()"><span class="val" id="cancelRateVal"></span></div>
-        <p class="note">Industry avg: 10-15%. BC keeps 3% on cancellations too.</p>
+        <p class="note">Promedio industria: 10-15%. BC retiene 3% en cancelaciones tambien.</p>
       </div>
       <div class="input-group">
-        <label>R — Tax Retention Float (days held)</label>
+        <label>R — Float de retenciones fiscales (dias retenidos)</label>
         <div class="row"><input type="range" id="taxHoldDays" min="1" max="46" value="30" step="1" oninput="calc()"><span class="val" id="taxHoldDaysVal"></span></div>
-        <p class="note">ISR+IVA withheld → paid to SAT by 17th of following month. Avg ~30 days float.</p>
+        <p class="note">ISR+IVA retenidos → pagados al SAT el dia 17 del mes siguiente. Promedio ~30 dias de float.</p>
       </div>
       <div class="input-group">
-        <label>W — Bank Interest Rate (annual %)</label>
+        <label>W — Tasa de interes bancario (% anual)</label>
         <div class="row"><input type="range" id="bankRate" min="0" max="12" value="6.8" step="0.1" oninput="calc()"><span class="val" id="bankRateVal"></span></div>
-        <p class="note">CETES 28-day March 2026: 6.81%. After ISR on capital (0.9%): ~5.9% net.</p>
+        <p class="note">CETES 28 dias marzo 2026: 6.81%. Despues de ISR sobre capital (0.9%): ~5.9% neto.</p>
       </div>
       <div class="input-group">
-        <label>T — Active App Users</label>
+        <label>T — Usuarios activos de la app</label>
         <div class="row"><input type="range" id="activeUsers" min="1000" max="250000000" value="50000" step="1000" oninput="calc()"><span class="val" id="activeUsersVal"></span></div>
       </div>
       <div class="input-group">
-        <label>Ad Revenue (CPM in MXN per 1000 impressions)</label>
+        <label>Ingreso por publicidad (CPM en MXN por 1000 impresiones)</label>
         <div class="row"><input type="range" id="adCpm" min="0" max="200" value="32" step="1" oninput="calc()"><span class="val" id="adCpmVal"></span></div>
-        <p class="note">Mexico publisher CPM: $25-40 MXN. FB advertiser CPM: $78 MXN but publishers earn 30-50% of that.</p>
+        <p class="note">CPM publicadores Mexico: $25-40 MXN. CPM anunciantes FB: $78 MXN pero publicadores ganan 30-50% de eso.</p>
       </div>
       <div class="input-group">
-        <label>Avg Monthly Ad Impressions per User</label>
+        <label>Impresiones publicitarias mensuales por usuario</label>
         <div class="row"><input type="range" id="impressionsPerUser" min="10" max="500" value="85" step="5" oninput="calc()"><span class="val" id="impressionsPerUserVal"></span></div>
-        <p class="note">Avg beauty app: 10-12 sessions/month × 5-8 ads = 50-96 impressions. 85 = moderate engagement.</p>
+        <p class="note">Promedio app de belleza: 10-12 sesiones/mes x 5-8 ads = 50-96 impresiones. 85 = engagement moderado.</p>
       </div>
       <div class="input-group">
-        <label>% Users with Dormant Saldo</label>
+        <label>% Usuarios con saldo dormido</label>
         <div class="row"><input type="range" id="saldoPct" min="0" max="50" value="15" step="1" oninput="calc()"><span class="val" id="saldoPctVal"></span></div>
-        <p class="note">Refund credits, partial gift cards, promo credits that sit unused.</p>
+        <p class="note">Creditos de reembolso, gift cards parciales, creditos de promo sin usar.</p>
       </div>
       <div class="input-group">
-        <label>Avg Dormant Saldo per User (MXN)</label>
+        <label>Saldo dormido promedio por usuario (MXN)</label>
         <div class="row"><input type="range" id="avgSaldo" min="20" max="500" value="180" step="10" oninput="calc()"><span class="val" id="avgSaldoVal"></span></div>
-        <p class="note">Typical: $100-300 MXN from cancel refunds, gift card remainders, promo credits.</p>
+        <p class="note">Tipico: $100-300 MXN de reembolsos por cancelacion, sobrantes de gift cards, creditos promo.</p>
       </div>
       <div class="input-group">
-        <label>Annual Saldo Expiry Rate (%)</label>
+        <label>Tasa de expiracion de saldo anual (%)</label>
         <div class="row"><input type="range" id="saldoExpiryRate" min="0" max="50" value="15" step="1" oninput="calc()"><span class="val" id="saldoExpiryRateVal"></span></div>
-        <p class="note">% of dormant saldo that expires at year-end. Industry gift card breakage: 5-15%. Saldo (refund credits) likely lower: 10-20%.</p>
+        <p class="note">% del saldo dormido que expira al final del año. Breakage de gift cards industria: 5-15%. Saldo (creditos de reembolso) probablemente menor: 10-20%.</p>
       </div>
     </div>
 
     <!-- Results -->
     <div class="card results">
-      <h2>Monthly Revenue Output</h2>
+      <h2>Resultado de Ingresos Mensuales</h2>
       <div class="results-grid">
         <div class="result-card">
-          <div class="label">Gross Platform Volume (GPV)</div>
+          <div class="label">Volumen Bruto de Plataforma (GPV)</div>
           <div class="value green" id="gpv">—</div>
           <div class="sub" id="gpvSub"></div>
         </div>
         <div class="result-card">
-          <div class="label">BC Commission Revenue (3%)</div>
+          <div class="label">Comision BC por servicios (3%)</div>
           <div class="value accent" id="commission">—</div>
           <div class="sub" id="commSub"></div>
         </div>
         <div class="result-card">
-          <div class="label">Product Commission (10%)</div>
+          <div class="label">Comision por productos (10%)</div>
           <div class="value accent" id="productComm">—</div>
           <div class="sub" id="prodSub"></div>
         </div>
         <div class="result-card">
-          <div class="label">Tax Float Interest</div>
+          <div class="label">Intereses del float fiscal</div>
           <div class="value gold" id="interest">—</div>
           <div class="sub" id="intSub"></div>
         </div>
         <div class="result-card">
-          <div class="label">Cancellation Revenue (3%)</div>
+          <div class="label">Ingreso por cancelaciones (3%)</div>
           <div class="value blue" id="cancelRev">—</div>
           <div class="sub" id="cancelSub"></div>
         </div>
         <div class="result-card">
-          <div class="label">Ad Revenue</div>
+          <div class="label">Ingreso por publicidad</div>
           <div class="value blue" id="adRev">—</div>
           <div class="sub" id="adSub"></div>
         </div>
         <div class="result-card" style="border: 2px solid var(--green);">
-          <div class="label">TOTAL MONTHLY BC REVENUE</div>
+          <div class="label">INGRESO MENSUAL TOTAL BC</div>
           <div class="value green" id="totalRev" style="font-size:28px;">—</div>
           <div class="sub" id="totalSub"></div>
         </div>
         <div class="result-card" style="border: 2px solid var(--gold);">
-          <div class="label">ANNUAL BC REVENUE</div>
+          <div class="label">INGRESO ANUAL BC</div>
           <div class="value gold" id="annualRev" style="font-size:28px;">—</div>
           <div class="sub" id="annualSub"></div>
         </div>
@@ -184,7 +184,7 @@
 
       <div class="breakdown">
         <table>
-          <thead><tr><th>Line Item</th><th>Monthly</th></tr></thead>
+          <thead><tr><th>Concepto</th><th>Mensual</th></tr></thead>
           <tbody id="breakdownBody"></tbody>
         </table>
       </div>
@@ -312,70 +312,70 @@ function calc() {
 
   // Render
   document.getElementById('gpv').textContent = fmtMxn(totalGPV);
-  document.getElementById('gpvSub').textContent = fmtNum(monthlyBookings) + ' bookings/month';
+  document.getElementById('gpvSub').textContent = fmtNum(monthlyBookings) + ' reservas/mes';
 
   document.getElementById('commission').textContent = fmtMxn(serviceCommission);
-  document.getElementById('commSub').textContent = '3% of ' + fmtMxn(monthlyServiceGPV) + ' services';
+  document.getElementById('commSub').textContent = '3% de ' + fmtMxn(monthlyServiceGPV) + ' servicios';
 
   document.getElementById('productComm').textContent = fmtMxn(productCommission);
-  document.getElementById('prodSub').textContent = '10% of ' + fmtMxn(monthlyProductGPV) + ' products';
+  document.getElementById('prodSub').textContent = '10% de ' + fmtMxn(monthlyProductGPV) + ' productos';
 
   document.getElementById('interest').textContent = fmtMxn(monthlyInterest);
-  document.getElementById('intSub').textContent = fmtMxn(avgTaxBalance) + ' avg balance × ' + (bankRate*100).toFixed(1) + '%/yr';
+  document.getElementById('intSub').textContent = fmtMxn(avgTaxBalance) + ' balance prom × ' + (bankRate*100).toFixed(1) + '%/año';
 
   document.getElementById('cancelRev').textContent = fmtMxn(cancelCommission);
-  document.getElementById('cancelSub').textContent = (cancelRate*100).toFixed(0) + '% cancel rate × 3%';
+  document.getElementById('cancelSub').textContent = (cancelRate*100).toFixed(0) + '% tasa cancelacion × 3%';
 
   document.getElementById('adRev').textContent = fmtMxn(adRevenue);
-  document.getElementById('adSub').textContent = fmtNum(monthlyImpressions) + ' impressions × $' + adCpm + ' CPM';
+  document.getElementById('adSub').textContent = fmtNum(monthlyImpressions) + ' impresiones × $' + adCpm + ' CPM';
 
   document.getElementById('totalRev').textContent = fmtMxn(totalMonthly);
-  document.getElementById('totalSub').textContent = fmtMxn(totalMonthly / N) + ' per salon';
+  document.getElementById('totalSub').textContent = fmtMxn(totalMonthly / N) + ' por salon';
 
   document.getElementById('annualRev').textContent = fmtMxn(totalAnnual);
-  document.getElementById('annualSub').textContent = totalAnnual >= 1e6 ? (totalAnnual/20/1e6).toFixed(1) + 'M USD approx' : '';
+  document.getElementById('annualSub').textContent = totalAnnual >= 1e6 ? (totalAnnual/20/1e6).toFixed(1) + 'M USD aprox' : '';
 
   // Breakdown table
   const rows = [
-    ['Gross Platform Volume (GPV)', fmtMxn(totalGPV)],
-    ['├ Service GPV (' + fmtNum(monthlyBookings) + ' bookings × $' + Z + ')', fmtMxn(monthlyServiceGPV)],
-    ['├ Product GPV (' + (productPct*100) + '% of services)', fmtMxn(monthlyProductGPV)],
-    ['├ Cancelled GPV (' + (cancelRate*100) + '% of services)', fmtMxn(cancelledGPV)],
+    ['Volumen Bruto de Plataforma (GPV)', fmtMxn(totalGPV)],
+    ['├ GPV servicios (' + fmtNum(monthlyBookings) + ' reservas × $' + Z + ')', fmtMxn(monthlyServiceGPV)],
+    ['├ GPV productos (' + (productPct*100) + '% de servicios)', fmtMxn(monthlyProductGPV)],
+    ['├ GPV cancelado (' + (cancelRate*100) + '% de servicios)', fmtMxn(cancelledGPV)],
     ['', ''],
-    ['BC Revenue Streams', ''],
-    ['├ Service commission (3% × all bookings)', fmtMxn(serviceCommission)],
-    ['├ Product commission (10% × products)', fmtMxn(productCommission)],
-    ['├ Cancellation commission (3% × cancelled)', fmtMxn(cancelCommission)],
-    ['├ Tax float interest (' + taxHoldDays + 'd avg @ ' + (bankRate*100).toFixed(1) + '%)', fmtMxn(monthlyInterest)],
-    ['├ Saldo float interest (' + fmtNum(usersWithSaldo) + ' users × $' + avgSaldo + ' avg)', fmtMxn(saldoFloatInterest)],
-    ['├ Saldo expiry/breakage (' + (saldoExpiryRate*100) + '% of $' + fmtNum(totalDormantSaldo) + ' dormant/yr)', fmtMxn(monthlySaldoExpiry)],
-    ['├ Ad revenue (' + fmtNum(T) + ' users × ' + impressions + ' imp × $' + adCpm + ' CPM)', fmtMxn(adRevenue)],
-    ['├ Uber referral (' + fmtNum(monthlyUberRides) + ' rides × $' + uberPerRideReferral + ' flat/ride)', fmtMxn(uberReferralRevenue)],
-    ['├ Featured listings (' + (featuredPct*100) + '% of ' + fmtNum(N) + ' salons × $' + featuredPrice + ')', fmtMxn(featuredRevenue)],
-    ['├ Premium subscriptions (' + (subPct*100) + '% of ' + fmtNum(N) + ' × $' + subPrice + '/mo)', fmtMxn(subscriptionRevenue)],
-    ['├ Brand partnerships (' + brandDeals + ' deals × $' + fmtNum(avgBrandDeal) + ')', fmtMxn(brandRevenue)],
+    ['Fuentes de Ingreso BC', ''],
+    ['├ Comision servicios (3% × todas las reservas)', fmtMxn(serviceCommission)],
+    ['├ Comision productos (10% × productos)', fmtMxn(productCommission)],
+    ['├ Comision cancelaciones (3% × canceladas)', fmtMxn(cancelCommission)],
+    ['├ Intereses float fiscal (' + taxHoldDays + 'd prom @ ' + (bankRate*100).toFixed(1) + '%)', fmtMxn(monthlyInterest)],
+    ['├ Intereses float saldo (' + fmtNum(usersWithSaldo) + ' usuarios × $' + avgSaldo + ' prom)', fmtMxn(saldoFloatInterest)],
+    ['├ Expiracion/breakage saldo (' + (saldoExpiryRate*100) + '% de $' + fmtNum(totalDormantSaldo) + ' dormido/año)', fmtMxn(monthlySaldoExpiry)],
+    ['├ Ingreso publicitario (' + fmtNum(T) + ' usuarios × ' + impressions + ' imp × $' + adCpm + ' CPM)', fmtMxn(adRevenue)],
+    ['├ Referidos Uber (' + fmtNum(monthlyUberRides) + ' viajes × $' + uberPerRideReferral + ' fijo/viaje)', fmtMxn(uberReferralRevenue)],
+    ['├ Listados destacados (' + (featuredPct*100) + '% de ' + fmtNum(N) + ' salones × $' + featuredPrice + ')', fmtMxn(featuredRevenue)],
+    ['├ Suscripciones premium (' + (subPct*100) + '% de ' + fmtNum(N) + ' × $' + subPrice + '/mes)', fmtMxn(subscriptionRevenue)],
+    ['├ Alianzas de marca (' + brandDeals + ' acuerdos × $' + fmtNum(avgBrandDeal) + ')', fmtMxn(brandRevenue)],
     ['', ''],
-    ['Saldo Holdings', ''],
-    ['├ Users with dormant saldo', fmtNum(usersWithSaldo)],
-    ['├ Total dormant saldo (BC holds this money)', fmtMxn(totalDormantSaldo)],
-    ['├ Annual expiry (pure revenue)', fmtMxn(annualSaldoExpiry)],
+    ['Saldo Retenido', ''],
+    ['├ Usuarios con saldo dormido', fmtNum(usersWithSaldo)],
+    ['├ Total saldo dormido (BC retiene este dinero)', fmtMxn(totalDormantSaldo)],
+    ['├ Expiracion anual (ingreso puro)', fmtMxn(annualSaldoExpiry)],
     ['', ''],
-    ['Tax Withholdings (held for SAT, not revenue)', ''],
-    ['├ ISR retained (2.5% of tax base)', fmtMxn(taxBase * 0.025)],
-    ['├ IVA retained (8% of tax base)', fmtMxn(taxBase * 0.08)],
-    ['├ Total monthly tax retained', fmtMxn(monthlyTaxRetained)],
-    ['├ Avg tax balance (float)', fmtMxn(avgTaxBalance)],
+    ['Retenciones Fiscales (retenidas para SAT, no son ingreso)', ''],
+    ['├ ISR retenido (2.5% de base gravable)', fmtMxn(taxBase * 0.025)],
+    ['├ IVA retenido (8% de base gravable)', fmtMxn(taxBase * 0.08)],
+    ['├ Total retenciones mensuales', fmtMxn(monthlyTaxRetained)],
+    ['├ Balance fiscal promedio (float)', fmtMxn(avgTaxBalance)],
     ['', ''],
-    ['Operational Costs (estimates)', ''],
-    ['├ Stripe fees (~2.9%+$3 on digital, salon pays)', '$0 (salon cost)'],
-    ['├ WA/SMS notifications (~$0.30/booking)', fmtMxn(monthlyBookings * 0.30)],
-    ['├ Infrastructure (servers, DB, CDN)', fmtMxn(Math.max(15000, N * 8))],
-    ['├ SAT compliance (CFDI ~$0.25/timbre)', fmtMxn(monthlyBookings * 0.25)],
+    ['Costos Operativos (estimados)', ''],
+    ['├ Comisiones Stripe (~2.9%+$3 en digital, paga el salon)', '$0 (costo del salon)'],
+    ['├ Notificaciones WA/SMS (~$0.30/reserva)', fmtMxn(monthlyBookings * 0.30)],
+    ['├ Infraestructura (servidores, BD, CDN)', fmtMxn(Math.max(15000, N * 8))],
+    ['├ Cumplimiento SAT (CFDI ~$0.25/timbre)', fmtMxn(monthlyBookings * 0.25)],
     ['', ''],
     ['', ''],
-    ['TOTAL MONTHLY BC REVENUE', fmtMxn(totalMonthly)],
-    ['NET MONTHLY (revenue - est. costs)', fmtMxn(totalMonthly - monthlyBookings*0.30 - Math.max(15000,N*8) - monthlyBookings*0.25)],
-    ['NET ANNUAL', fmtMxn((totalMonthly - monthlyBookings*0.30 - Math.max(15000,N*8) - monthlyBookings*0.25) * 12)],
+    ['INGRESO MENSUAL TOTAL BC', fmtMxn(totalMonthly)],
+    ['NETO MENSUAL (ingreso - costos est.)', fmtMxn(totalMonthly - monthlyBookings*0.30 - Math.max(15000,N*8) - monthlyBookings*0.25)],
+    ['NETO ANUAL', fmtMxn((totalMonthly - monthlyBookings*0.30 - Math.max(15000,N*8) - monthlyBookings*0.25) * 12)],
   ];
 
   document.getElementById('breakdownBody').innerHTML = rows.map(r =>
@@ -387,6 +387,7 @@ function calc() {
   // Formula
   document.getElementById('formulaBox').innerHTML =
     '<strong>Formula:</strong><br>' +
+
     'GPV = <span>N</span>(' + N + ') × <span>Y</span>(' + Y + ') × 26d × <span>Z</span>($' + Z + ') = ' + fmtMxn(monthlyServiceGPV) + '<br>' +
     'Commission = GPV × 3% = ' + fmtMxn(serviceCommission) + '<br>' +
     'Products = GPV × ' + (productPct*100) + '% × 10% = ' + fmtMxn(productCommission) + '<br>' +
