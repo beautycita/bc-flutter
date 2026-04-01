@@ -355,6 +355,25 @@
     font-family: 'Courier New', monospace;
   }
 
+  /* EXCLUSIVE badge */
+  .exclusive-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #ec4899, #9333ea);
+    color: white;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 8px 20px;
+    border-radius: 30px;
+    margin-bottom: 16px;
+    animation: pulse-badge 2s ease-in-out infinite;
+  }
+  @keyframes pulse-badge {
+    0%, 100% { box-shadow: 0 0 20px rgba(236, 72, 153, 0.3); }
+    50% { box-shadow: 0 0 40px rgba(236, 72, 153, 0.6); }
+  }
+
   /* NOBODY section variant */
   .nobody {
     background: var(--surface);
@@ -702,6 +721,7 @@
     <div class="section-title">Motor de Reservas <span class="highlight">Inteligente</span></div>
 
     <div class="comparison">
+      <div class="exclusive-badge">★ Exclusivo BeautyCita — Primero en la industria</div>
       <div class="nobody">
         <div class="nobody-text"><strong>Nadie tiene esto.</strong><br>No AgendaPro. No Fresha. No Booksy. Nadie.</div>
       </div>
@@ -964,6 +984,7 @@
     <div class="section-title">QR Walk-in <span class="highlight">(Cita Express)</span></div>
 
     <div class="comparison">
+      <div class="exclusive-badge">★ Exclusivo BeautyCita — Primero en la industria</div>
       <div class="nobody">
         <div class="nobody-text"><strong>Nadie tiene esto.</strong><br>Cero competidores. Cero alternativas.</div>
       </div>
@@ -1084,6 +1105,7 @@
     <div class="section-title">Inteligencia <span class="highlight">Artificial</span></div>
 
     <div class="comparison">
+      <div class="exclusive-badge">★ Exclusivo BeautyCita — Primero en la industria</div>
       <div class="nobody">
         <div class="nobody-text"><strong>Nadie en belleza tiene esto.</strong><br>Zero. Zilch. Nada.</div>
       </div>
