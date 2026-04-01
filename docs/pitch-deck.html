@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BeautyCita — Investor Pitch</title>
+<style>
+  :root { --bg: #0a0a0f; --surface: #14141f; --surface2: #1e1e2e; --border: #2a2a3a; --text: #e8e8f0; --muted: #6b6b8a; --accent: #C8A2C8; --green: #4ade80; --red: #f87171; --gold: #fbbf24; --blue: #60a5fa; --pink: #ec4899; --purple: #9333ea; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+  .container { max-width: 960px; margin: 0 auto; padding: 24px; }
+
+  /* Hero */
+  .hero { text-align: center; padding: 80px 0 60px; border-bottom: 1px solid var(--border); margin-bottom: 48px; }
+  .hero h1 { font-size: 42px; font-weight: 800; margin-bottom: 8px; }
+  .hero h1 span { background: linear-gradient(135deg, var(--pink), var(--purple), var(--blue)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .hero .rfc { font-size: 13px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 12px; }
+  .hero .tagline { font-size: 20px; color: var(--accent); font-weight: 300; margin-bottom: 32px; }
+  .hero-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .btn { display: inline-block; padding: 12px 28px; border-radius: 10px; font-size: 14px; font-weight: 600; text-decoration: none; transition: all 0.2s; cursor: pointer; border: none; }
+  .btn-primary { background: linear-gradient(135deg, var(--pink), var(--purple)); color: #fff; }
+  .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+  .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+  .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Sections */
+  .section { margin-bottom: 48px; }
+  .section h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); margin-bottom: 6px; }
+  .section h3 { font-size: 26px; font-weight: 700; margin-bottom: 16px; }
+  .section h3 span { color: var(--accent); }
+  .section p { color: var(--text); font-size: 15px; margin-bottom: 12px; }
+  .section .muted { color: var(--muted); font-size: 13px; }
+
+  /* Cards grid */
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-top: 16px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
+  .card .num { font-size: 28px; font-weight: 800; font-family: 'Courier New', monospace; margin-bottom: 4px; }
+  .card .label { font-size: 13px; color: var(--muted); }
+
+  /* Stat row */
+  .stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-top: 16px; }
+  .stat { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 16px; text-align: center; }
+  .stat .val { font-size: 22px; font-weight: 800; font-family: 'Courier New', monospace; }
+  .stat .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-top: 2px; }
+
+  /* List */
+  .feature-list { list-style: none; padding: 0; }
+  .feature-list li { padding: 10px 0; border-bottom: 1px solid rgba(42,42,58,0.5); font-size: 14px; display: flex; gap: 10px; }
+  .feature-list li::before { content: ''; display: inline-block; width: 8px; height: 8px; min-width: 8px; border-radius: 50%; margin-top: 6px; }
+  .feature-list.green li::before { background: var(--green); }
+  .feature-list.accent li::before { background: var(--accent); }
+  .feature-list.gold li::before { background: var(--gold); }
+  .feature-list.blue li::before { background: var(--blue); }
+
+  /* Divider */
+  .divider { border-top: 1px solid var(--border); margin: 48px 0; }
+
+  /* Revenue table */
+  .rev-table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 12px; }
+  .rev-table th { text-align: left; padding: 8px 10px; color: var(--muted); font-weight: 500; border-bottom: 1px solid var(--border); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .rev-table td { padding: 8px 10px; border-bottom: 1px solid rgba(42,42,58,0.3); }
+  .rev-table td:last-child { text-align: right; font-family: 'Courier New', monospace; font-weight: 600; color: var(--green); }
+
+  /* Tech list */
+  .tech-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 12px; }
+  .tech-item { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; font-size: 13px; }
+  .tech-item strong { color: var(--accent); }
+
+  /* Ask section */
+  .ask-box { background: var(--surface); border: 2px solid var(--gold); border-radius: 14px; padding: 28px; text-align: center; margin-top: 16px; }
+  .ask-box h3 { font-size: 22px; color: var(--gold); margin-bottom: 8px; }
+  .ask-box p { font-size: 15px; color: var(--text); }
+
+  /* Footer */
+  .footer { text-align: center; padding: 40px 0 24px; color: var(--muted); font-size: 12px; border-top: 1px solid var(--border); margin-top: 48px; }
+
+  @media (max-width: 768px) {
+    .hero h1 { font-size: 28px; }
+    .hero .tagline { font-size: 16px; }
+    .section h3 { font-size: 20px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="rfc">RFC: BEA260313MI8</div>
+    <h1>BeautyCita <span>Reservas Inteligentes de Belleza</span></h1>
+    <p class="tagline">The intelligent beauty booking agent for Mexico</p>
+    <div class="hero-buttons">
+      <a href="https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/apk/beautycita-arm64-v8a-release.apk" class="btn btn-primary">Download APK</a>
+      <a href="/bc/revenue-simulator.html" class="btn btn-outline">Revenue Simulator</a>
+      <a href="/bc/traction.html" class="btn btn-outline">Live Traction</a>
+    </div>
+  </div>
+
+  <!-- 1. PROBLEM -->
+  <div class="section">
+    <h2>01 &mdash; Problem</h2>
+    <h3>600K+ salons. <span>Zero infrastructure.</span></h3>
+    <p>Mexico has over 600,000 beauty salons. The vast majority run on paper agendas, WhatsApp messages, and phone calls. No-show rates sit at 10-20%. There are no tax compliance tools built for the beauty sector. The only digital competitor, AgendaPro, charges salons $29-129/month &mdash; a non-starter for 95% of Mexican salons earning under $50K MXN/month.</p>
+    <div class="stat-row">
+      <div class="stat"><div class="val accent">600K+</div><div class="lbl">Salons in Mexico</div></div>
+      <div class="stat"><div class="val red">10-20%</div><div class="lbl">No-show rate</div></div>
+      <div class="stat"><div class="val gold">&lt;10%</div><div class="lbl">Digital penetration</div></div>
+      <div class="stat"><div class="val blue">$29-129</div><div class="lbl">AgendaPro monthly fee</div></div>
+    </div>
+  </div>
+
+  <!-- 2. SOLUTION -->
+  <div class="section">
+    <h2>02 &mdash; Solution</h2>
+    <h3>AI booking agent. <span>Not another app.</span></h3>
+    <p>BeautyCita is not a booking app &mdash; it is an intelligent booking agent. The customer selects a service type, the engine returns the top 3 best options with a pre-selected time slot, and the customer books with one tap. 4-6 taps, under 30 seconds, zero keyboard input.</p>
+    <p>For the salon, BeautyCita replaces 5+ tools for free: CRM, marketing, payments, appointment management, and tax compliance. BeautyCita earns 3% per transaction &mdash; no monthly fees, no setup costs, no contracts.</p>
+    <ul class="feature-list green">
+      <li>Intelligent service-type-aware booking engine (200-400ms response)</li>
+      <li>Time inference &mdash; no calendar pickers, no time grids</li>
+      <li>Built-in ISR/IVA withholding with SAT real-time API</li>
+      <li>Stripe Connect payments + cash registration</li>
+      <li>WhatsApp-first salon onboarding (60 seconds)</li>
+      <li>Free for salons &mdash; always. BC earns on transactions.</li>
+    </ul>
+  </div>
+
+  <!-- 3. MARKET -->
+  <div class="section">
+    <h2>03 &mdash; Market</h2>
+    <h3>$12B market. <span>Wide open.</span></h3>
+    <p>The Mexico beauty and personal care market is valued at approximately $12 billion USD. With 600K+ salons and digital penetration below 10%, the opportunity is massive. LATAM beauty tech has grown 180% since 2020, and Mexico is the largest Spanish-speaking market by GDP.</p>
+    <div class="stat-row">
+      <div class="stat"><div class="val green">~$12B</div><div class="lbl">Mexico beauty market (USD)</div></div>
+      <div class="stat"><div class="val accent">600K+</div><div class="lbl">Total salons</div></div>
+      <div class="stat"><div class="val gold">180%</div><div class="lbl">LATAM beauty tech growth</div></div>
+      <div class="stat"><div class="val blue">#1</div><div class="lbl">Largest LatAm market (GDP)</div></div>
+    </div>
+  </div>
+
+  <!-- 4. REVENUE MODEL -->
+  <div class="section">
+    <h2>04 &mdash; Revenue Model</h2>
+    <h3>Seven revenue streams. <span>Day one.</span></h3>
+    <table class="rev-table">
+      <thead><tr><th>Stream</th><th>Rate</th></tr></thead>
+      <tbody>
+        <tr><td>Service transactions (card, saldo, cash registered)</td><td>3%</td></tr>
+        <tr><td>Product sales through platform</td><td>10%</td></tr>
+        <tr><td>Tax retention float interest (ISR + IVA held ~30 days)</td><td>~6.8% APY</td></tr>
+        <tr><td>In-app advertising (beauty brands, local businesses)</td><td>CPM $25-50</td></tr>
+        <tr><td>Gift cards &amp; saldo breakage</td><td>5-15% expiry</td></tr>
+        <tr><td>Featured salon listings</td><td>$200-500/mo</td></tr>
+        <tr><td>Premium salon subscriptions</td><td>$799/mo</td></tr>
+      </tbody>
+    </table>
+    <p class="muted" style="margin-top:12px;">See the <a href="/bc/revenue-simulator.html" style="color:var(--accent);">interactive Revenue Simulator</a> for projections at any scale.</p>
+  </div>
+
+  <!-- 5. TRACTION -->
+  <div class="section">
+    <h2>05 &mdash; Traction</h2>
+    <h3>67,000 salons discovered. <span>Platform built.</span></h3>
+    <p>Before writing a single line of marketing copy, we scraped and verified the market. The platform is fully built and SAT-compliant from day one.</p>
+    <div class="stat-row">
+      <div class="stat"><div class="val green">67,220</div><div class="lbl">Salons discovered</div></div>
+      <div class="stat"><div class="val accent">53,360</div><div class="lbl">In Mexico</div></div>
+      <div class="stat"><div class="val gold">6,334</div><div class="lbl">WhatsApp verified</div></div>
+      <div class="stat"><div class="val blue">371</div><div class="lbl">Cities covered</div></div>
+    </div>
+    <ul class="feature-list accent" style="margin-top:16px;">
+      <li>RFC obtained March 2026 &mdash; legal entity active</li>
+      <li>Full platform built: 90+ mobile screens, 58+ web pages, 55+ edge functions</li>
+      <li>SAT-compliant ISR/IVA withholding from day one (CFF Art. 30-B)</li>
+      <li>Stripe Connect integration live</li>
+      <li>Self-hosted Supabase on dedicated infrastructure</li>
+    </ul>
+  </div>
+
+  <!-- 6. COMPETITIVE ADVANTAGE -->
+  <div class="section">
+    <h2>06 &mdash; Competitive Advantage</h2>
+    <h3>The only platform with <span>built-in tax compliance.</span></h3>
+    <p>AgendaPro (Chile, YC W21, $35M Series B) is the only real competitor in Mexico with ~8,000 salons. They charge $29-129/month and have zero tax compliance features. BeautyCita is free for salons, has intelligent booking (vs. static search), and is the only platform in Mexico with ISR/IVA withholding and SAT real-time API integration.</p>
+    <div class="card-grid">
+      <div class="card">
+        <div class="num green">$0</div>
+        <div class="label">Cost for salons (vs $29-129/mo AgendaPro)</div>
+      </div>
+      <div class="card">
+        <div class="num accent">AI</div>
+        <div class="label">Intelligent booking engine (vs static directory)</div>
+      </div>
+      <div class="card">
+        <div class="num gold">SAT</div>
+        <div class="label">Built-in ISR/IVA withholding (only in Mexico)</div>
+      </div>
+      <div class="card">
+        <div class="num blue">Full</div>
+        <div class="label">Complete financial stack: payments, tax, CRM</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7. TECH STACK -->
+  <div class="section">
+    <h2>07 &mdash; Tech Stack</h2>
+    <h3>Production-grade. <span>Single operator.</span></h3>
+    <div class="tech-grid">
+      <div class="tech-item"><strong>Flutter</strong> &mdash; Android, iOS, Web (WASM)</div>
+      <div class="tech-item"><strong>Supabase</strong> &mdash; Self-hosted, PostgreSQL</div>
+      <div class="tech-item"><strong>Stripe Connect</strong> &mdash; Payments + payouts</div>
+      <div class="tech-item"><strong>55+ Edge Functions</strong> &mdash; Deno runtime</div>
+      <div class="tech-item"><strong>AI</strong> &mdash; GPT-4o integration</div>
+      <div class="tech-item"><strong>Cloudflare R2</strong> &mdash; Media storage + CDN</div>
+      <div class="tech-item"><strong>Nginx + Docker</strong> &mdash; Dedicated VPS</div>
+      <div class="tech-item"><strong>Grafana</strong> &mdash; Monitoring + alerting</div>
+      <div class="tech-item"><strong>SAT API</strong> &mdash; Real-time tax compliance</div>
+      <div class="tech-item"><strong>WhatsApp API</strong> &mdash; Notifications + onboarding</div>
+      <div class="tech-item"><strong>SW Sapien</strong> &mdash; CFDI invoicing (PAC)</div>
+      <div class="tech-item"><strong>Honeypot</strong> &mdash; 13-category security system</div>
+    </div>
+  </div>
+
+  <!-- 8. TEAM -->
+  <div class="section">
+    <h2>08 &mdash; Team</h2>
+    <h3>Sole founder. <span>Full stack.</span></h3>
+    <p>BC &mdash; sole founder and operator of BeautyCita S.A. de C.V. Built the entire platform: mobile app, web app, backend, infrastructure, scraper network, tax compliance system, and business operations. Operator of a retail chain (De Mar y Luna) and multiple vacation rental properties in Mexico.</p>
+    <p>Legal entity: <strong>BEAUTYCITA S.A. de C.V.</strong><br>
+    RFC: <strong>BEA260313MI8</strong><br>
+    Domicile: Puerto Vallarta, Jalisco, Mexico<br>
+    Phone: +52 (720) 677-7800</p>
+  </div>
+
+  <!-- 9. THE ASK -->
+  <div class="section">
+    <h2>09 &mdash; The Ask</h2>
+    <div class="ask-box">
+      <h3>Banking Relationship</h3>
+      <p>We are seeking a banking partner for operational accounts and tax retention deposit management. BeautyCita will handle significant transaction volume as we onboard salons across Mexico. We need a bank that understands fintech flows: high-volume micro-transactions, tax retention float accounts, and Stripe Connect payout rails.</p>
+    </div>
+  </div>
+
+  <div class="footer">
+    BEAUTYCITA S.A. de C.V. &middot; RFC BEA260313MI8 &middot; Puerto Vallarta, Jalisco &middot; beautycita.com<br>
+    Confidential &mdash; March 2026
+  </div>
+
+</div>
+</body>
+</html>
