@@ -1,5 +1,4 @@
 import 'package:beautycita_core/models.dart';
-import 'package:beautycita_core/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';

@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import '../../config/constants.dart';
 import '../../providers/business_provider.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
@@ -285,7 +284,6 @@ class _ClientCard extends StatelessWidget {
     final noShows = client['no_show_count'] as int? ?? 0;
     final loyaltyPoints = client['loyalty_points'] as int? ?? 0;
     final tags = (client['tags'] as List?)?.cast<String>() ?? [];
-    final phone = client['phone'] as String?;
     final notes = client['notes'] as String?;
     final fmt = NumberFormat('#,##0', 'es_MX');
 

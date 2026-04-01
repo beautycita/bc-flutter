@@ -1,12 +1,12 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
+import 'dart:js_interop';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:beautycita_core/supabase.dart';
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:html' as html;
+import 'package:web/web.dart' as web;
 
 import '../../config/breakpoints.dart';
 import '../../config/web_theme.dart';
@@ -146,15 +146,17 @@ class _ClientsTableState extends ConsumerState<_ClientsTable> {
       ].join(','));
     }
 
-    if (kIsWeb) {
-      final bytes = utf8.encode(sb.toString());
-      final blob = html.Blob([bytes], 'text/csv');
-      final url = html.Url.createObjectUrlFromBlob(blob);
-      final anchor = html.AnchorElement(href: url)
-        ..setAttribute('download', 'clientes.csv')
-        ..click();
-      html.Url.revokeObjectUrl(url);
-    }
+    final bytes = utf8.encode(sb.toString());
+    final blob = web.Blob(
+      [bytes.toJS].toJS,
+      web.BlobPropertyBag(type: 'text/csv'),
+    );
+    final url = web.URL.createObjectURL(blob);
+    (web.document.createElement('a') as web.HTMLAnchorElement
+          ..href = url
+          ..download = 'clientes.csv')
+        .click();
+    web.URL.revokeObjectURL(url);
   }
 
   String _csvEscape(String v) {

@@ -370,7 +370,6 @@ class _DebtCard extends ConsumerWidget {
         final debt = (biz['outstanding_debt'] as num?)?.toDouble() ?? 0;
         if (debt <= 0) return const SizedBox.shrink();
 
-        final colors = Theme.of(context).colorScheme;
         return Card(
           elevation: 0,
           color: Colors.red.shade50,

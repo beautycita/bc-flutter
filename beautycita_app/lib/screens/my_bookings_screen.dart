@@ -310,7 +310,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
         // Send cancel notification (fire-and-forget)
         SupabaseClientService.client.functions
             .invoke('cancel-notification', body: {'appointment_id': booking.id})
-            .catchError((_) {});
+            .ignore();
 
         // Refresh data.
         ref.invalidate(userBookingsProvider);

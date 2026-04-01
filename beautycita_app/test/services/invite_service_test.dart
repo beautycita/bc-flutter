@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:beautycita/services/invite_service.dart';
-import 'package:beautycita/screens/invite_salon_screen.dart' show DiscoveredSalon;
 
 void main() {
   group('InviteService', () {

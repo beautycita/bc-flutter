@@ -27,7 +27,7 @@ class BookingFlowScreen extends ConsumerWidget {
 
     return switch (state.step) {
       BookingFlowStep.followUpQuestions => const FollowUpQuestionScreen(),
-      BookingFlowStep.subcategorySelect => const SizedBox.shrink(),
+      BookingFlowStep.subcategorySelect => _LoadingView(serviceName: state.serviceName ?? 'Buscando...'),
       BookingFlowStep.loading => _LoadingView(
           serviceName: state.serviceName ?? '',
         ),

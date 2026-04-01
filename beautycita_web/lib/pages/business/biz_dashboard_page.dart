@@ -263,9 +263,6 @@ class _QuickActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-
     final actions = [
       (Icons.calendar_month_outlined, 'Ver calendario', _demoAware(context, WebRoutes.negocioCalendar)),
       (Icons.spa_outlined, 'Agregar servicio', _demoAware(context, WebRoutes.negocioServices)),
