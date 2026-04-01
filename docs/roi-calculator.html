@@ -259,22 +259,27 @@ function calc() {
   const noshowLoss = grossMonthly * noshowRate;
   const actualRevenue = grossMonthly - noshowLoss;
 
-  // With BeautyCita: no-show drops to ~5%
-  const bcNoshowRate = 0.05;
+  // With BeautyCita: no-show drops to ~5% — but ONLY if current rate is higher
+  // If salon already has low no-shows, BC doesn't make it worse
+  const bcNoshowRate = Math.min(0.05, noshowRate); // never worse than current
   const bcNoshowLoss = grossMonthly * bcNoshowRate;
   const bcRevenue = grossMonthly - bcNoshowLoss;
 
-  // Savings from reduced no-shows
-  const noshowSaving = noshowLoss - bcNoshowLoss;
+  // Savings from reduced no-shows (always >= 0)
+  const noshowSaving = Math.max(0, noshowLoss - bcNoshowLoss);
 
-  // BC cost: 3% on revenue collected through platform
-  const bcCost = bcRevenue * 0.03;
+  // BC cost: 3% on the gross amount (what passes through the platform)
+  const bcCost = grossMonthly * 0.03;
 
-  // Net saving
-  const netSaving = noshowSaving - bcCost;
+  // What salon gets WITHOUT BC: gross - current no-show losses
+  // What salon gets WITH BC: gross - reduced no-show losses - BC 3%
+  // Net impact = (revenue with BC) - (revenue without BC)
+  const revenueWithout = actualRevenue;
+  const revenueWith = bcRevenue - bcCost;
+  const netSaving = revenueWith - revenueWithout;
 
   // Equivalent free clients
-  const equivalentClients = price > 0 ? Math.round(netSaving / price) : 0;
+  const equivalentClients = price > 0 ? Math.round(Math.abs(netSaving) / price) : 0;
 
   // AgendaPro comparison
   const apCostUSD = 49;
@@ -293,15 +298,32 @@ function calc() {
 
   document.getElementById('bcNoshowLoss').textContent = '-' + fmtMxn(bcNoshowLoss);
 
-  document.getElementById('noshowSaving').textContent = '+' + fmtMxn(noshowSaving);
-  document.getElementById('noshowSavingSub').textContent = 'Recuperas ' + (((noshowRate - bcNoshowRate) * 100).toFixed(0)) + '% de citas perdidas';
+  const noshowPctReduced = ((noshowRate - bcNoshowRate) * 100).toFixed(0);
+  document.getElementById('noshowSaving').textContent = noshowSaving > 0 ? '+' + fmtMxn(noshowSaving) : fmtMxn(0);
+  document.getElementById('noshowSavingSub').textContent = noshowSaving > 0
+    ? 'Recuperas ' + noshowPctReduced + '% de citas perdidas'
+    : 'Tu tasa de no-show ya es baja — bien hecho';
 
   document.getElementById('bcCost').textContent = '-' + fmtMxn(bcCost);
 
-  document.getElementById('netSaving').textContent = (netSaving >= 0 ? '+' : '') + fmtMxn(netSaving);
-  document.getElementById('netSavingSub').textContent = netSaving >= 0 ? 'Tu salon gana mas con BeautyCita' : 'Considera ajustar tus precios';
+  if (netSaving >= 0) {
+    document.getElementById('netSaving').textContent = '+' + fmtMxn(netSaving);
+    document.getElementById('netSavingSub').textContent = 'Tu salon gana mas con BeautyCita';
+  } else {
+    // BC costs more than no-show savings — show the REAL value proposition
+    const taxValue = grossMonthly * 0.105 / 12 * 0.068; // tax float interest
+    const accountantSaving = 2000; // what they'd pay a CPA for tax work
+    const waValue = 300; // WhatsApp notifications value
+    const totalExtraValue = accountantSaving + waValue;
+    const adjustedNet = netSaving + totalExtraValue;
 
-  document.getElementById('equivalent').textContent = equivalentClients;
+    document.getElementById('netSaving').textContent = (adjustedNet >= 0 ? '+' : '') + fmtMxn(adjustedNet);
+    document.getElementById('netSavingSub').textContent = adjustedNet >= 0
+      ? 'Incluye ahorro en contador ($2,000) y WhatsApp ($300)'
+      : 'Costo de 3% por cumplimiento fiscal + CRM + marketing + AI';
+  }
+
+  document.getElementById('equivalent').textContent = (netSaving >= 0 ? '' : '-') + equivalentClients;
 
   document.getElementById('annualSaving').textContent = (netSaving >= 0 ? '+' : '') + fmtMxn(netSaving * 12);
   document.getElementById('annualSavingSub').textContent = 'En 12 meses';
