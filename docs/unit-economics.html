@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BeautyCita — Unit Economics</title>
+<style>
+  :root { --bg: #0a0a0f; --surface: #14141f; --surface2: #1e1e2e; --border: #2a2a3a; --text: #e8e8f0; --muted: #6b6b8a; --accent: #C8A2C8; --green: #4ade80; --red: #f87171; --gold: #fbbf24; --blue: #60a5fa; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.5; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+  h1 { font-size: 28px; font-weight: 700; margin-bottom: 4px; }
+  h1 span { color: var(--accent); }
+  .subtitle { color: var(--muted); font-size: 14px; margin-bottom: 24px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
+  .card h2 { font-size: 14px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 14px; }
+  .input-group { margin-bottom: 14px; }
+  .input-group label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+  .input-group .row { display: flex; align-items: center; gap: 10px; }
+  input[type="range"] { flex: 1; accent-color: var(--accent); height: 6px; }
+  .val { min-width: 90px; text-align: right; font-weight: 700; font-size: 15px; color: var(--accent); font-family: 'Courier New', monospace; }
+  .results { grid-column: 1 / -1; }
+  .results-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+  .result-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 16px; text-align: center; }
+  .result-card .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); }
+  .result-card .value { font-size: 24px; font-weight: 800; margin-top: 4px; font-family: 'Courier New', monospace; }
+  .result-card .sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .green { color: var(--green); }
+  .gold { color: var(--gold); }
+  .blue { color: var(--blue); }
+  .red { color: var(--red); }
+  .accent { color: var(--accent); }
+  .divider { border-top: 1px solid var(--border); margin: 20px 0; }
+  .indicator { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; font-family: 'Courier New', monospace; }
+  .indicator.healthy { background: rgba(74,222,128,0.15); color: var(--green); border: 1px solid rgba(74,222,128,0.3); }
+  .indicator.warning { background: rgba(251,191,36,0.15); color: var(--gold); border: 1px solid rgba(251,191,36,0.3); }
+  .indicator.danger { background: rgba(248,113,113,0.15); color: var(--red); border: 1px solid rgba(248,113,113,0.3); }
+  .note { font-size: 11px; color: var(--muted); margin-top: 6px; font-style: italic; }
+  .formula { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 14px; font-family: 'Courier New', monospace; font-size: 12px; color: var(--muted); margin-top: 12px; line-height: 1.8; }
+  .formula span { color: var(--accent); }
+  .section-title { font-size: 18px; font-weight: 700; color: var(--accent); margin: 24px 0 12px 0; }
+  .full-width { grid-column: 1 / -1; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>BeautyCita <span>Unit Economics</span></h1>
+  <p class="subtitle">Per-unit economics for investor analysis | RFC: BEA260313MI8 | 3% commission model</p>
+
+  <!-- ===== PER SALON ECONOMICS ===== -->
+  <div class="section-title">Per Salon Economics</div>
+  <div class="grid">
+    <div class="card">
+      <h2>Salon Inputs</h2>
+      <div class="input-group">
+        <label>Avg Bookings per Month via BC</label>
+        <div class="row"><input type="range" id="salonBookings" min="50" max="500" value="150" step="5" oninput="calc()"><span class="val" id="salonBookingsVal"></span></div>
+      </div>
+      <div class="input-group">
+        <label>Avg Ticket (MXN)</label>
+        <div class="row"><input type="range" id="salonTicket" min="200" max="800" value="380" step="10" oninput="calc()"><span class="val" id="salonTicketVal"></span></div>
+      </div>
+      <div class="input-group">
+        <label>Cost to Serve per Salon (MXN/month)</label>
+        <div class="row"><input type="range" id="salonCost" min="30" max="300" value="80" step="5" oninput="calc()"><span class="val" id="salonCostVal"></span></div>
+        <p class="note">Infrastructure, WA notifications, SAT compliance (CFDI timbres), support.</p>
+      </div>
+      <div class="input-group">
+        <label>CAC — Cost to Acquire a Salon (MXN)</label>
+        <div class="row"><input type="range" id="salonCAC" min="200" max="2000" value="500" step="50" oninput="calc()"><span class="val" id="salonCACVal"></span></div>
+        <p class="note">RP visits, WhatsApp outreach, Google Ads, onboarding time.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Salon Unit Metrics</h2>
+      <div class="results-grid">
+        <div class="result-card">
+          <div class="label">Monthly GPV per Salon</div>
+          <div class="value accent" id="salonGPV">--</div>
+          <div class="sub" id="salonGPVSub"></div>
+        </div>
+        <div class="result-card">
+          <div class="label">BC Revenue per Salon</div>
+          <div class="value green" id="salonRev">--</div>
+          <div class="sub">GPV x 3%</div>
+        </div>
+        <div class="result-card">
+          <div class="label">Gross Margin per Salon</div>
+          <div class="value green" id="salonMargin">--</div>
+          <div class="sub" id="salonMarginSub"></div>
+        </div>
+        <div class="result-card">
+          <div class="label">Salon LTV (24 months)</div>
+          <div class="value gold" id="salonLTV">--</div>
+          <div class="sub">margin x 24</div>
+        </div>
+        <div class="result-card">
+          <div class="label">LTV / CAC Ratio</div>
+          <div class="value" id="salonRatio">--</div>
+          <div class="sub" id="salonRatioIndicator"></div>
+        </div>
+        <div class="result-card">
+          <div class="label">Payback Period</div>
+          <div class="value" id="salonPayback">--</div>
+          <div class="sub" id="salonPaybackIndicator"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== PER USER ECONOMICS ===== -->
+  <div class="section-title">Per User Economics</div>
+  <div class="grid">
+    <div class="card">
+      <h2>User Inputs</h2>
+      <div class="input-group">
+        <label>Avg Bookings per Month</label>
+        <div class="row"><input type="range" id="userBookings" min="1" max="5" value="2" step="0.5" oninput="calc()"><span class="val" id="userBookingsVal"></span></div>
+      </div>
+      <div class="input-group">
+        <label>Avg Ticket (MXN) — same as salon</label>
+        <div class="row"><span class="val" id="userTicketVal" style="flex:1;text-align:left;">$380</span></div>
+        <p class="note">Linked to salon avg ticket slider above.</p>
+      </div>
+      <div class="input-group">
+        <label>User CAC (MXN)</label>
+        <div class="row"><input type="range" id="userCAC" min="50" max="500" value="100" step="10" oninput="calc()"><span class="val" id="userCACVal"></span></div>
+        <p class="note">Mostly organic: WA invite from friend, salon referral, Google Ads.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>User Unit Metrics</h2>
+      <div class="results-grid">
+        <div class="result-card">
+          <div class="label">Monthly Revenue per User</div>
+          <div class="value accent" id="userRev">--</div>
+          <div class="sub" id="userRevSub"></div>
+        </div>
+        <div class="result-card">
+          <div class="label">User LTV (18 months)</div>
+          <div class="value gold" id="userLTV">--</div>
+          <div class="sub">monthly x 18</div>
+        </div>
+        <div class="result-card">
+          <div class="label">LTV / CAC Ratio</div>
+          <div class="value" id="userRatio">--</div>
+          <div class="sub" id="userRatioIndicator"></div>
+        </div>
+        <div class="result-card">
+          <div class="label">Payback Period</div>
+          <div class="value" id="userPayback">--</div>
+          <div class="sub" id="userPaybackIndicator"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== PLATFORM ECONOMICS ===== -->
+  <div class="section-title">Platform Breakeven</div>
+  <div class="grid">
+    <div class="card">
+      <h2>Platform Inputs</h2>
+      <div class="input-group">
+        <label>Fixed Costs (MXN/month)</label>
+        <div class="row"><input type="range" id="fixedCosts" min="50000" max="500000" value="150000" step="5000" oninput="calc()"><span class="val" id="fixedCostsVal"></span></div>
+        <p class="note">Server infra, team salaries, legal, marketing, SAT compliance overhead.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Breakeven Analysis</h2>
+      <div class="results-grid">
+        <div class="result-card" style="border: 2px solid var(--gold);">
+          <div class="label">Breakeven Salon Count</div>
+          <div class="value gold" id="breakeven" style="font-size:28px;">--</div>
+          <div class="sub" id="breakevenSub"></div>
+        </div>
+        <div class="result-card" style="border: 2px solid var(--green);">
+          <div class="label">Monthly Bookings Needed</div>
+          <div class="value green" id="breakevenBookings" style="font-size:28px;">--</div>
+          <div class="sub" id="breakevenBookingsSub"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SUMMARY FORMULA ===== -->
+  <div class="grid">
+    <div class="card full-width">
+      <h2>Formulas</h2>
+      <div class="formula" id="formulaBox"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const fmt = (n) => {
+  if (n >= 1e9) return '$' + (n/1e9).toFixed(2) + 'B';
+  if (n >= 1e6) return '$' + (n/1e6).toFixed(2) + 'M';
+  if (n >= 1e3) return '$' + (n/1e3).toFixed(1) + 'K';
+  return '$' + n.toFixed(0);
+};
+const fmtMxn = (n) => fmt(n) + ' MXN';
+
+function ratioClass(r) { return r >= 3 ? 'healthy' : r >= 1.5 ? 'warning' : 'danger'; }
+function ratioLabel(r) { return r >= 3 ? 'Healthy (>3x)' : r >= 1.5 ? 'Marginal (1.5-3x)' : 'Unhealthy (<1.5x)'; }
+function paybackClass(m) { return m <= 3 ? 'healthy' : m <= 8 ? 'warning' : 'danger'; }
+function paybackLabel(m) { return m <= 3 ? 'Excellent (<3 mo)' : m <= 8 ? 'Acceptable (3-8 mo)' : 'Slow (>8 mo)'; }
+
+function calc() {
+  // Read inputs
+  const sBookings = +document.getElementById('salonBookings').value;
+  const sTicket   = +document.getElementById('salonTicket').value;
+  const sCost     = +document.getElementById('salonCost').value;
+  const sCAC      = +document.getElementById('salonCAC').value;
+  const uBookings = +document.getElementById('userBookings').value;
+  const uCAC      = +document.getElementById('userCAC').value;
+  const fixed     = +document.getElementById('fixedCosts').value;
+
+  // Display values
+  document.getElementById('salonBookingsVal').textContent = sBookings;
+  document.getElementById('salonTicketVal').textContent = '$' + sTicket;
+  document.getElementById('salonCostVal').textContent = '$' + sCost;
+  document.getElementById('salonCACVal').textContent = '$' + sCAC;
+  document.getElementById('userBookingsVal').textContent = uBookings;
+  document.getElementById('userTicketVal').textContent = '$' + sTicket;
+  document.getElementById('userCACVal').textContent = '$' + uCAC;
+  document.getElementById('fixedCostsVal').textContent = fmtMxn(fixed);
+
+  // === SALON UNIT ECONOMICS ===
+  const salonGPV = sBookings * sTicket;
+  const salonRev = salonGPV * 0.03;
+  const salonMargin = salonRev - sCost;
+  const salonLTV = salonMargin * 24;
+  const salonRatio = salonLTV / sCAC;
+  const salonPayback = salonMargin > 0 ? sCAC / salonMargin : Infinity;
+
+  document.getElementById('salonGPV').textContent = fmtMxn(salonGPV);
+  document.getElementById('salonGPVSub').textContent = sBookings + ' bookings x $' + sTicket;
+  document.getElementById('salonRev').textContent = fmtMxn(salonRev);
+  document.getElementById('salonMargin').textContent = fmtMxn(salonMargin);
+  document.getElementById('salonMarginSub').textContent = fmtMxn(salonRev) + ' - ' + fmtMxn(sCost) + ' cost';
+
+  document.getElementById('salonLTV').textContent = fmtMxn(salonLTV);
+
+  const sr = document.getElementById('salonRatio');
+  sr.textContent = salonRatio.toFixed(1) + 'x';
+  sr.className = 'value ' + (salonRatio >= 3 ? 'green' : salonRatio >= 1.5 ? 'gold' : 'red');
+  document.getElementById('salonRatioIndicator').innerHTML = '<span class="indicator ' + ratioClass(salonRatio) + '">' + ratioLabel(salonRatio) + '</span>';
+
+  const sp = document.getElementById('salonPayback');
+  sp.textContent = salonPayback === Infinity ? 'Never' : salonPayback.toFixed(1) + ' mo';
+  sp.className = 'value ' + (salonPayback <= 3 ? 'green' : salonPayback <= 8 ? 'gold' : 'red');
+  document.getElementById('salonPaybackIndicator').innerHTML = salonPayback === Infinity ? '<span class="indicator danger">Negative margin</span>' : '<span class="indicator ' + paybackClass(salonPayback) + '">' + paybackLabel(salonPayback) + '</span>';
+
+  // === USER UNIT ECONOMICS ===
+  const userMonthly = uBookings * sTicket * 0.03;
+  const userLTV = userMonthly * 18;
+  const userRatio = userLTV / uCAC;
+  const userPayback = userMonthly > 0 ? uCAC / userMonthly : Infinity;
+
+  document.getElementById('userRev').textContent = fmtMxn(userMonthly);
+  document.getElementById('userRevSub').textContent = uBookings + ' x $' + sTicket + ' x 3%';
+  document.getElementById('userLTV').textContent = fmtMxn(userLTV);
+
+  const ur = document.getElementById('userRatio');
+  ur.textContent = userRatio.toFixed(1) + 'x';
+  ur.className = 'value ' + (userRatio >= 3 ? 'green' : userRatio >= 1.5 ? 'gold' : 'red');
+  document.getElementById('userRatioIndicator').innerHTML = '<span class="indicator ' + ratioClass(userRatio) + '">' + ratioLabel(userRatio) + '</span>';
+
+  const up = document.getElementById('userPayback');
+  up.textContent = userPayback === Infinity ? 'Never' : userPayback.toFixed(1) + ' mo';
+  up.className = 'value ' + (userPayback <= 3 ? 'green' : userPayback <= 8 ? 'gold' : 'red');
+  document.getElementById('userPaybackIndicator').innerHTML = userPayback === Infinity ? '<span class="indicator danger">Zero revenue</span>' : '<span class="indicator ' + paybackClass(userPayback) + '">' + paybackLabel(userPayback) + '</span>';
+
+  // === PLATFORM BREAKEVEN ===
+  const breakevenSalons = salonMargin > 0 ? Math.ceil(fixed / salonMargin) : Infinity;
+  const breakevenBk = breakevenSalons === Infinity ? Infinity : breakevenSalons * sBookings;
+
+  const be = document.getElementById('breakeven');
+  be.textContent = breakevenSalons === Infinity ? 'N/A' : breakevenSalons.toLocaleString();
+  document.getElementById('breakevenSub').textContent = breakevenSalons === Infinity ? 'Negative margin per salon' : 'at ' + fmtMxn(salonMargin) + ' margin each';
+
+  const bb = document.getElementById('breakevenBookings');
+  bb.textContent = breakevenBk === Infinity ? 'N/A' : breakevenBk.toLocaleString();
+  document.getElementById('breakevenBookingsSub').textContent = breakevenBk === Infinity ? '' : breakevenSalons + ' salons x ' + sBookings + ' bookings/mo';
+
+  // === FORMULA ===
+  document.getElementById('formulaBox').innerHTML =
+    '<strong style="color:var(--accent)">Salon Economics:</strong><br>' +
+    'GPV/salon = <span>' + sBookings + '</span> bookings x <span>$' + sTicket + '</span> = ' + fmtMxn(salonGPV) + '<br>' +
+    'Revenue/salon = GPV x 3% = ' + fmtMxn(salonRev) + '<br>' +
+    'Margin/salon = ' + fmtMxn(salonRev) + ' - ' + fmtMxn(sCost) + ' = ' + fmtMxn(salonMargin) + '<br>' +
+    'LTV (24mo) = ' + fmtMxn(salonMargin) + ' x 24 = ' + fmtMxn(salonLTV) + '<br>' +
+    'LTV/CAC = ' + fmtMxn(salonLTV) + ' / ' + fmtMxn(sCAC) + ' = <span>' + salonRatio.toFixed(1) + 'x</span><br>' +
+    'Payback = ' + fmtMxn(sCAC) + ' / ' + fmtMxn(salonMargin) + ' = <span>' + (salonPayback === Infinity ? 'Never' : salonPayback.toFixed(1) + ' months') + '</span><br><br>' +
+    '<strong style="color:var(--accent)">User Economics:</strong><br>' +
+    'Revenue/user = <span>' + uBookings + '</span> x <span>$' + sTicket + '</span> x 3% = ' + fmtMxn(userMonthly) + '/mo<br>' +
+    'LTV (18mo) = ' + fmtMxn(userMonthly) + ' x 18 = ' + fmtMxn(userLTV) + '<br>' +
+    'LTV/CAC = ' + fmtMxn(userLTV) + ' / ' + fmtMxn(uCAC) + ' = <span>' + userRatio.toFixed(1) + 'x</span><br><br>' +
+    '<strong style="color:var(--accent)">Breakeven:</strong><br>' +
+    'Fixed costs / margin per salon = ' + fmtMxn(fixed) + ' / ' + fmtMxn(salonMargin) + ' = <span>' + (breakevenSalons === Infinity ? 'N/A' : breakevenSalons + ' salons') + '</span>';
+}
+
+calc();
+</script>
+</body>
+</html>
