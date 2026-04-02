@@ -161,6 +161,7 @@ serve(async (req) => {
         is_active: true,
         accept_online_booking: true,
         sort_order: 0,
+        position: "owner",
       })
       .select()
       .single();

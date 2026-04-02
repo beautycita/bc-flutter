@@ -3,18 +3,12 @@ import 'package:beautycita/providers/business_provider.dart';
 import 'package:beautycita/services/supabase_client.dart';
 
 /// Whether the current business has completed banking setup.
-/// Returns true if CLABE and beneficiary_name are present and non-empty.
+/// Returns true if the banking_complete flag is set in the DB.
 final bankingCompleteProvider = FutureProvider.autoDispose<bool>((ref) async {
   final biz = await ref.watch(currentBusinessProvider.future);
   if (biz == null) return false;
 
-  final clabe = biz['clabe'] as String?;
-  final beneficiary = biz['beneficiary_name'] as String?;
-
-  return clabe != null &&
-      clabe.isNotEmpty &&
-      beneficiary != null &&
-      beneficiary.isNotEmpty;
+  return biz['banking_complete'] as bool? ?? false;
 });
 
 /// Banking info for the current business (clabe, beneficiary_name, bank detected).

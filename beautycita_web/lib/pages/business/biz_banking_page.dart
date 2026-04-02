@@ -201,23 +201,23 @@ class _BizBankingPageState extends ConsumerState<BizBankingPage> {
             ),
       ]);
 
-      // Save CLABE + beneficiary to businesses table
+      // Save CLABE + beneficiary + ID URLs to businesses table
       await BCSupabase.client.from(BCTables.businesses).update({
         'clabe': clabe,
-        'clabe_beneficiary': beneficiary,
-        'clabe_bank': _detectedBank ?? '',
+        'beneficiary_name': beneficiary,
+        'bank_name': _detectedBank ?? '',
         'banking_complete': false, // will be set true by edge function on verification
-        'id_front_path': frontPath,
-        'id_back_path': backPath,
+        'id_front_url': frontPath,
+        'id_back_url': backPath,
       }).eq('id', bizId);
 
       // Call edge function for verification
+      // TODO: bank account details (CLABE routing) pending BBVA meeting
       final response = await BCSupabase.client.functions.invoke(
         'verify-salon-id',
         body: {
           'business_id': bizId,
-          'id_front_path': frontPath,
-          'id_back_path': backPath,
+          'beneficiary_name': beneficiary,
         },
       );
 

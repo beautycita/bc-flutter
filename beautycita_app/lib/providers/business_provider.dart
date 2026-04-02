@@ -22,7 +22,7 @@ final currentBusinessProvider =
 final isBusinessOwnerProvider = FutureProvider.autoDispose<bool>((ref) async {
   final biz = await ref.watch(currentBusinessProvider.future);
   if (biz == null) return false;
-  return (biz['is_verified'] as bool? ?? false) && (biz['is_active'] as bool? ?? false);
+  return biz['is_active'] as bool? ?? false;
 });
 
 /// Staff position for the current user at the current business.
