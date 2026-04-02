@@ -393,7 +393,7 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders(req) });
   }
 
-  const blocked = await requireFeature("enable_chat");
+  const blocked = await requireFeature("enable_salon_chat");
   if (blocked) return blocked;
 
   try {

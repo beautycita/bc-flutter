@@ -266,7 +266,7 @@ Deno.serve(async (req) => {
     return json({ error: "Method not allowed" }, 405);
   }
 
-  const blocked = await requireFeature("enable_chat");
+  const blocked = await requireFeature("enable_salon_chat");
   if (blocked) return blocked;
 
   try {

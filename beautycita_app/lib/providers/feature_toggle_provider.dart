@@ -9,31 +9,28 @@ const _defaults = <String, bool>{
   'enable_cash_payments': true,
   'enable_deposit_required': false,
   // Booking
-  'enable_instant_booking': true,
   'enable_time_inference': true,
   'enable_uber_integration': false,
-  'enable_waitlist': false,
   // Social
   'enable_reviews': true,
   'enable_salon_chat': true,
   'enable_referrals': true,
-  // Experimental
-  'enable_voice_booking': false,
   // Platform
   'enable_push_notifications': true,
-  'enable_analytics': true,
   'enable_maintenance_mode': false,
   // Marketplace
   'enable_pos': true,
   'enable_feed': true,
   'enable_portfolio': true,
+  'enable_gift_cards': true,
+  'enable_marketing_automation': true,
+  'enable_loyalty': true,
   // Registration
   'enable_salon_registration': false,
   // AI & Studio
   'enable_virtual_studio': true,
   'enable_aphrodite_ai': true,
   'enable_eros_support': true,
-  'enable_ai_copy': true,
   'enable_ai_avatars': true,
   // Integrations
   'enable_google_calendar': true,

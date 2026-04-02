@@ -257,7 +257,7 @@ Deno.serve(async (req: Request) => {
     return json({ error: "Method not allowed" }, 405);
   }
 
-  const blocked = await requireFeature("enable_google_calendar_sync");
+  const blocked = await requireFeature("enable_google_calendar");
   if (blocked) return blocked;
 
   if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
