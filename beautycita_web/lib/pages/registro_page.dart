@@ -33,6 +33,9 @@ class _RegistroPageState extends ConsumerState<RegistroPage> {
   final _cityController = TextEditingController();
   final _phoneController = TextEditingController();
   String? _imageUrl;
+  num? _salonLat;
+  num? _salonLng;
+  String? _salonState;
 
   // Step 2: Auth
   final _emailController = TextEditingController();
@@ -108,6 +111,9 @@ class _RegistroPageState extends ConsumerState<RegistroPage> {
       _cityController.text = (data['location_city'] as String?) ?? '';
       _phoneController.text = (data['phone'] as String?) ?? '';
       _imageUrl = data['feature_image_url'] as String?;
+      _salonLat = data['latitude'] as num?;
+      _salonLng = data['longitude'] as num?;
+      _salonState = data['location_state'] as String?;
 
       setState(() => _loading = false);
     } catch (_) {
@@ -698,6 +704,9 @@ class _RegistroPageState extends ConsumerState<RegistroPage> {
           'discovered_salon_id': widget.salonId,
           'photo_url': _imageUrl,
           'service_categories': _selectedServices.toList(),
+          if (_salonLat != null) 'lat': _salonLat,
+          if (_salonLng != null) 'lng': _salonLng,
+          if (_salonState != null) 'state': _salonState,
         },
       );
 

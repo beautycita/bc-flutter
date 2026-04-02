@@ -259,13 +259,13 @@ serve(async (req) => {
       id_verification_status: "pending",
     }).eq("id", business_id);
 
-    // Download images from private bucket
+    // Download images from private bucket using URLs stored in businesses table
     const { data: frontData, error: frontErr } = await supabase.storage
       .from("salon-ids")
-      .download(`${business_id}/id_front`);
+      .download(biz.id_front_url);
     const { data: backData, error: backErr } = await supabase.storage
       .from("salon-ids")
-      .download(`${business_id}/id_back`);
+      .download(biz.id_back_url);
 
     if (frontErr || backErr || !frontData || !backData) {
       await supabase.from("businesses").update({

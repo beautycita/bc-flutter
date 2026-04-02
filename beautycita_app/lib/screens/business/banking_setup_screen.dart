@@ -892,20 +892,23 @@ class _BankingSetupScreenState extends ConsumerState<BankingSetupScreen> {
             ),
           );
 
-      // 3. Save CLABE + beneficiary to businesses table
-      await saveBankingDetails(
-        businessId: businessId,
-        clabe: clabe,
-        beneficiaryName: beneficiary,
-      );
+      // 3. Save CLABE + beneficiary + ID URLs to businesses table
+      await client.from('businesses').update({
+        'clabe': clabe,
+        'beneficiary_name': beneficiary,
+        'bank_name': _detectedBank ?? '',
+        'id_front_url': frontPath,
+        'id_back_url': backPath,
+        'banking_complete': false, // set true by edge function on verification
+      }).eq('id', businessId);
 
       // 4. Call verify-salon-id Edge Function
+      // TODO: bank account details (CLABE routing) pending BBVA meeting
       final response = await client.functions.invoke(
         'verify-salon-id',
         body: {
           'business_id': businessId,
-          'id_front_path': frontPath,
-          'id_back_path': backPath,
+          'beneficiary_name': beneficiary,
         },
       );
 
