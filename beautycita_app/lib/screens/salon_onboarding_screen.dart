@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,6 +12,7 @@ import 'package:latlong2/latlong.dart' show LatLng;
 import 'package:url_launcher/url_launcher.dart';
 import '../providers/booking_flow_provider.dart' show placesServiceProvider;
 import '../providers/security_provider.dart';
+import '../services/location_service.dart';
 import '../services/places_service.dart';
 import '../services/supabase_client.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show UserAttributes;
@@ -44,6 +46,12 @@ class _SalonOnboardingScreenState
   String? _discoveredSalonId; // ID of matched discovered salon (from refCode or phone match)
   String? _businessId;
 
+  // Confirmation card state
+  bool _showConfirmation = false;
+  Map<String, dynamic>? _matchedSalon;
+  List<Map<String, dynamic>> _nearbyMatches = [];
+  bool _autoSubmitting = false;
+
   // Location state
   double? _pickedLat;
   double? _pickedLng;
@@ -69,6 +77,7 @@ class _SalonOnboardingScreenState
     _loadDiscoveredSalonData();
     _prefillEmail();
     _autoMatchByPhone();
+    _autoMatchByLocation();
   }
 
   void _prefillEmail() {
@@ -105,11 +114,62 @@ class _SalonOnboardingScreenState
 
       if (!mounted || results.isEmpty) return;
 
-      // Pre-fill phone field and trigger discovered salon match
+      // Show confirmation card instead of direct prefill
       _phoneCtrl.text = phone;
-      _prefillFromDiscoveredSalon(results.first);
+      setState(() {
+        _matchedSalon = results.first;
+        _showConfirmation = true;
+      });
     } catch (e) {
       if (kDebugMode) debugPrint('[SalonOnboarding] Auto-match by phone error: $e');
+    }
+  }
+
+  /// Auto-match: check discovered_salons within 200m of user's GPS location
+  Future<void> _autoMatchByLocation() async {
+    // Skip if already loading via refCode invite link
+    if (widget.refCode != null && widget.refCode!.isNotEmpty) return;
+
+    try {
+      final loc = await LocationService.getCurrentLocation();
+      if (loc == null || !mounted) return;
+
+      // Already matched by phone? Skip GPS match
+      if (_showConfirmation) return;
+
+      final results = await SupabaseClientService.client.rpc(
+        'nearby_discovered_salons',
+        params: {
+          'p_lat': loc.lat,
+          'p_lng': loc.lng,
+          'p_radius_km': 0.2,
+          'p_limit': 5,
+        },
+      ) as List<dynamic>;
+
+      if (!mounted || results.isEmpty) return;
+      // Already matched by phone while we were fetching GPS? Skip
+      if (_showConfirmation) return;
+
+      final salons = results
+          .map((e) => e as Map<String, dynamic>)
+          .toList();
+
+      if (salons.length == 1) {
+        // Single match — show confirmation card directly
+        setState(() {
+          _matchedSalon = salons.first;
+          _showConfirmation = true;
+        });
+      } else {
+        // Multiple matches — show selection list
+        setState(() {
+          _nearbyMatches = salons;
+          _showConfirmation = true;
+        });
+      }
+    } catch (e) {
+      if (kDebugMode) debugPrint('[SalonOnboarding] Auto-match by location error: $e');
     }
   }
 
@@ -126,38 +186,12 @@ class _SalonOnboardingScreenState
           .maybeSingle();
 
       if (response != null && mounted) {
-        _discoveredSalonData = response;
-
-        final name = response['business_name'] ?? response['name'];
-        if (name != null && name.toString().isNotEmpty) {
-          _nameCtrl.text = _sanitizeLatin(name.toString());
-        }
-
-        final phone = response['whatsapp'] ?? response['phone'];
-        if (phone != null && phone.toString().isNotEmpty) {
-          _phoneCtrl.text = phone.toString();
-        }
-
-        final address = response['location_address'] ?? response['address'];
-        final prefillLat = response['latitude'] ?? response['location_lat'] ?? response['lat'];
-        final prefillLng = response['longitude'] ?? response['location_lng'] ?? response['lng'];
-        if (address != null && address.toString().isNotEmpty) {
-          _addressCtrl.text = _sanitizeLatin(address.toString());
-          _pickedAddress = _addressCtrl.text;
-        }
-        if (prefillLat != null && prefillLng != null) {
-          _pickedLat = (prefillLat is num)
-              ? prefillLat.toDouble()
-              : double.tryParse(prefillLat.toString());
-          _pickedLng = (prefillLng is num)
-              ? prefillLng.toDouble()
-              : double.tryParse(prefillLng.toString());
-          if (_pickedLat != null && _pickedLng != null) {
-            _locationConfirmed = true;
-          }
-        }
-
-        _photoUrl = response['feature_image_url'] ?? response['photo_url'];
+        // Show confirmation card for refCode matches too
+        setState(() {
+          _matchedSalon = response;
+          _showConfirmation = true;
+          _photoUrl = response['feature_image_url'] ?? response['photo_url'];
+        });
       }
     } catch (e) {
       if (kDebugMode) debugPrint('[SalonOnboarding] Error loading prefill data: $e');
@@ -409,6 +443,66 @@ class _SalonOnboardingScreenState
     });
   }
 
+  // ── Confirmation card actions ────────────────────────────────────────
+
+  void _selectNearbyMatch(Map<String, dynamic> salon) {
+    HapticFeedback.selectionClick();
+    setState(() {
+      _matchedSalon = salon;
+      _nearbyMatches = [];
+      _photoUrl = salon['feature_image_url'] ?? salon['photo_url'];
+    });
+  }
+
+  Future<void> _confirmMatch() async {
+    if (_matchedSalon == null) return;
+    HapticFeedback.mediumImpact();
+
+    final salon = _matchedSalon!;
+    _prefillFromDiscoveredSalon(salon);
+
+    // Also set phone from match if available
+    final phone = salon['whatsapp'] ?? salon['phone'];
+    if (phone != null && phone.toString().isNotEmpty && _phoneCtrl.text.trim() == '+52') {
+      _phoneCtrl.text = phone.toString();
+    }
+
+    setState(() {
+      _showConfirmation = false;
+      _nearbyMatches = [];
+    });
+
+    // Check if we can auto-submit (all required fields filled)
+    // Allow a frame for setState to settle
+    await Future.delayed(const Duration(milliseconds: 100));
+    if (!mounted) return;
+
+    if (_isValid) {
+      // All fields filled — auto-submit directly
+      setState(() => _autoSubmitting = true);
+
+      // Gate: require Google or confirmed email (bypass for invite links)
+      if (widget.refCode == null || widget.refCode!.isEmpty) {
+        final identityOk = await _ensureIdentityVerified();
+        if (!identityOk || !mounted) {
+          setState(() => _autoSubmitting = false);
+          return;
+        }
+      }
+
+      await _submit();
+      if (mounted) setState(() => _autoSubmitting = false);
+    }
+  }
+
+  void _dismissConfirmation() {
+    setState(() {
+      _showConfirmation = false;
+      _matchedSalon = null;
+      _nearbyMatches = [];
+    });
+  }
+
   // ── Submit ───────────────────────────────────────────────────────────
 
   Future<void> _submit() async {
@@ -514,6 +608,30 @@ class _SalonOnboardingScreenState
       );
     }
 
+    // Show auto-submit loading state
+    if (_autoSubmitting) {
+      return Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(color: colors.primary),
+              const SizedBox(height: 20),
+              Text(
+                'Registrando tu salon...',
+                style: GoogleFonts.poppins(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: colors.onSurface,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: GestureDetector(
@@ -524,10 +642,41 @@ class _SalonOnboardingScreenState
             // ── Gradient header ──────────────────────────────────────
             SliverToBoxAdapter(
               child: _HeroHeader(
-                photoUrl: _photoUrl,
+                photoUrl: _showConfirmation
+                    ? (_matchedSalon?['feature_image_url'] ??
+                        _matchedSalon?['photo_url'] ??
+                        _photoUrl)
+                    : _photoUrl,
                 onBack: () => context.pop(),
               ),
             ),
+
+            // ── Confirmation card (match found) ─────────────────────
+            if (_showConfirmation) ...[
+              SliverPadding(
+                padding: EdgeInsets.fromLTRB(
+                  20, 0, 20,
+                  MediaQuery.of(context).viewInsets.bottom + 32,
+                ),
+                sliver: SliverList(
+                  delegate: SliverChildListDelegate([
+                    if (_matchedSalon != null && _nearbyMatches.isEmpty)
+                      _ConfirmationCard(
+                        salon: _matchedSalon!,
+                        onConfirm: _confirmMatch,
+                        onDismiss: _dismissConfirmation,
+                      )
+                    else if (_nearbyMatches.isNotEmpty)
+                      _NearbyMatchList(
+                        salons: _nearbyMatches,
+                        onSelect: _selectNearbyMatch,
+                        onDismiss: _dismissConfirmation,
+                      ),
+                    const SizedBox(height: 16),
+                  ]),
+                ),
+              ),
+            ] else ...[
 
             // ── Form content ─────────────────────────────────────────
             SliverPadding(
@@ -844,6 +993,7 @@ class _SalonOnboardingScreenState
                 ]),
               ),
             ),
+            ], // close else (form content)
           ],
         ),
       ),
@@ -1133,6 +1283,510 @@ class _InfoBanner extends StatelessWidget {
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
                 color: color,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ==========================================================================
+// Confirmation Card — "Es este tu salon?" with fade+scale entrance
+// ==========================================================================
+
+class _ConfirmationCard extends StatefulWidget {
+  final Map<String, dynamic> salon;
+  final VoidCallback onConfirm;
+  final VoidCallback onDismiss;
+
+  const _ConfirmationCard({
+    required this.salon,
+    required this.onConfirm,
+    required this.onDismiss,
+  });
+
+  @override
+  State<_ConfirmationCard> createState() => _ConfirmationCardState();
+}
+
+class _ConfirmationCardState extends State<_ConfirmationCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animCtrl;
+  late Animation<double> _fadeAnim;
+  late Animation<double> _scaleAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _animCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+    _fadeAnim = CurvedAnimation(
+      parent: _animCtrl,
+      curve: Curves.easeOut,
+    );
+    _scaleAnim = Tween<double>(begin: 0.92, end: 1.0).animate(
+      CurvedAnimation(parent: _animCtrl, curve: Curves.easeOutBack),
+    );
+    _animCtrl.forward();
+  }
+
+  @override
+  void dispose() {
+    _animCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final salon = widget.salon;
+    final name = salon['business_name'] ?? salon['name'] ?? '';
+    final address = salon['location_address'] ?? salon['address'] ?? '';
+    final phone = salon['whatsapp'] ?? salon['phone'] ?? '';
+    final photoUrl = salon['feature_image_url'] ?? salon['photo_url'];
+    const goldStart = Color(0xFFFFB300);
+    const goldEnd = Color(0xFFFF8F00);
+
+    return FadeTransition(
+      opacity: _fadeAnim,
+      child: ScaleTransition(
+        scale: _scaleAnim,
+        child: Container(
+          margin: const EdgeInsets.only(top: 8),
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: colors.primary.withValues(alpha: 0.12),
+                blurRadius: 24,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Stack(
+            children: [
+              // Background photo or gradient
+              if (photoUrl != null)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 320,
+                    child: Image.network(
+                      photoUrl.toString(),
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              colors.primary,
+                              colors.primary.withValues(alpha: 0.7),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                )
+              else
+                Container(
+                  width: double.infinity,
+                  height: 320,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        colors.primary,
+                        colors.primary.withValues(alpha: 0.7),
+                        const Color(0xFF990033),
+                      ],
+                    ),
+                  ),
+                ),
+
+              // Dark overlay for readability
+              Container(
+                width: double.infinity,
+                height: 320,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withValues(alpha: 0.15),
+                      Colors.black.withValues(alpha: 0.7),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Content overlay
+              SizedBox(
+                width: double.infinity,
+                height: 320,
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Salon name
+                      Text(
+                        name.toString(),
+                        style: GoogleFonts.poppins(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                          height: 1.2,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (address.toString().isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            const Icon(Icons.location_on_rounded,
+                                size: 16, color: Colors.white70),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                address.toString(),
+                                style: GoogleFonts.nunito(
+                                  fontSize: 14,
+                                  color: Colors.white70,
+                                  height: 1.3,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                      if (phone.toString().isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            const Icon(Icons.phone_rounded,
+                                size: 16, color: Colors.white70),
+                            const SizedBox(width: 4),
+                            Text(
+                              phone.toString(),
+                              style: GoogleFonts.nunito(
+                                fontSize: 14,
+                                color: Colors.white70,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                      const SizedBox(height: 20),
+
+                      // Question
+                      Text(
+                        'Es este tu salon?',
+                        style: GoogleFonts.poppins(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // CTA buttons
+                      // Gold "Si" button
+                      SizedBox(
+                        width: double.infinity,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(14),
+                            gradient: const LinearGradient(
+                              colors: [goldStart, goldEnd],
+                              begin: Alignment.centerLeft,
+                              end: Alignment.centerRight,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: goldStart.withValues(alpha: 0.4),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Material(
+                            color: Colors.transparent,
+                            borderRadius: BorderRadius.circular(14),
+                            child: InkWell(
+                              onTap: widget.onConfirm,
+                              borderRadius: BorderRadius.circular(14),
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
+                                child: Center(
+                                  child: Text(
+                                    'SI, ESTE ES MI SALON',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+
+                      // "No" text button
+                      Center(
+                        child: TextButton(
+                          onPressed: widget.onDismiss,
+                          child: Text(
+                            'No, registrar otro',
+                            style: GoogleFonts.nunito(
+                              fontSize: 14,
+                              color: Colors.white70,
+                              decoration: TextDecoration.underline,
+                              decorationColor: Colors.white54,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ==========================================================================
+// Nearby Match List — multiple GPS matches, tap to select
+// ==========================================================================
+
+class _NearbyMatchList extends StatefulWidget {
+  final List<Map<String, dynamic>> salons;
+  final void Function(Map<String, dynamic>) onSelect;
+  final VoidCallback onDismiss;
+
+  const _NearbyMatchList({
+    required this.salons,
+    required this.onSelect,
+    required this.onDismiss,
+  });
+
+  @override
+  State<_NearbyMatchList> createState() => _NearbyMatchListState();
+}
+
+class _NearbyMatchListState extends State<_NearbyMatchList>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animCtrl;
+  late Animation<double> _fadeAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _animCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _fadeAnim = CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut);
+    _animCtrl.forward();
+  }
+
+  @override
+  void dispose() {
+    _animCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return FadeTransition(
+      opacity: _fadeAnim,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 8),
+          Text(
+            'Encontramos salones cerca de ti',
+            style: GoogleFonts.poppins(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: colors.onSurface,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Toca tu salon para continuar',
+            style: GoogleFonts.nunito(
+              fontSize: 14,
+              color: colors.onSurface.withValues(alpha: 0.6),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Salon cards
+          ...widget.salons.asMap().entries.map((entry) {
+            final idx = entry.key;
+            final salon = entry.value;
+            final name = salon['business_name'] ?? salon['name'] ?? '';
+            final address = salon['location_address'] ?? salon['address'] ?? '';
+            final phone = salon['whatsapp'] ?? salon['phone'] ?? '';
+            final photoUrl =
+                salon['feature_image_url'] ?? salon['photo_url'];
+
+            return TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0.0, end: 1.0),
+              duration: Duration(milliseconds: 300 + (idx * 100)),
+              curve: Curves.easeOutBack,
+              builder: (context, value, child) {
+                return Opacity(
+                  opacity: value.clamp(0.0, 1.0),
+                  child: Transform.translate(
+                    offset: Offset(0, 20 * (1 - value)),
+                    child: child,
+                  ),
+                );
+              },
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Material(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  elevation: 0,
+                  child: InkWell(
+                    onTap: () => widget.onSelect(salon),
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: colors.primary.withValues(alpha: 0.1),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: colors.primary.withValues(alpha: 0.04),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          // Photo or icon
+                          Container(
+                            width: 56,
+                            height: 56,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              color: colors.primary.withValues(alpha: 0.08),
+                            ),
+                            clipBehavior: Clip.antiAlias,
+                            child: photoUrl != null
+                                ? Image.network(
+                                    photoUrl.toString(),
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => Icon(
+                                      Icons.store_rounded,
+                                      size: 28,
+                                      color: colors.primary.withValues(alpha: 0.5),
+                                    ),
+                                  )
+                                : Icon(
+                                    Icons.store_rounded,
+                                    size: 28,
+                                    color: colors.primary.withValues(alpha: 0.5),
+                                  ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  name.toString(),
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                    color: colors.onSurface,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                if (address.toString().isNotEmpty) ...[
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    address.toString(),
+                                    style: GoogleFonts.nunito(
+                                      fontSize: 13,
+                                      color: colors.onSurface
+                                          .withValues(alpha: 0.6),
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                                if (phone.toString().isNotEmpty) ...[
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    phone.toString(),
+                                    style: GoogleFonts.nunito(
+                                      fontSize: 12,
+                                      color: colors.onSurface
+                                          .withValues(alpha: 0.5),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                          Icon(
+                            Icons.chevron_right_rounded,
+                            color: colors.primary.withValues(alpha: 0.4),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }),
+
+          // "None of these" button
+          Center(
+            child: TextButton(
+              onPressed: widget.onDismiss,
+              child: Text(
+                'Ninguno es mi salon, registrar nuevo',
+                style: GoogleFonts.nunito(
+                  fontSize: 14,
+                  color: colors.onSurface.withValues(alpha: 0.5),
+                  decoration: TextDecoration.underline,
+                ),
               ),
             ),
           ),
