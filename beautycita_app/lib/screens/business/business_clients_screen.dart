@@ -519,10 +519,7 @@ class _ClientDetailSheetState extends State<_ClientDetailSheet> {
       });
 
       // Credit $50 saldo to user
-      await SupabaseClientService.client.rpc(
-        'increment_saldo',
-        params: {'p_user_id': userId, 'p_amount': 50.0},
-      );
+      await SupabaseClientService.adjustSaldo(userId: userId, amount: 50.0);
 
       widget.onUpdated();
       if (mounted) {

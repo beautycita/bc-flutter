@@ -70,6 +70,11 @@ class FavoritesScreen extends ConsumerWidget {
               const SizedBox(height: AppConstants.paddingMD),
               Text('Error al cargar favoritos',
                   style: textTheme.titleMedium),
+              const SizedBox(height: AppConstants.paddingMD),
+              TextButton(
+                onPressed: () => ref.invalidate(_favoriteSalonsProvider),
+                child: const Text('Reintentar'),
+              ),
             ],
           ),
         ),

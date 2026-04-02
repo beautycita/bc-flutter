@@ -124,6 +124,7 @@ class _PhoneVerifyGateSheetState extends ConsumerState<PhoneVerifyGateSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final bcTheme = theme.extension<BCThemeExtension>()!;
+    final cs = theme.colorScheme;
     final isLoading = ref.watch(profileProvider).isLoading;
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
@@ -147,9 +148,9 @@ class _PhoneVerifyGateSheetState extends ConsumerState<PhoneVerifyGateSheet> {
           _buildDragHandle(theme),
           const SizedBox(height: AppConstants.paddingLG),
           if (_step == 1)
-            _buildStep1(bcTheme, isLoading)
+            _buildStep1(bcTheme, cs, isLoading)
           else
-            _buildStep2(bcTheme, isLoading),
+            _buildStep2(bcTheme, cs, isLoading),
         ],
       ),
     );
@@ -168,7 +169,7 @@ class _PhoneVerifyGateSheetState extends ConsumerState<PhoneVerifyGateSheet> {
     );
   }
 
-  Widget _buildStep1(BCThemeExtension bcTheme, bool isLoading) {
+  Widget _buildStep1(BCThemeExtension bcTheme, ColorScheme cs, bool isLoading) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -178,7 +179,7 @@ class _PhoneVerifyGateSheetState extends ConsumerState<PhoneVerifyGateSheet> {
           style: GoogleFonts.poppins(
             fontSize: 22,
             fontWeight: FontWeight.w700,
-            color: const Color(0xFF5A0A2D),
+            color: cs.primary,
           ),
           textAlign: TextAlign.center,
         ),
@@ -187,12 +188,12 @@ class _PhoneVerifyGateSheetState extends ConsumerState<PhoneVerifyGateSheet> {
           'Para confirmar tu reserva necesitamos verificar tu numero',
           style: GoogleFonts.nunito(
             fontSize: 14,
-            color: Colors.black54,
+            color: cs.onSurface.withValues(alpha: 0.54),
           ),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: AppConstants.paddingLG),
-        _buildPhoneField(),
+        _buildPhoneField(cs),
         if (_errorMessage != null) ...[
           const SizedBox(height: AppConstants.paddingMD),
           _buildErrorText(_errorMessage!),
@@ -209,7 +210,7 @@ class _PhoneVerifyGateSheetState extends ConsumerState<PhoneVerifyGateSheet> {
     );
   }
 
-  Widget _buildStep2(BCThemeExtension bcTheme, bool isLoading) {
+  Widget _buildStep2(BCThemeExtension bcTheme, ColorScheme cs, bool isLoading) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -219,7 +220,7 @@ class _PhoneVerifyGateSheetState extends ConsumerState<PhoneVerifyGateSheet> {
           style: GoogleFonts.poppins(
             fontSize: 22,
             fontWeight: FontWeight.w700,
-            color: const Color(0xFF5A0A2D),
+            color: cs.primary,
           ),
           textAlign: TextAlign.center,
         ),
@@ -234,7 +235,7 @@ class _PhoneVerifyGateSheetState extends ConsumerState<PhoneVerifyGateSheet> {
                 'Enviamos un codigo a $_formattedPhone via WhatsApp',
                 style: GoogleFonts.nunito(
                   fontSize: 14,
-                  color: Colors.black54,
+                  color: cs.onSurface.withValues(alpha: 0.54),
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -242,7 +243,7 @@ class _PhoneVerifyGateSheetState extends ConsumerState<PhoneVerifyGateSheet> {
           ],
         ),
         const SizedBox(height: AppConstants.paddingLG),
-        _buildOtpRow(),
+        _buildOtpRow(cs),
         if (_errorMessage != null) ...[
           const SizedBox(height: AppConstants.paddingMD),
           _buildErrorText(_errorMessage!),
@@ -263,7 +264,7 @@ class _PhoneVerifyGateSheetState extends ConsumerState<PhoneVerifyGateSheet> {
               style: GoogleFonts.nunito(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: const Color(0xFF5A0A2D),
+                color: cs.primary,
               ),
             ),
           ),
@@ -272,7 +273,7 @@ class _PhoneVerifyGateSheetState extends ConsumerState<PhoneVerifyGateSheet> {
     );
   }
 
-  Widget _buildPhoneField() {
+  Widget _buildPhoneField(ColorScheme cs) {
     return TextFormField(
       controller: _phoneController,
       focusNode: _phoneFocusNode,
@@ -287,19 +288,19 @@ class _PhoneVerifyGateSheetState extends ConsumerState<PhoneVerifyGateSheet> {
         prefixStyle: GoogleFonts.nunito(
           fontSize: 16,
           fontWeight: FontWeight.w600,
-          color: const Color(0xFF5A0A2D),
+          color: cs.primary,
         ),
         hintText: '1234567890',
-        hintStyle: GoogleFonts.nunito(color: Colors.black26),
+        hintStyle: GoogleFonts.nunito(color: cs.onSurface.withValues(alpha: 0.26)),
         filled: true,
-        fillColor: const Color(0xFFF5F0F3),
+        fillColor: cs.surface,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppConstants.radiusMD),
           borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-          borderSide: const BorderSide(color: Color(0xFF5A0A2D), width: 1.5),
+          borderSide: BorderSide(color: cs.primary, width: 1.5),
         ),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
@@ -309,7 +310,7 @@ class _PhoneVerifyGateSheetState extends ConsumerState<PhoneVerifyGateSheet> {
     );
   }
 
-  Widget _buildOtpRow() {
+  Widget _buildOtpRow(ColorScheme cs) {
     final otp = _otpController.text;
 
     return GestureDetector(
@@ -328,13 +329,13 @@ class _PhoneVerifyGateSheetState extends ConsumerState<PhoneVerifyGateSheet> {
                   width: 44,
                   height: 54,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF5F0F3),
+                    color: cs.surface,
                     borderRadius: BorderRadius.circular(AppConstants.radiusMD),
                     border: Border.all(
                       color: isCurrent
-                          ? const Color(0xFF5A0A2D)
+                          ? cs.primary
                           : hasDigit
-                              ? const Color(0xFF5A0A2D).withValues(alpha: 0.3)
+                              ? cs.primary.withValues(alpha: 0.3)
                               : Colors.transparent,
                       width: isCurrent ? 1.5 : 1,
                     ),
@@ -346,14 +347,14 @@ class _PhoneVerifyGateSheetState extends ConsumerState<PhoneVerifyGateSheet> {
                           style: GoogleFonts.poppins(
                             fontSize: 20,
                             fontWeight: FontWeight.w700,
-                            color: const Color(0xFF5A0A2D),
+                            color: cs.primary,
                           ),
                         )
                       : isCurrent
                           ? Container(
                               width: 2,
                               height: 24,
-                              color: const Color(0xFF5A0A2D),
+                              color: cs.primary,
                             )
                           : null,
                 );
@@ -399,14 +400,17 @@ class _PhoneVerifyGateSheetState extends ConsumerState<PhoneVerifyGateSheet> {
         decoration: BoxDecoration(
           gradient: onTap != null
               ? bcTheme.goldGradientDirectional()
-              : const LinearGradient(
-                  colors: [Color(0xFFCCCCCC), Color(0xFFAAAAAA)],
+              : LinearGradient(
+                  colors: [
+                    Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
+                    Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.15),
+                  ],
                 ),
           borderRadius: BorderRadius.circular(AppConstants.radiusMD),
           boxShadow: onTap != null
               ? [
                   BoxShadow(
-                    color: const Color(0xFFB8860B).withValues(alpha: 0.35),
+                    color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.35),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
@@ -441,7 +445,7 @@ class _PhoneVerifyGateSheetState extends ConsumerState<PhoneVerifyGateSheet> {
       message,
       style: GoogleFonts.nunito(
         fontSize: 13,
-        color: Colors.red.shade700,
+        color: Theme.of(context).colorScheme.error,
         fontWeight: FontWeight.w600,
       ),
       textAlign: TextAlign.center,

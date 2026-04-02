@@ -8,6 +8,7 @@ import 'package:beautycita/providers/booking_provider.dart';
 import 'package:beautycita/providers/payment_methods_provider.dart';
 import 'package:beautycita/services/toast_service.dart';
 import 'package:beautycita/providers/feature_toggle_provider.dart';
+import 'package:flutter/services.dart';
 
 class BookingScreen extends ConsumerStatefulWidget {
   final String providerId;
@@ -103,6 +104,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
       return;
     }
 
+    HapticFeedback.mediumImpact();
     setState(() => _isSubmitting = true);
 
     try {
@@ -156,16 +158,19 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
       ),
       body: providerAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, _) => Center(
-          child: Padding(
-            padding: const EdgeInsets.all(AppConstants.paddingLG),
-            child: Text(
-              'Error al cargar proveedor: $err',
-              style: textTheme.bodyLarge?.copyWith(color: Colors.red),
-              textAlign: TextAlign.center,
+        error: (err, _) {
+          debugPrint('Error al cargar proveedor: $err');
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(AppConstants.paddingLG),
+              child: Text(
+                'No se pudo cargar la información. Intenta de nuevo.',
+                style: textTheme.bodyLarge?.copyWith(color: Colors.red),
+                textAlign: TextAlign.center,
+              ),
             ),
-          ),
-        ),
+          );
+        },
         data: (provider) {
           if (provider == null) {
             return Center(

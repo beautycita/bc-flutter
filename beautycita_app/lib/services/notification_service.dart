@@ -28,6 +28,7 @@ class NotificationService {
   String? _fcmToken;
   StreamSubscription<RemoteMessage>? _foregroundSub;
   StreamSubscription<String>? _tokenRefreshSub;
+  StreamSubscription<RemoteMessage>? _messageOpenedSub;
 
   /// Custom vibration pattern: attention pulse + pause + confirm pulse
   /// Values in milliseconds: [wait, vibrate, pause, vibrate]
@@ -124,7 +125,7 @@ class NotificationService {
         }
 
         // Handle notification tap when app was in background
-        FirebaseMessaging.onMessageOpenedApp.listen(_handleNotificationTap);
+        _messageOpenedSub = FirebaseMessaging.onMessageOpenedApp.listen(_handleNotificationTap);
 
         _initialized = true;
         if (kDebugMode) debugPrint('[FCM] Initialized successfully');
@@ -258,5 +259,6 @@ class NotificationService {
   void dispose() {
     _foregroundSub?.cancel();
     _tokenRefreshSub?.cancel();
+    _messageOpenedSub?.cancel();
   }
 }

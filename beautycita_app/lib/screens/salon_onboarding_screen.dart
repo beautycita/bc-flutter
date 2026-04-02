@@ -507,7 +507,7 @@ class _SalonOnboardingScreenState
 
     if (_loadingPrefill) {
       return Scaffold(
-        backgroundColor: const Color(0xFFFFF8F0),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: Center(
           child: CircularProgressIndicator(color: colors.primary),
         ),
@@ -515,7 +515,7 @@ class _SalonOnboardingScreenState
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFFF8F0),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(),
         child: CustomScrollView(
@@ -711,8 +711,7 @@ class _SalonOnboardingScreenState
                                                   style: GoogleFonts.nunito(
                                                     fontSize: 14,
                                                     fontWeight: FontWeight.w600,
-                                                    color: const Color(
-                                                        0xFF212121),
+                                                    color: colors.onSurface,
                                                   ),
                                                 ),
                                                 if (p.secondaryText.isNotEmpty)
@@ -720,8 +719,7 @@ class _SalonOnboardingScreenState
                                                     p.secondaryText,
                                                     style: GoogleFonts.nunito(
                                                       fontSize: 12,
-                                                      color: const Color(
-                                                          0xFF757575),
+                                                      color: colors.onSurface.withValues(alpha: 0.6),
                                                     ),
                                                     maxLines: 1,
                                                     overflow:
@@ -776,7 +774,7 @@ class _SalonOnboardingScreenState
                                   style: GoogleFonts.nunito(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
-                                    color: const Color(0xFF212121),
+                                    color: colors.onSurface,
                                   ),
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
@@ -1022,7 +1020,7 @@ class _SectionHeader extends StatelessWidget {
           style: GoogleFonts.poppins(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: const Color(0xFF212121),
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
       ],
@@ -1068,18 +1066,18 @@ class _StyledField extends StatelessWidget {
       keyboardType: keyboardType,
       textCapitalization: textCapitalization,
       onChanged: onChanged,
-      style: GoogleFonts.nunito(fontSize: 15, color: const Color(0xFF212121)),
+      style: GoogleFonts.nunito(fontSize: 15, color: colors.onSurface),
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
         labelStyle:
-            GoogleFonts.nunito(fontSize: 14, color: const Color(0xFF757575)),
+            GoogleFonts.nunito(fontSize: 14, color: colors.onSurface.withValues(alpha: 0.6)),
         hintStyle:
-            GoogleFonts.nunito(fontSize: 14, color: const Color(0xFF9E9E9E)),
+            GoogleFonts.nunito(fontSize: 14, color: colors.onSurface.withValues(alpha: 0.4)),
         prefixIcon: Icon(icon, size: 20, color: effectiveIconColor),
         suffixIcon: suffixWidget,
         filled: true,
-        fillColor: const Color(0xFFFAFAFA),
+        fillColor: colors.surface,
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(
@@ -1176,7 +1174,7 @@ class _RegisterButton extends StatelessWidget {
                   end: Alignment.centerRight,
                 )
               : null,
-          color: enabled ? null : const Color(0xFFE0E0E0),
+          color: enabled ? null : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.15),
           boxShadow: enabled
               ? [
                   BoxShadow(
@@ -1210,7 +1208,7 @@ class _RegisterButton extends StatelessWidget {
                           fontWeight: FontWeight.w700,
                           color: enabled
                               ? Colors.white
-                              : const Color(0xFF9E9E9E),
+                              : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                           letterSpacing: 0.5,
                         ),
                       ),
@@ -1267,7 +1265,7 @@ class _BenefitsSection extends StatelessWidget {
                 style: GoogleFonts.poppins(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: const Color(0xFF212121),
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
             ],
@@ -1331,7 +1329,7 @@ class _BenefitItem extends StatelessWidget {
             text,
             style: GoogleFonts.nunito(
               fontSize: 14,
-              color: const Color(0xFF424242),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
               height: 1.3,
             ),
           ),
@@ -1435,7 +1433,7 @@ class _MiniMapState extends State<_MiniMap>
               'Toca el mapa para posicionar el pin en la entrada',
               style: GoogleFonts.nunito(
                 fontSize: 12,
-                color: const Color(0xFF757575),
+                color: colors.onSurface.withValues(alpha: 0.6),
               ),
             ),
           ),
@@ -1701,7 +1699,7 @@ class _IdentityGateSheetState extends ConsumerState<_IdentityGateSheet> {
               style: GoogleFonts.poppins(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
-                color: const Color(0xFF212121),
+                color: colors.onSurface,
               ),
             ),
             const SizedBox(height: 8),
@@ -1709,7 +1707,7 @@ class _IdentityGateSheetState extends ConsumerState<_IdentityGateSheet> {
               'Para registrar un salon necesitas vincular tu cuenta de Google o confirmar tu email.',
               style: GoogleFonts.nunito(
                 fontSize: 14,
-                color: const Color(0xFF757575),
+                color: colors.onSurface.withValues(alpha: 0.6),
                 height: 1.4,
               ),
               textAlign: TextAlign.center,
@@ -1754,7 +1752,7 @@ class _IdentityGateSheetState extends ConsumerState<_IdentityGateSheet> {
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: Text('o',
                       style: GoogleFonts.nunito(
-                          color: const Color(0xFF9E9E9E), fontSize: 14)),
+                          color: colors.onSurface.withValues(alpha: 0.4), fontSize: 14)),
                 ),
                 const Expanded(child: Divider()),
               ],
@@ -1815,7 +1813,7 @@ class _IdentityGateSheetState extends ConsumerState<_IdentityGateSheet> {
                   hintText: 'tu@email.com',
                   prefixIcon: const Icon(Icons.email_outlined, size: 20),
                   filled: true,
-                  fillColor: const Color(0xFFFAFAFA),
+                  fillColor: colors.surface,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(
@@ -1971,7 +1969,7 @@ class _SuccessScreenState extends State<_SuccessScreen>
     final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFFF8F0),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -2009,7 +2007,7 @@ class _SuccessScreenState extends State<_SuccessScreen>
                       style: GoogleFonts.poppins(
                         fontSize: 24,
                         fontWeight: FontWeight.w700,
-                        color: const Color(0xFF212121),
+                        color: colors.onSurface,
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -2019,7 +2017,7 @@ class _SuccessScreenState extends State<_SuccessScreen>
                       text: TextSpan(
                         style: GoogleFonts.nunito(
                           fontSize: 15,
-                          color: const Color(0xFF757575),
+                          color: colors.onSurface.withValues(alpha: 0.6),
                           height: 1.5,
                         ),
                         children: [
@@ -2086,14 +2084,14 @@ class _SuccessScreenState extends State<_SuccessScreen>
                                   style: GoogleFonts.poppins(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w600,
-                                    color: const Color(0xFF212121),
+                                    color: colors.onSurface,
                                   ),
                                 ),
                                 Text(
                                   'Para recibir pagos de clientes',
                                   style: GoogleFonts.nunito(
                                     fontSize: 13,
-                                    color: const Color(0xFF757575),
+                                    color: colors.onSurface.withValues(alpha: 0.6),
                                   ),
                                 ),
                               ],
@@ -2106,7 +2104,7 @@ class _SuccessScreenState extends State<_SuccessScreen>
                         'Conecta tu cuenta bancaria para recibir el pago de cada reserva directamente. Solo toma 2 minutos.',
                         style: GoogleFonts.nunito(
                           fontSize: 14,
-                          color: const Color(0xFF757575),
+                          color: colors.onSurface.withValues(alpha: 0.6),
                           height: 1.4,
                         ),
                       ),
@@ -2152,7 +2150,7 @@ class _SuccessScreenState extends State<_SuccessScreen>
                   'Configurar despues',
                   style: GoogleFonts.nunito(
                     fontSize: 14,
-                    color: const Color(0xFF757575),
+                    color: colors.onSurface.withValues(alpha: 0.6),
                     decoration: TextDecoration.underline,
                   ),
                 ),
@@ -2177,7 +2175,7 @@ class _SuccessScreenState extends State<_SuccessScreen>
                         'Sin configurar pagos, las clientas te contactaran por WhatsApp pero no podran pagar en la app.',
                         style: GoogleFonts.nunito(
                           fontSize: 12,
-                          color: const Color(0xFF757575),
+                          color: colors.onSurface.withValues(alpha: 0.6),
                           height: 1.4,
                         ),
                       ),

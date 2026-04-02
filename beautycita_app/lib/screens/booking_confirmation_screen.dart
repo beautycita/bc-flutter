@@ -388,36 +388,45 @@ class _BookingConfirmationScreenState
                   const SizedBox(height: AppConstants.paddingLG),
 
                   // -- Volver al inicio --
-                  GestureDetector(
-                    onTap: () {
-                      HapticFeedback.mediumImpact();
-                      context.go('/home');
-                    },
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(
-                          vertical: AppConstants.paddingMD),
-                      decoration: BoxDecoration(
-                        gradient: ext.goldGradientDirectional(),
-                        borderRadius:
-                            BorderRadius.circular(AppConstants.radiusLG),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFFD4AF37)
-                                .withValues(alpha: 0.35),
-                            blurRadius: 8,
-                            offset: const Offset(0, 3),
+                  Material(
+                    color: Colors.transparent,
+                    borderRadius:
+                        BorderRadius.circular(AppConstants.radiusLG),
+                    child: InkWell(
+                      onTap: () {
+                        HapticFeedback.mediumImpact();
+                        context.go('/home');
+                      },
+                      borderRadius:
+                          BorderRadius.circular(AppConstants.radiusLG),
+                      splashColor: Colors.white.withValues(alpha: 0.2),
+                      child: Ink(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                            vertical: AppConstants.paddingMD),
+                        decoration: BoxDecoration(
+                          gradient: ext.goldGradientDirectional(),
+                          borderRadius:
+                              BorderRadius.circular(AppConstants.radiusLG),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFFD4AF37)
+                                  .withValues(alpha: 0.35),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: Center(
+                          child: Text(
+                            'VOLVER AL INICIO',
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1.2,
+                              color: const Color(0xFF1A1400),
+                            ),
                           ),
-                        ],
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        'VOLVER AL INICIO',
-                        style: GoogleFonts.poppins(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 1.2,
-                          color: const Color(0xFF1A1400),
                         ),
                       ),
                     ),

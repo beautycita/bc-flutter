@@ -213,8 +213,8 @@ class _InviteSalonDetailScreenState
         if (salon.address != null || salon.city != null)
           Row(
             children: [
-              const Icon(Icons.location_on_outlined,
-                  size: 16, color: Color(0xFF757575)),
+              Icon(Icons.location_on_outlined,
+                  size: 16, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
               const SizedBox(width: 4),
               Expanded(
                 child: Text(
@@ -223,7 +223,7 @@ class _InviteSalonDetailScreenState
                       .join(', '),
                   style: GoogleFonts.nunito(
                     fontSize: 13,
-                    color: const Color(0xFF757575),
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -246,7 +246,7 @@ class _InviteSalonDetailScreenState
                 style: GoogleFonts.nunito(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
-                  color: const Color(0xFF212121),
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               if (salon.reviewsCount != null) ...[
@@ -255,7 +255,7 @@ class _InviteSalonDetailScreenState
                   '(${salon.reviewsCount} resenas)',
                   style: GoogleFonts.nunito(
                     fontSize: 13,
-                    color: const Color(0xFF757575),
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
               ],
@@ -295,7 +295,7 @@ class _InviteSalonDetailScreenState
           style: GoogleFonts.poppins(
             fontSize: 16,
             fontWeight: FontWeight.bold,
-            color: const Color(0xFF212121),
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 8),
@@ -304,7 +304,7 @@ class _InviteSalonDetailScreenState
             state.generatedBio!,
             style: GoogleFonts.nunito(
               fontSize: 14,
-              color: const Color(0xFF424242),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
               height: 1.5,
             ),
           )
@@ -350,7 +350,7 @@ class _InviteSalonDetailScreenState
               style: GoogleFonts.poppins(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: const Color(0xFF212121),
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
           ],

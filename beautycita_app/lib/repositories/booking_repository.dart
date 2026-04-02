@@ -192,10 +192,7 @@ class BookingRepository {
     if (isPaid && refundAmount > 0) {
       final userId = booking['user_id'] as String?;
       if (userId != null) {
-        await SupabaseClientService.client.rpc(
-          'increment_saldo',
-          params: {'p_user_id': userId, 'p_amount': double.parse(refundAmount.toStringAsFixed(2))},
-        );
+        await SupabaseClientService.adjustSaldo(userId: userId, amount: refundAmount);
       }
     }
 

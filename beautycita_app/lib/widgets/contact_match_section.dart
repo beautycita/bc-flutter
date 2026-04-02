@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../config/theme_extension.dart';
 import '../providers/contact_match_provider.dart';
 import '../providers/feature_toggle_provider.dart';
 import 'contact_salon_card.dart';
@@ -57,12 +58,14 @@ class _ContactMatchSectionState extends ConsumerState<ContactMatchSection> {
   // ---------------------------------------------------------------------------
 
   Widget _buildCta({required bool loading}) {
+    final cs = Theme.of(context).colorScheme;
+    final ext = Theme.of(context).extension<BCThemeExtension>()!;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: cs.surface,
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
@@ -74,8 +77,8 @@ class _ContactMatchSectionState extends ConsumerState<ContactMatchSection> {
         ),
         child: Row(
           children: [
-            const Icon(Icons.contacts_rounded,
-                color: Color(0xFF9333ea), size: 28),
+            Icon(Icons.contacts_rounded,
+                color: cs.primary, size: 28),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
@@ -83,7 +86,7 @@ class _ContactMatchSectionState extends ConsumerState<ContactMatchSection> {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
-                  color: Colors.grey[800],
+                  color: cs.onSurface,
                 ),
               ),
             ),
@@ -103,9 +106,7 @@ class _ContactMatchSectionState extends ConsumerState<ContactMatchSection> {
                     )
                   : DecoratedBox(
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFFec4899), Color(0xFF9333ea)],
-                        ),
+                        gradient: ext.primaryGradient,
                         borderRadius: BorderRadius.circular(18),
                       ),
                       child: Material(
@@ -117,13 +118,13 @@ class _ContactMatchSectionState extends ConsumerState<ContactMatchSection> {
                                 .read(contactMatchProvider.notifier)
                                 .requestAndScan();
                           },
-                          child: const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 16),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
                             child: Center(
                               child: Text(
                                 'Buscar',
                                 style: TextStyle(
-                                  color: Colors.white,
+                                  color: cs.onPrimary,
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -145,6 +146,7 @@ class _ContactMatchSectionState extends ConsumerState<ContactMatchSection> {
   // ---------------------------------------------------------------------------
 
   Widget _buildShimmer() {
+    final shimmerColor = Theme.of(context).extension<BCThemeExtension>()!.shimmerColor;
     return SizedBox(
       height: 80,
       child: ListView.separated(
@@ -155,7 +157,7 @@ class _ContactMatchSectionState extends ConsumerState<ContactMatchSection> {
         itemBuilder: (_, _) => Container(
           width: 280,
           decoration: BoxDecoration(
-            color: Colors.grey[200],
+            color: shimmerColor,
             borderRadius: BorderRadius.circular(12),
           ),
         ),
@@ -168,6 +170,7 @@ class _ContactMatchSectionState extends ConsumerState<ContactMatchSection> {
   // ---------------------------------------------------------------------------
 
   Widget _buildMatchList(List<EnrichedMatch> matches) {
+    final cs = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -178,7 +181,7 @@ class _ContactMatchSectionState extends ConsumerState<ContactMatchSection> {
             style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w600,
-              color: Colors.grey[800],
+              color: cs.onSurface,
             ),
           ),
         ),
@@ -206,7 +209,7 @@ class _ContactMatchSectionState extends ConsumerState<ContactMatchSection> {
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
       child: Text(
         'Activa el permiso de contactos en Ajustes',
-        style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+        style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)),
       ),
     );
   }
@@ -216,7 +219,7 @@ class _ContactMatchSectionState extends ConsumerState<ContactMatchSection> {
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
       child: Text(
         error ?? 'Error al buscar contactos',
-        style: TextStyle(fontSize: 12, color: Colors.red[300]),
+        style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.error.withValues(alpha: 0.7)),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),

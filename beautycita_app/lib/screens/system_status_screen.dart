@@ -230,35 +230,36 @@ class _HeroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final (gradient, icon, dotColor, label) = switch (overall) {
       'operational' => (
-          const LinearGradient(
-            colors: [Color(0xFF16A34A), Color(0xFF22C55E)],
+          LinearGradient(
+            colors: [ext.successColor, ext.successColor.withValues(alpha: 0.8)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           Icons.check_circle_rounded,
-          const Color(0xFF4ADE80),
+          ext.successColor.withValues(alpha: 0.6),
           'Todos los sistemas operativos',
         ),
       'degraded' => (
-          const LinearGradient(
-            colors: [Color(0xFFD97706), Color(0xFFF59E0B)],
+          LinearGradient(
+            colors: [ext.warningColor, ext.warningColor.withValues(alpha: 0.8)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           Icons.warning_rounded,
-          const Color(0xFFFCD34D),
+          ext.warningColor.withValues(alpha: 0.6),
           'Algunos servicios con problemas',
         ),
       'down' => (
-          const LinearGradient(
-            colors: [Color(0xFFDC2626), Color(0xFFF87171)],
+          LinearGradient(
+            colors: [colorScheme.error, colorScheme.error.withValues(alpha: 0.7)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           Icons.error_rounded,
-          const Color(0xFFFCA5A5),
+          colorScheme.error.withValues(alpha: 0.5),
           'Problemas detectados',
         ),
       _ => (
@@ -477,38 +478,39 @@ class _ServiceCardState extends ConsumerState<_ServiceCard> {
     final isDown = widget.status == 'down' || widget.status == 'degraded';
     final canRepair = isSuperAdmin && isDown && widget.bpiServiceId != null;
 
+    final ext = Theme.of(context).extension<BCThemeExtension>()!;
     final (badgeColor, badgeBg, badgeBorder, badgeLabel, dotColor, statusIcon) =
         switch (widget.status) {
       'operational' => (
-          const Color(0xFF16A34A),
-          const Color(0xFFF0FDF4),
-          const Color(0xFFBBF7D0),
+          ext.successColor,
+          ext.successColor.withValues(alpha: 0.08),
+          ext.successColor.withValues(alpha: 0.3),
           'Operativo',
-          const Color(0xFF22C55E),
+          ext.successColor,
           Icons.check_circle_outline_rounded,
         ),
       'degraded' => (
-          const Color(0xFFD97706),
-          const Color(0xFFFFFBEB),
-          const Color(0xFFFDE68A),
+          ext.warningColor,
+          ext.warningColor.withValues(alpha: 0.08),
+          ext.warningColor.withValues(alpha: 0.3),
           'Degradado',
-          const Color(0xFFF59E0B),
+          ext.warningColor,
           Icons.warning_amber_rounded,
         ),
       'down' => (
-          const Color(0xFFDC2626),
-          const Color(0xFFFEF2F2),
-          const Color(0xFFFECACA),
+          colorScheme.error,
+          colorScheme.error.withValues(alpha: 0.06),
+          colorScheme.error.withValues(alpha: 0.3),
           'Fuera de linea',
-          const Color(0xFFEF4444),
+          colorScheme.error,
           Icons.cancel_outlined,
         ),
       _ => (
-          const Color(0xFF6B7280),
-          const Color(0xFFF9FAFB),
-          const Color(0xFFE5E7EB),
+          colorScheme.onSurface.withValues(alpha: 0.5),
+          colorScheme.surface,
+          colorScheme.onSurface.withValues(alpha: 0.15),
           'Desconocido',
-          const Color(0xFF9CA3AF),
+          colorScheme.onSurface.withValues(alpha: 0.4),
           Icons.help_outline_rounded,
         ),
     };
@@ -634,8 +636,8 @@ class _ServiceCardState extends ConsumerState<_ServiceCard> {
                     ),
                   ),
                   style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFFDC2626),
-                    foregroundColor: Colors.white,
+                    backgroundColor: colorScheme.error,
+                    foregroundColor: colorScheme.onError,
                     padding: const EdgeInsets.symmetric(vertical: 10),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
@@ -801,35 +803,38 @@ class _SmokeTestSectionState extends ConsumerState<_SmokeTestSection> {
         if (_results.isNotEmpty) ...[
           // Summary bar
           if (!_running) ...[
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              margin: const EdgeInsets.only(bottom: 8),
-              decoration: BoxDecoration(
-                color: _results.where((r) => !r.isSection && !r.passed).isEmpty
-                    ? const Color(0xFFF0FDF4)
-                    : const Color(0xFFFEF2F2),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: _results.where((r) => !r.isSection && !r.passed).isEmpty
-                      ? const Color(0xFFBBF7D0)
-                      : const Color(0xFFFECACA),
+            Builder(builder: (context) {
+              final ext = Theme.of(context).extension<BCThemeExtension>()!;
+              final cs = Theme.of(context).colorScheme;
+              final allPassed = _results.where((r) => !r.isSection && !r.passed).isEmpty;
+              return Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                margin: const EdgeInsets.only(bottom: 8),
+                decoration: BoxDecoration(
+                  color: allPassed
+                      ? ext.successColor.withValues(alpha: 0.08)
+                      : cs.error.withValues(alpha: 0.06),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: allPassed
+                        ? ext.successColor.withValues(alpha: 0.3)
+                        : cs.error.withValues(alpha: 0.3),
+                  ),
                 ),
-              ),
-              child: Text(
-                '${_results.where((r) => !r.isSection && r.passed).length} passed, '
-                '${_results.where((r) => !r.isSection && !r.passed).length} failed — '
-                '${_results.where((r) => !r.isSection).length} total',
-                style: GoogleFonts.poppins(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: _results.where((r) => !r.isSection && !r.passed).isEmpty
-                      ? const Color(0xFF16A34A)
-                      : const Color(0xFFDC2626),
+                child: Text(
+                  '${_results.where((r) => !r.isSection && r.passed).length} passed, '
+                  '${_results.where((r) => !r.isSection && !r.passed).length} failed — '
+                  '${_results.where((r) => !r.isSection).length} total',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: allPassed ? ext.successColor : cs.error,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-                textAlign: TextAlign.center,
-              ),
-            ),
+              );
+            }),
           ],
           ...(_results.map((r) => _TestResultTile(result: r))),
         ],
@@ -1077,6 +1082,7 @@ class _TestResultTile extends StatelessWidget {
       );
     }
 
+    final ext = Theme.of(context).extension<BCThemeExtension>()!;
     return Container(
       margin: const EdgeInsets.only(bottom: 4),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -1084,7 +1090,9 @@ class _TestResultTile extends StatelessWidget {
         color: colorScheme.surface,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: result.passed ? Colors.green.shade200 : Colors.red.shade200,
+          color: result.passed
+              ? ext.successColor.withValues(alpha: 0.3)
+              : colorScheme.error.withValues(alpha: 0.3),
         ),
       ),
       child: Row(
@@ -1092,7 +1100,7 @@ class _TestResultTile extends StatelessWidget {
           Icon(
             result.passed ? Icons.check_circle : Icons.cancel,
             size: 16,
-            color: result.passed ? Colors.green : Colors.red,
+            color: result.passed ? ext.successColor : colorScheme.error,
           ),
           const SizedBox(width: 8),
           Expanded(
@@ -1105,7 +1113,7 @@ class _TestResultTile extends StatelessWidget {
                 if (result.error != null)
                   Text(result.error!,
                       style: GoogleFonts.nunito(
-                          fontSize: 10, color: Colors.red.shade700),
+                          fontSize: 10, color: colorScheme.error),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis),
               ],

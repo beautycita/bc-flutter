@@ -7,6 +7,8 @@ import '../../providers/business_provider.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 import 'package:beautycita/widgets/admin/admin_widgets.dart';
+import '../../providers/banking_setup_provider.dart';
+import 'banking_setup_screen.dart';
 
 class BusinessDashboardScreen extends ConsumerWidget {
   const BusinessDashboardScreen({super.key});
@@ -31,6 +33,9 @@ class BusinessDashboardScreen extends ConsumerWidget {
       child: ListView(
         padding: const EdgeInsets.all(AppConstants.paddingMD),
         children: [
+          // Banking setup banner
+          _BankingBanner(),
+
           // Stats grid
           statsAsync.when(
             data: (stats) => _StatsGrid(stats: stats),
@@ -1349,6 +1354,95 @@ class _CfdiDetailRow extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Banking Setup Banner — shown when banking_complete == false
+// ═══════════════════════════════════════════════════════════════════════════
+
+class _BankingBanner extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final bankingAsync = ref.watch(bankingCompleteProvider);
+
+    return bankingAsync.when(
+      data: (complete) {
+        if (complete) return const SizedBox.shrink();
+
+        final colors = Theme.of(context).colorScheme;
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: AppConstants.paddingMD),
+          child: Container(
+            padding: const EdgeInsets.all(AppConstants.paddingMD),
+            decoration: BoxDecoration(
+              color: Colors.orange.shade50,
+              borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+              border: Border.all(color: Colors.orange.shade200),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade100,
+                    borderRadius: BorderRadius.circular(AppConstants.radiusSM),
+                  ),
+                  child: Icon(Icons.account_balance_outlined,
+                      color: Colors.orange.shade800, size: 22),
+                ),
+                const SizedBox(width: AppConstants.paddingSM),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Completa tu informacion bancaria para activar reservas y recibir pagos',
+                        style: GoogleFonts.nunito(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.orange.shade900,
+                          height: 1.3,
+                        ),
+                      ),
+                      const SizedBox(height: AppConstants.paddingSM),
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const BankingSetupScreen(),
+                            ),
+                          );
+                        },
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Completar ahora',
+                              style: GoogleFonts.poppins(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.orange.shade800,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Icon(Icons.arrow_forward_rounded,
+                                size: 16, color: Colors.orange.shade800),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
     );
   }
 }

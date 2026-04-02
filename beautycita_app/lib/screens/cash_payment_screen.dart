@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -48,20 +50,42 @@ class CashPaymentData {
 
 }
 
-class CashPaymentScreen extends ConsumerWidget {
+class CashPaymentScreen extends ConsumerStatefulWidget {
   final CashPaymentData? data;
 
   const CashPaymentScreen({super.key, this.data});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CashPaymentScreen> createState() => _CashPaymentScreenState();
+}
+
+class _CashPaymentScreenState extends ConsumerState<CashPaymentScreen> {
+  Timer? _ticker;
+
+  @override
+  void initState() {
+    super.initState();
+    _ticker = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final data = widget.data;
     if (data == null) {
       return Scaffold(
         appBar: AppBar(title: const Text('Pago en efectivo')),
         body: const Center(child: Text('Sin datos de pago')),
       );
     }
-    final payment = data!;
+    final payment = data;
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
     final onSurfaceLight = colorScheme.onSurface.withValues(alpha: 0.5);

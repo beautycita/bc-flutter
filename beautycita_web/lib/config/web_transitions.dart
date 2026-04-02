@@ -137,7 +137,7 @@ class _CircleGlowPainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = 30
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 15)
-        ..color = Color.fromRGBO(147, 51, 234, opacity),
+        ..color = Color.fromRGBO(200, 162, 200, opacity), // lila #C8A2C8
     );
   }
 

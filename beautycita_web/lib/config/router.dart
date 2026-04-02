@@ -28,6 +28,7 @@ import '../pages/admin/salons_page.dart';
 import '../pages/admin/toggles_page.dart';
 import '../pages/admin/users_page.dart';
 import '../pages/business/biz_analytics_page.dart';
+import '../pages/business/biz_banking_page.dart';
 import '../pages/business/biz_calendar_page.dart';
 import '../pages/business/biz_calendar_sync_page.dart';
 import '../pages/business/biz_clients_page.dart';
@@ -118,6 +119,7 @@ abstract final class WebRoutes {
   static const String negocioGiftCards = '/negocio/gift-cards';
   static const String negocioAnalytics = '/negocio/analytics';
   static const String negocioOrders = '/negocio/orders';
+  static const String negocioBanking = '/negocio/banking';
 
   // Client
   static const String explorar = '/explorar';
@@ -505,6 +507,10 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: 'orders',
                 builder: (context, state) => const BizOrdersPage(),
+              ),
+              GoRoute(
+                path: 'banking',
+                builder: (context, state) => const BizBankingPage(),
               ),
             ],
           ),

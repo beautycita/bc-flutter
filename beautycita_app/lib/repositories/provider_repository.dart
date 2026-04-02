@@ -2,17 +2,44 @@ import 'package:beautycita/models/provider.dart';
 import 'package:beautycita/services/supabase_client.dart';
 
 class ProviderRepository {
-  /// Get providers whose service_categories contain the given category,
-  /// ordered by rating descending.
-  Future<List<Provider>> getProvidersByCategory(String category) async {
+  /// Get providers whose service_categories contain the given category.
+  /// When [lat]/[lng]/[radiusKm] are provided, uses the nearby_businesses RPC
+  /// for geo-sorted results. Otherwise falls back to alphabetical order.
+  Future<List<Provider>> getProvidersByCategory(
+    String category, {
+    double? lat,
+    double? lng,
+    double radiusKm = 15,
+    int limit = 50,
+  }) async {
     if (!SupabaseClientService.isInitialized) return [];
+
+    // Geo-filtered path: use nearby_businesses RPC
+    if (lat != null && lng != null) {
+      final response = await SupabaseClientService.client.rpc(
+        'nearby_businesses',
+        params: {
+          'p_lat': lat,
+          'p_lng': lng,
+          'p_radius_km': radiusKm,
+          'p_category': category,
+        },
+      );
+      return (response as List)
+          .take(limit)
+          .map((json) => Provider.fromJson(json as Map<String, dynamic>))
+          .toList();
+    }
+
+    // No geo — alphabetical fallback
     final response = await SupabaseClientService.client
         .from('businesses')
         .select()
         .contains('service_categories', [category])
         .eq('is_active', true)
         .eq('is_verified', true)
-        .order('average_rating', ascending: false);
+        .order('name', ascending: true)
+        .limit(limit);
 
     return (response as List)
         .map((json) => Provider.fromJson(json as Map<String, dynamic>))

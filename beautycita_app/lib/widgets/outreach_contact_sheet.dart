@@ -13,9 +13,6 @@ import '../services/toast_service.dart';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const _kBrand = Color(0xFFC2185B);
-const _kBrandLight = Color(0xFFFCE4EC);
-const _kSurface = Color(0xFFF7F7F9);
 const _kWaGreen = Color(0xFF25D366);
 
 const _kOutcomes = [
@@ -368,9 +365,9 @@ class _SheetBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        color: _kSurface,
-        borderRadius: BorderRadius.vertical(
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        borderRadius: const BorderRadius.vertical(
           top: Radius.circular(AppConstants.radiusXL),
         ),
       ),
@@ -517,8 +514,8 @@ class _SalonHeader extends StatelessWidget {
         Container(
           width: AppConstants.avatarSizeMD,
           height: AppConstants.avatarSizeMD,
-          decoration: const BoxDecoration(
-            color: _kBrandLight,
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
           alignment: Alignment.center,
@@ -527,7 +524,7 @@ class _SalonHeader extends StatelessWidget {
             style: GoogleFonts.poppins(
               fontSize: 20,
               fontWeight: FontWeight.w700,
-              color: _kBrand,
+              color: Theme.of(context).colorScheme.primary,
             ),
           ),
         ),
@@ -701,7 +698,7 @@ class _TemplatePicker extends StatelessWidget {
             ),
             isDense: true,
             prefixIcon:
-                const Icon(Icons.article_outlined, size: 18, color: _kBrand),
+                Icon(Icons.article_outlined, size: 18, color: Theme.of(context).colorScheme.primary),
           ),
           hint: Text('Seleccionar plantilla',
               style: GoogleFonts.nunito(fontSize: 13, color: Colors.black38)),
@@ -737,12 +734,12 @@ class _MessageComposeArea extends StatelessWidget {
   final TextEditingController bodyCtrl;
   final TextEditingController subjectCtrl;
 
-  InputDecoration _inputDec(String label, {Widget? prefixIcon}) {
+  InputDecoration _inputDec(BuildContext context, String label, {Widget? prefixIcon}) {
     return InputDecoration(
       labelText: label,
       labelStyle: GoogleFonts.nunito(fontSize: 13),
       filled: true,
-      fillColor: Colors.white,
+      fillColor: Theme.of(context).colorScheme.surface,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppConstants.radiusSM),
         borderSide: const BorderSide(color: Colors.black12),
@@ -753,7 +750,7 @@ class _MessageComposeArea extends StatelessWidget {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppConstants.radiusSM),
-        borderSide: const BorderSide(color: _kBrand),
+        borderSide: BorderSide(color: Theme.of(context).colorScheme.primary),
       ),
       contentPadding: const EdgeInsets.symmetric(
         horizontal: AppConstants.paddingMD,
@@ -774,8 +771,9 @@ class _MessageComposeArea extends StatelessWidget {
             controller: subjectCtrl,
             style: GoogleFonts.nunito(fontSize: 14),
             decoration: _inputDec(
+              context,
               'Asunto',
-              prefixIcon: const Icon(Icons.subject, size: 18, color: _kBrand),
+              prefixIcon: Icon(Icons.subject, size: 18, color: Theme.of(context).colorScheme.primary),
             ),
             textCapitalization: TextCapitalization.sentences,
           ),
@@ -787,6 +785,7 @@ class _MessageComposeArea extends StatelessWidget {
           controller: bodyCtrl,
           style: GoogleFonts.nunito(fontSize: 14),
           decoration: _inputDec(
+            context,
             channel == ContactChannel.email ? 'Cuerpo del email' : 'Mensaje',
             prefixIcon: Icon(
               channel.icon,
@@ -855,7 +854,7 @@ class _CallComposeArea extends StatelessWidget {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppConstants.radiusSM),
-              borderSide: const BorderSide(color: _kBrand),
+              borderSide: BorderSide(color: Theme.of(context).colorScheme.primary),
             ),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: AppConstants.paddingMD,
@@ -920,7 +919,7 @@ class _CallComposeArea extends StatelessWidget {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(AppConstants.radiusSM),
-                    borderSide: const BorderSide(color: _kBrand),
+                    borderSide: BorderSide(color: Theme.of(context).colorScheme.primary),
                   ),
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: AppConstants.paddingMD,
@@ -985,7 +984,7 @@ class _CallComposeArea extends StatelessWidget {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppConstants.radiusSM),
-              borderSide: const BorderSide(color: _kBrand),
+              borderSide: BorderSide(color: Theme.of(context).colorScheme.primary),
             ),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: AppConstants.paddingMD,
@@ -1048,9 +1047,9 @@ class _SendButton extends StatelessWidget {
           ),
         ),
         style: ElevatedButton.styleFrom(
-          backgroundColor: _kBrand,
-          foregroundColor: Colors.white,
-          disabledBackgroundColor: _kBrand.withValues(alpha: 0.5),
+          backgroundColor: Theme.of(context).colorScheme.primary,
+          foregroundColor: Theme.of(context).colorScheme.onPrimary,
+          disabledBackgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
           disabledForegroundColor: Colors.white70,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppConstants.radiusMD),

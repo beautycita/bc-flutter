@@ -374,10 +374,7 @@ class _BusinessCalendarScreenState
 
           // Customer gets full refund (salon cancelled, not their fault)
           if (userId != null) {
-            await SupabaseClientService.client.rpc(
-              'increment_saldo',
-              params: {'p_user_id': userId, 'p_amount': price},
-            );
+            await SupabaseClientService.adjustSaldo(userId: userId, amount: price);
           }
 
           // BC still charges 3% — billed to salon (commission record)

@@ -115,30 +115,30 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen>
                 // Google
                 SettingsTile(
               icon: Icons.g_mobiledata_outlined,
-              iconColor: sec.isGoogleLinked ? Colors.green.shade600 : null,
+              iconColor: sec.isGoogleLinked ? ext.successColor : null,
               label: sec.isGoogleLinked ? 'Google vinculado' : 'Vincular Google',
               trailing: sec.isLoading
                   ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
                   : sec.isGoogleLinked
-                      ? Icon(Icons.check_circle_outlined, color: Colors.green.shade600, size: 20)
+                      ? Icon(Icons.check_circle_outlined, color: ext.successColor, size: 20)
                       : null,
               onTap: sec.isGoogleLinked ? null : () => ref.read(securityProvider.notifier).linkGoogle(),
             ),
 
-            const Divider(height: 1, color: Color(0xFFF5F0EB)),
+            Divider(height: 1, color: ext.cardBorderColor),
 
             // Email
             SettingsTile(
               icon: Icons.email_outlined,
-              iconColor: sec.isEmailConfirmed ? Colors.green.shade600 : sec.isEmailAdded ? Colors.orange.shade600 : null,
+              iconColor: sec.isEmailConfirmed ? ext.successColor : sec.isEmailAdded ? ext.warningColor : null,
               label: sec.isEmailAdded ? (sec.email ?? 'Email agregado') : 'Agregar email',
               trailing: sec.isEmailConfirmed
-                  ? Icon(Icons.check_circle_outlined, color: Colors.green.shade600, size: 20)
+                  ? Icon(Icons.check_circle_outlined, color: ext.successColor, size: 20)
                   : sec.isEmailAdded
                       ? Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
-                            color: Colors.orange.shade50,
+                            color: ext.warningColor.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(AppConstants.radiusXS),
                           ),
                           child: Text(
@@ -146,7 +146,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen>
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
-                              color: Colors.orange.shade700,
+                              color: ext.warningColor,
                             ),
                           ),
                         )
@@ -154,7 +154,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen>
               onTap: sec.isEmailAdded ? null : () => _showEmailSheet(context),
             ),
 
-            const Divider(height: 1, color: Color(0xFFF5F0EB)),
+            Divider(height: 1, color: ext.cardBorderColor),
 
             // Phone
             Consumer(builder: (ctx, ref, _) {
@@ -163,15 +163,15 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen>
               final verified = profile.hasVerifiedPhone;
               return SettingsTile(
                 icon: Icons.phone_outlined,
-                iconColor: verified ? Colors.green.shade600 : hasPhone ? Colors.orange.shade600 : null,
+                iconColor: verified ? ext.successColor : hasPhone ? ext.warningColor : null,
                 label: hasPhone ? (profile.phone ?? 'Telefono') : 'Agregar telefono',
                 trailing: verified
                     ? Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text('Verificado', style: TextStyle(fontSize: 11, color: Colors.green.shade600, fontWeight: FontWeight.w600)),
+                          Text('Verificado', style: TextStyle(fontSize: 11, color: ext.successColor, fontWeight: FontWeight.w600)),
                           const SizedBox(width: 6),
-                          Icon(Icons.check_circle_outlined, color: Colors.green.shade600, size: 20),
+                          Icon(Icons.check_circle_outlined, color: ext.successColor, size: 20),
                         ],
                       )
                     : hasPhone
@@ -180,24 +180,24 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen>
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
-                                color: Colors.orange.shade50,
+                                color: ext.warningColor.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(AppConstants.radiusXS),
                               ),
-                              child: Text('Verificar', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.orange.shade700)),
+                              child: Text('Verificar', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: ext.warningColor)),
                             ),
                           )
-                        : Text('Requerido', style: TextStyle(fontSize: 11, color: Colors.red.shade400)),
+                        : Text('Requerido', style: TextStyle(fontSize: 11, color: cs.error.withValues(alpha: 0.7))),
                 onTap: hasPhone ? null : () => _showPhoneSheet(context),
               );
             }),
 
-            const Divider(height: 1, color: Color(0xFFF5F0EB)),
+            Divider(height: 1, color: ext.cardBorderColor),
 
             // Password
             if (sec.hasPassword)
               SettingsTile(
                 icon: Icons.lock_outlined,
-                iconColor: Colors.green.shade600,
+                iconColor: ext.successColor,
                 label: 'Protegida',
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -210,7 +210,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen>
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Icon(Icons.check_circle_outlined, color: Colors.green.shade600, size: 20),
+                    Icon(Icons.check_circle_outlined, color: ext.successColor, size: 20),
                   ],
                 ),
                 onTap: () => _showPasswordSheet(context),
@@ -218,12 +218,12 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen>
             else
               SettingsTile(
                 icon: Icons.lock_open_outlined,
-                iconColor: _canAddPassword(sec) ? Colors.orange.shade600 : Colors.red.shade400,
+                iconColor: _canAddPassword(sec) ? ext.warningColor : cs.error.withValues(alpha: 0.7),
                 label: 'Agregar contrasena',
                 trailing: !_canAddPassword(sec)
                     ? Text(
                         sec.isEmailAdded ? 'Confirma email' : 'Requiere email',
-                        style: textTheme.bodySmall?.copyWith(color: Colors.red.shade400, fontSize: 11),
+                        style: textTheme.bodySmall?.copyWith(color: cs.error.withValues(alpha: 0.7), fontSize: 11),
                       )
                     : Icon(Icons.chevron_right_outlined, size: 20,
                         color: cs.onSurface.withValues(alpha: 0.3)),
@@ -255,7 +255,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen>
                   label: 'Dispositivos conectados',
                   onTap: () => context.push('/devices'),
                 ),
-                const Divider(height: 1, color: Color(0xFFF5F0EB)),
+                Divider(height: 1, color: ext.cardBorderColor),
                 SettingsTile(
                   icon: Icons.qr_code_scanner_outlined,
                   label: 'Vincular sesion web',
@@ -278,12 +278,12 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen>
             if (UpdaterService.instance.apkUpdateAvailable) ...[
               SettingsTile(
                 icon: Icons.system_update_outlined,
-                iconColor: Colors.blue.shade600,
+                iconColor: ext.infoColor,
                 label: 'Actualizar a ${UpdaterService.instance.apkUpdateVersion}',
-                trailing: Icon(Icons.download_outlined, color: Colors.blue.shade600, size: 20),
+                trailing: Icon(Icons.download_outlined, color: ext.infoColor, size: 20),
                 onTap: () => _launchUpdate(),
               ),
-              const Divider(height: 1, color: Color(0xFFF5F0EB)),
+              Divider(height: 1, color: ext.cardBorderColor),
             ],
 
             SettingsTile(
@@ -296,11 +296,11 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen>
                 ),
               ),
             ),
-            const Divider(height: 1, color: Color(0xFFF5F0EB)),
+            Divider(height: 1, color: ext.cardBorderColor),
 
             SettingsTile(
               icon: Icons.refresh_outlined,
-              iconColor: Colors.teal,
+              iconColor: ext.infoColor,
               label: 'Buscar actualizaciones',
               trailing: _checkingUpdate
                   ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))

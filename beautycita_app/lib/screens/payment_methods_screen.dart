@@ -407,9 +407,11 @@ class _CardTile extends StatelessWidget {
             style: textTheme.bodySmall?.copyWith(color: onSurfaceLight),
           ),
           const SizedBox(width: 8),
-          GestureDetector(
-            onTap: () => _confirmRemove(context),
-            child: Icon(Icons.delete_outlined, size: 18, color: Colors.red.shade400),
+          IconButton(
+            onPressed: () => _confirmRemove(context),
+            icon: Icon(Icons.delete_outlined, size: 18, color: Theme.of(context).colorScheme.error),
+            constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+            padding: EdgeInsets.zero,
           ),
         ],
       ),
@@ -715,10 +717,7 @@ class _GiftCardRedemptionTileState
         'is_active': false,
       }).eq('id', data['id'] as String);
 
-      await SupabaseClientService.client.rpc(
-        'increment_saldo',
-        params: {'p_user_id': userId, 'p_amount': remaining},
-      );
+      await SupabaseClientService.adjustSaldo(userId: userId, amount: remaining);
 
       _codeCtrl.clear();
       setState(() => _expanded = false);

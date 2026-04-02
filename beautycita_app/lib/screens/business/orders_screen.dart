@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:beautycita_core/models.dart' hide Provider;
 import '../../config/constants.dart';
+import '../../config/theme_extension.dart';
 import '../../providers/order_provider.dart';
 import '../../services/toast_service.dart';
 // ignore: depend_on_referenced_packages
@@ -116,7 +117,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
             child: TabBar(
               controller: _tabController,
               labelColor: colors.primary,
-              unselectedLabelColor: const Color(0xFF757575),
+              unselectedLabelColor: colors.onSurface.withValues(alpha: 0.6),
               indicatorColor: colors.primary,
               indicatorWeight: 2.5,
               labelStyle: GoogleFonts.poppins(
@@ -225,7 +226,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
                       style: GoogleFonts.poppins(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
-                        color: const Color(0xFF212121),
+                        color: colors.onSurface,
                       ),
                     ),
                     const SizedBox(height: AppConstants.paddingXS),
@@ -233,7 +234,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
                       e.toString(),
                       style: GoogleFonts.nunito(
                         fontSize: 13,
-                        color: const Color(0xFF757575),
+                        color: colors.onSurface.withValues(alpha: 0.6),
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -338,7 +339,8 @@ class _OrderList extends StatelessWidget {
 // Order card
 // ---------------------------------------------------------------------------
 
-Widget _OrderDetailRow(String label, String? value) => Padding(
+Widget _OrderDetailRow(String label, String? value) => Builder(
+  builder: (context) => Padding(
   padding: const EdgeInsets.only(bottom: 8),
   child: Row(
     crossAxisAlignment: CrossAxisAlignment.start,
@@ -350,7 +352,7 @@ Widget _OrderDetailRow(String label, String? value) => Padding(
           style: GoogleFonts.poppins(
             fontSize: 13,
             fontWeight: FontWeight.w600,
-            color: Colors.grey[600],
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
           ),
         ),
       ),
@@ -362,7 +364,7 @@ Widget _OrderDetailRow(String label, String? value) => Padding(
       ),
     ],
   ),
-);
+));
 
 class _OrderCard extends ConsumerStatefulWidget {
   final Order order;
@@ -437,6 +439,7 @@ class _OrderCardState extends ConsumerState<_OrderCard> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final ext = Theme.of(context).extension<BCThemeExtension>()!;
     final order = widget.order;
 
     return GestureDetector(
@@ -470,7 +473,7 @@ class _OrderCardState extends ConsumerState<_OrderCard> {
                   style: GoogleFonts.poppins(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    color: const Color(0xFF212121),
+                    color: colors.onSurface,
                   ),
                 ),
               ),
@@ -485,24 +488,24 @@ class _OrderCardState extends ConsumerState<_OrderCard> {
           Row(
             children: [
               Icon(Icons.shopping_bag_outlined,
-                  size: 14, color: const Color(0xFF9E9E9E)),
+                  size: 14, color: colors.onSurface.withValues(alpha: 0.4)),
               const SizedBox(width: 4),
               Text(
                 'x${order.quantity}',
                 style: GoogleFonts.nunito(
                   fontSize: 13,
-                  color: const Color(0xFF757575),
+                  color: colors.onSurface.withValues(alpha: 0.6),
                 ),
               ),
               const SizedBox(width: AppConstants.paddingMD),
               Icon(Icons.attach_money,
-                  size: 14, color: const Color(0xFF4CAF50)),
+                  size: 14, color: ext.successColor),
               Text(
                 '\$${order.totalAmount.toStringAsFixed(2)} MXN',
                 style: GoogleFonts.poppins(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
-                  color: const Color(0xFF212121),
+                  color: colors.onSurface,
                 ),
               ),
             ],
@@ -514,13 +517,13 @@ class _OrderCardState extends ConsumerState<_OrderCard> {
           Row(
             children: [
               Icon(Icons.access_time,
-                  size: 13, color: const Color(0xFF9E9E9E)),
+                  size: 13, color: colors.onSurface.withValues(alpha: 0.4)),
               const SizedBox(width: 4),
               Text(
                 _formatDate(order.createdAt),
                 style: GoogleFonts.nunito(
                   fontSize: 12,
-                  color: const Color(0xFF9E9E9E),
+                  color: colors.onSurface.withValues(alpha: 0.4),
                 ),
               ),
               if (order.daysSinceOrder > 2 && order.isPaid) ...[
@@ -529,7 +532,7 @@ class _OrderCardState extends ConsumerState<_OrderCard> {
                   padding: const EdgeInsets.symmetric(
                       horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
-                    color: Colors.orange.withValues(alpha: 0.12),
+                    color: ext.warningColor.withValues(alpha: 0.12),
                     borderRadius:
                         BorderRadius.circular(AppConstants.radiusFull),
                   ),
@@ -538,7 +541,7 @@ class _OrderCardState extends ConsumerState<_OrderCard> {
                     style: GoogleFonts.nunito(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
-                      color: Colors.orange.shade700,
+                      color: ext.warningColor,
                     ),
                   ),
                 ),
@@ -558,7 +561,7 @@ class _OrderCardState extends ConsumerState<_OrderCard> {
             Row(
               children: [
                 Icon(Icons.local_shipping_outlined,
-                    size: 13, color: const Color(0xFF059669)),
+                    size: 13, color: ext.successColor),
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
@@ -566,7 +569,7 @@ class _OrderCardState extends ConsumerState<_OrderCard> {
                     style: GoogleFonts.nunito(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: const Color(0xFF059669),
+                      color: ext.successColor,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -583,14 +586,14 @@ class _OrderCardState extends ConsumerState<_OrderCard> {
             Row(
               children: [
                 Icon(Icons.location_on_outlined,
-                    size: 13, color: const Color(0xFF9E9E9E)),
+                    size: 13, color: colors.onSurface.withValues(alpha: 0.4)),
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
                     _formatAddress(order.shippingAddress!),
                     style: GoogleFonts.nunito(
                       fontSize: 12,
-                      color: const Color(0xFF757575),
+                      color: colors.onSurface.withValues(alpha: 0.6),
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -617,8 +620,8 @@ class _OrderCardState extends ConsumerState<_OrderCard> {
                   ),
                 ),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF3B82F6),
-                  side: const BorderSide(color: Color(0xFF3B82F6)),
+                  foregroundColor: ext.infoColor,
+                  side: BorderSide(color: ext.infoColor),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(AppConstants.radiusSM),
                   ),
@@ -666,7 +669,7 @@ class _OrderCardState extends ConsumerState<_OrderCard> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: order.isPaid
                       ? colors.primary
-                      : const Color(0xFF4CAF50),
+                      : ext.successColor,
                   foregroundColor: Colors.white,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
@@ -810,6 +813,8 @@ class _ShippingDeadlineBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ext = Theme.of(context).extension<BCThemeExtension>()!;
+    final colors = Theme.of(context).colorScheme;
     final daysLeft = order.shippingDeadlineDaysLeft;
     final isOverdue = order.isShippingOverdue;
     final isUrgent = order.isShippingUrgent;
@@ -820,16 +825,16 @@ class _ShippingDeadlineBar extends StatelessWidget {
     final String label;
 
     if (isOverdue) {
-      barColor = const Color(0xFFDC2626);
-      bgColor = const Color(0xFFFEE2E2);
+      barColor = colors.error;
+      bgColor = colors.error.withValues(alpha: 0.1);
       label = 'Vencido hace ${daysLeft.abs()} dia${daysLeft.abs() == 1 ? '' : 's'}';
     } else if (isUrgent) {
-      barColor = const Color(0xFFF59E0B);
-      bgColor = const Color(0xFFFEF3C7);
+      barColor = ext.warningColor;
+      bgColor = ext.warningColor.withValues(alpha: 0.1);
       label = '$daysLeft dia${daysLeft == 1 ? '' : 's'} para enviar';
     } else {
-      barColor = const Color(0xFF059669);
-      bgColor = const Color(0xFFD1FAE5);
+      barColor = ext.successColor;
+      bgColor = ext.successColor.withValues(alpha: 0.1);
       label = '$daysLeft dias para enviar';
     }
 
@@ -886,7 +891,7 @@ class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (label, bg, fg) = _resolveStyle(status);
+    final (label, bg, fg) = _resolveStyle(context, status);
     return Container(
       padding:
           const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
@@ -905,25 +910,27 @@ class _StatusBadge extends StatelessWidget {
     );
   }
 
-  (String, Color, Color) _resolveStyle(String status) {
+  (String, Color, Color) _resolveStyle(BuildContext context, String status) {
+    final ext = Theme.of(context).extension<BCThemeExtension>()!;
+    final colors = Theme.of(context).colorScheme;
     switch (status) {
       case 'paid':
         return (
           'Pagado',
-          const Color(0xFF3B82F6).withValues(alpha: 0.12),
-          const Color(0xFF1D4ED8),
+          ext.infoColor.withValues(alpha: 0.12),
+          ext.infoColor,
         );
       case 'shipped':
         return (
           'Enviado',
-          const Color(0xFFF59E0B).withValues(alpha: 0.14),
-          const Color(0xFFB45309),
+          ext.warningColor.withValues(alpha: 0.14),
+          ext.warningColor,
         );
       case 'delivered':
         return (
           'Entregado',
-          const Color(0xFF4CAF50).withValues(alpha: 0.14),
-          const Color(0xFF2E7D32),
+          ext.successColor.withValues(alpha: 0.14),
+          ext.successColor,
         );
       case 'refunded':
         return (
@@ -934,14 +941,14 @@ class _StatusBadge extends StatelessWidget {
       case 'cancelled':
         return (
           'Cancelado',
-          const Color(0xFF9E9E9E).withValues(alpha: 0.14),
-          const Color(0xFF616161),
+          colors.onSurface.withValues(alpha: 0.08),
+          colors.onSurface.withValues(alpha: 0.5),
         );
       default:
         return (
           status,
-          const Color(0xFF9E9E9E).withValues(alpha: 0.14),
-          const Color(0xFF616161),
+          colors.onSurface.withValues(alpha: 0.08),
+          colors.onSurface.withValues(alpha: 0.5),
         );
     }
   }
@@ -976,7 +983,7 @@ class _EmptyState extends StatelessWidget {
               style: GoogleFonts.poppins(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: const Color(0xFF212121),
+                color: colors.onSurface,
               ),
               textAlign: TextAlign.center,
             ),
@@ -985,7 +992,7 @@ class _EmptyState extends StatelessWidget {
               subtext,
               style: GoogleFonts.nunito(
                 fontSize: 13,
-                color: const Color(0xFF757575),
+                color: colors.onSurface.withValues(alpha: 0.6),
               ),
               textAlign: TextAlign.center,
             ),

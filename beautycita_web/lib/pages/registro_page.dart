@@ -45,9 +45,9 @@ class _RegistroPageState extends ConsumerState<RegistroPage> {
   // Step 3: Services
   final Set<String> _selectedServices = {};
 
-  // Brand colors (matching landing page)
-  static const _deepRose = Color(0xFF990033);
-  static const _lightRose = Color(0xFFC2185B);
+  // Brand colors (lila — matching mobile app palette)
+  static const _deepRose = Color(0xFFAA7EAA);
+  static const _lightRose = Color(0xFFC8A2C8);
   static const _serviceCategories = [
     ('Corte', Icons.content_cut),
     ('Color', Icons.palette_outlined),
@@ -158,7 +158,7 @@ class _RegistroPageState extends ConsumerState<RegistroPage> {
       width: double.infinity,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFF660033), _deepRose, _lightRose],
+          colors: [Color(0xFF8A6B8A), _deepRose, _lightRose],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -686,27 +686,27 @@ class _RegistroPageState extends ConsumerState<RegistroPage> {
     if (user == null) return;
 
     try {
-      // Create the business record linked to this user and discovered salon
-      await BCSupabase.client.from(BCTables.businesses).insert({
-        'owner_id': user.id,
-        'name': _bizNameController.text.trim(),
-        'address': _addressController.text.trim(),
-        'city': _cityController.text.trim(),
-        'phone': _phoneController.text.trim(),
-        'discovered_salon_id': widget.salonId,
-        'photo_url': _imageUrl,
-        'service_categories': _selectedServices.toList(),
-      });
+      // Call the same Edge Function that mobile uses — atomic business +
+      // staff + schedule creation, discovered salon linking, role upgrade.
+      final response = await BCSupabase.client.functions.invoke(
+        'register-business',
+        body: {
+          'name': _bizNameController.text.trim(),
+          'phone': _phoneController.text.trim(),
+          'address': _addressController.text.trim(),
+          'city': _cityController.text.trim(),
+          'discovered_salon_id': widget.salonId,
+          'photo_url': _imageUrl,
+          'service_categories': _selectedServices.toList(),
+        },
+      );
 
-      // Update the user role to 'business'
-      await BCSupabase.client.from(BCTables.profiles).update({
-        'role': 'business',
-      }).eq('id', user.id);
-
-      // Mark discovered salon as converted
-      await BCSupabase.client
-          .from(BCTables.discoveredSalons)
-          .update({'status': 'converted'}).eq('id', widget.salonId);
+      if (response.status != 200) {
+        final error = response.data is Map
+            ? response.data['error'] ?? 'Error desconocido'
+            : 'Error al registrar';
+        throw Exception(error);
+      }
 
       if (mounted) {
         setState(() => _currentStep = 3);
@@ -716,7 +716,7 @@ class _RegistroPageState extends ConsumerState<RegistroPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error al registrar: $e'),
-            backgroundColor: Colors.red.shade600,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }

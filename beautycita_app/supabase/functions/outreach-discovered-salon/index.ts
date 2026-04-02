@@ -146,8 +146,8 @@ serve(async (req: Request) => {
         ? buildServiceKeywords(service_query)
         : null;
 
-      // Fetch a large candidate pool to rank from
-      const candidatePool = 500;
+      // Fetch a candidate pool to rank from (RPC handles primary case; fallback is smaller)
+      const candidatePool = 200;
 
       // Use PostGIS to find nearby discovered salons not yet registered
       const { data, error } = await serviceClient.rpc("nearby_discovered_salons", {
@@ -164,8 +164,10 @@ serve(async (req: Request) => {
         const { data: fallback, error: fallbackErr } = await serviceClient
           .from("discovered_salons")
           .select("id, business_name, phone, whatsapp, location_address, location_city, latitude, longitude, feature_image_url, rating_average, rating_count, interest_count, categories, specialties, matched_categories, status, created_at")
+          .eq("country", "MX")
           .in("status", ["discovered", "selected", "outreach_sent"])
           .not("latitude", "is", null)
+          .order("business_name", { ascending: true })
           .limit(candidatePool);
 
         if (fallbackErr) {
@@ -213,8 +215,8 @@ serve(async (req: Request) => {
       // Apply limit
       results = results.slice(0, limit);
 
-      // Strip PII before sending to client
-      const sanitized = results.map(({ phone, whatsapp, email, phone_raw, ...safe }: any) => safe);
+      // Strip private PII before sending to client (keep phone/whatsapp — they're public business numbers)
+      const sanitized = results.map(({ email, phone_raw, ...safe }: any) => safe);
 
       return jsonResponse({ salons: sanitized, count: sanitized.length });
     }
@@ -246,9 +248,11 @@ serve(async (req: Request) => {
       const { data, error } = await serviceClient
         .from("discovered_salons")
         .select("id, business_name, phone, whatsapp, location_address, location_city, latitude, longitude, feature_image_url, rating_average, rating_count, interest_count, categories, specialties, matched_categories, generated_bio, status, created_at")
+        .eq("country", "MX")
         .ilike("business_name", `%${query}%`)
         .in("status", ["discovered", "selected", "outreach_sent"])
         .not("latitude", "is", null)
+        .order("business_name", { ascending: true })
         .limit(50);
 
       if (error) {
@@ -279,8 +283,8 @@ serve(async (req: Request) => {
       // Limit to 10
       results = results.slice(0, 10);
 
-      // Strip PII before sending to client
-      const sanitized = results.map(({ phone, whatsapp, email, phone_raw, ...safe }: any) => safe);
+      // Strip private PII before sending to client (keep phone/whatsapp — they're public business numbers)
+      const sanitized = results.map(({ email, phone_raw, ...safe }: any) => safe);
 
       const searchResult = {
         salons: sanitized,
