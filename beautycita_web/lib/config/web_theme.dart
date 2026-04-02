@@ -32,6 +32,12 @@ const kWebPrimary = Color(0xFFEC4899);
 const kWebSecondary = Color(0xFF9333EA);
 const kWebTertiary = Color(0xFF3B82F6);
 
+/// Semantic status colors — use these instead of hardcoding Material colors.
+const kWebSuccess = Color(0xFF4CAF50);
+const kWebWarning = Color(0xFFFF9800);
+const kWebError = Color(0xFFE53935);
+const kWebInfo = Color(0xFF2196F3);
+
 /// Brand gradient: pink -> purple -> blue at 135 degrees.
 const kWebBrandGradient = LinearGradient(
   colors: [kWebPrimary, kWebSecondary, kWebTertiary],

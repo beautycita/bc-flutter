@@ -47,4 +47,13 @@ class SupabaseClientService {
 
   static bool get isAuthenticated =>
       testUserId != null || (_initialized && Supabase.instance.client.auth.currentUser != null);
+
+  /// Atomically adjust a user's saldo. Use positive amount to credit, negative to deduct.
+  /// Single call site for the increment_saldo RPC — all code must use this.
+  static Future<void> adjustSaldo({required String userId, required double amount}) async {
+    await client.rpc('increment_saldo', params: {
+      'p_user_id': userId,
+      'p_amount': double.parse(amount.toStringAsFixed(2)),
+    });
+  }
 }

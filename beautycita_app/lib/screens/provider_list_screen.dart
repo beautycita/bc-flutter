@@ -247,7 +247,9 @@ class _ProviderCard extends ConsumerWidget {
                               const SizedBox(width: AppConstants.paddingXS),
                               Flexible(
                                 child: Text(
-                                  '${provider.address}, ${provider.city}',
+                                  [provider.address, provider.city]
+                                      .where((s) => s != null && s.isNotEmpty)
+                                      .join(', '),
                                   style: textTheme.bodySmall?.copyWith(
                                     color: colorScheme.onSurface.withValues(alpha: 0.5),
                                   ),
@@ -579,7 +581,7 @@ class _FavoriteHeartButton extends ConsumerWidget {
 // Empty State
 // ---------------------------------------------------------------------------
 
-class _EmptyState extends StatelessWidget {
+class _EmptyState extends ConsumerWidget {
   final String category;
   final Color categoryColor;
 
@@ -589,7 +591,7 @@ class _EmptyState extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
 
@@ -616,7 +618,7 @@ class _EmptyState extends StatelessWidget {
             ),
             const SizedBox(height: AppConstants.paddingLG),
             Text(
-              'No encontramos salones',
+              'No encontramos salones en esta categoria',
               style: textTheme.titleMedium?.copyWith(
                 color: colorScheme.onSurface,
                 fontWeight: FontWeight.w600,
@@ -625,11 +627,28 @@ class _EmptyState extends StatelessWidget {
             ),
             const SizedBox(height: AppConstants.paddingSM),
             Text(
-              'Intenta ajustar tu búsqueda o ubicación',
+              'Estamos creciendo — pronto habra mas opciones aqui',
               style: textTheme.bodySmall?.copyWith(
                 color: colorScheme.onSurface.withValues(alpha: 0.5),
               ),
               textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppConstants.paddingXL),
+            SizedBox(
+              width: 200,
+              child: ElevatedButton.icon(
+                onPressed: () => ref.invalidate(providersByCategoryProvider(category)),
+                icon: const Icon(Icons.refresh),
+                label: const Text('Reintentar'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: categoryColor,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(200, AppConstants.minTouchHeight),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppConstants.radiusLG),
+                  ),
+                ),
+              ),
             ),
           ],
         ),

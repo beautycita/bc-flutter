@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../config/constants.dart';
 import '../../config/routes.dart';
 import '../../providers/admin_operations_provider.dart';
+import '../../services/supabase_client.dart';
 
 class AdminOperationsDashboardScreen extends ConsumerWidget {
   const AdminOperationsDashboardScreen({super.key});
@@ -51,6 +52,11 @@ class AdminOperationsDashboardScreen extends ConsumerWidget {
             loading: () => const _LoadingCard(),
             error: (e, _) => _ErrorCard(message: 'Error: $e'),
           ),
+
+          const SizedBox(height: AppConstants.paddingMD),
+
+          // ── Data Enrichment Pipeline ──
+          const _EnrichmentPanel(),
 
           const SizedBox(height: AppConstants.paddingMD),
 
@@ -763,6 +769,166 @@ class _InfraCard extends StatelessWidget {
               ],
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Data Enrichment Pipeline ─────────────────────────────────────────────────
+
+class _EnrichmentPanel extends StatefulWidget {
+  const _EnrichmentPanel();
+
+  @override
+  State<_EnrichmentPanel> createState() => _EnrichmentPanelState();
+}
+
+class _EnrichmentPanelState extends State<_EnrichmentPanel> {
+  bool _running = false;
+  String _status = '';
+  String _currentAction = '';
+
+  Future<void> _runAction(String action) async {
+    setState(() {
+      _running = true;
+      _currentAction = action;
+      _status = 'Ejecutando $action...';
+    });
+
+    try {
+      final response = await SupabaseClientService.client.functions.invoke(
+        'enrich-discovered-salons',
+        body: {'action': action, 'batch_size': 50},
+      );
+
+      if (response.status == 200 && response.data is Map) {
+        final data = response.data as Map;
+        final processed = data['processed'] ?? data['merged'] ?? 0;
+        final remaining = data['remaining'] ?? '?';
+        setState(() {
+          _status = '$action: $processed procesados, $remaining restantes';
+        });
+      } else {
+        setState(() {
+          _status = 'Error: ${response.data}';
+        });
+      }
+    } catch (e) {
+      setState(() => _status = 'Error: $e');
+    } finally {
+      setState(() => _running = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+        side: BorderSide(color: colors.outline.withValues(alpha: 0.2)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppConstants.paddingMD),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Enriquecimiento de Datos',
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: colors.onSurface,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Geocodificacion, deduplicacion y categorizacion de salones descubiertos',
+              style: GoogleFonts.nunito(
+                fontSize: 12,
+                color: colors.onSurface.withValues(alpha: 0.5),
+              ),
+            ),
+            const SizedBox(height: AppConstants.paddingSM),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _EnrichButton(
+                  label: 'Geocodificar',
+                  icon: Icons.location_on_outlined,
+                  running: _running && _currentAction == 'geocode',
+                  onTap: _running ? null : () => _runAction('geocode'),
+                ),
+                _EnrichButton(
+                  label: 'Deduplicar',
+                  icon: Icons.merge_outlined,
+                  running: _running && _currentAction == 'dedup',
+                  onTap: _running ? null : () => _runAction('dedup'),
+                ),
+                _EnrichButton(
+                  label: 'Categorizar',
+                  icon: Icons.category_outlined,
+                  running: _running && _currentAction == 'categorize',
+                  onTap: _running ? null : () => _runAction('categorize'),
+                ),
+              ],
+            ),
+            if (_status.isNotEmpty) ...[
+              const SizedBox(height: AppConstants.paddingSM),
+              Text(
+                _status,
+                style: GoogleFonts.nunito(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: _status.startsWith('Error')
+                      ? colors.error
+                      : colors.onSurface.withValues(alpha: 0.7),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EnrichButton extends StatelessWidget {
+  const _EnrichButton({
+    required this.label,
+    required this.icon,
+    required this.running,
+    this.onTap,
+  });
+  final String label;
+  final IconData icon;
+  final bool running;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return OutlinedButton.icon(
+      onPressed: onTap,
+      icon: running
+          ? SizedBox(
+              width: 14,
+              height: 14,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: colors.primary,
+              ),
+            )
+          : Icon(icon, size: 16),
+      label: Text(label, style: const TextStyle(fontSize: 12)),
+      style: OutlinedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
         ),
       ),
     );

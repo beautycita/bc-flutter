@@ -280,7 +280,7 @@ class _SummaryCards extends StatelessWidget {
           icon: Icons.attach_money_outlined,
           label: 'Ingresos Totales',
           value: '\$${totalRevenue.toStringAsFixed(0)}',
-          color: Colors.green,
+          color: kWebSuccess,
         ),
         _StatCard(
           icon: Icons.event_available_outlined,
@@ -304,7 +304,7 @@ class _SummaryCards extends StatelessWidget {
           icon: Icons.people_outlined,
           label: 'Staff Activo',
           value: '${staff.length}',
-          color: Colors.orange,
+          color: kWebWarning,
         ),
       ],
     );
@@ -631,14 +631,19 @@ class _ServiceBar extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 4),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(4),
-          child: LinearProgressIndicator(
-            value: pct.clamp(0.0, 1.0),
-            minHeight: 6,
-            backgroundColor: kWebCardBorder,
-            valueColor:
-                const AlwaysStoppedAnimation<Color>(kWebPrimary),
+        TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0, end: pct.clamp(0.0, 1.0)),
+          duration: const Duration(milliseconds: 600),
+          curve: Curves.easeOutCubic,
+          builder: (context, value, _) => ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: value,
+              minHeight: 6,
+              backgroundColor: kWebCardBorder,
+              valueColor:
+                  const AlwaysStoppedAnimation<Color>(kWebPrimary),
+            ),
           ),
         ),
       ],

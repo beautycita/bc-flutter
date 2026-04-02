@@ -86,8 +86,12 @@ Future<void> main() async {
           .eq('status', 'pending')
           .eq('payment_status', 'pending')
           .lt('created_at', DateTime.now().subtract(const Duration(minutes: 30)).toUtc().toIso8601String())
-          .then((_) {})
-          .catchError((_) {});
+          .then((_) {
+            if (kDebugMode) debugPrint('[Init] Orphan bookings cleaned');
+          })
+          .catchError((e) {
+            debugPrint('[Init] Orphan cleanup failed: $e');
+          });
     }
     // Auto-sync registered MX salons to Android contacts (non-blocking)
     ContactMatchService.autoSyncRegisteredSalons();
@@ -102,7 +106,7 @@ Future<void> main() async {
   // Sentry error reporting — captures crashes, unhandled exceptions, ANRs
   await SentryFlutter.init(
     (options) {
-      options.dsn = 'https://3ffa879e65080eaec1b7c016dd390e64@o4510248503869440.ingest.us.sentry.io/4510248532049921';
+      options.dsn = dotenv.env['SENTRY_DSN'] ?? '';
       options.tracesSampleRate = kDebugMode ? 1.0 : 0.2;
       options.environment = kDebugMode ? 'debug' : 'production';
       options.release = 'beautycita@1.1.0';

@@ -140,26 +140,26 @@ class _KpiSection extends StatelessWidget {
             label: 'Ingresos del mes',
             value: _formatCurrency(kpis.monthlyRevenue),
             prefix: '\$',
-            iconColor: const Color(0xFF4CAF50),
+            iconColor: kWebSuccess,
             changePercent: kpis.revenueChangePercent,
           ),
           KpiCard(
             icon: Icons.people_outlined,
             label: 'Usuarios activos',
             value: _formatNumber(kpis.activeUsers),
-            iconColor: const Color(0xFF2196F3),
+            iconColor: kWebInfo,
           ),
           KpiCard(
             icon: Icons.calendar_today_outlined,
             label: 'Reservas hoy',
             value: kpis.bookingsToday.toString(),
-            iconColor: const Color(0xFFFF9800),
+            iconColor: kWebWarning,
           ),
           KpiCard(
             icon: Icons.store_outlined,
             label: 'Salones registrados',
             value: kpis.registeredSalons.toString(),
-            iconColor: const Color(0xFF9C27B0),
+            iconColor: kWebSecondary,
           ),
         ];
 
@@ -353,11 +353,11 @@ class _ActivityFeed extends StatelessWidget {
                 width: 8,
                 height: 8,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF4CAF50),
+                  color: kWebSuccess,
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF4CAF50).withValues(alpha: 0.4),
+                      color: kWebSuccess.withValues(alpha: 0.4),
                       blurRadius: 6,
                     ),
                   ],
@@ -367,7 +367,7 @@ class _ActivityFeed extends StatelessWidget {
               Text(
                 'En vivo',
                 style: theme.textTheme.labelSmall?.copyWith(
-                  color: const Color(0xFF4CAF50),
+                  color: kWebSuccess,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -375,10 +375,7 @@ class _ActivityFeed extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           feedAsync.when(
-            loading: () => const Padding(
-              padding: EdgeInsets.symmetric(vertical: 32),
-              child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-            ),
+            loading: () => const _FeedSkeleton(),
             error: (_, __) => Padding(
               padding: const EdgeInsets.symmetric(vertical: 32),
               child: Center(
@@ -418,7 +415,10 @@ class _ActivityFeed extends StatelessWidget {
               return Column(
                 children: [
                   for (var i = 0; i < items.length && i < 8; i++) ...[
-                    _ActivityRow(item: items[i]),
+                    _AnimatedFeedRow(
+                      delay: Duration(milliseconds: 60 * i),
+                      child: _ActivityRow(item: items[i]),
+                    ),
                     if (i < items.length - 1 && i < 7)
                       Divider(
                         height: 1,
@@ -435,6 +435,57 @@ class _ActivityFeed extends StatelessWidget {
   }
 }
 
+/// Staggered fade+slide for each feed row.
+class _AnimatedFeedRow extends StatefulWidget {
+  const _AnimatedFeedRow({required this.delay, required this.child});
+  final Duration delay;
+  final Widget child;
+
+  @override
+  State<_AnimatedFeedRow> createState() => _AnimatedFeedRowState();
+}
+
+class _AnimatedFeedRowState extends State<_AnimatedFeedRow>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _opacity;
+  late final Animation<Offset> _slide;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _opacity = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
+    _slide = Tween<Offset>(
+      begin: const Offset(0, 0.15),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic));
+    Future.delayed(widget.delay, () {
+      if (mounted) _ctrl.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _opacity,
+      child: SlideTransition(
+        position: _slide,
+        child: widget.child,
+      ),
+    );
+  }
+}
+
 /// A single row in the activity feed.
 class _ActivityRow extends StatelessWidget {
   const _ActivityRow({required this.item});
@@ -445,10 +496,10 @@ class _ActivityRow extends StatelessWidget {
     final theme = Theme.of(context);
 
     final (IconData icon, Color color) = switch (item.type) {
-      'booking' => (Icons.calendar_today_outlined, const Color(0xFF4CAF50)),
-      'user' => (Icons.person_add_outlined, const Color(0xFF2196F3)),
-      'salon' => (Icons.store_outlined, const Color(0xFF9C27B0)),
-      'cancellation' => (Icons.cancel_outlined, const Color(0xFFE53935)),
+      'booking' => (Icons.calendar_today_outlined, kWebSuccess),
+      'user' => (Icons.person_add_outlined, kWebInfo),
+      'salon' => (Icons.store_outlined, kWebSecondary),
+      'cancellation' => (Icons.cancel_outlined, kWebError),
       _ => (Icons.info_outlined, kWebPrimary),
     };
 
@@ -534,13 +585,13 @@ class _AlertsPanel extends StatelessWidget {
                 width: 34,
                 height: 34,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFF9800).withValues(alpha: 0.08),
+                  color: kWebWarning.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Icon(
                   Icons.warning_amber_outlined,
                   size: 18,
-                  color: Color(0xFFFF9800),
+                  color: kWebWarning,
                 ),
               ),
               const SizedBox(width: 10),
@@ -563,13 +614,13 @@ class _AlertsPanel extends StatelessWidget {
                       vertical: 2,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFE53935).withValues(alpha: 0.1),
+                      color: kWebError.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
                       '${alerts.total}',
                       style: const TextStyle(
-                        color: Color(0xFFE53935),
+                        color: kWebError,
                         fontWeight: FontWeight.w700,
                         fontSize: 12,
                       ),
@@ -581,12 +632,7 @@ class _AlertsPanel extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           alertsAsync.when(
-            loading: () => const Center(
-              child: Padding(
-                padding: EdgeInsets.all(24),
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-            ),
+            loading: () => const _AlertsSkeleton(),
             error: (_, __) => Center(
               child: Text(
                 'Error al cargar alertas',
@@ -605,7 +651,7 @@ class _AlertsPanel extends StatelessWidget {
                         Icon(
                           Icons.check_circle_outlined,
                           size: 36,
-                          color: const Color(0xFF4CAF50).withValues(alpha: 0.6),
+                          color: kWebSuccess.withValues(alpha: 0.6),
                         ),
                         const SizedBox(height: 8),
                         Text(
@@ -627,7 +673,7 @@ class _AlertsPanel extends StatelessWidget {
                       icon: Icons.gavel_outlined,
                       label: 'Disputas pendientes',
                       count: alerts.pendingDisputes,
-                      color: const Color(0xFFE53935),
+                      color: kWebError,
                     ),
                   if (alerts.unverifiedSalons > 0) ...[
                     if (alerts.pendingDisputes > 0) const SizedBox(height: 12),
@@ -635,7 +681,7 @@ class _AlertsPanel extends StatelessWidget {
                       icon: Icons.verified_outlined,
                       label: 'Salones sin verificar',
                       count: alerts.unverifiedSalons,
-                      color: const Color(0xFFFF9800),
+                      color: kWebWarning,
                     ),
                   ],
                   if (alerts.failedPayments > 0) ...[
@@ -646,7 +692,7 @@ class _AlertsPanel extends StatelessWidget {
                       icon: Icons.payment_outlined,
                       label: 'Pagos fallidos',
                       count: alerts.failedPayments,
-                      color: const Color(0xFFE53935),
+                      color: kWebError,
                     ),
                   ],
                 ],
@@ -736,6 +782,92 @@ class _AlertRowState extends State<_AlertRow> {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ── Skeleton Placeholders ────────────────────────────────────────────────────
+
+class _SkeletonBar extends StatelessWidget {
+  const _SkeletonBar({this.width, this.height = 12, this.borderRadius = 6});
+  final double? width;
+  final double height;
+  final double borderRadius;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: kWebCardBorder.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(borderRadius),
+      ),
+    );
+  }
+}
+
+class _FeedSkeleton extends StatelessWidget {
+  const _FeedSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: List.generate(5, (i) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Row(
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: kWebCardBorder.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _SkeletonBar(width: 120 + (i * 20).toDouble()),
+                  const SizedBox(height: 6),
+                  _SkeletonBar(width: 80, height: 10),
+                ],
+              ),
+            ),
+            const _SkeletonBar(width: 28, height: 10),
+          ],
+        ),
+      )),
+    );
+  }
+}
+
+class _AlertsSkeleton extends StatelessWidget {
+  const _AlertsSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: List.generate(3, (i) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: kWebCardBorder.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(child: _SkeletonBar(width: 140 + (i * 15).toDouble())),
+            const _SkeletonBar(width: 24, height: 18, borderRadius: 9),
+          ],
+        ),
+      )),
     );
   }
 }

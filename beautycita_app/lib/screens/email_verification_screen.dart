@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../config/constants.dart';
 import '../config/theme_extension.dart';
 import '../providers/security_provider.dart';
+import '../services/toast_service.dart';
 
 class EmailVerificationScreen extends ConsumerStatefulWidget {
   final VoidCallback onSkip;
@@ -48,6 +49,10 @@ class _EmailVerificationScreenState
 
     try {
       await ref.read(securityProvider.notifier).linkGoogle();
+    } catch (e) {
+      if (mounted) {
+        ToastService.showError('No se pudo vincular con Google');
+      }
     } finally {
       if (mounted) {
         setState(() {

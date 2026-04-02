@@ -90,7 +90,7 @@ class _TotpInputWidgetState extends State<TotpInputWidget> {
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w700,
-                    color: hasError ? Colors.red : colorScheme.onSurface,
+                    color: hasError ? colorScheme.error : colorScheme.onSurface,
                   ),
                   decoration: InputDecoration(
                     counterText: '',
@@ -99,14 +99,14 @@ class _TotpInputWidgetState extends State<TotpInputWidget> {
                       borderRadius: BorderRadius.circular(10),
                       borderSide: BorderSide(
                         color: hasError
-                            ? Colors.red
+                            ? colorScheme.error
                             : colorScheme.onSurface.withValues(alpha: 0.2),
                       ),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
                       borderSide: BorderSide(
-                        color: hasError ? Colors.red : const Color(0xFFF7931A),
+                        color: hasError ? colorScheme.error : colorScheme.primary,
                         width: 2,
                       ),
                     ),
@@ -124,7 +124,7 @@ class _TotpInputWidgetState extends State<TotpInputWidget> {
           const SizedBox(height: 8),
           Text(
             widget.error!,
-            style: const TextStyle(color: Colors.red, fontSize: 13),
+            style: TextStyle(color: colorScheme.error, fontSize: 13),
           ),
         ],
         if (widget.isLoading) ...[

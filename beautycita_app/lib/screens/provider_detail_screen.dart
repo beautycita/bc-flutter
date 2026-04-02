@@ -364,7 +364,9 @@ class ProviderDetailScreen extends ConsumerWidget {
           const SizedBox(width: AppConstants.paddingSM),
           Expanded(
             child: Text(
-              '${provider.address}, ${provider.city}, ${provider.state}',
+              [provider.address, provider.city, provider.state]
+                  .where((s) => s != null && s.isNotEmpty)
+                  .join(', '),
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: colorScheme.onSurface.withValues(alpha: 0.5),
                   ),

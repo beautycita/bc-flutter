@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:beautycita_core/supabase.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../config/breakpoints.dart';
 import '../../config/web_theme.dart';
@@ -107,6 +108,10 @@ class _PaymentsContent extends ConsumerWidget {
 
               // Stripe status banner
               _StripeBanner(biz: biz),
+              const SizedBox(height: 16),
+
+              // Banking setup banner
+              if (biz['banking_complete'] != true) _BankingBanner(biz: biz),
               const SizedBox(height: 24),
 
               // Filters
@@ -779,6 +784,69 @@ class _CommissionMobileRow extends StatelessWidget {
             ),
           ),
           Text('\$${commissionAmt.toStringAsFixed(2)}', style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600, color: kWebSecondary)),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Banking Setup Banner ───────────────────────────────────────────────────
+
+class _BankingBanner extends StatelessWidget {
+  const _BankingBanner({required this.biz});
+  final Map<String, dynamic> biz;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            kWebPrimary.withValues(alpha: 0.06),
+            kWebSecondary.withValues(alpha: 0.06),
+          ],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: kWebPrimary.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              gradient: kWebBrandGradient,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.account_balance, size: 20, color: Colors.white),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Configura tu cuenta bancaria',
+                  style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Registra tu CLABE y sube tu INE para recibir depositos.',
+                  style: theme.textTheme.labelSmall?.copyWith(color: kWebTextSecondary),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          ElevatedButton(
+            onPressed: () => context.go('/negocio/banking'),
+            child: const Text('Configurar'),
+          ),
         ],
       ),
     );

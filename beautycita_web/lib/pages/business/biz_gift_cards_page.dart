@@ -232,7 +232,7 @@ class _GiftCardTable extends StatelessWidget {
                       child: Text(fmtMoney(c['remaining_balance']),
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: (c['remaining_balance'] as num? ?? 0) > 0
-                                ? Colors.green.shade700
+                                ? kWebSuccess
                                 : kWebTextHint,
                             fontWeight: FontWeight.w500,
                           ))),
@@ -326,7 +326,7 @@ class _CodeCellState extends State<_CodeCell> {
             Icon(
               _copied ? Icons.check_outlined : Icons.copy_outlined,
               size: 14,
-              color: _copied ? Colors.green : kWebTextHint,
+              color: _copied ? kWebSuccess : kWebTextHint,
             ),
           ],
         ),
@@ -345,14 +345,14 @@ class _StatusBadge extends StatelessWidget {
     Color fg;
     switch (status) {
       case 'active':
-        bg = Colors.green.withValues(alpha: 0.1);
-        fg = Colors.green.shade700;
+        bg = kWebSuccess.withValues(alpha: 0.1);
+        fg = kWebSuccess;
       case 'redeemed':
         bg = kWebTextHint.withValues(alpha: 0.1);
         fg = kWebTextHint;
       case 'expired':
-        bg = Colors.red.withValues(alpha: 0.1);
-        fg = Colors.red.shade700;
+        bg = kWebError.withValues(alpha: 0.1);
+        fg = kWebError;
       default:
         bg = kWebTextHint.withValues(alpha: 0.1);
         fg = kWebTextHint;
@@ -430,7 +430,13 @@ class _CreateGiftCardDialogState extends ConsumerState<_CreateGiftCardDialog> {
   void initState() {
     super.initState();
     _generatedCode = _generateCode();
+    // Live preview updates
+    _amountCtrl.addListener(_onFieldChange);
+    _recipientCtrl.addListener(_onFieldChange);
+    _messageCtrl.addListener(_onFieldChange);
   }
+
+  void _onFieldChange() => setState(() {});
 
   @override
   void dispose() {
@@ -493,7 +499,7 @@ class _CreateGiftCardDialogState extends ConsumerState<_CreateGiftCardDialog> {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Container(
-        width: 480,
+        width: 680,
         padding: const EdgeInsets.all(28),
         child: Form(
           key: _formKey,
@@ -521,60 +527,122 @@ class _CreateGiftCardDialogState extends ConsumerState<_CreateGiftCardDialog> {
               ),
               const SizedBox(height: 20),
 
-              // Generated code display
-              Container(
-                padding: const EdgeInsets.all(12),
+              // Live preview card
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOut,
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: kWebPrimary.withValues(alpha: 0.06),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                      color: kWebPrimary.withValues(alpha: 0.2)),
+                  gradient: LinearGradient(
+                    colors: [
+                      kWebPrimary.withValues(alpha: 0.08),
+                      kWebSecondary.withValues(alpha: 0.05),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: kWebPrimary.withValues(alpha: 0.15)),
                 ),
                 child: Row(
                   children: [
+                    // Card visual
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: kWebPrimary.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.card_giftcard_outlined,
+                          color: kWebPrimary, size: 24),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _generatedCode,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontFamily: 'monospace',
+                              color: kWebPrimary,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 2,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            _recipientCtrl.text.isNotEmpty
+                                ? 'Para: ${_recipientCtrl.text}'
+                                : 'Tarjeta de regalo',
+                            style: theme.textTheme.bodySmall
+                                ?.copyWith(color: kWebTextSecondary),
+                          ),
+                          if (_messageCtrl.text.isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              '"${_messageCtrl.text}"',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: kWebTextHint,
+                                fontStyle: FontStyle.italic,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
                     Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text(
-                          'Codigo generado',
+                          _amountCtrl.text.isNotEmpty
+                              ? '\$${_amountCtrl.text}'
+                              : '\$0',
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            color: kWebPrimary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          'MXN',
                           style: theme.textTheme.labelSmall
                               ?.copyWith(color: kWebTextHint),
                         ),
-                        Text(
-                          _generatedCode,
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            fontFamily: 'monospace',
-                            color: kWebPrimary,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 2,
-                          ),
-                        ),
                       ],
-                    ),
-                    const Spacer(),
-                    IconButton(
-                      icon: const Icon(Icons.refresh_outlined,
-                          size: 18, color: kWebPrimary),
-                      onPressed: () =>
-                          setState(() => _generatedCode = _generateCode()),
-                      tooltip: 'Regenerar',
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.copy_outlined,
-                          size: 18, color: kWebTextHint),
-                      onPressed: () {
-                        Clipboard.setData(
-                            ClipboardData(text: _generatedCode));
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Codigo copiado')),
-                        );
-                      },
-                      tooltip: 'Copiar',
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
+
+              // Code actions (regenerate + copy)
+              Row(
+                children: [
+                  TextButton.icon(
+                    onPressed: () =>
+                        setState(() => _generatedCode = _generateCode()),
+                    icon: const Icon(Icons.refresh_outlined, size: 16),
+                    label: const Text('Regenerar codigo'),
+                  ),
+                  TextButton.icon(
+                    onPressed: () {
+                      Clipboard.setData(
+                          ClipboardData(text: _generatedCode));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Codigo copiado')),
+                      );
+                    },
+                    icon: const Icon(Icons.copy_outlined, size: 16),
+                    label: const Text('Copiar'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
 
               // Amount
               _Label(theme, 'Monto (\$)'),

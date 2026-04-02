@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../config/web_theme.dart';
 import '../../providers/admin_bookings_provider.dart';
 import '../../services/csv_export.dart';
 import '../../widgets/bc_data_table.dart';
@@ -199,10 +200,14 @@ class _BookingsPageState extends ConsumerState<BookingsPage> {
                 horizontal: BCSpacing.sm,
                 vertical: BCSpacing.xs,
               ),
+              backgroundColor: filter.dateFrom != null
+                  ? kWebPrimary.withValues(alpha: 0.06)
+                  : null,
               side: BorderSide(
                 color: filter.dateFrom != null
-                    ? colors.primary
+                    ? kWebPrimary
                     : colors.outlineVariant,
+                width: filter.dateFrom != null ? 1.5 : 1,
               ),
             ),
           ),
@@ -412,12 +417,12 @@ class _BookingStatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (label, color) = switch (status) {
-      'pending' => ('Pendiente', Colors.orange),
-      'confirmed' => ('Confirmada', Colors.blue),
-      'completed' => ('Completada', Colors.green),
-      'cancelled' => ('Cancelada', Colors.red),
-      'no_show' => ('No asistio', Colors.grey),
-      _ => (status, Colors.grey),
+      'pending' => ('Pendiente', kWebWarning),
+      'confirmed' => ('Confirmada', kWebInfo),
+      'completed' => ('Completada', kWebSuccess),
+      'cancelled' => ('Cancelada', kWebError),
+      'no_show' => ('No asistio', kWebTextHint),
+      _ => (status, kWebTextHint),
     };
 
     return Container(
@@ -445,11 +450,11 @@ class _PaymentChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (label, color) = switch (status) {
-      'paid' => ('Pagado', Colors.green),
-      'pending' => ('Pendiente', Colors.orange),
-      'refunded' => ('Reembolso', Colors.blue),
-      'failed' => ('Fallido', Colors.red),
-      _ => (status, Colors.grey),
+      'paid' => ('Pagado', kWebSuccess),
+      'pending' => ('Pendiente', kWebWarning),
+      'refunded' => ('Reembolso', kWebInfo),
+      'failed' => ('Fallido', kWebError),
+      _ => (status, kWebTextHint),
     };
 
     return Container(
@@ -490,10 +495,15 @@ class _BookingFilterDropdown extends StatelessWidget {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
 
+    final isActive = value != null;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: BCSpacing.sm),
       decoration: BoxDecoration(
-        border: Border.all(color: colors.outlineVariant),
+        color: isActive ? kWebPrimary.withValues(alpha: 0.06) : null,
+        border: Border.all(
+          color: isActive ? kWebPrimary : colors.outlineVariant,
+          width: isActive ? 1.5 : 1,
+        ),
         borderRadius: BorderRadius.circular(BCSpacing.radiusXs),
       ),
       child: DropdownButtonHideUnderline(
@@ -502,7 +512,8 @@ class _BookingFilterDropdown extends StatelessWidget {
           isDense: true,
           hint: Text(hint, style: theme.textTheme.bodySmall),
           style: theme.textTheme.bodySmall?.copyWith(
-            color: colors.onSurface,
+            color: isActive ? kWebPrimary : colors.onSurface,
+            fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
           ),
           items: items.entries
               .map((e) => DropdownMenuItem<String?>(

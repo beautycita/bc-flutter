@@ -54,6 +54,15 @@ class _DiscoveredSalonDetailScreenState extends ConsumerState<DiscoveredSalonDet
   }
 
   Future<void> _loadBio() async {
+    // Skip API call if the salon already has a generated bio from the list response
+    if (widget.salon.generatedBio != null && widget.salon.generatedBio!.isNotEmpty) {
+      setState(() {
+        _generatedBio = widget.salon.generatedBio;
+        _bioLoading = false;
+      });
+      return;
+    }
+
     try {
       final response = await SupabaseClientService.client.functions.invoke(
         'aphrodite-chat',

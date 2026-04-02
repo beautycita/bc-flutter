@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:beautycita/models/provider.dart' as models;
 import 'package:beautycita/repositories/provider_repository.dart';
+import 'package:beautycita/services/location_service.dart';
 
 /// Repository provider for ProviderRepository.
 final providerRepositoryProvider = Provider<ProviderRepository>((ref) {
@@ -8,11 +9,17 @@ final providerRepositoryProvider = Provider<ProviderRepository>((ref) {
 });
 
 /// Providers by category, fetched via getProvidersByCategory.
+/// Passes user location for geo-sorted results when available.
 final providersByCategoryProvider =
     FutureProvider.family<List<models.Provider>, String>(
   (ref, category) async {
     final repository = ref.watch(providerRepositoryProvider);
-    return repository.getProvidersByCategory(category);
+    final location = await LocationService.getCurrentLocation();
+    return repository.getProvidersByCategory(
+      category,
+      lat: location?.lat,
+      lng: location?.lng,
+    );
   },
 );
 

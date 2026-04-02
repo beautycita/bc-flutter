@@ -113,6 +113,8 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
     }
   }
 
+  String? _cancellingBookingId;
+
   bool _isCancelled(String status) =>
       status == 'cancelled_customer' || status == 'cancelled_business';
 
@@ -303,6 +305,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
     );
 
     if (confirmed == true) {
+      setState(() => _cancellingBookingId = booking.id);
       try {
         final repo = ref.read(bookingRepositoryProvider);
         final result = await repo.cancelBooking(booking.id);
@@ -329,6 +332,10 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
         }
       } catch (e, stack) {
         ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
+      } finally {
+        if (mounted) {
+          setState(() => _cancellingBookingId = null);
+        }
       }
     }
   }
@@ -1273,10 +1280,10 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
                 Expanded(
                   child: Text(
                     booking.providerName ?? 'Proveedor',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF1a1a1a),
+                      color: colorScheme.onSurface,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -1287,7 +1294,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
               ],
             ),
 
-            const Divider(height: 20, thickness: 1, color: Color(0xFFF5F0EB)),
+            Divider(height: 20, thickness: 1, color: ext.cardBorderColor),
 
             // Service info row: IconBox + label/value
             _buildInfoRow(
@@ -1297,7 +1304,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
               value: booking.serviceName,
             ),
 
-            const Divider(height: 16, thickness: 1, color: Color(0xFFF5F0EB)),
+            Divider(height: 16, thickness: 1, color: ext.cardBorderColor),
 
             // Date info row
             _buildInfoRow(
@@ -1309,7 +1316,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
 
             // Price info row
             if (booking.price != null) ...[
-              const Divider(height: 16, thickness: 1, color: Color(0xFFF5F0EB)),
+              Divider(height: 16, thickness: 1, color: ext.cardBorderColor),
               _buildInfoRow(
                 icon: Icons.payments_outlined,
                 iconColor: Colors.green.shade600,
@@ -1393,7 +1400,13 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
               const SizedBox(height: AppConstants.paddingSM),
               Align(
                 alignment: Alignment.centerRight,
-                child: TextButton.icon(
+                child: _cancellingBookingId == booking.id
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : TextButton.icon(
                   onPressed: () => _cancelBooking(booking),
                   icon: const Icon(
                     Icons.cancel_outlined,
@@ -1545,20 +1558,20 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
             children: [
               Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 8,
                   fontWeight: FontWeight.w600,
                   letterSpacing: 0.5,
-                  color: Color(0xFFAAAAAA),
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                 ),
               ),
               const SizedBox(height: 2),
               Text(
                 value,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF1a1a1a),
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,

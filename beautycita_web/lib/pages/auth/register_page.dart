@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -304,9 +306,14 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
           // ── Loading overlay ──────────────────────────────────────────────
           if (authState.isLoading)
             Positioned.fill(
-              child: Container(
-                color: Colors.white.withValues(alpha: 0.6),
-                child: const Center(child: CircularProgressIndicator()),
+              child: ClipRect(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3),
+                  child: Container(
+                    color: Colors.white.withValues(alpha: 0.3),
+                    child: const Center(child: CircularProgressIndicator()),
+                  ),
+                ),
               ),
             ),
         ],

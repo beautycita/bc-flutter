@@ -358,129 +358,134 @@ class _TriggerCardState extends ConsumerState<_TriggerCard> {
             ),
           ),
 
-          // Expanded editor
-          if (_expanded) ...[
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Template
-                  Text(
-                    'Mensaje',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: kWebTextSecondary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  TextField(
-                    controller: _templateCtrl,
-                    maxLines: 4,
-                    decoration: _inputDec(
-                        theme,
-                        'Hola {nombre}, gracias por tu visita en {negocio}...'),
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: kWebTextPrimary),
-                  ),
-                  const SizedBox(height: 12),
+          // Expanded editor — animated
+          AnimatedSize(
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeInOut,
+            alignment: Alignment.topCenter,
+            child: _expanded
+                ? Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Template
+                        Text(
+                          'Mensaje',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: kWebTextSecondary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        TextField(
+                          controller: _templateCtrl,
+                          maxLines: 4,
+                          decoration: _inputDec(
+                              theme,
+                              'Hola {nombre}, gracias por tu visita en {negocio}...'),
+                          style: theme.textTheme.bodySmall
+                              ?.copyWith(color: kWebTextPrimary),
+                        ),
+                        const SizedBox(height: 12),
 
-                  // Delay + channel row
-                  Row(
-                    children: [
-                      // Delay hours
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        // Delay + channel row
+                        Row(
                           children: [
-                            Text(
-                              'Retraso (horas)',
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: kWebTextSecondary,
-                                fontWeight: FontWeight.w600,
+                            // Delay hours
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Retraso (horas)',
+                                    style: theme.textTheme.labelSmall?.copyWith(
+                                      color: kWebTextSecondary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  DropdownButtonFormField<int>(
+                                    value: _delayHours,
+                                    items: [0, 1, 2, 4, 8, 12, 24, 48, 72]
+                                        .map((h) => DropdownMenuItem(
+                                            value: h,
+                                            child: Text('$h h')))
+                                        .toList(),
+                                    onChanged: (v) =>
+                                        setState(() => _delayHours = v ?? 0),
+                                    decoration: _inputDec(theme, ''),
+                                    style: theme.textTheme.bodySmall
+                                        ?.copyWith(color: kWebTextPrimary),
+                                    isDense: true,
+                                  ),
+                                ],
                               ),
                             ),
-                            const SizedBox(height: 6),
-                            DropdownButtonFormField<int>(
-                              value: _delayHours,
-                              items: [0, 1, 2, 4, 8, 12, 24, 48, 72]
-                                  .map((h) => DropdownMenuItem(
-                                      value: h,
-                                      child: Text('$h h')))
-                                  .toList(),
-                              onChanged: (v) =>
-                                  setState(() => _delayHours = v ?? 0),
-                              decoration: _inputDec(theme, ''),
-                              style: theme.textTheme.bodySmall
-                                  ?.copyWith(color: kWebTextPrimary),
-                              isDense: true,
+                            const SizedBox(width: 12),
+
+                            // Channel
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Canal',
+                                    style: theme.textTheme.labelSmall?.copyWith(
+                                      color: kWebTextSecondary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  DropdownButtonFormField<String>(
+                                    value: _channel,
+                                    items: _channels
+                                        .map((ch) => DropdownMenuItem(
+                                            value: ch, child: Text(ch)))
+                                        .toList(),
+                                    onChanged: (v) =>
+                                        setState(() => _channel = v ?? 'whatsapp'),
+                                    decoration: _inputDec(theme, ''),
+                                    style: theme.textTheme.bodySmall
+                                        ?.copyWith(color: kWebTextPrimary),
+                                    isDense: true,
+                                  ),
+                                ],
+                              ),
                             ),
                           ],
                         ),
-                      ),
-                      const SizedBox(width: 12),
+                        const SizedBox(height: 16),
 
-                      // Channel
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Canal',
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: kWebTextSecondary,
-                                fontWeight: FontWeight.w600,
+                        // Save
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton(
+                            onPressed: _saving ? null : _save,
+                            style: FilledButton.styleFrom(
+                              backgroundColor: kWebPrimary,
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 10),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
                               ),
                             ),
-                            const SizedBox(height: 6),
-                            DropdownButtonFormField<String>(
-                              value: _channel,
-                              items: _channels
-                                  .map((ch) => DropdownMenuItem(
-                                      value: ch, child: Text(ch)))
-                                  .toList(),
-                              onChanged: (v) =>
-                                  setState(() => _channel = v ?? 'whatsapp'),
-                              decoration: _inputDec(theme, ''),
-                              style: theme.textTheme.bodySmall
-                                  ?.copyWith(color: kWebTextPrimary),
-                              isDense: true,
-                            ),
-                          ],
+                            child: _saving
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2, color: Colors.white),
+                                  )
+                                : const Text('Guardar',
+                                    style: TextStyle(color: Colors.white)),
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Save
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton(
-                      onPressed: _saving ? null : _save,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: kWebPrimary,
-                        padding:
-                            const EdgeInsets.symmetric(vertical: 10),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      child: _saving
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                  strokeWidth: 2, color: Colors.white),
-                            )
-                          : const Text('Guardar',
-                              style: TextStyle(color: Colors.white)),
+                      ],
                     ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+                  )
+                : const SizedBox.shrink(),
+          ),
         ],
       ),
     );

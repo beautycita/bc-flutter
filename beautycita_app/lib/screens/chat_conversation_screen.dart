@@ -95,16 +95,22 @@ class _ChatConversationScreenState
     });
     _scrollToBottom();
 
-    if (_isEros) {
-      await ref.read(sendErosMessageProvider.notifier).send(widget.threadId, text);
-    } else if (_isSupport) {
-      await ref.read(sendSupportMessageProvider.notifier).send(widget.threadId, text);
-    } else if (_isAphrodite) {
-      await ref.read(sendMessageProvider.notifier).send(widget.threadId, text);
-    } else if (_resolvedContactType == 'salon') {
-      await ref.read(sendSalonMessageProvider.notifier).send(widget.threadId, text);
-    } else {
-      await _sendDirectMessage(text);
+    try {
+      if (_isEros) {
+        await ref.read(sendErosMessageProvider.notifier).send(widget.threadId, text);
+      } else if (_isSupport) {
+        await ref.read(sendSupportMessageProvider.notifier).send(widget.threadId, text);
+      } else if (_isAphrodite) {
+        await ref.read(sendMessageProvider.notifier).send(widget.threadId, text);
+      } else if (_resolvedContactType == 'salon') {
+        await ref.read(sendSalonMessageProvider.notifier).send(widget.threadId, text);
+      } else {
+        await _sendDirectMessage(text);
+      }
+    } catch (e) {
+      if (mounted) {
+        ToastService.showError('No se pudo enviar el mensaje');
+      }
     }
 
     if (mounted) {

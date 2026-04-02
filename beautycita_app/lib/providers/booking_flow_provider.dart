@@ -217,12 +217,9 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
     }
 
     if (location == null) {
-      ToastService.showError('No pudimos obtener tu ubicacion');
-      state = state.copyWith(
-        step: BookingFlowStep.error,
-        error: 'Activa el GPS y permite el acceso a ubicacion',
-      );
-      return;
+      // Fallback: default to Puerto Vallarta so the flow doesn't hard-fail
+      if (kDebugMode) debugPrint('[LOCATION] GPS unavailable, using Puerto Vallarta default');
+      location = const LatLng(lat: 20.6534, lng: -105.2253);
     }
 
     // Use saved transport preference, default to 'car'
@@ -457,15 +454,16 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
         // For card: payment is instant, webhook will confirm.
         // For OXXO: payment is pending until customer pays at store.
         if (!oxxoOnly) {
-          // Card payment succeeded — webhook will also update, but set locally
-          // for immediate UI feedback.
+          // Card payment succeeded — update only if webhook hasn't already.
+          // Conditional update prevents race with Stripe webhook.
           await SupabaseClientService.client
               .from('appointments')
               .update({
                 'status': 'confirmed',
                 'payment_status': 'paid',
               })
-              .eq('id', booking.id);
+              .eq('id', booking.id)
+              .eq('payment_status', 'pending');
         }
       }
     } on StripeException {
@@ -522,11 +520,8 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
       transportMode: state.transportMode,
     );
 
-    // Deduct saldo
-    await SupabaseClientService.client
-        .from('profiles')
-        .update({'saldo': saldo - price})
-        .eq('id', userId);
+    // Deduct saldo atomically (prevents race condition with concurrent bookings)
+    await SupabaseClientService.adjustSaldo(userId: userId, amount: -price);
 
     // Mark as confirmed
     await SupabaseClientService.client
@@ -553,45 +548,57 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
         })
         .eq('id', booking.id);
 
-    // Record commission (3% service fee)
+    // Record commission (3% service fee) — must not fail silently
     final commission = price * 0.03;
-    SupabaseClientService.client.from('commission_records').insert({
-      'business_id': result.business.id,
-      'appointment_id': booking.id,
-      'amount': double.parse(commission.toStringAsFixed(2)),
-      'rate': 0.03,
-      'source': 'appointment',
-      'period_month': DateTime.now().month,
-      'period_year': DateTime.now().year,
-      'status': 'collected',
-    }).then((_) {}).catchError((_) {});
+    try {
+      await SupabaseClientService.client.from('commission_records').insert({
+        'business_id': result.business.id,
+        'appointment_id': booking.id,
+        'amount': double.parse(commission.toStringAsFixed(2)),
+        'rate': 0.03,
+        'source': 'appointment',
+        'period_month': DateTime.now().month,
+        'period_year': DateTime.now().year,
+        'status': 'collected',
+      });
+    } catch (e) {
+      debugPrint('[CRITICAL] Commission insert failed for ${booking.id}: $e');
+    }
 
-    // Record tax withholding in ledger
-    SupabaseClientService.client.from('tax_withholdings').insert({
-      'appointment_id': booking.id,
-      'business_id': result.business.id,
-      'payment_type': 'saldo',
-      'jurisdiction': 'MX',
-      'gross_amount': price,
-      'tax_base': double.parse(taxBase.toStringAsFixed(2)),
-      'platform_fee': double.parse(commission.toStringAsFixed(2)),
-      'isr_rate': 0.025,
-      'iva_rate': 0.08,
-      'isr_withheld': double.parse(isrWithheld.toStringAsFixed(2)),
-      'iva_withheld': double.parse(ivaWithheld.toStringAsFixed(2)),
-      'provider_net': double.parse(providerNet.toStringAsFixed(2)),
-      'period_year': DateTime.now().year,
-      'period_month': DateTime.now().month,
-    }).then((_) {}).catchError((_) {});
+    // Record tax withholding in ledger — must not fail silently
+    try {
+      await SupabaseClientService.client.from('tax_withholdings').insert({
+        'appointment_id': booking.id,
+        'business_id': result.business.id,
+        'payment_type': 'saldo',
+        'jurisdiction': 'MX',
+        'gross_amount': price,
+        'tax_base': double.parse(taxBase.toStringAsFixed(2)),
+        'platform_fee': double.parse(commission.toStringAsFixed(2)),
+        'isr_rate': 0.025,
+        'iva_rate': 0.08,
+        'isr_withheld': double.parse(isrWithheld.toStringAsFixed(2)),
+        'iva_withheld': double.parse(ivaWithheld.toStringAsFixed(2)),
+        'provider_net': double.parse(providerNet.toStringAsFixed(2)),
+        'period_year': DateTime.now().year,
+        'period_month': DateTime.now().month,
+      });
+    } catch (e) {
+      debugPrint('[CRITICAL] Tax withholding insert failed for ${booking.id}: $e');
+    }
 
     // Debt collection (if salon has outstanding debt)
-    SupabaseClientService.client.rpc('calculate_payout_with_debt', params: {
-      'p_business_id': result.business.id,
-      'p_gross_amount': price,
-      'p_commission': commission,
-      'p_iva_withheld': ivaWithheld,
-      'p_isr_withheld': isrWithheld,
-    }).then((_) {}).catchError((_) {});
+    try {
+      await SupabaseClientService.client.rpc('calculate_payout_with_debt', params: {
+        'p_business_id': result.business.id,
+        'p_gross_amount': price,
+        'p_commission': commission,
+        'p_iva_withheld': ivaWithheld,
+        'p_isr_withheld': isrWithheld,
+      });
+    } catch (e) {
+      debugPrint('[CRITICAL] Payout/debt calculation failed for ${booking.id}: $e');
+    }
 
     _sendBookingNotifications(booking.id);
 

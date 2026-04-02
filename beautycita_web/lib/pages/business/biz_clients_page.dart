@@ -286,7 +286,7 @@ class _ClientsTableState extends ConsumerState<_ClientsTable> {
 
 // ── Data table widget ─────────────────────────────────────────────────────────
 
-class _DataTable extends StatelessWidget {
+class _DataTable extends StatefulWidget {
   const _DataTable({
     required this.rows,
     required this.isDesktop,
@@ -297,6 +297,18 @@ class _DataTable extends StatelessWidget {
   final bool isDesktop;
   final String? selectedId;
   final void Function(Map<String, dynamic>) onSelect;
+
+  @override
+  State<_DataTable> createState() => _DataTableState();
+}
+
+class _DataTableState extends State<_DataTable> {
+  int _hoveredIndex = -1;
+
+  bool get isDesktop => widget.isDesktop;
+  List<Map<String, dynamic>> get rows => widget.rows;
+  String? get selectedId => widget.selectedId;
+  void Function(Map<String, dynamic>) get onSelect => widget.onSelect;
 
   @override
   Widget build(BuildContext context) {
@@ -359,23 +371,24 @@ class _DataTable extends StatelessWidget {
               ],
             ),
             // Rows
-            for (final c in rows)
+            for (var i = 0; i < rows.length; i++)
               TableRow(
                 decoration: BoxDecoration(
-                  color: selectedId == (c['id'] as String?)
-                      ? kWebPrimary.withValues(alpha: 0.04)
-                      : null,
+                  color: selectedId == (rows[i]['id'] as String?)
+                      ? kWebPrimary.withValues(alpha: 0.06)
+                      : _hoveredIndex == i
+                          ? kWebCardBorder.withValues(alpha: 0.3)
+                          : null,
                   border: const Border(
                     top: BorderSide(color: kWebCardBorder, width: 0.5),
                   ),
                 ),
                 children: [
-                  _td(
-                    theme,
+                  _hoverTd(i, theme,
                     child: _ClickableCell(
-                      onTap: () => onSelect(c),
+                      onTap: () => onSelect(rows[i]),
                       child: Text(
-                        c['client_name'] as String? ?? 'Sin nombre',
+                        rows[i]['client_name'] as String? ?? 'Sin nombre',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: kWebPrimary,
                           fontWeight: FontWeight.w600,
@@ -383,42 +396,42 @@ class _DataTable extends StatelessWidget {
                       ),
                     ),
                   ),
-                  _td(theme,
+                  _hoverTd(i, theme,
                       child: Text(
-                        c['phone'] as String? ?? '-',
+                        rows[i]['phone'] as String? ?? '-',
                         style: theme.textTheme.bodySmall
                             ?.copyWith(color: kWebTextSecondary),
                       )),
-                  _td(theme,
+                  _hoverTd(i, theme,
                       child: Text(
-                        '${c['visit_count'] ?? 0}',
+                        '${rows[i]['visit_count'] ?? 0}',
                         style: theme.textTheme.bodySmall
                             ?.copyWith(color: kWebTextPrimary),
                       )),
-                  _td(theme,
+                  _hoverTd(i, theme,
                       child: Text(
-                        fmtMoney(c['total_spent']),
+                        fmtMoney(rows[i]['total_spent']),
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: kWebTextPrimary,
                           fontWeight: FontWeight.w500,
                         ),
                       )),
                   if (isDesktop) ...[
-                    _td(theme,
+                    _hoverTd(i, theme,
                         child: Text(
-                          fmtDate(c['last_visit']),
+                          fmtDate(rows[i]['last_visit']),
                           style: theme.textTheme.bodySmall
                               ?.copyWith(color: kWebTextSecondary),
                         )),
-                    _td(theme,
-                        child: _NoShowBadge(count: c['no_show_count'] as int? ?? 0)),
-                    _td(theme,
+                    _hoverTd(i, theme,
+                        child: _NoShowBadge(count: rows[i]['no_show_count'] as int? ?? 0)),
+                    _hoverTd(i, theme,
                         child: Text(
-                          '${c['loyalty_points'] ?? 0}',
+                          '${rows[i]['loyalty_points'] ?? 0}',
                           style: theme.textTheme.bodySmall
                               ?.copyWith(color: kWebTextSecondary),
                         )),
-                    _td(theme, child: _TagsCell(tags: c['tags'] as List?)),
+                    _hoverTd(i, theme, child: _TagsCell(tags: rows[i]['tags'] as List?)),
                   ],
                 ],
               ),
@@ -442,10 +455,18 @@ class _DataTable extends StatelessWidget {
     );
   }
 
-  Widget _td(ThemeData theme, {required Widget child}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      child: child,
+  Widget _hoverTd(int index, ThemeData theme, {required Widget child}) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hoveredIndex = index),
+      onExit: (_) => setState(() { if (_hoveredIndex == index) _hoveredIndex = -1; }),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: () => onSelect(rows[index]),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: child,
+        ),
+      ),
     );
   }
 }
