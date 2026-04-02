@@ -119,7 +119,7 @@ AS $$
   SELECT *
   FROM discovered_salons
   WHERE country = 'MX'
-    AND status IN ('new', 'contacted', 'interested')
+    AND status NOT IN ('registered', 'declined', 'unreachable', 'duplicate')
     AND location IS NOT NULL
     AND ST_DWithin(
       location,
