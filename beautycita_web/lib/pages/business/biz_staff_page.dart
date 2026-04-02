@@ -608,7 +608,7 @@ class _AddStaffDialogState extends ConsumerState<_AddStaffDialog> {
         }
       }
 
-      await BCSupabase.client.from(BCTables.staff).insert({
+      final insertResult = await BCSupabase.client.from(BCTables.staff).insert({
         'business_id': widget.bizId,
         'first_name': _firstNameCtrl.text.trim(),
         'last_name': _lastNameCtrl.text.trim(),
@@ -620,7 +620,18 @@ class _AddStaffDialogState extends ConsumerState<_AddStaffDialog> {
         'avatar_url': avatarUrl,
         'portfolio_urls': portfolioUrls,
         'is_active': true,
-      });
+      }).select('id').single();
+
+      // Also insert into portfolio_photos so storefront reads work
+      final realStaffId = insertResult['id'] as String;
+      for (final url in portfolioUrls) {
+        await BCSupabase.client.from(BCTables.portfolioPhotos).insert({
+          'staff_id': realStaffId,
+          'business_id': widget.bizId,
+          'before_url': url,
+          'is_complete': false,
+        });
+      }
 
       ref.invalidate(businessStaffProvider);
       if (mounted) Navigator.of(context).pop();

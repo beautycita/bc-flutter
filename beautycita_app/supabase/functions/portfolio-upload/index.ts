@@ -13,13 +13,34 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
+const ALLOWED_ORIGINS = [
+  "https://beautycita.com",
+  "https://www.beautycita.com",
+  "https://debug.beautycita.com",
+];
+
+function corsOrigin(req: Request): string {
+  const o = req.headers.get("origin") ?? "";
+  return ALLOWED_ORIGINS.includes(o) ? o : ALLOWED_ORIGINS[0];
+}
+
+// ── PIN brute-force tracking (in-memory, resets on cold start) ──
+const pinAttempts = new Map<string, { failures: number; lockedUntil: number }>();
+const MAX_PIN_FAILURES = 5;
+const LOCKOUT_MS = 15 * 60 * 1000; // 15 minutes
+
+// ── Valid image signatures ──
+const JPEG_MAGIC = [0xFF, 0xD8, 0xFF];
+const PNG_MAGIC = [0x89, 0x50, 0x4E, 0x47];
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // 10 MB
+
 serve(async (req) => {
   const url = new URL(req.url);
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
   // CORS
   const corsHeaders = {
-    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Origin": corsOrigin(req),
     "Access-Control-Allow-Headers": "content-type",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   };
@@ -40,6 +61,17 @@ serve(async (req) => {
         return json({ error: "Token and PIN required" }, 400, corsHeaders);
       }
 
+      // Rate-limit: check lockout
+      const attempt = pinAttempts.get(token);
+      if (attempt && attempt.lockedUntil > Date.now()) {
+        console.warn(`[PORTFOLIO-UPLOAD] Token locked out: ${token}`);
+        await new Promise(r => setTimeout(r, 1000));
+        return json({ error: "Demasiados intentos. Espera 15 minutos." }, 429, corsHeaders);
+      }
+
+      // 1-second delay on every PIN check (prevents rapid enumeration)
+      await new Promise(r => setTimeout(r, 1000));
+
       const { data: staff } = await supabase
         .from("staff")
         .select("id, first_name, last_name, business_id, upload_pin, businesses(name)")
@@ -48,8 +80,20 @@ serve(async (req) => {
         .maybeSingle();
 
       if (!staff || staff.upload_pin !== pin) {
+        // Track failed attempt
+        const current = pinAttempts.get(token) ?? { failures: 0, lockedUntil: 0 };
+        current.failures += 1;
+        if (current.failures >= MAX_PIN_FAILURES) {
+          current.lockedUntil = Date.now() + LOCKOUT_MS;
+          console.warn(`[PORTFOLIO-UPLOAD] Token locked after ${MAX_PIN_FAILURES} failures: ${token}`);
+        }
+        pinAttempts.set(token, current);
+        console.warn(`[PORTFOLIO-UPLOAD] Failed PIN attempt ${current.failures} for token: ${token}`);
         return json({ error: "PIN incorrecto" }, 401, corsHeaders);
       }
+
+      // Successful verification — clear any tracked failures
+      pinAttempts.delete(token);
 
       // Return staff info + pending photos
       const { data: pending } = await supabase
@@ -90,14 +134,27 @@ serve(async (req) => {
 
       if (!staff) return json({ error: "Staff not found" }, 404, corsHeaders);
 
-      // Decode and upload image
+      // Decode and validate image
       const bytes = Uint8Array.from(atob(imageBase64), (c) => c.charCodeAt(0));
-      const filename = `${staffId}/${Date.now()}_${isBefore ? "before" : "after"}.jpg`;
+
+      if (bytes.length > MAX_IMAGE_BYTES) {
+        return json({ error: "Imagen demasiado grande (max 10MB)" }, 400, corsHeaders);
+      }
+
+      const isJpeg = bytes.length >= 3 && bytes[0] === JPEG_MAGIC[0] && bytes[1] === JPEG_MAGIC[1] && bytes[2] === JPEG_MAGIC[2];
+      const isPng = bytes.length >= 4 && bytes[0] === PNG_MAGIC[0] && bytes[1] === PNG_MAGIC[1] && bytes[2] === PNG_MAGIC[2] && bytes[3] === PNG_MAGIC[3];
+      if (!isJpeg && !isPng) {
+        return json({ error: "Formato de imagen no valido" }, 400, corsHeaders);
+      }
+
+      const ext = isPng ? "png" : "jpg";
+      const contentType = isPng ? "image/png" : "image/jpeg";
+      const filename = `${staffId}/${Date.now()}_${isBefore ? "before" : "after"}.${ext}`;
 
       const { error: uploadError } = await supabase.storage
         .from("staff-media")
         .upload(filename, bytes, {
-          contentType: "image/jpeg",
+          contentType: contentType,
           upsert: true,
         });
 

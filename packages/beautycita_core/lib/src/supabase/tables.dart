@@ -44,6 +44,7 @@ abstract final class BCTables {
   // ── Media ────────────────────────────────────────────────────────────
   static const String userMedia = 'user_media';
   static const String avatars = 'avatars';
+  static const String portfolioPhotos = 'portfolio_photos';
 
   // ── Outreach / Discovery ─────────────────────────────────────────────
   static const String discoveredSalons = 'discovered_salons';

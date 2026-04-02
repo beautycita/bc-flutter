@@ -241,11 +241,11 @@ Future<File?> _applyWatermark(File source, String text) async {
         text: text,
         style: TextStyle(
           fontSize: fontSize,
-          color: Colors.white.withValues(alpha: 0.08),
+          color: Colors.white.withValues(alpha: 0.25),
           fontWeight: FontWeight.w600,
           shadows: [
             Shadow(
-              color: Colors.black.withValues(alpha: 0.08),
+              color: Colors.black.withValues(alpha: 0.3),
               blurRadius: 2,
               offset: const Offset(1, 1),
             ),

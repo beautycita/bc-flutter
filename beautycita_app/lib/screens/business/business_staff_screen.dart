@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math';
 import 'package:beautycita/config/app_transitions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -1780,7 +1781,8 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
                   const Spacer(),
                   GestureDetector(
                     onTap: () async {
-                      final newPin = (1000 + DateTime.now().millisecondsSinceEpoch % 9000).toString();
+                      final rng = Random.secure();
+                      final newPin = (1000 + rng.nextInt(9000)).toString();
                       await SupabaseClientService.client.from('staff').update({'upload_pin': newPin}).eq('id', staffId);
                       ref.invalidate(businessStaffProvider);
                       ToastService.showSuccess('PIN actualizado: $newPin');
