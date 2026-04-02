@@ -60,7 +60,7 @@ class _CalendarContent extends ConsumerWidget {
     // Rolling 7-day window: yesterday + today (pos 1) + next 5 days
     final weekStart = date.subtract(const Duration(days: 1));
     final weekEnd = DateTime(weekStart.year, weekStart.month, weekStart.day + 6, 23, 59, 59);
-    final weekRange = (start: weekStart.toIso8601String(), end: weekEnd.toIso8601String());
+    final weekRange = (start: weekStart.toUtc().toIso8601String(), end: weekEnd.toUtc().toIso8601String());
     final weekApptsAsync = ref.watch(businessAppointmentsProvider(weekRange));
 
     return LayoutBuilder(
@@ -322,8 +322,8 @@ class _WalkInDialogState extends ConsumerState<_WalkInDialog> {
         'staff_name': _staffDisplayName(staff),
         'customer_name': 'Walk-in',
         'status': 'confirmed',
-        'starts_at': startsAt.toIso8601String(),
-        'ends_at': endsAt.toIso8601String(),
+        'starts_at': startsAt.toUtc().toIso8601String(),
+        'ends_at': endsAt.toUtc().toIso8601String(),
         'duration_minutes': duration,
         'price': (service['price'] as num?)?.toDouble() ?? 0,
         'notes': 'Walk-in',
@@ -425,8 +425,9 @@ class _DaySummaryCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
-    final dateStr = date.toIso8601String().split('T')[0];
-    final range = (start: '${dateStr}T00:00:00', end: '${dateStr}T23:59:59');
+    final utcStart = DateTime(date.year, date.month, date.day).toUtc().toIso8601String();
+    final utcEnd = DateTime(date.year, date.month, date.day, 23, 59, 59).toUtc().toIso8601String();
+    final range = (start: utcStart, end: utcEnd);
     final apptsAsync = ref.watch(businessAppointmentsProvider(range));
 
     return apptsAsync.when(
@@ -767,8 +768,8 @@ class _HorizontalDayViewState extends ConsumerState<_HorizontalDayView> {
     final newEnd = newStart.add(Duration(minutes: duration));
 
     final updateData = <String, dynamic>{
-      'starts_at': newStart.toIso8601String(),
-      'ends_at': newEnd.toIso8601String(),
+      'starts_at': newStart.toUtc().toIso8601String(),
+      'ends_at': newEnd.toUtc().toIso8601String(),
     };
 
     // If staff changed, update staff fields
@@ -917,8 +918,9 @@ class _HorizontalDayViewState extends ConsumerState<_HorizontalDayView> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
-    final dateStr = widget.date.toIso8601String().split('T')[0];
-    final range = (start: '${dateStr}T00:00:00', end: '${dateStr}T23:59:59');
+    final utcStart = DateTime(widget.date.year, widget.date.month, widget.date.day).toUtc().toIso8601String();
+    final utcEnd = DateTime(widget.date.year, widget.date.month, widget.date.day, 23, 59, 59).toUtc().toIso8601String();
+    final range = (start: utcStart, end: utcEnd);
     final apptsAsync = ref.watch(businessAppointmentsProvider(range));
     final blocksAsync = ref.watch(businessScheduleBlocksProvider(range));
     final staffAsync = ref.watch(businessStaffProvider);
@@ -929,9 +931,19 @@ class _HorizontalDayViewState extends ConsumerState<_HorizontalDayView> {
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (_, __) => const Center(child: Text('Error al cargar staff')),
       data: (allStaff) {
-        final staff = staffFilter.isNotEmpty
+        var staff = staffFilter.isNotEmpty
             ? allStaff.where((s) => staffFilter.contains(s['id'])).toList()
             : allStaff.where((s) => s['is_active'] == true).toList();
+
+        // Sole proprietor with no staff: create virtual owner lane
+        if (staff.isEmpty) {
+          final ownerId = BCSupabase.client.auth.currentUser?.id;
+          if (ownerId != null) {
+            staff = [
+              {'id': ownerId, 'first_name': 'Yo', 'last_name': '(Dueno)', 'is_active': true},
+            ];
+          }
+        }
 
         if (staff.isEmpty) {
           return Center(
@@ -1869,10 +1881,97 @@ class _AppointmentDetailState extends ConsumerState<_AppointmentDetail> {
 
     setState(() => _updating = true);
     try {
-      await BCSupabase.client
-          .from(BCTables.appointments)
-          .update({'status': newStatus})
-          .eq('id', id);
+      if (newStatus == 'cancelled_business') {
+        // Fetch appointment payment data
+        final apptData = await BCSupabase.client
+            .from(BCTables.appointments)
+            .select('user_id, price, payment_status')
+            .eq('id', id)
+            .maybeSingle();
+
+        await BCSupabase.client
+            .from(BCTables.appointments)
+            .update({
+              'status': newStatus,
+              'payment_status': apptData?['payment_status'] == 'paid' ? 'refunded_to_saldo' : apptData?['payment_status'],
+              'updated_at': DateTime.now().toUtc().toIso8601String(),
+            })
+            .eq('id', id);
+
+        if (apptData != null &&
+            apptData['payment_status'] == 'paid' &&
+            (apptData['price'] as num?)?.toDouble() != null &&
+            (apptData['price'] as num).toDouble() > 0) {
+          final userId = apptData['user_id'] as String?;
+          final price = (apptData['price'] as num).toDouble();
+          final bcCommission = price * 0.03;
+
+          // Customer gets full refund (salon cancelled, not their fault)
+          if (userId != null) {
+            await BCSupabase.client.rpc('increment_saldo', params: {
+              'p_user_id': userId,
+              'p_amount': double.parse(price.toStringAsFixed(2)),
+            });
+          }
+
+          // BC still charges 3% — billed to salon (commission record)
+          final biz = await ref.read(currentBusinessProvider.future);
+          if (biz != null) {
+            BCSupabase.client.from('commission_records').insert({
+              'business_id': biz['id'],
+              'appointment_id': id,
+              'amount': double.parse(bcCommission.toStringAsFixed(2)),
+              'rate': 0.03,
+              'source': 'salon_cancellation',
+              'period_month': DateTime.now().month,
+              'period_year': DateTime.now().year,
+              'status': 'collected',
+            }).then((_) {}).catchError((_) {});
+          }
+        }
+      } else if (newStatus == 'no_show') {
+        // Fetch appointment data for deposit forfeiture
+        final apptData = await BCSupabase.client
+            .from(BCTables.appointments)
+            .select('user_id, price, deposit_amount, payment_status')
+            .eq('id', id)
+            .maybeSingle();
+
+        final depositAmount = (apptData?['deposit_amount'] as num?)?.toDouble() ?? 0;
+        final price = (apptData?['price'] as num?)?.toDouble() ?? 0;
+        final bcCommission = price * 0.03;
+
+        await BCSupabase.client
+            .from(BCTables.appointments)
+            .update({
+              'status': newStatus,
+              'payment_status': depositAmount > 0 ? 'deposit_forfeited' : apptData?['payment_status'],
+              'updated_at': DateTime.now().toUtc().toIso8601String(),
+            })
+            .eq('id', id);
+
+        // Record 3% commission on the full appointment price
+        if (price > 0) {
+          final biz = await ref.read(currentBusinessProvider.future);
+          if (biz != null) {
+            BCSupabase.client.from('commission_records').insert({
+              'business_id': biz['id'],
+              'appointment_id': id,
+              'amount': double.parse(bcCommission.toStringAsFixed(2)),
+              'rate': 0.03,
+              'source': 'no_show',
+              'period_month': DateTime.now().month,
+              'period_year': DateTime.now().year,
+              'status': 'collected',
+            }).then((_) {}).catchError((_) {});
+          }
+        }
+      } else {
+        await BCSupabase.client
+            .from(BCTables.appointments)
+            .update({'status': newStatus})
+            .eq('id', id);
+      }
       ref.invalidate(businessAppointmentsProvider);
       ref.invalidate(businessStatsProvider);
       if (mounted) ref.read(selectedAppointmentProvider.notifier).state = null;
@@ -2061,8 +2160,8 @@ class _RescheduleDialogState extends State<_RescheduleDialog> {
       final newEnd = newStart.add(Duration(minutes: widget.duration));
 
       await BCSupabase.client.from(BCTables.appointments).update({
-        'starts_at': newStart.toIso8601String(),
-        'ends_at': newEnd.toIso8601String(),
+        'starts_at': newStart.toUtc().toIso8601String(),
+        'ends_at': newEnd.toUtc().toIso8601String(),
       }).eq('id', widget.appointmentId);
 
       widget.onSaved();

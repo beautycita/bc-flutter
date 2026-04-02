@@ -986,7 +986,7 @@ class _HorizontalTimeline extends StatefulWidget {
 }
 
 class _HorizontalTimelineState extends State<_HorizontalTimeline> {
-  static const _startHour = 8;
+  static const _startHour = 7;
   static const _endHour = 21;
   static const _hourWidth = 120.0;
   static const _laneHeight = 70.0;
