@@ -403,7 +403,7 @@ Now let me send the 4 test emails.
 ### ASSISTANT
 
 > *[Bash: `curl -s -X POST 'https://beautycita.com/supabase/functions/v1/send-email' \
-  -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlI`]*
+  -H 'Authorization: Bearer <SERVICE_ROLE_KEY>`]*
 
 
 ### ASSISTANT
@@ -459,7 +459,7 @@ Now redeploy and test.
 ### ASSISTANT
 
 > *[Bash: `sleep 8 && curl -s -X POST 'https://beautycita.com/supabase/functions/v1/send-email' \
-  -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ`]*
+  -H 'Authorization: Bearer <SERVICE_ROLE_KEY>`]*
 
 
 ### ASSISTANT
@@ -480,7 +480,7 @@ Good, container recreated with new env vars. Now let me send the test emails.
 ### ASSISTANT
 
 > *[Bash: `sleep 5 && curl -s -X POST 'https://beautycita.com/supabase/functions/v1/send-email' \
-  -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ`]*
+  -H 'Authorization: Bearer <SERVICE_ROLE_KEY>`]*
 
 
 ### ASSISTANT
@@ -491,19 +491,19 @@ Welcome email sent. Now the other 3.
 ### ASSISTANT
 
 > *[Bash: `curl -s -X POST 'https://beautycita.com/supabase/functions/v1/send-email' \
-  -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlI`]*
+  -H 'Authorization: Bearer <SERVICE_ROLE_KEY>`]*
 
 
 ### ASSISTANT
 
 > *[Bash: `curl -s -X POST 'https://beautycita.com/supabase/functions/v1/send-email' \
-  -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlI`]*
+  -H 'Authorization: Bearer <SERVICE_ROLE_KEY>`]*
 
 
 ### ASSISTANT
 
 > *[Bash: `curl -s -X POST 'https://beautycita.com/supabase/functions/v1/send-email' \
-  -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlI`]*
+  -H 'Authorization: Bearer <SERVICE_ROLE_KEY>`]*
 
 
 ### ASSISTANT
