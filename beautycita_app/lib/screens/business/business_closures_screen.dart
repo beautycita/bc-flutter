@@ -69,10 +69,42 @@ class _BusinessClosuresSectionState extends ConsumerState<BusinessClosuresSectio
     );
     if (reason == null || !mounted) return;
 
+    // Check for existing appointments on that day
     try {
+      final dateStr = picked.toIso8601String().substring(0, 10);
+      final conflicts = await SupabaseClientService.client
+          .from('appointments')
+          .select('id')
+          .eq('business_id', bizId)
+          .gte('starts_at', '${dateStr}T00:00:00')
+          .lte('starts_at', '${dateStr}T23:59:59')
+          .inFilter('status', ['pending', 'confirmed']);
+
+      if ((conflicts as List).isNotEmpty && mounted) {
+        final proceed = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text('Citas existentes', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700)),
+            content: Text(
+              'Hay ${(conflicts as List).length} cita(s) confirmada(s) para ese dia. Se cancelaran automaticamente si cierras.',
+              style: GoogleFonts.nunito(fontSize: 14),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+              FilledButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
+                child: const Text('Cerrar y cancelar citas'),
+              ),
+            ],
+          ),
+        );
+        if (proceed != true || !mounted) return;
+      }
+
       await SupabaseClientService.client.from('business_closures').insert({
         'business_id': bizId,
-        'closure_date': picked.toIso8601String().substring(0, 10),
+        'closure_date': dateStr,
         'reason': reason.trim().isEmpty ? null : reason.trim(),
         'all_day': true,
       });
@@ -158,7 +190,8 @@ class _BusinessClosuresSectionState extends ConsumerState<BusinessClosuresSectio
                     final dateStr = c['closure_date'] as String? ?? '';
                     final dt = DateTime.tryParse(dateStr);
                     final reason = c['reason'] as String? ?? '';
-                    final isPast = dt != null && dt.isBefore(DateTime.now());
+                    final today = DateTime.now();
+                    final isPast = dt != null && dt.isBefore(DateTime(today.year, today.month, today.day));
                     final formatted = dt != null ? _dateFmt.format(dt) : dateStr;
 
                     return Container(

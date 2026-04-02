@@ -100,7 +100,7 @@ final businessStatsProvider =
   final monthRevenue = client
       .from('appointments').select('price')
       .eq('business_id', bizId)
-      .inFilter('status', ['completed', 'confirmed'])
+      .eq('status', 'completed')
       .eq('payment_status', 'paid')
       .gte('starts_at', firstOfMonth);
   final pendingQ = client
@@ -163,7 +163,9 @@ final businessMonthlyDailyProvider =
     final dt = DateTime.tryParse(row['starts_at'] as String? ?? '');
     if (dt == null) continue;
     final day = dt.day;
-    final price = (row['price'] as num?)?.toDouble() ?? 0;
+    // Only count completed appointments in revenue
+    final status = row['status'] as String? ?? '';
+    final price = status == 'completed' ? ((row['price'] as num?)?.toDouble() ?? 0) : 0.0;
     final existing = byDay[day];
     byDay[day] = (
       count: (existing?.count ?? 0) + 1,
