@@ -233,6 +233,7 @@ class _SalonDetailBody extends ConsumerWidget {
     final photoUrl = salon['photo_url'] as String?;
     final currentTier = salon['tier'] as int?;
     final isActive = salon['is_active'] as bool? ?? false;
+    final isVerified = salon['is_verified'] as bool? ?? false;
     final avgRating = (salon['average_rating'] as num?)?.toDouble();
     final totalReviews = salon['total_reviews'] as int? ?? 0;
     final owner = salon['profiles'] as Map<String, dynamic>?;
@@ -268,8 +269,23 @@ class _SalonDetailBody extends ConsumerWidget {
           photoUrl: photoUrl,
           currentTier: currentTier,
           isActive: isActive,
+          isVerified: isVerified,
           colors: colors,
         ),
+
+        const SizedBox(height: AppConstants.paddingMD),
+
+        // ----------------------------------------------------------------
+        // 1b. Onboarding Progress
+        // ----------------------------------------------------------------
+        _onboardingProgressCard(context: context, salon: salon, colors: colors),
+
+        const SizedBox(height: AppConstants.paddingMD),
+
+        // ----------------------------------------------------------------
+        // 1c. Banking Status
+        // ----------------------------------------------------------------
+        _bankingStatusCard(context: context, salon: salon, colors: colors),
 
         const SizedBox(height: AppConstants.paddingMD),
 
@@ -365,6 +381,7 @@ class _SalonDetailBody extends ConsumerWidget {
     required String? photoUrl,
     required int? currentTier,
     required bool isActive,
+    required bool isVerified,
     required ColorScheme colors,
   }) {
     return _SectionCard(
@@ -445,6 +462,122 @@ class _SalonDetailBody extends ConsumerWidget {
                 activeThumbColor: Colors.green[600],
               ),
             ],
+          ),
+
+          const SizedBox(height: AppConstants.paddingSM),
+
+          // Verified toggle
+          _VerifiedToggle(
+            businessId: businessId,
+            isVerified: isVerified,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // 1b. Onboarding Progress
+  // ---------------------------------------------------------------------------
+
+  Widget _onboardingProgressCard({
+    required BuildContext context,
+    required Map<String, dynamic> salon,
+    required ColorScheme colors,
+  }) {
+    final hasServices = salon['has_services'] as bool? ?? false;
+    final hasSchedule = salon['has_schedule'] as bool? ?? false;
+    final stripeStatus = salon['stripe_onboarding_status'] as String? ?? 'not_started';
+    final onboardingStep = salon['onboarding_step'] as String?;
+    final onboardingComplete = salon['onboarding_complete'] as bool? ?? false;
+
+    return _SectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _SectionHeader(label: 'PROGRESO ONBOARDING', colors: colors),
+          const SizedBox(height: AppConstants.paddingSM),
+          _OnboardingRow(label: 'Servicios configurados', done: hasServices, colors: colors),
+          _OnboardingRow(label: 'Horario configurado', done: hasSchedule, colors: colors),
+          _OnboardingRow(
+            label: 'Stripe',
+            done: stripeStatus == 'complete',
+            value: stripeStatus,
+            colors: colors,
+          ),
+          _OnboardingRow(
+            label: 'Onboarding completo',
+            done: onboardingComplete,
+            value: onboardingStep,
+            colors: colors,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // 1c. Banking Status
+  // ---------------------------------------------------------------------------
+
+  Widget _bankingStatusCard({
+    required BuildContext context,
+    required Map<String, dynamic> salon,
+    required ColorScheme colors,
+  }) {
+    final stripeAccountId = salon['stripe_account_id'] as String?;
+    final stripeChargesEnabled = salon['stripe_charges_enabled'] as bool? ?? false;
+    final stripePayoutsEnabled = salon['stripe_payouts_enabled'] as bool? ?? false;
+    final clabe = salon['clabe'] as String?;
+    final bankName = salon['bank_name'] as String?;
+
+    // Mask CLABE: show first 4 and last 4
+    String maskedClabe = '--';
+    if (clabe != null && clabe.length >= 8) {
+      maskedClabe = '${clabe.substring(0, 4)}${'*' * (clabe.length - 8)}${clabe.substring(clabe.length - 4)}';
+    } else if (clabe != null) {
+      maskedClabe = clabe;
+    }
+
+    return _SectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _SectionHeader(label: 'DATOS BANCARIOS', colors: colors),
+          const SizedBox(height: AppConstants.paddingSM),
+          _InfoRow(
+            label: 'Stripe Account',
+            value: stripeAccountId ?? 'No configurado',
+            colors: colors,
+          ),
+          const SizedBox(height: AppConstants.paddingXS),
+          Row(
+            children: [
+              _BoolBadge(
+                value: stripeChargesEnabled,
+                trueText: 'Cargos activos',
+                falseText: 'Sin cargos',
+              ),
+              const SizedBox(width: 8),
+              _BoolBadge(
+                value: stripePayoutsEnabled,
+                trueText: 'Pagos activos',
+                falseText: 'Sin pagos',
+              ),
+            ],
+          ),
+          const SizedBox(height: AppConstants.paddingSM),
+          _InfoRow(
+            label: 'CLABE',
+            value: maskedClabe,
+            monospace: true,
+            colors: colors,
+          ),
+          const SizedBox(height: AppConstants.paddingXS),
+          _InfoRow(
+            label: 'Banco',
+            value: bankName ?? 'No registrado',
+            colors: colors,
           ),
         ],
       ),
@@ -1818,6 +1951,125 @@ class _StatusBadge extends StatelessWidget {
           fontWeight: FontWeight.w700,
           color: color,
         ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Verified toggle
+// ---------------------------------------------------------------------------
+
+class _VerifiedToggle extends ConsumerStatefulWidget {
+  final String businessId;
+  final bool isVerified;
+
+  const _VerifiedToggle({required this.businessId, required this.isVerified});
+
+  @override
+  ConsumerState<_VerifiedToggle> createState() => _VerifiedToggleState();
+}
+
+class _VerifiedToggleState extends ConsumerState<_VerifiedToggle> {
+  bool _updating = false;
+
+  Future<void> _toggle(bool newValue) async {
+    setState(() => _updating = true);
+    try {
+      await SupabaseClientService.client
+          .from('businesses')
+          .update({'is_verified': newValue}).eq('id', widget.businessId);
+      ref.invalidate(adminSalonDetailProvider(widget.businessId));
+      ToastService.showSuccess(newValue ? 'Salon verificado' : 'Verificacion removida');
+    } catch (e, stack) {
+      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
+    } finally {
+      if (mounted) setState(() => _updating = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              widget.isVerified ? Icons.verified : Icons.verified_outlined,
+              size: 18,
+              color: widget.isVerified ? Colors.blue[600] : Colors.grey,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              widget.isVerified ? 'Verificado' : 'Sin verificar',
+              style: GoogleFonts.nunito(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: widget.isVerified ? Colors.blue[700] : Colors.orange[700],
+              ),
+            ),
+          ],
+        ),
+        Switch(
+          value: widget.isVerified,
+          onChanged: _updating ? null : _toggle,
+          activeThumbColor: Colors.blue[600],
+        ),
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Onboarding row
+// ---------------------------------------------------------------------------
+
+class _OnboardingRow extends StatelessWidget {
+  final String label;
+  final bool done;
+  final String? value;
+  final ColorScheme colors;
+
+  const _OnboardingRow({
+    required this.label,
+    required this.done,
+    this.value,
+    required this.colors,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Icon(
+            done ? Icons.check_circle : Icons.radio_button_unchecked,
+            size: 18,
+            color: done ? Colors.green[600] : colors.onSurface.withValues(alpha: 0.3),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              label,
+              style: GoogleFonts.nunito(
+                fontSize: 13,
+                color: colors.onSurface.withValues(alpha: done ? 0.8 : 0.5),
+                fontWeight: done ? FontWeight.w600 : FontWeight.normal,
+              ),
+            ),
+          ),
+          if (value != null)
+            Text(
+              value!,
+              style: GoogleFonts.nunito(
+                fontSize: 12,
+                color: colors.onSurface.withValues(alpha: 0.4),
+              ),
+            ),
+        ],
       ),
     );
   }
