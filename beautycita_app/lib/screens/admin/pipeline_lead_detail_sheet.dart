@@ -1497,52 +1497,15 @@ class _LeadDetailSheetState extends State<_LeadDetailSheet> {
       spacing: 8,
       runSpacing: 8,
       children: [
-        // Mark as registered
-        _quickBtn(
-          label: 'Registrado',
-          icon: Icons.check_circle,
-          color: Colors.teal,
-          onTap: _status == 'registered'
-              ? null
-              : () async {
-                  final confirmed = await showDialog<bool>(
-                    context: context,
-                    builder: (ctx) => AlertDialog(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      title: Text(
-                        'Marcar como registrado',
-                        style: GoogleFonts.poppins(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      content: Text(
-                        'Confirmar que ${_lead['business_name'] ?? 'este salon'} se ha registrado en BeautyCita.',
-                        style: GoogleFonts.nunito(fontSize: 13),
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(ctx, false),
-                          child: const Text('Cancelar'),
-                        ),
-                        ElevatedButton(
-                          onPressed: () => Navigator.pop(ctx, true),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.teal,
-                            foregroundColor: Colors.white,
-                          ),
-                          child: const Text('Confirmar'),
-                        ),
-                      ],
-                    ),
-                  );
-                  if (confirmed == true && mounted) {
-                    await _changeStatus('registered', ref);
-                  }
-                },
-        ),
+        // "Registered" status is set automatically when a salon completes
+        // onboarding through the app. Admin cannot manually set it.
+        if (_status == 'registered')
+          _quickBtn(
+            label: 'Registrado',
+            icon: Icons.check_circle,
+            color: Colors.teal,
+            onTap: null, // read-only indicator
+          ),
 
         // Mark as declined
         _quickBtn(
