@@ -50,7 +50,7 @@ serve(async (req) => {
 
   // Fetch services
   const { data: services } = await supabase
-    .from("services")
+    .from("business_services")
     .select("id, name, price, duration_minutes, description, service_type, is_active")
     .eq("business_id", biz.id)
     .eq("is_active", true)
@@ -70,6 +70,7 @@ serve(async (req) => {
     .select("id, before_url, after_url, service_name, caption, created_at")
     .eq("business_id", biz.id)
     .eq("is_complete", true)
+    .or("publish_to_feed.is.null,publish_to_feed.eq.true")
     .order("created_at", { ascending: false })
     .limit(20);
 
@@ -88,13 +89,14 @@ serve(async (req) => {
     .select("id, name, price, photo_url, in_stock")
     .eq("business_id", biz.id)
     .eq("in_stock", true)
+    .order("name")
     .limit(8);
 
   const html = buildPage(biz, services ?? [], staff ?? [], photos ?? [], reviews ?? [], products ?? []);
   return new Response(html, {
     headers: {
       "Content-Type": "text/html; charset=utf-8",
-      "Cache-Control": "public, max-age=300",
+      "Cache-Control": "public, max-age=3600, s-maxage=3600, stale-while-revalidate=600",
     },
   });
 });
@@ -129,10 +131,11 @@ function buildPage(
   const staffHtml = staff.map(s => {
     const name = `${s.first_name} ${s.last_name ?? ""}`.trim();
     const exp = s.experience_years > 0 ? `${s.experience_years} años exp.` : "Nuevo";
+    const safeAvatarUrl = (s.avatar_url || '').replace(/[()'"\\]/g, '');
     return `
       <div class="staff-card">
-        <div class="staff-avatar" ${s.avatar_url ? `style="background-image:url(${s.avatar_url})"` : ""}>
-          ${!s.avatar_url ? name.charAt(0).toUpperCase() : ""}
+        <div class="staff-avatar" ${safeAvatarUrl ? `style="background-image:url(${safeAvatarUrl})"` : ""}>
+          ${!safeAvatarUrl ? name.charAt(0).toUpperCase() : ""}
         </div>
         <div class="staff-name">${esc(name)}</div>
         <div class="staff-meta">${esc(s.position === "owner" ? "Propietario" : "Estilista")} · ${exp}</div>
@@ -197,6 +200,10 @@ function buildPage(
 <meta property="og:description" content="${esc(biz.description || 'Reserva tu cita')}">
 ${biz.photo_url ? `<meta property="og:image" content="${biz.photo_url}">` : ""}
 <meta property="og:url" content="https://beautycita.com/s/${biz.slug}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="${esc(biz.name)} — BeautyCita">
+<meta name="twitter:description" content="${esc(biz.description || 'Reserva tu cita de belleza')}">
+${biz.photo_url ? `<meta name="twitter:image" content="${biz.photo_url}">` : ""}
 <style>
   :root { --primary: #C8A2C8; --dark: #1a1a2e; --surface: #ffffff; --text: #1f2937; --muted: #6b7280; --border: #e5e7eb; --green: #059669; }
   * { box-sizing: border-box; margin: 0; padding: 0; }

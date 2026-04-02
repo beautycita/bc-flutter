@@ -42,6 +42,7 @@ const _navItems = <_NavItem>[
   _NavItem(label: 'Tarjetas Regalo', icon: Icons.card_giftcard_outlined, route: WebRoutes.negocioGiftCards),
   _NavItem(label: 'Analiticas', icon: Icons.bar_chart_outlined, route: WebRoutes.negocioAnalytics),
   _NavDivider(),
+  _NavItem(label: 'Portafolio', icon: Icons.photo_library_outlined, route: WebRoutes.negocioPortfolio),
   _NavItem(label: 'Configuracion', icon: Icons.settings_outlined, route: WebRoutes.negocioSettings),
 ];
 

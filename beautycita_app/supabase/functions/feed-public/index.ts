@@ -76,7 +76,7 @@ interface ProductTag {
 // Ranking helpers
 // ---------------------------------------------------------------------------
 
-function freshnessBoot(createdAt: string): number {
+function freshnessBoost(createdAt: string): number {
   const ageMs = Date.now() - new Date(createdAt).getTime();
   const ageHours = ageMs / 3_600_000;
 
@@ -121,7 +121,7 @@ function scoreItem(
   viewCount: number,
   distKm: number | null,
 ): number {
-  const freshness = freshnessBoot(item.created_at);
+  const freshness = freshnessBoost(item.created_at);
   const quality = qualityMultiplier(
     item.before_url !== null && item.after_url !== null && item.type === "photo",
     item.product_tags.length > 0,
