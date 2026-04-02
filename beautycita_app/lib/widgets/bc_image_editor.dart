@@ -100,6 +100,7 @@ Future<File?> editImageFromBytes(
     '${dir.path}/bc_edit_${DateTime.now().millisecondsSinceEpoch}.jpg',
   );
   await tmp.writeAsBytes(bytes);
+  if (!context.mounted) return null;
   return editImage(
     context,
     imageFile: tmp,
