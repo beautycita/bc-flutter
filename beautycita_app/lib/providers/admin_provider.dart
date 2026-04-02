@@ -191,9 +191,9 @@ final adminDashStatsProvider = FutureProvider<AdminStats>((ref) async {
         .gte('created_at', firstOfMonth)
         .eq('status', 'completed'),
     client
-        .from('stylist_applications')
+        .from('businesses')
         .select('id')
-        .eq('status', 'pending'),
+        .eq('is_verified', false),
     client.from('disputes').select('id').eq('status', 'open'),
     client.from('disputes').select('id').eq('status', 'escalated'),
   ]);
@@ -208,7 +208,7 @@ final adminDashStatsProvider = FutureProvider<AdminStats>((ref) async {
     activeStylists: (results[1] as List).length,
     bookingsToday: (results[2] as List).length,
     revenueMonth: revenue,
-    pendingApplications: (results[4] as List).length,
+    unverifiedBusinesses: (results[4] as List).length,
     openDisputes: (results[5] as List).length,
     escalatedDisputes: (results[6] as List).length,
   );
@@ -571,7 +571,7 @@ class AdminStats {
   final int activeStylists;
   final int bookingsToday;
   final double revenueMonth;
-  final int pendingApplications;
+  final int unverifiedBusinesses;
   final int openDisputes;
   final int escalatedDisputes;
 
@@ -580,7 +580,7 @@ class AdminStats {
     required this.activeStylists,
     required this.bookingsToday,
     required this.revenueMonth,
-    required this.pendingApplications,
+    required this.unverifiedBusinesses,
     required this.openDisputes,
     this.escalatedDisputes = 0,
   });
@@ -903,6 +903,40 @@ final searchSalonsProvider = FutureProvider.family<List<Map<String, dynamic>>, S
     'result_limit': 50,
     'result_offset': 0,
   });
+  return (response as List).cast<Map<String, dynamic>>();
+});
+
+/// Lists all registered businesses with optional filters.
+/// Key format: "query|verified|active|tier" for stable Riverpod caching.
+final adminAllSalonsProvider = FutureProvider.family<List<Map<String, dynamic>>, String>((ref, key) async {
+  final parts = key.split('|');
+  final query = parts.isNotEmpty ? parts[0] : '';
+  final verifiedFilter = parts.length > 1 ? parts[1] : ''; // 'true', 'false', or ''
+  final activeFilter = parts.length > 2 ? parts[2] : '';   // 'true', 'false', or ''
+  final tierFilter = parts.length > 3 ? parts[3] : '';     // '1', '2', '3', or ''
+
+  var q = SupabaseClientService.client
+      .from('businesses')
+      .select('id, name, phone, whatsapp, address, city, state, tier, is_active, is_verified, average_rating, total_reviews, owner_id, photo_url, created_at');
+
+  if (query.length >= 2) {
+    q = q.or('name.ilike.%$query%,phone.ilike.%$query%,city.ilike.%$query%,whatsapp.ilike.%$query%');
+  }
+  if (verifiedFilter == 'true') {
+    q = q.eq('is_verified', true);
+  } else if (verifiedFilter == 'false') {
+    q = q.eq('is_verified', false);
+  }
+  if (activeFilter == 'true') {
+    q = q.eq('is_active', true);
+  } else if (activeFilter == 'false') {
+    q = q.eq('is_active', false);
+  }
+  if (tierFilter.isNotEmpty) {
+    q = q.eq('tier', int.parse(tierFilter));
+  }
+
+  final response = await q.order('created_at', ascending: false).limit(200);
   return (response as List).cast<Map<String, dynamic>>();
 });
 

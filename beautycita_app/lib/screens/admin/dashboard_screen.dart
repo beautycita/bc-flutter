@@ -84,11 +84,11 @@ class DashboardScreen extends ConsumerWidget {
                   onTap: () => _goToTab(ref, 'Ingresos Mes'),
                 ),
                 _StatCard(
-                  icon: Icons.assignment,
-                  label: 'Solicitudes',
-                  value: '${stats.pendingApplications}',
+                  icon: Icons.verified_user,
+                  label: 'Sin verificar',
+                  value: '${stats.unverifiedBusinesses}',
                   color: Colors.deepPurple,
-                  onTap: () => _goToTab(ref, 'Solicitudes'),
+                  onTap: () => _goToTab(ref, 'Sin verificar'),
                 ),
                 _StatCard(
                   icon: Icons.gavel,
