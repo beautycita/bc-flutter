@@ -534,6 +534,7 @@ class _AddStaffSheetState extends ConsumerState<_AddStaffSheet> {
       imageQuality: 85,
     );
     if (picked == null || !mounted) return;
+    if (!context.mounted) return;
     final edited = await editImage(
       context,
       imageFile: File(picked.path),
@@ -559,14 +560,20 @@ class _AddStaffSheetState extends ConsumerState<_AddStaffSheet> {
   }
 
   Future<String?> _uploadFile(File file, String path) async {
-    final bytes = await file.readAsBytes();
-    await SupabaseClientService.client.storage
-        .from('staff-media')
-        .uploadBinary(path, bytes, fileOptions: const FileOptions(upsert: true));
-    final publicUrl = SupabaseClientService.client.storage
-        .from('staff-media')
-        .getPublicUrl(path);
-    return publicUrl;
+    try {
+      final bytes = await file.readAsBytes();
+      await SupabaseClientService.client.storage
+          .from('staff-media')
+          .uploadBinary(path, bytes, fileOptions: const FileOptions(upsert: true));
+      final publicUrl = SupabaseClientService.client.storage
+          .from('staff-media')
+          .getPublicUrl(path);
+      return publicUrl;
+    } catch (e) {
+      debugPrint('[StaffScreen] Upload failed for $path: $e');
+      if (mounted) ToastService.showError('Error al subir imagen');
+      return null;
+    }
   }
 
   InputDecoration _styledInput(

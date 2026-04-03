@@ -8,6 +8,7 @@ import '../../providers/feature_toggle_provider.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 import 'business_closures_screen.dart';
+import 'business_shell_screen.dart';
 
 class BusinessSettingsScreen extends ConsumerStatefulWidget {
   const BusinessSettingsScreen({super.key});
@@ -293,6 +294,14 @@ class _BusinessSettingsScreenState
               maxLength: 300,
               decoration: _styledInput('Descripcion del negocio'),
             ),
+            const SizedBox(height: 4),
+            _AiDescriptionButton(
+              businessName: _nameCtrl.text,
+              city: _cityCtrl.text,
+              onGenerated: (text) {
+                setState(() => _descCtrl.text = text);
+              },
+            ),
 
             const SizedBox(height: AppConstants.paddingLG),
             _SectionHeader(label: 'REDES SOCIALES'),
@@ -334,17 +343,17 @@ class _BusinessSettingsScreenState
             _QuickLinkTile(
               icon: Icons.people_outline_rounded,
               label: 'Administrar Personal',
-              onTap: () => DefaultTabController.of(context).animateTo(4),
+              onTap: () => ref.read(businessTabProvider.notifier).state = 4,
             ),
             _QuickLinkTile(
               icon: Icons.design_services_outlined,
               label: 'Administrar Servicios',
-              onTap: () => DefaultTabController.of(context).animateTo(3),
+              onTap: () => ref.read(businessTabProvider.notifier).state = 3,
             ),
             _QuickLinkTile(
               icon: Icons.qr_code_rounded,
               label: 'QR para Walk-ins',
-              onTap: () => DefaultTabController.of(context).animateTo(6),
+              onTap: () => ref.read(businessTabProvider.notifier).state = 8,
             ),
 
             // ---------- Operating hours ----------
@@ -883,6 +892,115 @@ class _QuickLinkTile extends StatelessWidget {
                     size: 20, color: colors.onSurface.withValues(alpha: 0.3)),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// AI Description Generator
+// ---------------------------------------------------------------------------
+
+class _AiDescriptionButton extends ConsumerStatefulWidget {
+  final String businessName;
+  final String city;
+  final ValueChanged<String> onGenerated;
+
+  const _AiDescriptionButton({
+    required this.businessName,
+    required this.city,
+    required this.onGenerated,
+  });
+
+  @override
+  ConsumerState<_AiDescriptionButton> createState() => _AiDescriptionButtonState();
+}
+
+class _AiDescriptionButtonState extends ConsumerState<_AiDescriptionButton> {
+  bool _generating = false;
+
+  Future<void> _generate() async {
+    setState(() => _generating = true);
+    try {
+      final biz = await ref.read(currentBusinessProvider.future);
+      final services = biz != null
+          ? await SupabaseClientService.client
+              .from('services')
+              .select('name')
+              .eq('business_id', biz['id'] as String)
+              .eq('is_active', true)
+          : [];
+
+      final serviceNames = (services as List)
+          .map((s) => s['name'] as String)
+          .take(6)
+          .join(', ');
+
+      final name = widget.businessName.isNotEmpty
+          ? widget.businessName
+          : biz?['name'] ?? 'Mi Salon';
+      final city = widget.city.isNotEmpty
+          ? widget.city
+          : biz?['city'] ?? '';
+
+      final prompt = 'Escribe una descripcion atractiva y profesional para un salon de belleza llamado "$name"'
+          '${city.isNotEmpty ? " en $city" : ""}. '
+          '${serviceNames.isNotEmpty ? "Ofrecen: $serviceNames. " : ""}'
+          'Usa emojis con estilo y personalidad. Maximo 280 caracteres. '
+          'Tono: confiado, moderno, amigable. En espanol mexicano.';
+
+      final response = await SupabaseClientService.client.functions.invoke(
+        'aphrodite-chat',
+        body: {
+          'action': 'generate',
+          'prompt': prompt,
+          'max_tokens': 200,
+        },
+      );
+
+      if (response.status == 200 && response.data is Map) {
+        final text = (response.data['text'] as String? ??
+                response.data['output'] as String? ??
+                '')
+            .trim();
+        if (text.isNotEmpty && mounted) {
+          widget.onGenerated(text);
+          ToastService.showSuccess('Descripcion generada');
+        }
+      }
+    } catch (e) {
+      if (mounted) ToastService.showError('No se pudo generar la descripcion');
+      debugPrint('[AI Desc] Error: $e');
+    } finally {
+      if (mounted) setState(() => _generating = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Align(
+      alignment: Alignment.centerRight,
+      child: TextButton.icon(
+        onPressed: _generating ? null : _generate,
+        icon: _generating
+            ? SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: colors.primary,
+                ),
+              )
+            : Icon(Icons.auto_awesome, size: 16, color: colors.primary),
+        label: Text(
+          _generating ? 'Generando...' : 'Generar con IA',
+          style: GoogleFonts.nunito(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: colors.primary,
           ),
         ),
       ),
