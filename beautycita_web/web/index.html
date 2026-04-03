@@ -12,6 +12,7 @@
   <meta property="og:description" content="Tus clientas te encuentran. Registro en 60 segundos por WhatsApp. Sin cuotas de entrada.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://beautycita.com">
+  <link rel="canonical" href="https://beautycita.com/">
   <link rel="icon" type="image/png" href="/favicon.png">
   <link rel="apple-touch-icon" href="/icons/Icon-192.png">
   <link rel="manifest" href="/manifest.json">
@@ -601,6 +602,8 @@
         <a href="/reservar">Para clientes</a>
         <a href="/demo">Para salones</a>
         <a href="/soporte">Soporte</a>
+        <a href="/privacidad">Aviso de privacidad</a>
+        <a href="/ayuda">Ayuda</a>
       </div>
     </div>
     <div class="container">
@@ -737,16 +740,30 @@ function submitContact(e, form) {
   return false;
 }
 
-// ── Flutter loader (ALL paths including root) ──
-(function(){
+// ── Flutter loader (only for app routes, NOT landing page) ──
+var flutterRoutes = ['/auth', '/admin', '/negocio', '/registro'];
+var loadTimer;
+
+function isFlutterRoute(path) {
+  if (path === '/' || path === '/index.html' || path === '') return false;
+  for (var i = 0; i < flutterRoutes.length; i++) {
+    if (path === flutterRoutes[i] || path.indexOf(flutterRoutes[i] + '/') === 0) return true;
+  }
+  return false;
+}
+
+function bootFlutter() {
   var landing = document.getElementById('landing');
   if (landing) landing.style.display = 'none';
-  document.getElementById('flutter-loading').style.display = 'flex';
+  var fl = document.getElementById('flutter-loading');
+  if (fl) fl.style.display = 'flex';
+  if (document.getElementById('flutter-bootstrap-script')) return;
   var s = document.createElement('script');
+  s.id = 'flutter-bootstrap-script';
   s.src = 'flutter_bootstrap.js?v=' + Date.now(); s.async = true;
   document.body.appendChild(s);
 
-  var loadTimer = setTimeout(function(){
+  loadTimer = setTimeout(function(){
     var fl = document.getElementById('flutter-loading');
     if (fl && fl.style.display !== 'none') {
       fl.innerHTML = '<h1 style="color:#fff;font-size:2rem;font-weight:700;margin:0 0 12px">BeautyCita</h1>'
@@ -754,12 +771,30 @@ function submitContact(e, form) {
         + '<button onclick="location.reload()" style="background:#FFB300;color:#1a1a1a;border:none;padding:12px 32px;border-radius:24px;font-weight:700;font-size:1rem;cursor:pointer">Reintentar</button>';
     }
   }, 15000);
+}
 
-  window.addEventListener('flutter-first-frame', function(){
-    clearTimeout(loadTimer);
-  });
+(function(){
+  var path = window.location.pathname;
+  if (isFlutterRoute(path)) {
+    bootFlutter();
+  }
+  // else: landing page stays visible, Flutter does NOT load
 })();
+
+// Intercept clicks to Flutter routes from the landing page
+document.addEventListener('click', function(e) {
+  var a = e.target.closest('a');
+  if (!a) return;
+  var href = a.getAttribute('href');
+  if (href && isFlutterRoute(href)) {
+    e.preventDefault();
+    history.pushState(null, '', href);
+    bootFlutter();
+  }
+});
+
 window.addEventListener('flutter-first-frame', function(){
+  if (loadTimer) clearTimeout(loadTimer);
   var f = document.getElementById('flutter-loading');
   if (f) { f.style.display = 'none'; f.remove(); }
 });
