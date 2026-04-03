@@ -530,6 +530,16 @@ Tono profesional y atractivo para clientes. NO uses emojis. NO uses comillas.
 Solo el texto, nada mas.`;
           break;
 
+        case "business_description":
+          prompt = `Genera una descripcion atractiva para un salon de belleza.
+Salon: ${ctx.name || "salon de belleza"}
+Ciudad: ${ctx.city || "Mexico"}
+Servicios: ${ctx.services || "belleza en general"}
+Escribe en espanol mexicano, 2-3 oraciones. Maximo 280 caracteres.
+Tono confiado, moderno, amigable. USA emojis con estilo y personalidad.
+Solo el texto, nada mas.`;
+          break;
+
         default:
           prompt = `Genera un texto corto y profesional en espanol mexicano para un campo de tipo "${field_type}". 2-3 oraciones. Sin emojis ni comillas.`;
       }

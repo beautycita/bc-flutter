@@ -925,15 +925,16 @@ class _AiDescriptionButtonState extends ConsumerState<_AiDescriptionButton> {
     setState(() => _generating = true);
     try {
       final biz = await ref.read(currentBusinessProvider.future);
-      final services = biz != null
+      final bizId = biz?['id'] as String? ?? '';
+      final svcs = bizId.isNotEmpty
           ? await SupabaseClientService.client
               .from('services')
               .select('name')
-              .eq('business_id', biz['id'] as String)
+              .eq('business_id', bizId)
               .eq('is_active', true)
           : [];
 
-      final serviceNames = (services as List)
+      final serviceNames = (svcs as List)
           .map((s) => s['name'] as String)
           .take(6)
           .join(', ');
@@ -945,26 +946,21 @@ class _AiDescriptionButtonState extends ConsumerState<_AiDescriptionButton> {
           ? widget.city
           : biz?['city'] ?? '';
 
-      final prompt = 'Escribe una descripcion atractiva y profesional para un salon de belleza llamado "$name"'
-          '${city.isNotEmpty ? " en $city" : ""}. '
-          '${serviceNames.isNotEmpty ? "Ofrecen: $serviceNames. " : ""}'
-          'Usa emojis con estilo y personalidad. Maximo 280 caracteres. '
-          'Tono: confiado, moderno, amigable. En espanol mexicano.';
-
       final response = await SupabaseClientService.client.functions.invoke(
         'aphrodite-chat',
         body: {
-          'action': 'generate',
-          'prompt': prompt,
-          'max_tokens': 200,
+          'action': 'generate_copy',
+          'field_type': 'business_description',
+          'context': {
+            'name': name,
+            'city': city,
+            'services': serviceNames,
+          },
         },
       );
 
       if (response.status == 200 && response.data is Map) {
-        final text = (response.data['text'] as String? ??
-                response.data['output'] as String? ??
-                '')
-            .trim();
+        final text = (response.data['text'] as String? ?? '').trim();
         if (text.isNotEmpty && mounted) {
           widget.onGenerated(text);
           ToastService.showSuccess('Descripcion generada');
