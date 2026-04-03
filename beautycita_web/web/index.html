@@ -740,58 +740,21 @@ function submitContact(e, form) {
   return false;
 }
 
-// ── Flutter loader (only for app routes, NOT landing page) ──
-var flutterRoutes = ['/auth', '/admin', '/negocio', '/registro'];
-var loadTimer;
-
-function isFlutterRoute(path) {
-  if (path === '/' || path === '/index.html' || path === '') return false;
-  for (var i = 0; i < flutterRoutes.length; i++) {
-    if (path === flutterRoutes[i] || path.indexOf(flutterRoutes[i] + '/') === 0) return true;
-  }
-  return false;
-}
-
-function bootFlutter() {
+// ── Flutter loader — always boot Flutter as the homepage ──
+(function(){
   var landing = document.getElementById('landing');
   if (landing) landing.style.display = 'none';
-  var fl = document.getElementById('flutter-loading');
-  if (fl) fl.style.display = 'flex';
-  if (document.getElementById('flutter-bootstrap-script')) return;
-  var s = document.createElement('script');
-  s.id = 'flutter-bootstrap-script';
-  s.src = 'flutter_bootstrap.js?v=' + Date.now(); s.async = true;
-  document.body.appendChild(s);
-
-  loadTimer = setTimeout(function(){
-    var fl = document.getElementById('flutter-loading');
-    if (fl && fl.style.display !== 'none') {
-      fl.innerHTML = '<h1 style="color:#fff;font-size:2rem;font-weight:700;margin:0 0 12px">BeautyCita</h1>'
-        + '<p style="color:rgba(255,255,255,.85);font-size:1.1rem;margin:0 0 24px">No se pudo cargar la aplicacion.</p>'
-        + '<button onclick="location.reload()" style="background:#FFB300;color:#1a1a1a;border:none;padding:12px 32px;border-radius:24px;font-weight:700;font-size:1rem;cursor:pointer">Reintentar</button>';
-    }
-  }, 15000);
-}
-
-(function(){
-  var path = window.location.pathname;
-  if (isFlutterRoute(path)) {
-    bootFlutter();
-  }
-  // else: landing page stays visible, Flutter does NOT load
+  document.getElementById('flutter-loading').style.display = 'flex';
 })();
 
-// Intercept clicks to Flutter routes from the landing page
-document.addEventListener('click', function(e) {
-  var a = e.target.closest('a');
-  if (!a) return;
-  var href = a.getAttribute('href');
-  if (href && isFlutterRoute(href)) {
-    e.preventDefault();
-    history.pushState(null, '', href);
-    bootFlutter();
+var loadTimer = setTimeout(function(){
+  var fl = document.getElementById('flutter-loading');
+  if (fl && fl.style.display !== 'none') {
+    fl.innerHTML = '<h1 style="color:#fff;font-size:2rem;font-weight:700;margin:0 0 12px">BeautyCita</h1>'
+      + '<p style="color:rgba(255,255,255,.85);font-size:1.1rem;margin:0 0 24px">No se pudo cargar la aplicacion.</p>'
+      + '<button onclick="location.reload()" style="background:#FFB300;color:#1a1a1a;border:none;padding:12px 32px;border-radius:24px;font-weight:700;font-size:1rem;cursor:pointer">Reintentar</button>';
   }
-});
+}, 15000);
 
 window.addEventListener('flutter-first-frame', function(){
   if (loadTimer) clearTimeout(loadTimer);
