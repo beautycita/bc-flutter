@@ -53,24 +53,98 @@ class FollowUpQuestionScreen extends ConsumerWidget {
         ],
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppConstants.paddingLG,
-            vertical: AppConstants.paddingMD,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              CinematicQuestionText(
-                text: question.questionTextEs,
-                fontSize: 26,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Progress bar
+            if (state.followUpQuestions.length > 1)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppConstants.paddingLG),
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween<double>(
+                    begin: 0,
+                    end: (state.currentQuestionIndex + 1) /
+                        state.followUpQuestions.length,
+                  ),
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeOut,
+                  builder: (context, value, _) {
+                    return ClipRRect(
+                      borderRadius: BorderRadius.circular(1.5),
+                      child: LinearProgressIndicator(
+                        value: value,
+                        minHeight: 3,
+                        backgroundColor: palette.onSurface.withValues(alpha: 0.08),
+                        valueColor: AlwaysStoppedAnimation<Color>(palette.primary),
+                      ),
+                    );
+                  },
+                ),
               ),
-              const SizedBox(height: AppConstants.paddingXL),
-              Expanded(
-                child: _buildAnswerWidget(question, notifier),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppConstants.paddingLG,
+                  vertical: AppConstants.paddingMD,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 350),
+                      switchInCurve: Curves.easeOutCubic,
+                      switchOutCurve: Curves.easeOutCubic,
+                      transitionBuilder: (child, animation) {
+                        final slideIn = Tween<Offset>(
+                          begin: const Offset(0.04, 0),
+                          end: Offset.zero,
+                        ).animate(animation);
+                        return FadeTransition(
+                          opacity: animation,
+                          child: SlideTransition(
+                            position: slideIn,
+                            child: child,
+                          ),
+                        );
+                      },
+                      child: KeyedSubtree(
+                        key: ValueKey(question.questionKey),
+                        child: CinematicQuestionText(
+                          text: question.questionTextEs,
+                          fontSize: 26,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppConstants.paddingXL),
+                    Expanded(
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 350),
+                        switchInCurve: Curves.easeOutCubic,
+                        switchOutCurve: Curves.easeOutCubic,
+                        transitionBuilder: (child, animation) {
+                          final slideIn = Tween<Offset>(
+                            begin: const Offset(0.04, 0),
+                            end: Offset.zero,
+                          ).animate(animation);
+                          return FadeTransition(
+                            opacity: animation,
+                            child: SlideTransition(
+                              position: slideIn,
+                              child: child,
+                            ),
+                          );
+                        },
+                        child: KeyedSubtree(
+                          key: ValueKey('answers_${question.questionKey}'),
+                          child: _buildAnswerWidget(question, notifier),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -211,13 +285,8 @@ class _OptionCard extends StatelessWidget {
       width: 64,
       height: 64,
       decoration: BoxDecoration(
-        color: palette.primary.withValues(alpha: 0.1),
-        shape: BoxShape.circle,
-      ),
-      child: Icon(
-        Icons.auto_awesome,
-        color: palette.primary,
-        size: 28,
+        color: palette.primary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(16),
       ),
     );
   }

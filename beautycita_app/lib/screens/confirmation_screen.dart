@@ -21,8 +21,52 @@ class ConfirmationScreen extends ConsumerStatefulWidget {
   ConsumerState<ConfirmationScreen> createState() => _ConfirmationScreenState();
 }
 
-class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
+class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen>
+    with SingleTickerProviderStateMixin {
   bool _isConfirming = false;
+  late final AnimationController _cascadeController;
+
+  @override
+  void initState() {
+    super.initState();
+    _cascadeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 620),
+    )..forward();
+  }
+
+  @override
+  void dispose() {
+    _cascadeController.dispose();
+    super.dispose();
+  }
+
+  /// "Breath in" cascade: each element starts at scale 0.98 / opacity 0,
+  /// expands to 1.0 while fading in. 80ms stagger between elements.
+  Widget _cascadeElement(int index, Widget child) {
+    final startFraction = (index * 80) / 620;
+    final endFraction = (startFraction + 300 / 620).clamp(0.0, 1.0);
+
+    final curved = CurvedAnimation(
+      parent: _cascadeController,
+      curve: Interval(startFraction, endFraction, curve: Curves.easeOut),
+    );
+
+    return AnimatedBuilder(
+      animation: curved,
+      builder: (context, _) {
+        final t = curved.value;
+        final scale = 0.98 + 0.02 * t;
+        return Opacity(
+          opacity: t,
+          child: Transform.scale(
+            scale: scale,
+            child: child,
+          ),
+        );
+      },
+    );
+  }
 
   Future<void> _handleConfirm() async {
     final notifier = ref.read(bookingFlowProvider.notifier);
@@ -49,7 +93,6 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
     final notifier = ref.read(bookingFlowProvider.notifier);
     final result = state.selectedResult;
     final palette = Theme.of(context).colorScheme;
-    final ext = Theme.of(context).extension<BCThemeExtension>()!;
 
     if (result == null) {
       return const Scaffold(body: Center(child: Text('Sin seleccion')));
@@ -87,16 +130,16 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
               ),
               const SizedBox(height: AppConstants.paddingMD),
             ],
-            _SummaryCard(result: result),
+            _cascadeElement(0, _SummaryCard(result: result)),
             const SizedBox(height: AppConstants.paddingMD),
-            _PriceBreakdown(result: result),
+            _cascadeElement(1, _PriceBreakdown(result: result)),
             if (!isBooked) ...[
               const SizedBox(height: AppConstants.paddingMD),
-              _PaymentMethodSelector(
+              _cascadeElement(2, _PaymentMethodSelector(
                 selected: state.paymentMethod,
                 onSelect: (method) => notifier.selectPaymentMethod(method),
                 servicePrice: result.service.price ?? 0,
-              ),
+              )),
             ],
             const SizedBox(height: AppConstants.paddingXL),
             if (isBooked) ...[
@@ -111,13 +154,17 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: AppConstants.paddingMD),
                   decoration: BoxDecoration(
-                    gradient: ext.goldGradientDirectional(),
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFEC4899), Color(0xFF9333EA)],
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                    ),
                     borderRadius: BorderRadius.circular(AppConstants.radiusLG),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFFD4AF37).withValues(alpha: 0.4),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
+                        color: const Color(0xFFEC4899).withValues(alpha: 0.25),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
                       ),
                     ],
                   ),
@@ -128,7 +175,7 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 1.2,
-                      color: const Color(0xFF1A1400),
+                      color: Colors.white,
                     ),
                   ),
                 ),
@@ -149,19 +196,23 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
                 ),
               ),
             ] else ...[
-              // Confirm button — gold gradient
+              // Confirm button — brand gradient
               GestureDetector(
                 onTap: _isConfirming ? null : _handleConfirm,
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: AppConstants.paddingMD),
                   decoration: BoxDecoration(
-                    gradient: ext.goldGradientDirectional(),
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFEC4899), Color(0xFF9333EA)],
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                    ),
                     borderRadius: BorderRadius.circular(AppConstants.radiusLG),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFFD4AF37).withValues(alpha: 0.4),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
+                        color: const Color(0xFFEC4899).withValues(alpha: 0.25),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
                       ),
                     ],
                   ),
@@ -181,7 +232,7 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
                             letterSpacing: 1.2,
-                            color: const Color(0xFF1A1400),
+                            color: Colors.white,
                           ),
                         ),
                 ),
@@ -275,23 +326,19 @@ class _SummaryCard extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        gradient: ext.goldGradientDirectional(),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+        border: Border.all(color: ext.cardBorderColor),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFD4AF37).withValues(alpha: 0.3),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Container(
-        margin: const EdgeInsets.all(1.5),
         padding: const EdgeInsets.all(AppConstants.paddingLG),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(AppConstants.radiusMD - 1.5),
-        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -401,23 +448,19 @@ class _PriceBreakdown extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        gradient: ext.goldGradientDirectional(),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+        border: Border.all(color: ext.cardBorderColor),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFD4AF37).withValues(alpha: 0.3),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Container(
-        margin: const EdgeInsets.all(1.5),
         padding: const EdgeInsets.all(AppConstants.paddingLG),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(AppConstants.radiusMD - 1.5),
-        ),
         child: Column(
           children: [
             _PriceRow(
@@ -606,7 +649,6 @@ class _PaymentMethodCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = Theme.of(context).colorScheme;
-    final ext = Theme.of(context).extension<BCThemeExtension>()!;
     return Expanded(
       child: GestureDetector(
         onTap: () {
@@ -614,25 +656,16 @@ class _PaymentMethodCard extends StatelessWidget {
           onTap?.call();
         },
         child: Container(
-            decoration: BoxDecoration(
-              gradient: ext.goldGradientDirectional(),
-              borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-              boxShadow: isSelected
-                  ? [
-                      BoxShadow(
-                        color: const Color(0xFFD4AF37).withValues(alpha: 0.5),
-                        blurRadius: 10,
-                        offset: const Offset(0, 3),
-                      ),
-                    ]
-                  : null,
-            ),
-            child: Container(
-              margin: const EdgeInsets.all(2),
               padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),
               decoration: BoxDecoration(
-                color: isSelected ? const Color(0xFFFFF8DC) : Colors.white,
-                borderRadius: BorderRadius.circular(AppConstants.radiusMD - 2),
+                color: isSelected
+                    ? palette.primary.withValues(alpha: 0.08)
+                    : Colors.white,
+                borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+                border: Border.all(
+                  color: isSelected ? palette.primary : const Color(0xFFEEEEEE),
+                  width: isSelected ? 2 : 1,
+                ),
               ),
               child: Column(
                 children: [
@@ -640,7 +673,7 @@ class _PaymentMethodCard extends StatelessWidget {
                     icon,
                     size: 28,
                     color: isSelected
-                        ? const Color(0xFFB8860B)
+                        ? palette.primary
                         : palette.onSurface.withValues(alpha: 0.5),
                   ),
                   const SizedBox(height: 6),
@@ -650,7 +683,7 @@ class _PaymentMethodCard extends StatelessWidget {
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                       color: isSelected
-                          ? const Color(0xFF8B6914)
+                          ? palette.primary
                           : palette.onSurface,
                     ),
                   ),
@@ -661,13 +694,12 @@ class _PaymentMethodCard extends StatelessWidget {
                     style: GoogleFonts.nunito(
                       fontSize: 10,
                       color: isSelected
-                          ? const Color(0xFFA67C00)
+                          ? palette.primary
                           : palette.onSurface.withValues(alpha: 0.5),
                     ),
                   ),
                 ],
               ),
-            ),
           ),
         ),
       );
