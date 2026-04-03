@@ -127,9 +127,10 @@ async function verifyPin() {
     if (!res.ok) { errEl.textContent = data.error || 'Error'; errEl.classList.remove('hidden'); return; }
 
     staffId = data.staff_id;
+    const esc = s => { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; };
     document.getElementById('staff-info').innerHTML = `
-      <div class="staff-name">${data.staff_name}</div>
-      <div class="salon-name">${data.salon_name}</div>
+      <div class="staff-name">${esc(data.staff_name || '')}</div>
+      <div class="salon-name">${esc(data.salon_name || '')}</div>
     `;
 
     renderPhotos(data.photos || []);
@@ -144,19 +145,21 @@ function renderPhotos(photos) {
   const el = document.getElementById('photos-list');
   if (!photos.length) { el.innerHTML = '<p style="text-align:center;color:#9ca3af;font-size:13px;">Sin fotos recientes</p>'; return; }
 
+  const esc = s => { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; };
   el.innerHTML = photos.map(p => {
     const complete = p.is_complete;
+    const safeId = esc(p.id || '');
     return `
       <div class="photo-pair ${complete ? '' : 'incomplete'}">
-        <div class="meta"><strong>${p.service_name || 'Sin servicio'}</strong> ${p.client_name ? '— ' + p.client_name : ''}</div>
+        <div class="meta"><strong>${esc(p.service_name || 'Sin servicio')}</strong> ${p.client_name ? '— ' + esc(p.client_name) : ''}</div>
         <div class="meta">${new Date(p.created_at).toLocaleDateString('es-MX', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' })}</div>
         <div class="photo-row">
-          <div class="photo-slot" ${!p.before_url ? `onclick="addToExisting('${p.id}', true)"` : ''}>
-            ${p.before_url ? `<img src="${p.before_url}">` : '<div class="placeholder">+ Antes</div>'}
+          <div class="photo-slot" ${!p.before_url ? `onclick="addToExisting('${safeId}', true)"` : ''}>
+            ${p.before_url ? `<img src="${esc(p.before_url)}">` : '<div class="placeholder">+ Antes</div>'}
             <span class="label">ANTES</span>
           </div>
-          <div class="photo-slot" ${!p.after_url ? `onclick="addToExisting('${p.id}', false)"` : ''}>
-            ${p.after_url ? `<img src="${p.after_url}">` : '<div class="placeholder">+ Despues</div>'}
+          <div class="photo-slot" ${!p.after_url ? `onclick="addToExisting('${safeId}', false)"` : ''}>
+            ${p.after_url ? `<img src="${esc(p.after_url)}">` : '<div class="placeholder">+ Despues</div>'}
             <span class="label">DESPUES</span>
           </div>
         </div>
