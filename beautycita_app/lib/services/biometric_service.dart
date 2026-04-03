@@ -38,7 +38,7 @@ class BiometricService {
         localizedReason: '¡Usa tu huella o rostro para entrar!',
         options: const AuthenticationOptions(
           stickyAuth: true,
-          biometricOnly: true,
+          biometricOnly: false,
         ),
       );
 

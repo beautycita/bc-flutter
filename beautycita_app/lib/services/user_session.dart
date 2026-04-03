@@ -188,6 +188,15 @@ class UserSession {
 
   /// Clear all session data (logout)
   Future<void> clear() async {
+    // Sign out of Supabase first (invalidates JWT)
+    try {
+      if (SupabaseClientService.isInitialized) {
+        await SupabaseClientService.client.auth.signOut();
+      }
+    } catch (e) {
+      if (kDebugMode) debugPrint('[UserSession] Supabase signOut failed (non-fatal): $e');
+    }
+
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_keyUsername);
     await prefs.remove(_keyRegisteredAt);

@@ -49,13 +49,34 @@ Deno.serve(async (req) => {
   // Verify the old profile actually exists before touching anything
   const { data: oldProfile } = await db
     .from("profiles")
-    .select("id")
+    .select("id, device_id, username")
     .eq("id", old_user_id)
     .single();
 
   if (!oldProfile) {
     // Old profile already gone or never existed — nothing to do
     return new Response(JSON.stringify({ ok: true, migrated: false }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  // SECURITY: Verify the caller owns the old profile by matching device_id or username.
+  // Prevents random UUID guessing attacks.
+  const { data: callerProfile } = await db
+    .from("profiles")
+    .select("device_id, username")
+    .eq("id", user.id)
+    .single();
+
+  const deviceMatch = oldProfile.device_id && callerProfile?.device_id &&
+    oldProfile.device_id === callerProfile.device_id;
+  const usernameMatch = oldProfile.username && callerProfile?.username &&
+    oldProfile.username === callerProfile.username;
+
+  if (!deviceMatch && !usernameMatch) {
+    console.warn(`[migrate-profile] Blocked: caller ${user.id} does not match old profile ${old_user_id}`);
+    return new Response(JSON.stringify({ error: "Profile ownership verification failed" }), {
+      status: 403,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
@@ -106,7 +127,27 @@ Deno.serve(async (req) => {
     });
   }
 
-  console.log(`[migrate-profile] Migrated profile ${old_user_id} -> ${user.id}`);
+  // Migrate all related tables from old_user_id to new user.id
+  const tables = [
+    { table: "appointments", column: "user_id" },
+    { table: "favorites", column: "user_id" },
+    { table: "reviews", column: "user_id" },
+    { table: "chat_threads", column: "user_id" },
+    { table: "payment_methods", column: "user_id" },
+    { table: "gift_cards", column: "buyer_id" },
+  ];
+
+  for (const { table, column } of tables) {
+    const { error: migErr } = await db
+      .from(table)
+      .update({ [column]: user.id })
+      .eq(column, old_user_id);
+    if (migErr) {
+      console.warn(`[migrate-profile] Failed to migrate ${table}: ${migErr.message}`);
+    }
+  }
+
+  console.log(`[migrate-profile] Migrated profile + related data ${old_user_id} -> ${user.id}`);
   return new Response(JSON.stringify({ ok: true, migrated: true }), {
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });

@@ -532,7 +532,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen>
                     obscureText: obscure,
                     autofocus: true,
                     decoration: InputDecoration(
-                      hintText: 'Contrasena (min. 6 caracteres)',
+                      hintText: 'Contrasena (min. 8 caracteres)',
                       prefixIcon: const Icon(Icons.lock_outline),
                       suffixIcon: IconButton(
                         icon: Icon(obscure ? Icons.visibility_off : Icons.visibility),
@@ -556,8 +556,8 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen>
                       onPressed: () {
                         final pass = passController.text;
                         final confirm = confirmController.text;
-                        if (pass.length < 6) {
-                          ToastService.showError('La contrasena debe tener al menos 6 caracteres');
+                        if (pass.length < 8) {
+                          ToastService.showError('La contrasena debe tener al menos 8 caracteres');
                           return;
                         }
                         if (pass != confirm) {
