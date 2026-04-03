@@ -191,6 +191,7 @@ const roseGoldPalette = BCPalette(
   ],
   cinematicPrimary: Color(0xFFC8A2C8),
   cinematicAccent: Color(0xFFAA7EAA),
+  cinematicGradient: [Color(0xFFBE185D), Color(0xFF7C3AED), Color(0xFF2563EB)],
   statusBarColor: Color(0x00000000),
   statusBarIconBrightness: Brightness.dark,
   navigationBarColor: Color(0xFFFFFFFF),

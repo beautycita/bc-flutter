@@ -29,10 +29,12 @@ class BookingConfirmationScreen extends ConsumerStatefulWidget {
 
 class _BookingConfirmationScreenState
     extends ConsumerState<BookingConfirmationScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late final AnimationController _checkController;
   late final Animation<double> _checkScale;
   late final Animation<double> _checkFade;
+  late final AnimationController _ripple1Controller;
+  late final AnimationController _ripple2Controller;
 
   @override
   void initState() {
@@ -53,12 +55,32 @@ class _BookingConfirmationScreenState
         curve: const Interval(0.0, 0.3, curve: Curves.easeOut),
       ),
     );
+
+    _ripple1Controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _ripple2Controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+
     _checkController.forward();
+    // Start first ripple when check animation is ~40% done
+    Future.delayed(const Duration(milliseconds: 360), () {
+      if (mounted) _ripple1Controller.forward();
+    });
+    // Second ripple 200ms after the first
+    Future.delayed(const Duration(milliseconds: 560), () {
+      if (mounted) _ripple2Controller.forward();
+    });
   }
 
   @override
   void dispose() {
     _checkController.dispose();
+    _ripple1Controller.dispose();
+    _ripple2Controller.dispose();
     super.dispose();
   }
 
@@ -175,37 +197,59 @@ class _BookingConfirmationScreenState
                 children: [
                   const SizedBox(height: AppConstants.paddingXL),
 
-                  // -- Animated checkmark --
-                  AnimatedBuilder(
-                    animation: _checkController,
-                    builder: (context, child) {
-                      return Opacity(
-                        opacity: _checkFade.value,
-                        child: Transform.scale(
-                          scale: _checkScale.value,
-                          child: child,
+                  // -- Animated checkmark with ripple rings --
+                  SizedBox(
+                    width: 240,
+                    height: 240,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        // Ripple ring 1
+                        _RippleRing(
+                          controller: _ripple1Controller,
+                          color: palette.primary,
+                          startOpacity: 0.4,
                         ),
-                      );
-                    },
-                    child: Container(
-                      width: 96,
-                      height: 96,
-                      decoration: BoxDecoration(
-                        color: Colors.green.shade50,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.green.withValues(alpha: 0.2),
-                            blurRadius: 20,
-                            spreadRadius: 4,
+                        // Ripple ring 2
+                        _RippleRing(
+                          controller: _ripple2Controller,
+                          color: palette.primary,
+                          startOpacity: 0.3,
+                        ),
+                        // Checkmark
+                        AnimatedBuilder(
+                          animation: _checkController,
+                          builder: (context, child) {
+                            return Opacity(
+                              opacity: _checkFade.value,
+                              child: Transform.scale(
+                                scale: _checkScale.value,
+                                child: child,
+                              ),
+                            );
+                          },
+                          child: Container(
+                            width: 96,
+                            height: 96,
+                            decoration: BoxDecoration(
+                              color: Colors.green.shade50,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.green.withValues(alpha: 0.2),
+                                  blurRadius: 20,
+                                  spreadRadius: 4,
+                                ),
+                              ],
+                            ),
+                            child: Icon(
+                              Icons.check_circle_rounded,
+                              size: 64,
+                              color: Colors.green.shade600,
+                            ),
                           ),
-                        ],
-                      ),
-                      child: Icon(
-                        Icons.check_circle_rounded,
-                        size: 64,
-                        color: Colors.green.shade600,
-                      ),
+                        ),
+                      ],
                     ),
                   ),
 
@@ -405,15 +449,19 @@ class _BookingConfirmationScreenState
                         padding: const EdgeInsets.symmetric(
                             vertical: AppConstants.paddingMD),
                         decoration: BoxDecoration(
-                          gradient: ext.goldGradientDirectional(),
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFEC4899), Color(0xFF9333EA)],
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
+                          ),
                           borderRadius:
                               BorderRadius.circular(AppConstants.radiusLG),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFFD4AF37)
-                                  .withValues(alpha: 0.35),
-                              blurRadius: 8,
-                              offset: const Offset(0, 3),
+                              color: const Color(0xFFEC4899)
+                                  .withValues(alpha: 0.25),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
                             ),
                           ],
                         ),
@@ -424,7 +472,7 @@ class _BookingConfirmationScreenState
                               fontSize: 16,
                               fontWeight: FontWeight.w700,
                               letterSpacing: 1.2,
-                              color: const Color(0xFF1A1400),
+                              color: Colors.white,
                             ),
                           ),
                         ),
@@ -493,10 +541,10 @@ class _BookingConfirmationScreenState
     );
   }
 
-  Widget _divider() => const Divider(
+  Widget _divider() => Divider(
         height: 12,
         thickness: 1,
-        color: Color(0xFFF5F0EB),
+        color: Theme.of(context).dividerColor,
       );
 
   Widget _gradientButton({
@@ -610,4 +658,74 @@ class _BookingConfirmationScreenState
       ),
     );
   }
+}
+
+/// A single expanding ring that fades out — used for the success ripple effect.
+class _RippleRing extends StatelessWidget {
+  final AnimationController controller;
+  final Color color;
+  final double startOpacity;
+
+  const _RippleRing({
+    required this.controller,
+    required this.color,
+    this.startOpacity = 0.4,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final radiusAnim = Tween<double>(begin: 0, end: 120).animate(
+      CurvedAnimation(parent: controller, curve: Curves.easeOutCubic),
+    );
+    final opacityAnim = Tween<double>(begin: startOpacity, end: 0).animate(
+      CurvedAnimation(parent: controller, curve: Curves.easeOutCubic),
+    );
+
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, _) {
+        if (!controller.isAnimating && !controller.isCompleted) {
+          return const SizedBox.shrink();
+        }
+        final radius = radiusAnim.value;
+        return CustomPaint(
+          size: Size(radius * 2, radius * 2),
+          painter: _RingPainter(
+            radius: radius,
+            color: color.withValues(alpha: opacityAnim.value),
+            strokeWidth: 2,
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _RingPainter extends CustomPainter {
+  final double radius;
+  final Color color;
+  final double strokeWidth;
+
+  _RingPainter({
+    required this.radius,
+    required this.color,
+    required this.strokeWidth,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth;
+    canvas.drawCircle(
+      Offset(size.width / 2, size.height / 2),
+      radius,
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_RingPainter old) =>
+      old.radius != radius || old.color != color;
 }

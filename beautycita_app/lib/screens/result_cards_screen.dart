@@ -116,29 +116,55 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
     super.dispose();
   }
 
+  /// Silk reveal: shadow arrives 50ms before card content slides into place.
   Widget _staggerChild(int index, Widget child) {
     final route = ModalRoute.of(context);
     final anim = route?.animation;
     if (anim == null || anim.isCompleted) return child;
 
+    // Each element staggers by 50ms worth of animation progress
     final slot = index.clamp(0, 7);
-    final start = 0.45 + slot * 0.05;
-    final end = (start + 0.20).clamp(0.0, 1.0);
+    final start = 0.30 + slot * 0.06;
+    final end = (start + 0.30).clamp(0.0, 1.0);
 
-    final curved = CurvedAnimation(
+    // Shadow fades in first (starts earlier)
+    final shadowCurve = CurvedAnimation(
       parent: anim,
-      curve: Interval(start, end, curve: Curves.easeOutCubic),
+      curve: Interval(start, (start + 0.15).clamp(0.0, 1.0), curve: Curves.easeOutQuart),
     );
 
-    return FadeTransition(
-      opacity: curved,
-      child: SlideTransition(
-        position: Tween<Offset>(
-          begin: const Offset(0, 0.08),
-          end: Offset.zero,
-        ).animate(curved),
-        child: child,
-      ),
+    // Content slides up and fades in 50ms later
+    final contentCurve = CurvedAnimation(
+      parent: anim,
+      curve: Interval((start + 0.05).clamp(0.0, 1.0), end, curve: Curves.easeOutQuart),
+    );
+
+    return AnimatedBuilder(
+      animation: anim,
+      builder: (context, _) {
+        final shadowOpacity = shadowCurve.value;
+        final contentOpacity = contentCurve.value;
+        final slideY = (1.0 - contentCurve.value) * 30.0;
+
+        return Transform.translate(
+          offset: Offset(0, slideY),
+          child: Opacity(
+            opacity: contentOpacity,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.06 * shadowOpacity),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: child,
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -401,22 +427,18 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        gradient: ext.goldGradientDirectional(),
-        borderRadius: BorderRadius.circular(AppConstants.radiusLG),
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: ext.cardBorderColor),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: isTopCard ? 0.15 : 0.05),
-            blurRadius: isTopCard ? 12 : 4,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
       child: Container(
-        margin: const EdgeInsets.all(1.5),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(AppConstants.radiusLG - 1.5),
-        ),
         padding: const EdgeInsets.all(16),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -498,8 +520,8 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
               if (displayRating != null)
                 Row(
                   children: [
-                    Icon(Icons.star,
-                        color: palette.secondary, size: 16),
+                    const Icon(Icons.star,
+                        color: Color(0xFFF59E0B), size: 16),
                     const SizedBox(width: 3),
                     Text(
                       '${displayRating.toStringAsFixed(1)} ($displayReviews)',
@@ -697,10 +719,10 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
                 Row(
                   children: List.generate(
                     snippet.rating?.round() ?? 0,
-                    (index) => Icon(
+                    (index) => const Icon(
                       Icons.star,
                       size: 12,
-                      color: palette.secondary,
+                      color: Color(0xFFF59E0B),
                     ),
                   ),
                 ),
@@ -739,8 +761,6 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
   }
 
   Widget _buildActionButtons(ResultCard result) {
-    final ext = Theme.of(context).extension<BCThemeExtension>()!;
-
     // Discovered salons: WhatsApp contact button
     if (result.isDiscovered) {
       return GestureDetector(
@@ -809,13 +829,17 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          gradient: ext.goldGradientDirectional(),
-          borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+          gradient: const LinearGradient(
+            colors: [Color(0xFFEC4899), Color(0xFF9333EA)],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+          ),
+          borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFFD4AF37).withValues(alpha: 0.4),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
+              color: const Color(0xFFEC4899).withValues(alpha: 0.3),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
@@ -829,81 +853,16 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
                   color: Colors.white,
                 ),
               )
-            : const _GoldShimmerButtonText(text: 'RESERVAR'),
+            : Text(
+                'RESERVAR',
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                  letterSpacing: 1.5,
+                ),
+              ),
       ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Gold shimmer text for the RESERVAR button
-// ---------------------------------------------------------------------------
-
-class _GoldShimmerButtonText extends StatefulWidget {
-  final String text;
-  const _GoldShimmerButtonText({required this.text});
-
-  @override
-  State<_GoldShimmerButtonText> createState() => _GoldShimmerButtonTextState();
-}
-
-class _GoldShimmerButtonTextState extends State<_GoldShimmerButtonText>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 2500),
-      vsync: this,
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        final shimmerOffset = _controller.value * 3.0 - 1.0;
-        return ShaderMask(
-          shaderCallback: (bounds) {
-            return LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: const [
-                Color(0xFF1A1400),
-                Color(0xFFFFF8DC),
-                Color(0xFFFFFFFF),
-                Color(0xFFFFF8DC),
-                Color(0xFF1A1400),
-              ],
-              stops: [
-                (shimmerOffset - 0.2).clamp(0.0, 1.0),
-                (shimmerOffset - 0.05).clamp(0.0, 1.0),
-                shimmerOffset.clamp(0.0, 1.0),
-                (shimmerOffset + 0.05).clamp(0.0, 1.0),
-                (shimmerOffset + 0.2).clamp(0.0, 1.0),
-              ],
-            ).createShader(bounds);
-          },
-          child: Text(
-            widget.text,
-            style: GoogleFonts.poppins(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.2,
-              color: Colors.white,
-            ),
-          ),
-        );
-      },
     );
   }
 }
@@ -1320,7 +1279,7 @@ class _NearbySalonCardState extends State<_NearbySalonCard>
                     Row(
                       children: [
                         if (widget.salon.rating != null) ...[
-                          Icon(Icons.star, size: 14, color: palette.secondary),
+                          const Icon(Icons.star, size: 14, color: Color(0xFFF59E0B)),
                           const SizedBox(width: 3),
                           Text(
                             widget.salon.rating!.toStringAsFixed(1),

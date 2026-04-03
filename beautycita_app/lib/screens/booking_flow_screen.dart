@@ -25,7 +25,7 @@ class BookingFlowScreen extends ConsumerWidget {
       return const SizedBox.shrink();
     }
 
-    return switch (state.step) {
+    final stepWidget = switch (state.step) {
       BookingFlowStep.followUpQuestions => const FollowUpQuestionScreen(),
       BookingFlowStep.subcategorySelect => _LoadingView(serviceName: state.serviceName ?? 'Buscando...'),
       BookingFlowStep.loading => _LoadingView(
@@ -52,13 +52,59 @@ class BookingFlowScreen extends ConsumerWidget {
         ),
       BookingFlowStep.categorySelect => const SizedBox.shrink(),
     };
+
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 350),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeOutCubic,
+      transitionBuilder: (child, animation) {
+        final slideIn = Tween<Offset>(
+          begin: const Offset(0.04, 0),
+          end: Offset.zero,
+        ).animate(animation);
+        return FadeTransition(
+          opacity: animation,
+          child: SlideTransition(
+            position: slideIn,
+            child: child,
+          ),
+        );
+      },
+      child: KeyedSubtree(
+        key: ValueKey(state.step),
+        child: stepWidget,
+      ),
+    );
   }
 }
 
-class _LoadingView extends StatelessWidget {
+class _LoadingView extends StatefulWidget {
   final String serviceName;
 
   const _LoadingView({required this.serviceName});
+
+  @override
+  State<_LoadingView> createState() => _LoadingViewState();
+}
+
+class _LoadingViewState extends State<_LoadingView>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _breathController;
+
+  @override
+  void initState() {
+    super.initState();
+    _breathController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _breathController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -75,17 +121,25 @@ class _LoadingView extends StatelessWidget {
               fontSize: 24,
             ),
             const SizedBox(height: AppConstants.paddingLG),
-            SizedBox(
-              width: 48,
-              height: 48,
-              child: CircularProgressIndicator(
-                color: palette.primary,
-                strokeWidth: 3,
-              ),
+            // Breathing line indicator
+            AnimatedBuilder(
+              animation: _breathController,
+              builder: (context, _) {
+                final t = Curves.easeInOut.transform(_breathController.value);
+                final width = 20.0 + 40.0 * t; // 20px to 60px
+                return Container(
+                  width: width,
+                  height: 3,
+                  decoration: BoxDecoration(
+                    color: palette.primary,
+                    borderRadius: BorderRadius.circular(1.5),
+                  ),
+                );
+              },
             ),
             const SizedBox(height: AppConstants.paddingSM),
             Text(
-              serviceName,
+              widget.serviceName,
               style: GoogleFonts.nunito(
                 fontSize: 14,
                 color: palette.onSurface.withValues(alpha: 0.5),
