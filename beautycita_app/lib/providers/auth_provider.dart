@@ -63,6 +63,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final isRegistered = await _userSession.isRegistered();
 
       if (isRegistered) {
+        // Restore Supabase session before declaring authenticated
+        final sessionOk = await _userSession.ensureSupabaseSession();
+        if (!sessionOk) {
+          state = state.copyWith(
+            isLoading: false,
+            isAuthenticated: false,
+          );
+          return;
+        }
+
         final username = await _userSession.getUsername();
         state = state.copyWith(
           isLoading: false,
@@ -108,11 +118,20 @@ class AuthNotifier extends StateNotifier<AuthState> {
         return false;
       }
 
-      // Generate username
-      final username = UsernameGenerator.generateUsername();
-
-      // Create anonymous Supabase session
+      // Create anonymous Supabase session first (needed for collision check)
       await _userSession.ensureSupabaseSession();
+
+      // Generate username with suffix (220K combos) + collision retry
+      String username = UsernameGenerator.generateUsernameWithSuffix();
+      for (int attempt = 0; attempt < 5; attempt++) {
+        final existing = await SupabaseClientService.client
+            .from('profiles')
+            .select('id')
+            .eq('username', username)
+            .maybeSingle();
+        if (existing == null) break; // no collision
+        username = UsernameGenerator.generateUsernameWithSuffix();
+      }
 
       // Save to local session (also stores Supabase user ID)
       await _userSession.register(username);

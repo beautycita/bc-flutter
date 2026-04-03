@@ -21,7 +21,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
   late Animation<double> _pulseAnimation;
   late Animation<double> _celebrationAnimation;
 
-  final bool _showCelebration = false;
+  bool _showCelebration = false;
+  bool _registering = false;
   String? _generatedUsername;
 
   // Triple-tap detection for hidden email auth
@@ -45,9 +46,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
     _celebrationAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.elasticOut),
     );
-
-    Future.microtask(
-        () => ref.read(authStateProvider.notifier).checkRegistration());
   }
 
   @override
@@ -275,41 +273,58 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
   }
 
   void _handleBiometricTap() async {
-    final authNotifier = ref.read(authStateProvider.notifier);
-    final authState = ref.read(authStateProvider);
+    // Prevent double-tap duplicate accounts
+    if (_registering) return;
+    _registering = true;
 
-    bool success = false;
+    try {
+      final authNotifier = ref.read(authStateProvider.notifier);
+      final authState = ref.read(authStateProvider);
 
-    if (authState.username == null) {
-      // New user: biometric → anonymous account → auto-generated username
-      success = await authNotifier.register();
+      bool success = false;
 
-      if (success && mounted) {
-        // Google One Tap — capture email as discovered_email metadata.
-        // Skip on iOS: Google Sign-In SDK crashes without proper iOS OAuth config.
-        if (!Platform.isIOS) {
-          final linked = await authNotifier.captureGoogleEmail();
-          if (mounted && linked) {
-            ToastService.showSuccess('Google vinculado');
+      if (authState.username == null) {
+        // New user: biometric -> anonymous account -> auto-generated username
+        success = await authNotifier.register();
+
+        if (success && mounted) {
+          // Google One Tap -- capture email as discovered_email metadata.
+          // Skip on iOS: Google Sign-In SDK crashes without proper iOS OAuth config.
+          if (!Platform.isIOS) {
+            final linked = await authNotifier.captureGoogleEmail();
+            if (mounted && linked) {
+              ToastService.showSuccess('Google vinculado');
+            }
+          }
+
+          // Show celebration screen with username for 3 seconds
+          if (mounted) {
+            final username = ref.read(authStateProvider).username;
+            setState(() {
+              _generatedUsername = username;
+              _showCelebration = true;
+            });
+            await Future.delayed(const Duration(seconds: 3));
+            if (mounted) {
+              context.go('/home');
+            }
           }
         }
+      } else {
+        // Returning user: biometric -> login
+        success = await authNotifier.login();
 
-        if (mounted) {
+        if (success && mounted) {
           context.go('/home');
         }
       }
-    } else {
-      // Returning user: biometric → login
-      success = await authNotifier.login();
 
-      if (success && mounted) {
-        context.go('/home');
+      if (!success && mounted) {
+        final error = ref.read(authStateProvider).error;
+        ToastService.showError(error ?? AppConstants.errorAuth);
       }
-    }
-
-    if (!success && mounted) {
-      final error = ref.read(authStateProvider).error;
-      ToastService.showError(error ?? AppConstants.errorAuth);
+    } finally {
+      _registering = false;
     }
   }
 
