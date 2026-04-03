@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:beautycita_core/supabase.dart';
 
+import '../services/webauthn_service.dart';
+
 // ── Auth state model ──────────────────────────────────────────────────────────
 
 @immutable
@@ -267,6 +269,200 @@ class AuthNotifier extends StateNotifier<AuthState> {
         signOut();
       },
     ).subscribe();
+  }
+
+  /// Login with a passkey (WebAuthn assertion).
+  /// Full flow: request challenge → browser assertion → verify → sign in.
+  Future<bool> loginWithPasskey() async {
+    if (!BCSupabase.isInitialized) {
+      state = state.copyWith(
+        errorMessage: 'Servicio no disponible. Intenta mas tarde.',
+      );
+      return false;
+    }
+    if (!WebAuthnService.isSupported()) {
+      state = state.copyWith(
+        errorMessage: 'Tu navegador no soporta autenticacion biometrica.',
+      );
+      return false;
+    }
+
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      // 1. Get challenge from server
+      final chalResponse = await BCSupabase.client.functions.invoke(
+        'webauthn',
+        body: {'action': 'login-challenge'},
+      );
+
+      final chalData = chalResponse.data as Map<String, dynamic>?;
+      if (chalData == null || chalData['challenge'] == null) {
+        state = state.copyWith(
+          isLoading: false,
+          errorMessage: 'Error al obtener desafio de autenticacion.',
+        );
+        return false;
+      }
+
+      final challenge = chalData['challenge'] as String;
+      final rpId = chalData['rpId'] as String? ?? 'beautycita.com';
+
+      // 2. Browser assertion (user touches fingerprint / Windows Hello)
+      final assertion = await WebAuthnService.login(
+        challenge: challenge,
+        rpId: rpId,
+      );
+
+      // 3. Verify with server
+      final verifyResponse = await BCSupabase.client.functions.invoke(
+        'webauthn',
+        body: {
+          'action': 'login-verify',
+          'credential_id': assertion.credentialId,
+          'authenticator_data': assertion.authenticatorData,
+          'client_data_json': assertion.clientDataJSON,
+          'signature': assertion.signature,
+        },
+      );
+
+      final verifyData = verifyResponse.data as Map<String, dynamic>?;
+      if (verifyData == null) {
+        state = state.copyWith(
+          isLoading: false,
+          errorMessage: 'Error al verificar autenticacion.',
+        );
+        return false;
+      }
+
+      if (verifyData['error'] != null) {
+        state = state.copyWith(
+          isLoading: false,
+          errorMessage: verifyData['error'] as String,
+        );
+        return false;
+      }
+
+      // 4. Use the magic link OTP to sign in
+      final email = verifyData['email'] as String?;
+      final emailOtp = verifyData['email_otp'] as String?;
+
+      if (email == null || emailOtp == null) {
+        state = state.copyWith(
+          isLoading: false,
+          errorMessage: 'Error al generar sesion.',
+        );
+        return false;
+      }
+
+      final authResponse = await BCSupabase.client.auth.verifyOTP(
+        email: email,
+        token: emailOtp,
+        type: OtpType.magiclink,
+      );
+
+      state = state.copyWith(isLoading: false, user: authResponse.user);
+      if (authResponse.user != null) {
+        registerWebSession(); // fire-and-forget
+      }
+      return authResponse.user != null;
+    } catch (e) {
+      debugPrint('loginWithPasskey error: $e');
+      final msg = e.toString();
+      if (msg.contains('cancelled') || msg.contains('AbortError')) {
+        state = state.copyWith(isLoading: false, clearError: true);
+        return false;
+      }
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: 'No se pudo autenticar con biometrico.',
+      );
+      return false;
+    }
+  }
+
+  /// Register a passkey for the currently authenticated user.
+  /// Call after email/password sign-up to add a passkey.
+  Future<bool> registerPasskey({String? deviceName}) async {
+    if (!BCSupabase.isInitialized || state.user == null) {
+      state = state.copyWith(
+        errorMessage: 'Debes iniciar sesion primero.',
+      );
+      return false;
+    }
+    if (!WebAuthnService.isSupported()) {
+      state = state.copyWith(
+        errorMessage: 'Tu navegador no soporta autenticacion biometrica.',
+      );
+      return false;
+    }
+
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      // 1. Get challenge from server
+      final chalResponse = await BCSupabase.client.functions.invoke(
+        'webauthn',
+        body: {'action': 'register-challenge'},
+      );
+
+      final chalData = chalResponse.data as Map<String, dynamic>?;
+      if (chalData == null || chalData['challenge'] == null) {
+        state = state.copyWith(
+          isLoading: false,
+          errorMessage: 'Error al obtener desafio de registro.',
+        );
+        return false;
+      }
+
+      final challenge = chalData['challenge'] as String;
+      final rp = chalData['rp'] as Map<String, dynamic>;
+      final user = chalData['user'] as Map<String, dynamic>;
+
+      // 2. Browser attestation (user creates credential)
+      final registration = await WebAuthnService.register(
+        challenge: challenge,
+        rpId: rp['id'] as String,
+        rpName: rp['name'] as String,
+        userId: user['id'] as String,
+        userName: user['name'] as String,
+        userDisplayName: user['displayName'] as String,
+      );
+
+      // 3. Verify with server
+      final verifyResponse = await BCSupabase.client.functions.invoke(
+        'webauthn',
+        body: {
+          'action': 'register-verify',
+          'credential_id': registration.credentialId,
+          'attestation_object': registration.attestationObject,
+          'client_data_json': registration.clientDataJSON,
+          'device_name': deviceName,
+        },
+      );
+
+      final verifyData = verifyResponse.data as Map<String, dynamic>?;
+      if (verifyData?['error'] != null) {
+        state = state.copyWith(
+          isLoading: false,
+          errorMessage: verifyData!['error'] as String,
+        );
+        return false;
+      }
+
+      state = state.copyWith(isLoading: false);
+      return true;
+    } catch (e) {
+      debugPrint('registerPasskey error: $e');
+      final msg = e.toString();
+      if (msg.contains('cancelled') || msg.contains('AbortError')) {
+        state = state.copyWith(isLoading: false, clearError: true);
+        return false;
+      }
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: 'No se pudo registrar la llave de acceso.',
+      );
+      return false;
+    }
   }
 
   /// Clear any error message.
