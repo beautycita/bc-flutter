@@ -5,6 +5,14 @@ import '../screens/invite_salon_screen.dart' show DiscoveredSalon;
 /// API layer for the salon invite experience.
 /// Calls edge functions for discovering, searching, and inviting salons.
 class InviteService {
+  /// Sanitize user input before sending to edge functions.
+  /// Strips control characters and limits length to prevent abuse.
+  static String _sanitize(String input, {int maxLength = 500}) {
+    return input
+        .replaceAll(RegExp(r'[\x00-\x1F\x7F]'), '') // strip control chars
+        .trim()
+        .substring(0, input.length.clamp(0, maxLength));
+  }
   /// Fetch top nearby discovered salons, optionally filtered by service type.
   Future<List<DiscoveredSalon>> fetchNearbySalons({
     required double lat,
@@ -60,7 +68,7 @@ class InviteService {
       'outreach-discovered-salon',
       body: {
         'action': 'search',
-        'query': query,
+        'query': _sanitize(query, maxLength: 200),
         'lat': lat,
         'lng': lng,
       },
@@ -97,7 +105,7 @@ class InviteService {
       'on-demand-scrape',
       body: {
         'action': 'search_place',
-        'query': query,
+        'query': _sanitize(query, maxLength: 200),
         'lat': lat,
         'lng': lng,
       },
@@ -162,7 +170,7 @@ class InviteService {
       'aphrodite-chat',
       body: {
         'action': 'generate_invite_message',
-        'user_name': userName,
+        'user_name': _sanitize(userName, maxLength: 100),
         'salon_name': salon.name,
         'salon_city': salon.city,
         // ignore: use_null_aware_elements
@@ -198,7 +206,7 @@ class InviteService {
       body: {
         'action': 'invite',
         'discovered_salon_id': salonId,
-        'invite_message': inviteMessage,
+        'invite_message': _sanitize(inviteMessage, maxLength: 1000),
       },
     ).timeout(const Duration(seconds: 30));
 

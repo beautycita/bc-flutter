@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../config/web_theme.dart';
 import '../../providers/admin_salons_provider.dart';
 import '../../providers/outreach_contact_provider.dart';
 import '../../widgets/contact_panel.dart';
@@ -82,6 +83,10 @@ class _RegisteredSalonDetailContentState
                 children: [
                   _VerifiedBadge(verified: salon.verified),
                   _StripeStatusBadge(status: salon.stripeStatus),
+                  _BankingStatusBadge(
+                    bankingComplete: salon.bankingComplete,
+                    idStatus: salon.idVerificationStatus,
+                  ),
                   if (!salon.isActive) _SuspensionBadge(suspended: true),
                   if (salon.onHold) _SuspensionBadge(suspended: false),
                 ],
@@ -170,6 +175,15 @@ class _RegisteredSalonDetailContentState
         _SectionTitle(title: 'Licencia Municipal'),
         const SizedBox(height: BCSpacing.sm),
         _buildLicenseSection(context, salon),
+
+        const SizedBox(height: BCSpacing.lg),
+        const Divider(),
+        const SizedBox(height: BCSpacing.md),
+
+        // ── Banking ───────────────────────────────────────────────────
+        _SectionTitle(title: 'Informacion Bancaria'),
+        const SizedBox(height: BCSpacing.sm),
+        _buildBankingSection(context, salon),
 
         const SizedBox(height: BCSpacing.lg),
         const Divider(),
@@ -733,6 +747,194 @@ class _RegisteredSalonDetailContentState
                 ),
               ),
             ],
+          ),
+        ],
+      ],
+    );
+  }
+
+  bool _overridingBanking = false;
+
+  Widget _buildBankingSection(BuildContext context, RegisteredSalon salon) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+
+    final (statusLabel, statusColor) = salon.bankingComplete
+        ? ('Completa', Colors.green)
+        : switch (salon.idVerificationStatus) {
+            'pending' => ('Verificacion en proceso', Colors.orange),
+            'rejected' => ('ID rechazada', Colors.red),
+            'verified' => ('ID verificada, CLABE pendiente', Colors.orange),
+            _ => ('No iniciada', kWebTextHint),
+          };
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Status badge
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: statusColor.withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Text(
+            statusLabel,
+            style: TextStyle(
+              color: statusColor,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        const SizedBox(height: BCSpacing.sm),
+
+        // Banking details (if any data exists)
+        if (salon.clabe != null) ...[
+          _InfoRow(
+            icon: Icons.account_balance_outlined,
+            label: 'CLABE',
+            value: salon.clabe!,
+          ),
+        ],
+        if (salon.bankName != null)
+          _InfoRow(
+            icon: Icons.business_outlined,
+            label: 'Banco',
+            value: salon.bankName!,
+          ),
+        if (salon.beneficiaryName != null)
+          _InfoRow(
+            icon: Icons.person_outline,
+            label: 'Beneficiario',
+            value: salon.beneficiaryName!,
+          ),
+
+        if (salon.clabe == null &&
+            salon.idVerificationStatus == 'none') ...[
+          Row(
+            children: [
+              Icon(Icons.info_outline,
+                  size: 16,
+                  color: colors.onSurface.withValues(alpha: 0.4)),
+              const SizedBox(width: BCSpacing.sm),
+              Text(
+                'Sin informacion bancaria',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colors.onSurface.withValues(alpha: 0.5),
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
+          ),
+        ],
+
+        // Manual override button
+        if (!salon.bankingComplete) ...[
+          const SizedBox(height: BCSpacing.sm),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _overridingBanking
+                  ? null
+                  : () async {
+                      final confirm = await showDialog<bool>(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: const Text('Aprobar banca manualmente'),
+                          content: const Text(
+                            'Esto marcara la verificacion bancaria como completa '
+                            'y permitira que el salon reciba reservas. '
+                            'Solo usa esto si verificaste la informacion por otro medio.',
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx, false),
+                              child: const Text('Cancelar'),
+                            ),
+                            FilledButton(
+                              onPressed: () => Navigator.pop(ctx, true),
+                              child: const Text('Aprobar'),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (confirm != true || !mounted) return;
+                      setState(() => _overridingBanking = true);
+                      try {
+                        await BCSupabase.client
+                            .from(BCTables.businesses)
+                            .update({
+                          'banking_complete': true,
+                          'id_verification_status': 'verified',
+                        }).eq('id', salon.id);
+                        ref.invalidate(registeredSalonsProvider);
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Error: $e')),
+                          );
+                        }
+                      } finally {
+                        if (mounted) {
+                          setState(() => _overridingBanking = false);
+                        }
+                      }
+                    },
+              icon: _overridingBanking
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.verified_outlined, size: 18),
+              label: const Text('Aprobar banca manualmente'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.green,
+              ),
+            ),
+          ),
+        ] else ...[
+          const SizedBox(height: BCSpacing.sm),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _overridingBanking
+                  ? null
+                  : () async {
+                      setState(() => _overridingBanking = true);
+                      try {
+                        await BCSupabase.client
+                            .from(BCTables.businesses)
+                            .update({
+                          'banking_complete': false,
+                          'id_verification_status': 'rejected',
+                        }).eq('id', salon.id);
+                        ref.invalidate(registeredSalonsProvider);
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Error: $e')),
+                          );
+                        }
+                      } finally {
+                        if (mounted) {
+                          setState(() => _overridingBanking = false);
+                        }
+                      }
+                    },
+              icon: _overridingBanking
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.block_outlined, size: 18),
+              label: const Text('Revocar verificacion bancaria'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.red,
+              ),
+            ),
           ),
         ],
       ],
@@ -1855,6 +2057,42 @@ class _StripeStatusBadge extends StatelessWidget {
       'not_started' => ('Sin Stripe', Colors.grey),
       _ => (status, Colors.grey),
     };
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(BCSpacing.radiusFull),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+
+class _BankingStatusBadge extends StatelessWidget {
+  const _BankingStatusBadge({
+    required this.bankingComplete,
+    required this.idStatus,
+  });
+  final bool bankingComplete;
+  final String idStatus;
+
+  @override
+  Widget build(BuildContext context) {
+    final (label, color) = bankingComplete
+        ? ('Banca OK', Colors.green)
+        : switch (idStatus) {
+            'pending' => ('ID pendiente', Colors.orange),
+            'rejected' => ('ID rechazada', Colors.red),
+            _ => ('Sin banca', Colors.grey),
+          };
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),

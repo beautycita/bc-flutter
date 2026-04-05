@@ -921,6 +921,123 @@ class _CategoryCardState extends ConsumerState<_CategoryCard>
     );
   }
 
+  // Map category IDs to asset images (null = use icon fallback)
+  static const _categoryImages = <String, String>{
+    'nails': 'assets/categories/unas.jpg',
+    // Add more as images are generated:
+    // 'hair': 'assets/categories/cabello.jpg',
+    // 'lashes_brows': 'assets/categories/pestanas.jpg',
+    // 'makeup': 'assets/categories/maquillaje.jpg',
+    // 'facial': 'assets/categories/facial.jpg',
+    // 'body_spa': 'assets/categories/spa.jpg',
+    // 'specialized': 'assets/categories/especializado.jpg',
+    // 'barberia': 'assets/categories/barberia.jpg',
+  };
+
+  Widget _buildCardContent(ServiceCategory category, Color categoryColor) {
+    final imagePath = _categoryImages[category.id];
+
+    if (imagePath != null) {
+      // Photo-backed card
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(19),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.asset(
+              imagePath,
+              fit: BoxFit.cover,
+            ),
+            // Gradient overlay for text readability
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    Colors.black.withValues(alpha: 0.5),
+                  ],
+                  stops: const [0.4, 1.0],
+                ),
+              ),
+            ),
+            // Category name at bottom
+            Positioned(
+              left: 8,
+              right: 8,
+              bottom: 10,
+              child: Text(
+                category.nameEs,
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                  height: 1.2,
+                  shadows: [
+                    Shadow(
+                      color: Colors.black.withValues(alpha: 0.5),
+                      blurRadius: 4,
+                    ),
+                  ],
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Default icon-based card
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Container(
+          width: 72,
+          height: 72,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: LinearGradient(
+              colors: [
+                categoryColor.withValues(alpha: 0.12),
+                categoryColor.withValues(alpha: 0.06),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: Center(
+            child: getCategoryIcon(
+              variant: widget.variant,
+              categoryId: category.id,
+              color: categoryColor,
+              size: 36,
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: Text(
+            category.nameEs,
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: categoryColor.withValues(alpha: 0.85),
+              height: 1.2,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   void dispose() {
     _controller.dispose();
@@ -984,52 +1101,7 @@ class _CategoryCardState extends ConsumerState<_CategoryCard>
               ),
             ],
           ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // Colored circle behind emoji
-              Container(
-                width: 72,
-                height: 72,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [
-                      categoryColor.withValues(alpha: 0.12),
-                      categoryColor.withValues(alpha: 0.06),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                ),
-                child: Center(
-                  child: getCategoryIcon(
-                    variant: widget.variant,
-                    categoryId: category.id,
-                    color: categoryColor,
-                    size: 36,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 10),
-              // Category name
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Text(
-                  category.nameEs,
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: categoryColor.withValues(alpha: 0.85),
-                    height: 1.2,
-                  ),
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
+          child: _buildCardContent(category, categoryColor),
         ),
       ),
     );

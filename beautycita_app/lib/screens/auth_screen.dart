@@ -94,6 +94,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
         return StatefulBuilder(
           builder: (ctx, setSheetState) {
             Future<void> submit() async {
+              if (loading) return; // Prevent double-submit
               if (emailCtl.text.trim().isEmpty ||
                   passCtl.text.trim().isEmpty) {
                 return;

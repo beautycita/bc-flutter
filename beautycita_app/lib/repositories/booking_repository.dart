@@ -17,6 +17,7 @@ class BookingRepository {
     String? paymentMethod,
     String? transportMode,
     String? staffId,
+    String bookingSource = 'salon_direct',
   }) async {
     // Validate inputs
     if (durationMinutes <= 0) throw Exception('Duracion invalida');
@@ -60,10 +61,11 @@ class BookingRepository {
       'notes': notes,
       'status': paymentStatus == 'paid' ? 'confirmed' : 'pending',
       'payment_status': dbPaymentStatus,
-      'staff_id': ?staffId,
-      'payment_intent_id': ?paymentIntentId,
-      'payment_method': ?paymentMethod,
-      'transport_mode': ?transportMode,
+      if (staffId != null) 'staff_id': staffId,
+      if (paymentIntentId != null) 'payment_intent_id': paymentIntentId,
+      if (paymentMethod != null) 'payment_method': paymentMethod,
+      if (transportMode != null) 'transport_mode': transportMode,
+      'booking_source': bookingSource,
     };
 
     final response = await SupabaseClientService.client

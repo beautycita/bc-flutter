@@ -309,8 +309,8 @@ class _BusinessCalendarScreenState
     final picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate,
-      firstDate: DateTime(2026),
-      lastDate: DateTime(2030),
+      firstDate: DateTime(DateTime.now().year - 1),
+      lastDate: DateTime(DateTime.now().year + 5),
     );
     if (picked != null) setState(() => _selectedDate = picked);
   }
@@ -3105,12 +3105,9 @@ class _WalkinSheetState extends ConsumerState<_WalkinSheet> {
         }
       }
 
-      // Calculate tax withholdings (LISR Art. 113-A: ISR 2.5%, LIVA Art. 18-J: IVA 8%)
-      final taxBase = price / 1.16; // Remove IVA to get base
-      final isrWithheld = taxBase * 0.025;
-      final ivaWithheld = taxBase * 0.08;
-      final providerNet = price - isrWithheld - ivaWithheld;
-
+      // Walk-in bookings: salon's own client, salon's own tax responsibility.
+      // BC is SaaS here, NOT an intermediary. No withholding, no commission.
+      // LISR Art. 113-A / LIVA Art. 18-J only apply when BC is the platform intermediary.
       final data = <String, dynamic>{
         'business_id': biz['id'],
         'service_name': serviceName,
@@ -3118,13 +3115,11 @@ class _WalkinSheetState extends ConsumerState<_WalkinSheet> {
         'starts_at': startsAt.toUtc().toIso8601String(),
         'ends_at': endsAt.toUtc().toIso8601String(),
         'price': price,
-        'tax_base': double.parse(taxBase.toStringAsFixed(2)),
-        'isr_withheld': double.parse(isrWithheld.toStringAsFixed(2)),
-        'iva_withheld': double.parse(ivaWithheld.toStringAsFixed(2)),
-        'provider_net': double.parse(providerNet.toStringAsFixed(2)),
+        'provider_net': price, // Salon keeps 100% — their client, their taxes
         'status': 'confirmed',
         'payment_method': 'cash_direct',
         'payment_status': 'paid',
+        'booking_source': 'walk_in',
       };
       if (!_isOtherService) data['service_id'] = _serviceId;
       final customerName = _customerNameCtrl.text.trim();
@@ -3133,47 +3128,6 @@ class _WalkinSheetState extends ConsumerState<_WalkinSheet> {
       if (notes.isNotEmpty) data['notes'] = notes;
 
       await SupabaseClientService.client.from('appointments').insert(data);
-
-      final bizId = biz['id'] as String;
-      final commission = price * 0.03;
-
-      // Record 3% BC commission (charged to salon — cash collected by them)
-      SupabaseClientService.client.from('commission_records').insert({
-        'business_id': bizId,
-        'amount': double.parse(commission.toStringAsFixed(2)),
-        'rate': 0.03,
-        'source': 'appointment',
-        'period_month': DateTime.now().month,
-        'period_year': DateTime.now().year,
-        'status': 'collected',
-      }).then((_) {}).catchError((_) {});
-
-      // Record tax withholding in ledger
-      SupabaseClientService.client.from('tax_withholdings').insert({
-        'business_id': bizId,
-        'payment_type': 'cash_direct',
-        'jurisdiction': 'MX',
-        'gross_amount': price,
-        'tax_base': double.parse(taxBase.toStringAsFixed(2)),
-        'iva_portion': double.parse((price - taxBase).toStringAsFixed(2)),
-        'platform_fee': double.parse(commission.toStringAsFixed(2)),
-        'isr_rate': 0.025,
-        'iva_rate': 0.08,
-        'isr_withheld': double.parse(isrWithheld.toStringAsFixed(2)),
-        'iva_withheld': double.parse(ivaWithheld.toStringAsFixed(2)),
-        'provider_net': double.parse(providerNet.toStringAsFixed(2)),
-        'period_year': DateTime.now().year,
-        'period_month': DateTime.now().month,
-      }).then((_) {}).catchError((_) {});
-
-      // Debt collection on cash payments too
-      SupabaseClientService.client.rpc('calculate_payout_with_debt', params: {
-        'p_business_id': bizId,
-        'p_gross_amount': price,
-        'p_commission': commission,
-        'p_iva_withheld': ivaWithheld,
-        'p_isr_withheld': isrWithheld,
-      }).then((_) {}).catchError((_) {});
 
       widget.onSaved();
       if (mounted) Navigator.pop(context);

@@ -672,6 +672,13 @@ class _CommissionBreakdownSection extends ConsumerWidget {
           centered: false,
           titleSize: 20,
         ),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Text(
+            'Solo se cobran comisiones en citas que BeautyCita te envia. Tus propios clientes y walk-ins: 0%.',
+            style: theme.textTheme.bodySmall?.copyWith(color: kWebTextHint),
+          ),
+        ),
         const SizedBox(height: 12),
         commissionsAsync.when(
           loading: () => const Center(
@@ -697,7 +704,7 @@ class _CommissionBreakdownSection extends ConsumerWidget {
                         child: const Icon(Icons.pie_chart_outline, size: 28, color: kWebTextHint),
                       ),
                       const SizedBox(height: 8),
-                      Text('Sin comisiones registradas', style: theme.textTheme.bodySmall?.copyWith(color: kWebTextHint)),
+                      Text('Sin comisiones — aun no te hemos enviado clientes', style: theme.textTheme.bodySmall?.copyWith(color: kWebTextHint)),
                     ],
                   ),
                 ),

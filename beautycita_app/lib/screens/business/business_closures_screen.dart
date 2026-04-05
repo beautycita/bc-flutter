@@ -5,6 +5,14 @@ import 'package:intl/intl.dart';
 import '../../providers/business_provider.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
+import 'business_shell_screen.dart' show businessTabProvider;
+
+// Staff member entry for closure picker: null id = whole salon
+class _StaffOption {
+  final String? id;
+  final String name;
+  const _StaffOption({this.id, required this.name});
+}
 
 // ---------------------------------------------------------------------------
 // Provider
@@ -14,7 +22,7 @@ final businessClosuresProvider =
     FutureProvider.family<List<Map<String, dynamic>>, String>((ref, bizId) async {
   final data = await SupabaseClientService.client
       .from('business_closures')
-      .select()
+      .select('*, staff:staff_id(id, first_name, last_name)')
       .eq('business_id', bizId)
       .gte('closure_date', DateTime.now().subtract(const Duration(days: 30)).toIso8601String().substring(0, 10))
       .order('closure_date');
@@ -132,6 +140,9 @@ class _BusinessClosuresSectionState extends ConsumerState<BusinessClosuresSectio
   bool _holidaysExpanded = true;
   bool _vacationExpanded = false;
 
+  // Staff selector — null means whole salon
+  _StaffOption _selectedStaff = const _StaffOption(id: null, name: 'Todo el salon');
+
   // Vacation state
   DateTime? _vacStart;
   DateTime? _vacEnd;
@@ -146,16 +157,21 @@ class _BusinessClosuresSectionState extends ConsumerState<BusinessClosuresSectio
 
   // ------ Conflict checker (shared) ------
 
-  /// Returns count of conflicting appointments on a given date. Returns 0 on error.
+  /// Returns count of conflicting appointments on a given date.
+  /// When a specific staff member is selected, only counts their appointments.
   Future<int> _countConflicts(String bizId, String dateStr) async {
     try {
-      final conflicts = await SupabaseClientService.client
+      var query = SupabaseClientService.client
           .from('appointments')
           .select('id')
           .eq('business_id', bizId)
           .gte('starts_at', '${dateStr}T00:00:00')
           .lte('starts_at', '${dateStr}T23:59:59')
           .inFilter('status', ['pending', 'confirmed']);
+      if (_selectedStaff.id != null) {
+        query = query.eq('staff_id', _selectedStaff.id!);
+      }
+      final conflicts = await query;
       return (conflicts as List).length;
     } catch (e) {
       debugPrint('Conflict check error: $e');
@@ -163,28 +179,47 @@ class _BusinessClosuresSectionState extends ConsumerState<BusinessClosuresSectio
     }
   }
 
-  /// Show conflict warning and return true if user wants to proceed.
+  /// Show conflict warning. Returns true if user resolves or force-proceeds.
+  /// Offers to open the calendar so the salon owner can drag-and-drop reschedule.
   Future<bool> _confirmConflicts(int count) async {
     if (count == 0) return true;
-    final proceed = await showDialog<bool>(
+    final staffLabel = _selectedStaff.id != null ? _selectedStaff.name : 'el salon';
+    final result = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Citas existentes', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700)),
+        title: Text('Citas por reagendar', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700)),
         content: Text(
-          'Hay $count cita(s) confirmada(s) para ese dia. Se cancelaran automaticamente si cierras.',
+          '$staffLabel tiene $count cita(s) confirmada(s) ese dia. '
+          'Reagendalas en el calendario antes de cerrar.',
           style: GoogleFonts.nunito(fontSize: 14),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
-            child: const Text('Cerrar y cancelar citas'),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, 'cancel'),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton.icon(
+            onPressed: () => Navigator.pop(ctx, 'calendar'),
+            icon: const Icon(Icons.calendar_month, size: 18),
+            label: const Text('Abrir calendario'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, 'force'),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: const Text('Cerrar de todos modos'),
           ),
         ],
       ),
     );
-    return proceed == true;
+    if (result == 'calendar') {
+      // Navigate to calendar tab (index 1) so they can reschedule
+      ref.read(businessTabProvider.notifier).state = 1;
+      ToastService.showInfo('Reagenda las citas y vuelve a intentar el cierre');
+      return false;
+    }
+    return result == 'force';
   }
 
   // ------ Holiday toggle ------
@@ -209,6 +244,7 @@ class _BusinessClosuresSectionState extends ConsumerState<BusinessClosuresSectio
           'closure_date': dateStr,
           'reason': holiday.name,
           'all_day': true,
+          if (_selectedStaff.id != null) 'staff_id': _selectedStaff.id,
         });
         ref.invalidate(businessClosuresProvider(bizId));
         ToastService.showSuccess('${holiday.name} — Cerrado');
@@ -265,25 +301,42 @@ class _BusinessClosuresSectionState extends ConsumerState<BusinessClosuresSectio
     }
     if (!mounted) return;
     if (totalConflicts > 0) {
-      final proceed = await showDialog<bool>(
+      final staffLabel = _selectedStaff.id != null ? _selectedStaff.name : 'el salon';
+      final result = await showDialog<String>(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: Text('Citas existentes', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700)),
+          title: Text('Citas por reagendar', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700)),
           content: Text(
-            'Hay $totalConflicts cita(s) confirmada(s) en ese rango. Se cancelaran automaticamente.',
+            '$staffLabel tiene $totalConflicts cita(s) confirmada(s) en ese rango. '
+            'Reagendalas en el calendario antes de cerrar.',
             style: GoogleFonts.nunito(fontSize: 14),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
-            FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
-              child: const Text('Cerrar y cancelar citas'),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, 'cancel'),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton.icon(
+              onPressed: () => Navigator.pop(ctx, 'calendar'),
+              icon: const Icon(Icons.calendar_month, size: 18),
+              label: const Text('Abrir calendario'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, 'force'),
+              style: TextButton.styleFrom(
+                foregroundColor: Theme.of(context).colorScheme.error,
+              ),
+              child: const Text('Cerrar de todos modos'),
             ),
           ],
         ),
       );
-      if (proceed != true || !mounted) return;
+      if (result == 'calendar') {
+        ref.read(businessTabProvider.notifier).state = 1;
+        ToastService.showInfo('Reagenda las citas y vuelve a intentar el cierre');
+        return;
+      }
+      if (result != 'force' || !mounted) return;
     }
 
     setState(() => _vacLoading = true);
@@ -298,9 +351,10 @@ class _BusinessClosuresSectionState extends ConsumerState<BusinessClosuresSectio
           'closure_date': _dateKey(d),
           'reason': reason,
           'all_day': true,
+          if (_selectedStaff.id != null) 'staff_id': _selectedStaff.id,
         });
       }
-      await SupabaseClientService.client.from('business_closures').upsert(rows, onConflict: 'business_id,closure_date');
+      await SupabaseClientService.client.from('business_closures').upsert(rows);
       ref.invalidate(businessClosuresProvider(bizId));
       ToastService.showSuccess('$days dias de vacaciones agregados');
       setState(() {
@@ -363,6 +417,7 @@ class _BusinessClosuresSectionState extends ConsumerState<BusinessClosuresSectio
         'closure_date': dateStr,
         'reason': reason.trim().isEmpty ? null : reason.trim(),
         'all_day': true,
+        if (_selectedStaff.id != null) 'staff_id': _selectedStaff.id,
       });
       ref.invalidate(businessClosuresProvider(bizId));
       ToastService.showSuccess('Cierre agregado');
@@ -440,29 +495,86 @@ class _BusinessClosuresSectionState extends ConsumerState<BusinessClosuresSectio
             child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
           ),
           error: (e, _) => Text('Error: $e', style: GoogleFonts.nunito(color: colors.error)),
-          data: (closures) => Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // ============================================================
-              // SECTION 1: Dias Festivos
-              // ============================================================
-              _buildHolidaysSection(bizId, closures, colors),
+          data: (closures) {
+            // Build staff options from the staff provider
+            final staffAsync = ref.watch(businessStaffProvider);
+            final staffList = staffAsync.valueOrNull ?? [];
+            final staffOptions = <_StaffOption>[
+              const _StaffOption(id: null, name: 'Todo el salon'),
+              ...staffList.map((s) => _StaffOption(
+                id: s['id'] as String,
+                name: '${s['first_name'] ?? ''} ${s['last_name'] ?? ''}'.trim(),
+              )),
+            ];
 
-              const SizedBox(height: 16),
+            // Filter closures based on selected staff
+            final filteredClosures = _selectedStaff.id == null
+                ? closures.where((c) => c['staff_id'] == null).toList()
+                : closures.where((c) => c['staff_id'] == _selectedStaff.id).toList();
 
-              // ============================================================
-              // SECTION 2: Vacaciones
-              // ============================================================
-              _buildVacationSection(bizId, colors),
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Staff picker
+                if (staffList.length > 1) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: colors.outline.withValues(alpha: 0.3)),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String?>(
+                        value: _selectedStaff.id,
+                        isExpanded: true,
+                        icon: Icon(Icons.person, size: 20, color: colors.primary),
+                        style: GoogleFonts.poppins(fontSize: 14, color: colors.onSurface),
+                        items: staffOptions.map((opt) => DropdownMenuItem<String?>(
+                          value: opt.id,
+                          child: Row(
+                            children: [
+                              Icon(
+                                opt.id == null ? Icons.store : Icons.person_outline,
+                                size: 18,
+                                color: opt.id == null ? colors.primary : colors.onSurface.withValues(alpha: 0.6),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(opt.name),
+                            ],
+                          ),
+                        )).toList(),
+                        onChanged: (val) {
+                          setState(() {
+                            _selectedStaff = staffOptions.firstWhere((o) => o.id == val);
+                          });
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
 
-              const SizedBox(height: 16),
+                // ============================================================
+                // SECTION 1: Dias Festivos
+                // ============================================================
+                _buildHolidaysSection(bizId, filteredClosures, colors),
 
-              // ============================================================
-              // SECTION 3: Cierres Programados (existing closures list)
-              // ============================================================
-              _buildScheduledClosuresSection(bizId, closures, colors),
-            ],
-          ),
+                const SizedBox(height: 16),
+
+                // ============================================================
+                // SECTION 2: Vacaciones
+                // ============================================================
+                _buildVacationSection(bizId, colors),
+
+                const SizedBox(height: 16),
+
+                // ============================================================
+                // SECTION 3: Cierres Programados (existing closures list)
+                // ============================================================
+                _buildScheduledClosuresSection(bizId, filteredClosures, colors),
+              ],
+            );
+          },
         );
       },
     );
@@ -816,6 +928,10 @@ class _BusinessClosuresSectionState extends ConsumerState<BusinessClosuresSectio
               final dateStr = c['closure_date'] as String? ?? '';
               final dt = DateTime.tryParse(dateStr);
               final reason = c['reason'] as String? ?? '';
+              final staffData = c['staff'] as Map<String, dynamic>?;
+              final staffName = staffData != null
+                  ? '${staffData['first_name'] ?? ''} ${staffData['last_name'] ?? ''}'.trim()
+                  : null;
               final today = DateTime.now();
               final isPast = dt != null && dt.isBefore(DateTime(today.year, today.month, today.day));
               final formatted = dt != null ? _dateFmt.format(dt) : dateStr;
@@ -846,6 +962,8 @@ class _BusinessClosuresSectionState extends ConsumerState<BusinessClosuresSectio
                           ),
                           if (reason.isNotEmpty)
                             Text(reason, style: GoogleFonts.nunito(fontSize: 12, color: colors.onSurface.withValues(alpha: 0.5))),
+                          if (staffName != null)
+                            Text(staffName, style: GoogleFonts.nunito(fontSize: 11, fontStyle: FontStyle.italic, color: colors.primary.withValues(alpha: 0.7))),
                         ],
                       ),
                     ),

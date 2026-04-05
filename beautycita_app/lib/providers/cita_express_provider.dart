@@ -118,18 +118,33 @@ class CitaExpressNotifier extends StateNotifier<CitaExpressState> {
     try {
       final client = SupabaseClientService.client;
 
-      // Walk-in QR: only require verified (business may not be "active" in search yet).
+      // Validate business exists, is verified, and is active before rendering.
       final bizResponse = await client
           .from('businesses')
           .select('*, services(*)')
           .eq('id', businessId)
-          .eq('is_verified', true)
           .maybeSingle();
 
       if (bizResponse == null) {
         state = state.copyWith(
           step: CitaExpressStep.error,
           error: 'Salon no encontrado',
+        );
+        return;
+      }
+
+      if (bizResponse['is_verified'] != true) {
+        state = state.copyWith(
+          step: CitaExpressStep.error,
+          error: 'Este salon aun no esta verificado',
+        );
+        return;
+      }
+
+      if (bizResponse['is_active'] != true) {
+        state = state.copyWith(
+          step: CitaExpressStep.error,
+          error: 'Este salon no esta disponible actualmente',
         );
         return;
       }
@@ -242,6 +257,12 @@ class CitaExpressNotifier extends StateNotifier<CitaExpressState> {
       final isCashDirect = state.paymentMethod == 'cash_direct';
       final price = result.service.price ?? 0;
 
+      // Determine booking source: if client books at the salon they scanned,
+      // it's cita_express (salon's own client). If BC redirected them to a
+      // different salon with better availability, it's bc_marketplace.
+      final isRedirected = result.business.id != state.businessId;
+      final source = isRedirected ? 'bc_marketplace' : 'cita_express';
+
       final booking = await _bookingRepo.createBooking(
         providerId: result.business.id,
         providerServiceId: result.service.id ?? '',
@@ -253,9 +274,12 @@ class CitaExpressNotifier extends StateNotifier<CitaExpressState> {
         paymentMethod: state.paymentMethod,
         paymentStatus: isCashDirect ? 'paid' : null,
         staffId: result.staff?.id,
+        bookingSource: source,
       );
 
-      // For cash payments: record commission + tax withholding
+      // Tax withholding + commission apply whether client stayed at scanned
+      // salon or was redirected. BC processed the booking either way
+      // (intermediary per LISR 113-A / LIVA 18-J).
       if (isCashDirect && price > 0) {
         final bizId = result.business.id;
         final taxBase = price / 1.16;
@@ -291,7 +315,6 @@ class CitaExpressNotifier extends StateNotifier<CitaExpressState> {
           'jurisdiction': 'MX',
           'gross_amount': price,
           'tax_base': double.parse(taxBase.toStringAsFixed(2)),
-          'iva_portion': double.parse((price - taxBase).toStringAsFixed(2)),
           'platform_fee': double.parse(commission.toStringAsFixed(2)),
           'isr_rate': 0.025,
           'iva_rate': 0.08,

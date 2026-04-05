@@ -254,6 +254,25 @@ class _RegisteredTab extends ConsumerWidget {
               );
             },
           ),
+          _SalonFilterDropdown(
+            value: filter.bankingComplete == null
+                ? null
+                : (filter.bankingComplete! ? 'true' : 'false'),
+            hint: 'Banca',
+            items: const {
+              null: 'Todos',
+              'true': 'Banca completa',
+              'false': 'Banca pendiente',
+            },
+            onChanged: (value) {
+              ref.read(registeredSalonsFilterProvider.notifier).state =
+                  filter.copyWith(
+                bankingComplete: () =>
+                    value == null ? null : value == 'true',
+                page: 0,
+              );
+            },
+          ),
         ],
         onClearAll: filter.hasActiveFilters
             ? () {
@@ -353,6 +372,15 @@ class _RegisteredTab extends ConsumerWidget {
             width: 100,
             cellBuilder: (salon) => _StripeChip(
               status: salon.stripeStatus,
+            ),
+          ),
+          BCColumn<RegisteredSalon>(
+            id: 'banking_complete',
+            label: 'Banca',
+            width: 90,
+            cellBuilder: (salon) => _BankingChip(
+              bankingComplete: salon.bankingComplete,
+              idStatus: salon.idVerificationStatus,
             ),
           ),
           BCColumn<RegisteredSalon>(
@@ -944,6 +972,39 @@ class _StripeChip extends StatelessWidget {
       'not_started' => ('Sin iniciar', kWebTextHint),
       _ => (status, kWebTextHint),
     };
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+
+class _BankingChip extends StatelessWidget {
+  const _BankingChip({required this.bankingComplete, required this.idStatus});
+  final bool bankingComplete;
+  final String idStatus;
+
+  @override
+  Widget build(BuildContext context) {
+    final (label, color) = bankingComplete
+        ? ('Completa', Colors.green)
+        : switch (idStatus) {
+            'pending' => ('Verificando', Colors.orange),
+            'rejected' => ('Rechazada', Colors.red),
+            _ => ('Pendiente', kWebTextHint),
+          };
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),

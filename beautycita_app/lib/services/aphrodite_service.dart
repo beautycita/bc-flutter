@@ -160,7 +160,7 @@ class AphroditeService {
         'style_prompt': stylePrompt,
         'thread_id': threadId,
       },
-    );
+    ).timeout(const Duration(seconds: 30));
 
     if (response.status != 200) {
       throw AphroditeException(

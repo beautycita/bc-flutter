@@ -844,7 +844,7 @@ Deno.serve(async (req: Request) => {
         if (existingBiz) {
           return json(
             {
-              error: `Ya existe un salon con este numero: ${existingBiz.name}`,
+              error: "Ya existe un salon registrado con este numero de telefono.",
             },
             400,
           );
@@ -968,12 +968,6 @@ Deno.serve(async (req: Request) => {
           );
         }
 
-        // Check if phone already has a user account
-        const { data: existingUsers } = await supabase.auth.admin.listUsers({
-          page: 1,
-          perPage: 1,
-        });
-
         // Search for existing user by phone
         let userId: string | null = null;
         const { data: profileByPhone } = await supabase
@@ -1008,9 +1002,17 @@ Deno.serve(async (req: Request) => {
               createErr.message.includes("already") ||
               createErr.message.includes("exists")
             ) {
-              const { data: { users } } =
-                await supabase.auth.admin.listUsers();
-              const found = users?.find((u: { phone?: string }) => u.phone === phone);
+              // Search auth users by phone — paginate in small batches instead of loading all
+              let found: { id: string } | undefined;
+              let page = 1;
+              while (!found) {
+                const { data: { users }, error: listErr } =
+                  await supabase.auth.admin.listUsers({ page, perPage: 50 });
+                if (listErr || !users || users.length === 0) break;
+                found = users.find((u: { phone?: string }) => u.phone === phone);
+                if (users.length < 50) break;
+                page++;
+              }
               if (found) {
                 userId = found.id;
                 console.log(
@@ -1045,7 +1047,7 @@ Deno.serve(async (req: Request) => {
         if (existingBiz) {
           return json(
             {
-              error: `Ya tienes un salon registrado: ${existingBiz.name}`,
+              error: "Ya tienes un salon registrado.",
               business_id: existingBiz.id,
             },
             400,

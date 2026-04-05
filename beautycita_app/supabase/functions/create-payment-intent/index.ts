@@ -94,6 +94,7 @@ serve(async (req) => {
           name,
           stripe_account_id,
           onboarding_complete,
+          banking_complete,
           rfc,
           tax_residency
         )
@@ -111,6 +112,7 @@ serve(async (req) => {
       name: string;
       stripe_account_id: string | null;
       onboarding_complete: boolean;
+      banking_complete: boolean;
       rfc: string | null;
       tax_residency: string;
     };
@@ -118,6 +120,11 @@ serve(async (req) => {
     // Verify business is fully onboarded
     if (!business.onboarding_complete) {
       return json({ error: "This business is not yet accepting online payments" }, 400);
+    }
+
+    // Verify banking info is verified before accepting payments
+    if (!business.banking_complete) {
+      return json({ error: "Este negocio aun no ha completado su verificacion bancaria" }, 400);
     }
 
     if (!business.stripe_account_id) {

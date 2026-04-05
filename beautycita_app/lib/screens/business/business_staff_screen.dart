@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 import 'package:beautycita/config/app_transitions.dart';
+import 'package:uuid/uuid.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -1040,7 +1041,7 @@ class _AddStaffSheetState extends ConsumerState<_AddStaffSheet> {
       if (biz == null) throw Exception('No business found');
 
       final bizId = biz['id'] as String;
-      final staffId = DateTime.now().millisecondsSinceEpoch.toString();
+      final staffId = const Uuid().v4();
 
       // Upload avatar if selected
       String? avatarUrl;

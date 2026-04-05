@@ -15,6 +15,12 @@ class CurateService {
     final response = await client.functions.invoke(
       'curate-results',
       body: request.toJson(),
+    ).timeout(
+      const Duration(seconds: 10),
+      onTimeout: () => throw CurateException(
+        'La busqueda tardo demasiado. Intenta de nuevo.',
+        statusCode: 408,
+      ),
     );
 
     if (kDebugMode) debugPrint('[CURATE-SVC] status: ${response.status}, data type: ${response.data.runtimeType}');

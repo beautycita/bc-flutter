@@ -70,8 +70,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   }
 
   Future<void> _checkAuthAndNavigate() async {
-    // Wait for Supabase to finish initializing (runs in background since main)
-    await supabaseReady.future;
+    // Wait for Supabase to finish initializing (15s timeout prevents infinite hang)
+    await supabaseReady.future.timeout(
+      const Duration(seconds: 15),
+      onTimeout: () => debugPrint('[SPLASH] Supabase init timed out after 15s'),
+    );
 
     // Load version from compiled package metadata (pubspec.yaml is the source of truth)
     final info = await PackageInfo.fromPlatform();

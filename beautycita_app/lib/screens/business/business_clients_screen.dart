@@ -390,7 +390,7 @@ class _ClientCard extends StatelessWidget {
 
   String _timeAgo(DateTime dt) {
     final diff = DateTime.now().difference(dt);
-    if (diff.inDays > 30) return 'hace ${diff.inDays ~/ 30}m';
+    if (diff.inDays > 30) return 'hace ${diff.inDays ~/ 30} meses';
     if (diff.inDays > 0) return 'hace ${diff.inDays}d';
     if (diff.inHours > 0) return 'hace ${diff.inHours}h';
     return 'reciente';

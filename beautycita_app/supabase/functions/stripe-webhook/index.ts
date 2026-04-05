@@ -149,6 +149,29 @@ serve(async (req) => {
         const paymentIntent = event.data.object as Stripe.PaymentIntent;
         const metadata = paymentIntent.metadata ?? {};
 
+        // --- Validate business_id ownership against Stripe connected account ---
+        if (metadata.business_id) {
+          const stripeAccountId = typeof paymentIntent.on_behalf_of === "string"
+            ? paymentIntent.on_behalf_of
+            : (paymentIntent as any).transfer_data?.destination ?? null;
+
+          if (stripeAccountId) {
+            const { data: ownerBiz } = await supabase
+              .from("businesses")
+              .select("id")
+              .eq("id", metadata.business_id)
+              .eq("stripe_account_id", stripeAccountId)
+              .maybeSingle();
+
+            if (!ownerBiz) {
+              console.error(
+                `[STRIPE-WEBHOOK] business_id ${metadata.business_id} does not match Stripe account ${stripeAccountId} — skipping`
+              );
+              break;
+            }
+          }
+        }
+
         // --- Gift card payments ---
         if (metadata.type === "gift_card") {
           const { data: existingCard } = await supabase

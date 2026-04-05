@@ -967,7 +967,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     });
 
     // Debounced uniqueness check
-    _usernameDebounce = Timer(const Duration(milliseconds: 400), () async {
+    _usernameDebounce = Timer(const Duration(milliseconds: 500), () async {
       final available = await ref
           .read(profileProvider.notifier)
           .checkUsernameAvailable(trimmed);
