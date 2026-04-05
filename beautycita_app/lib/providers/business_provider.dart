@@ -82,11 +82,11 @@ final businessStatsProvider =
 
   final bizId = biz['id'] as String;
   final client = SupabaseClientService.client;
-  final now = DateTime.now();
+  final now = DateTime.now().toUtc();
   final today = now.toIso8601String().split('T')[0];
   final weekAgo = now.subtract(const Duration(days: 7)).toIso8601String();
   final firstOfMonth =
-      DateTime(now.year, now.month, 1).toIso8601String();
+      DateTime.utc(now.year, now.month, 1).toIso8601String();
 
   final todayAppts = client
       .from('appointments').select('id')

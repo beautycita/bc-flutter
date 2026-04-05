@@ -1,7 +1,7 @@
 # Salon Banking Collection Flow — Design Spec
 
 **Date:** 2026-04-02
-**Status:** Approved
+**Status:** Finished (2026-04-03 — all gates enforced, admin UI complete, Stripe CLABE prefill wired)
 **Author:** Claude (BC's #2)
 
 ---

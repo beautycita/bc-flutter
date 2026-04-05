@@ -50,6 +50,7 @@ import '../pages/client/invite_page.dart';
 import '../pages/client/mis_citas_page.dart';
 import '../pages/client/reservar_page.dart';
 import '../pages/public/invite_public_page.dart';
+import '../pages/public/porque_page.dart';
 import '../pages/auth/callback_page.dart';
 import '../pages/auth/forgot_page.dart';
 import '../pages/auth/login_page.dart';
@@ -70,6 +71,7 @@ import '../shells/demo_shell.dart';
 abstract final class WebRoutes {
   // Public
   static const String home = '/';
+  static const String porqueBc = '/porque-beautycita';
 
   // Auth
   static const String auth = '/auth';
@@ -234,6 +236,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: WebRoutes.home,
         builder: (context, state) => const LandingPage(),
+      ),
+
+      // ── Why BeautyCita (public, no shell) ──────────────────────────────
+      GoRoute(
+        path: WebRoutes.porqueBc,
+        builder: (context, state) => const PorQuePage(),
       ),
 
       // ── Support page (public, no shell) ────────────────────────────────

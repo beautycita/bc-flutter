@@ -120,7 +120,7 @@ Deno.serve(async (req: Request) => {
     // Fetch business data + verify ownership
     const { data: business, error: bizError } = await supabase
       .from("businesses")
-      .select("id, name, phone, whatsapp, address, stripe_account_id, owner_id")
+      .select("id, name, phone, whatsapp, address, stripe_account_id, owner_id, clabe, bank_name, beneficiary_name, banking_complete")
       .eq("id", businessId)
       .single();
 
@@ -165,7 +165,34 @@ Deno.serve(async (req: Request) => {
         }
       }
 
+      // Pre-fill beneficiary name from banking info
+      if (business.beneficiary_name) {
+        const parts = business.beneficiary_name.trim().split(/\s+/);
+        if (parts.length >= 2) {
+          params["individual[first_name]"] = parts[0];
+          params["individual[last_name]"] = parts.slice(1).join(" ");
+        } else if (parts.length === 1) {
+          params["individual[first_name]"] = parts[0];
+        }
+      }
+
       const account = await stripePost("/accounts", params);
+
+      // Pre-fill CLABE as external bank account if banking is verified
+      if (business.banking_complete && business.clabe) {
+        try {
+          await stripePost(`/accounts/${account.id}/external_accounts`, {
+            "external_account[object]": "bank_account",
+            "external_account[country]": "MX",
+            "external_account[currency]": "mxn",
+            "external_account[account_number]": business.clabe,
+            "external_account[account_holder_name]": business.beneficiary_name ?? business.name ?? "",
+          });
+        } catch (e) {
+          // Non-fatal: Stripe onboarding can still collect this info manually
+          console.warn("Failed to prefill CLABE:", e);
+        }
+      }
 
       // Store Stripe account ID in business record
       await supabase
@@ -201,9 +228,33 @@ Deno.serve(async (req: Request) => {
         if (business.name) {
           params["business_profile[name]"] = business.name;
         }
+        if (business.beneficiary_name) {
+          const parts = business.beneficiary_name.trim().split(/\s+/);
+          if (parts.length >= 2) {
+            params["individual[first_name]"] = parts[0];
+            params["individual[last_name]"] = parts.slice(1).join(" ");
+          } else if (parts.length === 1) {
+            params["individual[first_name]"] = parts[0];
+          }
+        }
 
         const account = await stripePost("/accounts", params);
         accountId = account.id;
+
+        // Pre-fill CLABE if banking is verified
+        if (business.banking_complete && business.clabe) {
+          try {
+            await stripePost(`/accounts/${accountId}/external_accounts`, {
+              "external_account[object]": "bank_account",
+              "external_account[country]": "MX",
+              "external_account[currency]": "mxn",
+              "external_account[account_number]": business.clabe,
+              "external_account[account_holder_name]": business.beneficiary_name ?? business.name ?? "",
+            });
+          } catch (e) {
+            console.warn("Failed to prefill CLABE:", e);
+          }
+        }
 
         await supabase
           .from("businesses")

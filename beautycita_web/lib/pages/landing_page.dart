@@ -303,6 +303,8 @@ class _LandingPageState extends State<LandingPage>
                       const SizedBox(width: 28),
                       _navLink('Para Salones', _forSalonsKey),
                       const SizedBox(width: 28),
+                      _navRouteLink(context, 'Por que BC?', '/porque-beautycita'),
+                      const SizedBox(width: 28),
                       _navLink('Para Clientes', _forClientsKey),
                       const SizedBox(width: 28),
                       _navLink('Demo', _demoKey),
@@ -363,6 +365,16 @@ class _LandingPageState extends State<LandingPage>
     );
   }
 
+  Widget _navRouteLink(BuildContext context, String label, String route) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: () => context.go(route),
+        child: Text(label, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: _brandPurple)),
+      ),
+    );
+  }
+
   Widget _buildMobileMenu() {
     return Container(
       color: _bgColor.withValues(alpha: 0.98),
@@ -372,6 +384,13 @@ class _LandingPageState extends State<LandingPage>
         children: [
           _mobileNavItem('Inicio', _heroKey),
           _mobileNavItem('Para Salones', _forSalonsKey),
+          GestureDetector(
+            onTap: () { setState(() => _mobileMenuOpen = false); context.go('/porque-beautycita'); },
+            child: const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: Text('Por que BC?', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: _brandPurple)),
+            ),
+          ),
           _mobileNavItem('Para Clientes', _forClientsKey),
           _mobileNavItem('Demo', _demoKey),
           _mobileNavItem('Precios', _pricingKey),
@@ -518,7 +537,7 @@ class _LandingPageState extends State<LandingPage>
         ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 520),
           child: Text(
-            'La unica plataforma con motor de busqueda inteligente que conecta clientes con el salon perfecto. Sin cuota mensual. Sin comisiones ocultas.',
+            'Usa todas las herramientas gratis desde hoy. 0% comision hasta que te enviemos tu primer cliente nuevo. Sin cuota mensual. Sin letra chiquita.',
             textAlign: textAlign,
             style: const TextStyle(fontSize: 19, color: _textSecondary, height: 1.7),
           ),
@@ -745,7 +764,7 @@ class _LandingPageState extends State<LandingPage>
       _CompRow('Cumplimiento SAT', 'Automatico', 'Solo autofacturacion', 'No', bcType: _CellType.checkText, col2Type: _CellType.plain, col3Type: _CellType.cross),
       _CompRow('Calendario drag & drop', null, 'No', 'No', bcType: _CellType.check, col2Type: _CellType.cross, col3Type: _CellType.cross),
       _CompRow('Sync Google Calendar', 'GRATIS', 'Solo Premium', 'Solo Pro', bcType: _CellType.free, col2Type: _CellType.warn, col3Type: _CellType.warn),
-      _CompRow('Motor inteligente', 'Busca clientes PARA ti', 'Directorio pasivo', 'Directorio pasivo', bcType: _CellType.checkText, col2Type: _CellType.plain, col3Type: _CellType.plain),
+      _CompRow('Motor inteligente', 'Busca clientes PARA ti (0% hasta el primero)', 'Directorio pasivo', 'Directorio pasivo', bcType: _CellType.checkText, col2Type: _CellType.plain, col3Type: _CellType.plain),
       _CompRow('App nativa', 'Flutter (rapida)', 'Ionic (lenta)', 'React Native', bcType: _CellType.checkText, col2Type: _CellType.warn, col3Type: _CellType.plain),
       _CompRow('Soporte en cash/OXXO', null, 'No', 'No', bcType: _CellType.check, col2Type: _CellType.cross, col3Type: _CellType.cross),
     ];
@@ -849,7 +868,7 @@ class _LandingPageState extends State<LandingPage>
   Widget _buildForSalons(bool isDesktop, bool isMobile, bool isTablet) {
     final features = [
       _Feature(Icons.location_on_outlined, 'Motor Inteligente',
-        'Nuestro AI encuentra clientes para tu salon, no al reves',
+        'Nuestro AI encuentra clientes para tu salon — 0% comision hasta el primero',
         detailTitle: 'Motor de Busqueda Inteligente',
         detailBullets: [
           'Pipeline de 6 pasos que analiza ubicacion, horario, especialidad, precio y calificaciones',
@@ -857,6 +876,7 @@ class _LandingPageState extends State<LandingPage>
           'Devuelve los 3 mejores salones con el mejor horario disponible en menos de 400ms',
           'Los clientes no buscan — el motor los conecta contigo automaticamente',
           'Tu salon aparece cuando un cliente busca tu tipo de servicio en tu zona',
+          'Usa todas las herramientas gratis. Solo cobramos 3% cuando te enviemos un cliente nuevo',
         ],
       ),
       _Feature(Icons.people_outline, 'Staff Ilimitado',
@@ -878,7 +898,7 @@ class _LandingPageState extends State<LandingPage>
           'Sincronizacion automatica en tiempo real con Google Calendar',
           'Alertas automaticas al cliente y estilista cuando hay cambios',
           'Si el salon modifica una cita, el cliente puede cancelar gratis y recibir reembolso completo en saldo',
-          'BeautyCita solo retiene el 3% — el cliente recupera el 97% restante',
+          'BeautyCita solo cobra comision en citas que nosotros te enviamos — tus propios clientes, 0%',
           'Politica de cancelacion configurable por salon (default 24 horas)',
         ],
         detailNote: 'El cliente siempre tiene la opcion de modificar o cancelar sin penalizacion cuando el salon inicia el cambio.',
@@ -1018,7 +1038,7 @@ class _LandingPageState extends State<LandingPage>
                 children: [
                   _sectionHeader(
                     null,
-                    'Herramientas profesionales para hacer crecer tu negocio sin pagar mensualidades',
+                    'Herramientas profesionales para hacer crecer tu negocio — 0% comision hasta que te enviemos tu primer cliente',
                     richTitle: Text.rich(
                       TextSpan(children: [
                         const TextSpan(text: 'Todo lo que tu salon necesita. ', style: TextStyle(fontSize: 42, fontWeight: FontWeight.w800, color: _textPrimary)),
@@ -1597,7 +1617,7 @@ class _LandingPageState extends State<LandingPage>
         'MC',
         'Maria Carmen R.',
         'Salon Glamour, Puerto Vallarta',
-        '"Antes usaba AgendaPro y pagaba \$2,500 al mes. Con BeautyCita tengo las mismas funciones y no pago nada. Mis clientas reciben recordatorio por WhatsApp gratis. Es increible."',
+        '"Antes usaba AgendaPro y pagaba \$2,500 al mes. Con BeautyCita tengo las mismas funciones y no pago nada. Solo me cobran cuando ellos me envian una clienta nueva — mis propias clientas, cero comision."',
       ),
       _Testimonial(
         'LS',
@@ -1609,7 +1629,7 @@ class _LandingPageState extends State<LandingPage>
         'AF',
         'Ana Fernandez',
         'Clienta frecuente, CDMX',
-        '"Como clienta, me encanta que solo necesito mi huella para reservar. En 30 segundos ya tengo mi cita. Y los precios son justos porque el salon no paga comisiones absurdas."',
+        '"Como clienta, me encanta que solo necesito mi huella para reservar. En 30 segundos ya tengo mi cita. Y los precios son justos porque el salon no paga mensualidades."',
       ),
     ];
 
@@ -1715,6 +1735,7 @@ class _LandingPageState extends State<LandingPage>
       'Analiticas y reportes',
       'Cumplimiento SAT automatico',
       'Pagos cash, OXXO, y tarjeta',
+      '0% comision hasta que te enviemos tu primer cliente',
     ];
 
     return _SectionWrapper(
@@ -1724,7 +1745,7 @@ class _LandingPageState extends State<LandingPage>
         children: [
           _sectionHeader(
             null,
-            'Sin trucos, sin letras chiquitas. Tu salon crece, tu bolsillo tambien.',
+            'Sin mensualidades. 0% comision hasta que te enviemos tu primer cliente.',
             richTitle: Text.rich(
               TextSpan(children: [
                 const TextSpan(text: 'Nuestros precios ', style: TextStyle(fontSize: 42, fontWeight: FontWeight.w800, color: _textPrimary)),
@@ -1799,7 +1820,7 @@ class _LandingPageState extends State<LandingPage>
                     )),
                     const SizedBox(height: 28),
                     const Text(
-                      'Solo cobramos 3% por transaccion con tarjeta.\nPagos en efectivo y OXXO: 0% comision.',
+                      'Usa todo gratis desde hoy. Solo cobramos 3% cuando\nte enviemos un cliente nuevo por nuestra plataforma.\nTus propios clientes: 0% comision. Siempre.',
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 13, color: _textHint, height: 1.6),
                     ),
@@ -2054,6 +2075,7 @@ class _LandingPageState extends State<LandingPage>
       children: [
         _footerCol('Plataforma', [
           _FooterLink('Para Salones', key: _forSalonsKey),
+          _FooterLink('Por que BeautyCita?', route: '/porque-beautycita'),
           _FooterLink('Para Clientes', key: _forClientsKey),
           _FooterLink('Precios', key: _pricingKey),
           _FooterLink('Demo', key: _demoKey),

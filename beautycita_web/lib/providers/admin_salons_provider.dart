@@ -28,6 +28,11 @@ class RegisteredSalon {
   final String? photoUrl;
   final String? municipalLicenseUrl;
   final String municipalLicenseStatus; // 'none', 'pending', 'approved', 'rejected'
+  final bool bankingComplete;
+  final String idVerificationStatus; // 'none', 'pending', 'verified', 'rejected'
+  final String? clabe;
+  final String? bankName;
+  final String? beneficiaryName;
 
   const RegisteredSalon({
     required this.id,
@@ -46,6 +51,11 @@ class RegisteredSalon {
     this.photoUrl,
     this.municipalLicenseUrl,
     this.municipalLicenseStatus = 'none',
+    this.bankingComplete = false,
+    this.idVerificationStatus = 'none',
+    this.clabe,
+    this.bankName,
+    this.beneficiaryName,
   });
 
   factory RegisteredSalon.fromJson(Map<String, dynamic> json) {
@@ -67,6 +77,11 @@ class RegisteredSalon {
       photoUrl: json['photo_url'] as String?,
       municipalLicenseUrl: json['municipal_license_url'] as String?,
       municipalLicenseStatus: json['municipal_license_status'] as String? ?? 'none',
+      bankingComplete: json['banking_complete'] as bool? ?? false,
+      idVerificationStatus: json['id_verification_status'] as String? ?? 'none',
+      clabe: json['clabe'] as String?,
+      bankName: json['bank_name'] as String?,
+      beneficiaryName: json['beneficiary_name'] as String?,
     );
   }
 }
@@ -263,6 +278,7 @@ class SalonsFilter {
   final String searchText;
   final bool? verified;
   final String? enrichmentFilter; // 'ig_enriched', 'wa_verified', 'wa_checked', 'has_photo', 'has_website'
+  final bool? bankingComplete; // null = all, true = banking done, false = banking pending
   final int page;
   final int pageSize;
   final String? sortColumn;
@@ -274,6 +290,7 @@ class SalonsFilter {
     this.searchText = '',
     this.verified,
     this.enrichmentFilter,
+    this.bankingComplete,
     this.page = 0,
     this.pageSize = 20,
     this.sortColumn,
@@ -286,6 +303,7 @@ class SalonsFilter {
     String? searchText,
     bool? Function()? verified,
     String? Function()? enrichmentFilter,
+    bool? Function()? bankingComplete,
     int? page,
     int? pageSize,
     String? Function()? sortColumn,
@@ -297,6 +315,7 @@ class SalonsFilter {
       searchText: searchText ?? this.searchText,
       verified: verified != null ? verified() : this.verified,
       enrichmentFilter: enrichmentFilter != null ? enrichmentFilter() : this.enrichmentFilter,
+      bankingComplete: bankingComplete != null ? bankingComplete() : this.bankingComplete,
       page: page ?? this.page,
       pageSize: pageSize ?? this.pageSize,
       sortColumn: sortColumn != null ? sortColumn() : this.sortColumn,
@@ -309,7 +328,8 @@ class SalonsFilter {
       country != null ||
       searchText.isNotEmpty ||
       verified != null ||
-      enrichmentFilter != null;
+      enrichmentFilter != null ||
+      bankingComplete != null;
 }
 
 // ── Providers ─────────────────────────────────────────────────────────────────
@@ -377,13 +397,17 @@ final registeredSalonsProvider =
   var query = client.from(BCTables.businesses).select(
     'id, name, city, state, average_rating, total_reviews, '
     'stripe_onboarding_status, is_verified, is_active, on_hold, phone, tier, '
-    'created_at, photo_url, municipal_license_url, municipal_license_status',
+    'created_at, photo_url, municipal_license_url, municipal_license_status, '
+    'banking_complete, id_verification_status, clabe, bank_name, beneficiary_name',
   );
   if (filter.city != null) {
     query = query.eq('city', filter.city!);
   }
   if (filter.verified != null) {
     query = query.eq('is_verified', filter.verified!);
+  }
+  if (filter.bankingComplete != null) {
+    query = query.eq('banking_complete', filter.bankingComplete!);
   }
 
   final List<dynamic> data;
@@ -409,6 +433,9 @@ final registeredSalonsProvider =
   }
   if (filter.verified != null) {
     countQuery = countQuery.eq('is_verified', filter.verified!);
+  }
+  if (filter.bankingComplete != null) {
+    countQuery = countQuery.eq('banking_complete', filter.bankingComplete!);
   }
   final int totalCount;
   if (searchText.isNotEmpty) {

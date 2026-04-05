@@ -26,7 +26,7 @@ class BookingScreen extends ConsumerStatefulWidget {
 
 class _BookingScreenState extends ConsumerState<BookingScreen> {
   DateTime _selectedDate = DateTime.now();
-  String? _selectedTime;
+  AvailableSlot? _selectedSlot;
   final TextEditingController _notesController = TextEditingController();
   bool _isSubmitting = false;
   String _selectedPaymentMethod = 'card'; // 'card', 'oxxo'
@@ -36,18 +36,6 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     return List.generate(14, (i) => today.add(Duration(days: i)));
-  }
-
-  /// Generate time slots from 09:00 to 19:00 in 30-minute increments.
-  List<String> get _timeSlots {
-    final slots = <String>[];
-    for (int hour = 9; hour <= 19; hour++) {
-      slots.add('${hour.toString().padLeft(2, '0')}:00');
-      if (hour < 19) {
-        slots.add('${hour.toString().padLeft(2, '0')}:30');
-      }
-    }
-    return slots;
   }
 
   /// Day-of-week abbreviations in Spanish.
@@ -73,20 +61,8 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
     return _isSameDay(date, DateTime.now());
   }
 
-  /// Combine selected date and time into a single DateTime.
-  DateTime? get _scheduledAt {
-    if (_selectedTime == null) return null;
-    final parts = _selectedTime!.split(':');
-    final hour = int.parse(parts[0]);
-    final minute = int.parse(parts[1]);
-    return DateTime(
-      _selectedDate.year,
-      _selectedDate.month,
-      _selectedDate.day,
-      hour,
-      minute,
-    );
-  }
+  /// The scheduled start time from the selected slot.
+  DateTime? get _scheduledAt => _selectedSlot?.slotStart;
 
   /// Find the matching service from the provider's service list.
   models.ProviderService? _findService(List<models.ProviderService> services) {
@@ -118,6 +94,8 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
         durationMinutes: service?.durationMinutes ?? 60,
         price: service?.priceMin,
         notes: _notesController.text.isNotEmpty ? _notesController.text : null,
+        staffId: _selectedSlot?.staffId,
+        paymentMethod: _selectedPaymentMethod,
       );
 
       // Invalidate bookings cache so the list refreshes.
@@ -247,7 +225,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
                   ),
                 ),
                 const SizedBox(height: AppConstants.paddingSM),
-                _buildTimeGrid(textTheme),
+                _buildTimeGrid(textTheme, service),
 
                 const SizedBox(height: AppConstants.paddingLG),
 
@@ -398,7 +376,10 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
           final isToday = _isToday(date);
 
           return GestureDetector(
-            onTap: () => setState(() => _selectedDate = date),
+            onTap: () => setState(() {
+              _selectedDate = date;
+              _selectedSlot = null; // Clear slot when date changes
+            }),
             child: AnimatedContainer(
               duration: AppConstants.shortAnimation,
               width: 64,
@@ -462,48 +443,107 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
     );
   }
 
-  Widget _buildTimeGrid(TextTheme textTheme) {
+  Widget _buildTimeGrid(TextTheme textTheme, models.ProviderService? service) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return Wrap(
-      spacing: AppConstants.paddingSM,
-      runSpacing: AppConstants.paddingSM,
-      children: _timeSlots.map((slot) {
-        final isSelected = slot == _selectedTime;
+    if (service == null) {
+      return Text(
+        'Selecciona un servicio primero',
+        style: textTheme.bodyMedium?.copyWith(
+          color: colorScheme.onSurface.withValues(alpha: 0.5),
+        ),
+      );
+    }
 
-        return GestureDetector(
-          onTap: () => setState(() => _selectedTime = slot),
-          child: AnimatedContainer(
-            duration: AppConstants.shortAnimation,
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppConstants.paddingMD,
-              vertical: AppConstants.paddingSM + 2,
-            ),
+    final slotsAsync = ref.watch(availableSlotsProvider((
+      businessId: widget.providerId,
+      serviceId: service.id,
+      date: _selectedDate,
+      durationMinutes: service.durationMinutes,
+    )));
+
+    return slotsAsync.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.all(16),
+        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      ),
+      error: (e, _) => Text(
+        'Error al cargar horarios: $e',
+        style: textTheme.bodyMedium?.copyWith(color: colorScheme.error),
+      ),
+      data: (slots) {
+        if (slots.isEmpty) {
+          return Container(
+            padding: const EdgeInsets.all(AppConstants.paddingMD),
             decoration: BoxDecoration(
-              color: isSelected
-                  ? colorScheme.primary
-                  : colorScheme.surface,
-              borderRadius: BorderRadius.circular(AppConstants.radiusSM),
-              boxShadow: isSelected
-                  ? [
-                      BoxShadow(
-                        color: colorScheme.primary.withValues(alpha: 0.3),
-                        blurRadius: 6,
-                        offset: const Offset(0, 3),
-                      ),
-                    ]
-                  : null,
+              color: colorScheme.surface,
+              borderRadius: BorderRadius.circular(AppConstants.radiusMD),
             ),
             child: Text(
-              slot,
+              'No hay horarios disponibles para este dia. Prueba otra fecha.',
               style: textTheme.bodyMedium?.copyWith(
-                color: isSelected ? Colors.white : colorScheme.onSurface,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                color: colorScheme.onSurface.withValues(alpha: 0.5),
               ),
+              textAlign: TextAlign.center,
             ),
-          ),
+          );
+        }
+
+        return Wrap(
+          spacing: AppConstants.paddingSM,
+          runSpacing: AppConstants.paddingSM,
+          children: slots.map((slot) {
+            final isSelected = _selectedSlot?.slotStart == slot.slotStart
+                && _selectedSlot?.staffId == slot.staffId;
+
+            return GestureDetector(
+              onTap: () => setState(() => _selectedSlot = slot),
+              child: AnimatedContainer(
+                duration: AppConstants.shortAnimation,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppConstants.paddingMD,
+                  vertical: AppConstants.paddingSM + 2,
+                ),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? colorScheme.primary
+                      : colorScheme.surface,
+                  borderRadius: BorderRadius.circular(AppConstants.radiusSM),
+                  boxShadow: isSelected
+                      ? [
+                          BoxShadow(
+                            color: colorScheme.primary.withValues(alpha: 0.3),
+                            blurRadius: 6,
+                            offset: const Offset(0, 3),
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      slot.timeLabel,
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: isSelected ? Colors.white : colorScheme.onSurface,
+                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                      ),
+                    ),
+                    Text(
+                      slot.staffName,
+                      style: textTheme.labelSmall?.copyWith(
+                        color: isSelected
+                            ? Colors.white.withValues(alpha: 0.8)
+                            : colorScheme.onSurface.withValues(alpha: 0.5),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
         );
-      }).toList(),
+      },
     );
   }
 

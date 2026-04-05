@@ -296,7 +296,7 @@ class _SummaryCards extends StatelessWidget {
         ),
         _StatCard(
           icon: Icons.paid_outlined,
-          label: 'Comisiones Totales',
+          label: 'Comisiones (clientes BC)',
           value: '\$${totalCommission.toStringAsFixed(0)}',
           color: kWebTertiary,
         ),

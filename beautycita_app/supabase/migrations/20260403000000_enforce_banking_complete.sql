@@ -1,17 +1,10 @@
 -- =============================================================================
--- Migration: Enforce is_verified on all customer-facing business queries,
---            and restrict booking availability to owner + stylist positions only.
--- No unverified (pending admin review) salon should appear to customers.
--- Non-stylist staff (receptionists, managers, assistants) must never appear
--- in booking flows.
+-- Migration: Enforce banking_complete on all booking-facing queries.
+-- No salon without verified banking info should appear in booking results
+-- or accept payment intents.
 -- =============================================================================
 
--- Drop old overload without p_business_id (superseded by version with default param)
-DROP FUNCTION IF EXISTS public.curate_candidates(
-  text, double precision, double precision, integer, timestamptz, timestamptz
-);
-
--- Recreate curate_candidates with is_verified + position IN ('owner','stylist') filters
+-- Recreate curate_candidates with banking_complete gate
 CREATE OR REPLACE FUNCTION public.curate_candidates(
   p_service_type   text,
   p_lat            double precision,
@@ -97,11 +90,11 @@ AS $$
       AND s.is_active   = true
       AND st.is_active  = true
       AND st.accept_online_booking = true
-      AND st.position IN ('owner', 'stylist')   -- Only booking-eligible positions
+      AND st.position IN ('owner', 'stylist')
       AND b.is_active   = true
-      AND b.is_verified  = true   -- Only admin-approved businesses
+      AND b.is_verified  = true
       AND b.onboarding_complete = true
-      AND b.banking_complete = true   -- Must have verified banking before accepting bookings
+      AND b.banking_complete = true
       AND (p_business_id IS NULL OR b.id = p_business_id)
       AND ST_DWithin(
         b.location,
@@ -149,10 +142,3 @@ AS $$
   ORDER BY sm.distance_m, avail.slot_start
   LIMIT 50;
 $$;
-
-COMMENT ON FUNCTION public.curate_candidates(text, double precision, double precision, integer, timestamptz, timestamptz, uuid) IS
-  'Finds candidate businesses/staff/slots for the curate-results engine. '
-  'Only returns staff with position IN (owner, stylist) — receptionists, '
-  'managers, and assistants are never shown to clients in booking flows. '
-  'INNER JOIN on staff_services ensures only staff with assigned services appear. '
-  'Optional p_business_id locks results to a specific business (Cita Express walk-in).';

@@ -520,6 +520,25 @@ class _SalonOnboardingScreenState
       final rawPhone = _phoneCtrl.text.replaceAll(RegExp(r'[^\d+]'), '');
       final phone = rawPhone.startsWith('+') ? rawPhone : '+52$rawPhone';
 
+      // Check phone uniqueness before calling edge function
+      final phoneDigits = phone.replaceAll(RegExp(r'[^\d]'), '');
+      final last10 = phoneDigits.length > 10
+          ? phoneDigits.substring(phoneDigits.length - 10)
+          : phoneDigits;
+      final existingBiz = await SupabaseClientService.client
+          .from('businesses')
+          .select('id')
+          .or('phone.ilike.%$last10,whatsapp.ilike.%$last10')
+          .limit(1)
+          .maybeSingle();
+      if (existingBiz != null) {
+        if (mounted) {
+          ToastService.showError('Ya existe un salon con este numero de telefono');
+          setState(() => _submitting = false);
+        }
+        return;
+      }
+
       final baseAddress = _pickedAddress ?? _addressCtrl.text.trim();
       final details = _detailsCtrl.text.trim();
       final fullAddress =

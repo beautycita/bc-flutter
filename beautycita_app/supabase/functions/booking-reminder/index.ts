@@ -55,9 +55,33 @@ Deno.serve(async (req) => {
 
   try {
     // -------------------------------------------------------------------
-    // 1. Find appointments starting within the next 2 hours that
-    //    are pending/confirmed and haven't been reminded yet
+    // 1. Atomically claim appointments for reminding.
+    //    UPDATE with WHERE reminded_at IS NULL prevents double-sends
+    //    if cron fires twice in the same window.
     // -------------------------------------------------------------------
+    const claimTime = now.toISOString();
+    const { data: claimed, error: claimErr } = await supabase
+      .from("appointments")
+      .update({ reminded_at: claimTime })
+      .gte("starts_at", now.toISOString())
+      .lte("starts_at", twoHoursFromNow.toISOString())
+      .in("status", ["pending", "confirmed"])
+      .is("reminded_at", null)
+      .select("id")
+      .limit(200);
+
+    if (claimErr) {
+      console.error("[REMINDER] Claim error:", claimErr);
+      return json({ error: claimErr.message }, 500);
+    }
+
+    const claimedIds = (claimed ?? []).map((r: { id: string }) => r.id);
+    if (claimedIds.length === 0) {
+      console.log("[REMINDER] No appointments to remind");
+      return json({ processed: 0, sent: 0, failed: 0 });
+    }
+
+    // 2. Now fetch full details for claimed appointments
     const { data: appointments, error: queryErr } = await supabase
       .from("appointments")
       .select(`
@@ -70,11 +94,7 @@ Deno.serve(async (req) => {
           name
         )
       `)
-      .gte("starts_at", now.toISOString())
-      .lte("starts_at", twoHoursFromNow.toISOString())
-      .in("status", ["pending", "confirmed"])
-      .is("reminded_at", null)
-      .limit(200);
+      .in("id", claimedIds);
 
     if (queryErr) {
       console.error("[REMINDER] Query error:", queryErr);
@@ -135,18 +155,6 @@ Deno.serve(async (req) => {
         });
 
         if (pushRes.ok) {
-          // -------------------------------------------------------------------
-          // 3. Update reminded_at on the appointment
-          // -------------------------------------------------------------------
-          const { error: updateErr } = await supabase
-            .from("appointments")
-            .update({ reminded_at: now.toISOString() })
-            .eq("id", appt.id);
-
-          if (updateErr) {
-            console.error(`[REMINDER] Failed to update reminded_at for ${appt.id}:`, updateErr);
-          }
-
           sent++;
           console.log(`[REMINDER] Sent reminder for ${appt.id} — ${appt.service_name} in ${timeStr}`);
         } else {

@@ -201,7 +201,7 @@ class _RegistroPageState extends ConsumerState<RegistroPage> {
           ),
           const SizedBox(height: 4),
           Text(
-            'Registra tu negocio en menos de 2 minutos',
+            'Registra tu negocio en menos de 2 minutos — 0% comision hasta tu primer cliente nuevo',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Colors.white.withValues(alpha: 0.7),
                   fontSize: isMobile ? 13 : 14,

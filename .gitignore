@@ -21,6 +21,11 @@
 .DS_Store
 Thumbs.db
 
+# Local dev config
+.mcp.json
+CLAUDE.md
+$tempWav
+
 # Artifacts
 *.apk
 *.aab

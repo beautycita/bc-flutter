@@ -344,6 +344,7 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
       paymentStatus: 'pending',
       paymentMethod: state.paymentMethod,
       transportMode: state.transportMode,
+      bookingSource: 'bc_marketplace',
     );
 
     if (kDebugMode) debugPrint('[PAYMENT] Booking created: ${booking.id} (pending payment)');
@@ -490,48 +491,44 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
 
 
   /// Pay with saldo (user credit balance) — no Stripe involved.
+  /// Uses a single DB transaction (book_with_saldo RPC) to atomically
+  /// check saldo, deduct it, and create the booking. No race condition.
   Future<void> _confirmWithSaldo(ResultCard result) async {
     final price = result.service.price ?? 0;
     final userId = SupabaseClientService.currentUserId;
     if (userId == null) throw Exception('No autenticado');
 
-    // Verify saldo is sufficient
-    final profile = await SupabaseClientService.client
-        .from('profiles')
-        .select('saldo')
-        .eq('id', userId)
-        .single();
-    final saldo = (profile['saldo'] as num?)?.toDouble() ?? 0;
-    if (saldo < price) {
-      throw Exception('Saldo insuficiente (\$${saldo.toStringAsFixed(0)} < \$${price.toStringAsFixed(0)})');
-    }
+    final endsAt = result.slot!.startTime.add(
+      Duration(minutes: result.service.durationMinutes),
+    );
 
-    // Create booking
-    final booking = await _bookingRepo.createBooking(
-      providerId: result.business.id,
-      providerServiceId: result.service.id ?? '',
+    // Single atomic transaction: check saldo, deduct, create booking
+    final bookingId = await SupabaseClientService.client.rpc('book_with_saldo', params: {
+      'p_user_id': userId,
+      'p_business_id': result.business.id,
+      'p_service_id': result.service.id ?? '',
+      'p_service_name': result.service.name,
+      'p_service_type': state.serviceType ?? '',
+      'p_starts_at': result.slot!.startTime.toUtc().toIso8601String(),
+      'p_ends_at': endsAt.toUtc().toIso8601String(),
+      'p_price': price,
+      'p_payment_method': 'saldo',
+      'p_transport_mode': state.transportMode,
+      'p_staff_id': result.staff?.id,
+    }) as String;
+
+    // Create a minimal Booking object for downstream use
+    final booking = Booking(
+      id: bookingId,
+      userId: userId,
+      businessId: result.business.id,
       serviceName: result.service.name,
-      category: state.serviceType ?? '',
       scheduledAt: result.slot!.startTime,
       durationMinutes: result.service.durationMinutes,
       price: price,
-      paymentStatus: 'paid',
-      paymentMethod: 'saldo',
-      transportMode: state.transportMode,
+      status: 'confirmed',
+      createdAt: DateTime.now(),
     );
-
-    // Deduct saldo atomically (prevents race condition with concurrent bookings)
-    await SupabaseClientService.adjustSaldo(userId: userId, amount: -price);
-
-    // Mark as confirmed
-    await SupabaseClientService.client
-        .from('appointments')
-        .update({
-          'status': 'confirmed',
-          'payment_status': 'paid',
-          'paid_at': DateTime.now().toUtc().toIso8601String(),
-        })
-        .eq('id', booking.id);
 
     // Calculate tax withholdings
     final taxBase = price / 1.16;
