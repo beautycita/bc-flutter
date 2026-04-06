@@ -51,6 +51,8 @@ import '../pages/client/mis_citas_page.dart';
 import '../pages/client/reservar_page.dart';
 import '../pages/public/invite_public_page.dart';
 import '../pages/public/porque_page.dart';
+import '../pages/public/porque_cinema.dart';
+import '../pages/public/salon_page.dart';
 import '../pages/auth/callback_page.dart';
 import '../pages/auth/forgot_page.dart';
 import '../pages/auth/login_page.dart';
@@ -134,6 +136,9 @@ abstract final class WebRoutes {
   // Public invite
   static const String invitarPublic = '/invitar';
 
+  // Public salon page
+  static const String salon = '/salon';
+
   // Demo (read-only business portal preview)
   static const String demo = '/demo';
   static const String demoCalendar = '/demo/calendar';
@@ -181,11 +186,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isPublicRoute = path == '/' ||
           path.startsWith('/auth') ||
           path == '/soporte' ||
+          path == WebRoutes.porqueBc ||
           path.startsWith('/demo') ||
           path.startsWith('/explorar') ||
           path.startsWith('/reservar') ||
           path.startsWith('/registro') ||
-          path == '/invitar';
+          path == '/invitar' ||
+          path.startsWith('/salon');
 
       // If Supabase never initialized (offline, failed, etc.),
       // only allow public routes — redirect protected routes to /auth
@@ -262,6 +269,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: WebRoutes.invitarPublic,
         builder: (context, state) => const InvitePublicPage(),
+      ),
+
+      // ── Public salon page (no shell, no auth) ─────────────────────────
+      GoRoute(
+        path: '/salon/:slug',
+        builder: (context, state) => SalonPage(
+          slug: state.pathParameters['slug'] ?? '',
+        ),
       ),
 
       // ── Auth routes (no shell) ───────────────────────────────────────────

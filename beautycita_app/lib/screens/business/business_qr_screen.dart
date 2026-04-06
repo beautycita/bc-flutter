@@ -27,7 +27,7 @@ class BusinessQrScreen extends ConsumerWidget {
 
         final bizId = biz['id'] as String;
         final bizName = biz['name'] as String? ?? 'Mi Salon';
-        final qrUrl = 'https://beautycita.com/cita-express/$bizId';
+        final qrUrl = 'https://beautycita.com/cita-express/$bizId?utm_source=qr';
 
         return _QrContent(
           qrUrl: qrUrl,

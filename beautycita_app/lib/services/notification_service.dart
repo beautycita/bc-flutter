@@ -110,9 +110,13 @@ class NotificationService {
         await _saveTokenToDatabase();
 
         // Listen for token refresh
-        _tokenRefreshSub = _messaging!.onTokenRefresh.listen((newToken) {
+        _tokenRefreshSub = _messaging!.onTokenRefresh.listen((newToken) async {
           _fcmToken = newToken;
-          _saveTokenToDatabase();
+          try {
+            await _saveTokenToDatabase();
+          } catch (e) {
+            if (kDebugMode) debugPrint('[FCM] Token refresh save error: $e');
+          }
         });
 
         // Handle foreground messages

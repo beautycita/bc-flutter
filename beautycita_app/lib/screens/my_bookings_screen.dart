@@ -476,6 +476,10 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
     );
 
     if (submitted == true) {
+      // Prompt user to add photo evidence before submitting
+      final shouldContinue = await _promptForDisputePhotos();
+      if (!shouldContinue) return;
+
       try {
         final userId = SupabaseClientService.currentUserId;
         if (userId == null) throw Exception('No autenticado');
@@ -500,6 +504,41 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
     }
 
     reasonCtrl.dispose();
+  }
+
+  /// Prompt user to add photos as evidence before submitting a dispute.
+  /// Returns true to continue with submission, false to cancel (go back to add photos).
+  Future<bool> _promptForDisputePhotos() async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Evidencia fotografica'),
+        content: const Text(
+          'Quieres agregar fotos como evidencia? '
+          'Las fotos ayudan a resolver tu caso mas rapido.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(
+              'Enviar sin fotos',
+              style: TextStyle(color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.6)),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange.shade700,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Agregar fotos', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+    // true = send without photos, false/null = go back to add photos
+    return result == true;
   }
 
   /// Show the salon's offer and let the client accept or reject.

@@ -545,7 +545,7 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
         })
         .eq('id', booking.id);
 
-    // Record commission (3% service fee) — must not fail silently
+    // Record commission, tax withholding, and payout — tracked on failure
     final commission = price * 0.03;
     try {
       await SupabaseClientService.client.from('commission_records').insert({
@@ -558,12 +558,7 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
         'period_year': DateTime.now().year,
         'status': 'collected',
       });
-    } catch (e) {
-      debugPrint('[CRITICAL] Commission insert failed for ${booking.id}: $e');
-    }
 
-    // Record tax withholding in ledger — must not fail silently
-    try {
       await SupabaseClientService.client.from('tax_withholdings').insert({
         'appointment_id': booking.id,
         'business_id': result.business.id,
@@ -580,12 +575,7 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
         'period_year': DateTime.now().year,
         'period_month': DateTime.now().month,
       });
-    } catch (e) {
-      debugPrint('[CRITICAL] Tax withholding insert failed for ${booking.id}: $e');
-    }
 
-    // Debt collection (if salon has outstanding debt)
-    try {
       await SupabaseClientService.client.rpc('calculate_payout_with_debt', params: {
         'p_business_id': result.business.id,
         'p_gross_amount': price,
@@ -594,7 +584,61 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
         'p_isr_withheld': isrWithheld,
       });
     } catch (e) {
-      debugPrint('[CRITICAL] Payout/debt calculation failed for ${booking.id}: $e');
+      debugPrint('[CRITICAL] Ledger insert failed for ${booking.id}: $e — retrying once');
+      // Retry once after a short delay
+      await Future.delayed(const Duration(seconds: 1));
+      try {
+        // Retry all three — Supabase upsert-safe or idempotent RPC
+        await SupabaseClientService.client.from('commission_records').upsert({
+          'business_id': result.business.id,
+          'appointment_id': booking.id,
+          'amount': double.parse(commission.toStringAsFixed(2)),
+          'rate': 0.03,
+          'source': 'appointment',
+          'period_month': DateTime.now().month,
+          'period_year': DateTime.now().year,
+          'status': 'collected',
+        }, onConflict: 'appointment_id');
+        await SupabaseClientService.client.from('tax_withholdings').upsert({
+          'appointment_id': booking.id,
+          'business_id': result.business.id,
+          'payment_type': 'saldo',
+          'jurisdiction': 'MX',
+          'gross_amount': price,
+          'tax_base': double.parse(taxBase.toStringAsFixed(2)),
+          'platform_fee': double.parse(commission.toStringAsFixed(2)),
+          'isr_rate': 0.025,
+          'iva_rate': 0.08,
+          'isr_withheld': double.parse(isrWithheld.toStringAsFixed(2)),
+          'iva_withheld': double.parse(ivaWithheld.toStringAsFixed(2)),
+          'provider_net': double.parse(providerNet.toStringAsFixed(2)),
+          'period_year': DateTime.now().year,
+          'period_month': DateTime.now().month,
+        }, onConflict: 'appointment_id');
+        await SupabaseClientService.client.rpc('calculate_payout_with_debt', params: {
+          'p_business_id': result.business.id,
+          'p_gross_amount': price,
+          'p_commission': commission,
+          'p_iva_withheld': ivaWithheld,
+          'p_isr_withheld': isrWithheld,
+        });
+      } catch (retryError) {
+        // Retry also failed — log to error_reports for manual reconciliation
+        debugPrint('[CRITICAL] Ledger retry failed for ${booking.id}: $retryError');
+        try {
+          await SupabaseClientService.client.from('user_error_reports').insert({
+            'user_id': SupabaseClientService.currentUserId,
+            'error_message': 'Ledger entry failed after retry',
+            'error_details': 'booking_id=${booking.id} '
+                'business_id=${result.business.id} '
+                'commission=$commission '
+                'error=$retryError',
+            'screen_name': 'booking_flow_ledger',
+          });
+        } catch (_) {
+          // Last resort — at least the debugPrint above captured it
+        }
+      }
     }
 
     _sendBookingNotifications(booking.id);
@@ -626,6 +670,12 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
         'booking_id': bookingId,
         'has_email': false, // Will be updated after email gate
       },
+    ).ignore();
+
+    // CFDI stamping (fire-and-forget — only applies to non-walk-in bookings)
+    SupabaseClientService.client.functions.invoke(
+      'cfdi-stamp',
+      body: {'appointment_id': bookingId},
     ).ignore();
   }
 

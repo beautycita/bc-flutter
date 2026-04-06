@@ -510,6 +510,46 @@ class _CommissionStaffRowState
     extends ConsumerState<_CommissionStaffRow> {
   bool _marking = false;
 
+  Future<void> _confirmAndMarkPaid() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        final colors = Theme.of(ctx).colorScheme;
+        final fmt = NumberFormat('#,##0.00', 'es_MX');
+        return AlertDialog(
+          title: Text('Marcar como pagado',
+              style: GoogleFonts.poppins(
+                  fontSize: 16, fontWeight: FontWeight.w600)),
+          content: Text(
+            'Confirmar pago de \$${fmt.format(widget.entry.pendingAmount)} '
+            'a ${widget.entry.firstName}?\n\n'
+            '${widget.entry.pendingCount} comisiones pendientes seran marcadas como pagadas.',
+            style: GoogleFonts.nunito(fontSize: 14),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text('Cancelar',
+                  style: GoogleFonts.poppins(
+                      color: colors.onSurface.withValues(alpha: 0.6))),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF059669),
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text('Marcar como pagado',
+                  style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirmed != true) return;
+    await _markPaid();
+  }
+
   Future<void> _markPaid() async {
     setState(() => _marking = true);
     try {
@@ -609,7 +649,7 @@ class _CommissionStaffRowState
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         foregroundColor: const Color(0xFF059669),
                       ),
-                      onPressed: _markPaid,
+                      onPressed: _confirmAndMarkPaid,
                       child: Text('Pagar',
                           style: GoogleFonts.poppins(
                               fontSize: 12,

@@ -306,6 +306,21 @@ final staffServicesProvider = FutureProvider.family<
   },
 );
 
+/// Staff IDs assigned to a specific service (for the service edit form).
+final serviceStaffProvider = FutureProvider.family<
+    List<String>, String>(
+  (ref, serviceId) async {
+    final response = await SupabaseClientService.client
+        .from('staff_services')
+        .select('staff_id')
+        .eq('service_id', serviceId);
+
+    return (response as List)
+        .map((r) => (r as Map<String, dynamic>)['staff_id'] as String)
+        .toList();
+  },
+);
+
 /// All staff→service mappings for the business (staffId → set of serviceIds).
 /// Used by drag-and-drop validation to check if a staff can perform a service.
 final allStaffServicesProvider =

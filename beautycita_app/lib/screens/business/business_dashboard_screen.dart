@@ -54,6 +54,11 @@ class BusinessDashboardScreen extends ConsumerWidget {
 
           const SizedBox(height: AppConstants.paddingLG),
 
+          // Top Staff this month
+          const _TopStaffSection(),
+
+          const SizedBox(height: AppConstants.paddingMD),
+
           // Outstanding Debt Warning
           _DebtCard(),
 
@@ -235,6 +240,113 @@ class _StatCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _TopStaffSection extends ConsumerWidget {
+  const _TopStaffSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = Theme.of(context).colorScheme;
+    final dataAsync = ref.watch(staffProductivityProvider('month'));
+    final fmt = NumberFormat('#,##0', 'es_MX');
+
+    return dataAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (data) {
+        if (data.entries.isEmpty) return const SizedBox.shrink();
+
+        final sorted = [...data.entries]
+          ..sort((a, b) => b.revenue.compareTo(a.revenue));
+        final top3 = sorted.take(3).toList();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.emoji_events_rounded,
+                    size: 20, color: const Color(0xFFFFB300)),
+                const SizedBox(width: 6),
+                Text('Top Staff del Mes',
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: colors.onSurface,
+                    )),
+              ],
+            ),
+            const SizedBox(height: AppConstants.paddingSM),
+            Container(
+              decoration: BoxDecoration(
+                color: colors.surface,
+                borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+                border: Border.all(
+                    color: colors.onSurface.withValues(alpha: 0.08)),
+              ),
+              child: Column(
+                children: [
+                  for (var i = 0; i < top3.length; i++) ...[
+                    if (i > 0)
+                      Divider(height: 1,
+                          color: colors.onSurface.withValues(alpha: 0.06)),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 10),
+                      child: Row(
+                        children: [
+                          // Rank medal
+                          SizedBox(
+                            width: 24,
+                            child: Icon(
+                              Icons.emoji_events_rounded,
+                              size: 16,
+                              color: i == 0
+                                  ? const Color(0xFFFFB300)
+                                  : i == 1
+                                      ? const Color(0xFF90A4AE)
+                                      : const Color(0xFFBF8040),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          // Name
+                          Expanded(
+                            child: Text(top3[i].firstName,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: colors.onSurface,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis),
+                          ),
+                          // Appointments count
+                          Text('${top3[i].completedAppointments} citas',
+                              style: GoogleFonts.nunito(
+                                fontSize: 12,
+                                color: colors.onSurface.withValues(alpha: 0.5),
+                              )),
+                          const SizedBox(width: 12),
+                          // Revenue
+                          Text('\$${fmt.format(top3[i].revenue)}',
+                              style: GoogleFonts.poppins(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF059669),
+                              )),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -1206,8 +1318,22 @@ class _CfdiSectionState extends ConsumerState<_CfdiSection> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Comprobantes Fiscales (CFDI)',
-                          style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w700, color: colors.onSurface)),
+                      Row(
+                        children: [
+                          Text('Comprobantes Fiscales (CFDI)',
+                              style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w700, color: colors.onSurface)),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF7C3AED).withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text('APROX',
+                                style: GoogleFonts.nunito(fontSize: 9, fontWeight: FontWeight.w800, color: const Color(0xFF7C3AED))),
+                          ),
+                        ],
+                      ),
                       Text('${_cfdiRecords.length} registro${_cfdiRecords.length == 1 ? '' : 's'}',
                           style: GoogleFonts.nunito(fontSize: 11, color: colors.onSurface.withValues(alpha: 0.5))),
                     ],

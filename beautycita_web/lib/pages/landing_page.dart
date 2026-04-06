@@ -274,15 +274,14 @@ class _LandingPageState extends State<LandingPage>
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Container(
-                              width: 36,
-                              height: 36,
-                              decoration: BoxDecoration(
-                                gradient: _brandGradient,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: const Center(
-                                child: Text('B', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 18)),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(10),
+                              child: Image.network('img/bc_logo.png', width: 36, height: 36, fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Container(
+                                  width: 36, height: 36,
+                                  decoration: BoxDecoration(gradient: _brandGradient, borderRadius: BorderRadius.circular(10)),
+                                  child: const Center(child: Text('BC', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 14))),
+                                ),
                               ),
                             ),
                             const SizedBox(width: 10),
@@ -512,7 +511,7 @@ class _LandingPageState extends State<LandingPage>
             borderRadius: BorderRadius.circular(50),
           ),
           child: const Text(
-            'La plataforma #1 para salones en Mexico',
+            'La primera plataforma sin mensualidad en Mexico',
             style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: _brandPurple),
           ),
         ),
@@ -580,9 +579,9 @@ class _LandingPageState extends State<LandingPage>
           runSpacing: 12,
           alignment: isDesktop ? WrapAlignment.start : WrapAlignment.center,
           children: [
-            _trustBadge('64,000+ salones descubiertos'),
-            _trustBadge('100% compatible SAT'),
+            _trustBadge('Cumplimiento SAT automatico'),
             _trustBadge('\$0 cuota mensual'),
+            _trustBadge('WhatsApp ilimitado gratis'),
           ],
         ),
       ],
@@ -743,10 +742,7 @@ class _LandingPageState extends State<LandingPage>
             ),
             clipBehavior: Clip.antiAlias,
             child: isMobile
-                ? SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: _comparisonTable(),
-                  )
+                ? _comparisonCards()
                 : _comparisonTable(),
           ),
         ],
@@ -756,16 +752,16 @@ class _LandingPageState extends State<LandingPage>
 
   Widget _comparisonTable() {
     final rows = [
-      _CompRow('Cuota mensual', 'GRATIS', '\$299 - \$4,500/mes', '\$350 - \$1,200/mes', bcType: _CellType.free, col2Type: _CellType.warn, col3Type: _CellType.warn),
-      _CompRow('Staff ilimitado', null, '1-20 (segun plan)', '1-5', bcType: _CellType.check, col2Type: _CellType.warn, col3Type: _CellType.warn),
-      _CompRow('Mensajes WhatsApp', 'ILIMITADOS GRATIS', '\$100/50 msgs', 'No incluido', bcType: _CellType.free, col2Type: _CellType.warn, col3Type: _CellType.cross),
-      _CompRow('Pagina portfolio', '5 temas', 'Pagina basica', 'No incluido', bcType: _CellType.checkText, col2Type: _CellType.plain, col3Type: _CellType.cross),
-      _CompRow('Punto de venta', 'GRATIS (10% comision)', '\$250/mes', 'No incluido', bcType: _CellType.free, col2Type: _CellType.warn, col3Type: _CellType.cross),
+      _CompRow('Cuota mensual', 'GRATIS', '\$299 - \$4,500/mes', '"Gratis" + 20% clientes nuevos', bcType: _CellType.free, col2Type: _CellType.warn, col3Type: _CellType.warn),
+      _CompRow('Staff ilimitado', null, '1-20 (segun plan)', '\$14.95/mes por estilista', bcType: _CellType.check, col2Type: _CellType.warn, col3Type: _CellType.warn),
+      _CompRow('Mensajes WhatsApp', 'ILIMITADOS GRATIS', '\$2/mensaje', 'Incluido (limitado)', bcType: _CellType.free, col2Type: _CellType.warn, col3Type: _CellType.plain),
+      _CompRow('Pagina portfolio', '5 temas', 'Pagina basica', 'Perfil en marketplace', bcType: _CellType.checkText, col2Type: _CellType.plain, col3Type: _CellType.plain),
+      _CompRow('Punto de venta', 'GRATIS (10% comision)', '\$250/mes', '2.19% + 0.20 por pago', bcType: _CellType.free, col2Type: _CellType.warn, col3Type: _CellType.warn),
       _CompRow('Cumplimiento SAT', 'Automatico', 'Solo autofacturacion', 'No', bcType: _CellType.checkText, col2Type: _CellType.plain, col3Type: _CellType.cross),
-      _CompRow('Calendario drag & drop', null, 'No', 'No', bcType: _CellType.check, col2Type: _CellType.cross, col3Type: _CellType.cross),
-      _CompRow('Sync Google Calendar', 'GRATIS', 'Solo Premium', 'Solo Pro', bcType: _CellType.free, col2Type: _CellType.warn, col3Type: _CellType.warn),
-      _CompRow('Motor inteligente', 'Busca clientes PARA ti (0% hasta el primero)', 'Directorio pasivo', 'Directorio pasivo', bcType: _CellType.checkText, col2Type: _CellType.plain, col3Type: _CellType.plain),
-      _CompRow('App nativa', 'Flutter (rapida)', 'Ionic (lenta)', 'React Native', bcType: _CellType.checkText, col2Type: _CellType.warn, col3Type: _CellType.plain),
+      _CompRow('Calendario drag & drop', null, 'No', 'Basico', bcType: _CellType.check, col2Type: _CellType.cross, col3Type: _CellType.plain),
+      _CompRow('Sync Google Calendar', 'GRATIS', 'Solo Premium', 'No', bcType: _CellType.free, col2Type: _CellType.warn, col3Type: _CellType.cross),
+      _CompRow('Motor inteligente', 'Busca clientes PARA ti (0% hasta el primero)', 'Directorio pasivo', '20% comision por cliente nuevo', bcType: _CellType.checkText, col2Type: _CellType.plain, col3Type: _CellType.warn),
+      _CompRow('Velocidad de la app', 'Rapida y fluida', 'Lenta en algunos dispositivos', 'Normal', bcType: _CellType.checkText, col2Type: _CellType.warn, col3Type: _CellType.plain),
       _CompRow('Soporte en cash/OXXO', null, 'No', 'No', bcType: _CellType.check, col2Type: _CellType.cross, col3Type: _CellType.cross),
     ];
 
@@ -779,7 +775,7 @@ class _LandingPageState extends State<LandingPage>
                 _tableHeaderCell('Caracteristica', flex: 3, align: Alignment.centerLeft),
                 _tableHeaderCellBC('BeautyCita', flex: 2),
                 _tableHeaderCell('AgendaPro', flex: 2),
-                _tableHeaderCell('Booksy', flex: 2),
+                _tableHeaderCell('Fresha', flex: 2),
               ],
           ),
           Divider(height: 1, thickness: 1, color: _cardBorder.withValues(alpha: 0.5)),
@@ -827,6 +823,70 @@ class _LandingPageState extends State<LandingPage>
           ],
         ),
       ),
+    );
+  }
+
+  Widget _comparisonCards() {
+    final items = [
+      ('Cuota mensual', 'GRATIS', '\$299-4,500/mes', '"Gratis" + 20%'),
+      ('Staff', 'Ilimitado', '1-20 (segun plan)', '\$14.95/mes c/u'),
+      ('WhatsApp', 'ILIMITADO GRATIS', '\$2/mensaje', 'Limitado'),
+      ('Cumplimiento SAT', 'Automatico', 'Solo autofacturacion', 'No'),
+      ('Calendario', 'Drag & drop', 'No', 'Basico'),
+      ('Motor inteligente', '0% hasta el primero', 'Directorio pasivo', '20% comision'),
+      ('Punto de venta', 'GRATIS (10%)', '\$250/mes', '2.19% + 0.20'),
+      ('Cash/OXXO', 'Si', 'No', 'No'),
+    ];
+
+    return Column(
+      children: items.map((item) => Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: _cardBorder),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(item.$1, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: _textPrimary)),
+            const SizedBox(height: 10),
+            // BC row
+            Row(children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(gradient: _brandGradient, borderRadius: BorderRadius.circular(6)),
+                child: const Text('BC', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Colors.white)),
+              ),
+              const SizedBox(width: 10),
+              Expanded(child: Text(item.$2, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: _checkGreen))),
+            ]),
+            const SizedBox(height: 6),
+            // AgendaPro row
+            Row(children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(color: _textHint.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
+                child: const Text('AP', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: _textHint)),
+              ),
+              const SizedBox(width: 10),
+              Expanded(child: Text(item.$3, style: TextStyle(fontSize: 13, color: _crossRed.withValues(alpha: 0.8)))),
+            ]),
+            const SizedBox(height: 4),
+            // Fresha row
+            Row(children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(color: _textHint.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
+                child: const Text('FR', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: _textHint)),
+              ),
+              const SizedBox(width: 10),
+              Expanded(child: Text(item.$4, style: TextStyle(fontSize: 13, color: _crossRed.withValues(alpha: 0.8)))),
+            ]),
+          ],
+        ),
+      )).toList(),
     );
   }
 
@@ -1283,87 +1343,84 @@ class _LandingPageState extends State<LandingPage>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [_brandPink.withValues(alpha: 0.06), _brandPurple.withValues(alpha: 0.06)],
-              ),
+              gradient: LinearGradient(colors: [_brandPink.withValues(alpha: 0.06), _brandPurple.withValues(alpha: 0.06)]),
               border: const Border(bottom: BorderSide(color: _cardBorder)),
             ),
-            child: Row(
-              children: [
-                Container(width: 10, height: 10, decoration: const BoxDecoration(color: _crossRed, shape: BoxShape.circle)),
-                const SizedBox(width: 6),
-                Container(width: 10, height: 10, decoration: const BoxDecoration(color: _warnAmber, shape: BoxShape.circle)),
-                const SizedBox(width: 6),
-                Container(width: 10, height: 10, decoration: const BoxDecoration(color: _checkGreen, shape: BoxShape.circle)),
-                const SizedBox(width: 12),
-                const Text('beautycita.com/dashboard', style: TextStyle(fontSize: 13, color: _textHint)),
-              ],
-            ),
+            child: Row(children: [
+              Container(width: 10, height: 10, decoration: const BoxDecoration(color: _crossRed, shape: BoxShape.circle)),
+              const SizedBox(width: 6),
+              Container(width: 10, height: 10, decoration: const BoxDecoration(color: _warnAmber, shape: BoxShape.circle)),
+              const SizedBox(width: 6),
+              Container(width: 10, height: 10, decoration: const BoxDecoration(color: _checkGreen, shape: BoxShape.circle)),
+              const SizedBox(width: 12),
+              const Text('beautycita.com/negocio', style: TextStyle(fontSize: 13, color: _textHint)),
+            ]),
           ),
-          // Dashboard body
-          Padding(
-            padding: const EdgeInsets.all(24),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Sidebar
-                SizedBox(
-                  width: 140,
-                  child: Column(
-                    children: [
-                      _demoSidebarItem('Dashboard', active: true),
-                      _demoSidebarItem('Calendario'),
-                      _demoSidebarItem('Clientes'),
-                      _demoSidebarItem('Servicios'),
-                      _demoSidebarItem('Staff'),
-                      _demoSidebarItem('Analiticas'),
-                      _demoSidebarItem('Portfolio'),
-                    ],
+          // Dashboard body — responsive
+          LayoutBuilder(builder: (context, constraints) {
+            final narrow = constraints.maxWidth < 500;
+            if (narrow) {
+              return Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(children: [
+                  Row(children: [
+                    Expanded(child: _demoStatCard('87', 'Citas')),
+                    const SizedBox(width: 8),
+                    Expanded(child: _demoStatCard('\$38.5k', 'MXN')),
+                    const SizedBox(width: 8),
+                    Expanded(child: _demoStatCard('4.7', 'Rating')),
+                  ]),
+                  const SizedBox(height: 12),
+                  Container(
+                    height: 80,
+                    decoration: BoxDecoration(color: _bgColor, borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.all(12),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [_demoBar(0.4), _demoBar(0.65), _demoBar(0.8), _demoBar(0.55), _demoBar(0.9)],
+                    ),
                   ),
-                ),
+                ]),
+              );
+            }
+            return Padding(
+              padding: const EdgeInsets.all(24),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                SizedBox(width: 140, child: Column(children: [
+                  _demoSidebarItem('Dashboard', active: true),
+                  _demoSidebarItem('Calendario'),
+                  _demoSidebarItem('Clientes'),
+                  _demoSidebarItem('Servicios'),
+                  _demoSidebarItem('Staff'),
+                  _demoSidebarItem('Pagos'),
+                  _demoSidebarItem('QR Code'),
+                  _demoSidebarItem('Marketing'),
+                  _demoSidebarItem('Analiticas'),
+                  _demoSidebarItem('Portfolio'),
+                ])),
                 const SizedBox(width: 16),
-                // Main content
-                Expanded(
-                  child: Column(
-                    children: [
-                      // Stat cards
-                      Row(
-                        children: [
-                          Expanded(child: _demoStatCard('142', 'Citas este mes')),
-                          const SizedBox(width: 12),
-                          Expanded(child: _demoStatCard('\$47.2k', 'Ingresos')),
-                          const SizedBox(width: 12),
-                          Expanded(child: _demoStatCard('96%', 'Satisfaccion')),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      // Chart placeholder
-                      Container(
-                        height: 120,
-                        decoration: BoxDecoration(
-                          color: _bgColor,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        padding: const EdgeInsets.all(16),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            _demoBar(0.4),
-                            _demoBar(0.65),
-                            _demoBar(0.45),
-                            _demoBar(0.8),
-                            _demoBar(0.55),
-                            _demoBar(0.9),
-                            _demoBar(0.7),
-                          ],
-                        ),
-                      ),
-                    ],
+                Expanded(child: Column(children: [
+                  Row(children: [
+                    Expanded(child: _demoStatCard('87', 'Citas este mes')),
+                    const SizedBox(width: 12),
+                    Expanded(child: _demoStatCard('\$38.5k', 'MXN ingresos')),
+                    const SizedBox(width: 12),
+                    Expanded(child: _demoStatCard('4.7', 'Calificacion')),
+                  ]),
+                  const SizedBox(height: 12),
+                  Container(
+                    height: 120,
+                    decoration: BoxDecoration(color: _bgColor, borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.all(16),
+                    child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                      _demoBar(0.4), _demoBar(0.65), _demoBar(0.45),
+                      _demoBar(0.8), _demoBar(0.55), _demoBar(0.9), _demoBar(0.7),
+                    ]),
                   ),
-                ),
-              ],
-            ),
-          ),
+                ])),
+              ]),
+            );
+          }),
         ],
       ),
     );
@@ -1522,9 +1579,9 @@ class _LandingPageState extends State<LandingPage>
 
   Widget _buildForClients(bool isDesktop, bool isMobile) {
     final cards = [
-      _ClientCard(Icons.attach_money, 'Mejores Precios', 'Nuestra comision baja significa que los salones no inflan sus precios. Tu pagas lo justo.'),
-      _ClientCard(Icons.verified_outlined, 'Salones Responsables', 'Todos nuestros salones cumplen con el SAT. Apoyas negocios que contribuyen a Mexico.'),
-      _ClientCard(Icons.shield_outlined, 'Garantia de Calidad', 'Si no quedas satisfecho, te devolvemos tu dinero. Sin preguntas.'),
+      _ClientCard(Icons.attach_money, 'Precios Justos', 'Sin mensualidades infladas que los salones te pasan a ti. Pagas el precio real del servicio.'),
+      _ClientCard(Icons.verified_outlined, 'Cumplimiento Fiscal Automatico', 'Los salones en BeautyCita cumplen con el SAT automaticamente. Apoyas negocios que contribuyen a Mexico.'),
+      _ClientCard(Icons.star_outline_rounded, 'Calificaciones Reales', 'Solo opiniones de clientes verificados que realmente visitaron el salon. Sin resenas falsas.'),
     ];
 
     return _SectionWrapper(
@@ -1612,26 +1669,8 @@ class _LandingPageState extends State<LandingPage>
   // ── Testimonials ───────────────────────────────────────────────────────────
 
   Widget _buildTestimonials(bool isDesktop, bool isMobile) {
-    final testimonials = [
-      _Testimonial(
-        'MC',
-        'Maria Carmen R.',
-        'Salon Glamour, Puerto Vallarta',
-        '"Antes usaba AgendaPro y pagaba \$2,500 al mes. Con BeautyCita tengo las mismas funciones y no pago nada. Solo me cobran cuando ellos me envian una clienta nueva — mis propias clientas, cero comision."',
-      ),
-      _Testimonial(
-        'LS',
-        'Lupita Sanchez',
-        'Studio Lash & Brow, Guadalajara',
-        '"El motor inteligente me trae clientes nuevos cada semana. No tengo que estar publicando en redes como loca. La plataforma trabaja para mi."',
-      ),
-      _Testimonial(
-        'AF',
-        'Ana Fernandez',
-        'Clienta frecuente, CDMX',
-        '"Como clienta, me encanta que solo necesito mi huella para reservar. En 30 segundos ya tengo mi cita. Y los precios son justos porque el salon no paga mensualidades."',
-      ),
-    ];
+    // Real testimonials will be added as salons adopt.
+    // For now, show a CTA to the porque page instead.
 
     return Container(
       width: double.infinity,
@@ -1655,32 +1694,37 @@ class _LandingPageState extends State<LandingPage>
                 children: [
                   _sectionHeader(
                     null,
-                    'Salones y clientes que ya confian en BeautyCita',
+                    'Sabias cuanto realmente cuestan los servicios por los que pagas?',
                     richTitle: Text.rich(
                       TextSpan(children: [
-                        const TextSpan(text: 'Lo que dicen nuestros ', style: TextStyle(fontSize: 42, fontWeight: FontWeight.w800, color: _textPrimary)),
+                        const TextSpan(text: 'La verdad detras de las ', style: TextStyle(fontSize: 42, fontWeight: FontWeight.w800, color: _textPrimary)),
                       ]),
                       textAlign: TextAlign.center,
                     ),
-                    richTitleSuffix: const _GradientText('usuarios', style: TextStyle(fontSize: 42, fontWeight: FontWeight.w800)),
+                    richTitleSuffix: const _GradientText('mensualidades', style: TextStyle(fontSize: 42, fontWeight: FontWeight.w800)),
                   ),
-                  const SizedBox(height: 40),
-                  isMobile
-                      ? Column(
-                          children: testimonials.map((t) => Padding(
-                            padding: const EdgeInsets.only(bottom: 20),
-                            child: _TestimonialCard(testimonial: t),
-                          )).toList(),
-                        )
-                      : Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: testimonials.map((t) => Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 14),
-                              child: _TestimonialCard(testimonial: t),
-                            ),
-                          )).toList(),
-                        ),
+                  const SizedBox(height: 24),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 600),
+                    child: const Text(
+                      'AgendaPro cobra \$2 por mensaje que les cuesta \$0.09. Vagaro cobra \$10/mes por estilista que les cuesta \$0.10. '
+                      'Fresha cobra 20% por clientes nuevos que les cuesta \$0 mostrar en un listado.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 17, color: _textSecondary, height: 1.6),
+                    ),
+                  ),
+                  const SizedBox(height: 28),
+                  _HoverScaleButton(
+                    onTap: () => context.go('/porque-beautycita'),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+                      decoration: BoxDecoration(
+                        gradient: _brandGradient,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const Text('Ver los numeros reales', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16)),
+                    ),
+                  ),
                   const SizedBox(height: 60),
                   // Trust metrics bar
                   Container(
@@ -1695,10 +1739,10 @@ class _LandingPageState extends State<LandingPage>
                       runSpacing: 24,
                       alignment: WrapAlignment.center,
                       children: [
-                        _trustMetric('64,024', 'Salones descubiertos'),
+                        _trustMetric('\$0', 'Mensualidad'),
                         _trustMetric('20+', 'Ciudades'),
-                        _trustMetric('100%', 'Uptime'),
-                        _trustMetric('4.9', 'Calificacion promedio'),
+                        _trustMetric('\u221E', 'Staff ilimitado'),
+                        _trustMetric('0%', 'Comision tus clientas'),
                       ],
                     ),
                   ),
@@ -2023,12 +2067,18 @@ class _LandingPageState extends State<LandingPage>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text.rich(
-          TextSpan(children: [
+        Row(mainAxisSize: MainAxisSize.min, children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.network('img/bc_logo.png', width: 32, height: 32, fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => const SizedBox.shrink()),
+          ),
+          const SizedBox(width: 10),
+          Text.rich(TextSpan(children: [
             const TextSpan(text: 'Beauty', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.white)),
             TextSpan(text: 'Cita', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: _brandPink)),
-          ]),
-        ),
+          ])),
+        ]),
         const SizedBox(height: 12),
         Text(
           'La plataforma inteligente que conecta clientes con el salon perfecto. Hecha en Mexico, para Mexico.',
@@ -2708,38 +2758,71 @@ class _FeatureDetailPopup extends StatelessWidget {
                       ),
                     ),
                   ),
-                  // CTA button
+                  // CTA buttons
                   Padding(
                     padding: const EdgeInsets.fromLTRB(28, 20, 28, 28),
-                    child: SizedBox(
-                      width: double.infinity,
-                      child: GestureDetector(
-                        onTap: onDemo,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          decoration: BoxDecoration(
-                            gradient: _brandGradient,
-                            borderRadius: BorderRadius.circular(14),
-                            boxShadow: [
-                              BoxShadow(
-                                color: _brandPink.withValues(alpha: 0.3),
-                                blurRadius: 16,
-                                offset: const Offset(0, 6),
+                    child: Column(
+                      children: [
+                        SizedBox(
+                          width: double.infinity,
+                          child: GestureDetector(
+                            onTap: onDemo,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              decoration: BoxDecoration(
+                                gradient: _brandGradient,
+                                borderRadius: BorderRadius.circular(14),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: _brandPink.withValues(alpha: 0.3),
+                                    blurRadius: 16,
+                                    offset: const Offset(0, 6),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
-                          child: const Center(
-                            child: Text(
-                              'Probar Demo',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
+                              child: const Center(
+                                child: Text(
+                                  'Probar Demo',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ),
+                        const SizedBox(height: 10),
+                        SizedBox(
+                          width: double.infinity,
+                          child: GestureDetector(
+                            onTap: () {
+                              Navigator.of(context).pop();
+                              GoRouter.of(context).go('/demo');
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(
+                                  color: _brandPurple.withValues(alpha: 0.3),
+                                ),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  'Ver en el demo',
+                                  style: TextStyle(
+                                    color: _brandPurple,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],

@@ -18,7 +18,7 @@ abstract final class DemoData {
     'country': 'MX',
     'lat': 20.6645623744056,
     'lng': -105.230326730276,
-    'photo_url': null,
+    'photo_url': 'img/demo-staff/salon.jpg',
     'average_rating': 4.75,
     'total_reviews': 16,
     'service_categories': [
@@ -68,7 +68,7 @@ abstract final class DemoData {
       'business_id': businessId,
       'first_name': 'Amber',
       'last_name': 'Elizabeth',
-      'avatar_url': null,
+      'avatar_url': 'img/demo-staff/amber.jpg',
       'phone': '+523223800207',
       'experience_years': 12,
       'average_rating': 4.8,
@@ -84,7 +84,7 @@ abstract final class DemoData {
       'business_id': businessId,
       'first_name': 'Valentina',
       'last_name': 'Rios',
-      'avatar_url': null,
+      'avatar_url': 'img/demo-staff/valentina.jpg',
       'phone': null,
       'experience_years': 8,
       'average_rating': 4.9,
@@ -100,7 +100,7 @@ abstract final class DemoData {
       'business_id': businessId,
       'first_name': 'Marcos',
       'last_name': 'Garcia',
-      'avatar_url': null,
+      'avatar_url': 'img/demo-staff/marcos.jpg',
       'phone': '3221215552',
       'experience_years': 4,
       'average_rating': 4.7,
@@ -115,7 +115,7 @@ abstract final class DemoData {
       'business_id': businessId,
       'first_name': 'Juan',
       'last_name': 'Carlos',
-      'avatar_url': null,
+      'avatar_url': 'img/demo-staff/juan.jpg',
       'phone': '+523222780020',
       'experience_years': 6,
       'average_rating': 4.5,
@@ -130,7 +130,7 @@ abstract final class DemoData {
       'business_id': businessId,
       'first_name': 'Daniela',
       'last_name': 'Herrera',
-      'avatar_url': null,
+      'avatar_url': 'img/demo-staff/daniela.jpg',
       'phone': null,
       'experience_years': 5,
       'average_rating': 4.6,
@@ -146,7 +146,7 @@ abstract final class DemoData {
       'business_id': businessId,
       'first_name': 'Andrea',
       'last_name': 'Munoz',
-      'avatar_url': null,
+      'avatar_url': 'img/demo-staff/andrea.jpg',
       'phone': null,
       'experience_years': 3,
       'average_rating': 4.8,
@@ -162,7 +162,7 @@ abstract final class DemoData {
       'business_id': businessId,
       'first_name': 'Sofia',
       'last_name': 'Ramirez',
-      'avatar_url': null,
+      'avatar_url': 'img/demo-staff/sofia.jpg',
       'phone': null,
       'experience_years': 7,
       'average_rating': 4.9,
@@ -178,7 +178,7 @@ abstract final class DemoData {
       'business_id': businessId,
       'first_name': 'Ricardo',
       'last_name': 'Vega',
-      'avatar_url': null,
+      'avatar_url': 'img/demo-staff/ricardo.jpg',
       'phone': null,
       'experience_years': 10,
       'average_rating': 4.7,
@@ -304,17 +304,31 @@ abstract final class DemoData {
         final staffId = staffIds[si];
         final pool = _staffServicePool[staffId] ?? [0];
 
-        for (var apptIdx = 0; apptIdx < 3; apptIdx++) {
+        // Vary appointment count by day of week:
+        // Mon(1)/Tue(2): 1-2, Wed(3)/Thu(4): 3-4, Fri(5)/Sat(6): 4-6
+        final daySeed = ((dayOffset + 100) * 1000 + si * 100) * 2654435761 & 0xFFFFFFFF;
+        final int apptCount;
+        switch (date.weekday) {
+          case DateTime.monday:
+          case DateTime.tuesday:
+            apptCount = 1 + (daySeed % 2); // 1-2
+          case DateTime.wednesday:
+          case DateTime.thursday:
+            apptCount = 3 + (daySeed % 2); // 3-4
+          case DateTime.friday:
+          case DateTime.saturday:
+            apptCount = 4 + (daySeed % 3); // 4-6
+          default:
+            apptCount = 2;
+        }
+
+        for (var apptIdx = 0; apptIdx < apptCount; apptIdx++) {
           // Deterministic "random" based on day + staff + appt index
           final seed = (dayOffset + 100) * 1000 + si * 100 + apptIdx;
           final hash = (seed * 2654435761) & 0xFFFFFFFF;
 
-          // Pick hour: spread 3 appointments across morning/midday/afternoon
-          final hourSlot = apptIdx == 0
-              ? startHours[hash % 3]            // morning: 9,10,11
-              : apptIdx == 1
-                  ? startHours[3 + (hash % 3)]  // midday: 12,13,14
-                  : startHours[6 + (hash % 3)]; // afternoon: 15,16,17
+          // Pick hour: spread appointments across the day
+          final hourSlot = startHours[(apptIdx * 3 + hash) % startHours.length];
 
           // Pick service from this staff's pool
           final svcIdx = pool[hash % pool.length];
@@ -376,6 +390,28 @@ abstract final class DemoData {
       (s) => s['id'] == staffId,
       orElse: () => staff.first,
     );
+    // Tax calculations (LISR Art. 113-A / LIVA Art. 18-J)
+    final taxBase = price / 1.16;
+    final isrWithheld = taxBase * 0.025;
+    final ivaWithheld = taxBase * 0.08;
+    final commission = price * 0.03;
+    final providerNet = price - isrWithheld - ivaWithheld;
+
+    // Booking source: realistic mix
+    // 35% walk-in (salon registers manually — no tax, no commission)
+    // 25% salon_direct (client books via salon's link/QR — tax applies, commission applies)
+    // 20% cita_express (client scans QR at salon — tax applies, commission applies)
+    // 20% bc_marketplace (BC found the client — tax applies, commission applies)
+    final sourceHash = id.hashCode.abs() % 20;
+    final bookingSource = sourceHash < 7
+        ? 'walk_in'
+        : sourceHash < 12
+            ? 'salon_direct'
+            : sourceHash < 16
+                ? 'cita_express'
+                : 'bc_marketplace';
+    final hasTax = bookingSource != 'walk_in';
+
     return {
       'id': id,
       'business_id': businessId,
@@ -394,8 +430,19 @@ abstract final class DemoData {
           : status == 'cancelled_customer'
               ? 'refunded'
               : 'pending',
+      'payment_method': bookingSource == 'walk_in'
+          ? 'cash_direct'
+          : (id.hashCode.abs() % 3 == 0 ? 'saldo' : 'card'),
       'payment_amount_centavos': (price * 100).toInt(),
-      'beautycita_fee_centavos': (price * 5).toInt(),
+      'beautycita_fee_centavos': hasTax ? (commission * 100).toInt() : 0,
+      'booking_source': bookingSource,
+      // Tax fields — only present for non-walk-in bookings
+      if (hasTax) 'tax_base': double.parse(taxBase.toStringAsFixed(2)),
+      if (hasTax) 'isr_withheld': double.parse(isrWithheld.toStringAsFixed(2)),
+      if (hasTax) 'iva_withheld': double.parse(ivaWithheld.toStringAsFixed(2)),
+      'provider_net': hasTax
+          ? double.parse(providerNet.toStringAsFixed(2))
+          : price, // walk-ins: salon keeps 100%
       'customer_name': _customerNames[id.hashCode.abs() % _customerNames.length],
       'customer_phone': '+5233${(1000000 + id.hashCode.abs() % 9000000)}',
       'notes': null,

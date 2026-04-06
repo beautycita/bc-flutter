@@ -10,4 +10,7 @@ export 'src/models/order.dart';
 export 'src/models/product.dart';
 export 'src/models/product_showcase.dart';
 export 'src/models/provider.dart';
+export 'src/models/payment.dart';
+export 'src/models/profile.dart';
+export 'src/models/staff.dart';
 export 'src/models/uber_ride.dart';

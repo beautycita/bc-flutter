@@ -58,6 +58,8 @@ flutter:
   assets:
     - .env
     - assets/screenshots/
+  shaders:
+    - shaders/light_reveal.frag
   fonts:
     - family: Roboto
       fonts:

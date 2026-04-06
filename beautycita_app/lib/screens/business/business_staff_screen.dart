@@ -19,9 +19,12 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import '../../repositories/staff_repository.dart';
 import '../../widgets/aphrodite_copy_field.dart';
 import '../../widgets/bc_image_editor.dart';
 import 'package:image_cropper/image_cropper.dart' show CropAspectRatioPreset;
+
+final _staffRepo = StaffRepository();
 
 class BusinessStaffScreen extends ConsumerWidget {
   const BusinessStaffScreen({super.key});
@@ -59,10 +62,14 @@ class BusinessStaffScreen extends ConsumerWidget {
                 ref.invalidate(businessStaffProvider),
             child: ListView.builder(
               padding: const EdgeInsets.all(AppConstants.paddingMD),
-              itemCount: otherStaff.length + 2, // +1 owner + 1 bottom spacer
+              itemCount: otherStaff.length + 3, // +1 today view + 1 owner + 1 bottom spacer
               itemBuilder: (context, index) {
-                // Owner card at index 0
+                // Today view at index 0
                 if (index == 0) {
+                  return _TodayStaffView(staff: staff, bizId: biz?['id'] as String? ?? '');
+                }
+                // Owner card at index 1
+                if (index == 1) {
                   if (ownerStaff != null) {
                     return _StaffCard(
                       staff: ownerStaff,
@@ -76,7 +83,7 @@ class BusinessStaffScreen extends ConsumerWidget {
                     onTap: () => _createOwnerStaff(context, ref),
                   );
                 }
-                final staffIndex = index - 1;
+                final staffIndex = index - 2;
                 if (staffIndex >= otherStaff.length) {
                   return const SizedBox(height: 80);
                 }
@@ -103,11 +110,8 @@ class BusinessStaffScreen extends ConsumerWidget {
   Future<void> _toggleActive(
       BuildContext context, WidgetRef ref, Map<String, dynamic> staff) async {
     final id = staff['id'] as String;
-    final current = staff['is_active'] as bool? ?? true;
     try {
-      await SupabaseClientService.client
-          .from('staff')
-          .update({'is_active': !current}).eq('id', id);
+      await _staffRepo.toggleActive(id);
       ref.invalidate(businessStaffProvider);
     } catch (e, stack) {
       ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
@@ -2782,6 +2786,146 @@ class _DaySchedule {
       startTime: startTime ?? this.startTime,
       endTime: endTime ?? this.endTime,
       breaks: breaks ?? this.breaks,
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Today's Staff View — who is working, how many appointments each
+// ---------------------------------------------------------------------------
+
+class _TodayStaffView extends StatefulWidget {
+  final List<Map<String, dynamic>> staff;
+  final String bizId;
+  const _TodayStaffView({required this.staff, required this.bizId});
+
+  @override
+  State<_TodayStaffView> createState() => _TodayStaffViewState();
+}
+
+class _TodayStaffViewState extends State<_TodayStaffView> {
+  Map<String, int>? _apptCounts;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTodayCounts();
+  }
+
+  Future<void> _loadTodayCounts() async {
+    final now = DateTime.now();
+    final todayStart = DateTime(now.year, now.month, now.day);
+    final todayEnd = todayStart.add(const Duration(hours: 23, minutes: 59));
+
+    try {
+      final appts = await SupabaseClientService.client
+          .from('appointments')
+          .select('staff_id, status')
+          .eq('business_id', widget.bizId)
+          .gte('starts_at', todayStart.toUtc().toIso8601String())
+          .lte('starts_at', todayEnd.toUtc().toIso8601String())
+          .inFilter('status', ['pending', 'confirmed', 'completed']);
+
+      final counts = <String, int>{};
+      for (final a in (appts as List)) {
+        final sid = a['staff_id'] as String?;
+        if (sid != null) counts[sid] = (counts[sid] ?? 0) + 1;
+      }
+
+      if (mounted) setState(() { _apptCounts = counts; _loading = false; });
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final activeStaff = widget.staff.where((s) => s['is_active'] == true).toList();
+
+    if (activeStaff.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [colors.primary.withValues(alpha: 0.06), colors.primary.withValues(alpha: 0.02)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colors.primary.withValues(alpha: 0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.today_rounded, size: 20, color: colors.primary),
+              const SizedBox(width: 8),
+              Text('Hoy', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700, color: colors.primary)),
+              const Spacer(),
+              if (_loading)
+                const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+              else
+                Text(
+                  '${_apptCounts?.values.fold<int>(0, (a, b) => a + b) ?? 0} citas',
+                  style: GoogleFonts.nunito(fontSize: 13, color: colors.onSurface.withValues(alpha: 0.5)),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: activeStaff.map((s) {
+              final sid = s['id'] as String;
+              final name = s['first_name'] as String? ?? '?';
+              final count = _apptCounts?[sid] ?? 0;
+              final isWorking = count > 0;
+
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: isWorking ? colors.primary.withValues(alpha: 0.08) : colors.surface,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isWorking ? colors.primary.withValues(alpha: 0.2) : colors.outline.withValues(alpha: 0.1),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 8, height: 8,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: isWorking ? const Color(0xFF059669) : colors.onSurface.withValues(alpha: 0.2),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(name, style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: isWorking ? FontWeight.w600 : FontWeight.w400,
+                      color: isWorking ? colors.onSurface : colors.onSurface.withValues(alpha: 0.4),
+                    )),
+                    if (isWorking) ...[
+                      const SizedBox(width: 6),
+                      Text('$count', style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: colors.primary,
+                      )),
+                    ],
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
     );
   }
 }

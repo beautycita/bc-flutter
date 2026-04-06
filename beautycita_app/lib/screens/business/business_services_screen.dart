@@ -146,18 +146,23 @@ class _BusinessServicesScreenState
                 ),
               ),
               Expanded(
-                child: services.isEmpty
+                child: filtered.isEmpty
                     ? Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.design_services_outlined,
+                            Icon(
+                                services.isEmpty
+                                    ? Icons.design_services_outlined
+                                    : Icons.search_off_rounded,
                                 size: 48,
                                 color:
                                     colors.onSurface.withValues(alpha: 0.3)),
                             const SizedBox(height: AppConstants.paddingSM),
                             Text(
-                              'No hay servicios registrados',
+                              services.isEmpty
+                                  ? 'No hay servicios registrados'
+                                  : 'Sin resultados para "$_searchQuery"',
                               style: GoogleFonts.nunito(
                                 fontSize: 14,
                                 color:
@@ -166,7 +171,9 @@ class _BusinessServicesScreenState
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'Toca + para agregar tu primer servicio',
+                              services.isEmpty
+                                  ? 'Toca + para agregar tu primer servicio'
+                                  : 'Intenta con otro término de búsqueda',
                               style: GoogleFonts.nunito(
                                 fontSize: 12,
                                 color:
@@ -433,6 +440,8 @@ class _ServiceFormSheetState extends ConsumerState<_ServiceFormSheet> {
   late bool _depositRequired;
   bool _saving = false;
   final FocusNode _depositPctFocus = FocusNode();
+  final Set<String> _selectedStaffIds = {};
+  bool _staffLoaded = false;
 
   static const _otherSuggestions = [
     'Depilación Láser',
@@ -799,6 +808,10 @@ class _ServiceFormSheetState extends ConsumerState<_ServiceFormSheet> {
                 'duration': '${_durationCtrl.text.trim()} min',
               },
             ),
+            // ── Staff assignment section ─────────────────────────
+            const SizedBox(height: AppConstants.paddingMD),
+            _buildStaffAssignmentSection(colors),
+
             // Deposit section — gated by enable_deposit_required toggle
             if (ref.watch(featureTogglesProvider).isEnabled('enable_deposit_required')) ...[
             const SizedBox(height: AppConstants.paddingMD),
@@ -880,6 +893,194 @@ class _ServiceFormSheetState extends ConsumerState<_ServiceFormSheet> {
     );
   }
 
+  Widget _buildStaffAssignmentSection(ColorScheme colors) {
+    final staffAsync = ref.watch(businessStaffProvider);
+
+    // Load current assignments once in edit mode
+    if (widget.existing != null && !_staffLoaded) {
+      final serviceId = widget.existing!['id'] as String;
+      final assignedAsync = ref.watch(serviceStaffProvider(serviceId));
+      assignedAsync.whenData((ids) {
+        if (!_staffLoaded) {
+          _staffLoaded = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              setState(() => _selectedStaffIds.addAll(ids));
+            }
+          });
+        }
+      });
+    } else if (widget.existing == null) {
+      _staffLoaded = true; // no need to load for new services
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+        border: Border.all(
+          color: colors.onSurface.withValues(alpha: 0.08),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.people_outline_rounded,
+                    size: 18, color: colors.primary),
+                const SizedBox(width: 8),
+                Text(
+                  'Staff asignado',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Selecciona quien puede realizar este servicio',
+              style: GoogleFonts.nunito(
+                fontSize: 12,
+                color: colors.onSurface.withValues(alpha: 0.5),
+              ),
+            ),
+            const SizedBox(height: 12),
+            staffAsync.when(
+              data: (staffList) {
+                final activeStaff = staffList
+                    .where((s) => s['is_active'] as bool? ?? true)
+                    .toList();
+
+                if (activeStaff.isEmpty) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Text(
+                      'No hay staff registrado',
+                      style: GoogleFonts.nunito(
+                        fontSize: 13,
+                        color: colors.onSurface.withValues(alpha: 0.4),
+                      ),
+                    ),
+                  );
+                }
+
+                return Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
+                  children: [
+                    for (final staff in activeStaff)
+                      FilterChip(
+                        avatar: CircleAvatar(
+                          radius: 12,
+                          backgroundColor: _selectedStaffIds
+                                  .contains(staff['id'] as String)
+                              ? colors.primary
+                              : colors.onSurface.withValues(alpha: 0.1),
+                          child: Text(
+                            (staff['first_name'] as String? ?? '?')
+                                .substring(0, 1)
+                                .toUpperCase(),
+                            style: GoogleFonts.poppins(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: _selectedStaffIds
+                                      .contains(staff['id'] as String)
+                                  ? Colors.white
+                                  : colors.onSurface.withValues(alpha: 0.5),
+                            ),
+                          ),
+                        ),
+                        label: Text(
+                          '${staff['first_name'] ?? ''} ${staff['last_name'] ?? ''}'
+                              .trim(),
+                          style: GoogleFonts.nunito(fontSize: 13),
+                        ),
+                        selected: _selectedStaffIds
+                            .contains(staff['id'] as String),
+                        onSelected: (selected) {
+                          setState(() {
+                            final id = staff['id'] as String;
+                            if (selected) {
+                              _selectedStaffIds.add(id);
+                            } else {
+                              _selectedStaffIds.remove(id);
+                            }
+                          });
+                        },
+                      ),
+                  ],
+                );
+              },
+              loading: () => const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: SizedBox(
+                  height: 24,
+                  width: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+              error: (e, _) => Text(
+                'Error cargando staff',
+                style: GoogleFonts.nunito(
+                  fontSize: 12,
+                  color: colors.error,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _saveStaffAssignments(String serviceId) async {
+    // Get current assignments from DB
+    final currentRows = await SupabaseClientService.client
+        .from('staff_services')
+        .select('staff_id')
+        .eq('service_id', serviceId);
+
+    final currentIds = (currentRows as List)
+        .map((r) => (r as Map<String, dynamic>)['staff_id'] as String)
+        .toSet();
+
+    final toAdd = _selectedStaffIds.difference(currentIds);
+    final toRemove = currentIds.difference(_selectedStaffIds);
+
+    // Delete removed assignments
+    for (final staffId in toRemove) {
+      await SupabaseClientService.client
+          .from('staff_services')
+          .delete()
+          .eq('service_id', serviceId)
+          .eq('staff_id', staffId);
+    }
+
+    // Insert new assignments
+    if (toAdd.isNotEmpty) {
+      final rows = toAdd
+          .map((staffId) => {
+                'staff_id': staffId,
+                'service_id': serviceId,
+              })
+          .toList();
+      await SupabaseClientService.client.from('staff_services').insert(rows);
+    }
+  }
+
   Future<void> _save() async {
     final name = _nameCtrl.text.trim();
     final price = double.tryParse(_priceCtrl.text.trim());
@@ -950,6 +1151,7 @@ class _ServiceFormSheetState extends ConsumerState<_ServiceFormSheet> {
 
       if (isEdit) {
         // ── Single update (edit mode) ──
+        final serviceId = widget.existing!['id'] as String;
         final data = {
           'business_id': biz['id'],
           'name': name,
@@ -967,7 +1169,8 @@ class _ServiceFormSheetState extends ConsumerState<_ServiceFormSheet> {
         await SupabaseClientService.client
             .from('services')
             .update(data)
-            .eq('id', widget.existing!['id'] as String);
+            .eq('id', serviceId);
+        await _saveStaffAssignments(serviceId);
       } else if (_selectedItems.length > 1) {
         // ── Batch insert (multiselect) ──
         final rows = _selectedItems.map((item) {
@@ -989,7 +1192,17 @@ class _ServiceFormSheetState extends ConsumerState<_ServiceFormSheet> {
             'is_active': true,
           };
         }).toList();
-        await SupabaseClientService.client.from('services').insert(rows);
+        final inserted = await SupabaseClientService.client
+            .from('services')
+            .insert(rows)
+            .select('id');
+        // Assign selected staff to each newly created service
+        if (_selectedStaffIds.isNotEmpty) {
+          for (final row in (inserted as List)) {
+            final newId = (row as Map<String, dynamic>)['id'] as String;
+            await _saveStaffAssignments(newId);
+          }
+        }
       } else {
         // ── Single insert ──
         final singleItem = _selectedItems.isNotEmpty
@@ -1009,10 +1222,19 @@ class _ServiceFormSheetState extends ConsumerState<_ServiceFormSheet> {
           'deposit_percentage': depPct,
           'is_active': true,
         };
-        await SupabaseClientService.client.from('services').insert(data);
+        final inserted = await SupabaseClientService.client
+            .from('services')
+            .insert(data)
+            .select('id')
+            .single();
+        final newId = inserted['id'] as String;
+        if (_selectedStaffIds.isNotEmpty) {
+          await _saveStaffAssignments(newId);
+        }
       }
 
       widget.onSaved();
+      ref.invalidate(allStaffServicesProvider);
       if (mounted) {
         if (isMultiSelect) {
           ToastService.showSuccess('${_selectedItems.length} servicios agregados');

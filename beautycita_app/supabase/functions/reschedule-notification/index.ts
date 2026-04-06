@@ -182,7 +182,7 @@ Deno.serve(async (req) => {
               },
               body: JSON.stringify({
                 user_id: appt.user_id,
-                notification_type: "booking_confirmed",
+                notification_type: "booking_rescheduled",
                 custom_title: "Cita Reagendada",
                 custom_body: `Tu cita de ${serviceName} fue movida a ${date}, ${time}${staffName ? ` con ${staffName}` : ""}`,
                 data: {

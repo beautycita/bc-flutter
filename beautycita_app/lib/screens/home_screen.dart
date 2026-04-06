@@ -1,4 +1,5 @@
 import 'package:beautycita/config/app_transitions.dart';
+import 'package:beautycita/services/toast_service.dart';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -648,11 +649,455 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   void _showSubcategorySheet(BuildContext context, ServiceCategory category) {
-    showBurstBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => SubcategorySheet(category: category),
+    final photoCardsEnabled = ref.read(featureTogglesProvider).isEnabled('enable_photo_category_cards');
+    final imagePath = _CategoryCardState._categoryImages[category.id];
+
+    if (photoCardsEnabled && imagePath != null) {
+      // Immersive full-screen transition with blurred photo backdrop
+      Navigator.of(context).push(
+        PageRouteBuilder(
+          transitionDuration: const Duration(milliseconds: 400),
+          reverseTransitionDuration: const Duration(milliseconds: 300),
+          pageBuilder: (context, animation, secondaryAnimation) {
+            return _ImmersiveSubcategoryPage(
+              category: category,
+              imagePath: imagePath,
+            );
+          },
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(
+              opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
+              child: child,
+            );
+          },
+        ),
+      );
+    } else {
+      // Original bottom sheet
+      showBurstBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) => SubcategorySheet(category: category),
+      );
+    }
+  }
+}
+
+// ── Immersive subcategory page (photo card flow) ─────────────────────────────
+
+String _getCategoryQuestion(String categoryId) {
+  switch (categoryId) {
+    case 'nails': return 'Manicure, pedicure o algo mas?';
+    case 'hair': return 'Corte, color o tratamiento?';
+    case 'facial': return 'Facial, limpieza o tratamiento?';
+    case 'lashes_brows': return 'Extensiones, lifting o tinte?';
+    case 'body_spa': return 'Masaje, depilacion o tratamiento?';
+    case 'makeup': return 'Que tipo de maquillaje?';
+    case 'specialized': return 'Que tratamiento necesitas?';
+    case 'barberia': return 'Corte, barba o afeitado?';
+    default: return 'Que servicio te interesa?';
+  }
+}
+
+class _ImmersiveSubcategoryPage extends StatelessWidget {
+  final ServiceCategory category;
+  final String imagePath;
+
+  const _ImmersiveSubcategoryPage({
+    required this.category,
+    required this.imagePath,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = category.color;
+    final mq = MediaQuery.of(context);
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Blurred photo backdrop
+          Positioned.fill(
+            child: ImageFiltered(
+              imageFilter: ui.ImageFilter.blur(sigmaX: 25, sigmaY: 25),
+              child: Image.asset(imagePath, fit: BoxFit.cover),
+            ),
+          ),
+          // Dark overlay for legibility
+          Container(color: Colors.black.withValues(alpha: 0.45)),
+          // Color tint
+          Container(color: color.withValues(alpha: 0.12)),
+
+          // Content
+          SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Back button + category header
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 8, 16, 0),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+                        style: IconButton.styleFrom(
+                          backgroundColor: Colors.white.withValues(alpha: 0.1),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              category.nameEs,
+                              style: GoogleFonts.poppins(
+                                fontSize: 28,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                                height: 1.1,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              _getCategoryQuestion(category.id),
+                              style: GoogleFonts.nunito(
+                                fontSize: 15,
+                                color: Colors.white.withValues(alpha: 0.7),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+                    .animate()
+                    .fadeIn(duration: 350.ms, delay: 100.ms)
+                    .slideY(begin: -0.1, end: 0, duration: 350.ms, curve: Curves.easeOutCubic),
+
+                const SizedBox(height: 32),
+
+                // Subcategory cards
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                    children: [
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: category.subcategories.asMap().entries.map((entry) {
+                          final index = entry.key;
+                          final sub = entry.value;
+                          return _ImmersiveSubPill(
+                            subcategory: sub,
+                            categoryColor: color,
+                          )
+                              .animate()
+                              .fadeIn(
+                                duration: 350.ms,
+                                delay: (200 + 60 * index).ms,
+                                curve: Curves.easeOut,
+                              )
+                              .slideY(
+                                begin: 0.15,
+                                end: 0,
+                                duration: 350.ms,
+                                delay: (200 + 60 * index).ms,
+                                curve: Curves.easeOutCubic,
+                              )
+                              .scale(
+                                begin: const Offset(0.9, 0.9),
+                                end: const Offset(1, 1),
+                                duration: 350.ms,
+                                delay: (200 + 60 * index).ms,
+                                curve: Curves.easeOutCubic,
+                              );
+                        }).toList(),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ImmersiveSubPill extends ConsumerStatefulWidget {
+  final ServiceSubcategory subcategory;
+  final Color categoryColor;
+
+  const _ImmersiveSubPill({
+    required this.subcategory,
+    required this.categoryColor,
+  });
+
+  @override
+  ConsumerState<_ImmersiveSubPill> createState() => _ImmersiveSubPillState();
+}
+
+class _ImmersiveSubPillState extends ConsumerState<_ImmersiveSubPill> {
+  bool _isPressed = false;
+
+  bool _hasItems() {
+    final items = widget.subcategory.items;
+    return items != null && items.isNotEmpty;
+  }
+
+  void _handleTap() {
+    if (_hasItems()) {
+      showBurstBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (ctx) => _ImmersiveItemsSheet(
+          subcategory: widget.subcategory,
+          categoryColor: widget.categoryColor,
+        ),
+      );
+    } else {
+      Navigator.of(context).pop(); // pop immersive page
+      final colorValue = widget.categoryColor.toARGB32();
+      context.push(
+        '/providers?category=${Uri.encodeComponent(widget.subcategory.categoryId)}&subcategory=${Uri.encodeComponent(widget.subcategory.nameEs)}&color=$colorValue',
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = widget.categoryColor;
+
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _isPressed = true),
+      onTapUp: (_) {
+        setState(() => _isPressed = false);
+        HapticFeedback.selectionClick();
+        _handleTap();
+      },
+      onTapCancel: () => setState(() => _isPressed = false),
+      child: AnimatedScale(
+        scale: _isPressed ? 0.95 : 1.0,
+        duration: const Duration(milliseconds: 120),
+        curve: _isPressed ? Curves.easeIn : Curves.elasticOut,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+          decoration: BoxDecoration(
+            color: _isPressed
+                ? Colors.white.withValues(alpha: 0.25)
+                : Colors.white.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.2),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                widget.subcategory.nameEs,
+                style: GoogleFonts.poppins(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+              if (_hasItems()) ...[
+                const SizedBox(width: 4),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: Colors.white.withValues(alpha: 0.5),
+                  size: 20,
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ImmersiveItemsSheet extends ConsumerWidget {
+  final ServiceSubcategory subcategory;
+  final Color categoryColor;
+
+  const _ImmersiveItemsSheet({
+    required this.subcategory,
+    required this.categoryColor,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.55,
+      minChildSize: 0.35,
+      maxChildSize: AppConstants.bottomSheetMaxHeight,
+      builder: (context, scrollController) {
+        return ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          child: BackdropFilter(
+            filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.5),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    margin: const EdgeInsets.only(top: 12, bottom: 8),
+                    width: 40, height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          subcategory.nameEs,
+                          style: GoogleFonts.poppins(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Elige el tipo exacto',
+                          style: GoogleFonts.nunito(
+                            fontSize: 14,
+                            color: Colors.white.withValues(alpha: 0.5),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ).animate()
+                      .fadeIn(duration: 300.ms)
+                      .slideX(begin: -0.05, end: 0, duration: 300.ms),
+              Expanded(
+                child: ListView.builder(
+                  controller: scrollController,
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                  itemCount: (subcategory.items ?? []).length,
+                  itemBuilder: (context, index) {
+                    final item = (subcategory.items ?? [])[index];
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: _ImmersiveItemTile(
+                        item: item,
+                        categoryColor: categoryColor,
+                      ),
+                    ).animate()
+                        .fadeIn(duration: 300.ms, delay: (60 * index).ms)
+                        .slideX(begin: 0.06, end: 0, duration: 300.ms, delay: (60 * index).ms);
+                  },
+                ),
+              ),
+            ],
+          ),
+          ),
+        ),
+        );
+      },
+    );
+  }
+}
+
+class _ImmersiveItemTile extends ConsumerStatefulWidget {
+  final ServiceItem item;
+  final Color categoryColor;
+
+  const _ImmersiveItemTile({required this.item, required this.categoryColor});
+
+  @override
+  ConsumerState<_ImmersiveItemTile> createState() => _ImmersiveItemTileState();
+}
+
+class _ImmersiveItemTileState extends ConsumerState<_ImmersiveItemTile> {
+  bool _isPressed = false;
+
+  void _handleTap() {
+    final serviceType = widget.item.serviceType;
+    if (serviceType.isEmpty) {
+      ToastService.showWarning('Servicio no disponible');
+      return;
+    }
+    Navigator.of(context).pop(); // items sheet
+    Navigator.of(context).pop(); // immersive page
+    context.push('/book');
+    ref.read(bookingFlowProvider.notifier).selectService(serviceType, widget.item.nameEs);
+    ref.read(searchHistoryProvider.notifier).addEntry(
+      serviceType: widget.item.serviceType,
+      serviceName: widget.item.nameEs,
+      category: widget.item.subcategoryId,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = widget.categoryColor;
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _isPressed = true),
+      onTapUp: (_) {
+        setState(() => _isPressed = false);
+        HapticFeedback.lightImpact();
+        _handleTap();
+      },
+      onTapCancel: () => setState(() => _isPressed = false),
+      child: AnimatedScale(
+        scale: _isPressed ? 0.97 : 1.0,
+        duration: const Duration(milliseconds: 120),
+        curve: _isPressed ? Curves.easeIn : Curves.elasticOut,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          decoration: BoxDecoration(
+            color: _isPressed
+                ? Colors.white.withValues(alpha: 0.15)
+                : Colors.white.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 4, height: 36,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  widget.item.nameEs,
+                  style: GoogleFonts.nunito(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+              Icon(Icons.arrow_forward_ios_rounded, color: Colors.white.withValues(alpha: 0.35), size: 16),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -924,65 +1369,86 @@ class _CategoryCardState extends ConsumerState<_CategoryCard>
   // Map category IDs to asset images (null = use icon fallback)
   static const _categoryImages = <String, String>{
     'nails': 'assets/categories/unas.jpg',
-    // Add more as images are generated:
-    // 'hair': 'assets/categories/cabello.jpg',
-    // 'lashes_brows': 'assets/categories/pestanas.jpg',
-    // 'makeup': 'assets/categories/maquillaje.jpg',
-    // 'facial': 'assets/categories/facial.jpg',
-    // 'body_spa': 'assets/categories/spa.jpg',
-    // 'specialized': 'assets/categories/especializado.jpg',
-    // 'barberia': 'assets/categories/barberia.jpg',
+    'hair': 'assets/categories/cabello.jpg',
+    'lashes_brows': 'assets/categories/pestanas.jpg',
+    'makeup': 'assets/categories/maquillaje.jpg',
+    'facial': 'assets/categories/facial.jpg',
+    'body_spa': 'assets/categories/spa_cuerpo.jpg',
+    'specialized': 'assets/categories/especializado.jpg',
+    'barberia': 'assets/categories/barberia.jpg',
   };
 
   Widget _buildCardContent(ServiceCategory category, Color categoryColor) {
     final imagePath = _categoryImages[category.id];
+    final photoCardsEnabled = ref.watch(featureTogglesProvider).isEnabled('enable_photo_category_cards');
 
-    if (imagePath != null) {
-      // Photo-backed card
+    if (imagePath != null && photoCardsEnabled) {
+      // Editorial photo card — heavy color grade for visual unity
       return ClipRRect(
         borderRadius: BorderRadius.circular(19),
         child: Stack(
           fit: StackFit.expand,
           children: [
-            Image.asset(
-              imagePath,
-              fit: BoxFit.cover,
-            ),
-            // Gradient overlay for text readability
+            // Base image
+            Image.asset(imagePath, fit: BoxFit.cover),
+            // Desaturate: pull most color out
+            Container(color: Colors.white.withValues(alpha: 0.35)),
+            // Category color tint — this is what unifies them
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                   colors: [
-                    Colors.transparent,
-                    Colors.black.withValues(alpha: 0.5),
+                    categoryColor.withValues(alpha: 0.25),
+                    categoryColor.withValues(alpha: 0.40),
                   ],
-                  stops: const [0.4, 1.0],
                 ),
               ),
             ),
-            // Category name at bottom
+            // Subtle vignette — darkens edges, draws focus to center
+            Container(
+              decoration: BoxDecoration(
+                gradient: RadialGradient(
+                  center: Alignment.center,
+                  radius: 0.85,
+                  colors: [
+                    Colors.transparent,
+                    Colors.black.withValues(alpha: 0.15),
+                  ],
+                ),
+              ),
+            ),
+            // Frosted bottom strip
             Positioned(
-              left: 8,
-              right: 8,
-              bottom: 10,
+              left: 0, right: 0, bottom: 0,
+              height: 40,
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.white.withValues(alpha: 0.0),
+                      Colors.white.withValues(alpha: 0.85),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            // Category name
+            Positioned(
+              left: 8, right: 8, bottom: 10,
               child: Text(
                 category.nameEs,
                 style: GoogleFonts.poppins(
-                  fontSize: 14,
+                  fontSize: 15,
                   fontWeight: FontWeight.w700,
-                  color: Colors.white,
+                  color: categoryColor,
                   height: 1.2,
-                  shadows: [
-                    Shadow(
-                      color: Colors.black.withValues(alpha: 0.5),
-                      blurRadius: 4,
-                    ),
-                  ],
                 ),
                 textAlign: TextAlign.center,
-                maxLines: 2,
+                maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
             ),

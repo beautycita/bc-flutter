@@ -43,6 +43,8 @@ const _defaults = <String, bool>{
   'enable_screenshot_report': true,
   'enable_qr_auth': true,
   'enable_contact_match': true,
+  // UI Experiments
+  'enable_photo_category_cards': true,
 };
 
 /// Fetches all boolean feature toggles from app_config and returns a map.

@@ -400,8 +400,19 @@ class _BusinessCalendarScreenState
 
       _refresh();
       ToastService.showSuccess('Cita actualizada');
-      if (action == 'cancelled_business' && mounted) {
-        await showShredderTransition(context);
+      if (action == 'cancelled_business') {
+        // Notify client their appointment was cancelled
+        SupabaseClientService.client.functions.invoke(
+          'send-push-notification',
+          body: {
+            'type': 'booking_cancelled',
+            'booking_id': id,
+            'title': 'Cita Cancelada',
+            'body': 'Tu salon cancelo tu cita. Se te devolvio el pago completo.',
+            'data': {'type': 'booking_cancelled', 'booking_id': id},
+          },
+        ).catchError((_) {});
+        if (mounted) await showShredderTransition(context);
       }
     } catch (e, stack) {
       ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
@@ -1137,8 +1148,8 @@ class _HorizontalTimelineState extends State<_HorizontalTimeline> {
         ToastService.showSuccess('Cita reagendada');
       }
 
-      // Fire-and-forget: send reschedule notification
-      _sendRescheduleNotification(id);
+      // Fire-and-forget: send reschedule notification with old staff ID
+      _sendRescheduleNotification(id, oldStaffId);
     } catch (e) {
       if (mounted) {
         ToastService.showError('Error al reagendar: $e');
@@ -1146,11 +1157,14 @@ class _HorizontalTimelineState extends State<_HorizontalTimeline> {
     }
   }
 
-  Future<void> _sendRescheduleNotification(String appointmentId) async {
+  Future<void> _sendRescheduleNotification(String appointmentId, String? oldStaffId) async {
     try {
       await SupabaseClientService.client.functions.invoke(
         'reschedule-notification',
-        body: {'appointment_id': appointmentId},
+        body: {
+          'appointment_id': appointmentId,
+          if (oldStaffId != null) 'old_staff_id': oldStaffId,
+        },
       );
     } catch (e) {
       if (kDebugMode) debugPrint('[Reschedule] Notification error: $e');
@@ -2286,6 +2300,9 @@ class _BlockTimeSheetState extends ConsumerState<_BlockTimeSheet> {
   TimeOfDay _startTime = const TimeOfDay(hour: 14, minute: 0);
   TimeOfDay _endTime = const TimeOfDay(hour: 15, minute: 0);
   String _reason = 'day_off';
+  String _recurrence = 'none'; // none, weekly, daily
+  int _weekCount = 4; // for weekly recurrence
+  DateTime _recurrenceEndDate = DateTime.now().add(const Duration(days: 14)); // for daily recurrence
   bool _saving = false;
 
   @override
@@ -2608,6 +2625,127 @@ class _BlockTimeSheetState extends ConsumerState<_BlockTimeSheet> {
               ),
             ],
 
+            // ── Recurrence options ──
+            const SizedBox(height: 16),
+            Text('Repetir',
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: colors.onSurface.withValues(alpha: 0.7),
+                )),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              children: [
+                _RecurrenceChip(
+                  label: 'Solo este dia',
+                  selected: _recurrence == 'none',
+                  onTap: () => setState(() => _recurrence = 'none'),
+                ),
+                _RecurrenceChip(
+                  label: 'Cada semana',
+                  selected: _recurrence == 'weekly',
+                  onTap: () => setState(() => _recurrence = 'weekly'),
+                ),
+                _RecurrenceChip(
+                  label: 'Todos los dias',
+                  selected: _recurrence == 'daily',
+                  onTap: () => setState(() => _recurrence = 'daily'),
+                ),
+              ],
+            ),
+
+            // Weekly: how many weeks
+            if (_recurrence == 'weekly') ...[
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Text('Repetir por',
+                      style: GoogleFonts.nunito(
+                          fontSize: 13,
+                          color: colors.onSurface.withValues(alpha: 0.6))),
+                  const SizedBox(width: 8),
+                  DropdownButton<int>(
+                    value: _weekCount,
+                    underline: const SizedBox.shrink(),
+                    style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: colors.primary),
+                    items: List.generate(12, (i) => i + 1)
+                        .map((w) => DropdownMenuItem(
+                            value: w, child: Text('$w')))
+                        .toList(),
+                    onChanged: (v) =>
+                        setState(() => _weekCount = v ?? 4),
+                  ),
+                  const SizedBox(width: 4),
+                  Text('semanas',
+                      style: GoogleFonts.nunito(
+                          fontSize: 13,
+                          color: colors.onSurface.withValues(alpha: 0.6))),
+                ],
+              ),
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  'Se crearan $_weekCount bloques cada ${_dayOfWeekLabel(_fromDate.weekday)}',
+                  style: GoogleFonts.nunito(
+                    fontSize: 12,
+                    color: colors.onSurface.withValues(alpha: 0.4),
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
+            ],
+
+            // Daily: end date
+            if (_recurrence == 'daily') ...[
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Text('Hasta:',
+                      style: GoogleFonts.nunito(
+                          fontSize: 13,
+                          color: colors.onSurface.withValues(alpha: 0.6))),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _PickerTile(
+                      icon: Icons.event_rounded,
+                      label: _fmtDate(_recurrenceEndDate),
+                      onTap: () async {
+                        final d = await showDatePicker(
+                          context: context,
+                          initialDate: _recurrenceEndDate.isBefore(_fromDate)
+                              ? _fromDate.add(const Duration(days: 7))
+                              : _recurrenceEndDate,
+                          firstDate: _fromDate.add(const Duration(days: 1)),
+                          lastDate: DateTime(2030),
+                        );
+                        if (d != null) {
+                          setState(() => _recurrenceEndDate = d);
+                        }
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Builder(builder: (_) {
+                  final days = _recurrenceEndDate.difference(_fromDate).inDays + 1;
+                  return Text(
+                    'Se crearan $days bloques (un bloque por dia)',
+                    style: GoogleFonts.nunito(
+                      fontSize: 12,
+                      color: colors.onSurface.withValues(alpha: 0.4),
+                      fontStyle: FontStyle.italic,
+                    ),
+                  );
+                }),
+              ),
+            ],
+
             const SizedBox(height: 20),
             _SheetButton(
               label: 'Bloquear',
@@ -2620,6 +2758,39 @@ class _BlockTimeSheetState extends ConsumerState<_BlockTimeSheet> {
     );
   }
 
+  static String _dayOfWeekLabel(int weekday) {
+    const days = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
+    return days[(weekday - 1).clamp(0, 6)];
+  }
+
+  /// Build the list of dates to create blocks for, considering recurrence.
+  List<DateTime> _buildBlockDates() {
+    final dates = <DateTime>[];
+
+    if (_recurrence == 'weekly') {
+      // Same day of week for _weekCount weeks starting from _fromDate
+      for (int w = 0; w < _weekCount; w++) {
+        dates.add(_fromDate.add(Duration(days: 7 * w)));
+      }
+    } else if (_recurrence == 'daily') {
+      // Every day from _fromDate to _recurrenceEndDate
+      var current = _fromDate;
+      while (!current.isAfter(_recurrenceEndDate)) {
+        dates.add(current);
+        current = current.add(const Duration(days: 1));
+      }
+    } else {
+      // No recurrence — just the original date range (existing behavior)
+      var current = _fromDate;
+      while (!current.isAfter(_toDate)) {
+        dates.add(current);
+        current = current.add(const Duration(days: 1));
+      }
+    }
+
+    return dates;
+  }
+
   Future<void> _save() async {
     if (_staffId == null) {
       ToastService.showWarning('Selecciona un empleado');
@@ -2630,10 +2801,10 @@ class _BlockTimeSheetState extends ConsumerState<_BlockTimeSheet> {
       final biz = await ref.read(currentBusinessProvider.future);
       if (biz == null) throw Exception('No business');
 
-      // Generate one block per day in the date range
+      final blockDates = _buildBlockDates();
       final rows = <Map<String, dynamic>>[];
-      var current = _fromDate;
-      while (!current.isAfter(_toDate)) {
+
+      for (final current in blockDates) {
         final startsAt = !_showTimes
             ? DateTime(current.year, current.month, current.day, 0, 0)
             : DateTime(current.year, current.month, current.day,
@@ -2650,7 +2821,6 @@ class _BlockTimeSheetState extends ConsumerState<_BlockTimeSheet> {
           'ends_at': endsAt.toUtc().toIso8601String(),
           'reason': _reason,
         });
-        current = current.add(const Duration(days: 1));
       }
 
       await SupabaseClientService.client
@@ -2659,11 +2829,55 @@ class _BlockTimeSheetState extends ConsumerState<_BlockTimeSheet> {
 
       widget.onSaved();
       if (mounted) Navigator.pop(context);
+      if (rows.length > 1) {
+        ToastService.showSuccess('${rows.length} bloques creados');
+      }
     } catch (e, stack) {
       ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+}
+
+/// Chip for selecting recurrence mode in block time sheet.
+class _RecurrenceChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _RecurrenceChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected ? colors.primary : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: selected
+                ? colors.primary
+                : colors.onSurface.withValues(alpha: 0.2),
+          ),
+        ),
+        child: Text(label,
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: selected
+                  ? Colors.white
+                  : colors.onSurface.withValues(alpha: 0.6),
+            )),
+      ),
+    );
   }
 }
 

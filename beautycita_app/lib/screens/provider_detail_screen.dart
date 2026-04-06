@@ -11,6 +11,7 @@ import '../config/theme_extension.dart';
 import '../services/toast_service.dart';
 import '../providers/feature_toggle_provider.dart';
 import '../providers/favorites_provider.dart';
+import '../providers/booking_provider.dart';
 
 class ProviderDetailScreen extends ConsumerWidget {
   final String providerId;
@@ -773,7 +774,7 @@ class _SocialChip extends StatelessWidget {
   }
 }
 
-class _ServiceCard extends StatelessWidget {
+class _ServiceCard extends ConsumerStatefulWidget {
   final models.ProviderService service;
   final VoidCallback onBook;
 
@@ -781,6 +782,14 @@ class _ServiceCard extends StatelessWidget {
     required this.service,
     required this.onBook,
   });
+
+  @override
+  ConsumerState<_ServiceCard> createState() => _ServiceCardState();
+}
+
+class _ServiceCardState extends ConsumerState<_ServiceCard> {
+  models.ProviderService get service => widget.service;
+  VoidCallback get onBook => widget.onBook;
 
   String _formatPrice() {
     if (service.priceMin == null && service.priceMax == null) {
@@ -878,6 +887,12 @@ class _ServiceCard extends StatelessWidget {
                         ),
                       ],
                     ),
+                    // Availability indicator
+                    _AvailabilityChip(
+                      businessId: service.providerId,
+                      serviceId: service.id,
+                      durationMinutes: service.durationMinutes,
+                    ),
                   ],
                 ),
               ),
@@ -906,6 +921,82 @@ class _ServiceCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Availability indicator for service cards
+// ---------------------------------------------------------------------------
+
+class _AvailabilityChip extends ConsumerWidget {
+  final String businessId;
+  final String serviceId;
+  final int durationMinutes;
+
+  const _AvailabilityChip({
+    required this.businessId,
+    required this.serviceId,
+    required this.durationMinutes,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final today = DateTime.now();
+    final slotsAsync = ref.watch(availableSlotsProvider((
+      businessId: businessId,
+      serviceId: serviceId,
+      date: today,
+      durationMinutes: durationMinutes,
+    )));
+
+    return slotsAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (slots) {
+        if (slots.isNotEmpty) {
+          return Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Row(
+              children: [
+                Container(
+                  width: 6, height: 6,
+                  decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFF059669)),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  'Disponible hoy ${slots.first.timeLabel}',
+                  style: const TextStyle(fontSize: 11, color: Color(0xFF059669), fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+          );
+        }
+        // Check tomorrow
+        final tomorrow = today.add(const Duration(days: 1));
+        final tomorrowSlots = ref.watch(availableSlotsProvider((
+          businessId: businessId,
+          serviceId: serviceId,
+          date: tomorrow,
+          durationMinutes: durationMinutes,
+        )));
+        return tomorrowSlots.when(
+          loading: () => const SizedBox.shrink(),
+          error: (_, __) => const SizedBox.shrink(),
+          data: (tmSlots) {
+            if (tmSlots.isNotEmpty) {
+              return Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  'Prox: manana ${tmSlots.first.timeLabel}',
+                  style: TextStyle(fontSize: 11, color: Colors.orange[700], fontWeight: FontWeight.w500),
+                ),
+              );
+            }
+            return const SizedBox.shrink();
+          },
+        );
+      },
     );
   }
 }

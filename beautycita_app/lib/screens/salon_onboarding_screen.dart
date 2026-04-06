@@ -558,25 +558,41 @@ class _SalonOnboardingScreenState
 
       // Call register-business edge function — creates business, staff,
       // schedule (Mon-Sat 9-7), role upgrade, and discovered salon link atomically.
-      final res = await SupabaseClientService.client.functions.invoke(
-        'register-business',
-        body: {
-          'name': _nameCtrl.text.trim(),
-          'phone': phone,
-          'whatsapp': phone,
-          'address': fullAddress,
-          'city': ?city,
-          'state': ?state,
-          'lat': _pickedLat,
-          'lng': _pickedLng,
-          'photo_url': ?_photoUrl,
-          'discovered_salon_id': ?discoveredSalonId,
-        },
-      );
+      // Retry up to 3 times with 2-second delays on failure.
+      final requestBody = {
+        'name': _nameCtrl.text.trim(),
+        'phone': phone,
+        'whatsapp': phone,
+        'address': fullAddress,
+        'city': ?city,
+        'state': ?state,
+        'lat': _pickedLat,
+        'lng': _pickedLng,
+        'photo_url': ?_photoUrl,
+        'discovered_salon_id': ?discoveredSalonId,
+      };
 
-      final data = res.data as Map<String, dynamic>;
-      if (data['error'] != null) {
-        throw Exception(data['error'] as String);
+      const maxAttempts = 3;
+      late Map<String, dynamic> data;
+      for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+          final res = await SupabaseClientService.client.functions.invoke(
+            'register-business',
+            body: requestBody,
+          );
+          data = res.data as Map<String, dynamic>;
+          if (data['error'] != null) {
+            throw Exception(data['error'] as String);
+          }
+          break; // Success — exit retry loop
+        } catch (e) {
+          if (attempt < maxAttempts) {
+            ToastService.showWarning('Reintentando...');
+            await Future.delayed(const Duration(seconds: 2));
+          } else {
+            rethrow; // All retries exhausted
+          }
+        }
       }
 
       final businessId = data['business']?['id'] as String? ?? '';

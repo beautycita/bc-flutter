@@ -468,6 +468,13 @@ serve(async (req) => {
 
           // Send emails (non-blocking — don't fail the webhook)
           await sendBookingEmails(supabase, bookingId, paymentIntent);
+
+          // Stamp CFDI (non-blocking — fire and forget)
+          supabase.functions.invoke("cfdi-stamp", {
+            body: { appointment_id: bookingId },
+          }).catch((err: unknown) => {
+            console.error(`[STRIPE-WEBHOOK] CFDI stamp failed (non-fatal):`, err);
+          });
         }
         break;
       }

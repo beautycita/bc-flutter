@@ -44,6 +44,9 @@ serve(async (_req) => {
 
     let sent = 0;
 
+    // Build email payloads for all staff first, then send in batches
+    const emailPayloads: Array<{ staff: any; email: string; subject: string; body: string }> = [];
+
     for (const staff of staffList) {
       const staffId = staff.id;
       const email = staff.email;
@@ -131,19 +134,38 @@ Si tienes preguntas, contacta a la recepcion de ${salonName}.
 — BeautyCita
 RFC: BEA260313MI8`;
 
-      // Send email via send-email edge function
-      try {
-        await supabase.functions.invoke("send-email", {
-          body: {
-            to: email,
-            subject: `Reporte ${monthNames[reportMonth]} ${reportYear} — ${salonName}`,
-            text: body,
-          },
-        });
-        sent++;
-        console.log(`[STAFF-REPORT] Sent to ${email} (${fullName} at ${salonName})`);
-      } catch (emailErr) {
-        console.error(`[STAFF-REPORT] Failed to send to ${email}:`, emailErr);
+      emailPayloads.push({
+        staff,
+        email,
+        subject: `Reporte ${monthNames[reportMonth]} ${reportYear} — ${salonName}`,
+        body,
+      });
+    }
+
+    // Send emails in batches of 10 concurrently to avoid timeout
+    const BATCH_SIZE = 10;
+    for (let i = 0; i < emailPayloads.length; i += BATCH_SIZE) {
+      const batch = emailPayloads.slice(i, i + BATCH_SIZE);
+      const results = await Promise.allSettled(
+        batch.map(async (payload) => {
+          await supabase.functions.invoke("send-email", {
+            body: {
+              to: payload.email,
+              subject: payload.subject,
+              text: payload.body,
+            },
+          });
+          return payload;
+        })
+      );
+      for (const result of results) {
+        if (result.status === "fulfilled") {
+          const p = result.value;
+          sent++;
+          console.log(`[STAFF-REPORT] Sent to ${p.email}`);
+        } else {
+          console.error(`[STAFF-REPORT] Failed to send:`, result.reason);
+        }
       }
     }
 

@@ -322,14 +322,10 @@ class _ChatConversationScreenState
           Expanded(
             child: messagesAsync.when(
               data: (messages) {
-                // Merge stream messages with optimistic ones (dedup by matching text+sender)
+                // Merge stream messages with optimistic ones (dedup by client-side UUID)
                 final streamIds = messages.map((m) => m.id).toSet();
                 final pendingOptimistic = _optimisticMessages
-                    .where((o) => !streamIds.contains(o.id) &&
-                        !messages.any((m) =>
-                            m.senderType == 'user' &&
-                            m.textContent == o.textContent &&
-                            m.createdAt.difference(o.createdAt).inSeconds.abs() < 10))
+                    .where((o) => !streamIds.contains(o.id))
                     .toList();
                 final allMessages = [...messages, ...pendingOptimistic];
                 allMessages.sort((a, b) => a.createdAt.compareTo(b.createdAt));

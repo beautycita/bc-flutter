@@ -186,14 +186,27 @@ serve(async (req) => {
       // Don't rollback - the business is created, role update is secondary
     }
 
-    // 4. Create default weekly schedule (Mon-Sat 9am-7pm)
+    // 4. Create default weekly schedule
+    // Use discovered salon hours if available, otherwise default Mon-Sat 9am-7pm
+    let defaultStart = "09:00";
+    let defaultEnd = "19:00";
+    if (discoveredSalon?.hours) {
+      // hours is a text field, try to extract open/close times (e.g. "9:00-20:00" or "Lun-Sáb 10:00-19:00")
+      const hoursMatch = String(discoveredSalon.hours).match(/(\d{1,2}:\d{2})\s*[-–]\s*(\d{1,2}:\d{2})/);
+      if (hoursMatch) {
+        defaultStart = hoursMatch[1].padStart(5, "0");
+        defaultEnd = hoursMatch[2].padStart(5, "0");
+        console.log(`[REGISTER-BIZ] Using discovered salon hours: ${defaultStart}-${defaultEnd}`);
+      }
+    }
+
     const defaultSchedule = [];
     for (let day = 1; day <= 6; day++) { // 1=Monday to 6=Saturday
       defaultSchedule.push({
         staff_id: staff.id,
         day_of_week: day,
-        start_time: "09:00",
-        end_time: "19:00",
+        start_time: defaultStart,
+        end_time: defaultEnd,
         is_available: true,
       });
     }
@@ -201,8 +214,8 @@ serve(async (req) => {
     defaultSchedule.push({
       staff_id: staff.id,
       day_of_week: 0,
-      start_time: "09:00",
-      end_time: "19:00",
+      start_time: defaultStart,
+      end_time: defaultEnd,
       is_available: false,
     });
 

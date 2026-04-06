@@ -32,6 +32,29 @@ final _messageLogProvider =
   return (data as List).cast<Map<String, dynamic>>();
 });
 
+/// Per-trigger-type stats: {trigger_type: {sent: N, responded: N}}
+final _messageStatsProvider =
+    FutureProvider.family<Map<String, Map<String, int>>, String>((ref, bizId) async {
+  final stats = <String, Map<String, int>>{};
+  try {
+    final data = await SupabaseClientService.client
+        .from('automated_message_log')
+        .select('trigger_type, status')
+        .eq('business_id', bizId);
+    final rows = (data as List).cast<Map<String, dynamic>>();
+    for (final row in rows) {
+      final type = row['trigger_type'] as String? ?? '';
+      final status = row['status'] as String? ?? '';
+      stats.putIfAbsent(type, () => {'sent': 0, 'responded': 0});
+      if (status == 'sent') stats[type]!['sent'] = (stats[type]!['sent'] ?? 0) + 1;
+      if (status == 'responded') stats[type]!['responded'] = (stats[type]!['responded'] ?? 0) + 1;
+    }
+  } catch (_) {
+    // Table may not exist yet — return empty stats
+  }
+  return stats;
+});
+
 // ---------------------------------------------------------------------------
 // Screen
 // ---------------------------------------------------------------------------
@@ -75,11 +98,13 @@ class _BusinessMarketingScreenState extends ConsumerState<BusinessMarketingScree
         final bizId = biz['id'] as String;
         final messagesAsync = ref.watch(_automatedMessagesProvider(bizId));
         final logAsync = ref.watch(_messageLogProvider(bizId));
+        final statsAsync = ref.watch(_messageStatsProvider(bizId));
 
         return RefreshIndicator(
           onRefresh: () async {
             ref.invalidate(_automatedMessagesProvider(bizId));
             ref.invalidate(_messageLogProvider(bizId));
+            ref.invalidate(_messageStatsProvider(bizId));
           },
           child: ListView(
             padding: const EdgeInsets.all(AppConstants.paddingMD),
@@ -119,15 +144,22 @@ class _BusinessMarketingScreenState extends ConsumerState<BusinessMarketingScree
                   for (final m in existing) {
                     existingMap[m['trigger_type'] as String] = m;
                   }
+                  final statsMap = statsAsync.valueOrNull ?? {};
 
                   return Column(
                     children: _triggerTypes.map((trigger) {
                       final saved = existingMap[trigger.type];
+                      final triggerStats = statsMap[trigger.type];
                       return _MessageTypeCard(
                         trigger: trigger,
                         saved: saved,
                         bizId: bizId,
-                        onSaved: () => ref.invalidate(_automatedMessagesProvider(bizId)),
+                        sentCount: triggerStats?['sent'] ?? 0,
+                        responseCount: triggerStats?['responded'] ?? 0,
+                        onSaved: () {
+                          ref.invalidate(_automatedMessagesProvider(bizId));
+                          ref.invalidate(_messageStatsProvider(bizId));
+                        },
                       );
                     }).toList(),
                   );
@@ -236,9 +268,11 @@ class _MessageTypeCard extends StatefulWidget {
   final _TriggerDef trigger;
   final Map<String, dynamic>? saved;
   final String bizId;
+  final int sentCount;
+  final int responseCount;
   final VoidCallback onSaved;
 
-  const _MessageTypeCard({required this.trigger, this.saved, required this.bizId, required this.onSaved});
+  const _MessageTypeCard({required this.trigger, this.saved, required this.bizId, this.sentCount = 0, this.responseCount = 0, required this.onSaved});
 
   @override
   State<_MessageTypeCard> createState() => _MessageTypeCardState();
@@ -331,6 +365,20 @@ class _MessageTypeCardState extends State<_MessageTypeCard> {
                         Text(t.label, style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600)),
                         Text(t.description, style: GoogleFonts.nunito(fontSize: 12, color: colors.onSurface.withValues(alpha: 0.5)),
                             maxLines: 1, overflow: TextOverflow.ellipsis),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Text(
+                              'Enviados: ${widget.sentCount > 0 ? widget.sentCount.toString() : '--'}',
+                              style: GoogleFonts.nunito(fontSize: 11, fontWeight: FontWeight.w600, color: colors.onSurface.withValues(alpha: 0.4)),
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              'Respuestas: ${widget.responseCount > 0 ? widget.responseCount.toString() : '--'}',
+                              style: GoogleFonts.nunito(fontSize: 11, fontWeight: FontWeight.w600, color: colors.onSurface.withValues(alpha: 0.4)),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                   ),

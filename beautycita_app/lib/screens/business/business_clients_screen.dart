@@ -662,6 +662,14 @@ class _ClientDetailSheetState extends State<_ClientDetailSheet> {
 
           const SizedBox(height: 20),
 
+          // Visit History
+          _VisitHistorySection(
+            bizId: widget.bizId,
+            userId: c['user_id'] as String?,
+            clientPhone: c['phone'] as String?,
+          ),
+          const SizedBox(height: 20),
+
           // Tags (editable)
           Text('Etiquetas', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600)),
           const SizedBox(height: 6),
@@ -749,3 +757,159 @@ Widget _DetailRow(String label, String value) => Padding(
     ],
   ),
 );
+
+// ---------------------------------------------------------------------------
+// Visit History
+// ---------------------------------------------------------------------------
+
+class _VisitHistorySection extends StatefulWidget {
+  final String bizId;
+  final String? userId;
+  final String? clientPhone;
+
+  const _VisitHistorySection({required this.bizId, this.userId, this.clientPhone});
+
+  @override
+  State<_VisitHistorySection> createState() => _VisitHistorySectionState();
+}
+
+class _VisitHistorySectionState extends State<_VisitHistorySection> {
+  bool _expanded = false;
+  List<Map<String, dynamic>>? _visits;
+  bool _loading = false;
+
+  Future<void> _loadVisits() async {
+    if (_visits != null || _loading) return;
+    if (widget.userId == null && widget.clientPhone == null) return;
+
+    setState(() => _loading = true);
+    try {
+      var filter = SupabaseClientService.client
+          .from('appointments')
+          .select('id, service_name, starts_at, price, status, staff:staff_id(first_name, last_name)')
+          .eq('business_id', widget.bizId);
+
+      if (widget.userId != null) {
+        filter = filter.eq('user_id', widget.userId!);
+      }
+
+      final data = await filter.order('starts_at', ascending: false).limit(50);
+      if (mounted) {
+        setState(() {
+          _visits = (data as List).cast<Map<String, dynamic>>();
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final dateFmt = DateFormat('dd MMM yyyy, HH:mm', 'es');
+    final priceFmt = NumberFormat('#,##0', 'es_MX');
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        InkWell(
+          onTap: () {
+            setState(() => _expanded = !_expanded);
+            if (_expanded) _loadVisits();
+          },
+          borderRadius: BorderRadius.circular(10),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Row(
+              children: [
+                Icon(Icons.history_rounded, size: 20, color: colors.primary),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text('Historial de visitas',
+                    style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: colors.primary)),
+                ),
+                Icon(_expanded ? Icons.expand_less : Icons.expand_more,
+                  color: colors.onSurface.withValues(alpha: 0.5)),
+              ],
+            ),
+          ),
+        ),
+        if (_expanded) ...[
+          if (_loading)
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+            )
+          else if (_visits == null || _visits!.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text('Sin historial de visitas',
+                style: GoogleFonts.nunito(fontSize: 13, color: colors.onSurface.withValues(alpha: 0.5))),
+            )
+          else
+            ...(_visits!.map((v) {
+              final dt = DateTime.tryParse(v['starts_at']?.toString() ?? '');
+              final staff = v['staff'] as Map<String, dynamic>?;
+              final staffName = staff != null
+                  ? '${staff['first_name'] ?? ''} ${staff['last_name'] ?? ''}'.trim()
+                  : null;
+              final price = (v['price'] as num?)?.toDouble();
+              final status = v['status'] as String? ?? '';
+              final statusColor = status == 'completed'
+                  ? const Color(0xFF059669)
+                  : status.contains('cancelled')
+                      ? Colors.red
+                      : status == 'no_show'
+                          ? Colors.orange
+                          : colors.onSurface.withValues(alpha: 0.5);
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: colors.surface,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: colors.outline.withValues(alpha: 0.1)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 4, height: 36,
+                      decoration: BoxDecoration(color: statusColor, borderRadius: BorderRadius.circular(2)),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(v['service_name'] as String? ?? 'Servicio',
+                            style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600)),
+                          Row(
+                            children: [
+                              if (dt != null)
+                                Text(dateFmt.format(dt.toLocal()),
+                                  style: GoogleFonts.nunito(fontSize: 11, color: colors.onSurface.withValues(alpha: 0.5))),
+                              if (staffName != null) ...[
+                                Text(' · ', style: TextStyle(color: colors.onSurface.withValues(alpha: 0.3))),
+                                Text(staffName,
+                                  style: GoogleFonts.nunito(fontSize: 11, color: colors.onSurface.withValues(alpha: 0.5))),
+                              ],
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (price != null)
+                      Text('\$${priceFmt.format(price)}',
+                        style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w700, color: statusColor)),
+                  ],
+                ),
+              );
+            })),
+        ],
+      ],
+    );
+  }
+}
