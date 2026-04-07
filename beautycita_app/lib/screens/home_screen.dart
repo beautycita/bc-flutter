@@ -22,7 +22,6 @@ import '../services/updater_service.dart';
 import '../themes/category_icons.dart';
 import '../themes/theme_variant.dart';
 import '../widgets/cinematic_question_text.dart';
-import '../widgets/video_map_background.dart';
 import 'onboarding_screen.dart';
 import 'subcategory_sheet.dart';
 import 'business/business_shell_screen.dart' show businessTabProvider;
@@ -1122,9 +1121,7 @@ class _HeroGradientBackground extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          // Looping video background
-          const VideoMapBackground(),
-          // Brand gradient overlay (transparent enough to see video)
+          // Brand gradient overlay
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(

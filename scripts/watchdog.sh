@@ -15,10 +15,10 @@ LOG_FILE="/var/log/watchdog.log"
 METRICS_DIR="/var/www/beautycita.com/monitoring/textfile_collector"
 METRICS_FILE="${METRICS_DIR}/watchdog-metrics.prom"
 SUPABASE_DIR="/var/www/beautycita.com/bc-flutter/supabase-docker"
-WA_API="http://100.93.1.103:3200/api/wa/send"
+WA_API="http://100.78.37.84:3200/api/wa/send"
 WA_PHONE="5217206777800"
 VERBOSE="${WATCHDOG_VERBOSE:-0}"
-SUDO_PASS="JUs3f2m3Fa"
+SUDO_PASS="${WATCHDOG_SUDO_PASS:?Set WATCHDOG_SUDO_PASS env var}"
 
 SERVICES=("nginx" "supabase_kong" "supabase_db" "supabase_auth" "supabase_functions" "supabase_realtime")
 

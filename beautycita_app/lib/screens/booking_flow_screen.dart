@@ -1,20 +1,50 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../config/constants.dart';
 import '../providers/booking_flow_provider.dart';
+import '../providers/feature_toggle_provider.dart';
 import '../widgets/cinematic_question_text.dart';
 import 'follow_up_question_screen.dart';
 import 'result_cards_screen.dart';
 import 'confirmation_screen.dart';
 import 'email_verification_screen.dart';
 
-class BookingFlowScreen extends ConsumerWidget {
+class BookingFlowScreen extends ConsumerStatefulWidget {
   const BookingFlowScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<BookingFlowScreen> createState() => _BookingFlowScreenState();
+}
+
+class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
+  @override
+  Widget build(BuildContext context) {
+    final toggles = ref.watch(featureTogglesProvider);
+    final hapticsEnabled = toggles.isEnabled('enable_haptic_feedback');
+
+    ref.listen<BookingFlowState>(bookingFlowProvider, (previous, next) {
+      if (!hapticsEnabled) return;
+      if (previous?.step == next.step) return;
+
+      switch (next.step) {
+        case BookingFlowStep.followUpQuestions:
+        case BookingFlowStep.loading:
+        case BookingFlowStep.results:
+          HapticFeedback.lightImpact();
+        case BookingFlowStep.confirmation:
+          HapticFeedback.mediumImpact();
+        case BookingFlowStep.booked:
+          HapticFeedback.heavyImpact();
+        case BookingFlowStep.error:
+          HapticFeedback.vibrate();
+        default:
+          break;
+      }
+    });
+
     final state = ref.watch(bookingFlowProvider);
 
     // If state reset to categorySelect, pop back to home

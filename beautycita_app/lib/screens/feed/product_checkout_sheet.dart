@@ -309,44 +309,18 @@ class _ProductCheckoutSheetState extends State<ProductCheckoutSheet> {
     final userId = SupabaseClientService.currentUserId;
     if (userId == null) throw Exception('No autenticado');
 
-    if (_userSaldo < _total) {
-      throw Exception('Saldo insuficiente');
-    }
+    // Atomic RPC: lock saldo, deduct, create order, record commission
+    final result = await SupabaseClientService.client.rpc('purchase_product_with_saldo', params: {
+      'p_user_id': userId,
+      'p_business_id': widget.businessId,
+      'p_product_id': widget.productId,
+      'p_product_name': widget.productName,
+      'p_quantity': widget.quantity,
+      'p_total_amount': _total,
+      'p_shipping_address': shippingAddress,
+    }) as Map<String, dynamic>;
 
-    // Deduct saldo
-    await SupabaseClientService.client
-        .from('profiles')
-        .update({'saldo': _userSaldo - _total})
-        .eq('id', userId);
-
-    // Create order
-    final orderResult =
-        await SupabaseClientService.client.from('orders').insert({
-      'buyer_id': userId,
-      'business_id': widget.businessId,
-      'product_id': widget.productId,
-      'product_name': widget.productName,
-      'quantity': widget.quantity,
-      'total_amount': _total,
-      'commission_amount': _commission,
-      'status': 'paid',
-      'payment_method': 'saldo',
-      'shipping_address': shippingAddress,
-    }).select('id').single();
-
-    _orderId = orderResult['id'] as String;
-
-    // Record commission (10% product)
-    SupabaseClientService.client.from('commission_records').insert({
-      'business_id': widget.businessId,
-      'order_id': _orderId,
-      'amount': _commission,
-      'rate': 0.10,
-      'source': 'product_sale',
-      'period_month': DateTime.now().month,
-      'period_year': DateTime.now().year,
-      'status': 'collected',
-    }).then((_) {}).catchError((_) {});
+    _orderId = result['order_id'] as String;
 
     if (mounted) {
       setState(() {

@@ -49,7 +49,7 @@ class BCSupabase {
       await dotenv.load(fileName: '.env');
       final url = dotenv.env['SUPABASE_URL'] ?? '';
       final anonKey = dotenv.env['SUPABASE_ANON_KEY'] ?? '';
-      debugPrint('Supabase: .env loaded. URL=$url, key=${anonKey.isNotEmpty ? "${anonKey.substring(0, 20)}..." : "EMPTY"}');
+      debugPrint('Supabase: .env loaded. URL=$url, key=${anonKey.isNotEmpty ? "present" : "EMPTY"}');
 
       if (url.isEmpty || anonKey.isEmpty || url.contains('PLACEHOLDER')) {
         _initError = 'No credentials configured (url=${url.isEmpty ? "empty" : "ok"}, key=${anonKey.isEmpty ? "empty" : "ok"})';

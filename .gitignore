@@ -41,3 +41,7 @@ images/
 
 # Confidential legal/corporate documents
 docs/consult/
+
+# SAT compliance — CONFIDENTIAL, never publish
+docs/sat-api-guide.html
+docs/escrito-libre-sat-30b.html

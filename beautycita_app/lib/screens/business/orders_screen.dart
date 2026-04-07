@@ -260,7 +260,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
   Future<void> _markShipped(Order order) async {
     final service = ref.read(orderServiceProvider);
     try {
-      await service.markShipped(order.id);
+      await service.markShipped(order.id, businessId: order.businessId);
       ref.invalidate(businessOrdersProvider);
       ToastService.showSuccess('Pedido marcado como enviado');
     } catch (e) {
@@ -272,7 +272,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
   Future<void> _markDelivered(Order order) async {
     final service = ref.read(orderServiceProvider);
     try {
-      await service.markDelivered(order.id);
+      await service.markDelivered(order.id, businessId: order.businessId);
       ref.invalidate(businessOrdersProvider);
       ToastService.showSuccess('Pedido marcado como entregado');
     } catch (e) {
@@ -752,7 +752,7 @@ class _OrderCardState extends ConsumerState<_OrderCard> {
                           setSheetState(() => saving = true);
                           try {
                             final service = ref.read(orderServiceProvider);
-                            await service.updateTrackingNumber(order.id, tracking);
+                            await service.updateTrackingNumber(order.id, tracking, businessId: order.businessId);
                             ref.invalidate(businessOrdersProvider);
                             ToastService.showSuccess('Numero de rastreo guardado');
                             if (ctx.mounted) Navigator.pop(ctx);

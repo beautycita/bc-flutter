@@ -1,34 +1,34 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:beautycita_core/supabase.dart';
 
 // ── Data classes ──────────────────────────────────────────────────────────────
 
-/// System health metrics for the operations dashboard.
 @immutable
 class SystemHealth {
   final bool databaseOnline;
-  final int connectionCount;
   final int edgeFunctionErrors;
   final DateTime? lastBackupAt;
   final String? lastBackupStatus;
+  final DateTime checkedAt;
 
   const SystemHealth({
     required this.databaseOnline,
-    required this.connectionCount,
     required this.edgeFunctionErrors,
     this.lastBackupAt,
     this.lastBackupStatus,
+    required this.checkedAt,
   });
 
-  static const placeholder = SystemHealth(
+  static final placeholder = SystemHealth(
     databaseOnline: false,
-    connectionCount: 0,
     edgeFunctionErrors: 0,
+    checkedAt: DateTime.now(),
   );
 }
 
-/// Business activity metrics for the operations dashboard.
 @immutable
 class BusinessActivity {
   final int bookingsConfirmed;
@@ -63,7 +63,6 @@ class BusinessActivity {
   );
 }
 
-/// A single log entry for the alerts/logs column.
 @immutable
 class OpsLogEntry {
   final String id;
@@ -81,28 +80,41 @@ class OpsLogEntry {
   });
 }
 
+// ── Auto-refresh ticker ─────────────────────────────────────────────────────
+// All ops providers depend on this. It ticks every 30 seconds, causing
+// dependent providers to refetch. No stale data on the ops dashboard.
+
+final _opsRefreshProvider = StreamProvider<int>((ref) {
+  return Stream.periodic(const Duration(seconds: 30), (i) => i);
+});
+
 // ── Providers ────────────────────────────────────────────────────────────────
 
 /// System health check — tests DB connectivity and retrieves metrics.
+/// Auto-refreshes every 30 seconds via _opsRefreshProvider.
 final systemHealthProvider = FutureProvider<SystemHealth>((ref) async {
+  ref.watch(_opsRefreshProvider); // triggers refetch every 30s
+
   if (!BCSupabase.isInitialized) return SystemHealth.placeholder;
 
   try {
     final client = BCSupabase.client;
 
-    // Test DB connectivity by running a simple query
-    final dbTest = await client
-        .from(BCTables.profiles)
-        .select('id')
-        .limit(1);
+    // Test DB connectivity — if the query completes without throwing, DB is online
+    bool dbOnline = false;
+    try {
+      await client.from(BCTables.profiles).select('id').limit(1);
+      dbOnline = true;
+    } catch (_) {
+      dbOnline = false;
+    }
 
-    final dbOnline = (dbTest as List).isNotEmpty || true; // query succeeded
-
-    // Check for edge function errors from audit_log if available
+    // Edge function errors from audit_log in last 24h
     int edgeFunctionErrors = 0;
     try {
-      final now = DateTime.now();
-      final last24h = now.subtract(const Duration(hours: 24)).toIso8601String();
+      final last24h = DateTime.now()
+          .subtract(const Duration(hours: 24))
+          .toIso8601String();
       final errorRows = await client
           .from(BCTables.auditLog)
           .select('id')
@@ -110,11 +122,9 @@ final systemHealthProvider = FutureProvider<SystemHealth>((ref) async {
           .gte('created_at', last24h)
           .count();
       edgeFunctionErrors = errorRows.count;
-    } catch (_) {
-      // audit_log may not have edge_function_error entries
-    }
+    } catch (_) {}
 
-    // Check last backup from app_config if available
+    // Last backup from app_config
     DateTime? lastBackupAt;
     String? lastBackupStatus;
     try {
@@ -126,20 +136,19 @@ final systemHealthProvider = FutureProvider<SystemHealth>((ref) async {
       if ((backupConfig as List).isNotEmpty) {
         final val = backupConfig.first['value'];
         if (val is Map) {
-          lastBackupAt = DateTime.tryParse(val['timestamp']?.toString() ?? '');
+          lastBackupAt =
+              DateTime.tryParse(val['timestamp']?.toString() ?? '');
           lastBackupStatus = val['status'] as String?;
         }
       }
-    } catch (_) {
-      // Config key may not exist
-    }
+    } catch (_) {}
 
     return SystemHealth(
       databaseOnline: dbOnline,
-      connectionCount: 0, // Not available via client API
       edgeFunctionErrors: edgeFunctionErrors,
       lastBackupAt: lastBackupAt,
       lastBackupStatus: lastBackupStatus,
+      checkedAt: DateTime.now(),
     );
   } catch (e) {
     debugPrint('System health error: $e');
@@ -148,7 +157,10 @@ final systemHealthProvider = FutureProvider<SystemHealth>((ref) async {
 });
 
 /// Business activity metrics from live tables.
+/// Auto-refreshes every 30 seconds.
 final businessActivityProvider = FutureProvider<BusinessActivity>((ref) async {
+  ref.watch(_opsRefreshProvider);
+
   if (!BCSupabase.isInitialized) return BusinessActivity.placeholder;
 
   try {
@@ -162,40 +174,34 @@ final businessActivityProvider = FutureProvider<BusinessActivity>((ref) async {
         now.subtract(const Duration(hours: 24)).toIso8601String();
 
     final results = await Future.wait([
-      // Bookings today — confirmed
       client
           .from(BCTables.appointments)
           .select('id')
           .gte('created_at', startOfDay)
           .eq('status', 'confirmed')
           .count(),
-      // Bookings today — pending
       client
           .from(BCTables.appointments)
           .select('id')
           .gte('created_at', startOfDay)
           .eq('status', 'pending')
           .count(),
-      // Bookings today — cancelled
       client
           .from(BCTables.appointments)
           .select('id')
           .gte('created_at', startOfDay)
           .eq('status', 'cancelled')
           .count(),
-      // New salons last 7 days
       client
           .from(BCTables.businesses)
           .select('id')
           .gte('created_at', last7Days)
           .count(),
-      // Active users last 24h (profiles with recent activity)
       client
           .from(BCTables.profiles)
           .select('id')
           .gte('updated_at', last24h)
           .count(),
-      // Pending disputes
       client
           .from(BCTables.disputes)
           .select('id')
@@ -210,7 +216,6 @@ final businessActivityProvider = FutureProvider<BusinessActivity>((ref) async {
     final activeUsers = results[4].count;
     final disputes = results[5].count;
 
-    // Revenue today from payments
     final todayPayments = await client
         .from(BCTables.payments)
         .select('amount')
@@ -239,14 +244,16 @@ final businessActivityProvider = FutureProvider<BusinessActivity>((ref) async {
 });
 
 /// Recent ops logs: admin actions, toggle changes, failed payments.
+/// Auto-refreshes every 30 seconds.
 final opsLogsProvider = FutureProvider<List<OpsLogEntry>>((ref) async {
+  ref.watch(_opsRefreshProvider);
+
   if (!BCSupabase.isInitialized) return [];
 
   try {
     final client = BCSupabase.client;
     final entries = <OpsLogEntry>[];
 
-    // Fetch from audit_log table if available
     try {
       final auditData = await client
           .from(BCTables.auditLog)
@@ -282,11 +289,8 @@ final opsLogsProvider = FutureProvider<List<OpsLogEntry>>((ref) async {
           actor: row['actor_id']?.toString(),
         ));
       }
-    } catch (_) {
-      // audit_log might not exist or have different schema
-    }
+    } catch (_) {}
 
-    // Fetch failed payments from last 7 days
     try {
       final failedPayments = await client
           .from(BCTables.payments)
@@ -306,11 +310,8 @@ final opsLogsProvider = FutureProvider<List<OpsLogEntry>>((ref) async {
                   DateTime.now(),
         ));
       }
-    } catch (_) {
-      // payments table query may fail
-    }
+    } catch (_) {}
 
-    // Sort by timestamp descending
     entries.sort((a, b) => b.timestamp.compareTo(a.timestamp));
     return entries.take(30).toList();
   } catch (e) {

@@ -131,95 +131,17 @@ class BookingRepository {
   /// - BC's 3% commission is NEVER refunded
   /// - Returns a CancelResult with what happened
   Future<CancelResult> cancelBooking(String bookingId) async {
-    // Fetch booking + business cancellation policy
-    final booking = await SupabaseClientService.client
-        .from('appointments')
-        .select('id, user_id, price, payment_status, payment_method, starts_at, business_id, businesses(cancellation_hours, deposit_percentage, deposit_required)')
-        .eq('id', bookingId)
-        .maybeSingle();
-
-    if (booking == null) return CancelResult(refundAmount: 0, depositForfeited: 0, commissionKept: 0, isFreeCancel: true);
-
-    final price = (booking['price'] as num?)?.toDouble() ?? 0;
-    final isPaid = booking['payment_status'] == 'paid';
-    final startsAt = DateTime.tryParse(booking['starts_at'] as String? ?? '');
-    final biz = booking['businesses'] as Map<String, dynamic>?;
-    final cancellationHours = biz?['cancellation_hours'] as int? ?? 24;
-    final depositRequired = biz?['deposit_required'] as bool? ?? false;
-    final depositPct = (biz?['deposit_percentage'] as num?)?.toDouble() ?? 0;
-
-    // Calculate time until appointment
-    final now = DateTime.now().toUtc();
-    final hoursUntilAppt = startsAt != null ? startsAt.toUtc().difference(now).inHours : 999;
-    final isFreeCancel = hoursUntilAppt >= cancellationHours;
-
-    // BC 3% commission is NEVER refunded
-    final bcCommission = price * 0.03;
-
-    double refundAmount;
-    double depositForfeited = 0;
-
-    if (!isPaid || price <= 0) {
-      // Not paid — just cancel, no money to move
-      refundAmount = 0;
-    } else if (isFreeCancel) {
-      // Cancelled within free window — full refund minus BC commission
-      refundAmount = price - bcCommission;
-    } else if (depositRequired && depositPct > 0) {
-      // Late cancel — deposit forfeited, refund the rest minus BC commission
-      final depositAmount = price * (depositPct / 100);
-      depositForfeited = depositAmount;
-      refundAmount = (price - depositAmount - bcCommission).clamp(0, double.infinity);
-    } else {
-      // Late cancel, no deposit policy — full refund minus BC commission
-      refundAmount = price - bcCommission;
-    }
-
-    // Update appointment status
-    String paymentStatus = booking['payment_status'] as String? ?? 'unpaid';
-    if (isPaid) {
-      paymentStatus = refundAmount > 0 ? 'refunded_to_saldo' : 'deposit_forfeited';
-    }
-
-    await SupabaseClientService.client
-        .from('appointments')
-        .update({
-          'status': 'cancelled_customer',
-          'payment_status': paymentStatus,
-          'updated_at': now.toIso8601String(),
-        })
-        .eq('id', bookingId);
-
-    // Refund to saldo (the calculated amount, not full price)
-    if (isPaid && refundAmount > 0) {
-      final userId = booking['user_id'] as String?;
-      if (userId != null) {
-        await SupabaseClientService.adjustSaldo(userId: userId, amount: refundAmount);
-      }
-    }
-
-    // Record the 3% commission BC kept on cancellation (audit trail)
-    if (isPaid && bcCommission > 0) {
-      final bizId = booking['business_id'] as String?;
-      if (bizId != null) {
-        await SupabaseClientService.client.from('commission_records').insert({
-          'business_id': bizId,
-          'appointment_id': bookingId,
-          'amount': double.parse(bcCommission.toStringAsFixed(2)),
-          'rate': 0.03,
-          'source': 'cancellation',
-          'period_month': DateTime.now().month,
-          'period_year': DateTime.now().year,
-          'status': 'collected',
-        }).then((_) {}).catchError((_) {});
-      }
-    }
+    // Atomic server-side: ownership check, refund calc, saldo credit, commission
+    final result = await SupabaseClientService.client.rpc('cancel_booking', params: {
+      'p_booking_id': bookingId,
+      'p_cancelled_by': 'customer',
+    }) as Map<String, dynamic>;
 
     return CancelResult(
-      refundAmount: refundAmount,
-      depositForfeited: depositForfeited,
-      commissionKept: isPaid ? bcCommission : 0,
-      isFreeCancel: isFreeCancel,
+      refundAmount: (result['refund_amount'] as num?)?.toDouble() ?? 0,
+      depositForfeited: (result['deposit_forfeited'] as num?)?.toDouble() ?? 0,
+      commissionKept: (result['commission_kept'] as num?)?.toDouble() ?? 0,
+      isFreeCancel: result['is_free_cancel'] as bool? ?? true,
     );
   }
 

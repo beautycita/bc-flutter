@@ -78,11 +78,37 @@ class _PageHeader extends StatelessWidget {
     final formattedDate = dateStr[0].toUpperCase() + dateStr.substring(1);
     final timeStr = DateFormat('HH:mm').format(now);
 
-    return WebSectionHeader(
-      label: '$formattedDate  $timeStr',
-      title: 'Centro de Operaciones',
-      centered: false,
-      titleSize: isMobile ? 28 : 36,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        WebSectionHeader(
+          label: '$formattedDate  $timeStr',
+          title: 'Centro de Operaciones',
+          centered: false,
+          titleSize: isMobile ? 28 : 36,
+        ),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration: const BoxDecoration(
+                color: Color(0xFF4CAF50),
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              'Actualizacion automatica cada 30s',
+              style: TextStyle(
+                fontSize: 11,
+                color: kWebTextHint,
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
@@ -187,22 +213,58 @@ class _SystemHealthColumn extends StatelessWidget {
           detail: isError ? 'Error de conexion' : 'En linea',
         ),
 
-        const SizedBox(height: 24),
+        const SizedBox(height: 16),
 
-        // Grafana dashboards link
-        WebOutlinedButton(
-          onPressed: () {
-            launchUrlString('https://beautycita.com/grafana/');
-          },
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.open_in_new_outlined, size: 18, color: kWebPrimary),
-              const SizedBox(width: 8),
-              const Text('Abrir Grafana'),
-            ],
+        // Last checked timestamp
+        Center(
+          child: Text(
+            'Actualizado: ${DateFormat('HH:mm:ss').format(health.checkedAt)}',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: kWebTextHint,
+              fontSize: 10,
+            ),
           ),
+        ),
+
+        const SizedBox(height: 16),
+
+        // Monitoring tools
+        Row(
+          children: [
+            Expanded(
+              child: WebOutlinedButton(
+                onPressed: () {
+                  launchUrlString('https://beautycita.com/kuma/');
+                },
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.monitor_heart_outlined, size: 16, color: kWebPrimary),
+                    SizedBox(width: 6),
+                    Text('Uptime', style: TextStyle(fontSize: 12)),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: WebOutlinedButton(
+                onPressed: () {
+                  launchUrlString('https://beautycita.com/beszel/');
+                },
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.memory_outlined, size: 16, color: kWebPrimary),
+                    SizedBox(width: 6),
+                    Text('Recursos', style: TextStyle(fontSize: 12)),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ],
     );

@@ -29,8 +29,8 @@ class OrderService {
     return (data as List).map((r) => Order.fromJson(r)).toList();
   }
 
-  /// Mark an order as shipped.
-  Future<void> markShipped(String orderId) async {
+  /// Mark an order as shipped (business owner only).
+  Future<void> markShipped(String orderId, {required String businessId}) async {
     if (!SupabaseClientService.isInitialized) return;
     await SupabaseClientService.client
         .from('orders')
@@ -38,20 +38,22 @@ class OrderService {
           'status': 'shipped',
           'shipped_at': DateTime.now().toUtc().toIso8601String(),
         })
-        .eq('id', orderId);
+        .eq('id', orderId)
+        .eq('business_id', businessId);
   }
 
-  /// Update tracking number on an order.
-  Future<void> updateTrackingNumber(String orderId, String trackingNumber) async {
+  /// Update tracking number on an order (business owner only).
+  Future<void> updateTrackingNumber(String orderId, String trackingNumber, {required String businessId}) async {
     if (!SupabaseClientService.isInitialized) return;
     await SupabaseClientService.client
         .from('orders')
         .update({'tracking_number': trackingNumber})
-        .eq('id', orderId);
+        .eq('id', orderId)
+        .eq('business_id', businessId);
   }
 
-  /// Mark an order as delivered.
-  Future<void> markDelivered(String orderId) async {
+  /// Mark an order as delivered (business owner only).
+  Future<void> markDelivered(String orderId, {required String businessId}) async {
     if (!SupabaseClientService.isInitialized) return;
     await SupabaseClientService.client
         .from('orders')
@@ -59,6 +61,7 @@ class OrderService {
           'status': 'delivered',
           'delivered_at': DateTime.now().toUtc().toIso8601String(),
         })
-        .eq('id', orderId);
+        .eq('id', orderId)
+        .eq('business_id', businessId);
   }
 }

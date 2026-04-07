@@ -35,17 +35,59 @@ class NotificationService {
   static final Int64List _vibrationPattern =
       Int64List.fromList([0, 150, 100, 200]);
 
-  /// Android notification channel for booking alerts
-  static const AndroidNotificationChannel _bookingChannel =
-      AndroidNotificationChannel(
-    'booking_alerts',
-    'Booking Alerts',
-    description: 'Notifications for new bookings and updates',
+  /// Android notification channels — one per notification type
+  static const _channelBooking = AndroidNotificationChannel(
+    'beautycita_booking',
+    'Reservaciones',
+    description: 'Confirmaciones y actualizaciones de citas',
     importance: Importance.high,
     playSound: true,
     enableVibration: true,
     sound: RawResourceAndroidNotificationSound('beautycita_notify'),
   );
+
+  static const _channelChat = AndroidNotificationChannel(
+    'beautycita_chat',
+    'Mensajes',
+    description: 'Nuevos mensajes de salones',
+    importance: Importance.high,
+    playSound: true,
+    enableVibration: true,
+    sound: RawResourceAndroidNotificationSound('beautycita_notify'),
+  );
+
+  static const _channelPayment = AndroidNotificationChannel(
+    'beautycita_payment',
+    'Pagos',
+    description: 'Confirmaciones de pago y recibos',
+    importance: Importance.high,
+    playSound: true,
+    enableVibration: true,
+    sound: RawResourceAndroidNotificationSound('beautycita_notify'),
+  );
+
+  static const _channelAlert = AndroidNotificationChannel(
+    'beautycita_alert',
+    'Alertas',
+    description: 'Alertas del sistema y promociones',
+    importance: Importance.defaultImportance,
+    playSound: true,
+    enableVibration: true,
+    sound: RawResourceAndroidNotificationSound('beautycita_notify'),
+  );
+
+  /// Route FCM message to the correct notification channel
+  static AndroidNotificationChannel _channelForType(String? type) {
+    return switch (type) {
+      'booking_confirmed' || 'booking_updated' || 'booking_cancelled' || 'booking_reminder'
+          => _channelBooking,
+      'chat_message' || 'new_message'
+          => _channelChat,
+      'payment_received' || 'payment_failed' || 'refund_processed'
+          => _channelPayment,
+      _ => _channelAlert,
+    };
+  }
 
   /// Initialize Firebase and notification permissions
   Future<void> initialize() async {
@@ -156,11 +198,17 @@ class NotificationService {
       },
     );
 
-    // Create Android notification channel
-    await _localNotifications
+    // Create Android notification channels + clean up legacy channel
+    final androidPlugin = _localNotifications
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(_bookingChannel);
+            AndroidFlutterLocalNotificationsPlugin>();
+    if (androidPlugin != null) {
+      await androidPlugin.deleteNotificationChannel('booking_alerts');
+      await androidPlugin.createNotificationChannel(_channelBooking);
+      await androidPlugin.createNotificationChannel(_channelChat);
+      await androidPlugin.createNotificationChannel(_channelPayment);
+      await androidPlugin.createNotificationChannel(_channelAlert);
+    }
   }
 
   /// Handle foreground messages - show local notification
@@ -169,20 +217,20 @@ class NotificationService {
 
     final notification = message.notification;
     if (notification != null) {
+      final channel = _channelForType(message.data['type'] as String?);
       _localNotifications.show(
         message.hashCode,
         notification.title,
         notification.body,
         NotificationDetails(
           android: AndroidNotificationDetails(
-            _bookingChannel.id,
-            _bookingChannel.name,
-            channelDescription: _bookingChannel.description,
-            importance: Importance.high,
+            channel.id,
+            channel.name,
+            channelDescription: channel.description,
+            importance: channel.importance,
             priority: Priority.high,
             icon: '@mipmap/ic_launcher',
-            sound: const RawResourceAndroidNotificationSound(
-                'beautycita_notify'),
+            sound: channel.sound,
             vibrationPattern: _vibrationPattern,
           ),
           iOS: const DarwinNotificationDetails(

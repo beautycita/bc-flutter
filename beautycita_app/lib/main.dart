@@ -24,11 +24,8 @@ import 'package:beautycita/screens/business/business_shell_screen.dart';
 import 'package:beautycita/services/toast_service.dart';
 import 'package:beautycita/services/debug_log.dart';
 import 'package:beautycita/services/presence_service.dart';
-import 'package:beautycita/services/screenshot_detector_service.dart';
-import 'package:beautycita/screens/screenshot_editor_screen.dart';
 import 'package:beautycita/services/contact_match_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:beautycita/widgets/screenshot_report_button.dart';
 import 'package:go_router/go_router.dart';
 
 /// Completes when Supabase is ready (or failed). Splash screen awaits this.
@@ -144,7 +141,6 @@ class BeautyCitaApp extends ConsumerStatefulWidget {
 class _BeautyCitaAppState extends ConsumerState<BeautyCitaApp> {
   late final AppLinks _appLinks;
   StreamSubscription<Uri>? _linkSub;
-  StreamSubscription<Uint8List>? _screenshotSub;
 
   static final _uuidRegex = RegExp(
     r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
@@ -156,30 +152,6 @@ class _BeautyCitaAppState extends ConsumerState<BeautyCitaApp> {
     super.initState();
     _appLinks = AppLinks();
     _initDeepLinks();
-    _initScreenshotDetection();
-  }
-
-  void _initScreenshotDetection() {
-    ScreenshotDetectorService.startListening();
-    _screenshotSub =
-        ScreenshotDetectorService.onScreenshotTaken.listen((bytes) {
-      if (kDebugMode) debugPrint('[Screenshot] Dart received ${bytes.length} bytes');
-      if (!mounted) return;
-      final nav = ToastService.navigatorKey.currentState;
-      if (nav == null) {
-        if (kDebugMode) debugPrint('[Screenshot] Navigator not ready yet');
-        return;
-      }
-      nav.push(
-        MaterialPageRoute(
-          fullscreenDialog: true,
-          builder: (_) => ScreenshotEditorScreen(screenshotBytes: bytes),
-        ),
-      );
-      if (kDebugMode) debugPrint('[Screenshot] Pushed editor screen');
-    }, onError: (e) {
-      if (kDebugMode) debugPrint('[Screenshot] Stream error: $e');
-    });
   }
 
   void _initDeepLinks() {
@@ -350,8 +322,6 @@ class _BeautyCitaAppState extends ConsumerState<BeautyCitaApp> {
 
   @override
   void dispose() {
-    _screenshotSub?.cancel();
-    ScreenshotDetectorService.stopListening();
     _linkSub?.cancel();
     super.dispose();
   }
@@ -393,15 +363,7 @@ class _BeautyCitaAppState extends ConsumerState<BeautyCitaApp> {
             data: MediaQuery.of(context).copyWith(
               textScaler: TextScaler.linear(scale),
             ),
-            child: Stack(
-              children: [
-                RepaintBoundary(
-                  key: screenshotBoundaryKey,
-                  child: child ?? const SizedBox.shrink(),
-                ),
-                const ScreenshotReportButton(),
-              ],
-            ),
+            child: child ?? const SizedBox.shrink(),
           ),
         );
       },

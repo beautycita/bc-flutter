@@ -710,7 +710,9 @@ class TaxSummary {
     required this.daysUntilYearEnd,
   });
 
-  double get ivaAmount => ytdRevenue * 0.08;
+  double get taxBase => ytdRevenue / 1.16;
+  double get ivaPortion => ytdRevenue - taxBase;
+  double get ivaAmount => ivaPortion * 0.08;
   double get isrAmount => ytdRevenue * 0.025;
   double get totalTaxes => ivaAmount + isrAmount;
   double get deductionBudget => ytdRevenue * 0.35 - ytdExpenses;

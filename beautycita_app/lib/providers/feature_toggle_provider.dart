@@ -45,6 +45,7 @@ const _defaults = <String, bool>{
   'enable_contact_match': true,
   // UI Experiments
   'enable_photo_category_cards': true,
+  'enable_haptic_feedback': true,
 };
 
 /// Fetches all boolean feature toggles from app_config and returns a map.

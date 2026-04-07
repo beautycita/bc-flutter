@@ -330,21 +330,49 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
   /// to 'paid' + 'confirmed' on payment success.
   Future<void> _confirmStripe(ResultCard result, {required bool oxxoOnly}) async {
     final serviceId = result.service.id ?? '';
+    final userId = SupabaseClientService.currentUserId;
+    if (userId == null) throw Exception('No autenticado');
 
-    // Step 1: Create booking first with pending status.
-    // If payment fails or user cancels, we clean it up below.
-    final booking = await _bookingRepo.createBooking(
-      providerId: result.business.id,
-      providerServiceId: result.service.id ?? '',
+    if (result.slot == null) {
+      throw Exception('No hay horario disponible para este servicio');
+    }
+
+    final price = result.service.price ?? 0;
+    final endsAt = result.slot!.startTime.add(
+      Duration(minutes: result.service.durationMinutes),
+    );
+
+    // Step 1: Create booking with pending status via atomic RPC.
+    // Tax/commission records are created now (rates locked at booking time).
+    // Webhook only needs to flip payment_status to 'paid'.
+    final rpcResult = await SupabaseClientService.client.rpc('create_booking_with_financials', params: {
+      'p_user_id': userId,
+      'p_business_id': result.business.id,
+      'p_service_id': serviceId,
+      'p_service_name': result.service.name,
+      'p_service_type': state.serviceType ?? '',
+      'p_starts_at': result.slot!.startTime.toUtc().toIso8601String(),
+      'p_ends_at': endsAt.toUtc().toIso8601String(),
+      'p_price': price,
+      'p_payment_method': oxxoOnly ? 'oxxo' : 'card',
+      'p_booking_source': 'bc_marketplace',
+      'p_transport_mode': state.transportMode,
+      'p_staff_id': result.staff?.id,
+      'p_idempotency_key': '${userId}_${serviceId}_${result.slot!.startTime.millisecondsSinceEpoch}',
+    });
+
+    final bookingData = rpcResult as Map<String, dynamic>;
+    final bookingId = bookingData['booking_id'] as String;
+    final booking = Booking(
+      id: bookingId,
+      userId: userId,
+      businessId: result.business.id,
       serviceName: result.service.name,
-      category: state.serviceType ?? '',
       scheduledAt: result.slot!.startTime,
       durationMinutes: result.service.durationMinutes,
-      price: result.service.price ?? 0,
-      paymentStatus: 'pending',
-      paymentMethod: state.paymentMethod,
-      transportMode: state.transportMode,
-      bookingSource: 'bc_marketplace',
+      price: price,
+      status: 'pending',
+      createdAt: DateTime.now(),
     );
 
     if (kDebugMode) debugPrint('[PAYMENT] Booking created: ${booking.id} (pending payment)');
@@ -498,12 +526,16 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
     final userId = SupabaseClientService.currentUserId;
     if (userId == null) throw Exception('No autenticado');
 
+    if (result.slot == null) {
+      throw Exception('No hay horario disponible para este servicio');
+    }
+
     final endsAt = result.slot!.startTime.add(
       Duration(minutes: result.service.durationMinutes),
     );
 
-    // Single atomic transaction: check saldo, deduct, create booking
-    final bookingId = await SupabaseClientService.client.rpc('book_with_saldo', params: {
+    // Single atomic RPC: saldo deduction + booking + tax + commission
+    final rpcResult = await SupabaseClientService.client.rpc('create_booking_with_financials', params: {
       'p_user_id': userId,
       'p_business_id': result.business.id,
       'p_service_id': result.service.id ?? '',
@@ -513,139 +545,19 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
       'p_ends_at': endsAt.toUtc().toIso8601String(),
       'p_price': price,
       'p_payment_method': 'saldo',
+      'p_booking_source': 'bc_marketplace',
       'p_transport_mode': state.transportMode,
       'p_staff_id': result.staff?.id,
-    }) as String;
+      'p_idempotency_key': '${userId}_${result.service.id}_${result.slot!.startTime.millisecondsSinceEpoch}',
+    });
 
-    // Create a minimal Booking object for downstream use
-    final booking = Booking(
-      id: bookingId,
-      userId: userId,
-      businessId: result.business.id,
-      serviceName: result.service.name,
-      scheduledAt: result.slot!.startTime,
-      durationMinutes: result.service.durationMinutes,
-      price: price,
-      status: 'confirmed',
-      createdAt: DateTime.now(),
-    );
+    final bookingId = (rpcResult as Map<String, dynamic>)['booking_id'] as String;
 
-    // Calculate tax withholdings
-    final taxBase = price / 1.16;
-    final isrWithheld = taxBase * 0.025;
-    final ivaWithheld = taxBase * 0.08;
-    final providerNet = price - isrWithheld - ivaWithheld;
-    await SupabaseClientService.client
-        .from('appointments')
-        .update({
-          'tax_base': double.parse(taxBase.toStringAsFixed(2)),
-          'isr_withheld': double.parse(isrWithheld.toStringAsFixed(2)),
-          'iva_withheld': double.parse(ivaWithheld.toStringAsFixed(2)),
-          'provider_net': double.parse(providerNet.toStringAsFixed(2)),
-        })
-        .eq('id', booking.id);
-
-    // Record commission, tax withholding, and payout — tracked on failure
-    final commission = price * 0.03;
-    try {
-      await SupabaseClientService.client.from('commission_records').insert({
-        'business_id': result.business.id,
-        'appointment_id': booking.id,
-        'amount': double.parse(commission.toStringAsFixed(2)),
-        'rate': 0.03,
-        'source': 'appointment',
-        'period_month': DateTime.now().month,
-        'period_year': DateTime.now().year,
-        'status': 'collected',
-      });
-
-      await SupabaseClientService.client.from('tax_withholdings').insert({
-        'appointment_id': booking.id,
-        'business_id': result.business.id,
-        'payment_type': 'saldo',
-        'jurisdiction': 'MX',
-        'gross_amount': price,
-        'tax_base': double.parse(taxBase.toStringAsFixed(2)),
-        'platform_fee': double.parse(commission.toStringAsFixed(2)),
-        'isr_rate': 0.025,
-        'iva_rate': 0.08,
-        'isr_withheld': double.parse(isrWithheld.toStringAsFixed(2)),
-        'iva_withheld': double.parse(ivaWithheld.toStringAsFixed(2)),
-        'provider_net': double.parse(providerNet.toStringAsFixed(2)),
-        'period_year': DateTime.now().year,
-        'period_month': DateTime.now().month,
-      });
-
-      await SupabaseClientService.client.rpc('calculate_payout_with_debt', params: {
-        'p_business_id': result.business.id,
-        'p_gross_amount': price,
-        'p_commission': commission,
-        'p_iva_withheld': ivaWithheld,
-        'p_isr_withheld': isrWithheld,
-      });
-    } catch (e) {
-      debugPrint('[CRITICAL] Ledger insert failed for ${booking.id}: $e — retrying once');
-      // Retry once after a short delay
-      await Future.delayed(const Duration(seconds: 1));
-      try {
-        // Retry all three — Supabase upsert-safe or idempotent RPC
-        await SupabaseClientService.client.from('commission_records').upsert({
-          'business_id': result.business.id,
-          'appointment_id': booking.id,
-          'amount': double.parse(commission.toStringAsFixed(2)),
-          'rate': 0.03,
-          'source': 'appointment',
-          'period_month': DateTime.now().month,
-          'period_year': DateTime.now().year,
-          'status': 'collected',
-        }, onConflict: 'appointment_id');
-        await SupabaseClientService.client.from('tax_withholdings').upsert({
-          'appointment_id': booking.id,
-          'business_id': result.business.id,
-          'payment_type': 'saldo',
-          'jurisdiction': 'MX',
-          'gross_amount': price,
-          'tax_base': double.parse(taxBase.toStringAsFixed(2)),
-          'platform_fee': double.parse(commission.toStringAsFixed(2)),
-          'isr_rate': 0.025,
-          'iva_rate': 0.08,
-          'isr_withheld': double.parse(isrWithheld.toStringAsFixed(2)),
-          'iva_withheld': double.parse(ivaWithheld.toStringAsFixed(2)),
-          'provider_net': double.parse(providerNet.toStringAsFixed(2)),
-          'period_year': DateTime.now().year,
-          'period_month': DateTime.now().month,
-        }, onConflict: 'appointment_id');
-        await SupabaseClientService.client.rpc('calculate_payout_with_debt', params: {
-          'p_business_id': result.business.id,
-          'p_gross_amount': price,
-          'p_commission': commission,
-          'p_iva_withheld': ivaWithheld,
-          'p_isr_withheld': isrWithheld,
-        });
-      } catch (retryError) {
-        // Retry also failed — log to error_reports for manual reconciliation
-        debugPrint('[CRITICAL] Ledger retry failed for ${booking.id}: $retryError');
-        try {
-          await SupabaseClientService.client.from('user_error_reports').insert({
-            'user_id': SupabaseClientService.currentUserId,
-            'error_message': 'Ledger entry failed after retry',
-            'error_details': 'booking_id=${booking.id} '
-                'business_id=${result.business.id} '
-                'commission=$commission '
-                'error=$retryError',
-            'screen_name': 'booking_flow_ledger',
-          });
-        } catch (_) {
-          // Last resort — at least the debugPrint above captured it
-        }
-      }
-    }
-
-    _sendBookingNotifications(booking.id);
+    _sendBookingNotifications(bookingId);
 
     state = state.copyWith(
       step: BookingFlowStep.emailVerification,
-      bookingId: booking.id,
+      bookingId: bookingId,
     );
   }
 
