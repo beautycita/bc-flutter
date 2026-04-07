@@ -123,14 +123,18 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
       // Generate username with suffix (220K combos) + collision retry
       String username = UsernameGenerator.generateUsernameWithSuffix();
+      bool unique = false;
       for (int attempt = 0; attempt < 5; attempt++) {
         final existing = await SupabaseClientService.client
             .from('profiles')
             .select('id')
             .eq('username', username)
             .maybeSingle();
-        if (existing == null) break; // no collision
+        if (existing == null) { unique = true; break; }
         username = UsernameGenerator.generateUsernameWithSuffix();
+      }
+      if (!unique) {
+        throw Exception('No se pudo generar un nombre de usuario unico. Intenta de nuevo.');
       }
 
       // Save to local session (also stores Supabase user ID)

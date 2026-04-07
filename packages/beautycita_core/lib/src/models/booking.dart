@@ -14,6 +14,9 @@ class Booking {
   final DateTime createdAt;
   final String? providerName;
   final String? businessPhone;
+  final double? businessLat;
+  final double? businessLng;
+  final String? businessAddress;
   final String? transportMode;
   final String? paymentStatus;
   final String? paymentMethod;
@@ -36,6 +39,9 @@ class Booking {
     required this.createdAt,
     this.providerName,
     this.businessPhone,
+    this.businessLat,
+    this.businessLng,
+    this.businessAddress,
     this.transportMode,
     this.paymentStatus,
     this.paymentMethod,
@@ -44,12 +50,19 @@ class Booking {
   });
 
   factory Booking.fromJson(Map<String, dynamic> json) {
-    // Handle joined business name + phone from nested object or flat field
+    // Handle joined business data from nested object or flat fields
     String? providerName;
     String? businessPhone;
+    double? businessLat;
+    double? businessLng;
+    String? businessAddress;
     if (json['businesses'] != null && json['businesses'] is Map) {
-      providerName = json['businesses']['name'] as String?;
-      businessPhone = json['businesses']['phone'] as String?;
+      final biz = json['businesses'] as Map<String, dynamic>;
+      providerName = biz['name'] as String?;
+      businessPhone = biz['phone'] as String?;
+      businessLat = (biz['lat'] as num?)?.toDouble();
+      businessLng = (biz['lng'] as num?)?.toDouble();
+      businessAddress = biz['address'] as String?;
     } else {
       providerName = json['provider_name'] as String?;
       businessPhone = json['business_phone'] as String?;
@@ -79,6 +92,9 @@ class Booking {
       createdAt: DateTime.parse(json['created_at'] as String),
       providerName: providerName,
       businessPhone: businessPhone,
+      businessLat: businessLat,
+      businessLng: businessLng,
+      businessAddress: businessAddress,
       transportMode: json['transport_mode'] as String?,
       paymentStatus: json['payment_status'] as String?,
       paymentMethod: json['payment_method'] as String?,
@@ -134,6 +150,9 @@ class Booking {
       createdAt: createdAt,
       providerName: providerName,
       businessPhone: businessPhone,
+      businessLat: businessLat,
+      businessLng: businessLng,
+      businessAddress: businessAddress,
       transportMode: transportMode ?? this.transportMode,
       paymentStatus: paymentStatus ?? this.paymentStatus,
       paymentMethod: paymentMethod ?? this.paymentMethod,

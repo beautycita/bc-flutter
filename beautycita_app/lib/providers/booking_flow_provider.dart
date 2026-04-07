@@ -584,11 +584,19 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
       },
     ).ignore();
 
-    // CFDI stamping (fire-and-forget — only applies to non-walk-in bookings)
+    // CFDI stamping — log failures for reconciliation
     SupabaseClientService.client.functions.invoke(
       'cfdi-stamp',
       body: {'appointment_id': bookingId},
-    ).ignore();
+    ).then((_) {}).catchError((e) {
+      debugPrint('[CFDI] Stamping failed for $bookingId: $e');
+      SupabaseClientService.client.from('user_error_reports').insert({
+        'user_id': SupabaseClientService.currentUserId,
+        'error_message': 'CFDI stamping failed',
+        'error_details': 'booking_id=$bookingId error=$e',
+        'screen_name': 'booking_flow_cfdi',
+      }).then((_) {}).catchError((_) {});
+    });
   }
 
   /// Called from email verification screen after user provides email or skips.

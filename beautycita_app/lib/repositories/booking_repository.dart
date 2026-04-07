@@ -157,7 +157,7 @@ class BookingRepository {
   Future<Booking?> getBookingById(String id) async {
     final response = await SupabaseClientService.client
         .from('appointments')
-        .select('*, businesses(name)')
+        .select('*, businesses(name, phone, lat, lng, address)')
         .eq('id', id)
         .maybeSingle();
 

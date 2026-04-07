@@ -82,6 +82,7 @@ Future<void> main() async {
           .eq('user_id', SupabaseClientService.currentUserId!)
           .eq('status', 'pending')
           .eq('payment_status', 'pending')
+          .isFilter('payment_intent_id', null)
           .lt('created_at', DateTime.now().subtract(const Duration(minutes: 30)).toUtc().toIso8601String())
           .then((_) {
             if (kDebugMode) debugPrint('[Init] Orphan bookings cleaned');

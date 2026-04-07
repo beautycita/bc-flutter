@@ -29,6 +29,7 @@ String _monthEndISO() {
 /// Business record owned by the currently authenticated user.
 final currentBusinessProvider =
     FutureProvider.autoDispose<Map<String, dynamic>?>((ref) async {
+  if (!BCSupabase.isInitialized) return null;
   final userId = BCSupabase.client.auth.currentUser?.id;
   if (userId == null) return null;
 

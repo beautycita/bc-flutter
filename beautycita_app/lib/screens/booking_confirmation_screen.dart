@@ -134,16 +134,34 @@ class _BookingConfirmationScreenState
   }
 
   Future<void> _openUber(Booking booking) async {
-    // Deep link to Uber with salon as destination
-    final uri = Uri.parse(
-      'uber://?action=setPickup&pickup=my_location',
-    );
-    final webUri = Uri.parse('https://m.uber.com/ul/');
+    final params = <String, String>{
+      'action': 'setPickup',
+    };
 
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
-    } else if (await canLaunchUrl(webUri)) {
-      await launchUrl(webUri, mode: LaunchMode.externalApplication);
+    // Pre-fill salon as destination if we have coordinates
+    if (booking.businessLat != null && booking.businessLng != null) {
+      params['dropoff[latitude]'] = booking.businessLat.toString();
+      params['dropoff[longitude]'] = booking.businessLng.toString();
+      params['dropoff[nickname]'] = booking.providerName ?? 'Salon';
+      if (booking.businessAddress != null) {
+        params['dropoff[formatted_address]'] = booking.businessAddress!;
+      }
+    }
+
+    final uri = Uri.https('m.uber.com', '/ul/', params);
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+  Future<void> _openDidi() async {
+    // Try DiDi app, fallback to Play Store
+    const didiPackage = 'com.didiglobal.passenger';
+    final playStoreUri = Uri.parse('https://play.google.com/store/apps/details?id=$didiPackage');
+    final didiUri = Uri.parse('didi://');
+
+    if (await canLaunchUrl(didiUri)) {
+      await launchUrl(didiUri);
+    } else {
+      await launchUrl(playStoreUri, mode: LaunchMode.externalApplication);
     }
   }
 
@@ -409,15 +427,13 @@ class _BookingConfirmationScreenState
                     onTap: () => _addToCalendar(booking),
                   ),
 
-                  if (booking.transportMode == 'uber') ...[
-                    const SizedBox(height: AppConstants.paddingSM),
-                    _solidButton(
-                      icon: Icons.local_taxi_rounded,
-                      label: 'Programar Uber',
-                      color: Colors.black,
-                      onTap: () => _openUber(booking),
-                    ),
-                  ],
+                  const SizedBox(height: AppConstants.paddingLG),
+
+                  // -- Transport offer --
+                  _TransportOfferCard(
+                    onUber: () => _openUber(booking),
+                    onDidi: () => _openDidi(),
+                  ),
 
                   const SizedBox(height: AppConstants.paddingSM),
 
@@ -728,4 +744,142 @@ class _RingPainter extends CustomPainter {
   @override
   bool shouldRepaint(_RingPainter old) =>
       old.radius != radius || old.color != color;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Transport Offer Card
+//
+// Always-visible post-booking prompt: "¿Necesitas transporte?"
+// Uber (deep link with salon destination) + DiDi (app launch)
+// ═══════════════════════════════════════════════════════════════════════════
+
+class _TransportOfferCard extends StatelessWidget {
+  final VoidCallback onUber;
+  final VoidCallback onDidi;
+
+  const _TransportOfferCard({
+    required this.onUber,
+    required this.onDidi,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = Theme.of(context).colorScheme;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppConstants.paddingMD),
+      decoration: BoxDecoration(
+        color: palette.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+        border: Border.all(
+          color: palette.outline.withValues(alpha: 0.1),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.directions_car_rounded,
+                size: 20,
+                color: palette.primary,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  '¿Necesitas transporte?',
+                  style: GoogleFonts.poppins(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: palette.onSurface,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Te llevamos al salon con un toque',
+            style: GoogleFonts.nunito(
+              fontSize: 13,
+              color: palette.onSurface.withValues(alpha: 0.5),
+            ),
+          ),
+          const SizedBox(height: AppConstants.paddingMD),
+          Row(
+            children: [
+              // Uber button
+              Expanded(
+                child: _RideButton(
+                  label: 'Uber',
+                  color: Colors.black,
+                  textColor: Colors.white,
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    onUber();
+                  },
+                ),
+              ),
+              const SizedBox(width: AppConstants.paddingSM),
+              // DiDi button
+              Expanded(
+                child: _RideButton(
+                  label: 'DiDi',
+                  color: const Color(0xFFFF6611),
+                  textColor: Colors.white,
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    onDidi();
+                  },
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RideButton extends StatelessWidget {
+  final String label;
+  final Color color;
+  final Color textColor;
+  final VoidCallback onTap;
+
+  const _RideButton({
+    required this.label,
+    required this.color,
+    required this.textColor,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: color,
+      borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+        splashColor: Colors.white.withValues(alpha: 0.15),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          child: Center(
+            child: Text(
+              label,
+              style: GoogleFonts.poppins(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: textColor,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
