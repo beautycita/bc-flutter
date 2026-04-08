@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../config/constants.dart';
 import '../providers/booking_flow_provider.dart';
 import '../providers/feature_toggle_provider.dart';
+import '../services/sound_service.dart';
 import '../widgets/cinematic_question_text.dart';
 import 'follow_up_question_screen.dart';
 import 'result_cards_screen.dart';
@@ -24,22 +25,30 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
   Widget build(BuildContext context) {
     final toggles = ref.watch(featureTogglesProvider);
     final hapticsEnabled = toggles.isEnabled('enable_haptic_feedback');
+    SoundService.instance.enabled = hapticsEnabled;
 
     ref.listen<BookingFlowState>(bookingFlowProvider, (previous, next) {
       if (!hapticsEnabled) return;
       if (previous?.step == next.step) return;
 
+      final sound = SoundService.instance;
       switch (next.step) {
         case BookingFlowStep.followUpQuestions:
         case BookingFlowStep.loading:
+          HapticFeedback.lightImpact();
+          sound.play(UiSound.tick);
         case BookingFlowStep.results:
           HapticFeedback.lightImpact();
+          sound.play(UiSound.select);
         case BookingFlowStep.confirmation:
           HapticFeedback.mediumImpact();
+          sound.play(UiSound.select);
         case BookingFlowStep.booked:
           HapticFeedback.heavyImpact();
+          sound.play(UiSound.success);
         case BookingFlowStep.error:
           HapticFeedback.vibrate();
+          sound.play(UiSound.error);
         default:
           break;
       }

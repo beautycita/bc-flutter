@@ -1,4 +1,5 @@
 import 'package:beautycita/config/app_transitions.dart';
+import 'package:beautycita/services/sound_service.dart';
 import 'package:beautycita/services/toast_service.dart';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
@@ -1056,6 +1057,7 @@ class _ImmersiveItemTileState extends ConsumerState<_ImmersiveItemTile> {
       onTapUp: (_) {
         setState(() => _isPressed = false);
         HapticFeedback.lightImpact();
+        SoundService.instance.play(UiSound.tap);
         _handleTap();
       },
       onTapCancel: () => setState(() => _isPressed = false),
