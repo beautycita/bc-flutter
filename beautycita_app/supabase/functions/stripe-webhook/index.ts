@@ -225,7 +225,7 @@ serve(async (req) => {
           const { data: existingOrder } = await supabase
             .from("orders")
             .select("id")
-            .eq("stripe_payment_intent_id", paymentIntent.id)
+            .eq("stripe_payment_id", paymentIntent.id)
             .maybeSingle();
 
           if (existingOrder) {
@@ -333,7 +333,7 @@ serve(async (req) => {
           const { data: existingPayment } = await supabase
             .from("payments")
             .select("id")
-            .eq("stripe_payment_intent_id", paymentIntent.id)
+            .eq("stripe_payment_id", paymentIntent.id)
             .eq("status", "succeeded")
             .maybeSingle();
 
@@ -342,10 +342,12 @@ serve(async (req) => {
           } else {
             await supabase.from("payments").insert({
               appointment_id: bookingId,
-              stripe_payment_intent_id: paymentIntent.id,
-              amount: paymentIntent.amount,
+              user_id: paymentIntent.metadata?.user_id ?? null,
+              stripe_payment_id: paymentIntent.id,
+              amount: paymentIntent.amount / 100,
               currency: paymentIntent.currency,
-              status: "succeeded",
+              payment_method: paymentIntent.payment_method_types?.[0] ?? "card",
+              status: "completed",
               created_at: new Date().toISOString(),
             });
           }
@@ -518,11 +520,41 @@ serve(async (req) => {
             payment_status: "paid",
             stripe_checkout_session_id: session.id,
             paid_at: new Date().toISOString(),
-            status: "confirmed", // Auto-confirm paid bookings
+            status: "confirmed",
             confirmed_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           })
           .eq("id", bookingId);
+
+        // Record payment (checkout sessions use payment_intent under the hood)
+        const sessionPI = session.payment_intent as string | null;
+        if (sessionPI) {
+          const { data: existingPay } = await supabase
+            .from("payments")
+            .select("id")
+            .eq("stripe_payment_id", sessionPI)
+            .maybeSingle();
+
+          if (!existingPay) {
+            await supabase.from("payments").insert({
+              appointment_id: bookingId,
+              user_id: session.metadata?.user_id ?? null,
+              stripe_payment_id: sessionPI,
+              amount: (session.amount_total ?? 0) / 100,
+              currency: session.currency ?? "mxn",
+              payment_method: "card",
+              status: "completed",
+              created_at: new Date().toISOString(),
+            });
+          }
+        }
+
+        // Send emails + CFDI (non-blocking)
+        sendBookingEmails(supabase, bookingId, null as any).catch(() => {});
+        supabase.functions.invoke("cfdi-stamp", {
+          body: { appointment_id: bookingId },
+        }).catch(() => {});
+
         break;
       }
 
@@ -545,10 +577,23 @@ serve(async (req) => {
           .maybeSingle();
 
         if (booking) {
+          // Idempotency: skip if already refunded
+          const { data: currentAppt } = await supabase
+            .from("appointments")
+            .select("payment_status")
+            .eq("id", booking.id)
+            .single();
+
+          if (currentAppt?.payment_status === "refunded_to_saldo" || currentAppt?.payment_status === "refunded") {
+            console.log(`[STRIPE-WEBHOOK] Booking ${booking.id} already refunded, skipping`);
+            break;
+          }
+
           await supabase
             .from("appointments")
             .update({
               payment_status: "refunded_to_saldo",
+              refund_amount: charge.amount_refunded / 100,
               refunded_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
             })
@@ -556,7 +601,7 @@ serve(async (req) => {
 
           // Credit refund to user saldo
           const refundUserId = booking.user_id;
-          const refundAmount = (booking.price as number) ?? charge.amount_refunded / 100;
+          const refundAmount = (charge.amount_refunded / 100) || (booking.price as number) || 0;
           if (refundUserId && refundAmount > 0) {
             await supabase.rpc("increment_saldo", {
               p_user_id: refundUserId,
@@ -578,9 +623,11 @@ serve(async (req) => {
           } else {
             await supabase.from("payments").insert({
               appointment_id: booking.id,
-              stripe_payment_intent_id: paymentIntentId,
-              amount: -charge.amount_refunded,
+              user_id: booking.user_id,
+              stripe_payment_id: paymentIntentId,
+              amount: -(charge.amount_refunded / 100),
               currency: charge.currency,
+              payment_method: "card",
               status: "refunded",
               created_at: new Date().toISOString(),
             });
@@ -649,11 +696,9 @@ async function sendBookingEmails(
     const { data: booking } = await supabase
       .from("appointments")
       .select(`
-        id, scheduled_at, duration_minutes, price,
-        service:services(name),
-        business:businesses(name),
-        staff:staff(display_name),
-        client_id
+        id, starts_at, ends_at, price, user_id, service_name,
+        businesses(name),
+        staff(display_name)
       `)
       .eq("id", bookingId)
       .single();
@@ -664,10 +709,10 @@ async function sendBookingEmails(
     }
 
     // Get client email & name
-    const { data: auth } = await supabase.auth.admin.getUserById(booking.client_id);
+    const { data: auth } = await supabase.auth.admin.getUserById(booking.user_id);
     const clientEmail = auth?.user?.email;
     if (!clientEmail) {
-      console.log(`[EMAIL] No email for client ${booking.client_id}, skipping`);
+      console.log(`[EMAIL] No email for client ${booking.user_id}, skipping`);
       return;
     }
 
@@ -684,7 +729,7 @@ async function sendBookingEmails(
         (await supabase
           .from("appointments")
           .select("id")
-          .eq("client_id", booking.client_id)
+          .eq("client_id", booking.user_id)
         ).data?.map((a: { id: string }) => a.id) ?? []
       );
 
@@ -695,7 +740,7 @@ async function sendBookingEmails(
     }
 
     // Send booking receipt
-    const scheduledDate = new Date(booking.scheduled_at);
+    const scheduledDate = new Date(booking.starts_at);
     const dateStr = scheduledDate.toLocaleDateString("es-MX", {
       weekday: "long", year: "numeric", month: "long", day: "numeric",
     });

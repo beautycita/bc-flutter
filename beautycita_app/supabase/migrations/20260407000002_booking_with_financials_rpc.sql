@@ -81,8 +81,19 @@ BEGIN
   -- 1. Read rates from app_config (single source of truth)
   -- =========================================================================
   v_iva_inclusive := get_config_rate('iva_inclusive_rate', 1.16);
-  v_isr_rate     := get_config_rate('isr_rate', 0.025);
-  v_iva_rate     := get_config_rate('iva_rate', 0.08);
+
+  -- Tax rates depend on whether salon has RFC registered
+  SELECT rfc INTO v_biz_rfc FROM public.businesses WHERE id = p_business_id;
+
+  IF v_biz_rfc IS NOT NULL AND v_biz_rfc != '' THEN
+    -- Salon has RFC: reduced rates (LISR 113-A)
+    v_isr_rate := get_config_rate('isr_rate', 0.025);
+    v_iva_rate := get_config_rate('iva_rate', 0.08);
+  ELSE
+    -- Salon has NO RFC: maximum rates
+    v_isr_rate := get_config_rate('isr_rate_no_rfc', 0.20);
+    v_iva_rate := get_config_rate('iva_rate_no_rfc', 0.16);
+  END IF;
 
   -- Commission rate depends on booking source
   IF p_booking_source IN ('bc_marketplace', 'invite_link') THEN
@@ -106,10 +117,11 @@ BEGIN
   v_provider_net := ROUND(p_price - v_isr_withheld - v_iva_withheld, 2);
 
   -- =========================================================================
-  -- 3. Read business tax info for withholding snapshot
+  -- 3. Read remaining business tax info for withholding snapshot
+  -- (RFC already read above for rate selection)
   -- =========================================================================
-  SELECT rfc, tax_regime, tax_residency
-  INTO v_biz_rfc, v_biz_tax_regime, v_biz_tax_residency
+  SELECT tax_regime, tax_residency
+  INTO v_biz_tax_regime, v_biz_tax_residency
   FROM public.businesses
   WHERE id = p_business_id;
 
