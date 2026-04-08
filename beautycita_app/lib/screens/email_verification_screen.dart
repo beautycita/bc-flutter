@@ -269,7 +269,7 @@ class _EmailVerificationScreenState
                 _GoldGradientButton(
                   label: 'Enviar recibo',
                   loading: _emailLoading,
-                  gradient: bcTheme.goldGradientDirectional(),
+                  gradient: const LinearGradient(colors: [Color(0xFFEC4899), Color(0xFF9333EA)], begin: Alignment.centerLeft, end: Alignment.centerRight),
                   onTap: _emailLoading ? null : _handleEmailSubmit,
                 ),
 

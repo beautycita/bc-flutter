@@ -399,7 +399,11 @@ class _PhoneVerifyGateSheetState extends ConsumerState<PhoneVerifyGateSheet> {
         height: 52,
         decoration: BoxDecoration(
           gradient: onTap != null
-              ? bcTheme.goldGradientDirectional()
+              ? const LinearGradient(
+                  colors: [Color(0xFFEC4899), Color(0xFF9333EA)],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                )
               : LinearGradient(
                   colors: [
                     Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
@@ -410,7 +414,7 @@ class _PhoneVerifyGateSheetState extends ConsumerState<PhoneVerifyGateSheet> {
           boxShadow: onTap != null
               ? [
                   BoxShadow(
-                    color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.35),
+                    color: const Color(0xFFEC4899).withValues(alpha: 0.25),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),

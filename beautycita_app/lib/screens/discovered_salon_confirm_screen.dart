@@ -233,7 +233,7 @@ class _DiscoveredSalonConfirmScreenState
                   width: double.infinity,
                   decoration: BoxDecoration(
                     gradient: !_isCreating
-                        ? bcTheme.goldGradientDirectional()
+                        ? const LinearGradient(colors: [Color(0xFFEC4899), Color(0xFF9333EA)], begin: Alignment.centerLeft, end: Alignment.centerRight)
                         : const LinearGradient(
                             colors: [Color(0xFFCCCCCC), Color(0xFFAAAAAA)],
                           ),

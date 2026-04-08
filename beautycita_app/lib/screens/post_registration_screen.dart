@@ -32,7 +32,7 @@ class PostRegistrationScreen extends ConsumerWidget {
                 width: 100,
                 height: 100,
                 decoration: BoxDecoration(
-                  gradient: bcTheme.goldGradientDirectional(),
+                  gradient: const LinearGradient(colors: [Color(0xFFEC4899), Color(0xFF9333EA)], begin: Alignment.centerLeft, end: Alignment.centerRight),
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
@@ -81,7 +81,7 @@ class PostRegistrationScreen extends ConsumerWidget {
                     'Tus clientes necesitan ver que ofreces y cuanto cuesta.',
                 icon: Icons.content_cut_rounded,
                 buttonLabel: 'IR A SERVICIOS',
-                gradient: bcTheme.goldGradientDirectional(),
+                gradient: const LinearGradient(colors: [Color(0xFFEC4899), Color(0xFF9333EA)], begin: Alignment.centerLeft, end: Alignment.centerRight),
                 onTap: () => context.go('/business'),
               ),
               const SizedBox(height: 16),
@@ -94,7 +94,7 @@ class PostRegistrationScreen extends ConsumerWidget {
                     'Ya tienes un horario predeterminado (Lun-Sab 9am-7pm). Ajustalo a tu gusto.',
                 icon: Icons.calendar_month_rounded,
                 buttonLabel: 'IR A CALENDARIO',
-                gradient: bcTheme.goldGradientDirectional(),
+                gradient: const LinearGradient(colors: [Color(0xFFEC4899), Color(0xFF9333EA)], begin: Alignment.centerLeft, end: Alignment.centerRight),
                 onTap: () => context.go('/business'),
               ),
               const SizedBox(height: 32),
