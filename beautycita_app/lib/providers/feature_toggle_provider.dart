@@ -17,6 +17,7 @@ const _defaults = <String, bool>{
   'enable_referrals': true,
   // Platform
   'enable_push_notifications': true,
+  'enable_no_show_processing': true,
   'enable_maintenance_mode': false,
   // Marketplace
   'enable_pos': true,

@@ -710,12 +710,25 @@ class _GiftCardRedemptionTileState
         return;
       }
 
-      await SupabaseClientService.client.from('gift_cards').update({
-        'redeemed_by': userId,
-        'redeemed_at': DateTime.now().toUtc().toIso8601String(),
-        'remaining_amount': 0,
-        'is_active': false,
-      }).eq('id', data['id'] as String);
+      // Atomic update: WHERE clause checks is_active=true AND redeemed_at IS NULL
+      // to prevent double-redemption on concurrent requests.
+      final updateResult = await SupabaseClientService.client
+          .from('gift_cards')
+          .update({
+            'redeemed_by': userId,
+            'redeemed_at': DateTime.now().toUtc().toIso8601String(),
+            'remaining_amount': 0,
+            'is_active': false,
+          })
+          .eq('id', data['id'] as String)
+          .eq('is_active', true)
+          .isFilter('redeemed_at', null)
+          .select('id');
+
+      if ((updateResult as List).isEmpty) {
+        ToastService.showError('Esta tarjeta ya fue canjeada');
+        return;
+      }
 
       await SupabaseClientService.adjustSaldo(userId: userId, amount: remaining);
 

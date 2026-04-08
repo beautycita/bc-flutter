@@ -41,8 +41,9 @@ serve(async (req) => {
   }
 
   try {
-    // Feature toggle check
-    const blocked = await requireFeature("enable_push_notifications");
+    // Feature toggle check — uses its own toggle so disabling push
+    // notifications doesn't accidentally block all no-show processing
+    const blocked = await requireFeature("enable_no_show_processing");
     if (blocked) return blocked;
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);

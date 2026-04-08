@@ -4,7 +4,10 @@
 // Handles:
 // - account.updated: When Stripe Connect Express account completes onboarding
 // - payment_intent.succeeded: When a payment is confirmed
+// - payment_intent.payment_failed: When a payment fails
+// - payment_intent.canceled: When an OXXO payment expires (cleans up pending bookings)
 // - checkout.session.completed: For booking payments
+// - charge.refunded: When a refund is processed
 // =============================================================================
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
@@ -501,6 +504,55 @@ serve(async (req) => {
       }
 
       // =======================================================================
+      // OXXO Expiration — Cancel pending bookings when payment expires
+      // =======================================================================
+      case "payment_intent.canceled": {
+        const paymentIntent = event.data.object as Stripe.PaymentIntent;
+        const bookingId = paymentIntent.metadata?.booking_id;
+
+        if (!bookingId) {
+          console.log(`[STRIPE-WEBHOOK] payment_intent.canceled without booking_id`);
+          break;
+        }
+
+        console.log(`[STRIPE-WEBHOOK] Payment canceled (expired) for booking ${bookingId}`);
+
+        // Only cancel if the booking is still pending — don't touch confirmed/completed
+        const { data: appt } = await supabase
+          .from("appointments")
+          .select("id, status, payment_status")
+          .eq("id", bookingId)
+          .maybeSingle();
+
+        if (!appt) {
+          console.log(`[STRIPE-WEBHOOK] Booking ${bookingId} not found, skipping`);
+          break;
+        }
+
+        if (appt.status !== "pending" && appt.payment_status !== "pending") {
+          console.log(`[STRIPE-WEBHOOK] Booking ${bookingId} is ${appt.status}/${appt.payment_status}, not pending — skipping`);
+          break;
+        }
+
+        const { error: cancelError } = await supabase
+          .from("appointments")
+          .update({
+            status: "cancelled_customer",
+            payment_status: "expired",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", bookingId)
+          .eq("status", "pending");
+
+        if (cancelError) {
+          console.error(`[STRIPE-WEBHOOK] Failed to cancel expired booking ${bookingId}: ${cancelError.message}`);
+        } else {
+          console.log(`[STRIPE-WEBHOOK] Booking ${bookingId} cancelled due to expired OXXO payment`);
+        }
+        break;
+      }
+
+      // =======================================================================
       // Checkout Sessions - For complete booking + payment flow
       // =======================================================================
       case "checkout.session.completed": {
@@ -752,10 +804,16 @@ async function sendBookingEmails(
       style: "currency", currency: "MXN",
     });
 
-    // Determine payment method display name
+    // Determine payment method display name from actual payment method
     let paymentMethodDisplay = "Tarjeta";
-    if (paymentIntent.payment_method_types?.includes("oxxo")) {
+    const pmType = paymentIntent.payment_method_types?.[0] ?? "";
+    const metaPM = paymentIntent.metadata?.payment_method ?? "";
+    if (metaPM === "saldo" || pmType === "saldo") {
+      paymentMethodDisplay = "Saldo BeautyCita";
+    } else if (metaPM === "oxxo" || pmType === "oxxo") {
       paymentMethodDisplay = "OXXO";
+    } else if (metaPM === "card" || pmType === "card") {
+      paymentMethodDisplay = "Tarjeta";
     }
 
     await sendEmail("booking-receipt", clientEmail, "Confirmacion de tu reserva - BeautyCita", {

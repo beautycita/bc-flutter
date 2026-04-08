@@ -99,3 +99,11 @@ END $$;
 INSERT INTO app_config (key, value, data_type, group_name, description_es)
 VALUES ('enable_instant_booking', 'true', 'bool', 'booking', 'Habilita el motor de reservas instantaneas')
 ON CONFLICT (key) DO NOTHING;
+
+-- ---------------------------------------------------------------------------
+-- 10. No-show processing: dedicated toggle so push notification toggle
+--     doesn't accidentally block no-show processing (#23 audit finding)
+-- ---------------------------------------------------------------------------
+INSERT INTO app_config (key, value, data_type, group_name, description_es)
+VALUES ('enable_no_show_processing', 'true', 'bool', 'booking', 'Habilitar procesamiento de no-shows (reembolso parcial + deposito)')
+ON CONFLICT (key) DO NOTHING;
