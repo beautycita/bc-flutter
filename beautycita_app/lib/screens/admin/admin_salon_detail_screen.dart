@@ -756,17 +756,27 @@ class _SalonDetailBody extends ConsumerWidget {
     final autoConfirm = salon['auto_confirm'] as bool? ?? false;
     final walkins = salon['accept_walkins'] as bool? ?? false;
 
+    // Parse hours into human-readable schedule
     String hoursText = 'No configurado';
     if (hours != null) {
       try {
-        if (hours is String) {
-          final decoded = jsonDecode(hours);
-          hoursText = const JsonEncoder.withIndent('  ').convert(decoded);
-        } else {
-          hoursText = const JsonEncoder.withIndent('  ').convert(hours);
+        final Map<String, dynamic> parsed = hours is String ? jsonDecode(hours) : hours is Map ? Map<String, dynamic>.from(hours) : {};
+        final days = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
+        final lines = <String>[];
+        for (final day in days) {
+          final d = parsed[day];
+          if (d == null) continue;
+          final open = d['open'] as String?;
+          final close = d['close'] as String?;
+          if (open != null && close != null) {
+            lines.add('${day[0].toUpperCase()}${day.substring(1)}: $open - $close');
+          } else {
+            lines.add('${day[0].toUpperCase()}${day.substring(1)}: Cerrado');
+          }
         }
+        hoursText = lines.isNotEmpty ? lines.join('\n') : 'No configurado';
       } catch (_) {
-        hoursText = hours.toString();
+        hoursText = 'No configurado';
       }
     }
 
@@ -816,7 +826,6 @@ class _SalonDetailBody extends ConsumerWidget {
           _InfoRow(
             label: 'Horario',
             value: hoursText,
-            monospace: true,
             colors: colors,
           ),
           const SizedBox(height: AppConstants.paddingSM),
@@ -952,15 +961,15 @@ class _SalonDetailBody extends ConsumerWidget {
           ],
         ),
       ),
-      error: (e, _) => _SectionCard(
+      error: (_, __) => _SectionCard(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _SectionHeader(label: 'ULTIMAS CITAS', colors: colors),
             const SizedBox(height: AppConstants.paddingSM),
-            Text('Error: $e',
+            Text('No hay citas registradas',
                 style: GoogleFonts.nunito(
-                    fontSize: 12, color: colors.error)),
+                    fontSize: 13, color: colors.onSurface.withValues(alpha: 0.5))),
           ],
         ),
       ),
@@ -1089,15 +1098,15 @@ class _SalonDetailBody extends ConsumerWidget {
           ],
         ),
       ),
-      error: (e, _) => _SectionCard(
+      error: (_, __) => _SectionCard(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _SectionHeader(label: 'ULTIMAS RESENAS', colors: colors),
             const SizedBox(height: AppConstants.paddingSM),
-            Text('Error: $e',
+            Text('No hay resenas',
                 style: GoogleFonts.nunito(
-                    fontSize: 12, color: colors.error)),
+                    fontSize: 13, color: colors.onSurface.withValues(alpha: 0.5))),
           ],
         ),
       ),

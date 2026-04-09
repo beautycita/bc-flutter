@@ -66,6 +66,101 @@ class _InviteSalonScreenState extends ConsumerState<InviteSalonScreen> {
     _fetchLocation();
     // Trigger contact match check (uses cached if permission already granted)
     Future.microtask(() => ref.read(contactMatchProvider.notifier).checkPermission());
+    // Prompt for name if missing — invites use the name, not the username
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkNamePrompt());
+  }
+
+  void _checkNamePrompt() {
+    final profile = ref.read(profileProvider);
+    if (profile.fullName == null || profile.fullName!.trim().isEmpty) {
+      _showNamePrompt();
+    }
+  }
+
+  void _showNamePrompt() {
+    final controller = TextEditingController();
+    final palette = Theme.of(context).colorScheme;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: palette.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.fromLTRB(
+          24, 24, 24, MediaQuery.of(ctx).viewInsets.bottom + 24,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Tu nombre',
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: palette.onSurface,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Las invitaciones se envian con tu nombre. Agrega tu nombre para que el salon sepa quien les invito.',
+              style: GoogleFonts.nunito(
+                fontSize: 14,
+                color: palette.onSurface.withValues(alpha: 0.6),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: controller,
+              autofocus: true,
+              textCapitalization: TextCapitalization.words,
+              decoration: InputDecoration(
+                hintText: 'Ej: Samantha Lopez',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('Omitir'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  flex: 2,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      final name = controller.text.trim();
+                      if (name.isNotEmpty) {
+                        ref.read(profileProvider.notifier).updateFullName(name);
+                      }
+                      Navigator.pop(ctx);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: palette.primary,
+                      foregroundColor: palette.onPrimary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    child: const Text('Guardar'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _fetchLocation() async {
