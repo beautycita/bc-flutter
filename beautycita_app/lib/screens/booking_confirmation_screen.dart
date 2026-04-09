@@ -237,8 +237,8 @@ class _BookingConfirmationScreenState
                         ),
                         // Checkmark with gyro parallax
                         ParallaxTilt(
-                          intensity: 6,
-                          perspectiveScale: 0.015,
+                          intensity: 12,
+                          perspectiveScale: 0.03,
                           child: AnimatedBuilder(
                           animation: _checkController,
                           builder: (context, child) {

@@ -1392,9 +1392,9 @@ class _CategoryCardState extends ConsumerState<_CategoryCard>
           children: [
             // Base image with parallax — slightly oversized so it can shift
             ParallaxWindow(
-              intensity: 6,
+              intensity: 14,
               child: Transform.scale(
-                scale: 1.12,
+                scale: 1.20,
                 child: Image.asset(imagePath, fit: BoxFit.cover),
               ),
             ),
@@ -1483,8 +1483,8 @@ class _CategoryCardState extends ConsumerState<_CategoryCard>
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         ParallaxTilt(
-          intensity: 4,
-          perspectiveScale: 0.01,
+          intensity: 10,
+          perspectiveScale: 0.03,
           child: Container(
           width: 72,
           height: 72,

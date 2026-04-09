@@ -40,9 +40,9 @@ class GyroParallaxService {
       samplingPeriod: const Duration(milliseconds: 16), // ~60fps
     ).listen((event) {
       // Integrate gyroscope angular velocity into position
-      // Low-pass filter for smoothness, clamp to [-1, 1]
-      const smoothing = 0.08;
-      const decay = 0.95; // slowly return to center
+      // Higher smoothing = more responsive, lower decay = snappier return
+      const smoothing = 0.18;
+      const decay = 0.88;
 
       _x = (_x * decay + event.y * smoothing).clamp(-1.0, 1.0);
       _y = (_y * decay - event.x * smoothing).clamp(-1.0, 1.0);
