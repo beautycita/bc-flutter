@@ -561,8 +561,9 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
     );
   }
 
-  /// Fire-and-forget booking notifications (push + multi-channel receipt).
-  void _sendBookingNotifications(String bookingId) {
+  /// Fire-and-forget booking notifications (push + multi-channel receipt + CFDI).
+  /// Async so CFDI errors are properly caught and logged.
+  Future<void> _sendBookingNotifications(String bookingId) async {
     // Push notification
     SupabaseClientService.client.functions.invoke(
       'send-push-notification',
@@ -584,19 +585,27 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
       },
     ).ignore();
 
-    // CFDI stamping — log failures for reconciliation
-    SupabaseClientService.client.functions.invoke(
-      'cfdi-stamp',
-      body: {'appointment_id': bookingId},
-    ).then((_) {}).catchError((e) {
+    // CFDI stamping — log failures for reconciliation.
+    // Uses try/catch instead of fire-and-forget .catchError() to ensure
+    // error logging actually completes if stamping fails.
+    try {
+      await SupabaseClientService.client.functions.invoke(
+        'cfdi-stamp',
+        body: {'appointment_id': bookingId},
+      );
+    } catch (e) {
       debugPrint('[CFDI] Stamping failed for $bookingId: $e');
-      SupabaseClientService.client.from('user_error_reports').insert({
-        'user_id': SupabaseClientService.currentUserId,
-        'error_message': 'CFDI stamping failed',
-        'error_details': 'booking_id=$bookingId error=$e',
-        'screen_name': 'booking_flow_cfdi',
-      }).then((_) {}).catchError((_) {});
-    });
+      try {
+        await SupabaseClientService.client.from('user_error_reports').insert({
+          'user_id': SupabaseClientService.currentUserId,
+          'error_message': 'CFDI stamping failed',
+          'error_details': 'booking_id=$bookingId error=$e',
+          'screen_name': 'booking_flow_cfdi',
+        });
+      } catch (_) {
+        // If error reporting itself fails, nothing more we can do
+      }
+    }
   }
 
   /// Called from email verification screen after user provides email or skips.

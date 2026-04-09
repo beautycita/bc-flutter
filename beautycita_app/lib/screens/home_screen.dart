@@ -1456,6 +1456,20 @@ class _CategoryCardState extends ConsumerState<_CategoryCard>
       );
     }
 
+    // Animated icon mapping — null means fall back to static icon
+    const animatedIcons = <String, String>{
+      'nails': 'assets/animated_icons/nails.gif',
+      'hair': 'assets/animated_icons/hair.gif',
+      'lashes_brows': 'assets/animated_icons/lashes_brows.gif',
+      'makeup': 'assets/animated_icons/makeup.gif',
+      'facial': 'assets/animated_icons/facial.gif',
+      'body_spa': 'assets/animated_icons/body_spa.gif',
+      'specialized': 'assets/animated_icons/specialized.gif',
+      'barberia': 'assets/animated_icons/barberia.gif',
+    };
+
+    final animatedPath = animatedIcons[category.id];
+
     // Default icon-based card
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -1475,12 +1489,20 @@ class _CategoryCardState extends ConsumerState<_CategoryCard>
             ),
           ),
           child: Center(
-            child: getCategoryIcon(
-              variant: widget.variant,
-              categoryId: category.id,
-              color: categoryColor,
-              size: 36,
-            ),
+            child: animatedPath != null
+                ? Image.asset(
+                    animatedPath,
+                    width: 40,
+                    height: 40,
+                    color: categoryColor,
+                    colorBlendMode: BlendMode.srcIn,
+                  )
+                : getCategoryIcon(
+                    variant: widget.variant,
+                    categoryId: category.id,
+                    color: categoryColor,
+                    size: 36,
+                  ),
           ),
         ),
         const SizedBox(height: 10),

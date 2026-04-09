@@ -51,21 +51,60 @@ Deno.serve(async (req) => {
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
   const now = new Date();
-  const twoHoursFromNow = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+  // Use the maximum possible reminder window (24h) for the initial query.
+  // Per-business filtering happens after we read each business's reminder_hours.
+  const maxReminderWindow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
 
   try {
     // -------------------------------------------------------------------
-    // 1. Atomically claim appointments for reminding.
-    //    UPDATE with WHERE reminded_at IS NULL prevents double-sends
-    //    if cron fires twice in the same window.
+    // 1. Find candidate appointments within the max window that haven't
+    //    been reminded yet. We fetch business reminder_hours to filter
+    //    per-business before claiming.
     // -------------------------------------------------------------------
+    const { data: candidates, error: candidateErr } = await supabase
+      .from("appointments")
+      .select(`
+        id,
+        business_id,
+        starts_at,
+        businesses!appointments_business_id_fkey (
+          reminder_hours
+        )
+      `)
+      .gte("starts_at", now.toISOString())
+      .lte("starts_at", maxReminderWindow.toISOString())
+      .in("status", ["pending", "confirmed"])
+      .is("reminded_at", null)
+      .limit(500);
+
+    if (candidateErr) {
+      console.error("[REMINDER] Candidate query error:", candidateErr);
+      return json({ error: candidateErr.message }, 500);
+    }
+
+    // Filter to appointments within each business's reminder window
+    const eligibleIds: string[] = [];
+    for (const appt of (candidates ?? [])) {
+      const biz = appt.businesses as unknown as { reminder_hours: number | null } | null;
+      const reminderHours = biz?.reminder_hours ?? 2; // default 2h if not set
+      const startsAt = new Date(appt.starts_at).getTime();
+      const windowCutoff = now.getTime() + reminderHours * 60 * 60 * 1000;
+      if (startsAt <= windowCutoff) {
+        eligibleIds.push(appt.id);
+      }
+    }
+
+    if (eligibleIds.length === 0) {
+      console.log("[REMINDER] No appointments to remind");
+      return json({ processed: 0, sent: 0, failed: 0 });
+    }
+
+    // Atomically claim eligible appointments
     const claimTime = now.toISOString();
     const { data: claimed, error: claimErr } = await supabase
       .from("appointments")
       .update({ reminded_at: claimTime })
-      .gte("starts_at", now.toISOString())
-      .lte("starts_at", twoHoursFromNow.toISOString())
-      .in("status", ["pending", "confirmed"])
+      .in("id", eligibleIds)
       .is("reminded_at", null)
       .select("id")
       .limit(200);
@@ -77,7 +116,7 @@ Deno.serve(async (req) => {
 
     const claimedIds = (claimed ?? []).map((r: { id: string }) => r.id);
     if (claimedIds.length === 0) {
-      console.log("[REMINDER] No appointments to remind");
+      console.log("[REMINDER] No appointments to remind (all already claimed)");
       return json({ processed: 0, sent: 0, failed: 0 });
     }
 

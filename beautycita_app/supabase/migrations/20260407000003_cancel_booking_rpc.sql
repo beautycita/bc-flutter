@@ -162,7 +162,8 @@ BEGIN
       v_booking.business_id, p_booking_id, v_bc_commission, v_commission_rate,
       CASE WHEN p_cancelled_by = 'business' THEN 'salon_cancellation' ELSE 'cancellation' END,
       EXTRACT(MONTH FROM now())::int, EXTRACT(YEAR FROM now())::int, 'collected'
-    );
+    )
+    ON CONFLICT (appointment_id, source) DO NOTHING;
   END IF;
 
   -- =========================================================================
