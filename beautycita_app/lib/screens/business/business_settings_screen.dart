@@ -572,6 +572,45 @@ class _BusinessSettingsScreenState
               ),
             ),
 
+            // ---------- Importar datos (placeholder) ----------
+            const SizedBox(height: AppConstants.paddingLG),
+            _SectionHeader(label: 'IMPORTAR DATOS'),
+            const SizedBox(height: AppConstants.paddingSM),
+            Container(
+              decoration: _cardDecoration(colors),
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Icon(Icons.cloud_upload_outlined,
+                      size: 32, color: colors.primary.withValues(alpha: 0.5)),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Importar datos',
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: colors.onSurface,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Proximamente: importa tus clientes, servicios e historial de citas desde otros sistemas.',
+                          style: GoogleFonts.nunito(
+                            fontSize: 13,
+                            color: colors.onSurface.withValues(alpha: 0.5),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
             const SizedBox(height: AppConstants.paddingXL),
             ElevatedButton(
               onPressed: _saving ? null : () => _save(biz['id'] as String),

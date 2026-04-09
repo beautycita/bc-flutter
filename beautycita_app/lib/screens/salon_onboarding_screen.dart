@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -8,14 +9,15 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart' show LatLng;
+import 'package:supabase_flutter/supabase_flutter.dart' show FileOptions, UserAttributes;
 import 'package:url_launcher/url_launcher.dart';
 import '../providers/booking_flow_provider.dart' show placesServiceProvider;
 import '../providers/security_provider.dart';
 import '../services/location_service.dart';
 import '../services/places_service.dart';
 import '../services/supabase_client.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' show UserAttributes;
 import '../services/toast_service.dart';
 
 class SalonOnboardingScreen extends ConsumerStatefulWidget {
@@ -42,6 +44,8 @@ class _SalonOnboardingScreenState
   bool _registered = false;
   bool _loadingPrefill = false;
   String? _photoUrl;
+  Uint8List? _licenseBytes;
+  String? _licenseName;
   Map<String, dynamic>? _discoveredSalonData;
   String? _discoveredSalonId; // ID of matched discovered salon (from refCode or phone match)
   String? _businessId;
@@ -609,6 +613,29 @@ class _SalonOnboardingScreenState
         }
       }
 
+      // Upload license image if provided
+      if (_licenseBytes != null && businessId.isNotEmpty) {
+        try {
+          final licensePath = 'salon-ids/$businessId/license.jpg';
+          await SupabaseClientService.client.storage
+              .from('salon-ids')
+              .uploadBinary(
+                licensePath,
+                _licenseBytes!,
+                fileOptions: const FileOptions(
+                  contentType: 'image/jpeg',
+                  upsert: true,
+                ),
+              );
+          await SupabaseClientService.client
+              .from('businesses')
+              .update({'license_url': licensePath})
+              .eq('id', businessId);
+        } catch (e) {
+          if (kDebugMode) debugPrint('[SalonOnboarding] License upload failed (non-critical): $e');
+        }
+      }
+
       setState(() {
         _businessId = businessId;
         _registered = true;
@@ -1010,6 +1037,90 @@ class _SalonOnboardingScreenState
                             onTap: _onMapTap,
                           ),
                       ],
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  // ── Section: Licencia de funcionamiento (optional) ──
+                  _SectionCard(
+                    children: [
+                      _SectionHeader(
+                        icon: Icons.badge_outlined,
+                        title: 'Licencia de funcionamiento',
+                        color: colors.primary,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Opcional: sube una foto de tu licencia de funcionamiento para acelerar la verificacion.',
+                        style: GoogleFonts.nunito(
+                          fontSize: 13,
+                          color: colors.onSurface.withValues(alpha: 0.6),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      if (_licenseBytes != null) ...[
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.memory(
+                            _licenseBytes!,
+                            height: 160,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Text(
+                              _licenseName ?? 'Licencia adjunta',
+                              style: GoogleFonts.nunito(
+                                fontSize: 12,
+                                color: colors.primary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const Spacer(),
+                            TextButton.icon(
+                              onPressed: () => setState(() {
+                                _licenseBytes = null;
+                                _licenseName = null;
+                              }),
+                              icon: const Icon(Icons.close, size: 16),
+                              label: const Text('Quitar'),
+                              style: TextButton.styleFrom(
+                                foregroundColor: colors.error,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ] else
+                        OutlinedButton.icon(
+                          onPressed: () async {
+                            final picker = ImagePicker();
+                            final picked = await picker.pickImage(
+                              source: ImageSource.gallery,
+                              maxWidth: 1600,
+                              imageQuality: 85,
+                            );
+                            if (picked != null) {
+                              final bytes = await picked.readAsBytes();
+                              setState(() {
+                                _licenseBytes = bytes;
+                                _licenseName = picked.name;
+                              });
+                            }
+                          },
+                          icon: const Icon(Icons.upload_file_rounded),
+                          label: const Text('Subir licencia'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: colors.primary,
+                            side: BorderSide(color: colors.primary.withValues(alpha: 0.3)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                          ),
+                        ),
                     ],
                   ),
                   const SizedBox(height: 20),

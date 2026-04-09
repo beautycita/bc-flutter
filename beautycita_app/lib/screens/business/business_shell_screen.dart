@@ -164,7 +164,8 @@ class BusinessShellScreen extends ConsumerWidget {
         }
 
         return _BusinessContent(
-            businessName: biz['name'] as String? ?? 'Mi Negocio');
+            businessName: biz['name'] as String? ?? 'Mi Negocio',
+            isVerified: biz['is_verified'] as bool? ?? false);
       },
       loading: () => const Scaffold(
         backgroundColor: Color(0xFFF5F3FF),
@@ -198,7 +199,8 @@ class BusinessShellScreen extends ConsumerWidget {
 
 class _BusinessContent extends ConsumerWidget {
   final String businessName;
-  const _BusinessContent({required this.businessName});
+  final bool isVerified;
+  const _BusinessContent({required this.businessName, this.isVerified = false});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -317,13 +319,25 @@ class _BusinessContent extends ConsumerWidget {
             bottom: Radius.circular(AppConstants.radiusMD),
           ),
         ),
-        title: Text(
-          businessName,
-          style: GoogleFonts.poppins(
-            fontWeight: FontWeight.w700,
-            fontSize: 18,
-            color: const Color(0xFF000000),
-          ),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(
+              child: Text(
+                businessName,
+                style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 18,
+                  color: const Color(0xFF000000),
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (isVerified) ...[
+              const SizedBox(width: 6),
+              Icon(Icons.verified, size: 20, color: colors.primary),
+            ],
+          ],
         ),
         iconTheme: IconThemeData(color: colors.primary),
         actions: [

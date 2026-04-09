@@ -183,6 +183,7 @@ class BusinessInfo {
   final String? instagram;
   final String? workingHours;
   final String? googleCategory;
+  final bool isVerified;
 
   const BusinessInfo({
     required this.id,
@@ -198,6 +199,7 @@ class BusinessInfo {
     this.instagram,
     this.workingHours,
     this.googleCategory,
+    this.isVerified = false,
   });
 
   factory BusinessInfo.fromJson(Map<String, dynamic> json) {
@@ -215,6 +217,7 @@ class BusinessInfo {
       instagram: json['instagram'] as String?,
       workingHours: json['working_hours'] as String?,
       googleCategory: json['google_category'] as String?,
+      isVerified: json['is_verified'] as bool? ?? false,
     );
   }
 }

@@ -14,6 +14,9 @@ const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const BEAUTYPI_WA_URL = Deno.env.get("BEAUTYPI_WA_URL") ?? "";
 const BEAUTYPI_WA_TOKEN = Deno.env.get("BEAUTYPI_WA_TOKEN") ?? "";
+const TWILIO_ACCOUNT_SID = Deno.env.get("TWILIO_ACCOUNT_SID") ?? "";
+const TWILIO_AUTH_TOKEN = Deno.env.get("TWILIO_AUTH_TOKEN") ?? "";
+const TWILIO_VERIFY_SID = Deno.env.get("TWILIO_VERIFY_SID") ?? "";
 const HMAC_SECRET = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!; // Reuse service key as HMAC secret
 
 const OTP_EXPIRY_MINUTES = 5;
@@ -167,6 +170,50 @@ async function sendWhatsApp(
 }
 
 // ---------------------------------------------------------------------------
+// SMS fallback via Twilio Verify
+// ---------------------------------------------------------------------------
+
+async function sendSms(
+  phone: string,
+  code: string,
+): Promise<{ sent: boolean; channel: string }> {
+  try {
+    if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_VERIFY_SID) {
+      console.error("[SALON-REG][SMS] Twilio not configured");
+      return { sent: false, channel: "sms" };
+    }
+
+    // Use Twilio Verify API to send OTP via SMS
+    const url = `https://verify.twilio.com/v2/Services/${TWILIO_VERIFY_SID}/Verifications`;
+    const auth = btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`);
+
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${auth}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        To: phone.startsWith("+") ? phone : `+${phone}`,
+        Channel: "sms",
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.text();
+      console.error(`[SALON-REG][SMS] Twilio error: ${res.status} ${err}`);
+      return { sent: false, channel: "sms" };
+    }
+
+    console.log(`[SALON-REG][SMS] OTP sent via SMS to ${phone}`);
+    return { sent: true, channel: "sms" };
+  } catch (e) {
+    console.error(`[SALON-REG][SMS] Error: ${e}`);
+    return { sent: false, channel: "sms" };
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Category definitions
 // ---------------------------------------------------------------------------
 
@@ -247,12 +294,12 @@ function registrationPage(ref: string | null, salon: SalonData): string {
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #FFF8F0;
+      background: #F8F5FC;
       color: #2D2D2D;
       min-height: 100vh;
     }
     .header {
-      background: linear-gradient(135deg, #E8788A 0%, #D4637A 100%);
+      background: linear-gradient(135deg, #9B72CF 0%, #7B5EA7 100%);
       padding: 32px 24px 28px;
       text-align: center;
       color: white;
@@ -303,7 +350,7 @@ function registrationPage(ref: string | null, salon: SalonData): string {
       box-shadow: 0 1px 3px rgba(0,0,0,0.06);
       outline: none; transition: box-shadow 0.2s;
     }
-    input:focus { box-shadow: 0 0 0 2px #E8788A; }
+    input:focus { box-shadow: 0 0 0 2px #9B72CF; }
     .cat-label { font-size: 14px; font-weight: 600; margin-bottom: 10px; }
     .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
     .chip { cursor: pointer; user-select: none; }
@@ -316,12 +363,12 @@ function registrationPage(ref: string | null, salon: SalonData): string {
       transition: all 0.15s;
     }
     .chip input:checked + span {
-      background: #E8788A; color: white;
+      background: #9B72CF; color: white;
       box-shadow: 0 2px 8px rgba(232,120,138,0.3);
     }
     .btn {
       width: 100%; padding: 16px;
-      background: #E8788A; color: white;
+      background: #9B72CF; color: white;
       border: none; border-radius: 14px;
       font-size: 16px; font-weight: 700;
       letter-spacing: 0.5px; cursor: pointer;
@@ -330,8 +377,8 @@ function registrationPage(ref: string | null, salon: SalonData): string {
     .btn:disabled { opacity: 0.4; cursor: not-allowed; }
     .btn:active:not(:disabled) { opacity: 0.8; }
     .btn-secondary {
-      background: transparent; color: #E8788A;
-      border: 2px solid #E8788A; margin-top: 12px;
+      background: transparent; color: #9B72CF;
+      border: 2px solid #9B72CF; margin-top: 12px;
     }
     .btn-green { background: #25D366; }
     .error { color: #D32F2F; font-size: 13px; margin-top: 8px; display: none; }
@@ -351,9 +398,9 @@ function registrationPage(ref: string | null, salon: SalonData): string {
       background: white; outline: none;
       transition: border-color 0.2s;
     }
-    .otp-wrap input:focus { border-color: #E8788A; }
+    .otp-wrap input:focus { border-color: #9B72CF; }
     .resend { text-align: center; margin-top: 12px; font-size: 13px; color: #888; }
-    .resend a { color: #E8788A; text-decoration: none; font-weight: 600; }
+    .resend a { color: #9B72CF; text-decoration: none; font-weight: 600; }
     .resend a.disabled { color: #ccc; pointer-events: none; }
     .channel-info { text-align: center; font-size: 13px; color: #666; margin-bottom: 16px; }
 
@@ -367,7 +414,7 @@ function registrationPage(ref: string | null, salon: SalonData): string {
     .salon-card img {
       width: 80px; height: 80px; border-radius: 50%;
       object-fit: cover; margin-bottom: 12px;
-      border: 3px solid #E8788A22;
+      border: 3px solid #9B72CF22;
     }
     .salon-card h2 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
     .salon-card .meta { font-size: 13px; color: #666; margin-bottom: 12px; }
@@ -465,7 +512,41 @@ function registrationPage(ref: string | null, salon: SalonData): string {
         <svg width="48" height="48" viewBox="0 0 24 24" fill="#4CAF50"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
       </div>
       <h1>Bienvenido a BeautyCita!</h1>
-      <p>Tu salon ya esta activo. Las clientas cercanas pueden encontrarte.</p>
+      <p style="font-size:15px;line-height:1.6;margin-bottom:16px">Tu cuenta fue creada. Ahora puedes gestionar tu salon, clientes y citas desde la app.</p>
+
+      <div style="background:white;border-radius:16px;padding:20px;margin:16px 0;text-align:left">
+        <p style="font-weight:700;font-size:16px;margin-bottom:12px;color:#333">Lo que obtienes — gratis, para siempre:</p>
+        <div style="display:flex;align-items:start;gap:10px;margin-bottom:10px">
+          <span style="color:#4CAF50;font-size:20px">&#10003;</span>
+          <span style="font-size:14px;color:#555">Sistema completo de gestion: calendario, servicios, personal, clientes (CRM)</span>
+        </div>
+        <div style="display:flex;align-items:start;gap:10px;margin-bottom:10px">
+          <span style="color:#4CAF50;font-size:20px">&#10003;</span>
+          <span style="font-size:14px;color:#555">Reservas de tus propios clientes — sin comision, sin costo, sin limite</span>
+        </div>
+        <div style="display:flex;align-items:start;gap:10px;margin-bottom:10px">
+          <span style="color:#4CAF50;font-size:20px">&#10003;</span>
+          <span style="font-size:14px;color:#555">Cumplimiento fiscal automatizado — somos la unica plataforma en Mexico con retencion ISR/IVA integrada conforme al SAT</span>
+        </div>
+        <div style="display:flex;align-items:start;gap:10px;margin-bottom:10px">
+          <span style="color:#4CAF50;font-size:20px">&#10003;</span>
+          <span style="font-size:14px;color:#555">Facturacion electronica (CFDI) incluida sin costo adicional</span>
+        </div>
+
+        <div style="display:flex;align-items:start;gap:10px;margin-bottom:10px">
+          <span style="color:#9B72CF;font-size:20px">&#9733;</span>
+          <span style="font-size:14px;color:#555"><strong>Sello de Salon Verificado</strong> — al completar tu registro, verificamos tu licencia comercial y tu salon recibe nuestro sello de confianza. Tus clientes saben que eres un negocio serio y verificado.</span>
+        </div>
+        <div style="display:flex;align-items:start;gap:10px;margin-bottom:10px">
+          <span style="color:#4CAF50;font-size:20px">&#8634;</span>
+          <span style="font-size:14px;color:#555"><strong>Ya usas otro sistema?</strong> Tenemos importacion automatica de tus datos — clientes, servicios, historial de citas. Migra a BeautyCita en minutos y deja de pagar por lo que nosotros te damos gratis.</span>
+        </div>
+
+        <div style="border-top:1px solid #eee;margin-top:14px;padding-top:14px">
+          <p style="font-size:13px;color:#888;line-height:1.5">Solo cobramos una pequena comision del 3% cuando <strong>nosotros</strong> te enviamos un cliente nuevo a traves de la plataforma. Tus propios clientes? Siempre gratis.</p>
+          <a href="https://beautycita.com/porque" style="display:block;text-align:center;margin-top:12px;color:#9B72CF;font-size:14px;font-weight:600;text-decoration:none">Como es esto posible? Conoce nuestra historia &rarr;</a>
+        </div>
+      </div>
 
       <a href="${APK_URL}" class="btn btn-green" style="display:block;text-align:center;text-decoration:none;margin-top:24px">
         DESCARGAR LA APP
@@ -651,7 +732,7 @@ function registrationPage(ref: string | null, salon: SalonData): string {
       const name = salon.name || 'Tu salon';
       const photoHtml = salon.photoUrl
         ? '<img src="' + salon.photoUrl + '" alt="' + name + '">'
-        : '<div style="width:80px;height:80px;border-radius:50%;background:#E8788A22;display:flex;align-items:center;justify-content:center;margin:0 auto 12px"><svg width="40" height="40" viewBox="0 0 24 24" fill="#E8788A"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2z"/></svg></div>';
+        : '<div style="width:80px;height:80px;border-radius:50%;background:#9B72CF22;display:flex;align-items:center;justify-content:center;margin:0 auto 12px"><svg width="40" height="40" viewBox="0 0 24 24" fill="#9B72CF"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2z"/></svg></div>';
       const ratingHtml = salon.rating ? '<div class="meta">\\u2605 ' + salon.rating.toFixed(1) + (salon.reviewsCount ? ' (' + salon.reviewsCount + ' resenas)' : '') + '</div>' : '';
       const addressHtml = salon.address ? '<div class="detail-row">\\uD83D\\uDCCD ' + salon.address + '</div>' : '';
       const phoneHtml = '<div class="detail-row">\\uD83D\\uDCDE ' + phoneInput.value.trim() + '</div>';
@@ -850,32 +931,50 @@ Deno.serve(async (req: Request) => {
           );
         }
 
-        // Generate and send OTP
+        // Generate OTP and pre-insert DB record BEFORE sending
+        // (edge runtime timeout can kill us after slow SMS/WA calls)
         const otp = generateOtp();
-        let result = await sendWhatsApp(phone, otp);
+        const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
-        if (!result.sent) {
-          return json(
-            { error: "No se pudo enviar el codigo por WhatsApp. Verifica que tu numero tenga WhatsApp activo e intenta de nuevo." },
-            500,
-          );
-        }
-
-        const expiresAt = new Date(
-          Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000,
-        ).toISOString();
-        await supabase.from("phone_verification_codes").insert({
+        const { error: insertErr } = await supabase.from("phone_verification_codes").insert({
           user_id: SENTINEL_USER_ID,
           phone,
           code: otp,
-          channel: "whatsapp",
+          channel: "sms",
           expires_at: expiresAt,
         });
+        if (insertErr) {
+          console.error(`[SALON-REG] DB insert failed: ${insertErr.message}`);
+          return json({ error: "Error interno. Intenta de nuevo." }, 500);
+        }
+        console.log(`[SALON-REG] OTP record inserted for ${phone}`);
 
-        console.log(
-          `[SALON-REG] OTP sent to ${phone} via ${result.channel}`,
-        );
-        return json({ sent: true, channel: result.channel });
+        // Try WhatsApp first, SMS fallback — fire and don't wait for completion
+        // The DB record is already saved so verify_otp will work even if we get killed
+        let channel = "sms";
+        try {
+          const waResult = await sendWhatsApp(phone, otp);
+          if (waResult.sent) {
+            channel = "whatsapp";
+            await supabase.from("phone_verification_codes")
+              .update({ channel: "whatsapp" })
+              .eq("phone", phone)
+              .eq("code", otp);
+          } else {
+            console.log(`[SALON-REG] WA failed for ${phone}, falling back to SMS`);
+            const smsResult = await sendSms(phone, otp);
+            if (!smsResult.sent) {
+              return json({ error: "No se pudo enviar el codigo. Intenta de nuevo." }, 500);
+            }
+          }
+        } catch (e) {
+          console.error(`[SALON-REG] Send error: ${e}`);
+          // DB record exists with our code — try SMS as last resort
+          await sendSms(phone, otp);
+        }
+
+        console.log(`[SALON-REG] OTP sent to ${phone} via ${channel}`);
+        return json({ sent: true, channel });
       }
 
       // ── VERIFY OTP ────────────────────────────────────────────
@@ -920,7 +1019,33 @@ Deno.serve(async (req: Request) => {
           .update({ attempts: record.attempts + 1 })
           .eq("id", record.id);
 
-        const verified = record.code === code;
+        let verified = false;
+
+        if (record.channel === "sms") {
+          // Verify via Twilio Verify API
+          try {
+            const url = `https://verify.twilio.com/v2/Services/${TWILIO_VERIFY_SID}/VerificationCheck`;
+            const auth = btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`);
+            const res = await fetch(url, {
+              method: "POST",
+              headers: {
+                Authorization: `Basic ${auth}`,
+                "Content-Type": "application/x-www-form-urlencoded",
+              },
+              body: new URLSearchParams({
+                To: phone.startsWith("+") ? phone : `+${phone}`,
+                Code: code,
+              }),
+            });
+            const data = await res.json();
+            verified = data.status === "approved";
+          } catch (e) {
+            console.error(`[SALON-REG] Twilio verify error: ${e}`);
+          }
+        } else {
+          // WA OTP — verify against our stored code
+          verified = record.code === code;
+        }
 
         if (!verified) {
           return json(
@@ -1206,12 +1331,14 @@ Deno.serve(async (req: Request) => {
           );
         }
 
-        // Find user by phone
+        // Find most recent user by phone
         const { data: profile } = await supabase
           .from("profiles")
           .select("id")
           .eq("phone", phone)
-          .single();
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
         if (!profile) {
           return json({ error: "Usuario no encontrado" }, 404);

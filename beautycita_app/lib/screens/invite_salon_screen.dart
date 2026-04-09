@@ -417,7 +417,7 @@ class _InviteSalonScreenState extends ConsumerState<InviteSalonScreen> {
       // registration page that fetches all salon data server-side from the ref ID.
       final regUrl = Uri.https(
         'beautycita.com',
-        '/supabase/functions/v1/salon-registro',
+        '/registro',
         {'ref': salon.id},
       );
       final message = Uri.encodeComponent(
@@ -453,7 +453,7 @@ class _InviteSalonScreenState extends ConsumerState<InviteSalonScreen> {
     final phone = match.matchedPhone;
     final regUrl = Uri.https(
       'beautycita.com',
-      '/supabase/functions/v1/salon-registro',
+      '/registro',
       {'ref': match.salonId},
     );
     final message = Uri.encodeComponent(

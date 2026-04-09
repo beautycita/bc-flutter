@@ -507,15 +507,25 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                result.business.name,
-                style: GoogleFonts.poppins(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: palette.onSurface,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+              Row(
+                children: [
+                  Flexible(
+                    child: Text(
+                      result.business.name,
+                      style: GoogleFonts.poppins(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: palette.onSurface,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (result.business.isVerified) ...[
+                    const SizedBox(width: 4),
+                    Icon(Icons.verified, size: 16, color: palette.primary),
+                  ],
+                ],
               ),
               if (displayRating != null)
                 Row(
