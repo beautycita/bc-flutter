@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:beautycita_core/supabase.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../utils/friendly_error.dart';
 
 import '../../config/breakpoints.dart';
 import '../../config/web_theme.dart';
@@ -39,7 +40,7 @@ class BizCalendarPage extends ConsumerWidget {
 
     return bizAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Error: $e')),
+      error: (e, _) => Center(child: Text(friendlyError(e))),
       data: (biz) {
         if (biz == null) return const Center(child: Text('Sin negocio'));
         return _CalendarContent(bizId: biz['id'] as String);
@@ -333,7 +334,7 @@ class _WalkInDialogState extends ConsumerState<_WalkInDialog> {
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -1700,7 +1701,7 @@ class _AppointmentDetailState extends ConsumerState<_AppointmentDetail> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error: $e')));
+            .showSnackBar(SnackBar(content: Text(friendlyError(e))));
       }
     } finally {
       if (mounted) setState(() => _savingNotes = false);
@@ -1977,7 +1978,7 @@ class _AppointmentDetailState extends ConsumerState<_AppointmentDetail> {
       if (mounted) ref.read(selectedAppointmentProvider.notifier).state = null;
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
       }
     } finally {
       if (mounted) setState(() => _updating = false);
@@ -2174,7 +2175,7 @@ class _RescheduleDialogState extends State<_RescheduleDialog> {
       ).then((_) {}).catchError((e) { debugPrint('[Reschedule] Notification error: $e'); });
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
       }
     } finally {
       if (mounted) setState(() => _saving = false);

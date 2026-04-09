@@ -67,17 +67,17 @@ class _PortfolioCaptureScreenState
 
     try {
       final servicesRes = await SupabaseClientService.client
-          .from('business_services')
+          .from('services')
           .select('id, name, category')
           .eq('business_id', businessId)
           .eq('is_active', true)
           .order('name');
       final staffRes = await SupabaseClientService.client
-          .from('business_staff')
-          .select('id, display_name, user_id')
+          .from('staff')
+          .select('id, first_name, last_name, user_id')
           .eq('business_id', businessId)
           .eq('is_active', true)
-          .order('display_name');
+          .order('first_name');
 
       if (!mounted) return;
       setState(() {
@@ -346,7 +346,7 @@ class _PortfolioCaptureScreenState
                       .map((s) => DropdownMenuItem(
                             value: s['id'] as String,
                             child:
-                                Text(s['display_name'] as String? ?? 'Staff'),
+                                Text('${s['first_name'] ?? ''} ${s['last_name'] ?? ''}'.trim().isEmpty ? 'Staff' : '${s['first_name'] ?? ''} ${s['last_name'] ?? ''}'.trim()),
                           ))
                       .toList(),
                   onChanged: (v) => setState(() => _selectedStaffId = v),

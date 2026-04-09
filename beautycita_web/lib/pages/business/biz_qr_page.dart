@@ -216,9 +216,9 @@ class _QrContentState extends ConsumerState<_QrContent> {
                           ),
                           const SizedBox(height: 12),
 
-                          // Business ID
+                          // Business name
                           Text(
-                            'Codigo: $_bizId',
+                            'Salon: $_bizName',
                             style: theme.textTheme.labelSmall?.copyWith(
                               color:
                                   colors.onSurface.withValues(alpha: 0.35),

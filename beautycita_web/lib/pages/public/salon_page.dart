@@ -49,7 +49,7 @@ class _SalonPageState extends State<SalonPage> {
       }
 
       final services = await BCSupabase.client
-          .from('business_services')
+          .from('services')
           .select('id, name, price, duration_minutes, category')
           .eq('business_id', biz['id'] as String)
           .eq('is_active', true)

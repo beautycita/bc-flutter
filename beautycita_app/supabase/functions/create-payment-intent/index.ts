@@ -12,12 +12,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Stripe from "https://esm.sh/stripe@14.21.0?target=deno";
 import { calculateWithholding, type TaxWithholding } from "../_shared/tax_mx.ts";
 import { requireFeature } from "../_shared/check-toggle.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "https://beautycita.com",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+import { corsHeaders as dynamicCors } from "../_shared/cors.ts";
 
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY") ?? "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
@@ -40,7 +35,11 @@ interface PaymentIntentRequest {
   payment_method?: "card" | "oxxo"; // default: card (bitcoin handled separately)
 }
 
+let _req: Request;
+
 serve(async (req) => {
+  _req = req;
+  const corsHeaders = dynamicCors(req);
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -373,6 +372,6 @@ serve(async (req) => {
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...dynamicCors(_req), "Content-Type": "application/json" },
   });
 }

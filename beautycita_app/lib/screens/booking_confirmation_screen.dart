@@ -355,6 +355,26 @@ class _BookingConfirmationScreenState
                             'Precio',
                             '\$${booking.price!.toStringAsFixed(0)} MXN',
                           ),
+                          if (booking.ivaWithheld != null &&
+                              booking.ivaWithheld! > 0) ...[
+                            _divider(),
+                            _detailRow(
+                              Icons.receipt_long_outlined,
+                              Colors.orange.shade600,
+                              'IVA retenido',
+                              '\$${booking.ivaWithheld!.toStringAsFixed(2)} MXN',
+                            ),
+                          ],
+                          if (booking.isrWithheld != null &&
+                              booking.isrWithheld! > 0) ...[
+                            _divider(),
+                            _detailRow(
+                              Icons.receipt_long_outlined,
+                              Colors.orange.shade600,
+                              'ISR retenido',
+                              '\$${booking.isrWithheld!.toStringAsFixed(2)} MXN',
+                            ),
+                          ],
                         ],
                         _divider(),
                         _detailRow(

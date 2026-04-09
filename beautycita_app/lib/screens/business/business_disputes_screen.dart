@@ -99,7 +99,7 @@ class _BusinessDisputesScreenState
     if (!toggles.isEnabled('enable_disputes')) {
       return const Scaffold(
         backgroundColor: Colors.transparent,
-        body: Center(child: Text('Disputas no disponibles')),
+        body: Center(child: Text('Las disputas estan desactivadas por el administrador')),
       );
     }
 

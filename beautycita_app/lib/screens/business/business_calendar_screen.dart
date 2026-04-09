@@ -3324,6 +3324,7 @@ class _WalkinSheetState extends ConsumerState<_WalkinSheet> {
       // LISR Art. 113-A / LIVA Art. 18-J only apply when BC is the platform intermediary.
       final data = <String, dynamic>{
         'business_id': biz['id'],
+        'user_id': null, // Walk-in: no app user
         'service_name': serviceName,
         'staff_id': _staffId,
         'starts_at': startsAt.toUtc().toIso8601String(),

@@ -6,6 +6,7 @@ import 'package:beautycita_core/models.dart';
 
 import '../../config/breakpoints.dart';
 import '../../config/web_theme.dart';
+import '../../utils/friendly_error.dart';
 import '../../data/categories.dart';
 import '../../providers/business_portal_provider.dart';
 import '../../providers/demo_providers.dart';
@@ -25,7 +26,7 @@ class BizServicesPage extends ConsumerWidget {
     final bizAsync = ref.watch(currentBusinessProvider);
     return bizAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Error: $e')),
+      error: (e, _) => Center(child: Text(friendlyError(e))),
       data: (biz) {
         if (biz == null) return const Center(child: Text('Sin negocio'));
         return _ServicesContent(bizId: biz['id'] as String);
@@ -265,7 +266,7 @@ class _ServiceCardState extends ConsumerState<_ServiceCard> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error: $e')));
+            .showSnackBar(SnackBar(content: Text(friendlyError(e))));
       }
     }
   }
@@ -513,7 +514,7 @@ class _ServiceDetailPanelState extends ConsumerState<_ServiceDetailPanel> {
               } catch (e) {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context)
-                      .showSnackBar(SnackBar(content: Text('Error: $e')));
+                      .showSnackBar(SnackBar(content: Text(friendlyError(e))));
                 }
               }
             },
@@ -562,7 +563,7 @@ class _ServiceDetailPanelState extends ConsumerState<_ServiceDetailPanel> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error: $e')));
+            .showSnackBar(SnackBar(content: Text(friendlyError(e))));
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -999,7 +1000,7 @@ class _BatchAddDialogState extends ConsumerState<_BatchAddDialog> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error: $e')));
+            .showSnackBar(SnackBar(content: Text(friendlyError(e))));
       }
     } finally {
       if (mounted) setState(() => _saving = false);

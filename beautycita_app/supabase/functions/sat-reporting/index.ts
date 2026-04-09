@@ -204,7 +204,7 @@ serve(async (req) => {
 
     // Also generate/update per-business sat_monthly_reports
     for (const provider of providerBreakdown) {
-      await supabase.from("sat_monthly_reports").upsert({
+      const { error: perBizError } = await supabase.from("sat_monthly_reports").upsert({
         business_id: provider.business_id,
         period_year: year,
         period_month: month,
@@ -217,7 +217,10 @@ serve(async (req) => {
         generated_at: new Date().toISOString(),
       }, {
         onConflict: "period_year,period_month,business_id",
-      }).catch((e: Error) => console.error(`[SAT-REPORTING] Per-biz upsert error: ${e.message}`));
+      });
+      if (perBizError) {
+        console.error(`[SAT-REPORTING] Per-biz upsert error: ${perBizError.message}`);
+      }
     }
 
     // Generate platform-level declaration
@@ -229,7 +232,7 @@ serve(async (req) => {
       .eq("period_month", month);
     const totalCommissions = (commissions ?? []).reduce((sum: number, c: { amount: number }) => sum + Number(c.amount), 0);
 
-    await supabase.from("platform_sat_declarations").upsert({
+    const { error: declError } = await supabase.from("platform_sat_declarations").upsert({
       period_year: year,
       period_month: month,
       total_businesses: providerBreakdown.length,
@@ -243,7 +246,10 @@ serve(async (req) => {
       generated_at: new Date().toISOString(),
     }, {
       onConflict: "period_year,period_month",
-    }).catch((e: Error) => console.error(`[SAT-REPORTING] Platform declaration error: ${e.message}`));
+    });
+    if (declError) {
+      console.error(`[SAT-REPORTING] Platform declaration error: ${declError.message}`);
+    }
 
     console.log(`[SAT-REPORTING] Generated report for ${year}-${String(month).padStart(2, "0")}`);
     console.log(`  Transactions: ${records.length}`);

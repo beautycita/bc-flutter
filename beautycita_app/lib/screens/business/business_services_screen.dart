@@ -229,8 +229,19 @@ class _BusinessServicesScreenState
       },
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(
-        child: Text('Error: $e',
-            style: GoogleFonts.nunito(color: colors.error)),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('No se pudieron cargar los servicios',
+                style: GoogleFonts.nunito(color: colors.error)),
+            const SizedBox(height: 12),
+            ElevatedButton.icon(
+              onPressed: () => ref.invalidate(businessServicesProvider),
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Reintentar'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -469,7 +480,7 @@ class _ServiceFormSheetState extends ConsumerState<_ServiceFormSheet> {
         text: widget.existing?['description'] as String? ?? '');
     _depositPctCtrl = TextEditingController(
         text:
-            (widget.existing?['deposit_percentage'] as num?)?.toString() ?? '0');
+            (widget.existing?['deposit_percentage'] as num?)?.toInt().toString() ?? '0');
     _otherCategoryCtrl = TextEditingController();
     _depositRequired = widget.existing?['deposit_required'] as bool? ?? false;
 

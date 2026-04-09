@@ -121,7 +121,11 @@ class BusinessDashboardScreen extends ConsumerWidget {
               height: 100,
               child: Center(child: CircularProgressIndicator()),
             ),
-            error: (e, _) => Text('Error: $e'),
+            error: (e, _) => Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text('No se pudieron cargar las citas',
+                  style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            ),
           ),
         ],
       ),
@@ -622,8 +626,10 @@ class _TaxDeductionsCardState extends ConsumerState<_TaxDeductionsCard> {
         }
       }
 
-      // Build monthly breakdown
+      // Build monthly breakdown with actual withheld amounts
       final monthlyRev = <int, double>{};
+      final monthlyIsr = <int, double>{};
+      final monthlyIva = <int, double>{};
       final monthlyExp = <int, double>{};
       for (final r in revenueRows) {
         final startStr = r['starts_at'] as String?;
@@ -631,6 +637,8 @@ class _TaxDeductionsCardState extends ConsumerState<_TaxDeductionsCard> {
         final dt = DateTime.tryParse(startStr);
         if (dt == null) continue;
         monthlyRev[dt.month] = (monthlyRev[dt.month] ?? 0) + ((r['price'] as num?)?.toDouble() ?? 0);
+        monthlyIsr[dt.month] = (monthlyIsr[dt.month] ?? 0) + ((r['isr_withheld'] as num?)?.toDouble() ?? 0);
+        monthlyIva[dt.month] = (monthlyIva[dt.month] ?? 0) + ((r['iva_withheld'] as num?)?.toDouble() ?? 0);
       }
       for (final r in expRows) {
         final m = r['month'] as int?;
@@ -647,8 +655,8 @@ class _TaxDeductionsCardState extends ConsumerState<_TaxDeductionsCard> {
         months.add({
           'month': monthNames[m],
           'revenue': mRev,
-          'iva': mRev * 0.08,
-          'isr': mRev * 0.025,
+          'iva': monthlyIva[m] ?? 0,
+          'isr': monthlyIsr[m] ?? 0,
           'expenses': mExp,
           'cfdi': mRev > 0 ? 'pendiente' : 'n/a',
         });
@@ -695,7 +703,7 @@ class _TaxDeductionsCardState extends ConsumerState<_TaxDeductionsCard> {
     // IVA: full 16%, BC retains 8%, salon owes 8%
     // ISR: varies by income bracket, BC retains 2.5%, salon owes the rest
     final salonIvaObligation = _ivaWithheld; // same 8% — the other half
-    final salonIsrEstimate = _revenueYtd * 0.075; // rough estimate of remaining ISR
+    final salonIsrEstimate = _isrWithheld; // actual ISR withheld from appointments
     final salonTotalOwed = salonIvaObligation + salonIsrEstimate;
 
     // Deduction budget: expenses reduce TAXABLE INCOME, which reduces the salon's

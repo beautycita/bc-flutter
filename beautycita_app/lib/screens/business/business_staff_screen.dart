@@ -1322,7 +1322,7 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
                   padding: EdgeInsets.all(16),
                   child: CircularProgressIndicator(),
                 )),
-                error: (e, _) => Text('Error: $e'),
+                error: (e, _) => const Text('No se pudo cargar esta seccion'),
               ),
 
               const SizedBox(height: AppConstants.paddingLG),
@@ -1338,7 +1338,7 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
                   padding: EdgeInsets.all(16),
                   child: CircularProgressIndicator(),
                 )),
-                error: (e, _) => Text('Error: $e'),
+                error: (e, _) => const Text('No se pudo cargar esta seccion'),
               ),
 
               const SizedBox(height: AppConstants.paddingLG),
@@ -1354,7 +1354,7 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
                   padding: EdgeInsets.all(16),
                   child: CircularProgressIndicator(),
                 )),
-                error: (e, _) => Text('Error: $e'),
+                error: (e, _) => const Text('No se pudo cargar esta seccion'),
               ),
 
               const SizedBox(height: AppConstants.paddingLG),

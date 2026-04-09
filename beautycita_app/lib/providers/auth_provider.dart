@@ -17,11 +17,16 @@ class AuthState {
   final String? username;
   final String? error;
 
+  /// True when the device has no biometric hardware, signaling the auth
+  /// screen to show an email/phone fallback registration option.
+  final bool biometricUnavailable;
+
   const AuthState({
     this.isLoading = false,
     this.isAuthenticated = false,
     this.username,
     this.error,
+    this.biometricUnavailable = false,
   });
 
   AuthState copyWith({
@@ -29,12 +34,14 @@ class AuthState {
     bool? isAuthenticated,
     String? username,
     String? error,
+    bool? biometricUnavailable,
   }) {
     return AuthState(
       isLoading: isLoading ?? this.isLoading,
       isAuthenticated: isAuthenticated ?? this.isAuthenticated,
       username: username ?? this.username,
       error: error,
+      biometricUnavailable: biometricUnavailable ?? this.biometricUnavailable,
     );
   }
 }
@@ -102,9 +109,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final isAvailable = await _biometricService.isBiometricAvailable();
 
       if (!isAvailable) {
-        const msg = 'Tu dispositivo no tiene biometria disponible';
-        ToastService.showError(msg);
-        state = state.copyWith(isLoading: false, error: msg);
+        // Signal the auth screen to show email/phone fallback instead of dead-end
+        state = state.copyWith(
+          isLoading: false,
+          biometricUnavailable: true,
+          error: 'Biometria no disponible. Usa email o telefono para registrarte.',
+        );
         return false;
       }
 

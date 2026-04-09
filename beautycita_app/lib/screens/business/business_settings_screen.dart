@@ -735,12 +735,25 @@ class _BusinessSettingsScreenState
   }
 
   Future<void> _save(String bizId) async {
+    // Validate close time > open time for all open days
+    for (var i = 0; i < 7; i++) {
+      final day = _hours[i];
+      if (!day.isOpen) continue;
+      final openMin = day.open.hour * 60 + day.open.minute;
+      final closeMin = day.close.hour * 60 + day.close.minute;
+      if (closeMin <= openMin) {
+        ToastService.showWarning(
+            'La hora de cierre debe ser posterior a la de apertura (${_dayKeys[i]})');
+        return;
+      }
+    }
+
     setState(() => _saving = true);
 
     try {
       await SupabaseClientService.client.from('businesses').update({
         'name': _nameCtrl.text.trim(),
-        'phone': _phoneCtrl.text.trim(),
+        'phone': _phoneCtrl.text.trim().replaceAll(RegExp(r'[^0-9+]'), ''),
         'email':
             _emailCtrl.text.trim().isEmpty ? null : _emailCtrl.text.trim(),
         'address': _addressCtrl.text.trim(),

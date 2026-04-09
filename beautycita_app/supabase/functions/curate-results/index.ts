@@ -10,23 +10,7 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { requireFeature } from "../_shared/check-toggle.ts";
 import { cacheGet, cacheSet } from "../_shared/redis.ts";
-
-const ALLOWED_ORIGINS = [
-  "https://beautycita.com",
-  "https://www.beautycita.com",
-  "https://debug.beautycita.com",
-];
-
-function corsOrigin(req: Request): string {
-  const o = req.headers.get("origin") ?? "";
-  return ALLOWED_ORIGINS.includes(o) ? o : ALLOWED_ORIGINS[0];
-}
-
-const corsHeaders = (req: Request) => ({
-  "Access-Control-Allow-Origin": corsOrigin(req),
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-});
+import { corsHeaders } from "../_shared/cors.ts";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -200,19 +184,18 @@ serve(async (req) => {
       user_id,
       location,
       transport_mode,
+      follow_up_answers,
       override_window,
       business_id,
     } = body;
 
-    if (!service_type || !location?.lat || !location?.lng) {
+    if (!service_type || location?.lat == null || location?.lng == null) {
       return json({ error: "service_type and location are required" }, 400);
     }
-    if (!["car", "uber", "transit"].includes(transport_mode)) {
-      return json(
-        { error: "transport_mode must be car, uber, or transit" },
-        400,
-      );
-    }
+    // Accept transport_mode from client; default to "car" if missing/invalid
+    const validTransport = ["car", "uber", "transit"].includes(transport_mode)
+      ? transport_mode
+      : "car";
 
     // --- Redis cache for search results (not bookings) ---
     const cacheKey = `curate:${location.lat.toFixed(2)}:${location.lng.toFixed(2)}:${service_type}`;
@@ -293,7 +276,7 @@ serve(async (req) => {
         candidates,
         profile,
         window,
-        transport_mode,
+        validTransport,
         location,
       );
 

@@ -8,6 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart' show FileOptions;
 
 import '../../config/breakpoints.dart';
 import '../../config/web_theme.dart';
+import '../../utils/friendly_error.dart';
 import '../../providers/business_portal_provider.dart';
 import '../../providers/demo_providers.dart';
 import '../../widgets/aphrodite_copy_field.dart';
@@ -30,7 +31,7 @@ class BizStaffPage extends ConsumerWidget {
 
     return bizAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Error: $e')),
+      error: (e, _) => Center(child: Text(friendlyError(e))),
       data: (biz) {
         if (biz == null) return const Center(child: Text('Sin negocio'));
         return _StaffContent(biz: biz);
@@ -274,7 +275,7 @@ class _CreateOwnerCardState extends ConsumerState<_CreateOwnerCard> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
       }
     } finally {
       if (mounted) setState(() => _creating = false);
@@ -637,7 +638,7 @@ class _AddStaffDialogState extends ConsumerState<_AddStaffDialog> {
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -772,7 +773,7 @@ class _StaffCardState extends ConsumerState<_StaffCard> {
       ref.invalidate(businessStaffProvider);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
       }
     }
   }
@@ -1060,7 +1061,7 @@ class _StaffReadView extends ConsumerWidget {
                 ref.read(selectedStaffProvider.notifier).state = null;
               } catch (e) {
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
                 }
               }
             },
@@ -1704,7 +1705,7 @@ class _StaffEditFormState extends ConsumerState<_StaffEditForm> {
                     if (ctx.mounted) Navigator.pop(ctx);
                   } catch (e) {
                     if (ctx.mounted) {
-                      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e')));
+                      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(friendlyError(e))));
                     }
                   }
                 },
@@ -1777,7 +1778,7 @@ class _StaffEditFormState extends ConsumerState<_StaffEditForm> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
       }
     } finally {
       if (mounted) setState(() => _saving = false);

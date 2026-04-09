@@ -9,16 +9,12 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { resolveNotificationText } from "../_shared/notification_templates.ts";
 import { sendWhatsAppWithRetry } from "../_shared/wa_queue.ts";
+import { corsHeaders as dynamicCors } from "../_shared/cors.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
-const ALLOWED_ORIGIN = "https://beautycita.com";
-const corsHeaders = {
-  "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+let _req: Request;
 
 interface ConfirmationRequest {
   booking_id: string;
@@ -45,7 +41,7 @@ interface BookingDetails {
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...dynamicCors(_req), "Content-Type": "application/json" },
   });
 }
 
@@ -69,6 +65,8 @@ function formatDateEs(isoDate: string): { date: string; time: string } {
 // which queues failed messages for retry instead of silently dropping them (#32)
 
 Deno.serve(async (req) => {
+  _req = req;
+  const corsHeaders = dynamicCors(req);
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }

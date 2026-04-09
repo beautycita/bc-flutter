@@ -50,7 +50,7 @@ serve(async (req) => {
 
   // Fetch services
   const { data: services } = await supabase
-    .from("business_services")
+    .from("services")
     .select("id, name, price, duration_minutes, description, service_type, is_active")
     .eq("business_id", biz.id)
     .eq("is_active", true)
@@ -146,8 +146,8 @@ function buildPage(
 
   const photosHtml = photos.map(p => `
     <div class="photo-pair">
-      ${p.before_url ? `<img src="${p.before_url}" alt="Antes" loading="lazy">` : ""}
-      ${p.after_url ? `<img src="${p.after_url}" alt="Despues" loading="lazy">` : ""}
+      ${p.before_url ? `<img src="${escUrl(p.before_url)}" alt="Antes" loading="lazy">` : ""}
+      ${p.after_url ? `<img src="${escUrl(p.after_url)}" alt="Despues" loading="lazy">` : ""}
       ${p.service_name ? `<div class="photo-label">${esc(p.service_name)}</div>` : ""}
     </div>
   `).join("");
@@ -173,7 +173,7 @@ function buildPage(
       <div class="products-grid">
         ${products.map(p => `
           <div class="product-card">
-            ${p.photo_url ? `<img src="${p.photo_url}" alt="${esc(p.name)}" loading="lazy">` : '<div class="product-placeholder"></div>'}
+            ${p.photo_url ? `<img src="${escUrl(p.photo_url)}" alt="${esc(p.name)}" loading="lazy">` : '<div class="product-placeholder"></div>'}
             <div class="product-name">${esc(p.name)}</div>
             <div class="product-price">$${Number(p.price).toFixed(0)} MXN</div>
           </div>
@@ -183,10 +183,10 @@ function buildPage(
   ` : "";
 
   const socialLinks = [
-    biz.instagram_handle ? `<a href="https://instagram.com/${biz.instagram_handle}" target="_blank">📸 @${biz.instagram_handle}</a>` : null,
-    biz.facebook_url ? `<a href="${biz.facebook_url}" target="_blank">📘 Facebook</a>` : null,
-    biz.tiktok_handle ? `<a href="https://tiktok.com/@${biz.tiktok_handle}" target="_blank">🎵 @${biz.tiktok_handle}</a>` : null,
-    biz.website ? `<a href="${biz.website}" target="_blank">🌐 Web</a>` : null,
+    biz.instagram_handle ? `<a href="https://instagram.com/${encodeURIComponent(biz.instagram_handle)}" target="_blank">📸 @${esc(biz.instagram_handle)}</a>` : null,
+    biz.facebook_url ? `<a href="${escUrl(biz.facebook_url)}" target="_blank">📘 Facebook</a>` : null,
+    biz.tiktok_handle ? `<a href="https://tiktok.com/@${encodeURIComponent(biz.tiktok_handle)}" target="_blank">🎵 @${esc(biz.tiktok_handle)}</a>` : null,
+    biz.website ? `<a href="${escUrl(biz.website)}" target="_blank">🌐 Web</a>` : null,
   ].filter(Boolean).join(" · ");
 
   return `<!DOCTYPE html>
@@ -198,12 +198,12 @@ function buildPage(
 <meta name="description" content="${esc(biz.description || biz.name + ' — Reserva tu cita de belleza')}">
 <meta property="og:title" content="${esc(biz.name)} — BeautyCita">
 <meta property="og:description" content="${esc(biz.description || 'Reserva tu cita')}">
-${biz.photo_url ? `<meta property="og:image" content="${biz.photo_url}">` : ""}
-<meta property="og:url" content="https://beautycita.com/s/${biz.slug}">
+${biz.photo_url ? `<meta property="og:image" content="${escUrl(biz.photo_url)}">` : ""}
+<meta property="og:url" content="https://beautycita.com/s/${encodeURIComponent(biz.slug)}">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="${esc(biz.name)} — BeautyCita">
 <meta name="twitter:description" content="${esc(biz.description || 'Reserva tu cita de belleza')}">
-${biz.photo_url ? `<meta name="twitter:image" content="${biz.photo_url}">` : ""}
+${biz.photo_url ? `<meta name="twitter:image" content="${escUrl(biz.photo_url)}">` : ""}
 <style>
   :root { --primary: #C8A2C8; --dark: #1a1a2e; --surface: #ffffff; --text: #1f2937; --muted: #6b7280; --border: #e5e7eb; --green: #059669; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -264,14 +264,14 @@ ${biz.photo_url ? `<meta name="twitter:image" content="${biz.photo_url}">` : ""}
 <body>
 
 <div class="hero">
-  ${biz.photo_url ? `<img src="${biz.photo_url}" class="hero-photo" alt="${esc(biz.name)}">` : ""}
+  ${biz.photo_url ? `<img src="${escUrl(biz.photo_url)}" class="hero-photo" alt="${esc(biz.name)}">` : ""}
   <h1>${esc(biz.name)}</h1>
   ${rating ? `<div class="rating">${stars} <span class="rating-num">${rating} (${biz.total_reviews} reseñas)</span></div>` : ""}
   ${biz.address ? `<div class="address">📍 ${esc(biz.address)}</div>` : ""}
   <div class="hero-actions">
     <a href="${bookUrl}" class="primary">📅 Reservar ahora</a>
-    ${waLink ? `<a href="${waLink}" target="_blank">💬 WhatsApp</a>` : ""}
-    ${biz.phone ? `<a href="tel:${biz.phone}">📞 Llamar</a>` : ""}
+    ${waLink ? `<a href="${escUrl(waLink)}" target="_blank">💬 WhatsApp</a>` : ""}
+    ${biz.phone ? `<a href="tel:${escUrl(biz.phone)}">📞 Llamar</a>` : ""}
   </div>
 </div>
 
@@ -325,7 +325,7 @@ ${biz.photo_url ? `<meta name="twitter:image" content="${biz.photo_url}">` : ""}
 
 <div class="cta-bar">
   <a href="${bookUrl}" class="cta-book">📅 Reservar</a>
-  ${waLink ? `<a href="${waLink}" class="cta-wa" target="_blank">💬 WhatsApp</a>` : ""}
+  ${waLink ? `<a href="${escUrl(waLink)}" class="cta-wa" target="_blank">💬 WhatsApp</a>` : ""}
 </div>
 
 </body>
@@ -348,9 +348,18 @@ function parseHours(hours: any): string {
 }
 
 function notFoundPage(slug: string): string {
-  return `<!DOCTYPE html><html><head><title>No encontrado</title></head><body style="font-family:sans-serif;text-align:center;padding:60px"><h1>Salon no encontrado</h1><p>"${slug}" no existe o no esta activo.</p><p><a href="https://beautycita.com">Ir a BeautyCita</a></p></body></html>`;
+  return `<!DOCTYPE html><html><head><title>No encontrado</title></head><body style="font-family:sans-serif;text-align:center;padding:60px"><h1>Salon no encontrado</h1><p>"${esc(slug)}" no existe o no esta activo.</p><p><a href="https://beautycita.com">Ir a BeautyCita</a></p></body></html>`;
 }
 
 function esc(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+/** Escape a URL for use in href/src attributes — strips javascript: and data: URIs, encodes quotes. */
+function escUrl(s: string | null | undefined): string {
+  if (!s) return "";
+  const trimmed = s.trim();
+  // Block javascript: and data: URIs
+  if (/^\s*(javascript|data):/i.test(trimmed)) return "";
+  return trimmed.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/'/g, "&#x27;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }

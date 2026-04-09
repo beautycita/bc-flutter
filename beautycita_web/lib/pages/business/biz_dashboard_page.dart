@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:beautycita_core/supabase.dart';
 
 import '../../config/breakpoints.dart';
+import '../../utils/friendly_error.dart';
 import '../../config/router.dart';
 import '../../config/web_theme.dart';
 import '../../providers/business_portal_provider.dart';
@@ -760,7 +761,7 @@ class _TaxDeductionsCard extends StatelessWidget {
               } catch (e) {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error: $e')),
+                    SnackBar(content: Text(friendlyError(e))),
                   );
                 }
               }

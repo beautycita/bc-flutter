@@ -6,6 +6,7 @@ import 'package:beautycita_core/supabase.dart';
 
 import '../../config/breakpoints.dart';
 import '../../config/web_theme.dart';
+import '../../utils/friendly_error.dart';
 import '../../providers/business_portal_provider.dart';
 import '../../providers/demo_providers.dart';
 import '../../widgets/web_design_system.dart';
@@ -57,7 +58,7 @@ class BizPosPage extends ConsumerWidget {
 
     return bizAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Error: $e')),
+      error: (e, _) => Center(child: Text(friendlyError(e))),
       data: (biz) {
         if (biz == null) return const Center(child: Text('Sin negocio'));
         final posEnabled = biz['pos_enabled'] as bool? ?? false;
@@ -92,7 +93,7 @@ class _PosOptInState extends ConsumerState<_PosOptIn> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
+          SnackBar(content: Text(friendlyError(e))),
         );
       }
     } finally {
@@ -440,7 +441,7 @@ class _PosContentState extends ConsumerState<_PosContent> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error: $e')));
+            .showSnackBar(SnackBar(content: Text(friendlyError(e))));
       }
     }
   }
@@ -469,7 +470,7 @@ class _PosContentState extends ConsumerState<_PosContent> {
               } catch (e) {
                 if (mounted) {
                   ScaffoldMessenger.of(context)
-                      .showSnackBar(SnackBar(content: Text('Error: $e')));
+                      .showSnackBar(SnackBar(content: Text(friendlyError(e))));
                 }
               }
             },
@@ -504,7 +505,7 @@ class _PosContentState extends ConsumerState<_PosContent> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error: $e')));
+            .showSnackBar(SnackBar(content: Text(friendlyError(e))));
       }
     }
   }
@@ -879,7 +880,7 @@ class _ProductFormDialogState extends State<_ProductFormDialog> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error: $e')));
+            .showSnackBar(SnackBar(content: Text(friendlyError(e))));
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -1036,7 +1037,7 @@ class _ShowcaseFormDialogState extends State<_ShowcaseFormDialog> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error: $e')));
+            .showSnackBar(SnackBar(content: Text(friendlyError(e))));
       }
     } finally {
       if (mounted) setState(() => _saving = false);

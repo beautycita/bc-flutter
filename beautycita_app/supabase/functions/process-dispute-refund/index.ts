@@ -16,11 +16,7 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Stripe from "https://esm.sh/stripe@14.21.0?target=deno";
 import { requireFeature } from "../_shared/check-toggle.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "https://beautycita.com",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { corsHeaders as dynamicCors } from "../_shared/cors.ts";
 
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY") ?? "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
@@ -35,7 +31,11 @@ interface DisputeRefundRequest {
   dispute_id: string;
 }
 
+let _req: Request;
+
 serve(async (req) => {
+  _req = req;
+  const corsHeaders = dynamicCors(req);
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -53,6 +53,18 @@ serve(async (req) => {
 
     if (authError || !user) {
       return json({ error: "Unauthorized" }, 401);
+    }
+
+    // Admin role check — only admin/superadmin can process dispute refunds
+    const { data: callerProfile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    const callerRole = callerProfile?.role;
+    if (callerRole !== "admin" && callerRole !== "superadmin") {
+      return json({ error: "Admin access required to process refunds" }, 403);
     }
 
     const body: DisputeRefundRequest = await req.json();
@@ -111,7 +123,6 @@ serve(async (req) => {
       return json({ error: "No refund amount set on dispute" }, 400);
     }
 
-    // Verify caller is admin, business owner, or the dispute's client
     const appointment = dispute.appointments as {
       id: string;
       user_id: string;
@@ -126,19 +137,6 @@ serve(async (req) => {
         stripe_account_id: string | null;
       };
     };
-
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-
-    const isAdmin = profile?.role === "admin" || profile?.role === "superadmin";
-    const isOwner = appointment.businesses.owner_id === user.id;
-
-    if (!isAdmin && !isOwner) {
-      return json({ error: "Only the business owner or admin can process refunds" }, 403);
-    }
 
     // No payment_intent_id — unpaid/test appointment
     if (!appointment.payment_intent_id) {
@@ -290,6 +288,6 @@ serve(async (req) => {
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...dynamicCors(_req), "Content-Type": "application/json" },
   });
 }

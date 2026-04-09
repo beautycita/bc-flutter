@@ -236,7 +236,12 @@ class _ErrorView extends StatelessWidget {
               ),
               const SizedBox(height: AppConstants.paddingSM),
               Text(
-                error,
+                // Strip technical details (stack traces, SQL, HTTP codes)
+                error.contains('Exception')
+                    ? 'Ocurrio un error inesperado. Intenta de nuevo.'
+                    : error.length > 120
+                        ? '${error.substring(0, 120)}...'
+                        : error,
                 style: GoogleFonts.nunito(
                   fontSize: 14,
                   color: palette.onSurface.withValues(alpha: 0.5),

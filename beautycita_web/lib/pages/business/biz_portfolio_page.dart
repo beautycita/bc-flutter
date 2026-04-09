@@ -61,10 +61,10 @@ class _PortfolioContentState extends ConsumerState<_PortfolioContent> {
         for (final entry in parsed.entries) {
           final day = entry.value;
           if (day is Map<String, dynamic>) {
-            final open = day['open'] as bool? ?? false;
-            if (open) {
-              final start = day['start'] as String? ?? '09:00';
-              final end = day['end'] as String? ?? '18:00';
+            final isOpen = day['open'] != null;
+            if (isOpen) {
+              final start = day['open'] as String? ?? '09:00';
+              final end = day['close'] as String? ?? '18:00';
               hoursMap[entry.key] = '$start - $end';
             } else {
               hoursMap[entry.key] = 'Cerrado';

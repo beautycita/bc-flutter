@@ -21,6 +21,9 @@ class Booking {
   final String? paymentStatus;
   final String? paymentMethod;
   final double? depositAmount;
+  final double? isrWithheld;
+  final double? ivaWithheld;
+  final double? providerNet;
   final DateTime? updatedAt;
 
   const Booking({
@@ -46,6 +49,9 @@ class Booking {
     this.paymentStatus,
     this.paymentMethod,
     this.depositAmount,
+    this.isrWithheld,
+    this.ivaWithheld,
+    this.providerNet,
     this.updatedAt,
   });
 
@@ -99,6 +105,9 @@ class Booking {
       paymentStatus: json['payment_status'] as String?,
       paymentMethod: json['payment_method'] as String?,
       depositAmount: (json['deposit_amount'] as num?)?.toDouble(),
+      isrWithheld: (json['isr_withheld'] as num?)?.toDouble(),
+      ivaWithheld: (json['iva_withheld'] as num?)?.toDouble(),
+      providerNet: (json['provider_net'] as num?)?.toDouble(),
       updatedAt: json['updated_at'] != null
           ? DateTime.parse(json['updated_at'] as String)
           : null,
@@ -124,6 +133,9 @@ class Booking {
       'payment_status': paymentStatus,
       'payment_method': paymentMethod,
       'deposit_amount': depositAmount,
+      'isr_withheld': isrWithheld,
+      'iva_withheld': ivaWithheld,
+      'provider_net': providerNet,
     };
   }
 
@@ -157,6 +169,9 @@ class Booking {
       paymentStatus: paymentStatus ?? this.paymentStatus,
       paymentMethod: paymentMethod ?? this.paymentMethod,
       depositAmount: depositAmount,
+      isrWithheld: isrWithheld,
+      ivaWithheld: ivaWithheld,
+      providerNet: providerNet,
       updatedAt: updatedAt,
     );
   }

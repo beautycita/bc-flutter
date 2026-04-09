@@ -208,9 +208,13 @@ Deno.serve(async (req: Request) => {
       photosQuery = photosQuery.eq("service_category", category);
     }
 
-    const showcasesQuery = supabase
+    let showcasesQuery = supabase
       .from("product_showcases")
       .select("id, business_id, product_id, caption, created_at, businesses!inner(id, name, photo_url, slug, lat, lng), products!inner(id, name, brand, price, photo_url, category, in_stock)");
+
+    if (category) {
+      showcasesQuery = showcasesQuery.eq("products.category", category);
+    }
 
     const [photosResult, showcasesResult] = await Promise.all([
       photosQuery,

@@ -29,6 +29,7 @@ class _ChatConversationScreenState
   final _textController = TextEditingController();
   final _scrollController = ScrollController();
   bool _isSending = false;
+  DateTime? _lastSentAt;
   final List<ChatMessage> _optimisticMessages = [];
   String? _resolvedContactType;
 
@@ -76,6 +77,11 @@ class _ChatConversationScreenState
     final text = _textController.text.trim();
     if (text.isEmpty || _isSending) return;
     if (_resolvedContactType == null) return; // Thread not loaded yet
+    // 2-second debounce to prevent double-sends
+    final now = DateTime.now();
+    if (_lastSentAt != null &&
+        now.difference(_lastSentAt!).inMilliseconds < 2000) return;
+    _lastSentAt = now;
 
     _textController.clear();
 

@@ -1390,6 +1390,8 @@ class _ReceiptWidget extends StatelessWidget {
     final dateStr = dateFormatter.format(booking.scheduledAt);
 
     final price = booking.price ?? 0;
+    final hasWithholding = (booking.ivaWithheld ?? 0) > 0 ||
+        (booking.isrWithheld ?? 0) > 0;
     final subtotal = price / 1.16; // IVA 16%
     final iva = price - subtotal;
 
@@ -1478,6 +1480,14 @@ class _ReceiptWidget extends StatelessWidget {
               const SizedBox(height: 6),
               _receiptRow('IVA (16%)',
                   '\$${iva.toStringAsFixed(2)} MXN'),
+              if (hasWithholding) ...[
+                const SizedBox(height: 6),
+                _receiptRow('IVA retenido',
+                    '-\$${(booking.ivaWithheld ?? 0).toStringAsFixed(2)} MXN'),
+                const SizedBox(height: 6),
+                _receiptRow('ISR retenido',
+                    '-\$${(booking.isrWithheld ?? 0).toStringAsFixed(2)} MXN'),
+              ],
               const SizedBox(height: 8),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
