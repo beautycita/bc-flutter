@@ -89,7 +89,7 @@ class ExportService {
       rows.add(columns.map((c) => row[c.key]?.toString() ?? '').toList());
     }
 
-    final csvString = const ListToCsvConverter().convert(rows);
+    final csvString = CsvEncoder().convert(rows);
     final file = File(path);
     // UTF-8 BOM for Excel compatibility
     await file.writeAsString('\uFEFF$csvString', encoding: utf8);

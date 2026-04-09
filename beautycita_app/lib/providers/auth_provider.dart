@@ -176,18 +176,22 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final clientId = dotenv.env['GOOGLE_OAUTH_CLIENT_ID'];
       if (clientId == null || clientId.isEmpty) return false;
 
-      final googleSignIn = GoogleSignIn(
-        serverClientId: clientId,
-      );
+      final googleSignIn = GoogleSignIn.instance;
+      await googleSignIn.initialize(serverClientId: clientId);
 
-      final account = await googleSignIn.signIn();
-      if (account == null) {
-        if (kDebugMode) debugPrint('[Auth] Google One Tap dismissed');
-        return false;
+      final GoogleSignInAccount account;
+      try {
+        account = await googleSignIn.authenticate();
+      } on GoogleSignInException catch (e) {
+        if (e.code == GoogleSignInExceptionCode.canceled) {
+          if (kDebugMode) debugPrint('[Auth] Google One Tap dismissed');
+          return false;
+        }
+        rethrow;
       }
 
       final email = account.email;
-      final googleAuth = await account.authentication;
+      final googleAuth = account.authentication;
       final idToken = googleAuth.idToken;
 
       // Store email as discovered_email metadata (always, even if link fails)
@@ -201,7 +205,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
           await SupabaseClientService.client.auth.linkIdentityWithIdToken(
             provider: OAuthProvider.google,
             idToken: idToken,
-            accessToken: googleAuth.accessToken,
           );
           if (kDebugMode) debugPrint('[Auth] Google identity linked + email stored: $email');
         } on AuthException catch (e) {

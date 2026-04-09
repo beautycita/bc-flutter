@@ -105,18 +105,22 @@ class SecurityNotifier extends StateNotifier<SecurityState> {
     state = state.copyWith(isLoading: true, error: null, successMessage: null);
 
     try {
-      final googleSignIn = GoogleSignIn(
-        serverClientId: _googleClientId,
-      );
+      final googleSignIn = GoogleSignIn.instance;
+      await googleSignIn.initialize(serverClientId: _googleClientId);
 
-      final googleUser = await googleSignIn.signIn();
-      if (googleUser == null) {
-        // User cancelled
-        state = state.copyWith(isLoading: false);
-        return;
+      final GoogleSignInAccount googleUser;
+      try {
+        googleUser = await googleSignIn.authenticate();
+      } on GoogleSignInException catch (e) {
+        if (e.code == GoogleSignInExceptionCode.canceled) {
+          // User cancelled
+          state = state.copyWith(isLoading: false);
+          return;
+        }
+        rethrow;
       }
 
-      final googleAuth = await googleUser.authentication;
+      final googleAuth = googleUser.authentication;
       final idToken = googleAuth.idToken;
       if (idToken == null) {
         const msg = 'No se pudo obtener el token de Google';
@@ -130,7 +134,6 @@ class SecurityNotifier extends StateNotifier<SecurityState> {
         await SupabaseClientService.client.auth.linkIdentityWithIdToken(
           provider: OAuthProvider.google,
           idToken: idToken,
-          accessToken: googleAuth.accessToken,
         );
         state = state.copyWith(
           isGoogleLinked: true,
@@ -147,7 +150,6 @@ class SecurityNotifier extends StateNotifier<SecurityState> {
         await SupabaseClientService.client.auth.signInWithIdToken(
           provider: OAuthProvider.google,
           idToken: idToken,
-          accessToken: googleAuth.accessToken,
         );
         state = state.copyWith(
           isGoogleLinked: true,

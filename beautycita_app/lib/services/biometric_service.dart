@@ -1,6 +1,4 @@
 import 'package:local_auth/local_auth.dart';
-import 'package:local_auth/error_codes.dart' as auth_error;
-import 'package:flutter/services.dart';
 
 /// Service for handling biometric authentication
 class BiometricService {
@@ -10,7 +8,7 @@ class BiometricService {
   Future<bool> isBiometricAvailable() async {
     try {
       return await _localAuth.canCheckBiometrics || await _localAuth.isDeviceSupported();
-    } on PlatformException {
+    } catch (_) {
       return false;
     }
   }
@@ -19,7 +17,7 @@ class BiometricService {
   Future<List<BiometricType>> getAvailableBiometrics() async {
     try {
       return await _localAuth.getAvailableBiometrics();
-    } on PlatformException {
+    } catch (_) {
       return <BiometricType>[];
     }
   }
@@ -36,29 +34,13 @@ class BiometricService {
 
       final bool authenticated = await _localAuth.authenticate(
         localizedReason: '¡Usa tu huella o rostro para entrar!',
-        options: const AuthenticationOptions(
-          stickyAuth: true,
-          biometricOnly: false,
-        ),
+        biometricOnly: false,
+        persistAcrossBackgrounding: true,
       );
 
       return authenticated;
-    } on PlatformException catch (e) {
-      // Handle specific error cases
-      if (e.code == auth_error.notAvailable) {
-        // Biometrics not available
-        return false;
-      } else if (e.code == auth_error.notEnrolled) {
-        // User hasn't enrolled biometrics
-        return false;
-      } else if (e.code == auth_error.lockedOut ||
-                 e.code == auth_error.permanentlyLockedOut) {
-        // Too many failed attempts
-        return false;
-      } else {
-        // Other errors (user canceled, etc.)
-        return false;
-      }
+    } on LocalAuthException {
+      return false;
     } catch (e) {
       return false;
     }

@@ -191,7 +191,7 @@ class NotificationService {
     );
 
     await _localNotifications.initialize(
-      const InitializationSettings(android: androidInit, iOS: iosInit),
+      settings: const InitializationSettings(android: androidInit, iOS: iosInit),
       onDidReceiveNotificationResponse: (response) {
         if (kDebugMode) debugPrint('[LOCAL] Notification tapped: ${response.payload}');
         // Parse payload and navigate if needed
@@ -203,7 +203,7 @@ class NotificationService {
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
     if (androidPlugin != null) {
-      await androidPlugin.deleteNotificationChannel('booking_alerts');
+      await androidPlugin.deleteNotificationChannel(channelId: 'booking_alerts');
       await androidPlugin.createNotificationChannel(_channelBooking);
       await androidPlugin.createNotificationChannel(_channelChat);
       await androidPlugin.createNotificationChannel(_channelPayment);
@@ -219,10 +219,10 @@ class NotificationService {
     if (notification != null) {
       final channel = _channelForType(message.data['type'] as String?);
       _localNotifications.show(
-        message.hashCode,
-        notification.title,
-        notification.body,
-        NotificationDetails(
+        id: message.hashCode,
+        title: notification.title,
+        body: notification.body,
+        notificationDetails: NotificationDetails(
           android: AndroidNotificationDetails(
             channel.id,
             channel.name,

@@ -89,7 +89,7 @@ class ContactMatchService {
 
   /// Check if contacts permission is granted.
   Future<bool> hasPermission() async {
-    return FlutterContacts.requestPermission(readonly: true);
+    return FlutterContacts.permissions.has(PermissionType.read);
   }
 
   /// Download MX salon phone list from edge function. Cache for 24h.
@@ -154,12 +154,12 @@ class ContactMatchService {
 
   /// Read device contacts and extract normalized phone numbers.
   Future<List<ContactEntry>> readContacts() async {
-    final contacts = await FlutterContacts.getContacts(withProperties: true);
+    final contacts = await FlutterContacts.getAll(properties: {ContactProperty.name, ContactProperty.phone});
     return contacts
         .where((c) => c.phones.isNotEmpty)
         .map(
           (c) => ContactEntry(
-            displayName: c.displayName,
+            displayName: c.displayName ?? '',
             phones:
                 c.phones
                     .map((p) => normalizePhone(p.number))
@@ -280,7 +280,7 @@ class ContactMatchService {
 
     try {
       // Need write permission to add BeautyCita actions to contacts
-      final hasPermission = await FlutterContacts.requestPermission(readonly: false);
+      final hasPermission = await FlutterContacts.permissions.has(PermissionType.read);
       if (!hasPermission) return;
 
       final service = ContactMatchService();
