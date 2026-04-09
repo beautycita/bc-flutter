@@ -5,6 +5,7 @@ import '../config/constants.dart';
 import '../models/follow_up_question.dart';
 import '../providers/booking_flow_provider.dart';
 import '../widgets/cinematic_question_text.dart';
+import '../widgets/parallax_tilt.dart';
 
 class FollowUpQuestionScreen extends ConsumerWidget {
   const FollowUpQuestionScreen({super.key});
@@ -198,10 +199,14 @@ class _VisualCardsAnswer extends StatelessWidget {
       itemCount: options.length,
       itemBuilder: (context, index) {
         final option = options[index];
-        return _OptionCard(
-          label: option.labelEs,
-          imageUrl: option.imageUrl,
-          onTap: () => onSelect(option.value),
+        return ParallaxTilt(
+          intensity: 8,
+          perspectiveScale: 0.02,
+          child: _OptionCard(
+            label: option.labelEs,
+            imageUrl: option.imageUrl,
+            onTap: () => onSelect(option.value),
+          ),
         );
       },
     );
@@ -227,66 +232,40 @@ class _OptionCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: palette.surface,
           borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+          border: Border.all(
+            color: palette.primary.withValues(alpha: 0.15),
+            width: 1.5,
+          ),
           boxShadow: [
             BoxShadow(
-              color: palette.primary.withValues(alpha: 0.08),
+              color: palette.primary.withValues(alpha: 0.06),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
           ],
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (imageUrl != null) ...[
-              ClipRRect(
-                borderRadius:
-                    BorderRadius.circular(AppConstants.radiusSM),
-                child: Image.network(
-                  imageUrl!,
-                  width: 64,
-                  height: 64,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => _placeholder(context),
-                ),
-              ),
-              const SizedBox(height: AppConstants.paddingSM),
-            ] else ...[
-              _placeholder(context),
-              const SizedBox(height: AppConstants.paddingSM),
-            ],
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: AppConstants.paddingSM),
-              child: Text(
-                label,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: palette.onSurface,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppConstants.paddingMD,
+              vertical: AppConstants.paddingSM,
             ),
-          ],
+            child: Text(
+              label,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: palette.primary,
+                height: 1.3,
+              ),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
         ),
-      ),
-    );
-  }
-
-  Widget _placeholder(BuildContext context) {
-    final palette = Theme.of(context).colorScheme;
-
-    return Container(
-      width: 64,
-      height: 64,
-      decoration: BoxDecoration(
-        color: palette.primary.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(16),
       ),
     );
   }
