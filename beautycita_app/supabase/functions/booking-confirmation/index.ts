@@ -7,11 +7,11 @@
 // =============================================================================
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { resolveNotificationText } from "../_shared/notification_templates.ts";
+import { sendWhatsAppWithRetry } from "../_shared/wa_queue.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-const BEAUTYPI_WA_URL = Deno.env.get("BEAUTYPI_WA_URL") ?? "";
-const BEAUTYPI_WA_TOKEN = Deno.env.get("BEAUTYPI_WA_TOKEN") ?? "";
 
 const ALLOWED_ORIGIN = "https://beautycita.com";
 const corsHeaders = {
@@ -65,32 +65,8 @@ function formatDateEs(isoDate: string): { date: string; time: string } {
   return { date, time };
 }
 
-async function sendWhatsAppReceipt(
-  phone: string,
-  message: string
-): Promise<boolean> {
-  try {
-    const res = await fetch(`${BEAUTYPI_WA_URL}/api/wa/send`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${BEAUTYPI_WA_TOKEN}`,
-      },
-      body: JSON.stringify({ phone, message }),
-    });
-
-    if (!res.ok) {
-      console.error(`[WA] Send failed for ${phone}: ${res.status}`);
-      return false;
-    }
-
-    const data = await res.json();
-    return data.sent === true;
-  } catch (err) {
-    console.error(`[WA] Error sending to ${phone}:`, err);
-    return false;
-  }
-}
+// NOTE: sendWhatsAppReceipt removed — now using sendWhatsAppWithRetry from _shared/wa_queue.ts
+// which queues failed messages for retry instead of silently dropping them (#32)
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -255,24 +231,50 @@ Deno.serve(async (req) => {
 
     // -----------------------------------------------------------------------
     // 4. If phone exists: try WhatsApp receipt via beautypi WA API
+    //    Uses notification_templates table if available, falls back to hardcoded (#31)
+    //    On failure, queues for retry instead of silently dropping (#32)
     // -----------------------------------------------------------------------
     if (userPhone) {
-      const waMessage =
+      const hardcodedWa =
         `*BeautyCita - Recibo*\n` +
         `${appt.service_name} con ${salonName}\n` +
         `${bookingDate} ${bookingTime}\n` +
         `Total: $${priceStr} MXN\n` +
         `Confirmacion: #${bookingIdShort}`;
 
-      const waSent = await sendWhatsAppReceipt(userPhone, waMessage);
+      const waMessage = await resolveNotificationText(
+        supabase,
+        "booking_confirmed",
+        "whatsapp",
+        "customer",
+        {
+          SERVICE_NAME: appt.service_name,
+          SALON_NAME: salonName,
+          BOOKING_DATE: bookingDate,
+          BOOKING_TIME: bookingTime,
+          PRICE: `$${priceStr} MXN`,
+          BOOKING_ID: bookingIdShort,
+          USER_NAME: userName,
+        },
+        hardcodedWa
+      );
+
+      const { sent: waSent, queued: waQueued } = await sendWhatsAppWithRetry(
+        supabase,
+        userPhone,
+        waMessage,
+        { trigger: "booking_confirmed", booking_id: appt.id }
+      );
 
       if (waSent) {
         results.whatsapp = "sent";
         console.log(`[BOOKING-CONFIRM] WhatsApp sent to ${userPhone}`);
+      } else if (waQueued) {
+        results.whatsapp = "queued";
+        console.log(`[BOOKING-CONFIRM] WhatsApp queued for retry to ${userPhone}`);
       } else {
-        // WhatsApp failed — don't try SMS in v1, just log and move on
         results.whatsapp = "failed";
-        console.log(`[BOOKING-CONFIRM] WhatsApp failed for ${userPhone}, skipping (no SMS in v1)`);
+        console.log(`[BOOKING-CONFIRM] WhatsApp failed for ${userPhone}`);
       }
     } else {
       results.whatsapp = "skipped";
@@ -313,7 +315,7 @@ Deno.serve(async (req) => {
     const bizOwnerId = appt.businesses?.owner_id ?? null;
 
     if (bizPhone) {
-      const bizWaMessage =
+      const hardcodedBizWa =
         `*BeautyCita - Nueva Reserva*\n` +
         `Cliente: ${userName}\n` +
         `Servicio: ${appt.service_name}\n` +
@@ -321,9 +323,38 @@ Deno.serve(async (req) => {
         `Total: $${priceStr} MXN\n` +
         `Ref: #${bookingIdShort}`;
 
-      const bizWaSent = await sendWhatsAppReceipt(bizPhone, bizWaMessage);
-      results.business_whatsapp = bizWaSent ? "sent" : "failed";
-      console.log(`[BOOKING-CONFIRM] Business WA ${bizWaSent ? "sent" : "failed"} to ${bizPhone}`);
+      const bizWaMessage = await resolveNotificationText(
+        supabase,
+        "booking_confirmed",
+        "whatsapp",
+        "salon",
+        {
+          USER_NAME: userName,
+          SERVICE_NAME: appt.service_name,
+          BOOKING_DATE: bookingDate,
+          BOOKING_TIME: bookingTime,
+          PRICE: `$${priceStr} MXN`,
+          BOOKING_ID: bookingIdShort,
+          SALON_NAME: salonName,
+        },
+        hardcodedBizWa
+      );
+
+      const { sent: bizWaSent, queued: bizWaQueued } = await sendWhatsAppWithRetry(
+        supabase,
+        bizPhone,
+        bizWaMessage,
+        { trigger: "booking_confirmed_business", booking_id: appt.id }
+      );
+
+      if (bizWaSent) {
+        results.business_whatsapp = "sent";
+      } else if (bizWaQueued) {
+        results.business_whatsapp = "queued";
+      } else {
+        results.business_whatsapp = "failed";
+      }
+      console.log(`[BOOKING-CONFIRM] Business WA ${results.business_whatsapp} to ${bizPhone}`);
     } else {
       results.business_whatsapp = "skipped_no_phone";
     }
