@@ -72,7 +72,13 @@ class UpdaterService {
       final url = data['url'] as String? ?? '';
       final required = data['forceUpdate'] as bool? ?? data['required'] as bool? ?? true;
 
-      final localBuild = AppConstants.buildNumber;
+      // Strip ABI offset from split-per-abi builds:
+      // Flutter adds +1000 (armeabi), +2000 (arm64), +3000 (x86_64)
+      // e.g., pubspec 50241 → arm64 APK reports 52241
+      // We compare base build numbers: 52241 - 2000 = 50241
+      final rawLocal = AppConstants.buildNumber;
+      final abiOffset = ((rawLocal ~/ 1000) % 10) * 1000; // extracts 0/1000/2000/3000
+      final localBuild = rawLocal - abiOffset;
       if (remoteBuild <= localBuild) {
         if (kDebugMode) debugPrint('[Updater] APK is current (local=$localBuild, remote=$remoteBuild)');
         // Record successful check even when current
