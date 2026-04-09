@@ -373,7 +373,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                                 right: AppConstants.paddingSM),
                                             child: _HeaderButton(
                                               icon: Icons.storefront_rounded,
-                                              onTap: () => context.push('/business'),
+                                              onTap: () {
+                                                ref.read(businessTabProvider.notifier).state = 0;
+                                                context.push('/business');
+                                              },
                                             ),
                                           )
                                         : const SizedBox.shrink(),

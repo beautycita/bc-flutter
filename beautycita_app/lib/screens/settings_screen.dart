@@ -8,6 +8,8 @@ import 'package:beautycita/config/routes.dart';
 import 'package:beautycita/providers/auth_provider.dart';
 import 'package:beautycita/providers/profile_provider.dart';
 import 'package:beautycita/providers/admin_provider.dart';
+import 'package:beautycita/screens/business/business_shell_screen.dart' show businessTabProvider;
+import 'package:beautycita/screens/admin/admin_shell_screen.dart' show adminTabProvider;
 import 'package:beautycita/providers/business_provider.dart';
 import 'package:beautycita/providers/security_provider.dart';
 import 'package:beautycita/providers/feature_toggle_provider.dart';
@@ -169,7 +171,10 @@ class SettingsScreen extends ConsumerWidget {
                       SettingsTile(
                         icon: Icons.admin_panel_settings_rounded,
                         label: 'Panel de administracion',
-                        onTap: () => context.push(AppRoutes.admin),
+                        onTap: () {
+                          ref.read(adminTabProvider.notifier).state = 0;
+                          context.push(AppRoutes.admin);
+                        },
                       ),
                     ],
                   )
@@ -267,7 +272,10 @@ class SettingsScreen extends ConsumerWidget {
         SettingsTile(
           icon: Icons.storefront_rounded,
           label: 'Portal de negocio',
-          onTap: () => context.push(AppRoutes.business),
+          onTap: () {
+            ref.read(businessTabProvider.notifier).state = 0;
+            context.push(AppRoutes.business);
+          },
         ),
       ]);
     }
