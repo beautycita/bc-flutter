@@ -1,6 +1,7 @@
 import 'package:beautycita/config/app_transitions.dart';
 import 'package:beautycita/services/sound_service.dart';
 import 'package:beautycita/services/toast_service.dart';
+import 'package:beautycita/widgets/parallax_tilt.dart';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -1383,13 +1384,20 @@ class _CategoryCardState extends ConsumerState<_CategoryCard>
 
     if (imagePath != null && photoCardsEnabled) {
       // Editorial photo card — heavy color grade for visual unity
+      // Gyroscope parallax: image shifts behind card like a window
       return ClipRRect(
         borderRadius: BorderRadius.circular(19),
         child: Stack(
           fit: StackFit.expand,
           children: [
-            // Base image
-            Image.asset(imagePath, fit: BoxFit.cover),
+            // Base image with parallax — slightly oversized so it can shift
+            ParallaxWindow(
+              intensity: 6,
+              child: Transform.scale(
+                scale: 1.12,
+                child: Image.asset(imagePath, fit: BoxFit.cover),
+              ),
+            ),
             // Desaturate: pull most color out
             Container(color: Colors.white.withValues(alpha: 0.35)),
             // Category color tint — this is what unifies them
@@ -1470,11 +1478,14 @@ class _CategoryCardState extends ConsumerState<_CategoryCard>
 
     final animatedPath = animatedIcons[category.id];
 
-    // Default icon-based card
+    // Default icon-based card with subtle gyro parallax on icon
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Container(
+        ParallaxTilt(
+          intensity: 4,
+          perspectiveScale: 0.01,
+          child: Container(
           width: 72,
           height: 72,
           decoration: BoxDecoration(
@@ -1504,6 +1515,7 @@ class _CategoryCardState extends ConsumerState<_CategoryCard>
                     size: 36,
                   ),
           ),
+        ),
         ),
         const SizedBox(height: 10),
         Padding(

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../widgets/parallax_tilt.dart';
 
 import '../config/constants.dart';
 import '../config/theme_extension.dart';
@@ -234,8 +235,11 @@ class _BookingConfirmationScreenState
                           color: palette.primary,
                           startOpacity: 0.3,
                         ),
-                        // Checkmark
-                        AnimatedBuilder(
+                        // Checkmark with gyro parallax
+                        ParallaxTilt(
+                          intensity: 6,
+                          perspectiveScale: 0.015,
+                          child: AnimatedBuilder(
                           animation: _checkController,
                           builder: (context, child) {
                             return Opacity(
@@ -267,6 +271,7 @@ class _BookingConfirmationScreenState
                             ),
                           ),
                         ),
+                        ), // ParallaxTilt
                       ],
                     ),
                   ),
