@@ -139,6 +139,7 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen>
                 selected: state.paymentMethod,
                 onSelect: (method) => notifier.selectPaymentMethod(method),
                 servicePrice: result.service.price ?? 0,
+                businessId: result.business.id,
               )),
             ],
             const SizedBox(height: AppConstants.paddingXL),
@@ -503,6 +504,22 @@ class _PriceBreakdown extends StatelessWidget {
 // Payment method selector
 // ---------------------------------------------------------------------------
 
+/// Checks if the selected business requires a deposit but lacks Stripe configuration.
+/// Returns true when Stripe-dependent payment methods (card/oxxo) should be blocked.
+final _bizStripeBlockedProvider = FutureProvider.family<bool, String>((ref, businessId) async {
+  if (businessId.isEmpty) return false;
+  final data = await SupabaseClientService.client
+      .from('businesses')
+      .select('deposit_required, stripe_charges_enabled')
+      .eq('id', businessId)
+      .maybeSingle();
+  if (data == null) return false;
+  final depositRequired = data['deposit_required'] as bool? ?? false;
+  final stripeEnabled = data['stripe_charges_enabled'] as bool? ?? false;
+  // Block Stripe methods when deposit is required but Stripe isn't configured
+  return depositRequired && !stripeEnabled;
+});
+
 final _userSaldoProvider = FutureProvider<double>((ref) async {
   final userId = SupabaseClientService.currentUserId;
   if (userId == null) return 0;
@@ -518,11 +535,13 @@ class _PaymentMethodSelector extends ConsumerStatefulWidget {
   final String selected;
   final ValueChanged<String> onSelect;
   final double servicePrice;
+  final String businessId;
 
   const _PaymentMethodSelector({
     required this.selected,
     required this.onSelect,
     required this.servicePrice,
+    required this.businessId,
   });
 
   @override
@@ -537,6 +556,11 @@ class _PaymentMethodSelectorState extends ConsumerState<_PaymentMethodSelector> 
     final cards = ref.watch(paymentMethodsProvider).cards;
     final hasCards = cards.isNotEmpty;
 
+    // Check if this business requires deposit but has no Stripe configured.
+    // In that case, card/oxxo are dead-ends — offer saldo or cash_direct.
+    final stripeBlockedAsync = ref.watch(_bizStripeBlockedProvider(widget.businessId));
+    final stripeBlocked = stripeBlockedAsync.valueOrNull ?? false;
+
     // Saldo is applied automatically — not a choice
     final saldoAsync = ref.watch(_userSaldoProvider);
     final saldo = saldoAsync.valueOrNull ?? 0.0;
@@ -544,10 +568,19 @@ class _PaymentMethodSelectorState extends ConsumerState<_PaymentMethodSelector> 
     final coversFullPrice = saldo >= servicePrice && servicePrice > 0;
     final hasPartialSaldo = saldo > 0 && saldo < servicePrice;
 
-    // If saldo covers full price, auto-select saldo. Otherwise card/oxxo for the remainder.
+    // If saldo covers full price, auto-select saldo.
+    // If Stripe is blocked (deposit without config), fallback to cash_direct.
+    // Otherwise card/oxxo for the remainder.
     if (!_didAutoSelect) {
       _didAutoSelect = true;
-      final preferred = coversFullPrice ? 'saldo' : (hasCards ? 'card' : 'oxxo');
+      String preferred;
+      if (coversFullPrice) {
+        preferred = 'saldo';
+      } else if (stripeBlocked) {
+        preferred = coversFullPrice ? 'saldo' : 'cash_direct';
+      } else {
+        preferred = hasCards ? 'card' : 'oxxo';
+      }
       if (widget.selected != preferred) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           widget.onSelect(preferred);
@@ -601,8 +634,56 @@ class _PaymentMethodSelectorState extends ConsumerState<_PaymentMethodSelector> 
           const SizedBox(height: 10),
         ],
 
-        // Only show card/oxxo if saldo doesn't cover full price
-        if (!coversFullPrice)
+        // If Stripe is blocked (deposit required, no Stripe config), show
+        // a notice and offer cash_direct instead of card/oxxo
+        if (stripeBlocked && !coversFullPrice) ...[
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.orange.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.orange.withValues(alpha: 0.2)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.info_outline, size: 20, color: Colors.orange),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Este salon aun no acepta pagos en linea. Paga directamente en el salon.',
+                    style: GoogleFonts.nunito(fontSize: 12, color: Colors.orange.shade800),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              if (saldo > 0)
+                _PaymentMethodCard(
+                  icon: Icons.account_balance_wallet,
+                  label: 'Saldo',
+                  subtitle: '\$${saldo.toStringAsFixed(0)} disponible',
+                  method: 'saldo',
+                  isSelected: widget.selected == 'saldo',
+                  onTap: () => widget.onSelect('saldo'),
+                ),
+              if (saldo > 0) const SizedBox(width: 10),
+              _PaymentMethodCard(
+                icon: Icons.payments_outlined,
+                label: 'En salon',
+                subtitle: 'Paga al llegar',
+                method: 'cash_direct',
+                isSelected: widget.selected == 'cash_direct',
+                onTap: () => widget.onSelect('cash_direct'),
+              ),
+            ],
+          ),
+        ],
+
+        // Normal card/oxxo options when Stripe is not blocked
+        if (!stripeBlocked && !coversFullPrice)
         Row(
           children: [
             _PaymentMethodCard(

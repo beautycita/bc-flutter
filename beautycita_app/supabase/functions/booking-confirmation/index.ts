@@ -37,6 +37,8 @@ interface BookingDetails {
   businesses: {
     name: string;
     address: string | null;
+    phone: string | null;
+    owner_id: string | null;
   };
 }
 
@@ -142,7 +144,9 @@ Deno.serve(async (req) => {
         status,
         businesses!appointments_business_id_fkey (
           name,
-          address
+          address,
+          phone,
+          owner_id
         )
       `)
       .eq("id", booking_id)
@@ -300,6 +304,61 @@ Deno.serve(async (req) => {
     } catch (pushErr) {
       results.push = "error";
       console.error("[BOOKING-CONFIRM] Push error:", pushErr);
+    }
+
+    // -----------------------------------------------------------------------
+    // 6. Notify the BUSINESS about the new booking (WhatsApp + push to owner)
+    // -----------------------------------------------------------------------
+    const bizPhone = appt.businesses?.phone ?? null;
+    const bizOwnerId = appt.businesses?.owner_id ?? null;
+
+    if (bizPhone) {
+      const bizWaMessage =
+        `*BeautyCita - Nueva Reserva*\n` +
+        `Cliente: ${userName}\n` +
+        `Servicio: ${appt.service_name}\n` +
+        `Fecha: ${bookingDate} ${bookingTime}\n` +
+        `Total: $${priceStr} MXN\n` +
+        `Ref: #${bookingIdShort}`;
+
+      const bizWaSent = await sendWhatsAppReceipt(bizPhone, bizWaMessage);
+      results.business_whatsapp = bizWaSent ? "sent" : "failed";
+      console.log(`[BOOKING-CONFIRM] Business WA ${bizWaSent ? "sent" : "failed"} to ${bizPhone}`);
+    } else {
+      results.business_whatsapp = "skipped_no_phone";
+    }
+
+    // Push notification to the business owner
+    if (bizOwnerId) {
+      try {
+        const bizPushRes = await fetch(`${SUPABASE_URL}/functions/v1/send-push-notification`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            user_id: bizOwnerId,
+            notification_type: "new_booking_business",
+            custom_title: "Nueva Reserva",
+            custom_body: `${userName} reservo ${appt.service_name} para ${bookingDate} ${bookingTime}`,
+            data: {
+              type: "new_booking_business",
+              booking_id: appt.id,
+            },
+          }),
+        });
+
+        results.business_push = bizPushRes.ok ? "sent" : "failed";
+        if (!bizPushRes.ok) {
+          console.error(`[BOOKING-CONFIRM] Business push failed: ${await bizPushRes.text()}`);
+        }
+      } catch (bizPushErr) {
+        results.business_push = "error";
+        console.error("[BOOKING-CONFIRM] Business push error:", bizPushErr);
+      }
+    } else {
+      results.business_push = "skipped_no_owner";
     }
 
     console.log(`[BOOKING-CONFIRM] Booking ${bookingIdShort} — results:`, results);
