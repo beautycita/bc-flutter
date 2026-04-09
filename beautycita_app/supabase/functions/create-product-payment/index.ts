@@ -10,12 +10,8 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Stripe from "https://esm.sh/stripe@14.21.0?target=deno";
 import { requireFeature } from "../_shared/check-toggle.ts";
+import { corsHeaders, handleCorsPreflightIfOptions } from "../_shared/cors.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "https://beautycita.com",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
 
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY") ?? "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
@@ -45,9 +41,8 @@ interface ProductPaymentRequest {
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+  const _pre = handleCorsPreflightIfOptions(req);
+  if (_pre) return _pre;
 
   try {
     // Feature toggle check
@@ -62,22 +57,22 @@ serve(async (req) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
     if (authError || !user) {
-      return json({ error: "Unauthorized" }, 401);
+      return json({ error: "Unauthorized" }, 401, req);
     }
 
     const body: ProductPaymentRequest = await req.json();
     const { product_id, quantity = 1, shipping_address } = body;
 
     if (!product_id) {
-      return json({ error: "product_id is required" }, 400);
+      return json({ error: "product_id is required" }, 400, req);
     }
 
     if (!shipping_address || !shipping_address.name || !shipping_address.street) {
-      return json({ error: "shipping_address with name and street is required" }, 400);
+      return json({ error: "shipping_address with name and street is required" }, 400, req);
     }
 
     if (quantity < 1 || !Number.isInteger(quantity)) {
-      return json({ error: "quantity must be a positive integer" }, 400);
+      return json({ error: "quantity must be a positive integer" }, 400, req);
     }
 
     // Fetch product with business info
@@ -97,12 +92,12 @@ serve(async (req) => {
       .single();
 
     if (productError || !product) {
-      return json({ error: "Product not found" }, 404);
+      return json({ error: "Product not found" }, 404, req);
     }
 
     // Verify product is in stock (in_stock is a boolean column)
     if (!product.in_stock) {
-      return json({ error: "Product is not available" }, 400);
+      return json({ error: "Product is not available" }, 400, req);
     }
 
     const business = product.businesses as {
@@ -115,16 +110,16 @@ serve(async (req) => {
 
     // Verify business is active
     if (!business.is_active) {
-      return json({ error: "This business is no longer active" }, 400);
+      return json({ error: "This business is no longer active" }, 400, req);
     }
 
     // Verify business is fully onboarded
     if (!business.onboarding_complete) {
-      return json({ error: "This business is not yet accepting online payments" }, 400);
+      return json({ error: "This business is not yet accepting online payments" }, 400, req);
     }
 
     if (!business.stripe_account_id) {
-      return json({ error: "Este negocio no tiene pagos en linea configurados" }, 400);
+      return json({ error: "Este negocio no tiene pagos en linea configurados" }, 400, req);
     }
 
     // Reject fake/test Stripe account IDs before hitting the Stripe API
@@ -132,14 +127,14 @@ serve(async (req) => {
       business.stripe_account_id.startsWith("acct_test") ||
       !business.stripe_account_id.startsWith("acct_")
     ) {
-      return json({ error: "Este negocio no tiene pagos en linea configurados" }, 400);
+      return json({ error: "Este negocio no tiene pagos en linea configurados" }, 400, req);
     }
 
     // Calculate amounts
     const productPrice = product.price ?? 0;
 
     if (productPrice <= 0) {
-      return json({ error: "Product price is not configured" }, 400);
+      return json({ error: "Product price is not configured" }, 400, req);
     }
 
     const totalAmount = productPrice * quantity;
@@ -241,13 +236,13 @@ serve(async (req) => {
 
   } catch (err) {
     console.error("[PRODUCT-PAYMENT] Error:", err);
-    return json({ error: "An internal error occurred" }, 500);
+    return json({ error: "An internal error occurred" }, 500, req);
   }
 });
 
-function json(body: unknown, status = 200) {
+function json(body: unknown, status = 200, req?: Request) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...corsHeaders(req!), "Content-Type": "application/json" },
   });
 }

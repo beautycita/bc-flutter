@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/constants.dart';
-import '../../config/theme.dart';
 import '../../providers/admin_provider.dart';
 
 class ReviewsScreen extends ConsumerStatefulWidget {
@@ -38,6 +37,7 @@ class _ReviewsScreenState extends ConsumerState<ReviewsScreen> {
   @override
   Widget build(BuildContext context) {
     final reviewsAsync = ref.watch(adminReviewsProvider);
+    final colors = Theme.of(context).colorScheme;
 
     return Column(
       children: [
@@ -71,7 +71,7 @@ class _ReviewsScreenState extends ConsumerState<ReviewsScreen> {
                     hintText: 'Buscar en resenas...',
                     hintStyle: GoogleFonts.nunito(fontSize: 14),
                     prefixIcon: Icon(Icons.search, size: 20,
-                        color: BeautyCitaTheme.primaryRose.withValues(alpha: 0.5)),
+                        color: colors.primary.withValues(alpha: 0.5)),
                     isDense: true,
                     contentPadding:
                         const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
@@ -80,17 +80,17 @@ class _ReviewsScreenState extends ConsumerState<ReviewsScreen> {
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(AppConstants.radiusSM),
                       borderSide: BorderSide(
-                          color: BeautyCitaTheme.primaryRose.withValues(alpha: 0.12)),
+                          color: colors.primary.withValues(alpha: 0.12)),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(AppConstants.radiusSM),
                       borderSide: BorderSide(
-                          color: BeautyCitaTheme.primaryRose.withValues(alpha: 0.12)),
+                          color: colors.primary.withValues(alpha: 0.12)),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(AppConstants.radiusSM),
                       borderSide: BorderSide(
-                          color: BeautyCitaTheme.primaryRose.withValues(alpha: 0.5)),
+                          color: colors.primary.withValues(alpha: 0.5)),
                     ),
                   ),
                   style: GoogleFonts.nunito(fontSize: 14),
@@ -100,8 +100,8 @@ class _ReviewsScreenState extends ConsumerState<ReviewsScreen> {
               PopupMenuButton<int?>(
                 icon: Icon(Icons.star_rounded,
                     color: _ratingFilter != null
-                        ? BeautyCitaTheme.secondaryGold
-                        : BeautyCitaTheme.textLight),
+                        ? colors.secondary
+                        : colors.onSurface),
                 onSelected: (v) => setState(() => _ratingFilter = v),
                 itemBuilder: (_) => [
                   const PopupMenuItem(value: null, child: Text('Todas')),
@@ -145,9 +145,9 @@ class _ReviewsScreenState extends ConsumerState<ReviewsScreen> {
                   deleteIcon: const Icon(Icons.close, size: 16),
                   onDeleted: () => setState(() => _ratingFilter = null),
                   backgroundColor:
-                      BeautyCitaTheme.secondaryGold.withValues(alpha: 0.1),
+                      colors.secondary.withValues(alpha: 0.1),
                   side: BorderSide(
-                      color: BeautyCitaTheme.secondaryGold.withValues(alpha: 0.2)),
+                      color: colors.secondary.withValues(alpha: 0.2)),
                 ),
               ],
             ),
@@ -164,18 +164,18 @@ class _ReviewsScreenState extends ConsumerState<ReviewsScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(Icons.rate_review_rounded, size: 48,
-                          color: BeautyCitaTheme.textLight.withValues(alpha: 0.3)),
+                          color: colors.onSurface.withValues(alpha: 0.3)),
                       const SizedBox(height: 12),
                       Text(
                         'Sin resenas',
-                        style: GoogleFonts.nunito(color: BeautyCitaTheme.textLight),
+                        style: GoogleFonts.nunito(color: colors.onSurface),
                       ),
                     ],
                   ),
                 );
               }
               return RefreshIndicator(
-                color: BeautyCitaTheme.primaryRose,
+                color: colors.primary,
                 onRefresh: () async => ref.invalidate(adminReviewsProvider),
                 child: ListView.builder(
                   padding: const EdgeInsets.symmetric(
@@ -185,9 +185,9 @@ class _ReviewsScreenState extends ConsumerState<ReviewsScreen> {
                 ),
               );
             },
-            loading: () => const Center(
+            loading: () => Center(
                 child: CircularProgressIndicator(
-                    color: BeautyCitaTheme.primaryRose)),
+                    color: colors.primary)),
             error: (e, _) => Center(
               child: Text('Error: $e',
                   style: GoogleFonts.nunito(color: Colors.red)),
@@ -201,6 +201,7 @@ class _ReviewsScreenState extends ConsumerState<ReviewsScreen> {
   Widget _buildStatsBar(List<Map<String, dynamic>> reviews) {
     if (reviews.isEmpty) return const SizedBox.shrink();
 
+    final colors = Theme.of(context).colorScheme;
     final total = reviews.length;
     final avgRating = reviews.fold(0.0,
             (sum, r) => sum + ((r['rating'] as num?)?.toDouble() ?? 0)) /
@@ -215,7 +216,7 @@ class _ReviewsScreenState extends ConsumerState<ReviewsScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
         border: Border.all(
-          color: BeautyCitaTheme.primaryRose.withValues(alpha: 0.08)),
+          color: colors.primary.withValues(alpha: 0.08)),
       ),
       child: Row(
         children: [
@@ -232,6 +233,7 @@ class _ReviewsScreenState extends ConsumerState<ReviewsScreen> {
   }
 
   Widget _statItem(String label, String value, Color bgColor) {
+    final colors = Theme.of(context).colorScheme;
     return Expanded(
       child: Column(
         children: [
@@ -246,7 +248,7 @@ class _ReviewsScreenState extends ConsumerState<ReviewsScreen> {
               style: GoogleFonts.poppins(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
-                color: BeautyCitaTheme.textDark,
+                color: colors.onSurface,
               ),
             ),
           ),
@@ -255,7 +257,7 @@ class _ReviewsScreenState extends ConsumerState<ReviewsScreen> {
             label,
             style: GoogleFonts.nunito(
               fontSize: 11,
-              color: BeautyCitaTheme.textLight,
+              color: colors.onSurface,
             ),
           ),
         ],
@@ -264,10 +266,11 @@ class _ReviewsScreenState extends ConsumerState<ReviewsScreen> {
   }
 
   Widget _statDivider() {
+    final colors = Theme.of(context).colorScheme;
     return Container(
       width: 1,
       height: 30,
-      color: BeautyCitaTheme.primaryRose.withValues(alpha: 0.08),
+      color: colors.primary.withValues(alpha: 0.08),
     );
   }
 
@@ -382,6 +385,7 @@ class _ReviewsScreenState extends ConsumerState<ReviewsScreen> {
   );
 
   Widget _buildReviewCard(Map<String, dynamic> review) {
+    final colors = Theme.of(context).colorScheme;
     final rating = (review['rating'] as num?)?.toDouble() ?? 0;
     final comment = review['comment'] as String? ?? '';
     final rawDate = review['created_at'] as String? ?? '';
@@ -401,7 +405,7 @@ class _ReviewsScreenState extends ConsumerState<ReviewsScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
         border: Border.all(
-          color: BeautyCitaTheme.primaryRose.withValues(alpha: 0.06),
+          color: colors.primary.withValues(alpha: 0.06),
         ),
       ),
       child: Column(
@@ -415,7 +419,7 @@ class _ReviewsScreenState extends ConsumerState<ReviewsScreen> {
                     ? Icons.star_rounded
                     : Icons.star_border_rounded,
                 size: 18,
-                color: BeautyCitaTheme.secondaryGold,
+                color: colors.secondary,
               )),
               const SizedBox(width: 8),
               Text(
@@ -423,7 +427,7 @@ class _ReviewsScreenState extends ConsumerState<ReviewsScreen> {
                 style: GoogleFonts.poppins(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
-                  color: BeautyCitaTheme.textDark,
+                  color: colors.onSurface,
                 ),
               ),
               const Spacer(),
@@ -431,7 +435,7 @@ class _ReviewsScreenState extends ConsumerState<ReviewsScreen> {
                 date,
                 style: GoogleFonts.nunito(
                   fontSize: 12,
-                  color: BeautyCitaTheme.textLight,
+                  color: colors.onSurface,
                 ),
               ),
             ],
@@ -442,7 +446,7 @@ class _ReviewsScreenState extends ConsumerState<ReviewsScreen> {
           Row(
             children: [
               Icon(Icons.store_rounded, size: 14,
-                  color: BeautyCitaTheme.primaryRose.withValues(alpha: 0.4)),
+                  color: colors.primary.withValues(alpha: 0.4)),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
@@ -450,7 +454,7 @@ class _ReviewsScreenState extends ConsumerState<ReviewsScreen> {
                   style: GoogleFonts.nunito(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: BeautyCitaTheme.primaryRose,
+                    color: colors.primary,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -466,7 +470,7 @@ class _ReviewsScreenState extends ConsumerState<ReviewsScreen> {
               comment,
               style: GoogleFonts.nunito(
                 fontSize: 14,
-                color: BeautyCitaTheme.textDark,
+                color: colors.onSurface,
                 height: 1.4,
               ),
               maxLines: 4,

@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../config/theme.dart';
+import '../config/constants.dart';
 import '../models/curate_result.dart';
 import '../providers/contact_match_provider.dart';
 import '../providers/profile_provider.dart';
@@ -108,7 +108,7 @@ class _InviteSalonScreenState extends ConsumerState<InviteSalonScreen> {
           // Subtitle
           Padding(
             padding: const EdgeInsets.symmetric(
-              horizontal: BeautyCitaTheme.spaceLG,
+              horizontal: AppConstants.paddingLG,
             ),
             child: Text(
               'que aún no están en BeautyCita',
@@ -118,12 +118,12 @@ class _InviteSalonScreenState extends ConsumerState<InviteSalonScreen> {
               ),
             ),
           ),
-          const SizedBox(height: BeautyCitaTheme.spaceSM),
+          const SizedBox(height: AppConstants.paddingSM),
 
           // Search bar
           Padding(
             padding: const EdgeInsets.symmetric(
-              horizontal: BeautyCitaTheme.spaceMD,
+              horizontal: AppConstants.paddingMD,
             ),
             child: TextField(
               onChanged: (v) => setState(() => _searchQuery = v),
@@ -146,7 +146,7 @@ class _InviteSalonScreenState extends ConsumerState<InviteSalonScreen> {
               ),
             ),
           ),
-          const SizedBox(height: BeautyCitaTheme.spaceMD),
+          const SizedBox(height: AppConstants.paddingMD),
 
           // Content area
           Expanded(
@@ -154,7 +154,7 @@ class _InviteSalonScreenState extends ConsumerState<InviteSalonScreen> {
               decoration: const BoxDecoration(
                 color: Color(0xFFECE5DD), // WhatsApp chat background
                 borderRadius: BorderRadius.vertical(
-                  top: Radius.circular(BeautyCitaTheme.radiusLarge),
+                  top: Radius.circular(AppConstants.radiusLG),
                 ),
               ),
               child: _locationLoading
@@ -168,7 +168,7 @@ class _InviteSalonScreenState extends ConsumerState<InviteSalonScreen> {
                             'Obteniendo tu ubicacion...',
                             style: GoogleFonts.nunito(
                               fontSize: 14,
-                              color: BeautyCitaTheme.textLight,
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
                         ],
@@ -177,7 +177,7 @@ class _InviteSalonScreenState extends ConsumerState<InviteSalonScreen> {
                   : _userLocation == null
                       ? Center(
                           child: Padding(
-                            padding: const EdgeInsets.all(BeautyCitaTheme.spaceLG),
+                            padding: const EdgeInsets.all(AppConstants.paddingLG),
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
@@ -189,7 +189,7 @@ class _InviteSalonScreenState extends ConsumerState<InviteSalonScreen> {
                                   style: GoogleFonts.poppins(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w600,
-                                    color: BeautyCitaTheme.textDark,
+                                    color: Theme.of(context).colorScheme.onSurface,
                                   ),
                                   textAlign: TextAlign.center,
                                 ),
@@ -229,7 +229,7 @@ class _InviteSalonScreenState extends ConsumerState<InviteSalonScreen> {
                         'No se encontraron estilistas',
                         style: GoogleFonts.nunito(
                           fontSize: 14,
-                          color: BeautyCitaTheme.textLight,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                     );
@@ -238,7 +238,7 @@ class _InviteSalonScreenState extends ConsumerState<InviteSalonScreen> {
                   return Expanded(
                     child: ListView(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: BeautyCitaTheme.spaceMD,
+                        horizontal: AppConstants.paddingMD,
                       ),
                       children: [
                         // ── Contact matches section ──
@@ -249,15 +249,15 @@ class _InviteSalonScreenState extends ConsumerState<InviteSalonScreen> {
                         // ── Nearby salons header ──
                         Padding(
                           padding: const EdgeInsets.only(
-                            left: BeautyCitaTheme.spaceSM,
-                            top: BeautyCitaTheme.spaceSM,
-                            bottom: BeautyCitaTheme.spaceSM,
+                            left: AppConstants.paddingSM,
+                            top: AppConstants.paddingSM,
+                            bottom: AppConstants.paddingSM,
                           ),
                           child: Text(
                             '${filtered.length} estilistas en tu zona',
                             style: GoogleFonts.nunito(
                               fontSize: 12,
-                              color: BeautyCitaTheme.textLight,
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
                         ),
@@ -277,11 +277,11 @@ class _InviteSalonScreenState extends ConsumerState<InviteSalonScreen> {
                 error: (e, _) => Center(
                   child: Padding(
                     padding:
-                        const EdgeInsets.all(BeautyCitaTheme.spaceLG),
+                        const EdgeInsets.all(AppConstants.paddingLG),
                     child: Text(
                       'Error: $e',
                       style: GoogleFonts.nunito(
-                        color: BeautyCitaTheme.textLight,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -407,9 +407,9 @@ class _ContactMatchesSection extends ConsumerWidget {
         padding: const EdgeInsets.only(bottom: 12),
         child: Material(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+          borderRadius: BorderRadius.circular(AppConstants.radiusMD),
           child: InkWell(
-            borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+            borderRadius: BorderRadius.circular(AppConstants.radiusMD),
             onTap: () => ref.read(contactMatchProvider.notifier).requestAndScan(),
             child: Padding(
               padding: const EdgeInsets.all(14),
@@ -434,14 +434,14 @@ class _ContactMatchesSection extends ConsumerWidget {
                           style: GoogleFonts.poppins(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
-                            color: BeautyCitaTheme.textDark,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                         Text(
                           'Encuentra salones que ya conoces e invitalos',
                           style: GoogleFonts.nunito(
                             fontSize: 12,
-                            color: BeautyCitaTheme.textLight,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                       ],
@@ -465,7 +465,7 @@ class _ContactMatchesSection extends ConsumerWidget {
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+            borderRadius: BorderRadius.circular(AppConstants.radiusMD),
           ),
           child: Row(
             children: [
@@ -477,7 +477,7 @@ class _ContactMatchesSection extends ConsumerWidget {
               const SizedBox(width: 12),
               Text(
                 'Buscando salones que ya conoces...',
-                style: GoogleFonts.nunito(fontSize: 13, color: BeautyCitaTheme.textLight),
+                style: GoogleFonts.nunito(fontSize: 13, color: Theme.of(context).colorScheme.onSurface),
               ),
             ],
           ),
@@ -502,9 +502,9 @@ class _ContactMatchesSection extends ConsumerWidget {
       children: [
         Padding(
           padding: const EdgeInsets.only(
-            left: BeautyCitaTheme.spaceSM,
-            top: BeautyCitaTheme.spaceMD,
-            bottom: BeautyCitaTheme.spaceSM,
+            left: AppConstants.paddingSM,
+            top: AppConstants.paddingMD,
+            bottom: AppConstants.paddingSM,
           ),
           child: Text(
             'Ya te conocen pero aún no están aquí',
@@ -544,7 +544,7 @@ class _ContactMatchCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
         color: invited ? waCardTint : Colors.white,
-        borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
         border: Border.all(
           color: waLightGreen.withValues(alpha: 0.3),
           width: 1,
@@ -579,7 +579,7 @@ class _ContactMatchCard extends StatelessWidget {
                     style: GoogleFonts.poppins(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
-                      color: BeautyCitaTheme.textDark,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -594,7 +594,7 @@ class _ContactMatchCard extends StatelessWidget {
                           match.contactName,
                           style: GoogleFonts.nunito(
                             fontSize: 12,
-                            color: BeautyCitaTheme.textLight,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -602,14 +602,14 @@ class _ContactMatchCard extends StatelessWidget {
                       ),
                       if (match.salonRating != null) ...[
                         const SizedBox(width: 8),
-                        Icon(Icons.star, size: 14, color: BeautyCitaTheme.secondaryGold),
+                        Icon(Icons.star, size: 14, color: Theme.of(context).colorScheme.secondary),
                         const SizedBox(width: 2),
                         Text(
                           match.salonRating!.toStringAsFixed(1),
                           style: GoogleFonts.nunito(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: BeautyCitaTheme.textDark,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                       ],
@@ -672,7 +672,7 @@ class _SalonCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
         color: invited ? waCardTint : Colors.white,
-        borderRadius: BorderRadius.circular(BeautyCitaTheme.radiusMedium),
+        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
       ),
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -703,7 +703,7 @@ class _SalonCard extends StatelessWidget {
                     style: GoogleFonts.poppins(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
-                      color: BeautyCitaTheme.textDark,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -714,14 +714,14 @@ class _SalonCard extends StatelessWidget {
                       if (salon.rating != null) ...[
                         Icon(Icons.star,
                             size: 14,
-                            color: BeautyCitaTheme.secondaryGold),
+                            color: Theme.of(context).colorScheme.secondary),
                         const SizedBox(width: 2),
                         Text(
                           salon.rating!.toStringAsFixed(1),
                           style: GoogleFonts.nunito(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: BeautyCitaTheme.textDark,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -731,7 +731,7 @@ class _SalonCard extends StatelessWidget {
                           '${salon.distanceKm!.toStringAsFixed(1)} km',
                           style: GoogleFonts.nunito(
                             fontSize: 12,
-                            color: BeautyCitaTheme.textLight,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                     ],

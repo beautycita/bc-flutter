@@ -58,7 +58,7 @@ adb -s 192.168.0.25:5555 install -r build/app/outputs/flutter-apk/app-arm64-v8a-
 ## WEB BUILD + DEPLOY
 ```bash
 cd ~/futureBeauty/beautycita_web
-flutter build web --release --no-tree-shake-icons
+flutter build web --release
 rsync -avz --delete --exclude sativa build/web/ www-bc:/var/www/beautycita.com/frontend/dist/
 ```
 

@@ -1,20 +1,14 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { corsHeaders, handleCorsPreflightIfOptions } from "../_shared/cors.ts";
 
-const ALLOWED_ORIGIN = "https://beautycita.com";
-const corsHeaders = {
-  "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
-  }
+  const _pre = handleCorsPreflightIfOptions(req);
+  if (_pre) return _pre;
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Method not allowed" }), {
       status: 405,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...corsHeaders(req), "Content-Type": "application/json" },
     });
   }
 
@@ -31,7 +25,7 @@ Deno.serve(async (req) => {
   if (authError || !user) {
     return new Response(JSON.stringify({ error: "Not authenticated" }), {
       status: 401,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...corsHeaders(req), "Content-Type": "application/json" },
     });
   }
 
@@ -39,7 +33,7 @@ Deno.serve(async (req) => {
   if (!old_user_id || old_user_id === user.id) {
     // Nothing to migrate — either missing arg or IDs already match
     return new Response(JSON.stringify({ ok: true, migrated: false }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...corsHeaders(req), "Content-Type": "application/json" },
     });
   }
 
@@ -56,7 +50,7 @@ Deno.serve(async (req) => {
   if (!oldProfile) {
     // Old profile already gone or never existed — nothing to do
     return new Response(JSON.stringify({ ok: true, migrated: false }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...corsHeaders(req), "Content-Type": "application/json" },
     });
   }
 
@@ -77,7 +71,7 @@ Deno.serve(async (req) => {
     console.warn(`[migrate-profile] Blocked: caller ${user.id} does not match old profile ${old_user_id}`);
     return new Response(JSON.stringify({ error: "Profile ownership verification failed" }), {
       status: 403,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...corsHeaders(req), "Content-Type": "application/json" },
     });
   }
 
@@ -91,7 +85,7 @@ Deno.serve(async (req) => {
     console.warn(`[migrate-profile] Blocked: old_user_id ${old_user_id} has confirmed email`);
     return new Response(JSON.stringify({ error: "Cannot migrate a confirmed account" }), {
       status: 403,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...corsHeaders(req), "Content-Type": "application/json" },
     });
   }
 
@@ -105,7 +99,7 @@ Deno.serve(async (req) => {
     console.warn(`[migrate-profile] Blocked: old_user_id ${old_user_id} has phone`);
     return new Response(JSON.stringify({ error: "Cannot migrate a profile with phone" }), {
       status: 403,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...corsHeaders(req), "Content-Type": "application/json" },
     });
   }
 
@@ -123,7 +117,7 @@ Deno.serve(async (req) => {
     console.error("[migrate-profile] Update failed:", updateErr);
     return new Response(JSON.stringify({ error: "Migration failed" }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...corsHeaders(req), "Content-Type": "application/json" },
     });
   }
 
@@ -149,6 +143,6 @@ Deno.serve(async (req) => {
 
   console.log(`[migrate-profile] Migrated profile + related data ${old_user_id} -> ${user.id}`);
   return new Response(JSON.stringify({ ok: true, migrated: true }), {
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...corsHeaders(req), "Content-Type": "application/json" },
   });
 });

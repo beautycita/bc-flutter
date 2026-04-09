@@ -313,7 +313,7 @@ beautycita.com/app/mensajes        # Chat
 ```bash
 # Flutter web (WASM)
 cd /home/bc/futureBeauty/beautycita_web
-/home/bc/flutter/bin/flutter build web --wasm --release --no-tree-shake-icons
+/home/bc/flutter/bin/flutter build web --wasm --release
 
 # Deploy Flutter app
 rsync -avz --delete build/web/ www-bc:/var/www/beautycita.com/webapp/dist/

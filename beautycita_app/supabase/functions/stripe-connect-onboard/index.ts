@@ -3,6 +3,7 @@
 // Actions: create-account, get-onboard-link, get-account-status, dashboard-link
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { corsHeaders, handleCorsPreflightIfOptions } from "../_shared/cors.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -10,19 +11,12 @@ const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY") ?? "";
 const STRIPE_API = "https://api.stripe.com/v1";
 const APP_URL = Deno.env.get("APP_URL") ?? "https://beautycita.com";
 
-const ALLOWED_ORIGIN = "https://beautycita.com";
 
-const corsHeaders = {
-  "Content-Type": "application/json",
-  "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
-  "Access-Control-Allow-Headers":
-    "authorization, content-type, x-client-info, apikey",
-};
 
-function json(body: unknown, status = 200) {
+function json(body: unknown, status = 200, req?: Request) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: corsHeaders,
+    headers: corsHeaders(req),
   });
 }
 
@@ -72,40 +66,34 @@ function checkRateLimit(key: string, limit: number, windowMs: number): boolean {
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, {
-      headers: {
-        ...corsHeaders,
-        "Access-Control-Allow-Methods": "POST",
-      },
-    });
-  }
+  const _pre = handleCorsPreflightIfOptions(req);
+  if (_pre) return _pre;
 
   if (req.method !== "POST") {
-    return json({ error: "Method not allowed" }, 405);
+    return json({ error: "Method not allowed" }, 405, req);
   }
 
   if (!STRIPE_SECRET_KEY) {
-    return json({ error: "Stripe not configured" }, 500);
+    return json({ error: "Stripe not configured" }, 500, req);
   }
 
   // ── Auth: require valid JWT ──
   const authHeader = req.headers.get("authorization") ?? "";
   const token = authHeader.replace("Bearer ", "");
   if (!token) {
-    return json({ error: "Authorization required" }, 401);
+    return json({ error: "Authorization required" }, 401, req);
   }
 
   const supabase = createClient(supabaseUrl, serviceKey);
   const { data: { user }, error: authErr } = await supabase.auth.getUser(token);
   if (authErr || !user) {
-    return json({ error: "Invalid token" }, 401);
+    return json({ error: "Invalid token" }, 401, req);
   }
 
   // Rate limit: 5 requests per minute
   const rateLimitKey = user?.id || authHeader.slice(-16) || "anon";
   if (!checkRateLimit(rateLimitKey, 5, 60_000)) {
-    return json({ error: "Rate limit exceeded" }, 429);
+    return json({ error: "Rate limit exceeded" }, 429, req);
   }
 
   try {
@@ -114,7 +102,7 @@ Deno.serve(async (req: Request) => {
     const businessId = body.business_id;
 
     if (!businessId) {
-      return json({ error: "business_id required" }, 400);
+      return json({ error: "business_id required" }, 400, req);
     }
 
     // Fetch business data + verify ownership
@@ -125,12 +113,12 @@ Deno.serve(async (req: Request) => {
       .single();
 
     if (bizError || !business) {
-      return json({ error: "Business not found" }, 404);
+      return json({ error: "Business not found" }, 404, req);
     }
 
     // Verify caller owns this business
     if (business.owner_id !== user.id) {
-      return json({ error: "Not authorized for this business" }, 403);
+      return json({ error: "Not authorized for this business" }, 403, req);
     }
 
     if (action === "create-account") {
@@ -139,7 +127,7 @@ Deno.serve(async (req: Request) => {
         return json({
           account_id: business.stripe_account_id,
           already_exists: true,
-        });
+        }, 200, req);
       }
 
       // Create Stripe Express account
@@ -206,7 +194,7 @@ Deno.serve(async (req: Request) => {
       return json({
         account_id: account.id,
         created: true,
-      });
+      }, 200, req);
     }
 
     if (action === "get-onboard-link") {
@@ -277,7 +265,7 @@ Deno.serve(async (req: Request) => {
         account_id: accountId,
         onboarding_url: accountLink.url,
         expires_at: accountLink.expires_at,
-      });
+      }, 200, req);
     }
 
     if (action === "get-account-status") {
@@ -287,7 +275,7 @@ Deno.serve(async (req: Request) => {
           charges_enabled: false,
           payouts_enabled: false,
           details_submitted: false,
-        });
+        }, 200, req);
       }
 
       // Fetch account from Stripe
@@ -317,12 +305,12 @@ Deno.serve(async (req: Request) => {
         payouts_enabled: account.payouts_enabled,
         details_submitted: account.details_submitted,
         requirements: account.requirements?.currently_due ?? [],
-      });
+      }, 200, req);
     }
 
     if (action === "dashboard-link") {
       if (!business.stripe_account_id) {
-        return json({ error: "No Stripe account linked" }, 400);
+        return json({ error: "No Stripe account linked" }, 400, req);
       }
 
       // Create login link for Express dashboard
@@ -332,12 +320,12 @@ Deno.serve(async (req: Request) => {
 
       return json({
         dashboard_url: loginLink.url,
-      });
+      }, 200, req);
     }
 
-    return json({ error: `Unknown action: ${action}` }, 400);
+    return json({ error: `Unknown action: ${action}` }, 400, req);
   } catch (err) {
     console.error("stripe-connect-onboard error:", err);
-    return json({ error: "Internal server error" }, 500);
+    return json({ error: "Internal server error" }, 500, req);
   }
 });

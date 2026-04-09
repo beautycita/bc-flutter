@@ -6,23 +6,18 @@
 // =============================================================================
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { corsHeaders, handleCorsPreflightIfOptions } from "../_shared/cors.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const BEAUTYPI_WA_URL = Deno.env.get("BEAUTYPI_WA_URL") ?? "";
 const BEAUTYPI_WA_TOKEN = Deno.env.get("BEAUTYPI_WA_TOKEN") ?? "";
 
-const ALLOWED_ORIGIN = "https://beautycita.com";
-const corsHeaders = {
-  "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
 
-function json(body: unknown, status = 200) {
+function json(body: unknown, status = 200, req?: Request) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...corsHeaders(req!), "Content-Type": "application/json" },
   });
 }
 
@@ -70,18 +65,17 @@ async function sendWhatsApp(phone: string, message: string): Promise<boolean> {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+  const _pre = handleCorsPreflightIfOptions(req);
+  if (_pre) return _pre;
 
   if (req.method !== "POST") {
-    return json({ error: "Method not allowed" }, 405);
+    return json({ error: "Method not allowed" }, 405, req);
   }
 
   const authHeader = req.headers.get("authorization") ?? "";
   const token = authHeader.replace("Bearer ", "");
   if (!token) {
-    return json({ error: "Authorization required" }, 401);
+    return json({ error: "Authorization required" }, 401, req);
   }
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
@@ -93,7 +87,7 @@ Deno.serve(async (req) => {
       error: authErr,
     } = await supabase.auth.getUser(token);
     if (authErr || !user) {
-      return json({ error: "Invalid token" }, 401);
+      return json({ error: "Invalid token" }, 401, req);
     }
   }
 
@@ -101,7 +95,7 @@ Deno.serve(async (req) => {
     const { appointment_id } = await req.json();
 
     if (!appointment_id) {
-      return json({ error: "appointment_id is required" }, 400);
+      return json({ error: "appointment_id is required" }, 400, req);
     }
 
     const { data: appt, error: apptErr } = await supabase
@@ -125,7 +119,7 @@ Deno.serve(async (req) => {
 
     if (apptErr || !appt) {
       console.error("[CANCEL] Appointment lookup failed:", apptErr);
-      return json({ error: "Appointment not found" }, 404);
+      return json({ error: "Appointment not found" }, 404, req);
     }
 
     const salonName = (appt as any).businesses?.name ?? "Salon";
@@ -227,9 +221,9 @@ Deno.serve(async (req) => {
       `[CANCEL] Appointment ${appointment_id} — results:`,
       results
     );
-    return json({ success: true, appointment_id, channels: results });
+    return json({ success: true, appointment_id, channels: results }, 200, req);
   } catch (err) {
     console.error("[CANCEL] Handler error:", (err as Error).message);
-    return json({ error: "Internal server error" }, 500);
+    return json({ error: "Internal server error" }, 500, req);
   }
 });

@@ -17,20 +17,16 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { resolveNotificationText } from "../_shared/notification_templates.ts";
 import { sendWhatsAppWithRetry, processWaRetryQueue } from "../_shared/wa_queue.ts";
+import { corsHeaders, handleCorsPreflightIfOptions } from "../_shared/cors.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "https://beautycita.com",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
 
-function json(body: unknown, status = 200) {
+function json(body: unknown, status = 200, req?: Request) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...corsHeaders(req!), "Content-Type": "application/json" },
   });
 }
 
@@ -401,9 +397,8 @@ async function sendViaChannel(
 // ── HTTP Handler ────────────────────────────────────────────────────────────
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+  const _pre = handleCorsPreflightIfOptions(req);
+  if (_pre) return _pre;
 
   // ── Auth: CRON_SECRET or service-role key ──
   const authHeader = req.headers.get("authorization") ?? "";
@@ -412,7 +407,7 @@ Deno.serve(async (req) => {
   const isServiceRole = authHeader === `Bearer ${SUPABASE_SERVICE_KEY}`;
 
   if (!isValidCron && !isServiceRole) {
-    return json({ error: "Unauthorized" }, 401);
+    return json({ error: "Unauthorized" }, 401, req);
   }
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
@@ -428,7 +423,7 @@ Deno.serve(async (req) => {
 
     if (msgErr) {
       console.error("[MARKETING] Failed to fetch automated_messages:", msgErr.message);
-      return json({ error: msgErr.message }, 500);
+      return json({ error: msgErr.message }, 500, req);
     }
 
     const messages = (allMessages ?? []) as AutomatedMessage[];
@@ -476,9 +471,9 @@ Deno.serve(async (req) => {
       triggers: results,
       wa_retry_queue: waQueueResult,
       automated_messages_count: messages.length,
-    });
+    }, 200, req);
   } catch (err) {
     console.error("[MARKETING] Handler error:", (err as Error).message);
-    return json({ error: "Internal server error" }, 500);
+    return json({ error: "Internal server error" }, 500, req);
   }
 });

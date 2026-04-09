@@ -717,7 +717,7 @@ cd /home/bc/futureBeauty/beautycita_web && /home/bc/flutter/bin/flutter pub add 
 - [ ] **Step 2: Verify build**
 
 ```bash
-cd /home/bc/futureBeauty/beautycita_web && /home/bc/flutter/bin/flutter build web --release --no-tree-shake-icons
+cd /home/bc/futureBeauty/beautycita_web && /home/bc/flutter/bin/flutter build web --release
 ```
 
 - [ ] **Step 3: Deploy**

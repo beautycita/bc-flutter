@@ -6,7 +6,6 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../config/constants.dart';
-import '../../config/theme.dart';
 import '../../config/theme_extension.dart';
 import '../../providers/contact_match_provider.dart';
 import '../../providers/feature_toggle_provider.dart';
@@ -246,17 +245,17 @@ class _InviteSearchBar extends StatelessWidget {
         onChanged: onChanged,
         onSubmitted: onSubmitted,
         textInputAction: TextInputAction.search,
-        style: GoogleFonts.nunito(fontSize: 14, color: BeautyCitaTheme.textDark),
+        style: GoogleFonts.nunito(fontSize: 14, color: theme.colorScheme.onSurface),
         decoration: InputDecoration(
           hintText: 'Buscar salon por nombre...',
           hintStyle: GoogleFonts.nunito(
             fontSize: 14,
-            color: BeautyCitaTheme.textLight,
+            color: theme.colorScheme.onSurface,
           ),
-          prefixIcon: const Icon(
+          prefixIcon: Icon(
             Icons.search_rounded,
             size: 22,
-            color: BeautyCitaTheme.textLight,
+            color: theme.colorScheme.onSurface,
           ),
           suffixIcon: ListenableBuilder(
             listenable: controller,
@@ -265,7 +264,7 @@ class _InviteSearchBar extends StatelessWidget {
               return IconButton(
                 icon: const Icon(Icons.close_rounded, size: 20),
                 onPressed: onClear,
-                color: BeautyCitaTheme.textLight,
+                color: theme.colorScheme.onSurface,
               );
             },
           ),
@@ -373,7 +372,7 @@ class _SalonCard extends StatelessWidget {
                       style: GoogleFonts.poppins(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
-                        color: BeautyCitaTheme.textDark,
+                        color: theme.colorScheme.onSurface,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -417,7 +416,7 @@ class _SalonCard extends StatelessWidget {
                           Icon(
                             Icons.star_rounded,
                             size: 14,
-                            color: BeautyCitaTheme.secondaryGold,
+                            color: theme.colorScheme.secondary,
                           ),
                           const SizedBox(width: 2),
                           Text(
@@ -425,7 +424,7 @@ class _SalonCard extends StatelessWidget {
                             style: GoogleFonts.nunito(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
-                              color: BeautyCitaTheme.textDark,
+                              color: theme.colorScheme.onSurface,
                             ),
                           ),
                           if (salon.reviewsCount != null &&
@@ -435,7 +434,7 @@ class _SalonCard extends StatelessWidget {
                               '(${salon.reviewsCount})',
                               style: GoogleFonts.nunito(
                                 fontSize: 11,
-                                color: BeautyCitaTheme.textLight,
+                                color: theme.colorScheme.onSurface,
                               ),
                             ),
                           ],
@@ -448,14 +447,14 @@ class _SalonCard extends StatelessWidget {
                               Icon(
                                 Icons.place_rounded,
                                 size: 13,
-                                color: BeautyCitaTheme.textLight,
+                                color: theme.colorScheme.onSurface,
                               ),
                               const SizedBox(width: 2),
                               Text(
                                 '${salon.distanceKm!.toStringAsFixed(1)} km',
                                 style: GoogleFonts.nunito(
                                   fontSize: 12,
-                                  color: BeautyCitaTheme.textLight,
+                                  color: theme.colorScheme.onSurface,
                                 ),
                               ),
                             ],
@@ -467,9 +466,9 @@ class _SalonCard extends StatelessWidget {
               ),
 
               // Chevron
-              const Icon(
+              Icon(
                 Icons.chevron_right_rounded,
-                color: BeautyCitaTheme.textLight,
+                color: theme.colorScheme.onSurface,
                 size: 24,
               ),
             ],
@@ -587,7 +586,7 @@ class _ShimmerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final shimmerColor = BeautyCitaTheme.dividerLight;
+    final shimmerColor = Theme.of(context).colorScheme.outlineVariant;
     final highlightColor = Colors.white;
 
     return Container(
@@ -748,7 +747,7 @@ class _AphroditeLoadingAnimationState
             'Esto puede tomar unos segundos',
             style: GoogleFonts.nunito(
               fontSize: 13,
-              color: BeautyCitaTheme.textLight,
+              color: theme.colorScheme.onSurface,
             ),
           ),
         ],
@@ -769,6 +768,7 @@ class _ScrapePrompt extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppConstants.paddingXL),
@@ -778,7 +778,7 @@ class _ScrapePrompt extends StatelessWidget {
             Icon(
               Icons.search_off_rounded,
               size: 56,
-              color: BeautyCitaTheme.textLight.withValues(alpha: 0.5),
+              color: colors.onSurface.withValues(alpha: 0.5),
             ),
             const SizedBox(height: AppConstants.paddingMD),
             Text(
@@ -786,7 +786,7 @@ class _ScrapePrompt extends StatelessWidget {
               style: GoogleFonts.poppins(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: BeautyCitaTheme.textDark,
+                color: colors.onSurface,
               ),
               textAlign: TextAlign.center,
             ),
@@ -795,7 +795,7 @@ class _ScrapePrompt extends StatelessWidget {
               'Podemos buscarlo en Google por ti',
               style: GoogleFonts.nunito(
                 fontSize: 14,
-                color: BeautyCitaTheme.textLight,
+                color: colors.onSurface,
               ),
               textAlign: TextAlign.center,
             ),
@@ -869,6 +869,7 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppConstants.paddingXL),
@@ -878,7 +879,7 @@ class _EmptyState extends StatelessWidget {
             Icon(
               hasSearch ? Icons.search_off_rounded : Icons.storefront_rounded,
               size: 56,
-              color: BeautyCitaTheme.textLight.withValues(alpha: 0.4),
+              color: colors.onSurface.withValues(alpha: 0.4),
             ),
             const SizedBox(height: AppConstants.paddingMD),
             Text(
@@ -888,7 +889,7 @@ class _EmptyState extends StatelessWidget {
               style: GoogleFonts.poppins(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
-                color: BeautyCitaTheme.textDark,
+                color: colors.onSurface,
               ),
               textAlign: TextAlign.center,
             ),
@@ -899,7 +900,7 @@ class _EmptyState extends StatelessWidget {
                   : 'Intenta activar tu GPS o busca por nombre',
               style: GoogleFonts.nunito(
                 fontSize: 13,
-                color: BeautyCitaTheme.textLight,
+                color: colors.onSurface,
               ),
               textAlign: TextAlign.center,
             ),
@@ -940,7 +941,7 @@ class _ErrorContent extends StatelessWidget {
               message,
               style: GoogleFonts.nunito(
                 fontSize: 14,
-                color: BeautyCitaTheme.textDark,
+                color: theme.colorScheme.onSurface,
               ),
               textAlign: TextAlign.center,
             ),

@@ -1254,7 +1254,7 @@ cd /home/bc/futureBeauty/beautycita_app
 **Step 2: Release build**
 
 ```bash
-/home/bc/flutter/bin/flutter build apk --release --no-tree-shake-icons --target-platform android-arm64
+/home/bc/flutter/bin/flutter build apk --release --target-platform android-arm64
 ```
 
 **Step 3: Install on phone**

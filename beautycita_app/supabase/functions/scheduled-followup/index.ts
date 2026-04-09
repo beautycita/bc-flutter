@@ -10,6 +10,7 @@
 // 5. Respects 48h minimum between messages
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { corsHeaders, handleCorsPreflightIfOptions } from "../_shared/cors.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -72,12 +73,12 @@ async function sendPromotionEmail(
   }
 }
 
-function json(body: unknown, status = 200) {
+function json(body: unknown, status = 200, req?: Request) {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
+      ...corsHeaders(req!),
       "Content-Type": "application/json",
-      "Access-Control-Allow-Origin": "https://beautycita.com",
     },
   });
 }
@@ -129,15 +130,8 @@ async function sendWhatsApp(to: string, body: string): Promise<boolean> {
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, {
-      headers: {
-        "Access-Control-Allow-Origin": "https://beautycita.com",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "authorization, content-type, apikey",
-      },
-    });
-  }
+  const _pre = handleCorsPreflightIfOptions(req);
+  if (_pre) return _pre;
 
   // Verify cron secret or service-role key (NOT spoofable includes check)
   const authHeader = req.headers.get("authorization") ?? "";
@@ -145,7 +139,7 @@ Deno.serve(async (req: Request) => {
   const isValidCron = cronSecret && authHeader === `Bearer ${cronSecret}`;
   const isServiceRole = authHeader === `Bearer ${SUPABASE_SERVICE_KEY}`;
   if (!isValidCron && !isServiceRole) {
-    return json({ error: "Unauthorized" }, 401);
+    return json({ error: "Unauthorized" }, 401, req);
   }
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
@@ -177,7 +171,7 @@ Deno.serve(async (req: Request) => {
 
     if (error) {
       console.error("Query error:", error);
-      return json({ error: "An internal error occurred" }, 500);
+      return json({ error: "An internal error occurred" }, 500, req);
     }
 
     const sent: string[] = [];
@@ -265,6 +259,6 @@ Deno.serve(async (req: Request) => {
     });
   } catch (err) {
     console.error("scheduled-followup error:", err);
-    return json({ error: "Internal server error" }, 500);
+    return json({ error: "Internal server error" }, 500, req);
   }
 });

@@ -624,7 +624,7 @@ git commit -m "refactor: mobile app models now source from beautycita_core"
 
 ```bash
 cd /home/bc/futureBeauty/beautycita_app
-/home/bc/flutter/bin/flutter build apk --release --no-tree-shake-icons --target-platform android-arm64
+/home/bc/flutter/bin/flutter build apk --release --target-platform android-arm64
 ```
 
 Expected: `Built build/app/outputs/flutter-apk/app-arm64-v8a-release.apk`
@@ -860,14 +860,14 @@ Replace `beautycita_web/web/index.html`:
 ```bash
 cd /home/bc/futureBeauty/beautycita_web
 /home/bc/flutter/bin/flutter pub get
-/home/bc/flutter/bin/flutter build web --wasm --release --no-tree-shake-icons
+/home/bc/flutter/bin/flutter build web --wasm --release
 ```
 
 Expected: `Built build/web/` with WASM output.
 
 If WASM fails due to package incompatibility, fall back to:
 ```bash
-/home/bc/flutter/bin/flutter build web --release --no-tree-shake-icons
+/home/bc/flutter/bin/flutter build web --release
 ```
 And investigate which package blocks WASM.
 
@@ -1323,7 +1323,7 @@ class BeautyCitaWebApp extends ConsumerWidget {
 ```bash
 cd /home/bc/futureBeauty/beautycita_web
 /home/bc/flutter/bin/flutter pub get
-/home/bc/flutter/bin/flutter build web --wasm --release --no-tree-shake-icons
+/home/bc/flutter/bin/flutter build web --wasm --release
 ```
 
 **Step 10: Commit**
@@ -1625,7 +1625,7 @@ Following the same master-detail pattern from Task 1.5:
 
 ```bash
 cd /home/bc/futureBeauty/beautycita_web
-/home/bc/flutter/bin/flutter build web --wasm --release --no-tree-shake-icons
+/home/bc/flutter/bin/flutter build web --wasm --release
 ```
 
 **Step 2: Deploy to server**
@@ -1801,7 +1801,7 @@ git push origin main
 ```bash
 # Flutter web (WASM)
 cd /home/bc/futureBeauty/beautycita_web
-/home/bc/flutter/bin/flutter build web --wasm --release --no-tree-shake-icons
+/home/bc/flutter/bin/flutter build web --wasm --release
 
 # Deploy Flutter app
 rsync -avz --delete build/web/ www-bc:/var/www/beautycita.com/webapp/dist/
@@ -1811,7 +1811,7 @@ rsync -avz --delete /home/bc/futureBeauty/public/ www-bc:/var/www/beautycita.com
 
 # Mobile app (unchanged)
 cd /home/bc/futureBeauty/beautycita_app
-/home/bc/flutter/bin/flutter build apk --release --no-tree-shake-icons --target-platform android-arm64
+/home/bc/flutter/bin/flutter build apk --release --target-platform android-arm64
 ```
 
 **Testing approach:**

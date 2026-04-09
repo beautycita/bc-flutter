@@ -382,7 +382,7 @@ Add import at top: `import '../pages/client/reservar_page.dart';`
 
 **Step 4: Verify it builds and renders**
 
-Run: `/home/bc/flutter/bin/flutter build web --no-tree-shake-icons` from `beautycita_web/`
+Run: `/home/bc/flutter/bin/flutter build web` from `beautycita_web/`
 Navigate to `/reservar` — should show category grid instead of "Proximamente"
 
 **Step 5: Commit**
@@ -917,7 +917,7 @@ git commit -m "feat(web): browser geolocation for salon proximity"
 
 ```bash
 cd /home/bc/futureBeauty/beautycita_web
-/home/bc/flutter/bin/flutter build web --release --no-tree-shake-icons
+/home/bc/flutter/bin/flutter build web --release
 rsync -avz --delete build/web/ www-bc:/var/www/beautycita.com/frontend/dist/
 ```
 

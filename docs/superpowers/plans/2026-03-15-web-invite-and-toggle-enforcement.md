@@ -399,7 +399,7 @@ git commit -m "test: verify all feature toggles have client-side defaults"
 - [ ] **Step 1: Build and deploy web**
 
 ```bash
-cd beautycita_web && flutter build web --release --no-tree-shake-icons
+cd beautycita_web && flutter build web --release
 rsync -avz --delete --exclude sativa build/web/ www-bc:/var/www/beautycita.com/frontend/dist/
 ```
 

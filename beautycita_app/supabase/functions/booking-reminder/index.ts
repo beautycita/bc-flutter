@@ -16,27 +16,22 @@
 // =============================================================================
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { corsHeaders, handleCorsPreflightIfOptions } from "../_shared/cors.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "https://beautycita.com",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
 
-function json(body: unknown, status = 200) {
+function json(body: unknown, status = 200, req?: Request) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...corsHeaders(req!), "Content-Type": "application/json" },
   });
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+  const _pre = handleCorsPreflightIfOptions(req);
+  if (_pre) return _pre;
 
   // Verify this is called by cron or has service-role auth
   const authHeader = req.headers.get("authorization") ?? "";
@@ -46,7 +41,7 @@ Deno.serve(async (req) => {
   const isValidCron = cronSecret && authHeader === `Bearer ${cronSecret}`;
   const isServiceRole = authHeader === `Bearer ${SUPABASE_SERVICE_KEY}`;
   if (!isValidCron && !isServiceRole) {
-    return json({ error: "Unauthorized" }, 401);
+    return json({ error: "Unauthorized" }, 401, req);
   }
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
@@ -79,7 +74,7 @@ Deno.serve(async (req) => {
 
     if (candidateErr) {
       console.error("[REMINDER] Candidate query error:", candidateErr);
-      return json({ error: candidateErr.message }, 500);
+      return json({ error: candidateErr.message }, 500, req);
     }
 
     // Filter to appointments within each business's reminder window
@@ -96,7 +91,7 @@ Deno.serve(async (req) => {
 
     if (eligibleIds.length === 0) {
       console.log("[REMINDER] No appointments to remind");
-      return json({ processed: 0, sent: 0, failed: 0 });
+      return json({ processed: 0, sent: 0, failed: 0 }, 200, req);
     }
 
     // Atomically claim eligible appointments
@@ -111,13 +106,13 @@ Deno.serve(async (req) => {
 
     if (claimErr) {
       console.error("[REMINDER] Claim error:", claimErr);
-      return json({ error: claimErr.message }, 500);
+      return json({ error: claimErr.message }, 500, req);
     }
 
     const claimedIds = (claimed ?? []).map((r: { id: string }) => r.id);
     if (claimedIds.length === 0) {
       console.log("[REMINDER] No appointments to remind (all already claimed)");
-      return json({ processed: 0, sent: 0, failed: 0 });
+      return json({ processed: 0, sent: 0, failed: 0 }, 200, req);
     }
 
     // 2. Now fetch full details for claimed appointments
@@ -137,12 +132,12 @@ Deno.serve(async (req) => {
 
     if (queryErr) {
       console.error("[REMINDER] Query error:", queryErr);
-      return json({ error: queryErr.message }, 500);
+      return json({ error: queryErr.message }, 500, req);
     }
 
     if (!appointments || appointments.length === 0) {
       console.log("[REMINDER] No appointments to remind");
-      return json({ processed: 0, sent: 0, failed: 0 });
+      return json({ processed: 0, sent: 0, failed: 0 }, 200, req);
     }
 
     console.log(`[REMINDER] Found ${appointments.length} appointments to remind`);
@@ -212,9 +207,9 @@ Deno.serve(async (req) => {
       processed: appointments.length,
       sent,
       failed,
-    });
+    }, 200, req);
   } catch (err) {
     console.error("[REMINDER] Handler error:", (err as Error).message);
-    return json({ error: "Internal server error" }, 500);
+    return json({ error: "Internal server error" }, 500, req);
   }
 });

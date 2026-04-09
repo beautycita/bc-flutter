@@ -4,23 +4,18 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { requireFeature } from "../_shared/check-toggle.ts";
+import { corsHeaders, handleCorsPreflightIfOptions } from "../_shared/cors.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY") ?? "";
 const STRIPE_API = "https://api.stripe.com/v1";
 
-const ALLOWED_ORIGIN = "https://beautycita.com";
-const corsHeaders = {
-  "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
-  "Access-Control-Allow-Headers":
-    "authorization, content-type, x-client-info, apikey",
-};
 
-function json(body: unknown, status = 200) {
+function json(body: unknown, status = 200, req?: Request) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...corsHeaders(req!), "Content-Type": "application/json" },
   });
 }
 
@@ -128,21 +123,18 @@ async function ensureCustomer(
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, {
-      headers: { ...corsHeaders, "Access-Control-Allow-Methods": "POST" },
-    });
-  }
+  const _pre = handleCorsPreflightIfOptions(req);
+  if (_pre) return _pre;
 
   if (req.method !== "POST") {
-    return json({ error: "Method not allowed" }, 405);
+    return json({ error: "Method not allowed" }, 405, req);
   }
 
   const blocked = await requireFeature("enable_stripe_payments");
   if (blocked) return blocked;
 
   if (!STRIPE_SECRET_KEY) {
-    return json({ error: "Stripe not configured" }, 500);
+    return json({ error: "Stripe not configured" }, 500, req);
   }
 
   // Authenticate
@@ -155,13 +147,13 @@ Deno.serve(async (req: Request) => {
   } = await supabase.auth.getUser(token);
 
   if (authError || !user) {
-    return json({ error: "Unauthorized" }, 401);
+    return json({ error: "Unauthorized" }, 401, req);
   }
 
   // Rate limit: 20 requests per minute
   const rateLimitKey = user?.id || authHeader.slice(-16) || "anon";
   if (!checkRateLimit(rateLimitKey, 20, 60_000)) {
-    return json({ error: "Rate limit exceeded" }, 429);
+    return json({ error: "Rate limit exceeded" }, 429, req);
   }
 
   try {
@@ -197,7 +189,7 @@ Deno.serve(async (req: Request) => {
         setupIntent: setupIntent.client_secret,
         ephemeralKey: ekData.secret,
         customer: customerId,
-      });
+      }, 200, req);
     }
 
     if (action === "list") {
@@ -216,29 +208,29 @@ Deno.serve(async (req: Request) => {
         expYear: pm.card?.exp_year,
       }));
 
-      return json({ cards });
+      return json({ cards }, 200, req);
     }
 
     if (action === "detach") {
       const paymentMethodId = body.payment_method_id;
       if (!paymentMethodId) {
-        return json({ error: "payment_method_id required" }, 400);
+        return json({ error: "payment_method_id required" }, 400, req);
       }
 
       // Verify the payment method belongs to the caller's Stripe customer
       const customerId = await ensureCustomer(supabase, user.id, user.email ?? undefined);
       const pm = await stripeGet(`/payment_methods/${paymentMethodId}`);
       if (pm.customer !== customerId) {
-        return json({ error: "Not authorized to detach this payment method" }, 403);
+        return json({ error: "Not authorized to detach this payment method" }, 403, req);
       }
 
       await stripePost(`/payment_methods/${paymentMethodId}/detach`);
-      return json({ detached: true });
+      return json({ detached: true }, 200, req);
     }
 
-    return json({ error: `Unknown action: ${action}` }, 400);
+    return json({ error: `Unknown action: ${action}` }, 400, req);
   } catch (err) {
     console.error("stripe-payment-methods error:", err);
-    return json({ error: "Internal server error" }, 500);
+    return json({ error: "Internal server error" }, 500, req);
   }
 });

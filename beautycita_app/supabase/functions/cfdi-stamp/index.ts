@@ -12,6 +12,7 @@
 // =============================================================================
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { corsHeaders, handleCorsPreflightIfOptions } from "../_shared/cors.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -28,15 +29,11 @@ const BC_NOMBRE = "BeautyCita S.A. de C.V.";
 const BC_REGIMEN_FISCAL = "601"; // General de Ley Personas Morales
 const BC_LUGAR_EXPEDICION = "48315"; // Puerto Vallarta CP
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "https://beautycita.com",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
 
-function json(body: unknown, status = 200) {
+function json(body: unknown, status = 200, req?: Request) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+    headers: { ...corsHeaders(req!), "Content-Type": "application/json" },
   });
 }
 
@@ -291,24 +288,23 @@ async function stampCfdi(cfdiJson: Record<string, unknown>, isRetenciones: boole
 // ── Main Handler ─────────────────────────────────────────────────────────────
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: CORS_HEADERS });
-  }
+  const _pre = handleCorsPreflightIfOptions(req);
+  if (_pre) return _pre;
 
   if (req.method !== "POST") {
-    return json({ error: "Method not allowed" }, 405);
+    return json({ error: "Method not allowed" }, 405, req);
   }
 
   // Auth check
   const authHeader = req.headers.get("authorization") ?? "";
   const token = authHeader.replace("Bearer ", "");
-  if (!token) return json({ error: "Authorization required" }, 401);
+  if (!token) return json({ error: "Authorization required" }, 401, req);
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
   try {
     const { appointment_id } = await req.json();
-    if (!appointment_id) return json({ error: "appointment_id required" }, 400);
+    if (!appointment_id) return json({ error: "appointment_id required" }, 400, req);
 
     // 1. Fetch appointment with business data
     const { data: appt, error: apptErr } = await supabase
@@ -324,17 +320,17 @@ Deno.serve(async (req) => {
       .single();
 
     if (apptErr || !appt) {
-      return json({ error: "Appointment not found" }, 404);
+      return json({ error: "Appointment not found" }, 404, req);
     }
 
     // 2. Guard: only BC-intermediary bookings get CFDIs
     if (appt.booking_source === "walk_in") {
-      return json({ error: "Walk-in bookings do not generate CFDIs" }, 400);
+      return json({ error: "Walk-in bookings do not generate CFDIs" }, 400, req);
     }
 
     // 3. Guard: must have tax data
     if (!appt.tax_base || !appt.isr_withheld) {
-      return json({ error: "Appointment missing tax withholding data" }, 400);
+      return json({ error: "Appointment missing tax withholding data" }, 400, req);
     }
 
     // 4. Check if CFDI already exists for this appointment
@@ -345,7 +341,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (existing) {
-      return json({ error: "CFDI already exists", uuid: existing.uuid }, 409);
+      return json({ error: "CFDI already exists", uuid: existing.uuid }, 409, req);
     }
 
     const biz = (appt as any).businesses;
@@ -385,7 +381,7 @@ Deno.serve(async (req) => {
         success: false,
         error: retencionesResult.error,
         appointment_id,
-      }, 500);
+      }, 500, req);
     }
 
     // 6. Store CFDI record
@@ -432,10 +428,10 @@ Deno.serve(async (req) => {
       appointment_id,
       retenciones_uuid: retencionesResult.uuid,
       commission_uuid: commissionUuid,
-    });
+    }, 200, req);
 
   } catch (err) {
     console.error("[CFDI] Handler error:", (err as Error).message);
-    return json({ error: "Internal server error" }, 500);
+    return json({ error: "Internal server error" }, 500, req);
   }
 });

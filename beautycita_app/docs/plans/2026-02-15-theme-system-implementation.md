@@ -913,7 +913,7 @@ Add import: `import 'package:beautycita/providers/theme_provider.dart';`
 
 **Step 2: Verify app builds and launches**
 
-Run: `cd /home/bc/futureBeauty/beautycita_app && /home/bc/flutter/bin/flutter build apk --release --no-tree-shake-icons --target-platform android-arm64`
+Run: `cd /home/bc/futureBeauty/beautycita_app && /home/bc/flutter/bin/flutter build apk --release --target-platform android-arm64`
 Expected: BUILD SUCCESSFUL. App should look identical (Rose & Gold is default).
 
 **Step 3: Commit**
@@ -1917,7 +1917,7 @@ Expected: No errors
 
 **Step 2: Build release APK**
 
-Run: `cd /home/bc/futureBeauty/beautycita_app && /home/bc/flutter/bin/flutter build apk --release --no-tree-shake-icons --target-platform android-arm64`
+Run: `cd /home/bc/futureBeauty/beautycita_app && /home/bc/flutter/bin/flutter build apk --release --target-platform android-arm64`
 Expected: BUILD SUCCESSFUL
 
 **Step 3: Verify Rose & Gold is default**

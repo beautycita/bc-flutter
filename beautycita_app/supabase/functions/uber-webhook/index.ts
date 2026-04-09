@@ -3,6 +3,7 @@
 // Verifies X-Uber-Signature HMAC SHA256, processes event, returns 200.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { corsHeaders, handleCorsPreflightIfOptions } from "../_shared/cors.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -52,9 +53,8 @@ async function verifySignature(
 Deno.serve(async (req: Request) => {
   // Uber only sends POST
   // Webhooks are server-to-server — no CORS needed
-  if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204 });
-  }
+  const _pre = handleCorsPreflightIfOptions(req);
+  if (_pre) return _pre;
 
   if (req.method !== "POST") {
     return new Response("", { status: 405 });

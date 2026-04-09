@@ -339,7 +339,7 @@ After changing state, show: `ScaffoldMessenger.of(context).showSnackBar(SnackBar
 
 Run:
 ```bash
-flutter build apk --release --no-tree-shake-icons 2>&1 | tail -5
+flutter build apk --release 2>&1 | tail -5
 adb -s 192.168.0.25:5555 install -r build/app/outputs/flutter-apk/app-release.apk
 ```
 

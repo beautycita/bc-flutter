@@ -61,7 +61,7 @@ static const int buildNumber = 45012;
 
 **Step 2: Build split release**
 ```bash
-/home/bc/flutter/bin/flutter build apk --release --split-per-abi --no-tree-shake-icons
+/home/bc/flutter/bin/flutter build apk --release --split-per-abi
 ```
 
 **Step 3: Install on connected devices**
@@ -674,7 +674,7 @@ This is covered by Task 7 (remove wrong buttons) + Task 9 (wire WA invite).
 **Step 1: Build web**
 ```bash
 cd /home/bc/futureBeauty/beautycita_web
-/home/bc/flutter/bin/flutter build web --release --no-tree-shake-icons
+/home/bc/flutter/bin/flutter build web --release
 ```
 
 **Step 2: Deploy to server**

@@ -12,11 +12,8 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Stripe from "https://esm.sh/stripe@14.21.0?target=deno";
 import { requireFeature } from "../_shared/check-toggle.ts";
+import { corsHeaders, handleCorsPreflightIfOptions } from "../_shared/cors.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "https://beautycita.com",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
 
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY") ?? "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
@@ -36,9 +33,8 @@ interface NoShowRequest {
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+  const _pre = handleCorsPreflightIfOptions(req);
+  if (_pre) return _pre;
 
   try {
     // Feature toggle check — uses its own toggle so disabling push
@@ -54,14 +50,14 @@ serve(async (req) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
     if (authError || !user) {
-      return json({ error: "Unauthorized" }, 401);
+      return json({ error: "Unauthorized" }, 401, req);
     }
 
     const body: NoShowRequest = await req.json();
     const { appointment_id, marked_by = "business" } = body;
 
     if (!appointment_id) {
-      return json({ error: "appointment_id is required" }, 400);
+      return json({ error: "appointment_id is required" }, 400, req);
     }
 
     // Fetch the appointment with related data
@@ -92,7 +88,7 @@ serve(async (req) => {
       .single();
 
     if (fetchError || !appointment) {
-      return json({ error: "Appointment not found" }, 404);
+      return json({ error: "Appointment not found" }, 404, req);
     }
 
     // Verify caller is the business owner or admin
@@ -107,20 +103,20 @@ serve(async (req) => {
     const isOwner = business.owner_id === user.id;
 
     if (!isAdmin && !isOwner) {
-      return json({ error: "Only the business owner can mark appointments as no-show" }, 403);
+      return json({ error: "Only the business owner can mark appointments as no-show" }, 403, req);
     }
 
     // Check appointment status
     if (appointment.status === "no_show") {
-      return json({ error: "Appointment is already marked as no-show" }, 400);
+      return json({ error: "Appointment is already marked as no-show" }, 400, req);
     }
 
     if (appointment.status !== "confirmed") {
-      return json({ error: "Only confirmed appointments can be marked as no-show" }, 400);
+      return json({ error: "Only confirmed appointments can be marked as no-show" }, 400, req);
     }
 
     if (appointment.payment_status !== "paid") {
-      return json({ error: "Appointment has not been paid" }, 400);
+      return json({ error: "Appointment has not been paid" }, 400, req);
     }
 
     // Calculate refund amounts
@@ -196,7 +192,7 @@ serve(async (req) => {
 
     if (updateError) {
       console.error(`[NO-SHOW] Failed to update appointment:`, updateError);
-      return json({ error: "Failed to update appointment status" }, 500);
+      return json({ error: "Failed to update appointment status" }, 500, req);
     }
 
     // Record payment transactions
@@ -302,17 +298,17 @@ serve(async (req) => {
       refund_amount: refundAmount,
       provider_payout: providerPayout,
       stripe_refund_id: stripeRefund?.id ?? null,
-    });
+    }, 200, req);
 
   } catch (err) {
     console.error("[NO-SHOW] Error:", err);
-    return json({ error: "An internal error occurred" }, 500);
+    return json({ error: "An internal error occurred" }, 500, req);
   }
 });
 
-function json(body: unknown, status = 200) {
+function json(body: unknown, status = 200, req?: Request) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...corsHeaders(req!), "Content-Type": "application/json" },
   });
 }

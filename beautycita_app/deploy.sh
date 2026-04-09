@@ -53,7 +53,7 @@ echo "[2/5] constants.dart updated"
 
 # ── 4. Build APK (split-per-abi for smaller download) ──
 echo "[3/5] Building APK..."
-$FLUTTER build apk --release --no-tree-shake-icons --split-per-abi 2>&1 | tail -3
+$FLUTTER build apk --release --split-per-abi 2>&1 | tail -3
 APK_PATH="build/app/outputs/flutter-apk/app-arm64-v8a-release.apk"
 
 if [[ ! -f "$APK_PATH" ]]; then

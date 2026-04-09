@@ -9,31 +9,15 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { requireFeature } from "../_shared/check-toggle.ts";
 import { cacheGet, cacheSet } from "../_shared/redis.ts";
-
-const ALLOWED_ORIGINS = [
-  "https://beautycita.com",
-  "https://www.beautycita.com",
-  "https://debug.beautycita.com",
-];
-
-function corsOrigin(req: Request): string {
-  const o = req.headers.get("origin") ?? "";
-  return ALLOWED_ORIGINS.includes(o) ? o : ALLOWED_ORIGINS[0];
-}
-
-const corsHeaders = (req: Request) => ({
-  "Access-Control-Allow-Origin": corsOrigin(req),
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-});
+import { corsHeaders, handleCorsPreflightIfOptions } from "../_shared/cors.ts";
 
 let _req: Request;
 
-function json(body: unknown, status = 200) {
+function json(body: unknown, status = 200, req?: Request) {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
-      ...corsHeaders(_req),
+      ...corsHeaders(req ?? _req),
       "Content-Type": "application/json",
       "Cache-Control": "public, max-age=60",
     },
@@ -136,17 +120,11 @@ function scoreItem(
 
 Deno.serve(async (req: Request) => {
   _req = req;
-  if (req.method === "OPTIONS") {
-    return new Response(null, {
-      headers: {
-        ...corsHeaders(req),
-        "Access-Control-Allow-Methods": "GET",
-      },
-    });
-  }
+  const _pre = handleCorsPreflightIfOptions(req);
+  if (_pre) return _pre;
 
   if (req.method !== "GET") {
-    return json({ error: "Method not allowed" }, 405);
+    return json({ error: "Method not allowed" }, 405, req);
   }
 
   // Server-side toggle enforcement
@@ -166,7 +144,7 @@ Deno.serve(async (req: Request) => {
       .eq("key", "enable_feed")
       .single();
     if (toggleData?.value !== "true") {
-      return json({ error: "This feature is currently disabled" }, 403);
+      return json({ error: "This feature is currently disabled" }, 403, req);
     }
 
     // --- Parse query params ---
@@ -449,6 +427,6 @@ Deno.serve(async (req: Request) => {
     return json(result);
   } catch (err) {
     console.error("feed-public error:", err);
-    return json({ error: "An internal error occurred" }, 500);
+    return json({ error: "An internal error occurred" }, 500, req);
   }
 });

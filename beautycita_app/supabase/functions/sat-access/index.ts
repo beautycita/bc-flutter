@@ -15,6 +15,7 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { corsHeaders, handleCorsPreflightIfOptions } from "../_shared/cors.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -33,7 +34,7 @@ serve(async (req) => {
   try {
     supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
   } catch {
-    return json({ error: "Service unavailable" }, 503);
+    return json({ error: "Service unavailable" }, 503, req);
   }
 
   const url = new URL(req.url);
@@ -51,14 +52,14 @@ serve(async (req) => {
     // Verify API key
     if (!SAT_API_KEY || !SAT_API_SECRET || apiKey !== SAT_API_KEY) {
       logAccess(supabase, endpoint, null, 401, ipAddress, apiKey, "invalid_key").catch(() => {});
-      return json({ error: "Invalid or missing API key" }, 401);
+      return json({ error: "Invalid or missing API key" }, 401, req);
     }
 
     // Verify timestamp (prevent replay attacks — 5 minute window)
     const ts = parseInt(timestamp);
     if (!ts || Math.abs(Date.now() - ts) > TIMESTAMP_TOLERANCE_MS) {
       logAccess(supabase, endpoint, null, 401, ipAddress, apiKey, "expired_timestamp").catch(() => {});
-      return json({ error: "Timestamp expired or invalid. Must be within 5 minutes." }, 401);
+      return json({ error: "Timestamp expired or invalid. Must be within 5 minutes." }, 401, req);
     }
 
     // Verify HMAC-SHA256 signature
@@ -84,7 +85,7 @@ serve(async (req) => {
 
     if (signature !== expectedSignature) {
       logAccess(supabase, endpoint, null, 403, ipAddress, apiKey, "invalid_signature").catch(() => {});
-      return json({ error: "Invalid signature" }, 403);
+      return json({ error: "Invalid signature" }, 403, req);
     }
 
     // ── Rate Limiting ──────────────────────────────────────────────────
@@ -142,7 +143,7 @@ serve(async (req) => {
   } catch (err) {
     console.error("[SAT-ACCESS] Error:", (err as Error).message);
     logAccess(supabase, endpoint, null, 500, ipAddress, "", "error").catch(() => {});
-    return json({ error: "Internal server error" }, 500);
+    return json({ error: "Internal server error" }, 500, req);
   }
 });
 
@@ -366,7 +367,7 @@ async function logAccess(
   });
 }
 
-function json(body: unknown, status = 200) {
+function json(body: unknown, status = 200, req?: Request) {
   return new Response(JSON.stringify(body, null, 2), {
     status,
     headers: {

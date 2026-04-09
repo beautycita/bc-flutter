@@ -8,6 +8,7 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { corsHeaders, handleCorsPreflightIfOptions } from "../_shared/cors.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -39,7 +40,7 @@ serve(async (_req) => {
       .not("email", "is", null);
 
     if (!staffList || staffList.length === 0) {
-      return json({ message: "No staff with email to report", count: 0 });
+      return json({ message: "No staff with email to report", count: 0 }, 200, req);
     }
 
     let sent = 0;
@@ -169,7 +170,7 @@ RFC: BEA260313MI8`;
       }
     }
 
-    return json({ message: `Reports sent: ${sent}/${staffList.length}`, sent, total: staffList.length });
+    return json({ message: `Reports sent: ${sent}/${staffList.length}`, sent, total: staffList.length }, 200, req);
 
   } catch (err) {
     console.error("[STAFF-REPORT] Error:", (err as Error).message);
@@ -177,7 +178,7 @@ RFC: BEA260313MI8`;
   }
 });
 
-function json(body: unknown, status = 200) {
+function json(body: unknown, status = 200, req?: Request) {
   return new Response(JSON.stringify(body), {
     status,
     headers: { "Content-Type": "application/json" },

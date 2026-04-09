@@ -1,11 +1,7 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { corsHeaders, handleCorsPreflightIfOptions } from "../_shared/cors.ts";
 
-const ALLOWED_ORIGIN = "https://beautycita.com";
-const corsHeaders = {
-  "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
 
 // --- Helpers for search_place ---
 
@@ -56,9 +52,8 @@ function mapGoogleTypesToCategories(types: string[] | undefined): string[] {
 // --- Main handler ---
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+  const _pre = handleCorsPreflightIfOptions(req);
+  if (_pre) return _pre;
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
@@ -72,7 +67,7 @@ serve(async (req) => {
     if (authError || !user) {
       return new Response(
         JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 401, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
     const userId = user.id;
@@ -89,7 +84,7 @@ serve(async (req) => {
       if (!query || lat == null || lng == null) {
         return new Response(
           JSON.stringify({ error: "query, lat, and lng are required" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
         );
       }
 
@@ -101,7 +96,7 @@ serve(async (req) => {
       if (!apiKey) {
         return new Response(
           JSON.stringify({ error: "Google API key not configured" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
         );
       }
 
@@ -134,7 +129,7 @@ serve(async (req) => {
       if (!places || places.length === 0) {
         return new Response(
           JSON.stringify({ error: "No results found", salon: null }),
-          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 200, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
         );
       }
 
@@ -152,7 +147,7 @@ serve(async (req) => {
       if (existingRows && existingRows.length > 0) {
         return new Response(
           JSON.stringify({ salon: existingRows[0], source: "existing" }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
         );
       }
 
@@ -210,7 +205,7 @@ serve(async (req) => {
 
       return new Response(
         JSON.stringify({ salon: inserted, source: "scraped" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -229,7 +224,7 @@ serve(async (req) => {
 
       if (error) throw error;
       return new Response(JSON.stringify(data), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...corsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -237,7 +232,7 @@ serve(async (req) => {
     if (lat == null || lng == null) {
       return new Response(
         JSON.stringify({ error: "lat and lng are required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -256,7 +251,7 @@ serve(async (req) => {
     if (hasCoverage) {
       return new Response(
         JSON.stringify({ has_coverage: true, salon_count: salonCount }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -280,7 +275,7 @@ serve(async (req) => {
           scrape_request_id: existing[0].id,
           status: existing[0].status,
         }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -308,13 +303,13 @@ serve(async (req) => {
         scrape_request_id: newRequest.id,
         status: "pending",
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error("[on-demand-scrape] Error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
   }
 });

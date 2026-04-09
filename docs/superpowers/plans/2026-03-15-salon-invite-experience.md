@@ -419,7 +419,7 @@ GoRoute(
 - [ ] **Step 4: Build and deploy web**
 
 ```bash
-cd beautycita_web && flutter build web --release --no-tree-shake-icons
+cd beautycita_web && flutter build web --release
 rsync -avz --delete --exclude sativa build/web/ www-bc:/var/www/beautycita.com/frontend/dist/
 ```
 

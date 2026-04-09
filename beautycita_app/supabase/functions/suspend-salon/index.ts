@@ -13,12 +13,8 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { corsHeaders, handleCorsPreflightIfOptions } from "../_shared/cors.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "https://beautycita.com",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY =
@@ -32,9 +28,8 @@ interface SuspendSalonRequest {
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+  const _pre = handleCorsPreflightIfOptions(req);
+  if (_pre) return _pre;
 
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -48,7 +43,7 @@ serve(async (req) => {
     } = await supabase.auth.getUser(token);
 
     if (authError || !user) {
-      return json({ error: "Unauthorized" }, 401);
+      return json({ error: "Unauthorized" }, 401, req);
     }
 
     // ── Admin check ────────────────────────────────────────────────────
@@ -59,7 +54,7 @@ serve(async (req) => {
       .single();
 
     if (profileError || !profile || profile.role !== "admin") {
-      return json({ error: "Forbidden: admin access required" }, 403);
+      return json({ error: "Forbidden: admin access required" }, 403, req);
     }
 
     // ── Parse request ──────────────────────────────────────────────────
@@ -67,7 +62,7 @@ serve(async (req) => {
     const { business_id, action } = body;
 
     if (!business_id) {
-      return json({ error: "business_id is required" }, 400);
+      return json({ error: "business_id is required" }, 400, req);
     }
 
     const validActions: Action[] = ["suspend", "reactivate", "hold", "unhold"];
@@ -86,7 +81,7 @@ serve(async (req) => {
       .single();
 
     if (bizError || !business) {
-      return json({ error: "Business not found" }, 404);
+      return json({ error: "Business not found" }, 404, req);
     }
 
     console.log(
@@ -108,11 +103,11 @@ serve(async (req) => {
         return await handleUnhold(supabase, business);
 
       default:
-        return json({ error: "Unknown action" }, 400);
+        return json({ error: "Unknown action" }, 400, req);
     }
   } catch (err) {
     console.error("[SUSPEND-SALON] Error:", err);
-    return json({ error: "An internal error occurred" }, 500);
+    return json({ error: "An internal error occurred" }, 500, req);
   }
 });
 
@@ -152,7 +147,7 @@ async function handleSuspend(
       success: true,
       warning: "Business deactivated but failed to query appointments for notifications",
       affected_bookings: 0,
-    });
+    }, 200, req);
   }
 
   const affectedBookings = appointments?.length ?? 0;
@@ -203,7 +198,7 @@ async function handleSuspend(
         success: true,
         warning: "Business deactivated but failed to send some notifications",
         affected_bookings: affectedBookings,
-      });
+      }, 200, req);
     }
 
     console.log(
@@ -214,7 +209,7 @@ async function handleSuspend(
   return json({
     success: true,
     affected_bookings: affectedBookings,
-  });
+  }, 200, req);
 }
 
 // ── Reactivate ───────────────────────────────────────────────────────────────
@@ -236,7 +231,7 @@ async function handleReactivate(
   }
 
   console.log(`[SUSPEND-SALON] Reactivated ${business.name}`);
-  return json({ success: true });
+  return json({ success: true }, 200, req);
 }
 
 // ── Hold ─────────────────────────────────────────────────────────────────────
@@ -259,7 +254,7 @@ async function handleHold(
   }
 
   console.log(`[SUSPEND-SALON] Put ${business.name} on hold`);
-  return json({ success: true });
+  return json({ success: true }, 200, req);
 }
 
 // ── Unhold ───────────────────────────────────────────────────────────────────
@@ -281,13 +276,13 @@ async function handleUnhold(
   }
 
   console.log(`[SUSPEND-SALON] Removed hold on ${business.name}`);
-  return json({ success: true });
+  return json({ success: true }, 200, req);
 }
 
 // ── Helper ───────────────────────────────────────────────────────────────────
-function json(body: unknown, status = 200) {
+function json(body: unknown, status = 200, req?: Request) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...corsHeaders(req!), "Content-Type": "application/json" },
   });
 }
