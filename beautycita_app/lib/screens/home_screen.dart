@@ -539,62 +539,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
             ),
 
-          // Recientes — recent search history chips
-          Consumer(
-            builder: (context, ref, _) {
-              final history = ref.watch(searchHistoryProvider);
-              if (history.isEmpty) return const SizedBox.shrink();
-              return Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppConstants.paddingMD,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Recientes',
-                      style: GoogleFonts.poppins(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: palette.onSurface.withValues(alpha: 0.6),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    SizedBox(
-                      height: 38,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: history.length,
-                        separatorBuilder: (_, __) => const SizedBox(width: 8),
-                        itemBuilder: (context, index) {
-                          final entry = history[index];
-                          return ActionChip(
-                            label: Text(entry.serviceName),
-                            onPressed: () {
-                              ref
-                                  .read(bookingFlowProvider.notifier)
-                                  .selectService(
-                                      entry.serviceType, entry.serviceName);
-                              context.push('/book');
-                            },
-                            backgroundColor: palette.primary.withValues(alpha: 0.08),
-                            side: BorderSide.none,
-                            labelStyle: GoogleFonts.nunito(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: palette.primary,
-                            ),
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                  ],
-                ),
-              );
-            },
-          ),
+          // Recent search history chips removed per BC request
 
           // Category Grid
           Expanded(
