@@ -276,7 +276,7 @@ class _LandingPageState extends State<LandingPage>
                           children: [
                             ClipRRect(
                               borderRadius: BorderRadius.circular(10),
-                              child: Image.network('img/bc_logo.png', width: 36, height: 36, fit: BoxFit.cover,
+                              child: Image.network('https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/media/web/img/bc_logo.png', width: 36, height: 36, fit: BoxFit.cover,
                                 errorBuilder: (_, __, ___) => Container(
                                   width: 36, height: 36,
                                   decoration: BoxDecoration(gradient: _brandGradient, borderRadius: BorderRadius.circular(10)),
@@ -614,7 +614,7 @@ class _LandingPageState extends State<LandingPage>
       child: ClipRRect(
         borderRadius: BorderRadius.circular(24),
         child: Image.network(
-          'img/01_home.png',
+          'https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/media/web/img/01_home.png',
           fit: BoxFit.cover,
           width: double.infinity,
           height: double.infinity,
@@ -2070,7 +2070,7 @@ class _LandingPageState extends State<LandingPage>
         Row(mainAxisSize: MainAxisSize.min, children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
-            child: Image.network('img/bc_logo.png', width: 32, height: 32, fit: BoxFit.cover,
+            child: Image.network('https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/media/web/img/bc_logo.png', width: 32, height: 32, fit: BoxFit.cover,
               errorBuilder: (_, __, ___) => const SizedBox.shrink()),
           ),
           const SizedBox(width: 10),
