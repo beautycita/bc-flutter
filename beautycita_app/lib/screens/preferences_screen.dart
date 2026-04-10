@@ -740,6 +740,15 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen>
               );
             },
           ),
+
+          // Dark mode 3-way toggle
+          const SizedBox(height: AppConstants.paddingMD),
+          _ThemeModeSelector(
+            value: themeState.themeMode,
+            cs: cs,
+            onChanged: (mode) =>
+                ref.read(themeProvider.notifier).setThemeMode(mode),
+          ),
         ],
       ),
     );
@@ -1192,6 +1201,110 @@ class _TextSizeSelector extends StatelessWidget {
           ),
         );
       }),
+    );
+  }
+}
+
+/// 3-way theme mode toggle: System / Light / Dark
+class _ThemeModeSelector extends StatelessWidget {
+  final ThemeMode value;
+  final ColorScheme cs;
+  final ValueChanged<ThemeMode> onChanged;
+
+  const _ThemeModeSelector({
+    required this.value,
+    required this.cs,
+    required this.onChanged,
+  });
+
+  static const _modes = [ThemeMode.system, ThemeMode.light, ThemeMode.dark];
+  static const _icons = [
+    Icons.settings_brightness_rounded,
+    Icons.light_mode_rounded,
+    Icons.dark_mode_rounded,
+  ];
+  static const _labels = ['Sistema', 'Claro', 'Oscuro'];
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: cs.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: cs.onSurface.withValues(alpha: 0.08)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.contrast_rounded, size: 20, color: cs.primary),
+              const SizedBox(width: 12),
+              Text(
+                'Modo de pantalla',
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: cs.onSurface,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: List.generate(3, (i) {
+              final isSelected = _modes[i] == value;
+              return Expanded(
+                child: GestureDetector(
+                  onTap: () => onChanged(_modes[i]),
+                  child: AnimatedContainer(
+                    duration: AppConstants.shortAnimation,
+                    margin: EdgeInsets.only(right: i < 2 ? 8 : 0),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? cs.primary.withValues(alpha: 0.1)
+                          : Colors.transparent,
+                      borderRadius:
+                          BorderRadius.circular(AppConstants.radiusSM),
+                      border: Border.all(
+                        color: isSelected
+                            ? cs.primary.withValues(alpha: 0.3)
+                            : cs.onSurface.withValues(alpha: 0.1),
+                      ),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          _icons[i],
+                          size: 20,
+                          color: isSelected
+                              ? cs.primary
+                              : cs.onSurface.withValues(alpha: 0.5),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _labels[i],
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight:
+                                isSelected ? FontWeight.w700 : FontWeight.w400,
+                            color: isSelected
+                                ? cs.primary
+                                : cs.onSurface.withValues(alpha: 0.5),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ),
+        ],
+      ),
     );
   }
 }

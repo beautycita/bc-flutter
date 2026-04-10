@@ -338,8 +338,8 @@ class _BeautyCitaAppState extends ConsumerState<BeautyCitaApp> {
       child: MaterialApp.router(
       title: AppConstants.appName,
       debugShowCheckedModeBanner: false,
-      theme: themeState.themeData,
-      darkTheme: themeState.themeData,
+      theme: themeState.lightThemeData,
+      darkTheme: themeState.darkThemeData,
       themeMode: themeState.themeMode,
       routerDelegate: router.routerDelegate,
       routeInformationParser: router.routeInformationParser,

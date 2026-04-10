@@ -547,6 +547,125 @@ const emeraldLuxePalette = BCPalette(
   navigationBarIconBrightness: Brightness.light,
 );
 
+// ─── Dark variants for light palettes ─────────────────────────────────────
+
+/// 1-D. Rose Gold Dark — keeps lilac primary, dark surfaces
+const roseGoldDarkPalette = BCPalette(
+  id: 'rose_gold_dark',
+  nameEs: 'Lila Oscuro',
+  nameEn: 'Lilac Dark',
+  brightness: Brightness.dark,
+  primary: Color(0xFFC8A2C8),         // same lilac
+  onPrimary: Color(0xFFFFFFFF),
+  secondary: Color(0xFFAA7EAA),
+  onSecondary: Color(0xFFFFFFFF),
+  surface: Color(0xFF1E1E2A),
+  onSurface: Color(0xFFF5F5F5),
+  scaffoldBackground: Color(0xFF121218),
+  error: Color(0xFFFF6B6B),
+  onError: Color(0xFFFFFFFF),
+  cardColor: Color(0xFF1E1E2A),
+  cardBorderColor: Color(0xFF3A3A4A),
+  divider: Color(0xFF2A2A3A),
+  textPrimary: Color(0xFFF5F5F5),
+  textSecondary: Color(0xFFB0B0B0),
+  textHint: Color(0xFF808080),
+  shimmerColor: Color(0xFFAA7EAA),
+  success: Color(0xFF69F0AE),
+  warning: Color(0xFFFFD740),
+  info: Color(0xFF40C4FF),
+  primaryGradient: LinearGradient(
+    colors: [Color(0xFFEC4899), Color(0xFF9333EA), Color(0xFF3B82F6)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  ),
+  accentGradient: LinearGradient(
+    colors: [Color(0xFFC8A2C8), Color(0xFFAA7EAA)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  ),
+  goldGradientStops: kGoldStops,
+  goldGradientPositions: kGoldPositions,
+  categoryColors: [
+    Color(0xFFD4A0D4),
+    Color(0xFF8D6E63),
+    Color(0xFFB07EB0),
+    Color(0xFFE08080),
+    Color(0xFF26A69A),
+    Color(0xFF8A7CB8),
+    Color(0xFFFFA726),
+    Color(0xFF37474F),
+  ],
+  cinematicPrimary: Color(0xFFC8A2C8),
+  cinematicAccent: Color(0xFFAA7EAA),
+  cinematicGradient: [Color(0xFFBE185D), Color(0xFF7C3AED), Color(0xFF2563EB)],
+  statusBarColor: Color(0x00000000),
+  statusBarIconBrightness: Brightness.light,
+  navigationBarColor: Color(0xFF121218),
+  navigationBarIconBrightness: Brightness.light,
+);
+
+/// 6-D. Cherry Blossom Dark — keeps pink primary, dark surfaces
+const cherryBlossomDarkPalette = BCPalette(
+  id: 'cherry_blossom_dark',
+  nameEs: 'Flor de Cerezo Oscuro',
+  nameEn: 'Cherry Blossom Dark',
+  brightness: Brightness.dark,
+  headingFont: 'Cormorant Garamond',
+  bodyFont: 'Nunito Sans',
+  spacingScale: 1.1,
+  radiusScale: 1.2,
+  primary: Color(0xFFFF6B9D),         // same pink
+  onPrimary: Color(0xFFFFFFFF),
+  secondary: Color(0xFFC084FC),
+  onSecondary: Color(0xFFFFFFFF),
+  surface: Color(0xFF2D1B26),
+  onSurface: Color(0xFFF5F5F5),
+  scaffoldBackground: Color(0xFF140A12),
+  error: Color(0xFFFF6B6B),
+  onError: Color(0xFFFFFFFF),
+  cardColor: Color(0xFF2D1B26),
+  cardBorderColor: Color(0xFF4A2D40),
+  divider: Color(0xFF3A2233),
+  textPrimary: Color(0xFFF5F5F5),
+  textSecondary: Color(0xFFB0B0B0),
+  textHint: Color(0xFF808080),
+  shimmerColor: Color(0xFFC084FC),
+  success: Color(0xFF34D399),
+  warning: Color(0xFFFBBF24),
+  info: Color(0xFF818CF8),
+  primaryGradient: LinearGradient(
+    colors: [Color(0xFFFF6B9D), Color(0xFFC084FC)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  ),
+  accentGradient: LinearGradient(
+    colors: [Color(0xFFC084FC), Color(0xFF818CF8)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  ),
+  goldGradientStops: [
+    Color(0xFFA64D79), Color(0xFFFF6B9D), Color(0xFFFFF5F7),
+    Color(0xFFC084FC), Color(0xFFD946EF), Color(0xFFF0ABFC),
+    Color(0xFFFFF5F7), Color(0xFFFF6B9D), Color(0xFFA855F7),
+    Color(0xFFE879F9), Color(0xFFFFF5F7), Color(0xFFBE185D),
+    Color(0xFFA64D79),
+  ],
+  goldGradientPositions: kGoldPositions,
+  categoryColors: [
+    Color(0xFFFF6B9D), Color(0xFFD946EF), Color(0xFFC084FC),
+    Color(0xFFFB7185), Color(0xFF34D399), Color(0xFF818CF8),
+    Color(0xFFFBBF24), Color(0xFF94A3B8),
+  ],
+  cinematicPrimary: Color(0xFFFF6B9D),
+  cinematicAccent: Color(0xFFC084FC),
+  cinematicGradient: [Color(0xFFBE185D), Color(0xFFFF6B9D), Color(0xFFC084FC), Color(0xFFFFF5F7)],
+  statusBarColor: Color(0x00000000),
+  statusBarIconBrightness: Brightness.light,
+  navigationBarColor: Color(0xFF140A12),
+  navigationBarIconBrightness: Brightness.light,
+);
+
 // ─── Palette registry ──────────────────────────────────────────────────────
 
 final allPalettes = <String, BCPalette>{
@@ -557,4 +676,18 @@ final allPalettes = <String, BCPalette>{
   oceanNoirPalette.id: oceanNoirPalette,
   cherryBlossomPalette.id: cherryBlossomPalette,
   emeraldLuxePalette.id: emeraldLuxePalette,
+};
+
+// ─── Dark palette registry ────────────────────────────────────────────────
+/// Maps each palette ID to its dark counterpart.
+/// Already-dark palettes map to themselves.
+final darkPalettes = <String, BCPalette>{
+  'rose_gold': roseGoldDarkPalette,
+  'cherry_blossom': cherryBlossomDarkPalette,
+  // Already dark — map to self
+  'black_gold': blackGoldPalette,
+  'glass': glassmorphismPalette,
+  'midnight_orchid': midnightOrchidPalette,
+  'ocean_noir': oceanNoirPalette,
+  'emerald_luxe': emeraldLuxePalette,
 };

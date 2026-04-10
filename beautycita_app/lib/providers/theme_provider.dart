@@ -17,16 +17,21 @@ const _prefCustomSat = 'custom_sat';
 
 class ThemeState {
   final String themeId;
-  final ThemeData themeData;
+  final ThemeData lightThemeData;
+  final ThemeData darkThemeData;
   final BCPalette palette;
   final double fontScale;
   final double radiusScale;
   final double animationSpeed;
   final ThemeMode themeMode;
 
+  /// Backward-compat alias — returns the light theme.
+  ThemeData get themeData => lightThemeData;
+
   const ThemeState({
     required this.themeId,
-    required this.themeData,
+    required this.lightThemeData,
+    required this.darkThemeData,
     required this.palette,
     this.fontScale = 1.0,
     this.radiusScale = 1.0,
@@ -54,12 +59,14 @@ class ThemeNotifier extends StateNotifier<ThemeState> {
   // when inputs haven't changed (e.g. redundant rebuilds, same-value drags).
   String? _lastRebuildKey;
   BCPalette? _lastEffectivePalette;
-  ThemeData? _lastThemeData;
+  ThemeData? _lastLightThemeData;
+  ThemeData? _lastDarkThemeData;
 
   ThemeNotifier()
       : super(ThemeState(
           themeId: roseGoldPalette.id,
-          themeData: buildThemeFromPalette(roseGoldPalette),
+          lightThemeData: buildThemeFromPalette(roseGoldPalette),
+          darkThemeData: buildThemeFromPalette(darkPalettes['rose_gold']!),
           palette: roseGoldPalette,
         )) {
     _cacheCategoryOffsets(roseGoldPalette);
@@ -226,32 +233,49 @@ class ThemeNotifier extends StateNotifier<ThemeState> {
     final cacheKey = '${palette.id}|$_customHue|$_customSat|$_fontScale|$effectiveRadius|${_customGradientColors?.length}';
 
     BCPalette effectivePalette;
-    ThemeData themeData;
+    ThemeData lightThemeData;
+    ThemeData darkThemeData;
 
-    if (cacheKey == _lastRebuildKey && _lastEffectivePalette != null && _lastThemeData != null) {
+    if (cacheKey == _lastRebuildKey && _lastEffectivePalette != null && _lastLightThemeData != null && _lastDarkThemeData != null) {
       effectivePalette = _lastEffectivePalette!;
-      themeData = _lastThemeData!;
+      lightThemeData = _lastLightThemeData!;
+      darkThemeData = _lastDarkThemeData!;
     } else {
-      // Apply custom color override if set
+      // ── Light theme ──
       effectivePalette = palette;
       if (_customHue != null && _customSat != null) {
         effectivePalette = _applyColorOverride(palette, _customHue!, _customSat!);
       }
 
-      themeData = buildThemeFromPalette(
+      lightThemeData = buildThemeFromPalette(
         effectivePalette,
         fontScale: _fontScale,
         radiusOverride: effectiveRadius,
       );
 
+      // ── Dark theme ──
+      final darkBase = darkPalettes[palette.id] ?? palette;
+      final darkEffective = (_customHue != null && _customSat != null)
+          ? _applyColorOverride(darkBase, _customHue!, _customSat!)
+          : darkBase;
+      final darkRadius = _radiusScale * darkBase.radiusScale;
+
+      darkThemeData = buildThemeFromPalette(
+        darkEffective,
+        fontScale: _fontScale,
+        radiusOverride: darkRadius,
+      );
+
       _lastRebuildKey = cacheKey;
       _lastEffectivePalette = effectivePalette;
-      _lastThemeData = themeData;
+      _lastLightThemeData = lightThemeData;
+      _lastDarkThemeData = darkThemeData;
     }
 
     state = ThemeState(
       themeId: palette.id,
-      themeData: themeData,
+      lightThemeData: lightThemeData,
+      darkThemeData: darkThemeData,
       palette: effectivePalette,
       fontScale: _fontScale,
       radiusScale: _radiusScale,
