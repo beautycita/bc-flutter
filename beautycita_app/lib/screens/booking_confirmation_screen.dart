@@ -839,7 +839,9 @@ class _TransportOfferCard extends StatelessWidget {
               Expanded(
                 child: _RideButton(
                   label: 'Uber',
-                  color: Colors.black,
+                  color: palette.brightness == Brightness.dark
+                      ? const Color(0xFF2A2A2A)
+                      : Colors.black,
                   textColor: Colors.white,
                   onTap: () {
                     HapticFeedback.lightImpact();

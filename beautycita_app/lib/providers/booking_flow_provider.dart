@@ -2,7 +2,8 @@
 // (status=pending, payment_status=pending, created_at > 30 min ago).
 // Client-side cleanup is in main.dart but a cron is needed for reliability.
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart' show Color, ThemeMode;
+import 'package:flutter/material.dart' show Brightness, Color, ThemeMode;
+import 'package:flutter/scheduler.dart' show SchedulerBinding;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
@@ -18,6 +19,7 @@ import '../services/places_service.dart';
 import 'package:beautycita/services/supabase_client.dart';
 import 'user_preferences_provider.dart';
 import 'profile_provider.dart' show tempSearchLocationProvider;
+import 'theme_provider.dart';
 
 // ---------------------------------------------------------------------------
 // Service instances
@@ -146,6 +148,7 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
   final BookingRepository _bookingRepo;
   final UserPrefsState _userPrefs;
   final LatLng? _tempSearchLocation;
+  final Ref _ref;
 
   BookingFlowNotifier(
     this._curateService,
@@ -153,6 +156,7 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
     this._bookingRepo,
     this._userPrefs,
     this._tempSearchLocation,
+    this._ref,
   ) : super(const BookingFlowState());
 
   /// User selected a service type from the category tree.
@@ -328,6 +332,14 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
   /// where a user is charged but no appointment exists (e.g. app crash after
   /// payment but before booking creation). The webhook updates the booking
   /// to 'paid' + 'confirmed' on payment success.
+  /// Resolve the effective ThemeMode (system -> actual platform brightness).
+  ThemeMode get _resolvedThemeMode {
+    final mode = _ref.read(themeProvider).themeMode;
+    if (mode != ThemeMode.system) return mode;
+    final brightness = SchedulerBinding.instance.platformDispatcher.platformBrightness;
+    return brightness == Brightness.dark ? ThemeMode.dark : ThemeMode.light;
+  }
+
   Future<void> _confirmStripe(ResultCard result, {required bool oxxoOnly}) async {
     final serviceId = result.service.id ?? '';
     final userId = SupabaseClientService.currentUserId;
@@ -440,40 +452,74 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
               phone: CollectionMode.never,
               address: AddressCollectionMode.never,
             ),
-            style: ThemeMode.light,
-            appearance: const PaymentSheetAppearance(
-              colors: PaymentSheetAppearanceColors(
-                primary: Color(0xFF660033),
-                background: Color(0xFFF9F9F9),
-                componentBackground: Color(0xFFFFFFFF),
-                componentBorder: Color(0xFFBDBDBD),
-                componentDivider: Color(0xFFE0E0E0),
-                primaryText: Color(0xFF000000),
-                secondaryText: Color(0xFF212121),
-                componentText: Color(0xFF000000),
-                placeholderText: Color(0xFF757575),
-                icon: Color(0xFF660033),
-                error: Color(0xFFD32F2F),
-              ),
-              shapes: PaymentSheetShape(
-                borderRadius: 12,
-                borderWidth: 1.0,
-              ),
-              primaryButton: PaymentSheetPrimaryButtonAppearance(
-                colors: PaymentSheetPrimaryButtonTheme(
-                  light: PaymentSheetPrimaryButtonThemeColors(
-                    background: Color(0xFF660033),
-                    text: Color(0xFFFFFFFF),
-                    border: Color(0xFF660033),
+            style: _resolvedThemeMode,
+            appearance: _resolvedThemeMode == ThemeMode.dark
+                ? const PaymentSheetAppearance(
+                    colors: PaymentSheetAppearanceColors(
+                      primary: Color(0xFFC8A2C8),
+                      background: Color(0xFF121218),
+                      componentBackground: Color(0xFF1E1E2A),
+                      componentBorder: Color(0xFF3A3A4A),
+                      componentDivider: Color(0xFF2A2A3A),
+                      primaryText: Color(0xFFF5F5F5),
+                      secondaryText: Color(0xFFBDBDBD),
+                      componentText: Color(0xFFF5F5F5),
+                      placeholderText: Color(0xFF757575),
+                      icon: Color(0xFFC8A2C8),
+                      error: Color(0xFFEF5350),
+                    ),
+                    shapes: PaymentSheetShape(
+                      borderRadius: 12,
+                      borderWidth: 1.0,
+                    ),
+                    primaryButton: PaymentSheetPrimaryButtonAppearance(
+                      colors: PaymentSheetPrimaryButtonTheme(
+                        light: PaymentSheetPrimaryButtonThemeColors(
+                          background: Color(0xFF660033),
+                          text: Color(0xFFFFFFFF),
+                          border: Color(0xFF660033),
+                        ),
+                        dark: PaymentSheetPrimaryButtonThemeColors(
+                          background: Color(0xFFC8A2C8),
+                          text: Color(0xFF121218),
+                          border: Color(0xFFC8A2C8),
+                        ),
+                      ),
+                    ),
+                  )
+                : const PaymentSheetAppearance(
+                    colors: PaymentSheetAppearanceColors(
+                      primary: Color(0xFF660033),
+                      background: Color(0xFFF9F9F9),
+                      componentBackground: Color(0xFFFFFFFF),
+                      componentBorder: Color(0xFFBDBDBD),
+                      componentDivider: Color(0xFFE0E0E0),
+                      primaryText: Color(0xFF000000),
+                      secondaryText: Color(0xFF212121),
+                      componentText: Color(0xFF000000),
+                      placeholderText: Color(0xFF757575),
+                      icon: Color(0xFF660033),
+                      error: Color(0xFFD32F2F),
+                    ),
+                    shapes: PaymentSheetShape(
+                      borderRadius: 12,
+                      borderWidth: 1.0,
+                    ),
+                    primaryButton: PaymentSheetPrimaryButtonAppearance(
+                      colors: PaymentSheetPrimaryButtonTheme(
+                        light: PaymentSheetPrimaryButtonThemeColors(
+                          background: Color(0xFF660033),
+                          text: Color(0xFFFFFFFF),
+                          border: Color(0xFF660033),
+                        ),
+                        dark: PaymentSheetPrimaryButtonThemeColors(
+                          background: Color(0xFF660033),
+                          text: Color(0xFFFFFFFF),
+                          border: Color(0xFF660033),
+                        ),
+                      ),
+                    ),
                   ),
-                  dark: PaymentSheetPrimaryButtonThemeColors(
-                    background: Color(0xFF660033),
-                    text: Color(0xFFFFFFFF),
-                    border: Color(0xFF660033),
-                  ),
-                ),
-              ),
-            ),
           ),
         );
 
@@ -761,5 +807,6 @@ final bookingFlowProvider =
     bookingRepo,
     userPrefs,
     tempLatLng,
+    ref,
   );
 });

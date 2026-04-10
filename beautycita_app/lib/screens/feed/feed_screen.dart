@@ -162,7 +162,9 @@ class _FeedScreenState extends ConsumerState<FeedScreen>
         index: _tabIndex,
         children: [
           // Tab 1: Video (WebView with YouTube Shorts beauty content)
-          const _VideoFeedTab(),
+          _VideoFeedTab(
+            isDark: Theme.of(context).brightness == Brightness.dark,
+          ),
 
           // Tab 2: Fotos (native portfolio feed)
           _PhotosFeedTab(
@@ -180,7 +182,8 @@ class _FeedScreenState extends ConsumerState<FeedScreen>
 // Pre-creates one WebView per category so switching is instant.
 
 class _VideoFeedTab extends StatefulWidget {
-  const _VideoFeedTab();
+  final bool isDark;
+  const _VideoFeedTab({this.isDark = false});
 
   @override
   State<_VideoFeedTab> createState() => _VideoFeedTabState();
@@ -208,7 +211,19 @@ class _VideoFeedTabState extends State<_VideoFeedTab>
         ..setNavigationDelegate(
           NavigationDelegate(
             onPageFinished: (_) {
-              if (mounted) setState(() => _loadingState[value] = false);
+              if (mounted) {
+                setState(() => _loadingState[value] = false);
+                if (widget.isDark) {
+                  _controllers[value]?.runJavaScript(
+                    "document.documentElement.style.cssText += "
+                    "'background-color: #121212 !important; "
+                    "color: #E0E0E0 !important;';"
+                    "document.body.style.cssText += "
+                    "'background-color: #121212 !important; "
+                    "color: #E0E0E0 !important;';",
+                  );
+                }
+              }
             },
             onNavigationRequest: (request) {
               final url = request.url;
