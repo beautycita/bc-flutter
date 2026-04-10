@@ -1,40 +1,105 @@
 // =============================================================================
 // sat-access — Real-time data access API for SAT (CFF Art. 30-B)
 // =============================================================================
-// Provides authenticated read-only access to platform transaction data
-// as required by Mexican tax law for digital intermediation platforms.
+// CRITICAL INFRASTRUCTURE — This endpoint must NEVER return an error to SAT.
+// If anything fails internally, return a polite "high volume" retry message.
+// All failures trigger immediate WA + logging alerts to BC.
 //
 // Authentication: HMAC-SHA256 signed requests
 //   X-SAT-Key: {api_key}           — identifies the caller
 //   X-SAT-Timestamp: {unix_epoch}  — prevents replay (5-min window)
-//   X-SAT-Signature: HMAC-SHA256(secret, timestamp + method + path + body)
+//   X-SAT-Signature: HMAC-SHA256(secret, timestamp + method + path)
 //
 // All requests are audit-logged to sat_access_log.
 // Rate limited: 100 requests/hour.
 // =============================================================================
 
-import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { corsHeaders, handleCorsPreflightIfOptions } from "../_shared/cors.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const SAT_API_KEY = Deno.env.get("SAT_API_KEY") ?? "";
 const SAT_API_SECRET = Deno.env.get("SAT_API_SECRET") ?? "";
+const WA_API_URL = Deno.env.get("BEAUTYPI_WA_URL") ?? "";
+const WA_API_TOKEN = Deno.env.get("BEAUTYPI_WA_TOKEN") ?? "";
+const BC_PHONE = "+5213322091741";
 
 // Rate limit: sliding window per hour
 const rateLimitWindow: number[] = [];
 const RATE_LIMIT_MAX = 100;
-const RATE_LIMIT_WINDOW_MS = 3_600_000; // 1 hour
-const TIMESTAMP_TOLERANCE_MS = 300_000; // 5 minutes
+const RATE_LIMIT_WINDOW_MS = 3_600_000;
+const TIMESTAMP_TOLERANCE_MS = 300_000;
 
-serve(async (req) => {
-  // Top-level safety: if anything fails before auth, return 401 not 500
+// ── SAT-safe error message — NEVER expose internals to SAT ──────────────────
+const SAT_RETRY_MESSAGE = {
+  status: "temporarily_unavailable",
+  message: "El servidor esta experimentando un volumen inusualmente alto. Por favor espere un momento e intente de nuevo.",
+  retry_after_seconds: 30,
+};
+
+// ── Alert BC immediately on any SAT failure ─────────────────────────────────
+async function alertBC(reason: string, details: string) {
+  const msg = `🚨 *SAT API ALERT* 🚨\n\n*Reason:* ${reason}\n*Details:* ${details}\n*Time:* ${new Date().toISOString()}\n\n_This is a critical alert. The SAT API experienced a failure. Investigate immediately._`;
+
+  // Try WA alert
+  try {
+    const ac = new AbortController();
+    const t = setTimeout(() => ac.abort(), 5000);
+    await fetch(`${WA_API_URL}/api/wa/send`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${WA_API_TOKEN}`,
+      },
+      body: JSON.stringify({ phone: BC_PHONE, message: msg }),
+      signal: ac.signal,
+    });
+    clearTimeout(t);
+  } catch (e) {
+    console.error("[SAT-ALERT] WA alert failed:", e);
+  }
+
+  // Always log to console (picked up by docker logs)
+  console.error(`[SAT-ALERT] ${reason}: ${details}`);
+}
+
+// ── DB query with retry (2 attempts, 1s delay) ─────────────────────────────
+async function queryWithRetry<T>(
+  fn: () => Promise<{ data: T | null; error: any }>,
+  label: string,
+): Promise<T> {
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const { data, error } = await fn();
+      if (error) {
+        if (attempt < 2) {
+          console.warn(`[SAT] ${label} attempt ${attempt} failed: ${error.message}, retrying...`);
+          await new Promise((r) => setTimeout(r, 1000));
+          continue;
+        }
+        throw new Error(`${label}: ${error.message}`);
+      }
+      return data as T;
+    } catch (e) {
+      if (attempt < 2) {
+        console.warn(`[SAT] ${label} attempt ${attempt} exception, retrying...`);
+        await new Promise((r) => setTimeout(r, 1000));
+        continue;
+      }
+      throw e;
+    }
+  }
+  throw new Error(`${label}: all retries exhausted`);
+}
+
+Deno.serve(async (req) => {
+  // ── ABSOLUTE SAFETY NET — nothing escapes as an ugly error to SAT ───────
   let supabase: ReturnType<typeof createClient>;
   try {
     supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-  } catch {
-    return json({ error: "Service unavailable" }, 503, req);
+  } catch (e) {
+    await alertBC("Supabase client init failed", String(e));
+    return json(SAT_RETRY_MESSAGE, 503);
   }
 
   const url = new URL(req.url);
@@ -44,27 +109,31 @@ serve(async (req) => {
     ?? "unknown";
 
   try {
-    // ── HMAC Authentication ────────────────────────────────────────────
+    // ── CORS preflight ────────────────────────────────────────────────
+    if (req.method === "OPTIONS") {
+      return new Response(null, { status: 204 });
+    }
+
+    // ── HMAC Authentication ───────────────────────────────────────────
     const apiKey = req.headers.get("x-sat-key") ?? "";
     const timestamp = req.headers.get("x-sat-timestamp") ?? "";
     const signature = req.headers.get("x-sat-signature") ?? "";
 
-    // Verify API key
     if (!SAT_API_KEY || !SAT_API_SECRET || apiKey !== SAT_API_KEY) {
       logAccess(supabase, endpoint, null, 401, ipAddress, apiKey, "invalid_key").catch(() => {});
-      return json({ error: "Invalid or missing API key" }, 401, req);
+      return json({ error: "Invalid or missing API key" }, 401);
     }
 
-    // Verify timestamp (prevent replay attacks — 5 minute window)
     const ts = parseInt(timestamp);
     if (!ts || Math.abs(Date.now() - ts) > TIMESTAMP_TOLERANCE_MS) {
       logAccess(supabase, endpoint, null, 401, ipAddress, apiKey, "expired_timestamp").catch(() => {});
-      return json({ error: "Timestamp expired or invalid. Must be within 5 minutes." }, 401, req);
+      return json({ error: "Timestamp expired or invalid. Must be within 5 minutes." }, 401);
     }
 
-    // Verify HMAC-SHA256 signature
-    // Signature = HMAC-SHA256(secret, timestamp + method + path)
-    const path = url.pathname + url.search;
+    // Use X-SAT-Original-Path (set by nginx) so callers sign the public URL
+    const originalPath = req.headers.get("x-sat-original-path");
+    const internalPath = url.pathname + url.search;
+    const path = originalPath || internalPath;
     const signaturePayload = `${timestamp}${req.method}${path}`;
 
     const key = await crypto.subtle.importKey(
@@ -85,21 +154,21 @@ serve(async (req) => {
 
     if (signature !== expectedSignature) {
       logAccess(supabase, endpoint, null, 403, ipAddress, apiKey, "invalid_signature").catch(() => {});
-      return json({ error: "Invalid signature" }, 403, req);
+      return json({ error: "Invalid signature" }, 403);
     }
 
-    // ── Rate Limiting ──────────────────────────────────────────────────
+    // ── Rate Limiting ─────────────────────────────────────────────────
     const now = Date.now();
     while (rateLimitWindow.length > 0 && rateLimitWindow[0] < now - RATE_LIMIT_WINDOW_MS) {
       rateLimitWindow.shift();
     }
     if (rateLimitWindow.length >= RATE_LIMIT_MAX) {
       logAccess(supabase, endpoint, null, 429, ipAddress, apiKey, "rate_limited").catch(() => {});
-      return json({ error: "Rate limit exceeded (100/hour)" }, 429);
+      return json(SAT_RETRY_MESSAGE, 429);
     }
     rateLimitWindow.push(now);
 
-    // ── Route ──────────────────────────────────────────────────────────
+    // ── Route ─────────────────────────────────────────────────────────
     const params = Object.fromEntries(url.searchParams);
     const routePath = url.pathname.replace(/^\/sat-access\/?/, "").replace(/^\//, "");
 
@@ -137,13 +206,22 @@ serve(async (req) => {
         };
     }
 
-    logAccess(supabase, endpoint, params, 200, ipAddress, apiKey, "success");
+    logAccess(supabase, endpoint, params, 200, ipAddress, apiKey, "success").catch(() => {});
     return json(result);
 
   } catch (err) {
-    console.error("[SAT-ACCESS] Error:", (err as Error).message);
-    logAccess(supabase, endpoint, null, 500, ipAddress, "", "error").catch(() => {});
-    return json({ error: "Internal server error" }, 500, req);
+    // ── CRITICAL: SAT never sees an error — only the retry message ───
+    const errMsg = (err as Error).message ?? String(err);
+    console.error("[SAT-ACCESS] CRITICAL FAILURE:", errMsg);
+
+    // Alert BC immediately via every channel
+    await alertBC("Query/processing failure", errMsg);
+
+    // Log the failure
+    logAccess(supabase, endpoint, null, 503, ipAddress, "", `critical_error: ${errMsg}`).catch(() => {});
+
+    // Return friendly retry message — NOT an error
+    return json(SAT_RETRY_MESSAGE, 503);
   }
 });
 
@@ -154,29 +232,29 @@ async function handleTransactions(
   supabase: ReturnType<typeof createClient>,
   params: Record<string, string>,
 ) {
-  let query = supabase
-    .from("appointments")
-    .select(`
-      id, business_id, starts_at, price, payment_method, payment_status,
-      isr_withheld, iva_withheld, tax_base, provider_net,
-      service_name, status, created_at,
-      businesses!inner(name, rfc, tax_regime)
-    `)
-    .eq("status", "completed")
-    .eq("payment_status", "paid")
-    .order("starts_at", { ascending: false });
-
-  if (params.from) query = query.gte("starts_at", params.from);
-  if (params.to) query = query.lte("starts_at", `${params.to}T23:59:59Z`);
-  if (params.business_id) query = query.eq("business_id", params.business_id);
-  if (params.rfc) query = query.eq("businesses.rfc", params.rfc);
-
   const limit = Math.min(parseInt(params.limit ?? "100"), 1000);
   const offset = parseInt(params.offset ?? "0");
-  query = query.range(offset, offset + limit - 1);
 
-  const { data, error, count } = await query;
-  if (error) throw new Error(`Query failed: ${error.message}`);
+  const data = await queryWithRetry(() => {
+    let query = supabase
+      .from("appointments")
+      .select(`
+        id, business_id, starts_at, price, payment_method, payment_status,
+        isr_withheld, iva_withheld, tax_base, provider_net,
+        service_name, status, created_at,
+        businesses!inner(name, rfc, tax_regime)
+      `)
+      .eq("status", "completed")
+      .eq("payment_status", "paid")
+      .order("starts_at", { ascending: false });
+
+    if (params.from) query = query.gte("starts_at", params.from);
+    if (params.to) query = query.lte("starts_at", `${params.to}T23:59:59Z`);
+    if (params.business_id) query = query.eq("business_id", params.business_id);
+    if (params.rfc) query = query.eq("businesses.rfc", params.rfc);
+
+    return query.range(offset, offset + limit - 1);
+  }, "transactions");
 
   return {
     data: (data ?? []).map((t: any) => ({
@@ -194,7 +272,7 @@ async function handleTransactions(
       tax_base: t.tax_base ?? 0,
       provider_net: t.provider_net ?? 0,
     })),
-    pagination: { limit, offset, total: count },
+    pagination: { limit, offset },
   };
 }
 
@@ -210,22 +288,20 @@ async function handleWithholdings(
   const [yearStr, monthStr] = params.period.split("-");
   const year = parseInt(yearStr);
   const month = parseInt(monthStr);
-
-  let query = supabase
-    .from("tax_withholdings")
-    .select("*")
-    .eq("period_year", year)
-    .eq("period_month", month)
-    .order("created_at", { ascending: false });
-
-  if (params.business_id) query = query.eq("business_id", params.business_id);
-
   const limit = Math.min(parseInt(params.limit ?? "100"), 1000);
   const offset = parseInt(params.offset ?? "0");
-  query = query.range(offset, offset + limit - 1);
 
-  const { data, error } = await query;
-  if (error) throw new Error(`Query failed: ${error.message}`);
+  const data = await queryWithRetry(() => {
+    let query = supabase
+      .from("tax_withholdings")
+      .select("*")
+      .eq("period_year", year)
+      .eq("period_month", month)
+      .order("created_at", { ascending: false });
+
+    if (params.business_id) query = query.eq("business_id", params.business_id);
+    return query.range(offset, offset + limit - 1);
+  }, "withholdings");
 
   return { period: { year, month }, data: data ?? [] };
 }
@@ -237,17 +313,16 @@ async function handleProviders(
   supabase: ReturnType<typeof createClient>,
   params: Record<string, string>,
 ) {
-  let query = supabase
-    .from("businesses")
-    .select("id, name, rfc, tax_regime, tax_residency, city, state, is_active, created_at");
+  const data = await queryWithRetry(() => {
+    let query = supabase
+      .from("businesses")
+      .select("id, name, rfc, tax_regime, tax_residency, city, state, is_active, created_at");
 
-  if (params.rfc) query = query.eq("rfc", params.rfc);
-  if (params.business_id) query = query.eq("id", params.business_id);
+    if (params.rfc) query = query.eq("rfc", params.rfc);
+    if (params.business_id) query = query.eq("id", params.business_id);
+    return query;
+  }, "providers");
 
-  const { data, error } = await query;
-  if (error) throw new Error(`Query failed: ${error.message}`);
-
-  // Only return businesses with RFC (SAT doesn't need unregistered ones)
   return { data: (data ?? []).filter((b: any) => b.rfc) };
 }
 
@@ -264,16 +339,16 @@ async function handleSummary(
   const year = parseInt(yearStr);
   const month = parseInt(monthStr);
 
-  let query = supabase
-    .from("sat_monthly_reports")
-    .select("*")
-    .eq("period_year", year)
-    .eq("period_month", month);
+  const data = await queryWithRetry(() => {
+    let query = supabase
+      .from("sat_monthly_reports")
+      .select("*")
+      .eq("period_year", year)
+      .eq("period_month", month);
 
-  if (params.business_id) query = query.eq("business_id", params.business_id);
-
-  const { data, error } = await query;
-  if (error) throw new Error(`Query failed: ${error.message}`);
+    if (params.business_id) query = query.eq("business_id", params.business_id);
+    return query;
+  }, "summary");
 
   return {
     period: { year, month },
@@ -303,14 +378,14 @@ async function handlePlatformDeclaration(
   const year = parseInt(yearStr);
   const month = parseInt(monthStr);
 
-  const { data, error } = await supabase
-    .from("platform_sat_declarations")
-    .select("*")
-    .eq("period_year", year)
-    .eq("period_month", month)
-    .maybeSingle();
-
-  if (error) throw new Error(`Query failed: ${error.message}`);
+  const data = await queryWithRetry(() => {
+    return supabase
+      .from("platform_sat_declarations")
+      .select("*")
+      .eq("period_year", year)
+      .eq("period_month", month)
+      .maybeSingle();
+  }, "platform");
 
   if (!data) {
     return { period: { year, month }, status: "not_generated" };
@@ -323,14 +398,11 @@ async function handlePlatformDeclaration(
       rfc: "BEA260313MI8",
       total_businesses: data.total_businesses,
       total_transactions: data.total_transactions,
-      total_revenue: data.total_revenue_all,
+      total_revenue: data.total_revenue,
       iva_collected: data.total_iva_collected,
       isr_collected: data.total_isr_collected,
-      commissions_earned: data.total_commissions_earned,
-      paid_to_sat: data.total_paid_to_sat,
-      bank_interest: data.bank_interest_earned,
+      commissions_earned: data.total_commissions,
       status: data.status,
-      submitted_at: data.submitted_at,
     },
   };
 }
@@ -367,7 +439,7 @@ async function logAccess(
   });
 }
 
-function json(body: unknown, status = 200, req?: Request) {
+function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body, null, 2), {
     status,
     headers: {
