@@ -10,8 +10,6 @@ import '../config/constants.dart';
 import '../config/theme_extension.dart';
 import '../models/curate_result.dart';
 import '../providers/booking_flow_provider.dart';
-import '../providers/profile_provider.dart';
-import '../providers/security_provider.dart';
 import '../services/supabase_client.dart';
 import '../services/toast_service.dart';
 import '../widgets/cinematic_question_text.dart';
@@ -1109,16 +1107,6 @@ class _NoResultsWithNearbySalonsState
   }
 
   void _handleInvite(DiscoveredSalon salon) {
-    // Identity gate: verified phone OR verified email required
-    final profile = ref.read(profileProvider);
-    final sec = ref.read(securityProvider);
-    if (!profile.hasVerifiedPhone && !sec.isEmailConfirmed) {
-      ToastService.showWarning(
-        'Verifica tu telefono o email en Ajustes > Seguridad para invitar salones.',
-      );
-      return;
-    }
-
     setState(() => _invitedIds.add(salon.id));
 
     final phone = salon.whatsapp ?? salon.phone;

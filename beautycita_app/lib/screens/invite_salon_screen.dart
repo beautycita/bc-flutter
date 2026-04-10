@@ -7,10 +7,8 @@ import '../config/constants.dart';
 import '../models/curate_result.dart';
 import '../providers/contact_match_provider.dart';
 import '../providers/profile_provider.dart';
-import '../providers/security_provider.dart';
 import '../services/location_service.dart';
 import '../services/supabase_client.dart';
-import '../services/toast_service.dart';
 
 // WhatsApp-inspired colors
 const waGreen = Color(0xFF075E54);
@@ -390,24 +388,7 @@ class _InviteSalonScreenState extends ConsumerState<InviteSalonScreen> {
     );
   }
 
-  /// Check if user has verified identity (phone or email).
-  bool _hasVerifiedIdentity() {
-    final profile = ref.read(profileProvider);
-    if (profile.hasVerifiedPhone) return true;
-    final sec = ref.read(securityProvider);
-    if (sec.isEmailConfirmed) return true;
-    return false;
-  }
-
   Future<void> _handleInvite(DiscoveredSalon salon) async {
-    // Identity gate: verified phone OR verified email required
-    if (!_hasVerifiedIdentity()) {
-      ToastService.showWarning(
-        'Verifica tu telefono o email en Ajustes > Seguridad para invitar salones.',
-      );
-      return;
-    }
-
     setState(() => _invitedIds.add(salon.id));
 
     // 1. Open WhatsApp with pre-filled message
@@ -441,13 +422,6 @@ class _InviteSalonScreenState extends ConsumerState<InviteSalonScreen> {
   }
 
   Future<void> _handleContactInvite(EnrichedMatch match) async {
-    if (!_hasVerifiedIdentity()) {
-      ToastService.showWarning(
-        'Verifica tu telefono o email en Ajustes > Seguridad para invitar salones.',
-      );
-      return;
-    }
-
     setState(() => _invitedIds.add(match.salonId));
 
     final phone = match.matchedPhone;

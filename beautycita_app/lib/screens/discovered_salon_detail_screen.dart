@@ -5,10 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../config/constants.dart';
 import '../config/palettes.dart';
-import '../providers/profile_provider.dart';
-import '../providers/security_provider.dart';
 import '../services/supabase_client.dart';
-import '../services/toast_service.dart';
 import 'invite_salon_screen.dart' show DiscoveredSalon;
 
 /// WhatsApp chat background color
@@ -409,18 +406,8 @@ class _DiscoveredSalonDetailScreenState extends ConsumerState<DiscoveredSalonDet
                     },
                   ),
 
-                  if (widget.salon.interestCount > 0) ...[
-                    const SizedBox(height: 14),
-                    Center(
-                      child: Text(
-                        '${widget.salon.interestCount} clientes esperando que se registre',
-                        style: GoogleFonts.nunito(
-                          fontSize: 13,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                        ),
-                      ),
-                    ),
-                  ],
+                  // Interest count hidden from user-facing view;
+                  // visible only in admin/business panel.
 
                   const SizedBox(height: 28),
                 ],
@@ -486,16 +473,6 @@ class _DiscoveredSalonDetailScreenState extends ConsumerState<DiscoveredSalonDet
   }
 
   void _handleInvite() {
-    // Identity gate: verified phone OR verified email required
-    final profile = ref.read(profileProvider);
-    final sec = ref.read(securityProvider);
-    if (!profile.hasVerifiedPhone && !sec.isEmailConfirmed) {
-      ToastService.showWarning(
-        'Verifica tu telefono o email en Ajustes > Seguridad para invitar salones.',
-      );
-      return;
-    }
-
     final phone = widget.salon.whatsapp ?? widget.salon.phone;
     if (phone != null) {
       final params = <String, String>{
