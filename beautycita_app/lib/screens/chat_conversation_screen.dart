@@ -13,6 +13,7 @@ import '../services/supabase_client.dart';
 import 'package:beautycita/services/toast_service.dart';
 import 'package:beautycita/widgets/media_viewer.dart';
 import 'package:beautycita/services/media_service.dart';
+import 'package:beautycita/widgets/chat_animations.dart';
 
 class ChatConversationScreen extends ConsumerStatefulWidget {
   final String threadId;
@@ -349,14 +350,22 @@ class _ChatConversationScreenState
                   itemCount: allMessages.length + (_isSending ? 1 : 0),
                   itemBuilder: (context, index) {
                     if (index == allMessages.length && _isSending) {
-                      return _TypingIndicator();
+                      return const WaveTypingIndicator();
                     }
                     final msg = allMessages[index];
-                    return _MessageBubble(
+                    // Only animate recent messages (last 3) to avoid
+                    // animating the entire history on first load
+                    final isRecent = index >= allMessages.length - 3;
+                    final bubble = _MessageBubble(
                       message: msg,
                       isAphroditeThread: isAphrodite,
                       isSupportThread: isSupport,
                       isErosThread: isEros,
+                    );
+                    if (!isRecent) return bubble;
+                    return AnimatedBubbleEntrance(
+                      isFromUser: msg.isFromUser,
+                      child: bubble,
                     );
                   },
                 );
@@ -781,102 +790,8 @@ class _TimeStamp extends StatelessWidget {
   }
 }
 
-/// Typing indicator (three bouncing dots).
-class _TypingIndicator extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 4,
-                  offset: const Offset(0, 1),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _BouncingDot(delay: 0),
-                const SizedBox(width: 4),
-                _BouncingDot(delay: 150),
-                const SizedBox(width: 4),
-                _BouncingDot(delay: 300),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Single bouncing dot for the typing indicator.
-class _BouncingDot extends StatefulWidget {
-  final int delay;
-
-  const _BouncingDot({required this.delay});
-
-  @override
-  State<_BouncingDot> createState() => _BouncingDotState();
-}
-
-class _BouncingDotState extends State<_BouncingDot>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _animation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-    );
-    _animation = Tween<double>(begin: 0, end: -6).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
-    Future.delayed(Duration(milliseconds: widget.delay), () {
-      if (mounted) _controller.repeat(reverse: true);
-    });
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _animation,
-      builder: (context, child) {
-        return Transform.translate(
-          offset: Offset(0, _animation.value),
-          child: child,
-        );
-      },
-      child: Container(
-        width: 8,
-        height: 8,
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-          shape: BoxShape.circle,
-        ),
-      ),
-    );
-  }
-}
+// Typing indicator and bouncing dots replaced by WaveTypingIndicator
+// from chat_animations.dart — smoother wave animation matching WA's style.
 
 /// Quick action chips above the input bar.
 class _QuickActionChips extends StatelessWidget {
@@ -964,7 +879,7 @@ class _ActionChip extends StatelessWidget {
 }
 
 /// Bottom input bar with text field, camera, and send button.
-class _InputBar extends StatelessWidget {
+class _InputBar extends StatefulWidget {
   final TextEditingController controller;
   final bool isSending;
   final bool isAphrodite;
@@ -980,6 +895,31 @@ class _InputBar extends StatelessWidget {
     required this.onSend,
     required this.onCamera,
   });
+
+  @override
+  State<_InputBar> createState() => _InputBarState();
+}
+
+class _InputBarState extends State<_InputBar> {
+  bool _hasText = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _hasText = widget.controller.text.trim().isNotEmpty;
+    widget.controller.addListener(_onTextChanged);
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_onTextChanged);
+    super.dispose();
+  }
+
+  void _onTextChanged() {
+    final has = widget.controller.text.trim().isNotEmpty;
+    if (has != _hasText) setState(() => _hasText = has);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1003,9 +943,9 @@ class _InputBar extends StatelessWidget {
       child: Row(
         children: [
           // Camera button
-          if (showCamera) ...[
+          if (widget.showCamera) ...[
             GestureDetector(
-              onTap: isSending ? null : onCamera,
+              onTap: widget.isSending ? null : widget.onCamera,
               child: Container(
                 width: 44,
                 height: 44,
@@ -1015,7 +955,7 @@ class _InputBar extends StatelessWidget {
                 ),
                 child: Icon(
                   Icons.camera_alt_rounded,
-                  color: isSending
+                  color: widget.isSending
                       ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)
                       : Theme.of(context).colorScheme.primary,
                   size: 22,
@@ -1032,8 +972,8 @@ class _InputBar extends StatelessWidget {
                 borderRadius: BorderRadius.circular(24),
               ),
               child: TextField(
-                controller: controller,
-                enabled: !isSending,
+                controller: widget.controller,
+                enabled: !widget.isSending,
                 maxLines: 4,
                 minLines: 1,
                 textCapitalization: TextCapitalization.sentences,
@@ -1050,38 +990,17 @@ class _InputBar extends StatelessWidget {
                     vertical: 10,
                   ),
                 ),
-                onSubmitted: (_) => onSend(),
+                onSubmitted: (_) => widget.onSend(),
               ),
             ),
           ),
           const SizedBox(width: 8),
-          // Send button
-          GestureDetector(
-            onTap: isSending ? null : onSend,
-            child: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                gradient: isSending
-                    ? null
-                    : Theme.of(context).extension<BCThemeExtension>()!.primaryGradient,
-                color: isSending ? Theme.of(context).dividerColor : null,
-                shape: BoxShape.circle,
-              ),
-              child: isSending
-                  ? Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                    )
-                  : const Icon(
-                      Icons.send_rounded,
-                      color: Colors.white,
-                      size: 20,
-                    ),
-            ),
+          // Morphing mic ↔ send button (WA-style)
+          MorphingSendButton(
+            hasText: _hasText,
+            isSending: widget.isSending,
+            onSend: widget.onSend,
+            activeGradient: Theme.of(context).extension<BCThemeExtension>()?.primaryGradient,
           ),
         ],
       ),

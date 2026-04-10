@@ -11,7 +11,7 @@ class AuthLayout extends StatelessWidget {
   final Widget formContent;
   const AuthLayout({super.key, required this.formContent});
 
-  static const _goldAccent = Color(0xFFFFB300);
+  static const _lilacAccent = Color(0xFFC8A2C8);
 
   @override
   Widget build(BuildContext context) {
@@ -63,7 +63,7 @@ class AuthLayout extends StatelessWidget {
                     children: [
                       ShaderMask(
                         shaderCallback: (bounds) => const LinearGradient(
-                          colors: [Colors.white, _goldAccent],
+                          colors: [Colors.white, _lilacAccent],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ).createShader(bounds),
@@ -153,7 +153,7 @@ class AuthLayout extends StatelessWidget {
                     children: [
                       ShaderMask(
                         shaderCallback: (bounds) => const LinearGradient(
-                          colors: [Colors.white, _goldAccent],
+                          colors: [Colors.white, _lilacAccent],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ).createShader(bounds),
@@ -222,7 +222,7 @@ class AuthLayout extends StatelessWidget {
               children: [
                 ShaderMask(
                   shaderCallback: (bounds) => const LinearGradient(
-                    colors: [Colors.white, _goldAccent],
+                    colors: [Colors.white, _lilacAccent],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ).createShader(bounds),

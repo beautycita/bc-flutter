@@ -70,6 +70,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   }
 
   Future<void> _checkAuthAndNavigate() async {
+    // Track when splash started so we can enforce a minimum visible time
+    final splashStart = DateTime.now();
+
     // Wait for Supabase to finish initializing (15s timeout prevents infinite hang)
     await supabaseReady.future.timeout(
       const Duration(seconds: 15),
@@ -91,7 +94,13 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       if (kDebugMode) debugPrint('[SplashScreen] checkRegistration failed: $e');
     }
 
-    await Future.delayed(AppConstants.splashDuration);
+    // Enforce minimum 3s visible time so the logo reveal animation
+    // (800ms fade-in + shimmer) is fully visible before navigating.
+    final elapsed = DateTime.now().difference(splashStart);
+    final remaining = const Duration(seconds: 3) - elapsed;
+    if (remaining > Duration.zero) {
+      await Future.delayed(remaining);
+    }
 
     if (!mounted) return;
 

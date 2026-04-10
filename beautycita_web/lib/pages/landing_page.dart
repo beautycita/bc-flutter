@@ -2131,15 +2131,15 @@ class _LandingPageState extends State<LandingPage>
           _FooterLink('Demo', key: _demoKey),
         ]),
         _footerCol('Empresa', [
-          _FooterLink('Sobre nosotros'),
+          _FooterLink('Sobre nosotros', route: '/porque-beautycita'),
           _FooterLink('Terminos', route: '/terminos'),
           _FooterLink('Privacidad', route: '/privacidad'),
-          _FooterLink('Contacto'),
+          _FooterLink('Contacto', route: '/soporte'),
         ]),
         _footerCol('Soporte', [
-          _FooterLink('Centro de ayuda'),
-          _FooterLink('WhatsApp'),
-          _FooterLink('soporte@beautycita.com'),
+          _FooterLink('Centro de ayuda', route: '/soporte'),
+          _FooterLink('WhatsApp', url: 'https://wa.me/527206777800'),
+          _FooterLink('soporte@beautycita.com', url: 'mailto:soporte@beautycita.com'),
         ]),
       ],
     );
@@ -2159,6 +2159,8 @@ class _LandingPageState extends State<LandingPage>
               onTap: () {
                 if (l.key != null) {
                   _scrollToSection(l.key!);
+                } else if (l.url != null) {
+                  launchUrl(Uri.parse(l.url!), mode: LaunchMode.externalApplication);
                 } else if (l.route != null) {
                   context.go(l.route!);
                 }
@@ -3106,5 +3108,6 @@ class _FooterLink {
   final String label;
   final GlobalKey? key;
   final String? route;
-  const _FooterLink(this.label, {this.key, this.route});
+  final String? url; // external URL (opens in new tab)
+  const _FooterLink(this.label, {this.key, this.route, this.url});
 }

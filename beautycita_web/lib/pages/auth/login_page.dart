@@ -8,7 +8,6 @@ import 'package:beautycita_core/theme.dart';
 
 import '../../config/router.dart';
 import '../../providers/auth_provider.dart';
-import '../../services/webauthn_service.dart';
 import 'auth_layout.dart';
 
 /// Login page — email/password + Google/Apple OAuth.
@@ -27,12 +26,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   bool _obscurePassword = true;
   bool _retrying = false;
   bool _initializing = true;
-  bool _webauthnSupported = false;
 
   @override
   void initState() {
     super.initState();
-    _webauthnSupported = WebAuthnService.isSupported();
     _waitForInit();
   }
 
@@ -55,14 +52,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
-  }
-
-  Future<void> _handlePasskeyLogin() async {
-    final notifier = ref.read(authProvider.notifier);
-    final success = await notifier.loginWithPasskey();
-    if (success && mounted) {
-      await _navigateByRole(notifier);
-    }
   }
 
   Future<void> _handleLogin() async {
@@ -161,71 +150,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 ),
                 const SizedBox(height: BCSpacing.xl),
 
-                // ── Passkey / biometric button ─────────────────────────────
-                if (_webauthnSupported) ...[
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFFFFB300), Color(0xFFFFC107)],
-                        begin: Alignment.centerLeft,
-                        end: Alignment.centerRight,
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(12),
-                        onTap: authState.isLoading ? null : _handlePasskeyLogin,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 14,
-                            horizontal: BCSpacing.lg,
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.fingerprint,
-                                color: Colors.brown.shade900,
-                                size: 26,
-                              ),
-                              const SizedBox(width: BCSpacing.sm),
-                              Text(
-                                'Iniciar con biometrico',
-                                style: theme.textTheme.titleMedium?.copyWith(
-                                  color: Colors.brown.shade900,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: BCSpacing.lg),
-
-                  // ── Divider ──────────────────────────────────────────────
-                  Row(
-                    children: [
-                      const Expanded(child: Divider()),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: BCSpacing.md),
-                        child: Text(
-                          'o inicia con email',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurface
-                                .withValues(alpha: 0.5),
-                          ),
-                        ),
-                      ),
-                      const Expanded(child: Divider()),
-                    ],
-                  ),
-                  const SizedBox(height: BCSpacing.lg),
-                ],
+                // Biometric / passkey login is mobile-only (handled in the app).
+                // Desktop web uses email + OAuth.
 
                 // ── Email ──────────────────────────────────────────────────
                 TextFormField(

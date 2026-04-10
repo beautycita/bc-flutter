@@ -52,7 +52,9 @@ import '../pages/client/reservar_page.dart';
 import '../pages/public/invite_public_page.dart';
 import '../pages/public/porque_page.dart';
 import '../pages/public/porque_cinema.dart';
+import '../pages/public/privacidad_page.dart';
 import '../pages/public/salon_page.dart';
+import '../pages/public/terminos_page.dart';
 import '../pages/auth/callback_page.dart';
 import '../pages/auth/forgot_page.dart';
 import '../pages/auth/login_page.dart';
@@ -155,6 +157,8 @@ abstract final class WebRoutes {
   // Public
   static const String soporte = '/soporte';
   static const String registro = '/registro';
+  static const String terminos = '/terminos';
+  static const String privacidad = '/privacidad';
 }
 
 /// Map user role → correct portal route.
@@ -186,6 +190,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isPublicRoute = path == '/' ||
           path.startsWith('/auth') ||
           path == '/soporte' ||
+          path == '/terminos' ||
+          path == '/privacidad' ||
           path == WebRoutes.porqueBc ||
           path.startsWith('/demo') ||
           path.startsWith('/explorar') ||
@@ -255,6 +261,18 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: WebRoutes.soporte,
         builder: (context, state) => const SoportePage(),
+      ),
+
+      // ── Terms of service (public, no shell) ───────────────────────────
+      GoRoute(
+        path: WebRoutes.terminos,
+        builder: (context, state) => const TerminosPage(),
+      ),
+
+      // ── Privacy policy (public, no shell) ─────────────────────────────
+      GoRoute(
+        path: WebRoutes.privacidad,
+        builder: (context, state) => const PrivacidadPage(),
       ),
 
       // ── Salon registration (public, no shell) ─────────────────────────
