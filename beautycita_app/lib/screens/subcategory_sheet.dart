@@ -60,7 +60,7 @@ class SubcategorySheet extends StatelessWidget {
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.1),
+                color: const Color(0xFF000000).withValues(alpha: 0.1),
                 blurRadius: 20,
                 offset: const Offset(0, -4),
               ),
@@ -149,15 +149,22 @@ class SubcategorySheet extends StatelessWidget {
                         )
                             .animate()
                             .fadeIn(
-                              duration: 300.ms,
-                              delay: (50 * index).ms,
+                              duration: 350.ms,
+                              delay: (65 * index).ms,
                               curve: Curves.easeOut,
                             )
-                            .slideX(
-                              begin: 0.08,
+                            .slideY(
+                              begin: 0.4,
                               end: 0,
-                              duration: 300.ms,
-                              delay: (50 * index).ms,
+                              duration: 400.ms,
+                              delay: (65 * index).ms,
+                              curve: Curves.easeOutCubic,
+                            )
+                            .scale(
+                              begin: const Offset(0.92, 0.92),
+                              end: const Offset(1, 1),
+                              duration: 350.ms,
+                              delay: (65 * index).ms,
                               curve: Curves.easeOutCubic,
                             );
                       }).toList(),
@@ -186,22 +193,60 @@ class _SubcategoryPill extends StatefulWidget {
   State<_SubcategoryPill> createState() => _SubcategoryPillState();
 }
 
-class _SubcategoryPillState extends State<_SubcategoryPill> {
+class _SubcategoryPillState extends State<_SubcategoryPill>
+    with SingleTickerProviderStateMixin {
   bool _isPressed = false;
+  bool _showShimmer = false;
+  late AnimationController _shimmerController;
+
+  @override
+  void initState() {
+    super.initState();
+    _shimmerController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+  }
+
+  @override
+  void dispose() {
+    _shimmerController.dispose();
+    super.dispose();
+  }
+
+  void _playShimmer() {
+    setState(() => _showShimmer = true);
+    _shimmerController.forward(from: 0).then((_) {
+      if (mounted) setState(() => _showShimmer = false);
+    });
+  }
 
   bool _hasItems() {
     final items = widget.subcategory.items;
     return items != null && items.isNotEmpty;
   }
 
-  void _handleTap(BuildContext context) {
+  void _handleTap(BuildContext ctx) {
+    _playShimmer();
+    final navigator = Navigator.of(ctx);
+    final router = GoRouter.of(ctx);
     if (_hasItems()) {
-      _showItemsSheet(context);
+      // Short delay so shimmer is visible before sheet opens
+      Future.delayed(const Duration(milliseconds: 250), () {
+        if (mounted) _showItemsSheet(context);
+      });
     } else {
-      Navigator.of(context).pop();
+      // Capture values before async gap
       final colorValue = widget.categoryColor.toARGB32();
-      context.push(
-          '/providers?category=${Uri.encodeComponent(widget.subcategory.categoryId)}&subcategory=${Uri.encodeComponent(widget.subcategory.nameEs)}&color=$colorValue');
+      final catId = widget.subcategory.categoryId;
+      final nameEs = widget.subcategory.nameEs;
+      // Short delay so shimmer is visible before navigation
+      Future.delayed(const Duration(milliseconds: 350), () {
+        if (!mounted) return;
+        navigator.pop();
+        router.push(
+            '/providers?category=${Uri.encodeComponent(catId)}&subcategory=${Uri.encodeComponent(nameEs)}&color=$colorValue');
+      });
     }
   }
 
@@ -233,49 +278,75 @@ class _SubcategoryPillState extends State<_SubcategoryPill> {
         scale: _isPressed ? 0.96 : 1.0,
         duration: const Duration(milliseconds: 150),
         curve: _isPressed ? Curves.easeInCubic : Curves.elasticOut,
-        child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        curve: Curves.easeOutCubic,
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-        decoration: BoxDecoration(
-          color: _isPressed ? color.withValues(alpha: 0.12) : Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: Theme.of(context).dividerColor,
-            width: 1,
-          ),
-          boxShadow: _isPressed
-              ? []
-              : [
-                  BoxShadow(
-                    color: color.withValues(alpha: 0.08),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
+        child: AnimatedBuilder(
+          animation: _shimmerController,
+          builder: (context, child) {
+            final pillChild = AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              curve: Curves.easeOutCubic,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+              decoration: BoxDecoration(
+                color: _isPressed ? color.withValues(alpha: 0.12) : const Color(0xFFFFFFFF),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: Theme.of(context).dividerColor,
+                  width: 1,
+                ),
+                boxShadow: _isPressed
+                    ? []
+                    : [
+                        BoxShadow(
+                          color: color.withValues(alpha: 0.08),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    widget.subcategory.nameEs,
+                    style: GoogleFonts.poppins(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: color.withValues(alpha: 0.85),
+                    ),
                   ),
+                  if (_hasItems()) ...[
+                    const SizedBox(width: 4),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      color: color.withValues(alpha: 0.5),
+                      size: 20,
+                    ),
+                  ],
                 ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              widget.subcategory.nameEs,
-              style: GoogleFonts.poppins(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: color.withValues(alpha: 0.85),
               ),
-            ),
-            if (_hasItems()) ...[
-              const SizedBox(width: 4),
-              Icon(
-                Icons.chevron_right_rounded,
-                color: color.withValues(alpha: 0.5),
-                size: 20,
-              ),
-            ],
-          ],
+            );
+
+            if (!_showShimmer) return pillChild;
+
+            // Shimmer gradient sweep left to right
+            final shimmerOffset = -1.0 + 2.0 * _shimmerController.value;
+            return ShaderMask(
+              blendMode: BlendMode.srcATop,
+              shaderCallback: (bounds) {
+                return LinearGradient(
+                  begin: Alignment(shimmerOffset - 0.5, 0),
+                  end: Alignment(shimmerOffset + 0.5, 0),
+                  colors: [
+                    const Color(0xFFFFFFFF).withValues(alpha: 0.0),
+                    color.withValues(alpha: 0.35),
+                    const Color(0xFFFFFFFF).withValues(alpha: 0.0),
+                  ],
+                  stops: const [0.0, 0.5, 1.0],
+                ).createShader(bounds);
+              },
+              child: pillChild,
+            );
+          },
         ),
-      ),
       ),
     );
   }
@@ -308,7 +379,7 @@ class _ServiceItemsSheet extends StatelessWidget {
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.1),
+                color: const Color(0xFF000000).withValues(alpha: 0.1),
                 blurRadius: 20,
                 offset: const Offset(0, -4),
               ),
