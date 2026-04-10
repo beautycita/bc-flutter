@@ -52,6 +52,11 @@ serve(async (req) => {
       return json({ error: "business_id and amount required" }, 400, corsHeaders);
     }
 
+    // Validate expiration date is in the future (if provided)
+    if (expires_at && new Date(expires_at) <= new Date()) {
+      return json({ error: "Expiration must be in the future" }, 400, corsHeaders);
+    }
+
     // Get business Stripe account
     const { data: business } = await supabase
       .from("businesses")

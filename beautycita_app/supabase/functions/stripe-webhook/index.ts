@@ -387,27 +387,26 @@ serve(async (req) => {
             const isProduct = paymentIntent.metadata?.type === "product";
 
             // Record commission for EVERY payment (3% services, 10% products)
+            // Uses upsert with onConflict to prevent duplicate commission records
             try {
-              const { data: existingComm } = await supabase
-                .from("commission_records")
-                .select("id")
-                .eq("appointment_id", bookingId)
-                .in("source", ["appointment", "product_sale"])
-                .maybeSingle();
-
-              if (!existingComm && commission > 0) {
-                await supabase.from("commission_records").insert({
+              if (commission > 0) {
+                const commSource = isProduct ? "product_sale" : "appointment";
+                const { error: commError } = await supabase.from("commission_records").upsert({
                   business_id: businessId,
                   appointment_id: isProduct ? null : bookingId,
                   order_id: isProduct ? bookingId : null,
                   amount: commission,
                   rate: isProduct ? 0.10 : 0.03,
-                  source: isProduct ? "product_sale" : "appointment",
+                  source: commSource,
                   period_month: new Date().getMonth() + 1,
                   period_year: new Date().getFullYear(),
                   status: "collected",
-                });
-                console.log(`[STRIPE-WEBHOOK] Commission recorded: $${commission} (${isProduct ? "product 10%" : "service 3%"}) for ${businessId}`);
+                }, { onConflict: "appointment_id,source" });
+                if (commError) {
+                  console.error(`[STRIPE-WEBHOOK] Commission upsert error:`, commError);
+                } else {
+                  console.log(`[STRIPE-WEBHOOK] Commission recorded: $${commission} (${isProduct ? "product 10%" : "service 3%"}) for ${businessId}`);
+                }
               }
             } catch (commErr) {
               console.error(`[STRIPE-WEBHOOK] Commission record error (non-fatal):`, commErr);

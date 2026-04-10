@@ -194,6 +194,8 @@ serve(async (req) => {
     let taxInfo: TaxWithholding | null = null;
 
     if (taxWithholdingEnabled) {
+      // IMPORTANT: Use chargeAmount (not servicePrice) so deposit-only payments
+      // calculate withholding on the actual amount charged, not the full service price.
       taxInfo = calculateWithholding(
         chargeAmount,
         PLATFORM_FEE_PERCENT,

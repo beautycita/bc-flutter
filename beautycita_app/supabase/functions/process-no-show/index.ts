@@ -106,13 +106,17 @@ serve(async (req) => {
       return json({ error: "Only the business owner can mark appointments as no-show" }, 403, req);
     }
 
-    // Check appointment status
+    // Validate appointment status transition: only confirmed → no_show is valid
+    const VALID_NO_SHOW_FROM = ["confirmed"] as const;
+
     if (appointment.status === "no_show") {
       return json({ error: "Appointment is already marked as no-show" }, 400, req);
     }
 
-    if (appointment.status !== "confirmed") {
-      return json({ error: "Only confirmed appointments can be marked as no-show" }, 400, req);
+    if (!VALID_NO_SHOW_FROM.includes(appointment.status as typeof VALID_NO_SHOW_FROM[number])) {
+      return json({
+        error: `Cannot mark as no-show: appointment status is '${appointment.status}'. Only confirmed appointments can be marked as no-show.`
+      }, 400, req);
     }
 
     if (appointment.payment_status !== "paid") {
