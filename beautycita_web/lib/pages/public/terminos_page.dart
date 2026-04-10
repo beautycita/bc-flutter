@@ -29,33 +29,142 @@ class TerminosPage extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text('Ultima actualizacion: 10 de abril de 2026',
                     style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey)),
+                const SizedBox(height: 12),
+                Text('BEAUTYCITA, S.A. de C.V. (RFC: BEA260313MI8)\nAvenida Manuel Corona, Alazan 11A, C.P. 48290, Jalisco, Mexico',
+                    style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey)),
                 const SizedBox(height: 32),
+
                 _section('1. Aceptacion de los Terminos',
-                    'Al acceder y utilizar la plataforma BeautyCita ("la Plataforma"), usted acepta estos Terminos y Condiciones en su totalidad. Si no esta de acuerdo con alguna parte, no utilice la Plataforma.'),
+                    'Al descargar, instalar, o utilizar la plataforma BeautyCita ("la Plataforma"), incluyendo la aplicacion movil y el sitio web beautycita.com, usted acepta estos Terminos y Condiciones en su totalidad. Si no esta de acuerdo con alguna disposicion, no utilice la Plataforma. El uso continuado despues de cualquier modificacion constituye su aceptacion de los terminos actualizados.'),
+
                 _section('2. Descripcion del Servicio',
-                    'BeautyCita es una plataforma tecnologica que conecta a usuarios con salones de belleza y profesionales de servicios esteticos. BeautyCita facilita la reserva de citas pero no es proveedor directo de los servicios de belleza.'),
+                    'BeautyCita es un agente inteligente de reservas que conecta a usuarios con salones de belleza y profesionales de servicios esteticos en Mexico. La Plataforma:\n\n'
+                    '  a) Facilita la busqueda, seleccion y reserva de servicios de belleza\n'
+                    '  b) Procesa pagos de forma segura entre usuarios y proveedores\n'
+                    '  c) Realiza retenciones fiscales conforme a la legislacion mexicana\n'
+                    '  d) Ofrece herramientas de gestion para salones registrados\n'
+                    '  e) Proporciona un asistente virtual de belleza (Aphrodite) y soporte al cliente\n\n'
+                    'BeautyCita NO es proveedor directo de servicios de belleza. Los servicios son prestados exclusivamente por los salones y profesionales registrados, quienes son responsables de la calidad, seguridad e higiene de los mismos.'),
+
                 _section('3. Registro y Cuenta',
-                    'Para utilizar ciertos servicios, debera crear una cuenta proporcionando informacion veraz y actualizada. Usted es responsable de mantener la confidencialidad de sus credenciales de acceso.'),
-                _section('4. Reservas y Pagos',
-                    'Las reservas realizadas a traves de la Plataforma constituyen un acuerdo entre el usuario y el salon. Los pagos se procesan de forma segura a traves de proveedores certificados (Stripe). BeautyCita no almacena datos de tarjetas de credito.'),
-                _section('5. Cancelaciones y Reembolsos',
-                    'Las politicas de cancelacion varian por salon. En general, las cancelaciones con mas de 2 horas de anticipacion son gratuitas. Los reembolsos se acreditan al saldo de la cuenta o al metodo de pago original segun corresponda.'),
-                _section('6. Obligaciones del Usuario',
-                    'El usuario se compromete a: (a) proporcionar informacion veraz, (b) no utilizar la Plataforma para fines ilicitos, (c) respetar las citas reservadas, (d) tratar con respeto al personal de los salones.'),
-                _section('7. Obligaciones de los Salones',
-                    'Los salones registrados se comprometen a: (a) cumplir con todas las leyes y regulaciones aplicables, (b) mantener sus precios y disponibilidad actualizados, (c) cumplir con los servicios reservados, (d) cumplir con obligaciones fiscales (SAT).'),
-                _section('8. Comisiones y Facturacion',
-                    'BeautyCita opera bajo un modelo de comision por transaccion. Las retenciones de ISR e IVA se realizan conforme a los articulos 113-A de LISR y 18-J de LIVA. Los salones reciben CFDI por las retenciones efectuadas.'),
-                _section('9. Propiedad Intelectual',
-                    'Todo el contenido de la Plataforma, incluyendo pero no limitado a disenos, logotipos, textos y software, es propiedad de BeautyCita o sus licenciantes y esta protegido por leyes de propiedad intelectual.'),
-                _section('10. Limitacion de Responsabilidad',
-                    'BeautyCita no sera responsable por: (a) la calidad de los servicios prestados por los salones, (b) danos indirectos o consecuenciales, (c) interrupciones del servicio por causas de fuerza mayor.'),
-                _section('11. Modificaciones',
-                    'BeautyCita se reserva el derecho de modificar estos terminos en cualquier momento. Los cambios seran notificados a traves de la Plataforma. El uso continuado despues de los cambios constituye aceptacion.'),
-                _section('12. Ley Aplicable',
-                    'Estos terminos se rigen por las leyes de los Estados Unidos Mexicanos. Cualquier controversia sera sometida a los tribunales competentes de Jalisco, Mexico.'),
-                _section('13. Contacto',
-                    'Para preguntas sobre estos terminos, contactenos en soporte@beautycita.com o al +52 (720) 677-7800.'),
+                    'Para utilizar la Plataforma se requiere crear una cuenta. El registro se realiza mediante:\n\n'
+                    '  a) Autenticacion biometrica del dispositivo (huella digital o reconocimiento facial)\n'
+                    '  b) Inicio de sesion con Google o Apple\n'
+                    '  c) Correo electronico y contrasena\n\n'
+                    'La autenticacion biometrica se procesa exclusivamente en el dispositivo del usuario. BeautyCita nunca recibe, transmite ni almacena datos biometricos en sus servidores.\n\n'
+                    'El usuario es responsable de mantener la seguridad de su cuenta y de toda actividad realizada bajo sus credenciales. Notifique inmediatamente a soporte@beautycita.com si detecta uso no autorizado.'),
+
+                _section('4. Reservas',
+                    'Las reservas realizadas a traves de la Plataforma constituyen un acuerdo entre el usuario y el salon. Al confirmar una reserva, el usuario se compromete a:\n\n'
+                    '  a) Asistir a la cita en la fecha y hora indicadas\n'
+                    '  b) Notificar cancelaciones con la anticipacion requerida\n'
+                    '  c) Proporcionar informacion veraz sobre el servicio solicitado\n\n'
+                    'Los salones pueden requerir un deposito configurable (porcentaje del precio del servicio) como garantia de reserva. El deposito se aplica al costo total del servicio.'),
+
+                _section('5. Pagos y Procesamiento',
+                    'Los pagos se procesan a traves de Stripe, procesador certificado PCI-DSS Nivel 1. BeautyCita nunca almacena datos completos de tarjetas de credito o debito; unicamente se conservan los ultimos 4 digitos para referencia.\n\n'
+                    'Metodos de pago aceptados:\n'
+                    '  a) Tarjeta de credito o debito (via Stripe)\n'
+                    '  b) OXXO (pago en efectivo en tienda)\n'
+                    '  c) Saldo BeautyCita (credito en plataforma)\n'
+                    '  d) Pago directo en efectivo al salon\n\n'
+                    'Los reembolsos se acreditan exclusivamente al saldo de la cuenta del usuario dentro de la Plataforma, no al metodo de pago original. El saldo puede utilizarse para futuras reservas o compras.'),
+
+                _section('6. Cancelaciones y Reembolsos',
+                    'La politica de cancelacion es configurable por cada salon. Las reglas generales son:\n\n'
+                    'Cancelacion gratuita: Si el usuario cancela con la anticipacion establecida por el salon (por defecto, 24 horas antes), recibe un reembolso completo menos la comision de plataforma (3%) acreditado a su saldo.\n\n'
+                    'Cancelacion tardia: Si el usuario cancela dentro del periodo no reembolsable y el salon requiere deposito, el deposito se pierde. El monto restante se reembolsa al saldo.\n\n'
+                    'Cancelacion por el salon: Si el salon cancela la cita, el usuario recibe un reembolso completo acreditado a su saldo.\n\n'
+                    'No se realizan devoluciones a tarjetas de credito o cuentas bancarias. Todos los reembolsos se procesan como credito en la Plataforma.'),
+
+                _section('7. Comisiones',
+                    'BeautyCita opera bajo el siguiente modelo de comisiones:\n\n'
+                    '  a) Reservas del marketplace: 3% del precio del servicio\n'
+                    '  b) Reservas directas del salon: 0% (sin comision)\n'
+                    '  c) Venta de productos (POS): 10% del precio del producto\n\n'
+                    'Las comisiones se deducen automaticamente del pago al proveedor. Los salones reciben un desglose detallado de cada transaccion incluyendo comision, retenciones fiscales y monto neto.'),
+
+                _section('8. Retenciones Fiscales',
+                    'Conforme a la legislacion fiscal mexicana, BeautyCita actua como plataforma tecnologica intermediaria y esta obligada a realizar las siguientes retenciones:\n\n'
+                    'Para proveedores con RFC registrado:\n'
+                    '  - ISR (Impuesto Sobre la Renta): 2.5% del monto bruto (Art. 113-A LISR)\n'
+                    '  - IVA (Impuesto al Valor Agregado): 8% de la porcion de IVA (Art. 18-J LIVA)\n\n'
+                    'Para proveedores sin RFC registrado:\n'
+                    '  - ISR: 20% del monto bruto\n'
+                    '  - IVA: 16% de la porcion de IVA\n\n'
+                    'BeautyCita emite CFDI (Comprobante Fiscal Digital por Internet) por todas las retenciones efectuadas. Los registros fiscales se conservan por 5 anos conforme al Articulo 30 del Codigo Fiscal de la Federacion.\n\n'
+                    'La Plataforma cumple con el Articulo 30-B del Codigo Fiscal, proporcionando al SAT acceso autenticado a la informacion de transacciones y retenciones.'),
+
+                _section('9. Saldo y Sistema de Creditos',
+                    'La Plataforma mantiene un sistema de credito interno ("Saldo") asociado a cada cuenta de usuario:\n\n'
+                    '  a) Los reembolsos por cancelaciones se acreditan al Saldo\n'
+                    '  b) Las tarjetas de regalo se cargan al Saldo\n'
+                    '  c) El programa de lealtad acumula puntos canjeables por Saldo\n'
+                    '  d) El Saldo puede utilizarse para pagar servicios y productos\n\n'
+                    'El Saldo no es transferible entre cuentas, no genera intereses, y no es canjeable por efectivo. En caso de eliminacion de cuenta, el Saldo restante se pierde despues de 30 dias.'),
+
+                _section('10. Obligaciones del Usuario',
+                    'El usuario se compromete a:\n\n'
+                    '  a) Proporcionar informacion veraz y mantenerla actualizada\n'
+                    '  b) No utilizar la Plataforma para fines ilicitos o fraudulentos\n'
+                    '  c) Respetar las citas reservadas y las politicas de cancelacion\n'
+                    '  d) Tratar con respeto al personal de los salones\n'
+                    '  e) No manipular, modificar o hacer ingenieria inversa de la Plataforma\n'
+                    '  f) No crear multiples cuentas para evadir restricciones\n'
+                    '  g) No enviar contenido inapropiado a traves del sistema de mensajeria'),
+
+                _section('11. Obligaciones de los Salones',
+                    'Los salones y profesionales registrados se comprometen a:\n\n'
+                    '  a) Cumplir con todas las leyes, regulaciones sanitarias y fiscales aplicables\n'
+                    '  b) Mantener precios, disponibilidad y servicios actualizados\n'
+                    '  c) Cumplir con los servicios reservados segun lo publicado\n'
+                    '  d) Registrar su RFC ante la Plataforma para recibir tasas preferenciales de retencion\n'
+                    '  e) Completar el proceso de verificacion (servicios, horarios, cuenta Stripe, RFC)\n'
+                    '  f) Mantener estandares de calidad e higiene en la prestacion de servicios\n'
+                    '  g) Responder a las comunicaciones de clientes en tiempo razonable'),
+
+                _section('12. Propiedad Intelectual',
+                    'Todo el contenido de la Plataforma, incluyendo disenos, logotipos, interfaces, codigo fuente, algoritmos de recomendacion, modelos de IA (Aphrodite, Eros), textos y graficos, es propiedad exclusiva de BEAUTYCITA, S.A. de C.V. o sus licenciantes, y esta protegido por las leyes de propiedad intelectual de Mexico y tratados internacionales.\n\n'
+                    'Los salones conservan la propiedad de su contenido (fotos de portafolio, descripciones de servicios) pero otorgan a BeautyCita una licencia no exclusiva para exhibirlo en la Plataforma.'),
+
+                _section('13. Limitacion de Responsabilidad',
+                    'BeautyCita no sera responsable por:\n\n'
+                    '  a) La calidad, seguridad o resultado de los servicios prestados por los salones\n'
+                    '  b) Danos directos, indirectos, incidentales o consecuenciales derivados del uso de la Plataforma\n'
+                    '  c) Interrupciones del servicio por causas de fuerza mayor, mantenimiento programado o fallas de terceros\n'
+                    '  d) Perdida de datos por uso inadecuado de credenciales por parte del usuario\n'
+                    '  e) Disputas entre usuarios y salones respecto a la prestacion de servicios\n\n'
+                    'La responsabilidad maxima de BeautyCita en cualquier caso se limita al monto de las comisiones cobradas en los ultimos 12 meses al usuario o salon afectado.'),
+
+                _section('14. Resolucion de Disputas',
+                    'En caso de controversia entre usuario y salon:\n\n'
+                    '  a) Primera instancia: Mediacion a traves del equipo de soporte de BeautyCita\n'
+                    '  b) Segunda instancia: Escalamiento a PROFECO (Procuraduria Federal del Consumidor)\n'
+                    '  c) Tercera instancia: Tribunales competentes de Puerto Vallarta, Jalisco, Mexico\n\n'
+                    'BeautyCita se reserva el derecho de suspender o cancelar cuentas que infrinjan estos terminos, con notificacion previa al usuario afectado.'),
+
+                _section('15. Modificaciones',
+                    'BeautyCita se reserva el derecho de modificar estos terminos en cualquier momento. Los cambios se notificaran a traves de:\n\n'
+                    '  a) Notificacion push en la aplicacion\n'
+                    '  b) Correo electronico al email registrado\n'
+                    '  c) Aviso en el sitio web\n\n'
+                    'El uso continuado de la Plataforma despues de la notificacion constituye aceptacion de los terminos modificados. Si no esta de acuerdo, debera dejar de utilizar la Plataforma y solicitar la eliminacion de su cuenta.'),
+
+                _section('16. Ley Aplicable y Jurisdiccion',
+                    'Estos terminos se rigen por las leyes de los Estados Unidos Mexicanos, incluyendo:\n\n'
+                    '  - Ley Federal de Proteccion al Consumidor\n'
+                    '  - Codigo Fiscal de la Federacion (Art. 30-B)\n'
+                    '  - Ley del Impuesto Sobre la Renta (Art. 113-A)\n'
+                    '  - Ley del Impuesto al Valor Agregado (Art. 18-J)\n'
+                    '  - Ley Federal de Proteccion de Datos Personales en Posesion de los Particulares\n\n'
+                    'Cualquier controversia sera sometida a los tribunales competentes de Puerto Vallarta, Jalisco, Mexico.'),
+
+                _section('17. Contacto',
+                    'Para preguntas sobre estos terminos:\n\n'
+                    'Email: soporte@beautycita.com\n'
+                    'Telefono: +52 (720) 677-7800\n'
+                    'WhatsApp: +52 (720) 677-7800\n'
+                    'Domicilio: Avenida Manuel Corona, Alazan 11A, C.P. 48290, Jalisco, Mexico'),
                 const SizedBox(height: 48),
               ],
             ),

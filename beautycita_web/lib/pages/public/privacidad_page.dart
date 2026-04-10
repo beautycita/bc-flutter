@@ -30,55 +30,166 @@ class PrivacidadPage extends StatelessWidget {
                 Text('Ultima actualizacion: 10 de abril de 2026',
                     style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey)),
                 const SizedBox(height: 32),
-                _section('Responsable',
-                    'BeautyCita, con domicilio en Jalisco, Mexico, es responsable del tratamiento de sus datos personales conforme a la Ley Federal de Proteccion de Datos Personales en Posesion de los Particulares (LFPDPPP).'),
-                _section('Datos que Recopilamos',
-                    'Recopilamos los siguientes datos personales:\n'
-                    '- Nombre completo\n'
-                    '- Numero de telefono\n'
-                    '- Correo electronico\n'
-                    '- Ubicacion (para encontrar salones cercanos)\n'
-                    '- Historial de reservas\n'
-                    '- Informacion de pago (procesada por Stripe, no almacenada por nosotros)\n\n'
-                    'Para salones, adicionalmente:\n'
-                    '- RFC y datos fiscales\n'
-                    '- CLABE interbancaria\n'
-                    '- Informacion del negocio'),
-                _section('Finalidad del Tratamiento',
-                    'Sus datos personales seran utilizados para:\n'
-                    '- Crear y administrar su cuenta\n'
-                    '- Facilitar la reserva de servicios de belleza\n'
-                    '- Procesar pagos y emitir comprobantes fiscales (CFDI)\n'
-                    '- Enviar confirmaciones y recordatorios de citas\n'
-                    '- Cumplir con obligaciones fiscales ante el SAT\n'
-                    '- Mejorar nuestros servicios mediante analisis anonimizados'),
-                _section('Transferencia de Datos',
-                    'Sus datos podran ser compartidos con:\n'
-                    '- El salon de belleza donde realice su reserva (nombre, telefono)\n'
-                    '- Procesadores de pago (Stripe) para completar transacciones\n'
-                    '- Autoridades fiscales (SAT) conforme a la legislacion vigente\n\n'
-                    'No vendemos ni compartimos sus datos con terceros para fines publicitarios.'),
+
+                _section('Responsable del Tratamiento',
+                    'BEAUTYCITA, S.A. de C.V.\n'
+                    'RFC: BEA260313MI8\n'
+                    'Domicilio: Avenida Manuel Corona, Alazan 11A, C.P. 48290, Jalisco, Mexico\n'
+                    'Contacto de privacidad: legal@beautycita.com\n'
+                    'Telefono: +52 (720) 677-7800\n\n'
+                    'BEAUTYCITA es responsable del tratamiento de sus datos personales conforme a la Ley Federal de Proteccion de Datos Personales en Posesion de los Particulares (LFPDPPP) y su Reglamento.'),
+
+                _section('Datos Personales que Recopilamos',
+                    'Recopilamos las siguientes categorias de datos personales:\n\n'
+                    'Datos de identificacion:\n'
+                    '  - Nombre completo\n'
+                    '  - Correo electronico\n'
+                    '  - Numero de telefono (opcional, para verificacion y comunicaciones)\n'
+                    '  - Foto de perfil (opcional)\n\n'
+                    'Datos de ubicacion:\n'
+                    '  - Coordenadas GPS (solo con su permiso, para encontrar salones cercanos)\n'
+                    '  - Direccion de domicilio (opcional, para calcular tiempos de traslado)\n\n'
+                    'Datos transaccionales:\n'
+                    '  - Historial de reservas y servicios\n'
+                    '  - Metodos de pago utilizados (solo ultimos 4 digitos de tarjeta)\n'
+                    '  - Montos de transacciones, comisiones y retenciones fiscales\n'
+                    '  - Saldo de credito en la Plataforma\n\n'
+                    'Datos de comunicacion:\n'
+                    '  - Mensajes enviados al asistente virtual (Aphrodite), soporte, y salones\n'
+                    '  - Historial de conversaciones\n\n'
+                    'Datos tecnicos:\n'
+                    '  - Token de notificaciones push (Firebase Cloud Messaging)\n'
+                    '  - Modelo de dispositivo, sistema operativo, version de la aplicacion\n'
+                    '  - Reportes de errores anonimizados (Sentry)\n\n'
+                    'Para salones y profesionales, adicionalmente:\n'
+                    '  - RFC (Registro Federal de Contribuyentes)\n'
+                    '  - Regimen fiscal\n'
+                    '  - CLABE interbancaria (via Stripe Connect)\n'
+                    '  - Informacion del negocio (nombre, direccion, horarios, servicios)\n'
+                    '  - Fotos de portafolio y del establecimiento'),
+
+                _section('Datos que NO Recopilamos',
+                    '  - Datos biometricos: La autenticacion biometrica (huella digital, reconocimiento facial) se procesa exclusivamente en el hardware seguro de su dispositivo (Secure Enclave / TEE). BeautyCita nunca recibe, transmite ni almacena datos biometricos.\n\n'
+                    '  - Datos completos de tarjeta: Los datos de pago son procesados directamente por Stripe (certificado PCI-DSS Nivel 1). Solo conservamos los ultimos 4 digitos como referencia.\n\n'
+                    '  - Contactos del dispositivo: No accedemos ni almacenamos su lista de contactos.\n\n'
+                    '  - Cookies de rastreo: No utilizamos cookies publicitarias ni de terceros para seguimiento.'),
+
+                _section('Finalidades del Tratamiento',
+                    'Finalidades primarias (necesarias para el servicio):\n\n'
+                    '  a) Crear y administrar su cuenta de usuario\n'
+                    '  b) Facilitar la busqueda y reserva de servicios de belleza\n'
+                    '  c) Procesar pagos y emitir recibos\n'
+                    '  d) Realizar retenciones de ISR e IVA conforme a la legislacion fiscal (Art. 113-A LISR, Art. 18-J LIVA)\n'
+                    '  e) Emitir CFDI por retenciones efectuadas\n'
+                    '  f) Enviar confirmaciones, recordatorios y actualizaciones de citas\n'
+                    '  g) Proporcionar soporte al cliente y asistencia virtual\n'
+                    '  h) Cumplir con obligaciones ante el SAT (Art. 30-B CFF)\n'
+                    '  i) Prevenir fraude y actividades ilicitas\n\n'
+                    'Finalidades secundarias (puede oponerse sin afectar el servicio):\n\n'
+                    '  a) Mejorar nuestros servicios mediante analisis anonimizados de uso\n'
+                    '  b) Personalizar recomendaciones de salones y servicios\n'
+                    '  c) Enviar comunicaciones promocionales (puede desactivarse en Ajustes)\n\n'
+                    'Si desea oponerse a las finalidades secundarias, envie un correo a legal@beautycita.com con el asunto "Negativa finalidades secundarias".'),
+
+                _section('Transferencias de Datos',
+                    'Sus datos pueden ser compartidos con los siguientes destinatarios:\n\n'
+                    'Transferencias nacionales:\n'
+                    '  - Salones de belleza: Nombre y telefono del usuario para confirmar y atender la cita\n'
+                    '  - Servicio de Administracion Tributaria (SAT): Informacion fiscal conforme a la ley\n\n'
+                    'Transferencias internacionales (con clausulas contractuales estandar, Art. 36 LFPDPPP):\n'
+                    '  - Stripe (EE.UU.): Procesamiento de pagos\n'
+                    '  - Google LLC (EE.UU.): Autenticacion OAuth y servicios de ubicacion\n'
+                    '  - Apple Inc. (EE.UU.): Autenticacion OAuth\n'
+                    '  - Firebase / Google Cloud (EE.UU.): Notificaciones push\n'
+                    '  - Sentry (EE.UU.): Reportes de errores anonimizados (sin datos personales identificables)\n'
+                    '  - OpenAI (EE.UU.): Procesamiento de mensajes del asistente virtual (sin datos fiscales ni de pago)\n'
+                    '  - Cloudflare (global): Almacenamiento de medios (fotos de portafolio)\n'
+                    '  - Meta / WhatsApp (EE.UU.): Comunicaciones de negocio (numero de telefono)\n\n'
+                    'No vendemos, rentamos ni compartimos sus datos personales con terceros para fines publicitarios, de mercadotecnia o perfilamiento comercial.'),
+
                 _section('Medidas de Seguridad',
-                    'Implementamos medidas de seguridad tecnicas, administrativas y fisicas para proteger sus datos, incluyendo:\n'
-                    '- Cifrado en transito (TLS/SSL)\n'
-                    '- Control de acceso basado en roles (RLS)\n'
-                    '- Autenticacion segura\n'
-                    '- Respaldos cifrados diarios'),
+                    'Implementamos las siguientes medidas para proteger sus datos:\n\n'
+                    'Tecnicas:\n'
+                    '  - Cifrado en transito (TLS/SSL) para todas las comunicaciones\n'
+                    '  - Control de acceso basado en roles (Row Level Security) en la base de datos\n'
+                    '  - Autenticacion con tokens JWT de corta duracion\n'
+                    '  - Operaciones financieras atomicas con bloqueo de fila (prevencion de condiciones de carrera)\n'
+                    '  - Respaldos diarios cifrados con almacenamiento redundante\n'
+                    '  - Claves API segregadas (cliente vs servidor)\n\n'
+                    'Administrativas:\n'
+                    '  - Acceso a datos personales restringido a personal autorizado\n'
+                    '  - Registro de auditoria para accesos a datos fiscales (5 anos)\n'
+                    '  - Revision periodica de seguridad del codigo fuente\n\n'
+                    'Fisicas:\n'
+                    '  - Infraestructura alojada en centros de datos con certificacion de seguridad\n'
+                    '  - Acceso fisico restringido a servidores de produccion'),
+
                 _section('Derechos ARCO',
-                    'Usted tiene derecho a Acceder, Rectificar, Cancelar u Oponerse al tratamiento de sus datos personales (derechos ARCO). Para ejercer estos derechos, envie su solicitud a soporte@beautycita.com con:\n'
-                    '- Nombre completo\n'
-                    '- Descripcion del derecho que desea ejercer\n'
-                    '- Identificacion oficial\n\n'
-                    'Responderemos en un plazo maximo de 20 dias habiles.'),
-                _section('Cookies y Tecnologias de Rastreo',
-                    'Nuestra plataforma web utiliza cookies estrictamente necesarias para el funcionamiento del servicio. No utilizamos cookies de rastreo publicitario ni de terceros.'),
+                    'Conforme a la LFPDPPP, usted tiene derecho a:\n\n'
+                    'Acceso (A): Conocer que datos personales tenemos y como los usamos.\n\n'
+                    'Rectificacion (R): Corregir datos inexactos o incompletos.\n\n'
+                    'Cancelacion (C): Solicitar la eliminacion de sus datos cuando considere que no se requieren para las finalidades establecidas. Puede iniciar la eliminacion desde Ajustes > Eliminar cuenta en la aplicacion.\n\n'
+                    'Oposicion (O): Oponerse al tratamiento de sus datos para finalidades especificas.\n\n'
+                    'Para ejercer sus derechos ARCO, envie su solicitud a legal@beautycita.com incluyendo:\n'
+                    '  - Nombre completo\n'
+                    '  - Correo electronico asociado a su cuenta\n'
+                    '  - Descripcion clara del derecho que desea ejercer\n'
+                    '  - Copia de identificacion oficial (INE/pasaporte)\n\n'
+                    'Plazo de respuesta: 20 dias habiles a partir de la recepcion de la solicitud completa.\n\n'
+                    'Excepciones a la eliminacion (datos retenidos por obligacion legal):\n'
+                    '  - Registros fiscales y de retenciones: 5 anos (Art. 30 CFF)\n'
+                    '  - Historial de transacciones con desglose fiscal: 5 anos\n'
+                    '  - RFC y regimen fiscal de proveedores: 5 anos\n'
+                    '  - Registros de acceso del SAT: 5 anos\n'
+                    '  - Historial de soporte: 2 anos\n'
+                    '  - Demas datos personales: eliminacion permanente en 30 dias'),
+
+                _section('Notificaciones y Comunicaciones',
+                    'La Plataforma envia las siguientes notificaciones:\n\n'
+                    '  a) Confirmaciones y recordatorios de citas (push y/o WhatsApp)\n'
+                    '  b) Actualizaciones de estado de reserva (confirmada, cancelada)\n'
+                    '  c) Notificaciones de pago (recibido, fallido, reembolsado)\n'
+                    '  d) Alertas del sistema y mantenimiento\n\n'
+                    'Las notificaciones push se envian a traves de Firebase Cloud Messaging (Google). Puede desactivarlas en cualquier momento desde los ajustes de la aplicacion o del dispositivo.\n\n'
+                    'Las comunicaciones por WhatsApp se envian al numero registrado. Puede optar por no recibir mensajes promocionales respondiendo "BAJA" a cualquier mensaje.'),
+
+                _section('Analitica y Monitoreo',
+                    'Utilizamos las siguientes herramientas de analitica:\n\n'
+                    'Sentry (monitoreo de errores):\n'
+                    '  - Recopila reportes de errores tecnicos anonimizados\n'
+                    '  - NO recopila datos personales identificables (sendDefaultPii = false)\n'
+                    '  - Muestreo del 20% en produccion\n'
+                    '  - Proposito: estabilidad y rendimiento de la aplicacion\n\n'
+                    'Analitica interna:\n'
+                    '  - Pantallas visitadas, acciones realizadas (reservar, buscar, cancelar)\n'
+                    '  - Datos agregados y anonimizados\n'
+                    '  - Retencion: 12 meses, luego anonimizacion permanente\n'
+                    '  - Proposito: mejora del servicio\n\n'
+                    'No utilizamos:\n'
+                    '  - Google Analytics ni servicios de analitica de terceros\n'
+                    '  - Pixeles de retargeting o seguimiento publicitario\n'
+                    '  - Cookies de seguimiento entre sitios\n'
+                    '  - Redes de publicidad de terceros'),
+
+                _section('Menores de Edad',
+                    'La Plataforma esta dirigida a personas mayores de 18 anos. No recopilamos intencionalmente datos de menores de edad. Si detectamos que un menor ha creado una cuenta, procederemos a eliminarla y sus datos asociados.'),
+
                 _section('Cambios al Aviso de Privacidad',
-                    'Nos reservamos el derecho de modificar este aviso de privacidad. Cualquier cambio sera notificado a traves de la Plataforma o por correo electronico.'),
-                _section('Contacto',
-                    'Para dudas o solicitudes relacionadas con sus datos personales:\n\n'
-                    'Email: soporte@beautycita.com\n'
+                    'Nos reservamos el derecho de modificar este aviso de privacidad. Cualquier cambio sera notificado a traves de:\n\n'
+                    '  a) Notificacion push en la aplicacion\n'
+                    '  b) Correo electronico al email registrado\n'
+                    '  c) Publicacion en beautycita.com/privacidad\n\n'
+                    'La fecha de ultima actualizacion se indica al inicio de este documento.'),
+
+                _section('Contacto y Quejas',
+                    'Para dudas, solicitudes ARCO, o quejas relacionadas con el tratamiento de sus datos personales:\n\n'
+                    'Email de privacidad: legal@beautycita.com\n'
+                    'Email de soporte: soporte@beautycita.com\n'
                     'Telefono: +52 (720) 677-7800\n'
-                    'Domicilio: Jalisco, Mexico'),
+                    'WhatsApp: +52 (720) 677-7800\n'
+                    'Domicilio: Avenida Manuel Corona, Alazan 11A, C.P. 48290, Jalisco, Mexico\n\n'
+                    'Si considera que su derecho a la proteccion de datos personales ha sido vulnerado, puede presentar una queja ante el INAI (Instituto Nacional de Transparencia, Acceso a la Informacion y Proteccion de Datos Personales) en www.inai.org.mx.'),
+
                 const SizedBox(height: 48),
               ],
             ),
