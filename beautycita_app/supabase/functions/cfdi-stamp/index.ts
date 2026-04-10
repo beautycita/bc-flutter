@@ -23,9 +23,9 @@ const SW_URL = Deno.env.get("SW_SAPIEN_URL") ?? "https://services.test.sw.com.mx
 const SW_USER = Deno.env.get("SW_SAPIEN_USER") ?? "demo";
 const SW_PASSWORD = Deno.env.get("SW_SAPIEN_PASSWORD") ?? "123456789";
 
-// BC's RFC and fiscal info (issuer of retenciones)
-const BC_RFC = Deno.env.get("BC_RFC") ?? "EKU9003173C9"; // Test RFC — replace with BC's real RFC
-const BC_NOMBRE = "BeautyCita S.A. de C.V.";
+// BC's RFC and fiscal info — loaded from app_config at request time (see handler)
+let BC_RFC = "";
+let BC_NOMBRE = "";
 const BC_REGIMEN_FISCAL = "601"; // General de Ley Personas Morales
 const BC_LUGAR_EXPEDICION = "48315"; // Puerto Vallarta CP
 
@@ -48,11 +48,15 @@ async function getSwToken(): Promise<string> {
     return _swToken; // reuse if >5min remaining
   }
 
+  const authCtrl = new AbortController();
+  const authTimeout = setTimeout(() => authCtrl.abort(), 10_000);
   const res = await fetch(`${SW_URL}/v2/security/authenticate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ user: SW_USER, password: SW_PASSWORD }),
+    signal: authCtrl.signal,
   });
+  clearTimeout(authTimeout);
 
   const data = await res.json();
   if (data.status !== "success" || !data.data?.token) {
@@ -260,6 +264,8 @@ async function stampCfdi(cfdiJson: Record<string, unknown>, isRetenciones: boole
     ? `${SW_URL}/v4/cfdi33/issue/json/v4` // Retenciones use same issue endpoint
     : `${SW_URL}/v4/cfdi33/issue/json/v4`;
 
+  const stampCtrl = new AbortController();
+  const stampTimeout = setTimeout(() => stampCtrl.abort(), 10_000);
   const res = await fetch(endpoint, {
     method: "POST",
     headers: {
@@ -267,7 +273,9 @@ async function stampCfdi(cfdiJson: Record<string, unknown>, isRetenciones: boole
       Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify(cfdiJson),
+    signal: stampCtrl.signal,
   });
+  clearTimeout(stampTimeout);
 
   const data = await res.json();
 
@@ -301,6 +309,14 @@ Deno.serve(async (req) => {
   if (!token) return json({ error: "Authorization required" }, 401, req);
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+
+  // Load BC's RFC and business name from app_config (not hardcoded)
+  {
+    const { data: rfcCfg } = await supabase.from("app_config").select("value").eq("key", "bc_rfc").single();
+    BC_RFC = rfcCfg?.value ?? "BEA260313MI8";
+    const { data: nombreCfg } = await supabase.from("app_config").select("value").eq("key", "bc_nombre").single();
+    BC_NOMBRE = nombreCfg?.value ?? "BeautyCita S.A. de C.V.";
+  }
 
   try {
     const { appointment_id } = await req.json();

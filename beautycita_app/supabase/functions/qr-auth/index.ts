@@ -252,9 +252,21 @@ serve(async (req) => {
         })
         .eq("id", session.id);
 
+      // Verify OTP server-side and return session tokens (never expose email_otp)
+      const { data: verifyData, error: verifyError } =
+        await supabase.auth.verifyOtp({
+          email: session.email,
+          token: session.email_otp,
+          type: "magiclink",
+        });
+
+      if (verifyError || !verifyData?.session) {
+        return json({ error: "OTP verification failed" }, 500);
+      }
+
       return json({
-        email: session.email,
-        email_otp: session.email_otp,
+        access_token: verifyData.session.access_token,
+        refresh_token: verifyData.session.refresh_token,
       });
     }
 

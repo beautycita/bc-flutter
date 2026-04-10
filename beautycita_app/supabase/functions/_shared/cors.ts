@@ -9,12 +9,18 @@ const ALLOWED_ORIGINS = [
 ];
 
 /**
- * Returns the request's origin if it's in the allowlist,
+ * Returns the request's origin if it matches beautycita.com (or a subdomain),
  * otherwise falls back to the primary origin.
+ * Uses URL parsing instead of string matching to prevent origin spoofing
+ * (e.g. "https://evil-beautycita.com" would pass a string includes check).
  */
 export function corsOrigin(req: Request): string {
-  const origin = req.headers.get("origin") ?? "";
-  return ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  const o = req.headers.get("origin") ?? "";
+  try {
+    const hostname = new URL(o).hostname;
+    if (hostname === "beautycita.com" || hostname.endsWith(".beautycita.com")) return o;
+  } catch { /* malformed origin — fall through to default */ }
+  return ALLOWED_ORIGINS[0];
 }
 
 /**

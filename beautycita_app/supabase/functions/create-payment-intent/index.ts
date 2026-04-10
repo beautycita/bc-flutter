@@ -70,6 +70,17 @@ serve(async (req) => {
       return json({ error: "This feature is currently disabled" }, 403);
     }
 
+    // Per-user rate limit: max 10 payment intents in 5 minutes
+    const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    const { count: recentPayments } = await supabase
+      .from("orders")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .gte("created_at", fiveMinAgo);
+    if ((recentPayments ?? 0) > 10) {
+      return json({ error: "Too many payment attempts. Please wait a few minutes." }, 429);
+    }
+
     const body: PaymentIntentRequest = await req.json();
     const { service_id, booking_id, staff_id, scheduled_at, payment_type = "full", payment_method = "card" } = body;
 
@@ -92,6 +103,7 @@ serve(async (req) => {
           id,
           name,
           stripe_account_id,
+          stripe_onboarding_status,
           onboarding_complete,
           banking_complete,
           rfc,
@@ -110,6 +122,7 @@ serve(async (req) => {
       id: string;
       name: string;
       stripe_account_id: string | null;
+      stripe_onboarding_status: string | null;
       onboarding_complete: boolean;
       banking_complete: boolean;
       rfc: string | null;
@@ -136,6 +149,11 @@ serve(async (req) => {
       !business.stripe_account_id.startsWith("acct_")
     ) {
       return json({ error: "Este negocio no tiene pagos en linea configurados" }, 400);
+    }
+
+    // Verify Stripe account was set via proper Connect onboarding (not manually edited)
+    if (business.stripe_onboarding_status !== "complete") {
+      return json({ error: "Este negocio no ha completado la configuracion de Stripe Connect" }, 400);
     }
 
     // Calculate amounts
