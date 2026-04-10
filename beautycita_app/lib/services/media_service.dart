@@ -173,7 +173,8 @@ class MediaService {
   /// Download image from URL and save to device gallery.
   Future<bool> saveUrlToGallery(String url) async {
     try {
-      final response = await http.get(Uri.parse(url));
+      final response = await http.get(Uri.parse(url))
+          .timeout(const Duration(seconds: 15));
       if (response.statusCode != 200) return false;
 
       final result = await ImageGallerySaverPlus.saveImage(
@@ -209,7 +210,8 @@ class MediaService {
   /// Share an image by URL using native share sheet.
   Future<void> shareImage(String url, {String? text}) async {
     try {
-      final response = await http.get(Uri.parse(url));
+      final response = await http.get(Uri.parse(url))
+          .timeout(const Duration(seconds: 15));
       if (response.statusCode != 200) return;
 
       final dir = await getTemporaryDirectory();

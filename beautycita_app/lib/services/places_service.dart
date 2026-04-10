@@ -85,7 +85,7 @@ class PlacesService {
         Uri.parse('https://places.googleapis.com/v1/places:autocomplete'),
         headers: _headers,
         body: jsonEncode(body),
-      );
+      ).timeout(const Duration(seconds: 8));
 
       if (kDebugMode) debugPrint('[PlacesService] status=${response.statusCode}');
 
@@ -146,7 +146,8 @@ class PlacesService {
         'X-Android-Cert': sha1Cert,
       };
 
-      final response = await http.get(uri, headers: headers);
+      final response = await http.get(uri, headers: headers)
+          .timeout(const Duration(seconds: 8));
 
       if (response.statusCode != 200) {
         if (kDebugMode) debugPrint('[PlacesService] details error: ${response.body}');

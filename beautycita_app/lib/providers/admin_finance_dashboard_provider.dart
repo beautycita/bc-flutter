@@ -599,24 +599,39 @@ final commissionBreakdownProvider =
     final client = SupabaseClientService.client;
     final now = DateTime.now();
 
-    // Get current month from v_monthly_revenue
-    final data = await client
-        .from('v_monthly_revenue')
-        .select()
-        .eq('year', now.year)
-        .eq('month', now.month)
-        .limit(1);
+    // Fetch commission rates from app_config and monthly revenue in parallel
+    final results = await Future.wait([
+      client
+          .from('app_config')
+          .select('key, value')
+          .inFilter('key', ['commission_rate_marketplace', 'commission_rate_product']),
+      client
+          .from('v_monthly_revenue')
+          .select()
+          .eq('year', now.year)
+          .eq('month', now.month)
+          .limit(1),
+    ]);
 
-    if ((data as List).isEmpty) return CommissionBreakdown.placeholder;
+    final configRows = results[0] as List;
+    final rates = {
+      for (var r in configRows)
+        r['key'] as String: double.tryParse(r['value']?.toString() ?? '') ?? 0.0,
+    };
+    final bookingRate = rates['commission_rate_marketplace'] ?? 0.03;
+    final productRate = rates['commission_rate_product'] ?? 0.10;
+
+    final data = results[1] as List;
+    if (data.isEmpty) return CommissionBreakdown.placeholder;
 
     final row = data.first;
     return CommissionBreakdown(
       bookingCommission:
           (row['booking_platform_fees'] as num?)?.toDouble() ??
-              ((row['booking_revenue'] as num?)?.toDouble() ?? 0) * 0.03,
+              ((row['booking_revenue'] as num?)?.toDouble() ?? 0) * bookingRate,
       productCommission:
           (row['product_platform_fees'] as num?)?.toDouble() ??
-              ((row['product_revenue'] as num?)?.toDouble() ?? 0) * 0.10,
+              ((row['product_revenue'] as num?)?.toDouble() ?? 0) * productRate,
       bookingCount: (row['booking_count'] as num?)?.toInt() ?? 0,
       productCount: (row['product_orders'] as num?)?.toInt() ?? 0,
     );

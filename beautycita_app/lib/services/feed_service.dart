@@ -41,7 +41,8 @@ class FeedService {
     }
 
     try {
-      final response = await http.get(uri, headers: headers);
+      final response = await http.get(uri, headers: headers)
+          .timeout(const Duration(seconds: 10));
       if (response.statusCode != 200) {
         if (kDebugMode) debugPrint('[FeedService] fetchFeed: HTTP ${response.statusCode}');
         return [];

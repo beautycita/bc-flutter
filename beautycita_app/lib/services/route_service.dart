@@ -24,7 +24,8 @@ class RouteService {
       '?overview=full&geometries=geojson',
     );
 
-    final response = await http.get(url);
+    final response = await http.get(url)
+        .timeout(const Duration(seconds: 8));
     if (response.statusCode != 200) {
       throw Exception('OSRM routing failed: ${response.statusCode}');
     }
