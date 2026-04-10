@@ -181,10 +181,12 @@ class ThemeNotifier extends StateNotifier<ThemeState> {
 
   /// Persist the custom color after drag ends.
   Future<void> saveCustomColor() async {
-    if (_customHue == null || _customSat == null) return;
+    final hue = _customHue;
+    final sat = _customSat;
+    if (hue == null || sat == null) return;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setDouble(_prefCustomHue, _customHue!);
-    await prefs.setDouble(_prefCustomSat, _customSat!);
+    await prefs.setDouble(_prefCustomHue, hue);
+    await prefs.setDouble(_prefCustomSat, sat);
   }
 
   /// Clear custom color override (restore palette default).
@@ -350,7 +352,11 @@ final paletteProvider = Provider<BCPalette>((ref) {
 
 /// Convenience: access BCThemeExtension directly.
 final themeExtProvider = Provider<BCThemeExtension>((ref) {
-  return ref.watch(themeProvider).themeData.extension<BCThemeExtension>()!;
+  final ext = ref.watch(themeProvider).themeData.extension<BCThemeExtension>();
+  if (ext == null) {
+    throw StateError('BCThemeExtension missing from ThemeData — check buildThemeFromPalette');
+  }
+  return ext;
 });
 
 /// Live color picker state — lightweight, bypasses ThemeData during drag.

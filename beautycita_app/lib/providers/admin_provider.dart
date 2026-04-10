@@ -490,19 +490,21 @@ class AdminUser {
 
   /// Online if last_seen within last 5 minutes.
   bool get isOnline {
-    if (lastSeen == null) return false;
-    return DateTime.now().toUtc().difference(lastSeen!).inMinutes < 5;
+    final ls = lastSeen;
+    if (ls == null) return false;
+    return DateTime.now().toUtc().difference(ls).inMinutes < 5;
   }
 
   /// Human-readable last seen text.
   String get lastSeenText {
-    if (lastSeen == null) return 'Nunca';
-    final diff = DateTime.now().toUtc().difference(lastSeen!);
+    final ls = lastSeen;
+    if (ls == null) return 'Nunca';
+    final diff = DateTime.now().toUtc().difference(ls);
     if (diff.inMinutes < 1) return 'Ahora';
     if (diff.inMinutes < 60) return 'Hace ${diff.inMinutes}m';
     if (diff.inHours < 24) return 'Hace ${diff.inHours}h';
     if (diff.inDays < 30) return 'Hace ${diff.inDays}d';
-    return lastSeen!.toLocal().toString().split('.')[0];
+    return ls.toLocal().toString().split('.')[0];
   }
 
   factory AdminUser.fromJson(Map<String, dynamic> json) {

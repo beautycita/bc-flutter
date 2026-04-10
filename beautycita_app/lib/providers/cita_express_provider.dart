@@ -198,9 +198,11 @@ class CitaExpressNotifier extends StateNotifier<CitaExpressState> {
 
   /// No slots today — try this week at the same salon.
   Future<void> tryOtherDay() async {
+    final svcId = state.selectedServiceId;
+    if (svcId == null) return;
     state = state.copyWith(step: CitaExpressStep.searching);
     await _findWalkInSlots(
-      serviceId: state.selectedServiceId!,
+      serviceId: svcId,
       range: 'this_week',
     );
   }

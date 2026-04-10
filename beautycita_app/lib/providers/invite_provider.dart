@@ -137,7 +137,8 @@ class InviteNotifier extends StateNotifier<InviteState> {
 
   /// Search salons by name in DB.
   Future<void> searchSalons(String query) async {
-    if (state.userLocation == null) return;
+    final loc = state.userLocation;
+    if (loc == null) return;
 
     state = state.copyWith(
       step: InviteStep.searching,
@@ -147,8 +148,8 @@ class InviteNotifier extends StateNotifier<InviteState> {
     try {
       final result = await _service.searchSalons(
         query: query,
-        lat: state.userLocation!.lat,
-        lng: state.userLocation!.lng,
+        lat: loc.lat,
+        lng: loc.lng,
       );
 
       state = state.copyWith(
@@ -167,15 +168,16 @@ class InviteNotifier extends StateNotifier<InviteState> {
 
   /// On-demand scrape for a salon not found.
   Future<void> scrapeAndShow(String query) async {
-    if (state.userLocation == null) return;
+    final loc = state.userLocation;
+    if (loc == null) return;
 
     state = state.copyWith(step: InviteStep.scraping);
 
     try {
       final salon = await _service.scrapeAndEnrich(
         query: query,
-        lat: state.userLocation!.lat,
-        lng: state.userLocation!.lng,
+        lat: loc.lat,
+        lng: loc.lng,
       );
 
       if (salon == null) {

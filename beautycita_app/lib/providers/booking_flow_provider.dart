@@ -691,11 +691,15 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
   }
 
   Future<void> _fetchResults() async {
+    final st = state.serviceType;
+    final loc = state.userLocation;
+    if (st == null || loc == null) return;
+
     try {
       final request = CurateRequest(
-        serviceType: state.serviceType!,
+        serviceType: st,
         userId: SupabaseClientService.currentUserId,
-        location: state.userLocation!,
+        location: loc,
         transportMode: state.transportMode ?? _userPrefs.defaultTransport,
         followUpAnswers:
             state.followUpAnswers.isNotEmpty ? state.followUpAnswers : null,

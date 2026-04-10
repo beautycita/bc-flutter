@@ -140,7 +140,8 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
 
   Future<void> updateFullName(String name) async {
     if (!_ensureReady('updateFullName')) return;
-    final userId = SupabaseClientService.currentUserId!;
+    final userId = SupabaseClientService.currentUserId;
+    if (userId == null) return;
 
     state = state.copyWith(isLoading: true, error: null);
     try {
@@ -163,7 +164,8 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
 
   Future<void> updateAvatar(String url) async {
     if (!_ensureReady('updateAvatar')) return;
-    final userId = SupabaseClientService.currentUserId!;
+    final userId = SupabaseClientService.currentUserId;
+    if (userId == null) return;
 
     state = state.copyWith(isLoading: true, error: null);
     try {
@@ -229,7 +231,8 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
     required double lng,
   }) async {
     if (!_ensureReady('updateHomeLocation')) return;
-    final userId = SupabaseClientService.currentUserId!;
+    final userId = SupabaseClientService.currentUserId;
+    if (userId == null) return;
 
     state = state.copyWith(isLoading: true, error: null);
     try {
@@ -258,7 +261,8 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
   /// Save phone number to profile (unverified). Returns true on success.
   Future<bool> updatePhone(String phone) async {
     if (!_ensureReady('updatePhone')) return false;
-    final userId = SupabaseClientService.currentUserId!;
+    final userId = SupabaseClientService.currentUserId;
+    if (userId == null) return false;
 
     state = state.copyWith(isLoading: true, error: null);
     try {
@@ -379,7 +383,8 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
 
   Future<void> updateBirthday(DateTime? birthday) async {
     if (!_ensureReady('updateBirthday')) return;
-    final userId = SupabaseClientService.currentUserId!;
+    final userId = SupabaseClientService.currentUserId;
+    if (userId == null) return;
 
     state = state.copyWith(isLoading: true, error: null);
     try {
@@ -404,7 +409,8 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
 
   Future<void> updateGender(String? gender) async {
     if (!_ensureReady('updateGender')) return;
-    final userId = SupabaseClientService.currentUserId!;
+    final userId = SupabaseClientService.currentUserId;
+    if (userId == null) return;
 
     state = state.copyWith(isLoading: true, error: null);
     try {
@@ -437,7 +443,8 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
       return false;
     }
 
-    final userId = SupabaseClientService.currentUserId!;
+    final userId = SupabaseClientService.currentUserId;
+    if (userId == null) return false;
 
     state = state.copyWith(isLoading: true, error: null);
     try {
