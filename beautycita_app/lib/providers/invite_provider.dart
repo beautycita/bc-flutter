@@ -342,7 +342,9 @@ class InviteNotifier extends StateNotifier<InviteState> {
       if (state.selectedSalon?.id == salon.id && apiBio.isNotEmpty) {
         state = state.copyWith(generatedBio: apiBio);
       }
-    }).catchError((_) {});
+    }).catchError((e) {
+      debugPrint('[InviteProvider] generateBio API enrichment failed: $e');
+    });
   }
 
   Future<String> _getCurrentUserName() async {
