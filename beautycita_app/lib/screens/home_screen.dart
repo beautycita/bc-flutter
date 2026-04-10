@@ -1,7 +1,10 @@
 import 'package:beautycita/config/app_transitions.dart';
+import 'package:beautycita/services/gyro_parallax_service.dart';
 import 'package:beautycita/services/sound_service.dart';
 import 'package:beautycita/services/toast_service.dart';
 import 'package:beautycita/widgets/parallax_tilt.dart';
+import 'dart:async';
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -1297,6 +1300,14 @@ class _CategoryCardState extends ConsumerState<_CategoryCard>
   late Animation<double> _scaleAnimation;
   bool _isPressed = false;
 
+  // Task 25: Gyro-leveled icons — counter-rotate to stay level
+  final _gyro = GyroParallaxService.instance;
+  StreamSubscription<ParallaxOffset>? _gyroSub;
+  double _gyroX = 0;
+
+  // Task 26: Animated GIF on selection before navigation
+  bool _isAnimating = false;
+
   @override
   void initState() {
     super.initState();
@@ -1312,6 +1323,11 @@ class _CategoryCardState extends ConsumerState<_CategoryCard>
         reverseCurve: Curves.elasticOut,
       ),
     );
+    // Start listening to gyro for icon counter-rotation
+    _gyro.addListener();
+    _gyroSub = _gyro.stream.listen((offset) {
+      if (mounted) setState(() => _gyroX = offset.x);
+    });
   }
 
   // Map category IDs to asset images (null = use icon fallback)
@@ -1426,6 +1442,13 @@ class _CategoryCardState extends ConsumerState<_CategoryCard>
 
     final animatedPath = animatedIcons[category.id];
 
+    // Task 26: When animating, show the full-color animated GIF
+    final gifPath = _animatedGifs[category.id];
+    final showAnimatedGif = _isAnimating && gifPath != null;
+
+    // Counter-rotation angle: max ~6 degrees, based on gyro x tilt
+    final counterAngle = -_gyroX * (6.0 * math.pi / 180.0);
+
     // Default icon-based card with subtle gyro parallax on icon
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -1448,19 +1471,30 @@ class _CategoryCardState extends ConsumerState<_CategoryCard>
             ),
           ),
           child: Center(
-            child: animatedPath != null
+            child: showAnimatedGif
+                // Task 26: Full-color animated GIF during selection
                 ? Image.asset(
-                    animatedPath,
-                    width: 40,
-                    height: 40,
-                    color: categoryColor,
-                    colorBlendMode: BlendMode.srcIn,
+                    gifPath,
+                    width: 48,
+                    height: 48,
                   )
-                : getCategoryIcon(
-                    variant: widget.variant,
-                    categoryId: category.id,
-                    color: categoryColor,
-                    size: 36,
+                // Task 25: Counter-rotate icon to stay level
+                : Transform.rotate(
+                    angle: counterAngle,
+                    child: animatedPath != null
+                        ? Image.asset(
+                            animatedPath,
+                            width: 40,
+                            height: 40,
+                            color: categoryColor,
+                            colorBlendMode: BlendMode.srcIn,
+                          )
+                        : getCategoryIcon(
+                            variant: widget.variant,
+                            categoryId: category.id,
+                            color: categoryColor,
+                            size: 36,
+                          ),
                   ),
           ),
         ),
@@ -1487,8 +1521,39 @@ class _CategoryCardState extends ConsumerState<_CategoryCard>
 
   @override
   void dispose() {
+    _gyroSub?.cancel();
+    _gyro.removeListener();
     _controller.dispose();
     super.dispose();
+  }
+
+  /// Animated GIF mapping for tap-to-play effect
+  static const _animatedGifs = <String, String>{
+    'nails': 'assets/animated_icons/nails.gif',
+    'hair': 'assets/animated_icons/hair.gif',
+    'lashes_brows': 'assets/animated_icons/lashes_brows.gif',
+    'makeup': 'assets/animated_icons/makeup.gif',
+    'facial': 'assets/animated_icons/facial.gif',
+    'body_spa': 'assets/animated_icons/body_spa.gif',
+    'specialized': 'assets/animated_icons/specialized.gif',
+    'barberia': 'assets/animated_icons/barberia.gif',
+  };
+
+  void _handleTapWithAnimation() {
+    final gifPath = _animatedGifs[widget.category.id];
+    if (gifPath == null) {
+      // No animated GIF available — proceed immediately
+      widget.onTap();
+      return;
+    }
+    // Show animated GIF for 1.5s, then navigate
+    setState(() => _isAnimating = true);
+    Future.delayed(const Duration(milliseconds: 1500), () {
+      if (mounted) {
+        setState(() => _isAnimating = false);
+        widget.onTap();
+      }
+    });
   }
 
   @override
@@ -1511,16 +1576,19 @@ class _CategoryCardState extends ConsumerState<_CategoryCard>
       },
       child: GestureDetector(
         onTapDown: (_) {
+          if (_isAnimating) return;
           setState(() => _isPressed = true);
           _controller.forward();
         },
         onTapUp: (_) {
+          if (_isAnimating) return;
           _controller.reverse();
           setState(() => _isPressed = false);
           HapticFeedback.lightImpact();
-          widget.onTap();
+          _handleTapWithAnimation();
         },
         onTapCancel: () {
+          if (_isAnimating) return;
           _controller.reverse();
           setState(() => _isPressed = false);
         },
