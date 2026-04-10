@@ -188,21 +188,12 @@ serve(async (req: Request) => {
         }));
       }
 
-      // Apply service-type filtering if query provided
-      // If too few matched results, pad with nearby unfiltered salons
-      let allResults = results;
+      // Apply STRICT service-type filtering when a service query is provided.
+      // Only show salons that actually offer the searched service — don't pad
+      // with unrelated salons. If a user searched for "unas" they want nail
+      // salons in their invite list, not random barbershops.
       if (serviceKeywords && serviceKeywords.length > 0) {
-        const filtered = results.filter((s: any) => matchesService(s, serviceKeywords));
-        if (filtered.length >= limit) {
-          results = filtered;
-        } else {
-          // Put matched salons first, then pad with closest unmatched
-          const matchedIds = new Set(filtered.map((s: any) => s.id));
-          const unmatched = results
-            .filter((s: any) => !matchedIds.has(s.id))
-            .sort((a: any, b: any) => a.distance_km - b.distance_km);
-          results = [...filtered, ...unmatched];
-        }
+        results = results.filter((s: any) => matchesService(s, serviceKeywords));
       }
 
       // Quality-weighted ranking: best salons first, not just closest
