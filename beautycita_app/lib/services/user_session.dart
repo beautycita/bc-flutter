@@ -168,7 +168,7 @@ class UserSession {
       final userId = response.user?.id;
       if (userId != null) {
         await saveSupabaseUserId(userId);
-        if (kDebugMode) debugPrint('[UserSession] New anonymous session $userId');
+        if (kDebugMode) debugPrint('[UserSession] New anonymous session ${userId.substring(0, 8)}...');
         // Tag registration source as APK (Android build)
         try {
           await SupabaseClientService.client

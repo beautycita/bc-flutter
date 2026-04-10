@@ -257,16 +257,17 @@ class MediaService {
       if (kDebugMode) debugPrint('MediaService.uploadMedia: userId is null');
       return null;
     }
-    if (kDebugMode) debugPrint('MediaService.uploadMedia: userId=$userId');
+    final maskedId = userId.length >= 8 ? '${userId.substring(0, 8)}...' : userId;
+    if (kDebugMode) debugPrint('MediaService.uploadMedia: userId=$maskedId');
 
     final client = SupabaseClientService.client;
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     final fileName = '$userId/$section/$timestamp.jpg';
-    if (kDebugMode) debugPrint('MediaService.uploadMedia: fileName=$fileName');
+    if (kDebugMode) debugPrint('MediaService.uploadMedia: fileName=$maskedId/$section/$timestamp.jpg');
 
     try {
       // Upload to storage bucket
-      if (kDebugMode) debugPrint('MediaService.uploadMedia: bucket=user-media, path=$fileName');
+      if (kDebugMode) debugPrint('MediaService.uploadMedia: bucket=user-media, path=$maskedId/$section/$timestamp.jpg');
       await client.storage.from('user-media').uploadBinary(
             fileName,
             bytes,
@@ -280,7 +281,7 @@ class MediaService {
       // Get public URL
       final publicUrl =
           client.storage.from('user-media').getPublicUrl(fileName);
-      if (kDebugMode) debugPrint('MediaService.uploadMedia: publicUrl=$publicUrl');
+      if (kDebugMode) debugPrint('MediaService.uploadMedia: publicUrl=[masked]');
 
       // Insert record into user_media table
       final row = {

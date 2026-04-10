@@ -50,6 +50,12 @@ class ThemeNotifier extends StateNotifier<ThemeState> {
   List<double> _catSaturations = [];
   List<double> _catLightnesses = [];
 
+  // Memoization cache for _rebuild — avoids recomputing palette + ThemeData
+  // when inputs haven't changed (e.g. redundant rebuilds, same-value drags).
+  String? _lastRebuildKey;
+  BCPalette? _lastEffectivePalette;
+  ThemeData? _lastThemeData;
+
   ThemeNotifier()
       : super(ThemeState(
           themeId: roseGoldPalette.id,
@@ -65,6 +71,8 @@ class ThemeNotifier extends StateNotifier<ThemeState> {
   /// Sat/lightness are normalized to vibrant, readable ranges so hue-shifted
   /// categories never look muddy (e.g. hair=0.18sat → clamped to 0.50).
   void _cacheCategoryOffsets(BCPalette palette) {
+    // Invalidate memoization cache — category offsets changed.
+    _lastRebuildKey = null;
     final baseHsl = HSLColor.fromColor(palette.primary);
     _basePrimaryHue = baseHsl.hue;
     _catHueOffsets = [];
@@ -213,17 +221,34 @@ class ThemeNotifier extends StateNotifier<ThemeState> {
   void _rebuild(BCPalette palette) {
     final effectiveRadius = _radiusScale * palette.radiusScale;
 
-    // Apply custom color override if set
-    BCPalette effectivePalette = palette;
-    if (_customHue != null && _customSat != null) {
-      effectivePalette = _applyColorOverride(palette, _customHue!, _customSat!);
+    // Build a cache key from all inputs that affect palette + ThemeData.
+    // Avoids redundant HSL math + ThemeData construction on duplicate calls.
+    final cacheKey = '${palette.id}|$_customHue|$_customSat|$_fontScale|$effectiveRadius|${_customGradientColors?.length}';
+
+    BCPalette effectivePalette;
+    ThemeData themeData;
+
+    if (cacheKey == _lastRebuildKey && _lastEffectivePalette != null && _lastThemeData != null) {
+      effectivePalette = _lastEffectivePalette!;
+      themeData = _lastThemeData!;
+    } else {
+      // Apply custom color override if set
+      effectivePalette = palette;
+      if (_customHue != null && _customSat != null) {
+        effectivePalette = _applyColorOverride(palette, _customHue!, _customSat!);
+      }
+
+      themeData = buildThemeFromPalette(
+        effectivePalette,
+        fontScale: _fontScale,
+        radiusOverride: effectiveRadius,
+      );
+
+      _lastRebuildKey = cacheKey;
+      _lastEffectivePalette = effectivePalette;
+      _lastThemeData = themeData;
     }
 
-    final themeData = buildThemeFromPalette(
-      effectivePalette,
-      fontScale: _fontScale,
-      radiusOverride: effectiveRadius,
-    );
     state = ThemeState(
       themeId: palette.id,
       themeData: themeData,
