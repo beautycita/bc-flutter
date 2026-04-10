@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../config/breakpoints.dart';
 import '../../providers/web_invite_provider.dart';
 import '../../widgets/invite/salon_detail_panel.dart';
 import '../../widgets/invite/salon_list_panel.dart';
@@ -52,10 +53,10 @@ class _InvitePageState extends ConsumerState<InvitePage> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        if (constraints.maxWidth >= 1200) {
+        if (WebBreakpoints.isDesktop(constraints.maxWidth)) {
           return _DesktopLayout();
         }
-        return _CompactLayout(isTablet: constraints.maxWidth >= 800);
+        return _CompactLayout(isTablet: !WebBreakpoints.isMobile(constraints.maxWidth));
       },
     );
   }

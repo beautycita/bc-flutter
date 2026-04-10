@@ -2109,7 +2109,7 @@ class _PhotoUploaderState extends State<PhotoUploader> {
           const SizedBox(height: 20),
           LayoutBuilder(
             builder: (context, constraints) {
-              final cols = constraints.maxWidth > 600 ? 4 : 2;
+              final cols = constraints.maxWidth > WebBreakpoints.compact ? 4 : 2;
               return Wrap(
                 spacing: 12,
                 runSpacing: 12,

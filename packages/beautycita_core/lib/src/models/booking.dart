@@ -25,6 +25,9 @@ class Booking {
   final double? ivaWithheld;
   final double? providerNet;
   final DateTime? updatedAt;
+  final String? staffId;
+  final String? staffName;
+  final String? cancellationReason;
 
   const Booking({
     required this.id,
@@ -53,6 +56,9 @@ class Booking {
     this.ivaWithheld,
     this.providerNet,
     this.updatedAt,
+    this.staffId,
+    this.staffName,
+    this.cancellationReason,
   });
 
   factory Booking.fromJson(Map<String, dynamic> json) {
@@ -111,6 +117,9 @@ class Booking {
       updatedAt: json['updated_at'] != null
           ? DateTime.parse(json['updated_at'] as String)
           : null,
+      staffId: json['staff_id'] as String?,
+      staffName: json['staff_name'] as String?,
+      cancellationReason: json['cancellation_reason'] as String?,
     );
   }
 
@@ -136,6 +145,9 @@ class Booking {
       'isr_withheld': isrWithheld,
       'iva_withheld': ivaWithheld,
       'provider_net': providerNet,
+      'staff_id': staffId,
+      'staff_name': staffName,
+      'cancellation_reason': cancellationReason,
     };
   }
 
@@ -145,6 +157,9 @@ class Booking {
     String? transportMode,
     String? paymentStatus,
     String? paymentMethod,
+    String? staffId,
+    String? staffName,
+    String? cancellationReason,
   }) {
     return Booking(
       id: id,
@@ -173,6 +188,9 @@ class Booking {
       ivaWithheld: ivaWithheld,
       providerNet: providerNet,
       updatedAt: updatedAt,
+      staffId: staffId ?? this.staffId,
+      staffName: staffName ?? this.staffName,
+      cancellationReason: cancellationReason ?? this.cancellationReason,
     );
   }
 }

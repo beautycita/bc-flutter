@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:beautycita_core/supabase.dart';
 
+import '../../config/breakpoints.dart';
 import '../../config/web_theme.dart';
 import '../../providers/business_portal_provider.dart';
 
@@ -194,7 +195,7 @@ class _AnalyticsContent extends ConsumerWidget {
           // Two-column layout: staff table | service breakdown
           LayoutBuilder(
             builder: (context, constraints) {
-              if (constraints.maxWidth >= 900) {
+              if (constraints.maxWidth >= WebBreakpoints.tabletLarge) {
                 return Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [

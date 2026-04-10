@@ -5,8 +5,6 @@ import 'package:intl/intl.dart';
 import '../../config/breakpoints.dart';
 import '../../config/web_theme.dart';
 import '../../providers/business_portal_provider.dart';
-// ignore: unused_import — imported for consistency with other business pages
-import '../../providers/demo_providers.dart';
 import '../../widgets/web_design_system.dart';
 
 /// Review filter.

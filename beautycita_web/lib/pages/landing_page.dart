@@ -1358,7 +1358,7 @@ class _LandingPageState extends State<LandingPage>
           ),
           // Dashboard body — responsive
           LayoutBuilder(builder: (context, constraints) {
-            final narrow = constraints.maxWidth < 500;
+            final narrow = WebBreakpoints.isNarrow(constraints.maxWidth);
             if (narrow) {
               return Padding(
                 padding: const EdgeInsets.all(12),

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../config/breakpoints.dart';
 
 const _bg = Color(0xFFFFFAF5);
 const _dark = Color(0xFF1A1A1A);

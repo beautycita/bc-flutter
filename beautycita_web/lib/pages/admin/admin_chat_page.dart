@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../config/breakpoints.dart';
 import '../../config/web_theme.dart';
 import '../../providers/admin_chat_provider.dart';
 
@@ -18,7 +19,7 @@ class AdminChatPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isMobile = constraints.maxWidth < 700;
+        final isMobile = constraints.maxWidth < WebBreakpoints.tabletSmall;
 
         if (isMobile) {
           return _MobileLayout();

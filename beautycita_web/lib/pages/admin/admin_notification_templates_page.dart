@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../config/breakpoints.dart';
 import '../../config/web_theme.dart';
 import '../../providers/admin_notification_templates_provider.dart';
 
@@ -372,7 +373,7 @@ class _TemplateCardState extends ConsumerState<_TemplateCard> {
           Padding(
             padding: const EdgeInsets.all(16),
             child: LayoutBuilder(builder: (context, constraints) {
-              final useColumns = constraints.maxWidth >= 700;
+              final useColumns = constraints.maxWidth >= WebBreakpoints.tabletSmall;
               if (useColumns) {
                 return Row(
                   crossAxisAlignment: CrossAxisAlignment.start,

@@ -472,7 +472,7 @@ class _BizBankingPageState extends ConsumerState<BizBankingPage> {
           // Two upload zones side by side on desktop, stacked on mobile
           LayoutBuilder(
             builder: (context, constraints) {
-              final narrow = constraints.maxWidth < 480;
+              final narrow = constraints.maxWidth < WebBreakpoints.mobileXSmall;
               final children = [
                 Expanded(
                   child: _DropZone(
