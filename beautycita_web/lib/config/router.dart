@@ -221,17 +221,17 @@ final routerProvider = Provider<GoRouter>((ref) {
         return routeForRole(role);
       }
 
-      // Block non-admin from admin routes
+      // Block non-admin from admin routes — always re-verify role from DB
       if (isAuthenticated && path.startsWith('/admin')) {
-        final role = await ref.read(authProvider.notifier).getUserRole();
+        final role = await ref.read(authProvider.notifier).getUserRole(forceRefresh: true);
         if (role != 'admin' && role != 'superadmin') {
           return routeForRole(role);
         }
       }
 
-      // Block non-business from business routes
+      // Block non-business from business routes — always re-verify role from DB
       if (isAuthenticated && path.startsWith('/negocio')) {
-        final role = await ref.read(authProvider.notifier).getUserRole();
+        final role = await ref.read(authProvider.notifier).getUserRole(forceRefresh: true);
         if (role != 'stylist' && role != 'business' &&
             role != 'admin' && role != 'superadmin') {
           return routeForRole(role);

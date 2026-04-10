@@ -47,40 +47,54 @@ class BCSupabase {
     try {
       debugPrint('Supabase: Loading .env...');
       await dotenv.load(fileName: '.env');
-      final url = dotenv.env['SUPABASE_URL'] ?? '';
-      final anonKey = dotenv.env['SUPABASE_ANON_KEY'] ?? '';
-      debugPrint('Supabase: .env loaded. URL=$url, key=${anonKey.isNotEmpty ? "present" : "EMPTY"}');
+    } catch (e) {
+      _initError = 'Failed to load .env: $e';
+      debugPrint('Supabase: $_initError');
+      return;
+    }
 
-      if (url.isEmpty || anonKey.isEmpty || url.contains('PLACEHOLDER')) {
-        _initError = 'No credentials configured (url=${url.isEmpty ? "empty" : "ok"}, key=${anonKey.isEmpty ? "empty" : "ok"})';
-        debugPrint('Supabase: $_initError');
-        return;
-      }
+    final url = dotenv.env['SUPABASE_URL'] ?? '';
+    final anonKey = dotenv.env['SUPABASE_ANON_KEY'] ?? '';
+    debugPrint('Supabase: .env loaded. URL=$url, key=${anonKey.isNotEmpty ? "present" : "EMPTY"}');
 
-      // The SDK's _init() creates the client synchronously, then awaits
-      // supabaseAuth.initialize() which can hang on web (deeplink observer,
-      // SharedPreferences). Timeout prevents infinite hang. Recovery below
-      // detects if the client is usable despite the timeout.
-      debugPrint('Supabase: Calling Supabase.initialize()...');
-      await Supabase.initialize(url: url, anonKey: anonKey)
-          .timeout(const Duration(seconds: 12));
-      _initialized = true;
-      debugPrint('Supabase: Connected to $url');
-    } catch (e, st) {
-      debugPrint('Supabase: Init exception: $e');
-      debugPrint('Supabase: Stack: ${st.toString().split('\n').take(5).join('\n')}');
-      // The SDK's _init() runs synchronously before the async auth init.
-      // If timeout fires, the client may already exist and be usable.
+    if (url.isEmpty || anonKey.isEmpty || url.contains('PLACEHOLDER')) {
+      _initError = 'No credentials configured (url=${url.isEmpty ? "empty" : "ok"}, key=${anonKey.isEmpty ? "empty" : "ok"})';
+      debugPrint('Supabase: $_initError');
+      return;
+    }
+
+    // Exponential backoff: 3 attempts with 3s, 6s, 12s timeouts.
+    const timeouts = [3, 6, 12];
+    for (var attempt = 0; attempt < timeouts.length; attempt++) {
       try {
-        final _ = Supabase.instance.client;
+        debugPrint('Supabase: Init attempt ${attempt + 1}/${timeouts.length} '
+            '(timeout ${timeouts[attempt]}s)...');
+        await Supabase.initialize(url: url, anonKey: anonKey)
+            .timeout(Duration(seconds: timeouts[attempt]));
         _initialized = true;
         _initError = null;
-        debugPrint('Supabase: Recovered after exception, client usable.');
-      } catch (e2) {
+        debugPrint('Supabase: Connected to $url');
+        return;
+      } catch (e, st) {
+        debugPrint('Supabase: Attempt ${attempt + 1} failed: $e');
+        if (attempt == 0) {
+          debugPrint('Supabase: Stack: ${st.toString().split('\n').take(5).join('\n')}');
+        }
+        // The SDK's _init() runs synchronously before the async auth init.
+        // If timeout fires, the client may already exist and be usable.
+        try {
+          final _ = Supabase.instance.client;
+          _initialized = true;
+          _initError = null;
+          debugPrint('Supabase: Recovered after exception, client usable.');
+          return;
+        } catch (_) {
+          // Client not available yet — continue retrying
+        }
         _initError = e.toString();
-        debugPrint('Supabase: Recovery failed ($e2). Init failed.');
       }
     }
+    debugPrint('Supabase: All ${timeouts.length} init attempts failed.');
   }
 
   static String? get currentUserId =>

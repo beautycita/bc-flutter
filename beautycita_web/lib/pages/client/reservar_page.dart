@@ -18,6 +18,7 @@ import '../../config/breakpoints.dart';
 import '../../config/web_theme.dart';
 import '../../data/categories.dart';
 import '../../providers/booking_flow_provider.dart';
+import '../../providers/client_bookings_provider.dart';
 import '../../providers/curate_provider.dart';
 import '../../providers/payment_provider.dart';
 import '../../services/geocoding_web.dart';
@@ -2552,6 +2553,9 @@ class _DetailPanelOverlayState extends ConsumerState<_DetailPanelOverlay>
       }
 
       ref.read(bookingFlowProvider.notifier).setBookingConfirmed(appointmentId);
+
+      // Invalidate client bookings so "Mis Citas" reflects the new appointment
+      ref.invalidate(clientBookingsProvider);
     } catch (e) {
       if (!mounted) return;
       setState(() {

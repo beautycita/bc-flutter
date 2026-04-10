@@ -45,12 +45,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final currentUser = BCSupabase.client.auth.currentUser;
       if (currentUser != null) {
         state = state.copyWith(user: currentUser);
+        _startSessionPing();
       }
     }
   }
 
   /// Cached role to avoid repeated DB queries during navigation.
   String? _cachedRole;
+
+  /// Periodic timer that validates the session is still active.
+  Timer? _sessionPingTimer;
 
   /// Sign in with email + password.
   Future<bool> signInWithEmail(String email, String password) async {
@@ -68,6 +72,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       );
       state = state.copyWith(isLoading: false, user: response.user);
       if (response.user != null) {
+        _startSessionPing();
         registerWebSession(); // fire-and-forget
       }
       return response.user != null;
@@ -104,6 +109,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       );
       state = state.copyWith(isLoading: false, user: response.user);
       if (response.user != null) {
+        _startSessionPing();
         registerWebSession(); // fire-and-forget
       }
       return response.user != null;
@@ -203,6 +209,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> signOut() async {
     if (!BCSupabase.isInitialized) return;
     _cachedRole = null;
+    _stopSessionPing();
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       await BCSupabase.client.auth.signOut();
@@ -217,8 +224,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   /// Query the profiles table for the user's role.
   /// Caches the result so subsequent calls (router redirects) are instant.
-  Future<String?> getUserRole() async {
-    if (_cachedRole != null && state.user != null) return _cachedRole;
+  /// Pass [forceRefresh] = true from admin/business contexts to re-fetch.
+  Future<String?> getUserRole({bool forceRefresh = false}) async {
+    if (!forceRefresh && _cachedRole != null && state.user != null) {
+      return _cachedRole;
+    }
     if (!BCSupabase.isInitialized || state.user == null) return null;
     try {
       final data = await BCSupabase.client
@@ -237,6 +247,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   /// Set the authenticated user (e.g., after QR login).
   void setUser(User user) {
     state = state.copyWith(user: user, isLoading: false, clearError: true);
+    _startSessionPing();
   }
 
   /// Register this web session so the mobile device manager can see it.
@@ -362,6 +373,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
       state = state.copyWith(isLoading: false, user: authResponse.user);
       if (authResponse.user != null) {
+        _startSessionPing();
         registerWebSession(); // fire-and-forget
       }
       return authResponse.user != null;
@@ -465,6 +477,45 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  /// Start a 60-second periodic ping to verify the session is still valid.
+  /// If the server has revoked the session, signs the user out.
+  void _startSessionPing() {
+    _sessionPingTimer?.cancel();
+    _sessionPingTimer = Timer.periodic(
+      const Duration(seconds: 60),
+      (_) => _checkSessionValidity(),
+    );
+  }
+
+  /// Stop the session validity timer.
+  void _stopSessionPing() {
+    _sessionPingTimer?.cancel();
+    _sessionPingTimer = null;
+  }
+
+  Future<void> _checkSessionValidity() async {
+    if (!BCSupabase.isInitialized || state.user == null) {
+      _stopSessionPing();
+      return;
+    }
+    try {
+      final response = await BCSupabase.client.auth.getUser();
+      if (response.user == null) {
+        debugPrint('Session ping: user null — signing out');
+        await signOut();
+      }
+    } catch (e) {
+      debugPrint('Session ping: revoked or expired — signing out ($e)');
+      await signOut();
+    }
+  }
+
+  @override
+  void dispose() {
+    _stopSessionPing();
+    super.dispose();
+  }
+
   /// Clear any error message.
   void clearError() {
     state = state.copyWith(clearError: true);
@@ -519,9 +570,11 @@ final authStateStreamProvider = StreamProvider<AuthState>((ref) {
   }
   return BCSupabase.client.auth.onAuthStateChange.map((data) {
     final user = data.session?.user;
-    // Register web session on sign-in events (OAuth, page refresh with session)
+    // Register web session + session ping on sign-in events (OAuth, page refresh)
     if (user != null && data.event.name == 'signedIn') {
-      ref.read(authProvider.notifier).registerWebSession();
+      final notifier = ref.read(authProvider.notifier);
+      notifier.setUser(user); // also starts session ping
+      notifier.registerWebSession();
     }
     return AuthState(user: user);
   });
