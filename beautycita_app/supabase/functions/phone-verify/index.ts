@@ -31,6 +31,9 @@ const corsHeaders = (req: Request) => ({
 
 const BEAUTYPI_WA_URL = Deno.env.get("BEAUTYPI_WA_URL") ?? "";
 const BEAUTYPI_WA_TOKEN = Deno.env.get("BEAUTYPI_WA_TOKEN") ?? "";
+const TWILIO_ACCOUNT_SID = Deno.env.get("TWILIO_ACCOUNT_SID") ?? "";
+const TWILIO_AUTH_TOKEN = Deno.env.get("TWILIO_AUTH_TOKEN") ?? "";
+const TWILIO_VERIFY_SID = Deno.env.get("TWILIO_VERIFY_SID") ?? "";
 const OTP_EXPIRY_MINUTES = 5;
 const MAX_ATTEMPTS = 3;
 
@@ -167,18 +170,38 @@ Deno.serve(async (req) => {
     console.log(`[phone-verify] Trying WhatsApp for ${phone.slice(0, 6)}***`);
     let result = await sendWhatsApp(phone, otp);
 
+    // If WA failed, fall back to SMS via Twilio
     if (!result.sent) {
-      console.error(`[phone-verify] WhatsApp failed for ${phone.slice(0, 6)}***`);
-      return json({ error: "No se pudo enviar el codigo por WhatsApp. Verifica que tu numero tenga WhatsApp activo e intenta de nuevo." }, 500);
+      console.log(`[phone-verify] WA failed for ${phone.slice(0, 6)}***, falling back to SMS`);
+      try {
+        const url = `https://verify.twilio.com/v2/Services/${TWILIO_VERIFY_SID}/Verifications`;
+        const auth = btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`);
+        const smsRes = await fetch(url, {
+          method: "POST",
+          headers: { Authorization: `Basic ${auth}`, "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({ To: phone.startsWith("+") ? phone : `+${phone}`, Channel: "sms" }),
+        });
+        if (smsRes.ok) {
+          result = { sent: true, channel: "sms" };
+          console.log(`[phone-verify] OTP sent via SMS to ${phone.slice(0, 6)}***`);
+        } else {
+          const err = await smsRes.text();
+          console.error(`[phone-verify] SMS also failed: ${err}`);
+          return json({ error: "No se pudo enviar el codigo. Intenta de nuevo." }, 500);
+        }
+      } catch (e) {
+        console.error(`[phone-verify] SMS error: ${e}`);
+        return json({ error: "No se pudo enviar el codigo. Intenta de nuevo." }, 500);
+      }
     }
 
-    // Store OTP in DB
-    const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000).toISOString();
+    // Store OTP in DB (for WA we store our code, for SMS Twilio manages its own)
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
     await db.from("phone_verification_codes").insert({
       user_id: user.id,
       phone,
-      code: otp,
-      channel: "whatsapp",
+      code: result.channel === "sms" ? "TWILIO_MANAGED" : otp,
+      channel: result.channel,
       expires_at: expiresAt,
     });
 
@@ -222,7 +245,25 @@ Deno.serve(async (req) => {
       .update({ attempts: record.attempts + 1 })
       .eq("id", record.id);
 
-    const verified = record.code === code;
+    let verified = false;
+    if (record.channel === "sms") {
+      // Verify via Twilio Verify API
+      try {
+        const url = `https://verify.twilio.com/v2/Services/${TWILIO_VERIFY_SID}/VerificationCheck`;
+        const auth = btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`);
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { Authorization: `Basic ${auth}`, "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({ To: phone.startsWith("+") ? phone : `+${phone}`, Code: code }),
+        });
+        const data = await res.json();
+        verified = data.status === "approved";
+      } catch (e) {
+        console.error(`[phone-verify] Twilio verify error: ${e}`);
+      }
+    } else {
+      verified = record.code === code;
+    }
 
     if (!verified) {
       return json({ error: "Codigo incorrecto", remaining: MAX_ATTEMPTS - record.attempts - 1 }, 400);

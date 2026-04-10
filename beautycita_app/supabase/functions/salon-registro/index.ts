@@ -544,7 +544,7 @@ function registrationPage(ref: string | null, salon: SalonData): string {
 
         <div style="border-top:1px solid #eee;margin-top:14px;padding-top:14px">
           <p style="font-size:13px;color:#888;line-height:1.5">Solo cobramos una pequena comision del 3% cuando <strong>nosotros</strong> te enviamos un cliente nuevo a traves de la plataforma. Tus propios clientes? Siempre gratis.</p>
-          <a href="https://beautycita.com/porque" style="display:block;text-align:center;margin-top:12px;color:#9B72CF;font-size:14px;font-weight:600;text-decoration:none">Como es esto posible? Conoce nuestra historia &rarr;</a>
+          <a href="https://beautycita.com/porque-beautycita" style="display:block;text-align:center;margin-top:12px;color:#9B72CF;font-size:14px;font-weight:600;text-decoration:none">Como es esto posible? Conoce nuestra historia &rarr;</a>
         </div>
       </div>
 
