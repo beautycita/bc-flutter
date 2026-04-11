@@ -184,14 +184,14 @@ class _InviteSalonScreenState extends ConsumerState<InviteSalonScreen> {
         backgroundColor: waGreen,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 24),
+          icon: Icon(Icons.arrow_back_rounded, color: Theme.of(context).colorScheme.onPrimary, size: 24),
           onPressed: () => context.pop(),
         ),
         title: Text(
           'Estilistas cerca de ti',
           style: GoogleFonts.poppins(
             fontWeight: FontWeight.w600,
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onPrimary,
             fontSize: 17,
           ),
         ),
@@ -207,7 +207,7 @@ class _InviteSalonScreenState extends ConsumerState<InviteSalonScreen> {
               'que aún no están en BeautyCita',
               style: GoogleFonts.nunito(
                 fontSize: 13,
-                color: Colors.white70,
+                color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7),
               ),
             ),
           ),
@@ -220,7 +220,7 @@ class _InviteSalonScreenState extends ConsumerState<InviteSalonScreen> {
             ),
             child: TextField(
               onChanged: (v) => setState(() => _searchQuery = v),
-              style: GoogleFonts.nunito(fontSize: 14, color: Colors.black87),
+              style: GoogleFonts.nunito(fontSize: 14, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.87)),
               decoration: InputDecoration(
                 hintText: 'Buscar por nombre...',
                 hintStyle: GoogleFonts.nunito(
@@ -228,7 +228,7 @@ class _InviteSalonScreenState extends ConsumerState<InviteSalonScreen> {
                 prefixIcon:
                     const Icon(Icons.search, size: 20, color: Colors.grey),
                 filled: true,
-                fillColor: Colors.white,
+                fillColor: Theme.of(context).colorScheme.surface,
                 isDense: true,
                 contentPadding: const EdgeInsets.symmetric(
                     horizontal: 12, vertical: 10),
@@ -296,7 +296,7 @@ class _InviteSalonScreenState extends ConsumerState<InviteSalonScreen> {
                                   label: const Text('Reintentar'),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: waLightGreen,
-                                    foregroundColor: Colors.white,
+                                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(20),
                                     ),
@@ -475,7 +475,7 @@ class _ContactMatchesSection extends ConsumerWidget {
       return Padding(
         padding: const EdgeInsets.only(bottom: 12),
         child: Material(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.onPrimary,
           borderRadius: BorderRadius.circular(AppConstants.radiusMD),
           child: InkWell(
             borderRadius: BorderRadius.circular(AppConstants.radiusMD),
@@ -533,7 +533,7 @@ class _ContactMatchesSection extends ConsumerWidget {
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onPrimary,
             borderRadius: BorderRadius.circular(AppConstants.radiusMD),
           ),
           child: Row(
@@ -612,7 +612,7 @@ class _ContactMatchCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: invited ? waCardTint : Colors.white,
+        color: invited ? waCardTint : Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
         border: Border.all(
           color: waLightGreen.withValues(alpha: 0.3),
@@ -698,7 +698,7 @@ class _ContactMatchCard extends StatelessWidget {
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: invited ? Colors.grey[300] : waLightGreen,
-                foregroundColor: invited ? Colors.grey[600] : Colors.white,
+                foregroundColor: invited ? Colors.grey[600] : Theme.of(context).colorScheme.onPrimary,
                 elevation: 0,
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -740,7 +740,7 @@ class _SalonCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: invited ? waCardTint : Colors.white,
+        color: invited ? waCardTint : Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
       ),
       child: Padding(
@@ -825,7 +825,7 @@ class _SalonCard extends StatelessWidget {
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: invited ? Colors.grey[300] : waLightGreen,
-                foregroundColor: invited ? Colors.grey[600] : Colors.white,
+                foregroundColor: invited ? Colors.grey[600] : Theme.of(context).colorScheme.onPrimary,
                 elevation: 0,
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

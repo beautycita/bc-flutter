@@ -113,7 +113,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
         children: [
           // Tab bar
           Container(
-            color: Colors.white,
+            color: colors.surface,
             child: TabBar(
               controller: _tabController,
               labelColor: colors.primary,
@@ -447,14 +447,14 @@ class _OrderCardState extends ConsumerState<_OrderCard> {
       child: Container(
       padding: const EdgeInsets.all(AppConstants.paddingMD),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
         border: Border.all(
           color: colors.primary.withValues(alpha: 0.10),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: Theme.of(context).shadowColor.withValues(alpha: 0.04),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -645,12 +645,12 @@ class _OrderCardState extends ConsumerState<_OrderCard> {
                         if (mounted) setState(() => _loading = false);
                       },
                 icon: _loading
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 16,
                         height: 16,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: Colors.white,
+                          color: colors.onPrimary,
                         ),
                       )
                     : Icon(
@@ -670,7 +670,7 @@ class _OrderCardState extends ConsumerState<_OrderCard> {
                   backgroundColor: order.isPaid
                       ? colors.primary
                       : ext.successColor,
-                  foregroundColor: Colors.white,
+                  foregroundColor: colors.onPrimary,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius:
@@ -764,15 +764,15 @@ class _OrderCardState extends ConsumerState<_OrderCard> {
                         },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: colors.primary,
-                    foregroundColor: Colors.white,
+                    foregroundColor: colors.onPrimary,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                   child: saving
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 20,
                           height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          child: CircularProgressIndicator(strokeWidth: 2, color: colors.onPrimary),
                         )
                       : Text('Guardar', style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w600)),
                 ),
@@ -870,7 +870,7 @@ class _ShippingDeadlineBar extends StatelessWidget {
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
               value: progress,
-              backgroundColor: Colors.white.withValues(alpha: 0.6),
+              backgroundColor: colors.surface.withValues(alpha: 0.6),
               valueColor: AlwaysStoppedAnimation<Color>(barColor),
               minHeight: 4,
             ),

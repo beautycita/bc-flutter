@@ -349,7 +349,7 @@ class _SalonCard extends StatelessWidget {
       color: theme.colorScheme.surface,
       borderRadius: BorderRadius.circular(AppConstants.radiusMD),
       elevation: AppConstants.elevationLow,
-      shadowColor: Colors.black.withValues(alpha: 0.08),
+      shadowColor: Theme.of(context).shadowColor.withValues(alpha: 0.08),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
@@ -596,7 +596,7 @@ class _ShimmerCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: Theme.of(context).shadowColor.withValues(alpha: 0.04),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -726,9 +726,9 @@ class _AphroditeLoadingAnimationState
                   ),
                 ],
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.search_rounded,
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onPrimary,
                 size: 36,
               ),
             ),
@@ -831,9 +831,9 @@ class _ScrapePrompt extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.travel_explore_rounded,
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onPrimary,
                           size: 20,
                         ),
                         const SizedBox(width: AppConstants.paddingSM),
@@ -842,7 +842,7 @@ class _ScrapePrompt extends StatelessWidget {
                           style: GoogleFonts.poppins(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onPrimary,
                           ),
                         ),
                       ],

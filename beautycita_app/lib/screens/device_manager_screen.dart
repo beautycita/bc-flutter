@@ -271,10 +271,10 @@ class DeviceManagerScreen extends ConsumerWidget {
                                 AppConstants.radiusLG),
                           ),
                         ),
-                        child: const Text(
+                        child: Text(
                           'Cerrar sesion',
                           style: TextStyle(
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onPrimary,
                             fontWeight: FontWeight.w700,
                           ),
                         ),

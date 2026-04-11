@@ -517,12 +517,12 @@ class _ProductCheckoutSheetState extends State<ProductCheckoutSheet> {
                 ),
               ),
               child: _processing
-                  ? const SizedBox(
+                  ? SizedBox(
                       width: 22,
                       height: 22,
                       child: CircularProgressIndicator(
                         strokeWidth: 2.5,
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onPrimary,
                       ),
                     )
                   : Text(

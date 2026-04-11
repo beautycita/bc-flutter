@@ -180,7 +180,7 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
               decoration: BoxDecoration(
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.06 * shadowOpacity),
+                    color: Theme.of(context).shadowColor.withValues(alpha: 0.06 * shadowOpacity),
                     blurRadius: 20,
                     offset: const Offset(0, 8),
                   ),
@@ -891,14 +891,14 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.chat, color: Colors.white, size: 20),
+              Icon(Icons.chat, color: Theme.of(context).colorScheme.onPrimary, size: 20),
               const SizedBox(width: 8),
               Text(
                 'CONTACTAR POR WHATSAPP',
                 style: GoogleFonts.poppins(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onPrimary,
                   letterSpacing: 1.2,
                 ),
               ),
@@ -939,12 +939,12 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
         ),
         alignment: Alignment.center,
         child: _isBooking
-            ? const SizedBox(
+            ? SizedBox(
                 width: 20,
                 height: 20,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onPrimary,
                 ),
               )
             : Text(
@@ -952,7 +952,7 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
                 style: GoogleFonts.poppins(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onPrimary,
                   letterSpacing: 1.5,
                 ),
               ),
@@ -1017,14 +1017,14 @@ class _NoResultsWithNearbySalonsState
         backgroundColor: waGreen,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 24),
+          icon: Icon(Icons.arrow_back_rounded, color: Theme.of(context).colorScheme.onPrimary, size: 24),
           onPressed: widget.onGoBack,
         ),
         title: Text(
           'Estilistas de $displayService',
           style: GoogleFonts.poppins(
             fontWeight: FontWeight.w600,
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onPrimary,
             fontSize: 16,
           ),
           maxLines: 1,
@@ -1038,7 +1038,7 @@ class _NoResultsWithNearbySalonsState
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Text(
               'que aun no estan en BeautyCita',
-              style: GoogleFonts.nunito(fontSize: 13, color: Colors.white70),
+              style: GoogleFonts.nunito(fontSize: 13, color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7)),
             ),
           ),
           const SizedBox(height: 12),
@@ -1101,11 +1101,11 @@ class _NoResultsWithNearbySalonsState
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onPrimary,
                   borderRadius: BorderRadius.circular(AppConstants.radiusMD),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.06),
+                      color: Theme.of(context).shadowColor.withValues(alpha: 0.06),
                       blurRadius: 10,
                       offset: const Offset(0, 3),
                     ),
@@ -1287,17 +1287,17 @@ class _NearbySalonCardState extends State<_NearbySalonCard>
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
-          color: widget.invited ? waCardTint : Colors.white,
+          color: widget.invited ? waCardTint : Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(AppConstants.radiusMD),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
+              color: Theme.of(context).shadowColor.withValues(alpha: 0.08),
               blurRadius: 12,
               offset: const Offset(0, 4),
               spreadRadius: 0,
             ),
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
+              color: Theme.of(context).shadowColor.withValues(alpha: 0.04),
               blurRadius: 4,
               offset: const Offset(0, 2),
               spreadRadius: 0,
@@ -1314,7 +1314,7 @@ class _NearbySalonCardState extends State<_NearbySalonCard>
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.1),
+                      color: Theme.of(context).shadowColor.withValues(alpha: 0.1),
                       blurRadius: 4,
                       offset: const Offset(0, 2),
                     ),
@@ -1395,9 +1395,9 @@ class _NearbySalonCardState extends State<_NearbySalonCard>
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: widget.invited ? Colors.grey[300] : waLightGreen,
-                        foregroundColor: widget.invited ? Colors.grey[600] : Colors.white,
+                        foregroundColor: widget.invited ? Colors.grey[600] : Theme.of(context).colorScheme.onPrimary,
                         elevation: widget.invited ? 0 : 3,
-                        shadowColor: Colors.black.withValues(alpha: 0.2),
+                        shadowColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(20),

@@ -112,7 +112,7 @@ class _NeonGlowIcon extends StatelessWidget {
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(color: color.withValues(alpha: 0.5), blurRadius: 12, spreadRadius: 4),
-          BoxShadow(color: Colors.white.withValues(alpha: 0.3), blurRadius: 4, spreadRadius: 1),
+          BoxShadow(color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.3), blurRadius: 4, spreadRadius: 1),
         ],
       ),
       child: Center(

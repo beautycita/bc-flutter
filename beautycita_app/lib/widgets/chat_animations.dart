@@ -147,7 +147,7 @@ class MorphingSendButton extends StatelessWidget {
             );
           },
           child: hasText
-              ? const Icon(Icons.send_rounded, key: ValueKey('send'), color: Colors.white, size: 20)
+              ? Icon(Icons.send_rounded, key: const ValueKey('send'), color: colors.onPrimary, size: 20)
               : Icon(Icons.mic_rounded, key: const ValueKey('mic'), color: colors.primary, size: 22),
         ),
       ),
@@ -203,7 +203,7 @@ class _WaveTypingIndicatorState extends State<WaveTypingIndicator>
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
+                  color: colors.onSurface.withValues(alpha: 0.04),
                   blurRadius: 4,
                   offset: const Offset(0, 1),
                 ),
@@ -323,6 +323,7 @@ class _AnimatedImageSendState extends State<AnimatedImageSend>
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return AnimatedBuilder(
       animation: _scaleAnimation,
       builder: (context, child) {
@@ -338,13 +339,13 @@ class _AnimatedImageSendState extends State<AnimatedImageSend>
           if (widget.isSending)
             Container(
               decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.3),
+                color: colors.onSurface.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: const Padding(
-                padding: EdgeInsets.all(20),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
                 child: CircularProgressIndicator(
-                  color: Colors.white,
+                  color: colors.onPrimary,
                   strokeWidth: 3,
                 ),
               ),
@@ -415,7 +416,7 @@ class _VoiceRecordingBarState extends State<VoiceRecordingBar>
         color: Theme.of(context).scaffoldBackgroundColor,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Theme.of(context).shadowColor.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, -2),
           ),
@@ -474,7 +475,7 @@ class _VoiceRecordingBarState extends State<VoiceRecordingBar>
                 color: Color(0xFF25D366), // WA green
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.send_rounded, color: Colors.white, size: 20),
+              child: Icon(Icons.send_rounded, color: colors.onPrimary, size: 20),
             ),
           ),
         ],

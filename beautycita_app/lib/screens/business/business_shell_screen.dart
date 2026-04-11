@@ -132,7 +132,7 @@ class BusinessShellScreen extends ConsumerWidget {
                         onPressed: () => context.push('/registro'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: colors.primary,
-                          foregroundColor: Colors.white,
+                          foregroundColor: colors.onPrimary,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(AppConstants.radiusLG),
                           ),

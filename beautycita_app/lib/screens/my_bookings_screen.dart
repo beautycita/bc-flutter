@@ -286,10 +286,10 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
                                 AppConstants.radiusLG),
                           ),
                         ),
-                        child: const Text(
+                        child: Text(
                           'Si, cancelar',
                           style: TextStyle(
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onPrimary,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -458,10 +458,10 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
                               BorderRadius.circular(AppConstants.radiusLG),
                         ),
                       ),
-                      child: const Text(
+                      child: Text(
                         'Enviar reporte',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onPrimary,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -532,7 +532,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
               backgroundColor: Colors.orange.shade700,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
-            child: const Text('Agregar fotos', style: TextStyle(color: Colors.white)),
+            child: Text('Agregar fotos', style: TextStyle(color: Theme.of(context).colorScheme.onPrimary)),
           ),
         ],
       ),
@@ -712,8 +712,8 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
                             salonOffer == 'denied'
                                 ? 'Aceptar decision'
                                 : 'Aceptar oferta',
-                            style: const TextStyle(
-                              color: Colors.white,
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.onPrimary,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -1232,7 +1232,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
                     overflow: TextOverflow.ellipsis,
                     style: textTheme.labelLarge?.copyWith(
                       color: isSelected
-                          ? Colors.white
+                          ? colorScheme.onPrimary
                           : colorScheme.onSurface,
                       fontWeight:
                           isSelected ? FontWeight.w700 : FontWeight.w500,
@@ -1296,12 +1296,12 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
         border: Border.all(color: ext.cardBorderColor),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
+            color: Theme.of(context).shadowColor.withValues(alpha: 0.03),
             blurRadius: 10,
             offset: const Offset(0, 3),
           ),
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
+            color: Theme.of(context).shadowColor.withValues(alpha: 0.02),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),

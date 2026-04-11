@@ -28,9 +28,9 @@ class PressScreen extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final accentColor = colorScheme.primary;
-    final surfaceColor = isDark ? const Color(0xFF1E1E2A) : Colors.white;
+    final surfaceColor = isDark ? const Color(0xFF1E1E2A) : colorScheme.surface;
     final borderColor = ext.cardBorderColor;
-    final subtleText = isDark ? Colors.white54 : Colors.black45;
+    final subtleText = isDark ? Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.54) : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.45);
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -86,7 +86,7 @@ class PressScreen extends StatelessWidget {
                   style: GoogleFonts.poppins(
                     fontSize: 30,
                     fontWeight: FontWeight.w700,
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onPrimary,
                     height: 1.15,
                   ),
                 ),
@@ -95,7 +95,7 @@ class PressScreen extends StatelessWidget {
                   'Transformando la industria de la belleza en Mexico.',
                   style: GoogleFonts.nunito(
                     fontSize: 15,
-                    color: Colors.white.withValues(alpha: 0.75),
+                    color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.75),
                     height: 1.5,
                   ),
                 ),
@@ -129,7 +129,7 @@ class PressScreen extends StatelessWidget {
                     style: GoogleFonts.nunito(
                       fontSize: 14.5,
                       height: 1.65,
-                      color: isDark ? Colors.white70 : Colors.black87,
+                      color: isDark ? Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7) : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.87),
                     ),
                   ),
                   const SizedBox(height: AppConstants.paddingLG),
@@ -274,7 +274,7 @@ class PressScreen extends StatelessWidget {
                     style: GoogleFonts.nunito(
                       fontSize: 14.5,
                       height: 1.6,
-                      color: isDark ? Colors.white70 : Colors.black87,
+                      color: isDark ? Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7) : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.87),
                     ),
                   ),
                   const SizedBox(height: AppConstants.paddingMD),
@@ -441,7 +441,7 @@ class _ElevatedCard extends StatelessWidget {
         border: Border.all(color: borderColor, width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
+            color: Theme.of(context).shadowColor.withValues(alpha: 0.06),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -489,8 +489,8 @@ class _StatCell extends StatelessWidget {
                 fontSize: 11.5,
                 fontWeight: FontWeight.w600,
                 color: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.white54
-                    : Colors.black45,
+                    ? Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.54)
+                    : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.45),
               ),
               textAlign: TextAlign.center,
             ),
@@ -674,7 +674,7 @@ class _TimelineRow extends StatelessWidget {
                     style: GoogleFonts.nunito(
                       fontSize: 14,
                       height: 1.55,
-                      color: isDark ? Colors.white70 : Colors.black87,
+                      color: isDark ? Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7) : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.87),
                     ),
                   ),
                 ],

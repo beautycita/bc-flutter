@@ -542,7 +542,7 @@ class _GoldGradientButton extends StatelessWidget {
               boxShadow: onTap != null
                   ? [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.18),
+                        color: Theme.of(context).shadowColor.withValues(alpha: 0.18),
                         blurRadius: 8,
                         offset: const Offset(0, 3),
                       ),
@@ -551,12 +551,12 @@ class _GoldGradientButton extends StatelessWidget {
             ),
             alignment: Alignment.center,
             child: loading
-                ? const SizedBox(
+                ? SizedBox(
                     width: 22,
                     height: 22,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onPrimary,
                     ),
                   )
                 : Text(
@@ -564,7 +564,7 @@ class _GoldGradientButton extends StatelessWidget {
                     style: GoogleFonts.poppins(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onPrimary,
                       letterSpacing: 0.3,
                     ),
                   ),

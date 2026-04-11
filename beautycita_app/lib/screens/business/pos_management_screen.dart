@@ -201,11 +201,11 @@ class _PosOptInViewState extends ConsumerState<_PosOptInView> {
           child: ElevatedButton.icon(
             onPressed: _saving ? null : _activate,
             icon: _saving
-                ? const SizedBox(
+                ? SizedBox(
                     width: 18,
                     height: 18,
                     child: CircularProgressIndicator(
-                        strokeWidth: 2, color: Colors.white),
+                        strokeWidth: 2, color: colors.onPrimary),
                   )
                 : const Icon(Icons.storefront_rounded),
             label: Text(
@@ -214,7 +214,7 @@ class _PosOptInViewState extends ConsumerState<_PosOptInView> {
             ),
             style: ElevatedButton.styleFrom(
               backgroundColor: colors.primary,
-              foregroundColor: Colors.white,
+              foregroundColor: colors.onPrimary,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(AppConstants.radiusLG),
               ),
@@ -302,11 +302,11 @@ class _PosContentView extends ConsumerWidget {
           style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
         ),
         backgroundColor: colors.primary,
-        foregroundColor: Colors.white,
+        foregroundColor: colors.onPrimary,
       ),
       body: RefreshIndicator(
         color: colors.primary,
-        backgroundColor: Colors.white,
+        backgroundColor: colors.surface,
         onRefresh: () async {
           ref.invalidate(businessProductsProvider);
           ref.invalidate(businessShowcasesProvider);
@@ -340,6 +340,7 @@ class _PosContentView extends ConsumerWidget {
 
   Future<void> _confirmDelete(
       BuildContext context, WidgetRef ref, Product product) async {
+    final colors = Theme.of(context).colorScheme;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -365,7 +366,7 @@ class _PosContentView extends ConsumerWidget {
             onPressed: () => Navigator.of(ctx).pop(true),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
+              foregroundColor: colors.onPrimary,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(AppConstants.radiusSM),
               ),
@@ -414,6 +415,7 @@ class _PosContentView extends ConsumerWidget {
   }
 
   Future<void> _confirmDeactivate(BuildContext context, WidgetRef ref) async {
+    final colors = Theme.of(context).colorScheme;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -436,7 +438,7 @@ class _PosContentView extends ConsumerWidget {
             onPressed: () => Navigator.of(ctx).pop(true),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
+              foregroundColor: colors.onPrimary,
             ),
             child: Text('Desactivar',
                 style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
@@ -636,8 +638,8 @@ class _ProductCard extends StatelessWidget {
             color: Colors.red.shade400,
             borderRadius: BorderRadius.circular(AppConstants.radiusMD),
           ),
-          child: const Icon(Icons.delete_outline_rounded,
-              color: Colors.white, size: 28),
+          child: Icon(Icons.delete_outline_rounded,
+              color: colors.onPrimary, size: 28),
         ),
         confirmDismiss: (_) async {
           onDelete();
@@ -649,7 +651,7 @@ class _ProductCard extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.all(AppConstants.paddingMD),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: colors.surface,
               borderRadius: BorderRadius.circular(AppConstants.radiusMD),
               border: Border.all(
                 color: colors.onSurface.withValues(alpha: 0.08),
@@ -903,9 +905,9 @@ class _ProductFormSheetState extends ConsumerState<_ProductFormSheet> {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: const BorderRadius.vertical(
           top: Radius.circular(AppConstants.radiusLG),
         ),
       ),
@@ -1112,18 +1114,18 @@ class _ProductFormSheetState extends ConsumerState<_ProductFormSheet> {
                   onPressed: _saving ? null : _save,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: colors.primary,
-                    foregroundColor: Colors.white,
+                    foregroundColor: colors.onPrimary,
                     shape: RoundedRectangleBorder(
                       borderRadius:
                           BorderRadius.circular(AppConstants.radiusLG),
                     ),
                   ),
                   child: _saving
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 22,
                           height: 22,
                           child: CircularProgressIndicator(
-                              strokeWidth: 2.5, color: Colors.white),
+                              strokeWidth: 2.5, color: colors.onPrimary),
                         )
                       : Text(
                           _isEdit ? 'Guardar cambios' : 'Crear producto',
@@ -1275,9 +1277,9 @@ class _ShowcaseSheetState extends ConsumerState<_ShowcaseSheet> {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: const BorderRadius.vertical(
           top: Radius.circular(AppConstants.radiusLG),
         ),
       ),
@@ -1351,7 +1353,7 @@ class _ShowcaseSheetState extends ConsumerState<_ShowcaseSheet> {
                       fontSize: 13,
                       fontWeight:
                           selected ? FontWeight.w700 : FontWeight.w500,
-                      color: selected ? Colors.white : const Color(0xFF424242),
+                      color: selected ? colors.onPrimary : const Color(0xFF424242),
                     ),
                   ),
                   selected: selected,
@@ -1422,11 +1424,11 @@ class _ShowcaseSheetState extends ConsumerState<_ShowcaseSheet> {
               child: ElevatedButton.icon(
                 onPressed: _saving ? null : _publish,
                 icon: _saving
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 18,
                         height: 18,
                         child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white),
+                            strokeWidth: 2, color: colors.onPrimary),
                       )
                     : const Icon(Icons.send_rounded),
                 label: Text(
@@ -1436,7 +1438,7 @@ class _ShowcaseSheetState extends ConsumerState<_ShowcaseSheet> {
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: colors.primary,
-                  foregroundColor: Colors.white,
+                  foregroundColor: colors.onPrimary,
                   shape: RoundedRectangleBorder(
                     borderRadius:
                         BorderRadius.circular(AppConstants.radiusLG),

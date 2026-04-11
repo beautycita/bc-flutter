@@ -1009,7 +1009,7 @@ class _ServiceFormSheetState extends ConsumerState<_ServiceFormSheet> {
                               fontWeight: FontWeight.w600,
                               color: _selectedStaffIds
                                       .contains(staff['id'] as String)
-                                  ? Colors.white
+                                  ? colors.onPrimary
                                   : colors.onSurface.withValues(alpha: 0.5),
                             ),
                           ),

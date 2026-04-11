@@ -176,7 +176,7 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen>
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 1.2,
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onPrimary,
                     ),
                   ),
                 ),
@@ -219,12 +219,12 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen>
                   ),
                   alignment: Alignment.center,
                   child: _isConfirming
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 20,
                           height: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onPrimary,
                           ),
                         )
                       : Text(
@@ -233,7 +233,7 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen>
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
                             letterSpacing: 1.2,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onPrimary,
                           ),
                         ),
                 ),
@@ -332,7 +332,7 @@ class _SummaryCard extends StatelessWidget {
         border: Border.all(color: ext.cardBorderColor),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: Theme.of(context).shadowColor.withValues(alpha: 0.04),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -454,7 +454,7 @@ class _PriceBreakdown extends StatelessWidget {
         border: Border.all(color: ext.cardBorderColor),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: Theme.of(context).shadowColor.withValues(alpha: 0.04),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),

@@ -759,12 +759,12 @@ class _BankingSetupScreenState extends ConsumerState<BankingSetupScreen> {
               ),
             ),
             child: _submitting
-                ? const SizedBox(
+                ? SizedBox(
                     width: 24,
                     height: 24,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: Colors.white,
+                      color: colors.onPrimary,
                     ),
                   )
                 : Text(
@@ -987,14 +987,14 @@ class _StepProgress extends StatelessWidget {
                   ),
                   child: Center(
                     child: i < currentStep
-                        ? const Icon(Icons.check, size: 16, color: Colors.white)
+                        ? Icon(Icons.check, size: 16, color: colors.onPrimary)
                         : Text(
                             '${i + 1}',
                             style: GoogleFonts.poppins(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
                               color: isActive
-                                  ? Colors.white
+                                  ? colors.onPrimary
                                   : colors.onSurface.withValues(alpha: 0.4),
                             ),
                           ),
@@ -1078,7 +1078,7 @@ class _IdUploadCard extends StatelessWidget {
                           end: Alignment.bottomCenter,
                           colors: [
                             Colors.transparent,
-                            Colors.black.withValues(alpha: 0.6),
+                            colors.onSurface.withValues(alpha: 0.6),
                           ],
                         ),
                         borderRadius: const BorderRadius.vertical(
@@ -1087,15 +1087,15 @@ class _IdUploadCard extends StatelessWidget {
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.check_circle, size: 16,
-                              color: Colors.white),
+                          Icon(Icons.check_circle, size: 16,
+                              color: colors.onPrimary),
                           const SizedBox(width: 6),
                           Text(
                             label,
                             style: GoogleFonts.nunito(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
-                              color: Colors.white,
+                              color: colors.onPrimary,
                             ),
                           ),
                           const Spacer(),
@@ -1103,7 +1103,7 @@ class _IdUploadCard extends StatelessWidget {
                             'Cambiar',
                             style: GoogleFonts.nunito(
                               fontSize: 12,
-                              color: Colors.white.withValues(alpha: 0.8),
+                              color: colors.onPrimary.withValues(alpha: 0.8),
                             ),
                           ),
                         ],

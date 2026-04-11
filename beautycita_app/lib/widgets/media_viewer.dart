@@ -49,19 +49,19 @@ class _MediaViewerState extends State<MediaViewer> {
     final primary = Theme.of(context).colorScheme.primary;
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: Theme.of(context).colorScheme.scrim,
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: Colors.black54,
+        backgroundColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.54),
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.close, color: Colors.white),
+          icon: Icon(Icons.close, color: Theme.of(context).colorScheme.onPrimary),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           '${_currentIndex + 1} / ${widget.items.length}',
           style: GoogleFonts.nunito(
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onPrimary,
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
@@ -79,7 +79,7 @@ class _MediaViewerState extends State<MediaViewer> {
               child: Text(
                 _currentItem.toolLabel!,
                 style: GoogleFonts.nunito(
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onPrimary,
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                 ),
@@ -114,9 +114,9 @@ class _MediaViewerState extends State<MediaViewer> {
                       ),
                     );
                   },
-                  errorBuilder: (_, _, _) => const Icon(
+                  errorBuilder: (_, _, _) => Icon(
                     Icons.broken_image,
-                    color: Colors.white38,
+                    color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.38),
                     size: 64,
                   ),
                 ),
@@ -126,7 +126,7 @@ class _MediaViewerState extends State<MediaViewer> {
         ),
       ),
       bottomNavigationBar: Container(
-        color: Colors.black87,
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.87),
         padding: EdgeInsets.only(
           left: 16,
           right: 16,
@@ -146,7 +146,7 @@ class _MediaViewerState extends State<MediaViewer> {
                       Text(
                         _currentItem.sourceLabel,
                         style: GoogleFonts.nunito(
-                          color: Colors.white70,
+                          color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7),
                           fontSize: 12,
                         ),
                       ),
@@ -155,7 +155,7 @@ class _MediaViewerState extends State<MediaViewer> {
                           _currentItem.createdAt.toLocal(),
                         ),
                         style: GoogleFonts.nunito(
-                          color: Colors.white54,
+                          color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.54),
                           fontSize: 11,
                         ),
                       ),

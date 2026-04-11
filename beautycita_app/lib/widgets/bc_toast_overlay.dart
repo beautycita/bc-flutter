@@ -175,7 +175,7 @@ class _BCToastOverlayState extends State<BCToastOverlay>
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.15),
+                    color: Theme.of(context).shadowColor.withValues(alpha: 0.15),
                     blurRadius: 16,
                     offset: const Offset(0, 4),
                   ),
@@ -370,17 +370,17 @@ class _BCToastOverlayState extends State<BCToastOverlay>
                 : ElevatedButton.icon(
                     onPressed: _isReporting ? null : _handleReport,
                     icon: _isReporting
-                        ? const SizedBox(
+                        ? SizedBox(
                             width: 14,
                             height: 14,
                             child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.white),
+                                strokeWidth: 2, color: cs.onPrimary),
                           )
                         : const Icon(Icons.bug_report_rounded, size: 16),
                     label: Text(_isReporting ? 'Enviando...' : 'Reportar'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: accent,
-                      foregroundColor: Colors.white,
+                      foregroundColor: cs.onPrimary,
                       minimumSize: const Size(0, 40),
                       shape: RoundedRectangleBorder(
                         borderRadius:

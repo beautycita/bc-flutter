@@ -185,11 +185,11 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen>
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.2),
+                          color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(Icons.account_balance_wallet_rounded,
-                            color: Colors.white, size: 24),
+                        child: Icon(Icons.account_balance_wallet_rounded,
+                            color: Theme.of(context).colorScheme.onPrimary, size: 24),
                       ),
                       const SizedBox(width: 14),
                       Expanded(
@@ -198,17 +198,17 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen>
                           children: [
                             Text('Saldo disponible',
                               style: GoogleFonts.nunito(
-                                fontSize: 12, color: Colors.white70, fontWeight: FontWeight.w600)),
+                                fontSize: 12, color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7), fontWeight: FontWeight.w600)),
                             Text('\$${saldo.toStringAsFixed(2)} MXN',
                               style: GoogleFonts.poppins(
-                                fontSize: 22, fontWeight: FontWeight.w800, color: Colors.white)),
+                                fontSize: 22, fontWeight: FontWeight.w800, color: Theme.of(context).colorScheme.onPrimary)),
                           ],
                         ),
                       ),
                       Text('Se aplica\nautomaticamente',
                         textAlign: TextAlign.right,
                         style: GoogleFonts.nunito(
-                          fontSize: 10, color: Colors.white60, height: 1.3)),
+                          fontSize: 10, color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.6), height: 1.3)),
                     ],
                   ),
                 ),
@@ -235,12 +235,12 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen>
                   border: Border.all(color: ext.cardBorderColor),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.03),
+                      color: Theme.of(context).shadowColor.withValues(alpha: 0.03),
                       blurRadius: 10,
                       offset: const Offset(0, 3),
                     ),
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.02),
+                      color: Theme.of(context).shadowColor.withValues(alpha: 0.02),
                       blurRadius: 20,
                       offset: const Offset(0, 8),
                     ),
@@ -310,12 +310,12 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen>
                   border: Border.all(color: ext.cardBorderColor),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.03),
+                      color: Theme.of(context).shadowColor.withValues(alpha: 0.03),
                       blurRadius: 10,
                       offset: const Offset(0, 3),
                     ),
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.02),
+                      color: Theme.of(context).shadowColor.withValues(alpha: 0.02),
                       blurRadius: 20,
                       offset: const Offset(0, 8),
                     ),
@@ -345,12 +345,12 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen>
               border: Border.all(color: ext.cardBorderColor),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.03),
+                  color: Theme.of(context).shadowColor.withValues(alpha: 0.03),
                   blurRadius: 10,
                   offset: const Offset(0, 3),
                 ),
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.02),
+                  color: Theme.of(context).shadowColor.withValues(alpha: 0.02),
                   blurRadius: 20,
                   offset: const Offset(0, 8),
                 ),
@@ -472,9 +472,9 @@ class _CardTile extends StatelessWidget {
                             borderRadius: BorderRadius.circular(AppConstants.radiusLG),
                           ),
                         ),
-                        child: const Text(
+                        child: Text(
                           'Eliminar',
-                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+                          style: TextStyle(color: Theme.of(context).colorScheme.onPrimary, fontWeight: FontWeight.w700),
                         ),
                       ),
                     ),
@@ -766,7 +766,7 @@ class _GiftCardRedemptionTileState
                   color: colors.outline.withValues(alpha: 0.15)),
               boxShadow: [
                 BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.03),
+                    color: Theme.of(context).shadowColor.withValues(alpha: 0.03),
                     blurRadius: 10,
                     offset: const Offset(0, 3))
               ],
@@ -852,11 +852,11 @@ class _GiftCardRedemptionTileState
                               const EdgeInsets.symmetric(horizontal: 16),
                         ),
                         child: _loading
-                            ? const SizedBox(
+                            ? SizedBox(
                                 width: 18,
                                 height: 18,
                                 child: CircularProgressIndicator(
-                                    strokeWidth: 2, color: Colors.white))
+                                    strokeWidth: 2, color: Theme.of(context).colorScheme.onPrimary))
                             : Text('Canjear',
                                 style: GoogleFonts.poppins(
                                     fontSize: 14,

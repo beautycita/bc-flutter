@@ -168,11 +168,11 @@ class ProviderDetailScreen extends ConsumerWidget {
       leading: Container(
         margin: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.3),
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
           shape: BoxShape.circle,
         ),
         child: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 24),
+          icon: Icon(Icons.arrow_back_rounded, color: Theme.of(context).colorScheme.onPrimary, size: 24),
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
@@ -203,10 +203,10 @@ class ProviderDetailScreen extends ConsumerWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
+            Icon(
               Icons.store_rounded,
               size: 64,
-              color: Colors.white70,
+              color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7),
             ),
             const SizedBox(height: AppConstants.paddingSM),
             Padding(
@@ -214,8 +214,8 @@ class ProviderDetailScreen extends ConsumerWidget {
                   const EdgeInsets.symmetric(horizontal: AppConstants.paddingLG),
               child: Text(
                 name,
-                style: const TextStyle(
-                  color: Colors.white70,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7),
                   fontSize: 20,
                   fontWeight: FontWeight.w600,
                 ),
@@ -676,13 +676,13 @@ class _DetailFavoriteButton extends ConsumerWidget {
     return Container(
       margin: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.3),
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
         shape: BoxShape.circle,
       ),
       child: IconButton(
         icon: Icon(
           isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-          color: isFav ? Colors.redAccent : Colors.white,
+          color: isFav ? Colors.redAccent : Theme.of(context).colorScheme.onPrimary,
           size: 24,
         ),
         onPressed: () =>

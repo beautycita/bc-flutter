@@ -247,7 +247,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                           style: GoogleFonts.playfairDisplay(
                             fontSize: 44,
                             fontWeight: FontWeight.w700,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onPrimary,
                             letterSpacing: -1.0,
                             height: 1.1,
                             shadows: [
@@ -277,7 +277,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                               height: 1.3,
                               shadows: [
                                 Shadow(
-                                  color: Colors.black.withValues(alpha: 0.06),
+                                  color: Theme.of(context).shadowColor.withValues(alpha: 0.06),
                                   blurRadius: 8,
                                   offset: const Offset(0, 2),
                                 ),

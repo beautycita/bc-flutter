@@ -130,7 +130,7 @@ ThemeData buildThemeFromPalette(BCPalette palette, {double fontScale = 1.0, doub
       elevation: AppConstants.elevationLow,
       color: palette.cardColor,
       surfaceTintColor: Colors.transparent,
-      shadowColor: Colors.black.withValues(alpha: 0.1),
+      shadowColor: palette.textPrimary.withValues(alpha: 0.1),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(rMD),
       ),
@@ -253,7 +253,7 @@ ThemeData buildThemeFromPalette(BCPalette palette, {double fontScale = 1.0, doub
         vertical: AppConstants.paddingSM * s,
       ),
       labelStyle: body(fontSize: 14, fontWeight: FontWeight.w600, color: palette.textPrimary),
-      secondaryLabelStyle: body(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white),
+      secondaryLabelStyle: body(fontSize: 14, fontWeight: FontWeight.w600, color: palette.onPrimary),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(rMD),
       ),

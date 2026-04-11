@@ -231,16 +231,16 @@ class _RPCentroScreenState extends ConsumerState<RPCentroScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(icon, color: Colors.white, size: 28),
+              Icon(icon, color: Theme.of(context).colorScheme.onPrimary, size: 28),
               const SizedBox(height: 8),
               Text(label,
                   style: GoogleFonts.poppins(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
-                      color: Colors.white)),
+                      color: Theme.of(context).colorScheme.onPrimary)),
               Text(subtitle,
                   style:
-                      GoogleFonts.poppins(fontSize: 11, color: Colors.white70)),
+                      GoogleFonts.poppins(fontSize: 11, color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7))),
             ],
           ),
         ),

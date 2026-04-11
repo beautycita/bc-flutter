@@ -202,7 +202,7 @@ class _BusinessMarketingScreenState extends ConsumerState<BusinessMarketingScree
                         margin: const EdgeInsets.only(bottom: 6),
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: colors.surface,
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(color: colors.outline.withValues(alpha: 0.1)),
                         ),
@@ -334,10 +334,10 @@ class _MessageTypeCardState extends State<_MessageTypeCard> {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: _isActive ? t.color.withValues(alpha: 0.3) : colors.outline.withValues(alpha: 0.1)),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 6, offset: const Offset(0, 2))],
+        boxShadow: [BoxShadow(color: Theme.of(context).shadowColor.withValues(alpha: 0.03), blurRadius: 6, offset: const Offset(0, 2))],
       ),
       child: Column(
         children: [
@@ -483,7 +483,7 @@ class _MessageTypeCardState extends State<_MessageTypeCard> {
                     child: FilledButton(
                       onPressed: _saving ? null : _save,
                       child: _saving
-                          ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                          ? SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: colors.onPrimary))
                           : Text('Guardar', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600)),
                     ),
                   ),

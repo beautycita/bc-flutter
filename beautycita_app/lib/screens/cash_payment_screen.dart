@@ -19,7 +19,7 @@ BoxDecoration _cardDecoration(ColorScheme cs) => BoxDecoration(
       ),
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withValues(alpha: 0.06),
+          color: cs.onSurface.withValues(alpha: 0.06),
           blurRadius: 8,
           offset: const Offset(0, 2),
         ),
@@ -158,7 +158,7 @@ class _CashPaymentScreenState extends ConsumerState<CashPaymentScreen> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onPrimary,
                     borderRadius: BorderRadius.circular(AppConstants.radiusSM),
                     border: Border.all(
                       color: colorScheme.onSurface.withValues(alpha: 0.08),
@@ -168,7 +168,7 @@ class _CashPaymentScreenState extends ConsumerState<CashPaymentScreen> {
                     data: payment.referenceNumber.replaceAll(' ', ''),
                     version: QrVersions.auto,
                     size: 200,
-                    backgroundColor: Colors.white,
+                    backgroundColor: Theme.of(context).colorScheme.surface,
                     eyeStyle: const QrEyeStyle(
                       eyeShape: QrEyeShape.square,
                       color: Color(0xFF1A1A1A),
@@ -222,7 +222,7 @@ class _CashPaymentScreenState extends ConsumerState<CashPaymentScreen> {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
+                  color: Theme.of(context).shadowColor.withValues(alpha: 0.04),
                   blurRadius: 6,
                   offset: const Offset(0, 2),
                 ),
@@ -370,7 +370,7 @@ class _CashPaymentScreenState extends ConsumerState<CashPaymentScreen> {
                     label: const Text('Nuevo codigo'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFCC0000),
-                      foregroundColor: Colors.white,
+                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
                       minimumSize: const Size(0, AppConstants.minTouchHeight),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(AppConstants.radiusLG),

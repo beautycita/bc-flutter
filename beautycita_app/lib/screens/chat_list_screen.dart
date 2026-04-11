@@ -108,7 +108,7 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
                   alignment: Alignment.centerRight,
                   padding: const EdgeInsets.only(right: 24),
                   color: Colors.red.shade400,
-                  child: const Icon(Icons.delete_outline, color: Colors.white, size: 28),
+                  child: Icon(Icons.delete_outline, color: Theme.of(context).colorScheme.onPrimary, size: 28),
                 ),
                 confirmDismiss: (_) => _confirmDelete(context, thread.displayName),
                 onDismissed: (_) {
@@ -194,7 +194,7 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
                     onPressed: () => Navigator.of(ctx).pop(true),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.red.shade400,
-                      foregroundColor: Colors.white,
+                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     child: Text('Eliminar', style: GoogleFonts.nunito(fontWeight: FontWeight.w700)),
@@ -335,7 +335,7 @@ class _AphroditeRow extends StatelessWidget {
                       style: GoogleFonts.nunito(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onPrimary,
                       ),
                     ),
                   ),
@@ -382,8 +382,8 @@ class _SupportRow extends StatelessWidget {
                   ),
                 ],
               ),
-              child: const Center(
-                child: Icon(Icons.support_agent_rounded, color: Colors.white, size: 28),
+              child: Center(
+                child: Icon(Icons.support_agent_rounded, color: Theme.of(context).colorScheme.onPrimary, size: 28),
               ),
             ),
             const SizedBox(width: 14),
@@ -445,7 +445,7 @@ class _SupportRow extends StatelessWidget {
                       style: GoogleFonts.nunito(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onPrimary,
                       ),
                     ),
                   ),
@@ -536,7 +536,7 @@ class _ThreadRow extends StatelessWidget {
                       style: GoogleFonts.nunito(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onPrimary,
                       ),
                     ),
                   ),

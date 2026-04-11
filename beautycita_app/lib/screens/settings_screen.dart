@@ -66,7 +66,7 @@ class SettingsScreen extends ConsumerWidget {
                             ? NetworkImage(profile.avatarUrl!)
                             : null,
                         child: profile.avatarUrl == null
-                            ? const Icon(Icons.person_outline, color: Colors.white, size: 28)
+                            ? Icon(Icons.person_outline, color: Theme.of(context).colorScheme.onPrimary, size: 28)
                             : null,
                       ),
                     ),
@@ -90,7 +90,7 @@ class SettingsScreen extends ConsumerWidget {
                             child: Text(
                               'Editar perfil',
                               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Colors.white,
+                                color: Theme.of(context).colorScheme.onPrimary,
                               ),
                             ),
                           ),
@@ -100,19 +100,19 @@ class SettingsScreen extends ConsumerWidget {
                     // Pencil icon — gold
                     ShaderMask(
                       shaderCallback: (bounds) => goldGrad.createShader(bounds),
-                      child: const Icon(
+                      child: Icon(
                         Icons.edit_outlined,
                         size: 18,
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onPrimary,
                       ),
                     ),
                     const SizedBox(width: 4),
                     // Chevron — gold
                     ShaderMask(
                       shaderCallback: (bounds) => goldGrad.createShader(bounds),
-                      child: const Icon(
+                      child: Icon(
                         Icons.chevron_right_rounded,
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onPrimary,
                       ),
                     ),
                   ],
@@ -473,9 +473,9 @@ class SettingsScreen extends ConsumerWidget {
                             borderRadius: BorderRadius.circular(AppConstants.radiusLG),
                           ),
                         ),
-                        child: const Text(
+                        child: Text(
                           'Cerrar sesion',
-                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+                          style: TextStyle(color: Theme.of(context).colorScheme.onPrimary, fontWeight: FontWeight.w700),
                         ),
                       ),
                     ),
@@ -571,7 +571,7 @@ class _GoldShimmerTextState extends State<_GoldShimmerText>
           child: Text(
             widget.text,
             style: (widget.style ?? const TextStyle()).copyWith(
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onPrimary,
             ),
           ),
         );

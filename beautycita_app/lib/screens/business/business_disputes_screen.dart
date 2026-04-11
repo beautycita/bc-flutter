@@ -656,17 +656,17 @@ class _DisputeDetailSheetState extends ConsumerState<_DisputeDetailSheet> {
                       ),
                     ),
                     child: _saving
-                        ? const SizedBox(
+                        ? SizedBox(
                             width: 18,
                             height: 18,
                             child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.white))
+                                strokeWidth: 2, color: colors.onPrimary))
                         : Text(
                             'Enviar Oferta',
                             style: GoogleFonts.poppins(
                               fontSize: 15,
                               fontWeight: FontWeight.w700,
-                              color: Colors.white,
+                              color: colors.onPrimary,
                             ),
                           ),
                   ),

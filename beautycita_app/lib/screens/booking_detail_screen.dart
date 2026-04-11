@@ -317,10 +317,10 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
                           BorderRadius.circular(AppConstants.radiusLG),
                     ),
                   ),
-                  child: const Text(
+                  child: Text(
                     'Guardar',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onPrimary,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -417,10 +417,10 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
                                 AppConstants.radiusLG),
                           ),
                         ),
-                        child: const Text(
+                        child: Text(
                           'Si, cancelar',
                           style: TextStyle(
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onPrimary,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -745,7 +745,7 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
         border: Border.all(color: Theme.of(context).dividerColor, width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: Theme.of(context).shadowColor.withValues(alpha: 0.04),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -1036,7 +1036,7 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
                     Icon(
                       mode.icon,
                       size: AppConstants.iconSizeSM,
-                      color: isSelected ? Colors.white : colorScheme.primary,
+                      color: isSelected ? colorScheme.onPrimary : colorScheme.primary,
                     ),
                     const SizedBox(width: AppConstants.paddingXS),
                     Flexible(
@@ -1044,7 +1044,7 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
                         mode.label,
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
                               color: isSelected
-                                  ? Colors.white
+                                  ? colorScheme.onPrimary
                                   : colorScheme.onSurface,
                               fontWeight: FontWeight.w700,
                             ),
@@ -1078,7 +1078,7 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
             children: [
               Expanded(
                 child: _actionButton(
-                  color: Colors.black,
+                  color: Theme.of(context).colorScheme.onSurface,
                   icon: Icons.arrow_forward_rounded,
                   label: 'Pedir Uber',
                   onTap: () => _openUberToSalon(booking),
@@ -1087,7 +1087,7 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
               const SizedBox(width: AppConstants.paddingSM),
               Expanded(
                 child: _actionButton(
-                  color: Colors.black,
+                  color: Theme.of(context).colorScheme.onSurface,
                   icon: Icons.arrow_back_rounded,
                   label: 'Uber de regreso',
                   onTap: () => _openUberFromSalon(booking),
@@ -1143,12 +1143,12 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(icon,
-                  size: AppConstants.iconSizeSM, color: Colors.white),
+                  size: AppConstants.iconSizeSM, color: Theme.of(context).colorScheme.onPrimary),
               const SizedBox(width: AppConstants.paddingXS),
               Text(
                 label,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onPrimary,
                       fontWeight: FontWeight.w700,
                     ),
               ),
@@ -1333,7 +1333,7 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
         color: Theme.of(context).scaffoldBackgroundColor,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
+            color: Theme.of(context).shadowColor.withValues(alpha: 0.06),
             blurRadius: 8,
             offset: const Offset(0, -2),
           ),
@@ -1406,7 +1406,7 @@ class _ReceiptWidget extends StatelessWidget {
     }
 
     return Material(
-      color: Colors.white,
+      color: Theme.of(context).colorScheme.onPrimary,
       child: SizedBox(
         width: 380,
         child: Padding(
@@ -1425,11 +1425,11 @@ class _ReceiptWidget extends StatelessWidget {
                   ),
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: const Center(
+                child: Center(
                   child: Text(
                     'BC',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onPrimary,
                       fontSize: 24,
                       fontWeight: FontWeight.w800,
                     ),

@@ -587,12 +587,12 @@ class _ViewToggle extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon, size: 16,
-                color: selected ? Colors.white : colors.onSurface.withValues(alpha: 0.6)),
+                color: selected ? colors.onPrimary : colors.onSurface.withValues(alpha: 0.6)),
             const SizedBox(width: 4),
             Text(label, style: GoogleFonts.poppins(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: selected ? Colors.white : colors.onSurface.withValues(alpha: 0.6),
+              color: selected ? colors.onPrimary : colors.onSurface.withValues(alpha: 0.6),
             )),
           ],
         ),
@@ -1767,6 +1767,7 @@ class _StaffLane extends StatelessWidget {
 
   Widget _buildApptBlock(
       BuildContext context, Map<String, dynamic> appt, Color staffColor) {
+    final colors = Theme.of(context).colorScheme;
     final startsAt =
         DateTime.tryParse(appt['starts_at'] as String? ?? '')?.toLocal();
     final endsAt =
@@ -1826,7 +1827,7 @@ class _StaffLane extends StatelessWidget {
                         style: GoogleFonts.poppins(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
-                          color: Colors.white,
+                          color: colors.onPrimary,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -1837,18 +1838,18 @@ class _StaffLane extends StatelessWidget {
                           '${endsAt != null ? ' - ${endsAt.hour.toString().padLeft(2, '0')}:${endsAt.minute.toString().padLeft(2, '0')}' : ''}',
                           style: GoogleFonts.nunito(
                             fontSize: 9,
-                            color: Colors.white.withValues(alpha: 0.85),
+                            color: colors.onPrimary.withValues(alpha: 0.85),
                           ),
                         ),
                     ],
                   ),
                   // Notes flag
                   if (hasNotes)
-                    const Positioned(
+                    Positioned(
                       top: 0,
                       right: 0,
                       child: Icon(Icons.sticky_note_2,
-                          size: 12, color: Colors.white70),
+                          size: 12, color: colors.onPrimary.withValues(alpha: 0.7)),
                     ),
                 ],
               ),
@@ -2261,7 +2262,7 @@ class _CompactWeekStrip extends StatelessWidget {
                             fontSize: 10,
                             fontWeight: FontWeight.w700,
                             color: isSelected
-                                ? Colors.white
+                                ? colors.onPrimary
                                 : colors.primary,
                           ),
                         ),
@@ -2873,7 +2874,7 @@ class _RecurrenceChip extends StatelessWidget {
               fontSize: 12,
               fontWeight: FontWeight.w600,
               color: selected
-                  ? Colors.white
+                  ? colors.onPrimary
                   : colors.onSurface.withValues(alpha: 0.6),
             )),
       ),
@@ -3957,18 +3958,18 @@ class _SheetButton extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 14),
               child: Center(
                 child: saving
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 20,
                         height: 20,
                         child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white),
+                            strokeWidth: 2, color: colors.onPrimary),
                       )
                     : Text(
                         label,
                         style: GoogleFonts.poppins(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
-                          color: enabled ? Colors.white : colors.onSurface.withValues(alpha: 0.4),
+                          color: enabled ? colors.onPrimary : colors.onSurface.withValues(alpha: 0.4),
                           letterSpacing: 0.3,
                         ),
                       ),

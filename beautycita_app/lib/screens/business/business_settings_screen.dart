@@ -205,7 +205,7 @@ class _BusinessSettingsScreenState
       prefixIcon: prefixIcon,
       prefixText: prefixText,
       filled: true,
-      fillColor: Colors.white,
+      fillColor: colors.surface,
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
         borderSide: BorderSide(color: gray, width: 1),
@@ -225,7 +225,7 @@ class _BusinessSettingsScreenState
 
   BoxDecoration _cardDecoration(ColorScheme colors) {
     return BoxDecoration(
-      color: Colors.white,
+      color: colors.surface,
       borderRadius: BorderRadius.circular(AppConstants.radiusMD),
       border: Border.all(
         color: colors.onSurface.withValues(alpha: 0.08),
@@ -233,7 +233,7 @@ class _BusinessSettingsScreenState
       ),
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withValues(alpha: 0.04),
+          color: colors.onSurface.withValues(alpha: 0.04),
           blurRadius: 8,
           offset: const Offset(0, 2),
         ),
@@ -523,7 +523,7 @@ class _BusinessSettingsScreenState
                               fontSize: 13,
                               fontWeight: FontWeight.w500,
                               color: selected
-                                  ? Colors.white
+                                  ? colors.onPrimary
                                   : colors.onSurface
                                       .withValues(alpha: 0.7),
                             )),
@@ -531,7 +531,7 @@ class _BusinessSettingsScreenState
                         selectedColor: colors.primary,
                         backgroundColor:
                             colors.onSurface.withValues(alpha: 0.06),
-                        checkmarkColor: Colors.white,
+                        checkmarkColor: colors.onPrimary,
                         onSelected: (on) {
                           setState(() {
                             if (on) {
@@ -916,7 +916,7 @@ class _QuickLinkTile extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Material(
-        color: Colors.white,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
           onTap: onTap,

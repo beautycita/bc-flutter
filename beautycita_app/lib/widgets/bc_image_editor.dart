@@ -202,7 +202,7 @@ class _WatermarkDialogState extends State<_WatermarkDialog> {
             style: GoogleFonts.nunito(
               fontSize: 14,
               fontWeight: FontWeight.w700,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onPrimary,
             ),
           ),
         ),

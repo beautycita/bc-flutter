@@ -61,6 +61,7 @@ class _HeroSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(gradient: gradient),
@@ -79,10 +80,10 @@ class _HeroSection extends StatelessWidget {
               vertical: AppConstants.paddingXS,
             ),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.18),
+              color: cs.onPrimary.withValues(alpha: 0.18),
               borderRadius: BorderRadius.circular(AppConstants.radiusFull),
               border: Border.all(
-                color: Colors.white.withValues(alpha: 0.35),
+                color: cs.onPrimary.withValues(alpha: 0.35),
                 width: 1,
               ),
             ),
@@ -91,7 +92,7 @@ class _HeroSection extends StatelessWidget {
               style: GoogleFonts.nunito(
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
-                color: Colors.white,
+                color: cs.onPrimary,
                 letterSpacing: 0.5,
               ),
             ),
@@ -102,7 +103,7 @@ class _HeroSection extends StatelessWidget {
             style: GoogleFonts.poppins(
               fontSize: 40,
               fontWeight: FontWeight.w800,
-              color: Colors.white,
+              color: cs.onPrimary,
               height: 1.1,
             ),
           ),
@@ -112,7 +113,7 @@ class _HeroSection extends StatelessWidget {
             style: GoogleFonts.nunito(
               fontSize: 16,
               fontWeight: FontWeight.w500,
-              color: Colors.white.withValues(alpha: 0.88),
+              color: cs.onPrimary.withValues(alpha: 0.88),
               height: 1.55,
             ),
           ),
@@ -401,7 +402,7 @@ class _ValueCard extends StatelessWidget {
             child: Icon(
               icon,
               size: AppConstants.iconSizeMD,
-              color: Colors.white,
+              color: colorScheme.onPrimary,
             ),
           ),
           const SizedBox(height: AppConstants.paddingSM + 2),

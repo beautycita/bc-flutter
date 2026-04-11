@@ -216,7 +216,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                             onPressed: loading ? null : () => submit(),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: primary,
-                              foregroundColor: Colors.white,
+                              foregroundColor: Theme.of(context).colorScheme.onPrimary,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(
                                     AppConstants.radiusSM),
@@ -225,12 +225,12 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                                   const EdgeInsets.symmetric(vertical: 14),
                             ),
                             child: loading
-                                ? const SizedBox(
+                                ? SizedBox(
                                     width: 20,
                                     height: 20,
                                     child: CircularProgressIndicator(
                                       strokeWidth: 2,
-                                      color: Colors.white,
+                                      color: Theme.of(context).colorScheme.onPrimary,
                                     ),
                                   )
                                 : Text(

@@ -642,7 +642,7 @@ class _EmptyState extends ConsumerWidget {
                 label: const Text('Reintentar'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: categoryColor,
-                  foregroundColor: Colors.white,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
                   minimumSize: const Size(200, AppConstants.minTouchHeight),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(AppConstants.radiusLG),
@@ -721,7 +721,7 @@ class _ErrorState extends StatelessWidget {
                 label: const Text('Reintentar'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: categoryColor,
-                  foregroundColor: Colors.white,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
                   minimumSize: const Size(200, AppConstants.minTouchHeight),
                   shape: RoundedRectangleBorder(
                     borderRadius:

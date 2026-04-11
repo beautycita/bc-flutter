@@ -335,15 +335,15 @@ class _BCImagePickerBodyState extends State<_BCImagePickerBody> {
                             Container(
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(8),
-                                color: Colors.black45,
+                                color: onSurface.withValues(alpha: 0.45),
                               ),
-                              child: const Center(
+                              child: Center(
                                 child: SizedBox(
                                   width: 24,
                                   height: 24,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    color: Colors.white,
+                                    color: surface,
                                   ),
                                 ),
                               ),
@@ -360,13 +360,13 @@ class _BCImagePickerBodyState extends State<_BCImagePickerBody> {
                                   vertical: 2,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: Colors.black54,
+                                  color: onSurface.withValues(alpha: 0.54),
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: Text(
                                   item.toolLabel!,
-                                  style: const TextStyle(
-                                    color: Colors.white,
+                                  style: TextStyle(
+                                    color: surface,
                                     fontSize: 9,
                                     fontWeight: FontWeight.w600,
                                   ),

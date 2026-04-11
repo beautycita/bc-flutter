@@ -188,7 +188,7 @@ class _DiscoveredSalonConfirmScreenState
                       BorderRadius.circular(AppConstants.radiusMD),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.04),
+                      color: Theme.of(context).shadowColor.withValues(alpha: 0.04),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -252,13 +252,13 @@ class _DiscoveredSalonConfirmScreenState
                   ),
                   alignment: Alignment.center,
                   child: _isCreating
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 24,
                           height: 24,
                           child: CircularProgressIndicator(
                             strokeWidth: 2.5,
                             valueColor:
-                                AlwaysStoppedAnimation<Color>(Colors.white),
+                                AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.onPrimary),
                           ),
                         )
                       : Text(
@@ -266,7 +266,7 @@ class _DiscoveredSalonConfirmScreenState
                           style: GoogleFonts.poppins(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onPrimary,
                             letterSpacing: 0.5,
                           ),
                         ),

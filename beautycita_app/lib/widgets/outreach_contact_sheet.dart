@@ -444,7 +444,7 @@ class _SheetBody extends StatelessWidget {
                       style: GoogleFonts.poppins(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: Colors.black45,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.45),
                       ),
                     ),
                   ),
@@ -483,7 +483,7 @@ class _DragHandle extends StatelessWidget {
           width: AppConstants.bottomSheetDragHandleWidth,
           height: AppConstants.bottomSheetDragHandleHeight,
           decoration: BoxDecoration(
-            color: Colors.black26,
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.26),
             borderRadius: BorderRadius.circular(
               AppConstants.bottomSheetDragHandleRadius,
             ),
@@ -543,7 +543,7 @@ class _SalonHeader extends StatelessWidget {
                       style: GoogleFonts.poppins(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
-                        color: Colors.black87,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.87),
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -560,7 +560,7 @@ class _SalonHeader extends StatelessWidget {
                       .join(' · '),
                   style: GoogleFonts.nunito(
                     fontSize: 13,
-                    color: Colors.black54,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.54),
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -627,7 +627,7 @@ class _ChannelChips extends StatelessWidget {
                   Icon(
                     ch.icon,
                     size: 16,
-                    color: isSelected ? Colors.white : ch.color,
+                    color: isSelected ? Theme.of(context).colorScheme.onPrimary : ch.color,
                   ),
                   const SizedBox(width: 6),
                   Text(
@@ -635,7 +635,7 @@ class _ChannelChips extends StatelessWidget {
                     style: GoogleFonts.poppins(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                      color: isSelected ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                   ),
                 ],
@@ -686,11 +686,11 @@ class _TemplatePicker extends StatelessWidget {
             fillColor: Theme.of(context).colorScheme.surface,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppConstants.radiusSM),
-              borderSide: const BorderSide(color: Colors.black12),
+              borderSide: BorderSide(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.12)),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppConstants.radiusSM),
-              borderSide: const BorderSide(color: Colors.black12),
+              borderSide: BorderSide(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.12)),
             ),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: AppConstants.paddingMD,
@@ -701,7 +701,7 @@ class _TemplatePicker extends StatelessWidget {
                 Icon(Icons.article_outlined, size: 18, color: Theme.of(context).colorScheme.primary),
           ),
           hint: Text('Seleccionar plantilla',
-              style: GoogleFonts.nunito(fontSize: 13, color: Colors.black38)),
+              style: GoogleFonts.nunito(fontSize: 13, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.38))),
           items: templates
               .map((t) => DropdownMenuItem(
                     value: t,
@@ -742,11 +742,11 @@ class _MessageComposeArea extends StatelessWidget {
       fillColor: Theme.of(context).colorScheme.surface,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppConstants.radiusSM),
-        borderSide: const BorderSide(color: Colors.black12),
+        borderSide: BorderSide(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.12)),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppConstants.radiusSM),
-        borderSide: const BorderSide(color: Colors.black12),
+        borderSide: BorderSide(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.12)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppConstants.radiusSM),
@@ -846,11 +846,11 @@ class _CallComposeArea extends StatelessWidget {
             fillColor: Theme.of(context).colorScheme.surface,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppConstants.radiusSM),
-              borderSide: const BorderSide(color: Colors.black12),
+              borderSide: BorderSide(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.12)),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppConstants.radiusSM),
-              borderSide: const BorderSide(color: Colors.black12),
+              borderSide: BorderSide(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.12)),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppConstants.radiusSM),
@@ -864,11 +864,11 @@ class _CallComposeArea extends StatelessWidget {
             prefixIcon: Icon(
               Icons.flag_outlined,
               size: 18,
-              color: outcome != null ? _outcomeColor(outcome) : Colors.black38,
+              color: outcome != null ? _outcomeColor(outcome) : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.38),
             ),
           ),
           hint: Text('Selecciona el resultado',
-              style: GoogleFonts.nunito(fontSize: 13, color: Colors.black38)),
+              style: GoogleFonts.nunito(fontSize: 13, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.38))),
           items: _kOutcomes
               .map((pair) => DropdownMenuItem(
                     value: pair.$1,
@@ -911,11 +911,11 @@ class _CallComposeArea extends StatelessWidget {
                   fillColor: Theme.of(context).colorScheme.surface,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(AppConstants.radiusSM),
-                    borderSide: const BorderSide(color: Colors.black12),
+                    borderSide: BorderSide(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.12)),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(AppConstants.radiusSM),
-                    borderSide: const BorderSide(color: Colors.black12),
+                    borderSide: BorderSide(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.12)),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(AppConstants.radiusSM),
@@ -926,7 +926,7 @@ class _CallComposeArea extends StatelessWidget {
                     vertical: AppConstants.paddingMD,
                   ),
                   prefixIcon:
-                      const Icon(Icons.timer_outlined, size: 18, color: Colors.black45),
+                      Icon(Icons.timer_outlined, size: 18, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.45)),
                 ),
               ),
             ),
@@ -946,15 +946,15 @@ class _CallComposeArea extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.surface,
                         borderRadius:
                             BorderRadius.circular(AppConstants.radiusFull),
-                        border: Border.all(color: Colors.black12),
+                        border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.12)),
                       ),
                       child: Text(
                         label,
                         style: GoogleFonts.nunito(
-                            fontSize: 12, color: Colors.black54),
+                            fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.54)),
                       ),
                     ),
                   );
@@ -976,11 +976,11 @@ class _CallComposeArea extends StatelessWidget {
             fillColor: Theme.of(context).colorScheme.surface,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppConstants.radiusSM),
-              borderSide: const BorderSide(color: Colors.black12),
+              borderSide: BorderSide(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.12)),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppConstants.radiusSM),
-              borderSide: const BorderSide(color: Colors.black12),
+              borderSide: BorderSide(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.12)),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppConstants.radiusSM),
@@ -990,7 +990,7 @@ class _CallComposeArea extends StatelessWidget {
               horizontal: AppConstants.paddingMD,
               vertical: AppConstants.paddingMD,
             ),
-            prefixIcon: const Icon(Icons.notes, size: 18, color: Colors.black45),
+            prefixIcon: Icon(Icons.notes, size: 18, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.45)),
           ),
           maxLines: 3,
           minLines: 2,
@@ -1030,12 +1030,12 @@ class _SendButton extends StatelessWidget {
       child: ElevatedButton.icon(
         onPressed: sending ? null : onTap,
         icon: sending
-            ? const SizedBox(
+            ? SizedBox(
                 width: 18,
                 height: 18,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onPrimary,
                 ),
               )
             : Icon(channel.icon, size: 18),
@@ -1050,7 +1050,7 @@ class _SendButton extends StatelessWidget {
           backgroundColor: Theme.of(context).colorScheme.primary,
           foregroundColor: Theme.of(context).colorScheme.onPrimary,
           disabledBackgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
-          disabledForegroundColor: Colors.white70,
+          disabledForegroundColor: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppConstants.radiusMD),
           ),
@@ -1101,7 +1101,7 @@ class _ContactHistoryTimeline extends StatelessWidget {
                 'Sin contacto previo',
                 style: GoogleFonts.nunito(
                   fontSize: 13,
-                  color: Colors.black38,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.38),
                   fontStyle: FontStyle.italic,
                 ),
               ),
@@ -1194,7 +1194,7 @@ class _HistoryEntryRow extends StatelessWidget {
                   Expanded(
                     child: Container(
                       width: 1.5,
-                      color: Colors.black12,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.12),
                     ),
                   ),
               ],
@@ -1213,10 +1213,10 @@ class _HistoryEntryRow extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.all(AppConstants.paddingSM),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.surface,
                     borderRadius:
                         BorderRadius.circular(AppConstants.radiusMD),
-                    border: Border.all(color: Colors.black12),
+                    border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.12)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1242,7 +1242,7 @@ class _HistoryEntryRow extends StatelessWidget {
                             _formatDate(entry.sentAt),
                             style: GoogleFonts.nunito(
                               fontSize: 11,
-                              color: Colors.black38,
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.38),
                             ),
                           ),
                         ],
@@ -1256,7 +1256,7 @@ class _HistoryEntryRow extends StatelessWidget {
                             entry.rpDisplayName!,
                             style: GoogleFonts.nunito(
                               fontSize: 11,
-                              color: Colors.black38,
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.38),
                             ),
                           ),
                         ),
@@ -1269,7 +1269,7 @@ class _HistoryEntryRow extends StatelessWidget {
                             entry.messageText!,
                             style: GoogleFonts.nunito(
                               fontSize: 12,
-                              color: Colors.black54,
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.54),
                             ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
@@ -1285,7 +1285,7 @@ class _HistoryEntryRow extends StatelessWidget {
                               entry.messageText!,
                               style: GoogleFonts.nunito(
                                 fontSize: 12,
-                                color: Colors.black54,
+                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.54),
                               ),
                             ),
                           ),
@@ -1295,15 +1295,15 @@ class _HistoryEntryRow extends StatelessWidget {
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Icon(Icons.notes,
-                                    size: 12, color: Colors.black38),
+                                Icon(Icons.notes,
+                                    size: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.38)),
                                 const SizedBox(width: 4),
                                 Expanded(
                                   child: Text(
                                     entry.notes!,
                                     style: GoogleFonts.nunito(
                                       fontSize: 12,
-                                      color: Colors.black54,
+                                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.54),
                                       fontStyle: FontStyle.italic,
                                     ),
                                   ),
@@ -1325,15 +1325,15 @@ class _HistoryEntryRow extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Row(children: [
-                                    const Icon(Icons.record_voice_over,
-                                        size: 12, color: Colors.black38),
+                                    Icon(Icons.record_voice_over,
+                                        size: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.38)),
                                     const SizedBox(width: 4),
                                     Text(
                                       'Transcripción',
                                       style: GoogleFonts.poppins(
                                           fontSize: 10,
                                           fontWeight: FontWeight.w600,
-                                          color: Colors.black45),
+                                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.45)),
                                     ),
                                   ]),
                                   const SizedBox(height: 4),
@@ -1341,7 +1341,7 @@ class _HistoryEntryRow extends StatelessWidget {
                                     entry.transcript!,
                                     style: GoogleFonts.nunito(
                                       fontSize: 11,
-                                      color: Colors.black54,
+                                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.54),
                                     ),
                                   ),
                                 ],
@@ -1355,7 +1355,7 @@ class _HistoryEntryRow extends StatelessWidget {
                               'Duración: ${entry.durationSeconds}s',
                               style: GoogleFonts.nunito(
                                 fontSize: 11,
-                                color: Colors.black38,
+                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.38),
                               ),
                             ),
                           ),
@@ -1373,7 +1373,7 @@ class _HistoryEntryRow extends StatelessWidget {
                                     ? Icons.keyboard_arrow_up
                                     : Icons.keyboard_arrow_down,
                                 size: 16,
-                                color: Colors.black26,
+                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.26),
                               ),
                             ],
                           ),

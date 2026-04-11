@@ -376,11 +376,11 @@ class _PortfolioCaptureScreenState
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: _saving
-                        ? const SizedBox(
+                        ? SizedBox(
                             width: 24,
                             height: 24,
                             child: CircularProgressIndicator(
-                              color: Colors.white,
+                              color: colors.onPrimary,
                               strokeWidth: 2.5,
                             ),
                           )
@@ -390,7 +390,7 @@ class _PortfolioCaptureScreenState
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
                               color:
-                                  _canSave ? Colors.white : colors.onSurface.withValues(alpha: 0.38),
+                                  _canSave ? colors.onPrimary : colors.onSurface.withValues(alpha: 0.38),
                             ),
                           ),
                   ),
@@ -434,7 +434,7 @@ class _PhotoSlot extends StatelessWidget {
     return Container(
       height: 220,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: photo != null
@@ -447,7 +447,7 @@ class _PhotoSlot extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: Theme.of(context).shadowColor.withValues(alpha: 0.04),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -462,6 +462,7 @@ class _PhotoSlot extends StatelessWidget {
   }
 
   Widget _buildPhotoPreview(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -475,7 +476,7 @@ class _PhotoSlot extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: Colors.black54,
+              color: colors.onSurface.withValues(alpha: 0.54),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
@@ -483,7 +484,7 @@ class _PhotoSlot extends StatelessWidget {
               style: GoogleFonts.poppins(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: Colors.white,
+                color: colors.onPrimary,
               ),
             ),
           ),
@@ -496,12 +497,12 @@ class _PhotoSlot extends StatelessWidget {
             child: Container(
               width: 32,
               height: 32,
-              decoration: const BoxDecoration(
-                color: Colors.black54,
+              decoration: BoxDecoration(
+                color: colors.onSurface.withValues(alpha: 0.54),
                 shape: BoxShape.circle,
               ),
               child:
-                  const Icon(Icons.close_rounded, size: 18, color: Colors.white),
+                  Icon(Icons.close_rounded, size: 18, color: colors.onPrimary),
             ),
           ),
         ),

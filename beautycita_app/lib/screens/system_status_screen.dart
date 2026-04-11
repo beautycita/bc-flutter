@@ -265,7 +265,7 @@ class _HeroCard extends StatelessWidget {
       _ => (
           ext.primaryGradient,
           Icons.help_outline_rounded,
-          Colors.white70,
+          Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7),
           'Estado desconocido',
         ),
     };
@@ -287,12 +287,12 @@ class _HeroCard extends StatelessWidget {
             width: 56,
             height: 56,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.15),
+              color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(AppConstants.radiusSM),
             ),
             child: Icon(
               icon,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onPrimary,
               size: AppConstants.iconSizeLG,
             ),
           ),
@@ -321,7 +321,7 @@ class _HeroCard extends StatelessWidget {
                   style: GoogleFonts.poppins(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onPrimary,
                   ),
                 ),
               ),
@@ -526,7 +526,7 @@ class _ServiceCardState extends ConsumerState<_ServiceCard> {
         border: Border.all(color: widget.ext.cardBorderColor, width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: Theme.of(context).shadowColor.withValues(alpha: 0.04),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),

@@ -297,7 +297,7 @@ class _StatusChip extends StatelessWidget {
                 fontSize: 12,
                 fontWeight:
                     selected ? FontWeight.w700 : FontWeight.w500,
-                color: selected ? Colors.white : colors.onSurface.withValues(alpha: 0.7),
+                color: selected ? colors.onPrimary : colors.onSurface.withValues(alpha: 0.7),
               )),
           backgroundColor: selected ? activeColor : colors.surface,
           side: BorderSide(
@@ -379,12 +379,12 @@ class _GiftCardTile extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: colors.surface,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: colors.outline.withValues(alpha: 0.1)),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withValues(alpha: 0.03),
+                color: Theme.of(context).shadowColor.withValues(alpha: 0.03),
                 blurRadius: 6,
                 offset: const Offset(0, 2))
           ],
@@ -949,7 +949,7 @@ class _CreateGiftCardSheetState extends ConsumerState<_CreateGiftCardSheet> {
                   label: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.email_outlined, size: 14, color: _isVirtual ? Colors.white : colors.onSurface),
+                      Icon(Icons.email_outlined, size: 14, color: _isVirtual ? colors.onPrimary : colors.onSurface),
                       const SizedBox(width: 4),
                       Text('Virtual (email)'),
                     ],
@@ -965,7 +965,7 @@ class _CreateGiftCardSheetState extends ConsumerState<_CreateGiftCardSheet> {
                   label: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.card_giftcard, size: 14, color: !_isVirtual ? Colors.white : colors.onSurface),
+                      Icon(Icons.card_giftcard, size: 14, color: !_isVirtual ? colors.onPrimary : colors.onSurface),
                       const SizedBox(width: 4),
                       Text('Fisica (codigo)'),
                     ],
@@ -1073,11 +1073,11 @@ class _CreateGiftCardSheetState extends ConsumerState<_CreateGiftCardSheet> {
             child: FilledButton(
               onPressed: _saving ? null : _save,
               child: _saving
-                  ? const SizedBox(
+                  ? SizedBox(
                       width: 20,
                       height: 20,
                       child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white))
+                          strokeWidth: 2, color: colors.onPrimary))
                   : Text('Crear tarjeta',
                       style: GoogleFonts.poppins(
                           fontSize: 15, fontWeight: FontWeight.w600)),

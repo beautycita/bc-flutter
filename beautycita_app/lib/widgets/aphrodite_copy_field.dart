@@ -101,7 +101,7 @@ class _AphroditeCopyFieldState extends State<AphroditeCopyField>
             border: Border.all(color: colors.primary.withValues(alpha: 0.25)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
+                color: Theme.of(context).shadowColor.withValues(alpha: 0.04),
                 blurRadius: 4,
                 offset: const Offset(0, 2),
               ),

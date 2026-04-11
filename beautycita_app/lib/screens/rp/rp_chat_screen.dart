@@ -47,7 +47,7 @@ class _RPChatScreenState extends ConsumerState<RPChatScreen> {
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: channelColor,
-        foregroundColor: Colors.white,
+        foregroundColor: Theme.of(context).colorScheme.onPrimary,
         title: Row(
           children: [
             Container(
@@ -58,8 +58,8 @@ class _RPChatScreenState extends ConsumerState<RPChatScreen> {
                 gradient: LinearGradient(
                     colors: [Color(0xFFec4899), Color(0xFF9333ea)]),
               ),
-              child: const Icon(Icons.auto_awesome,
-                  color: Colors.white, size: 16),
+              child: Icon(Icons.auto_awesome,
+                  color: Theme.of(context).colorScheme.onPrimary, size: 16),
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -171,7 +171,7 @@ class _RPChatScreenState extends ConsumerState<RPChatScreen> {
               children: [
                 Text(text,
                     style: GoogleFonts.poppins(
-                        fontSize: 14, color: Colors.white)),
+                        fontSize: 14, color: Theme.of(context).colorScheme.onPrimary)),
                 const SizedBox(height: 4),
                 Row(
                   mainAxisSize: MainAxisSize.min,
@@ -188,7 +188,7 @@ class _RPChatScreenState extends ConsumerState<RPChatScreen> {
                             ? DateFormat('HH:mm').format(msgDate)
                             : '',
                         style: GoogleFonts.poppins(
-                            fontSize: 10, color: Colors.white70)),
+                            fontSize: 10, color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7))),
                   ],
                 ),
               ],
@@ -316,12 +316,12 @@ class _RPChatScreenState extends ConsumerState<RPChatScreen> {
                 style:
                     IconButton.styleFrom(backgroundColor: channelColor),
                 icon: _sending
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 20,
                         height: 20,
                         child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white))
-                    : const Icon(Icons.send, color: Colors.white),
+                            strokeWidth: 2, color: Theme.of(context).colorScheme.onPrimary))
+                    : Icon(Icons.send, color: Theme.of(context).colorScheme.onPrimary),
                 onPressed: _sending ? null : _send,
               ),
             ],

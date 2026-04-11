@@ -26,7 +26,7 @@ void _openImageFullscreen(
   Navigator.of(context).push(
     PageRouteBuilder(
       opaque: false,
-      barrierColor: Colors.black,
+      barrierColor: Theme.of(context).colorScheme.scrim,
       pageBuilder: (ctx, anim, secondAnim) => _FullscreenImageView(
         bytes: bytes,
         url: url,
@@ -56,19 +56,19 @@ class _FullscreenImageView extends StatelessWidget {
     final hasUrl = url != null && url!.isNotEmpty;
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: Theme.of(context).colorScheme.scrim,
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: Colors.black54,
+        backgroundColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.54),
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.close, color: Colors.white),
+          icon: Icon(Icons.close, color: Theme.of(context).colorScheme.onPrimary),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           title,
           style: GoogleFonts.nunito(
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onPrimary,
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
@@ -96,9 +96,9 @@ class _FullscreenImageView extends StatelessWidget {
                       ),
                     );
                   },
-                  errorBuilder: (_, _, _) => const Icon(
+                  errorBuilder: (_, _, _) => Icon(
                     Icons.broken_image,
-                    color: Colors.white38,
+                    color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.38),
                     size: 64,
                   ),
                 ),
@@ -106,7 +106,7 @@ class _FullscreenImageView extends StatelessWidget {
       ),
       bottomNavigationBar: hasUrl
           ? Container(
-              color: Colors.black87,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.87),
               padding: EdgeInsets.only(
                 left: 16,
                 right: 16,
@@ -167,12 +167,12 @@ class _FullscreenAction extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: Colors.white, size: 24),
+          Icon(icon, color: Theme.of(context).colorScheme.onPrimary, size: 24),
           const SizedBox(height: 4),
           Text(
             label,
             style: GoogleFonts.nunito(
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onPrimary,
               fontSize: 11,
               fontWeight: FontWeight.w600,
             ),
@@ -532,7 +532,7 @@ class _ToolViewState extends ConsumerState<_ToolView>
               aspectRatio: 3 / 4,
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onPrimary,
                   borderRadius: BorderRadius.circular(16),
                   border: _imageBytes != null
                       ? Border.all(color: primary, width: 2)
@@ -553,11 +553,11 @@ class _ToolViewState extends ConsumerState<_ToolView>
                                 onTap: _showImageSourcePicker,
                                 child: Container(
                                   padding: const EdgeInsets.all(6),
-                                  decoration: const BoxDecoration(
-                                    color: Colors.black54,
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.54),
                                     shape: BoxShape.circle,
                                   ),
-                                  child: const Icon(Icons.edit, color: Colors.white, size: 18),
+                                  child: Icon(Icons.edit, color: Theme.of(context).colorScheme.onPrimary, size: 18),
                                 ),
                               ),
                             ),
@@ -612,7 +612,7 @@ class _ToolViewState extends ConsumerState<_ToolView>
               labelText: 'Describe el look',
               labelStyle: GoogleFonts.nunito(fontSize: 14),
               filled: true,
-              fillColor: Colors.white,
+              fillColor: Theme.of(context).colorScheme.surface,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide(color: dividerColor),
@@ -673,7 +673,7 @@ class _ToolViewState extends ConsumerState<_ToolView>
               onPressed: _imageBytes != null ? _process : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: primary,
-                foregroundColor: Colors.white,
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
                 disabledBackgroundColor: dividerColor,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -709,7 +709,7 @@ class _ToolViewState extends ConsumerState<_ToolView>
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
+                    color: Theme.of(context).shadowColor.withValues(alpha: 0.1),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -835,7 +835,7 @@ class _ToolViewState extends ConsumerState<_ToolView>
                   label: Text('Guardar', style: GoogleFonts.nunito(fontWeight: FontWeight.w700)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primary,
-                    foregroundColor: Colors.white,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -1169,7 +1169,7 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
             child: Container(
               height: 160,
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onPrimary,
                 borderRadius: BorderRadius.circular(16),
                 border: _selfieBytes != null
                     ? Border.all(color: primary, width: 2)
@@ -1185,8 +1185,8 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
                             top: 8, right: 8,
                             child: Container(
                               padding: const EdgeInsets.all(6),
-                              decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
-                              child: const Icon(Icons.edit, color: Colors.white, size: 16),
+                              decoration: BoxDecoration(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.54), shape: BoxShape.circle),
+                              child: Icon(Icons.edit, color: Theme.of(context).colorScheme.onPrimary, size: 16),
                             ),
                           ),
                         ],
@@ -1260,7 +1260,7 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
                                   child: Text(
                                     'Tu foto',
                                     textAlign: TextAlign.center,
-                                    style: GoogleFonts.nunito(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white),
+                                    style: GoogleFonts.nunito(fontSize: 10, fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.onPrimary),
                                   ),
                                 ),
                               ],
@@ -1326,7 +1326,7 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
                               style: GoogleFonts.nunito(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w700,
-                                color: _selectedSample?.id == sample.id ? Colors.white : onSurface,
+                                color: _selectedSample?.id == sample.id ? Theme.of(context).colorScheme.onPrimary : onSurface,
                               ),
                             ),
                           ),
@@ -1383,7 +1383,7 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
               onPressed: _canProcess ? _process : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: primary,
-                foregroundColor: Colors.white,
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
                 disabledBackgroundColor: dividerColor,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
@@ -1497,7 +1497,7 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
                   label: Text('Guardar', style: GoogleFonts.nunito(fontWeight: FontWeight.w700)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primary,
-                    foregroundColor: Colors.white,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),

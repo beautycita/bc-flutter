@@ -136,12 +136,12 @@ class _InviteSalonDetailScreenState
             _gradientPlaceholder(),
 
           // Dark gradient overlay for text readability
-          const DecoratedBox(
+          DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [Colors.transparent, Colors.black54],
+                colors: [Colors.transparent, Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.54)],
                 stops: [0.4, 1.0],
               ),
             ),
@@ -157,9 +157,9 @@ class _InviteSalonDetailScreenState
               style: GoogleFonts.poppins(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onPrimary,
                 shadows: [
-                  const Shadow(blurRadius: 8, color: Colors.black45),
+                  Shadow(blurRadius: 8, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.45)),
                 ],
               ),
               maxLines: 2,
@@ -172,10 +172,10 @@ class _InviteSalonDetailScreenState
             top: MediaQuery.of(context).padding.top + 8,
             left: 8,
             child: Material(
-              color: Colors.black26,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.26),
               shape: const CircleBorder(),
               child: IconButton(
-                icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+                icon: Icon(Icons.arrow_back_rounded, color: Theme.of(context).colorScheme.onPrimary),
                 onPressed: () {
                   Navigator.of(context).pop();
                   ref.read(inviteProvider.notifier).backToList();
@@ -197,8 +197,8 @@ class _InviteSalonDetailScreenState
           end: Alignment.bottomRight,
         ),
       ),
-      child: const Center(
-        child: Icon(Icons.store_rounded, size: 64, color: Colors.white54),
+      child: Center(
+        child: Icon(Icons.store_rounded, size: 64, color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.54)),
       ),
     );
   }
@@ -342,7 +342,7 @@ class _InviteSalonDetailScreenState
               shaderCallback: (bounds) => const LinearGradient(
                 colors: [Color(0xFFec4899), Color(0xFF9333ea)],
               ).createShader(bounds),
-              child: const Icon(Icons.auto_awesome, size: 18, color: Colors.white),
+              child: Icon(Icons.auto_awesome, size: 18, color: Theme.of(context).colorScheme.onPrimary),
             ),
             const SizedBox(width: 6),
             Text(
@@ -395,7 +395,7 @@ class _InviteSalonDetailScreenState
         color: Theme.of(context).colorScheme.surface,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
             blurRadius: 8,
             offset: const Offset(0, -2),
           ),
@@ -439,14 +439,14 @@ class _InviteSalonDetailScreenState
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.check_circle, color: Colors.white, size: 20),
+              Icon(Icons.check_circle, color: Theme.of(context).colorScheme.onPrimary, size: 20),
               const SizedBox(width: 8),
               Text(
                 'Invitacion Enviada',
                 style: GoogleFonts.poppins(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onPrimary,
                 ),
               ),
             ],
@@ -526,14 +526,14 @@ class _GradientButton extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(icon, color: iconColor ?? Colors.white, size: 20),
+                Icon(icon, color: iconColor ?? Theme.of(context).colorScheme.onPrimary, size: 20),
                 const SizedBox(width: 8),
                 Text(
                   label,
                   style: GoogleFonts.poppins(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onPrimary,
                   ),
                 ),
               ],

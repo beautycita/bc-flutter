@@ -237,7 +237,7 @@ class _ProductShowcaseCard extends StatelessWidget {
                           end: Alignment.bottomCenter,
                           colors: [
                             Colors.transparent,
-                            Colors.black.withValues(alpha: 0.7),
+                            Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                           ],
                         ),
                       ),
@@ -254,7 +254,7 @@ class _ProductShowcaseCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.2),
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),
@@ -265,7 +265,7 @@ class _ProductShowcaseCard extends StatelessWidget {
                         style: GoogleFonts.poppins(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onPrimary,
                         ),
                       ),
                     ),
@@ -285,7 +285,7 @@ class _ProductShowcaseCard extends StatelessWidget {
                               fontSize: 10,
                               fontWeight: FontWeight.w700,
                               letterSpacing: 1.2,
-                              color: Colors.white.withValues(alpha: 0.7),
+                              color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7),
                             ),
                           ),
                         Text(
@@ -293,7 +293,7 @@ class _ProductShowcaseCard extends StatelessWidget {
                           style: GoogleFonts.poppins(
                             fontSize: 18,
                             fontWeight: FontWeight.w700,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onPrimary,
                             height: 1.2,
                           ),
                           maxLines: 2,
@@ -315,7 +315,7 @@ class _ProductShowcaseCard extends StatelessWidget {
                         ),
                         child: Text('Agotado',
                             style: GoogleFonts.poppins(
-                                fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white)),
+                                fontSize: 10, fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.onPrimary)),
                       ),
                     ),
                 ],
@@ -414,14 +414,14 @@ class _ProductShowcaseCard extends StatelessWidget {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.shopping_bag_outlined, size: 16, color: Colors.white),
+                          Icon(Icons.shopping_bag_outlined, size: 16, color: Theme.of(context).colorScheme.onPrimary),
                           const SizedBox(width: 6),
                           Text(
                             'Ver Producto',
                             style: GoogleFonts.poppins(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
-                              color: Colors.white,
+                              color: Theme.of(context).colorScheme.onPrimary,
                             ),
                           ),
                         ],
@@ -606,7 +606,7 @@ class _MainImage extends StatelessWidget {
                     vertical: AppConstants.paddingXS,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.65),
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.65),
                     borderRadius:
                         BorderRadius.circular(AppConstants.radiusFull),
                   ),
@@ -618,7 +618,7 @@ class _MainImage extends StatelessWidget {
                             ? Icons.compare_outlined
                             : Icons.compare_outlined,
                         size: 14,
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onPrimary,
                       ),
                       const SizedBox(width: 4),
                       Text(
@@ -626,7 +626,7 @@ class _MainImage extends StatelessWidget {
                         style: GoogleFonts.poppins(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onPrimary,
                         ),
                       ),
                     ],
@@ -657,7 +657,7 @@ class _MainImage extends StatelessWidget {
                   style: GoogleFonts.poppins(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onPrimary,
                   ),
                 ),
               ),

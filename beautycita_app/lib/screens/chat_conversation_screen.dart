@@ -265,8 +265,8 @@ class _ChatConversationScreenState
                     end: Alignment.bottomRight,
                   ),
                 ),
-                child: const Center(
-                  child: Icon(Icons.support_agent_rounded, color: Colors.white, size: 20),
+                child: Center(
+                  child: Icon(Icons.support_agent_rounded, color: Theme.of(context).colorScheme.onPrimary, size: 20),
                 ),
               ),
               const SizedBox(width: 10),
@@ -554,7 +554,7 @@ class _MessageBubble extends StatelessWidget {
     final textColor = isUser
         ? colors.onPrimary
         : (isErosAgent || isSupportAgent)
-            ? Colors.white
+            ? colors.onPrimary
             : colors.onSurface;
 
     // Try-on result card
@@ -573,7 +573,7 @@ class _MessageBubble extends StatelessWidget {
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.06),
+                    color: Theme.of(context).shadowColor.withValues(alpha: 0.06),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -610,12 +610,12 @@ class _MessageBubble extends StatelessWidget {
                           child: Container(
                             padding: const EdgeInsets.all(4),
                             decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.45),
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.45),
                               borderRadius: BorderRadius.circular(6),
                             ),
-                            child: const Icon(
+                            child: Icon(
                               Icons.zoom_in_rounded,
-                              color: Colors.white,
+                              color: Theme.of(context).colorScheme.onPrimary,
                               size: 18,
                             ),
                           ),
@@ -674,7 +674,7 @@ class _MessageBubble extends StatelessWidget {
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.06),
+                    color: Theme.of(context).shadowColor.withValues(alpha: 0.06),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -704,12 +704,12 @@ class _MessageBubble extends StatelessWidget {
                       child: Container(
                         padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.45),
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.45),
                           borderRadius: BorderRadius.circular(6),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.zoom_in_rounded,
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onPrimary,
                           size: 18,
                         ),
                       ),
@@ -746,7 +746,7 @@ class _MessageBubble extends StatelessWidget {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
+                  color: Theme.of(context).shadowColor.withValues(alpha: 0.04),
                   blurRadius: 4,
                   offset: const Offset(0, 1),
                 ),
@@ -934,7 +934,7 @@ class _InputBarState extends State<_InputBar> {
         color: Theme.of(context).scaffoldBackgroundColor,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Theme.of(context).shadowColor.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, -2),
           ),

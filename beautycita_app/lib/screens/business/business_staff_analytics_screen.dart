@@ -59,7 +59,7 @@ class _BusinessStaffAnalyticsScreenState
 
     return RefreshIndicator(
       color: colors.primary,
-      backgroundColor: Colors.white,
+      backgroundColor: colors.surface,
       onRefresh: () async =>
           ref.invalidate(staffProductivityProvider(_period)),
       child: ListView(
@@ -237,7 +237,7 @@ class _ServiceRevenueSection extends ConsumerWidget {
                     margin: const EdgeInsets.only(bottom: 6),
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: colors.surface,
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(color: colors.outline.withValues(alpha: 0.1)),
                     ),
@@ -337,7 +337,7 @@ class _CommissionsSection extends ConsumerWidget {
               return Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: colors.surface,
                   borderRadius:
                       BorderRadius.circular(AppConstants.radiusMD),
                   border: Border.all(
@@ -404,7 +404,7 @@ class _CommissionsSection extends ConsumerWidget {
                 // Per-staff rows
                 Container(
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: colors.surface,
                     borderRadius:
                         BorderRadius.circular(AppConstants.radiusMD),
                     border: Border.all(
@@ -447,11 +447,12 @@ class _CommissionSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     final fmt = NumberFormat('#,##0', 'es_MX');
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cs.surface,
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
         border: Border.all(color: color.withValues(alpha: 0.15)),
         boxShadow: [
@@ -536,7 +537,7 @@ class _CommissionStaffRowState
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF059669),
-                foregroundColor: Colors.white,
+                foregroundColor: colors.onPrimary,
               ),
               onPressed: () => Navigator.pop(ctx, true),
               child: Text('Marcar como pagado',
@@ -672,7 +673,7 @@ class _EmptyState extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(40),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
       ),
       child: Column(
@@ -780,7 +781,7 @@ class _HighlightCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
         border: Border.all(
           color: colors.primary.withValues(alpha: 0.1),
@@ -861,7 +862,7 @@ class _RevenueChart extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppConstants.paddingMD),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
         border: Border.all(color: colors.primary.withValues(alpha: 0.1)),
       ),
@@ -908,6 +909,7 @@ class _RevenueBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     final fraction = revenue / maxRevenue;
 
     return Padding(
@@ -951,7 +953,7 @@ class _RevenueBar extends StatelessWidget {
                             style: GoogleFonts.poppins(
                               fontSize: 10,
                               fontWeight: FontWeight.w600,
-                              color: Colors.white,
+                              color: colors.onPrimary,
                             ))
                         : null,
                   ),
@@ -996,7 +998,7 @@ class _HoursChart extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppConstants.paddingMD),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
         border: Border.all(color: colors.primary.withValues(alpha: 0.1)),
       ),
@@ -1189,7 +1191,7 @@ class _StaffRankingTable extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppConstants.paddingMD),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
         border: Border.all(color: colors.primary.withValues(alpha: 0.1)),
       ),
@@ -1286,7 +1288,7 @@ class _StaffRevenueTrendChart extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppConstants.paddingMD),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
         border: Border.all(color: colors.primary.withValues(alpha: 0.1)),
       ),

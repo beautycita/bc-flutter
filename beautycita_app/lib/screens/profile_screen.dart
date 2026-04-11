@@ -245,21 +245,21 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     child: CircularProgressIndicator(
                       value: completionPercent / 100,
                       strokeWidth: 3,
-                      backgroundColor: Colors.white.withValues(alpha: 0.3),
-                      valueColor: const AlwaysStoppedAnimation(Colors.white),
+                      backgroundColor: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.3),
+                      valueColor: AlwaysStoppedAnimation(cs.onPrimary),
                     ),
                   ),
                   // Avatar
                   CircleAvatar(
                     key: ValueKey(profile.avatarUrl),
                     radius: 46,
-                    backgroundColor: Colors.white.withValues(alpha: 0.2),
+                    backgroundColor: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.2),
                     backgroundImage: profile.avatarUrl != null
                         ? NetworkImage(profile.avatarUrl!)
                         : null,
                     child: profile.avatarUrl == null
                         ? Icon(Icons.person_outline, size: 46,
-                            color: Colors.white.withValues(alpha: 0.7))
+                            color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7))
                         : null,
                   ),
                   // Camera badge
@@ -269,11 +269,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     child: Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onPrimary,
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.15),
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.15),
                             blurRadius: 4,
                           ),
                         ],
@@ -302,12 +302,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     authState.username ?? 'Usuario',
                     style: textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.w700,
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onPrimary,
                     ),
                   ),
                   const SizedBox(width: 6),
                   Icon(Icons.edit_outlined, size: 16,
-                      color: Colors.white.withValues(alpha: 0.7)),
+                      color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7)),
                 ],
               ),
             ),
@@ -318,7 +318,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           Text(
             '$completionPercent% completado',
             style: textTheme.bodySmall?.copyWith(
-              color: Colors.white.withValues(alpha: 0.8),
+              color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.8),
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -340,27 +340,27 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   controller: _usernameController,
                   autofocus: true,
                   maxLength: 30,
-                  style: const TextStyle(color: Colors.white),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onPrimary),
                   decoration: InputDecoration(
                     hintText: 'Nombre de usuario',
-                    hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
+                    hintStyle: TextStyle(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.5)),
                     isDense: true,
                     counterText: '',
                     errorText: _usernameError,
                     errorStyle: const TextStyle(color: Colors.yellowAccent),
                     enabledBorder: UnderlineInputBorder(
-                      borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.5)),
+                      borderSide: BorderSide(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.5)),
                     ),
-                    focusedBorder: const UnderlineInputBorder(
-                      borderSide: BorderSide(color: Colors.white),
+                    focusedBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: Theme.of(context).colorScheme.onPrimary),
                     ),
                     suffixIcon: _checkingUsername
-                        ? const Padding(
+                        ? Padding(
                             padding: EdgeInsets.all(12),
                             child: SizedBox(
                               width: 16, height: 16,
                               child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.white),
+                                strokeWidth: 2, color: Theme.of(context).colorScheme.onPrimary),
                             ),
                           )
                         : _usernameController.text.length >= 3
@@ -381,14 +381,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ),
               const SizedBox(width: 8),
               IconButton(
-                icon: const Icon(Icons.check_outlined, color: Colors.white),
+                icon: Icon(Icons.check_outlined, color: Theme.of(context).colorScheme.onPrimary),
                 onPressed: _usernameAvailable && _usernameError == null
                     ? _saveUsername
                     : null,
               ),
               IconButton(
                 icon: Icon(Icons.close_outlined,
-                    color: Colors.white.withValues(alpha: 0.7)),
+                    color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7)),
                 onPressed: () => setState(() => _editingUsername = false),
               ),
             ],
@@ -401,13 +401,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             children: _usernameSuggestions
                 .map(
                   (s) => ActionChip(
-                    label: Text(s, style: const TextStyle(
-                      fontSize: 12, color: Colors.white)),
+                    label: Text(s, style: TextStyle(
+                      fontSize: 12, color: Theme.of(context).colorScheme.onPrimary)),
                     onPressed: () {
                       _usernameController.text = s;
                       _onUsernameChanged(s);
                     },
-                    backgroundColor: Colors.white.withValues(alpha: 0.2),
+                    backgroundColor: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.2),
                     side: BorderSide.none,
                     visualDensity: VisualDensity.compact,
                   ),
@@ -468,7 +468,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     child: Icon(
                       style.icon,
                       size: AppConstants.iconSizeMD,
-                      color: isActive ? Colors.white : cs.onSurface.withValues(alpha: 0.6),
+                      color: isActive ? cs.onPrimary : cs.onSurface.withValues(alpha: 0.6),
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -903,10 +903,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
+                color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(AppConstants.radiusSM),
               ),
-              child: const Icon(Icons.home_outlined, color: Colors.white, size: 22),
+              child: Icon(Icons.home_outlined, color: Theme.of(context).colorScheme.onPrimary, size: 22),
             ),
             const SizedBox(width: AppConstants.paddingSM + 4),
             Expanded(
@@ -914,15 +914,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('Registra tu salon', style: textTheme.titleSmall?.copyWith(
-                    color: Colors.white, fontWeight: FontWeight.w700)),
+                    color: Theme.of(context).colorScheme.onPrimary, fontWeight: FontWeight.w700)),
                   Text('Lleva tu negocio al siguiente nivel',
                     style: textTheme.bodySmall?.copyWith(
-                      color: Colors.white.withValues(alpha: 0.8))),
+                      color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.8))),
                 ],
               ),
             ),
             Icon(Icons.chevron_right_outlined,
-                color: Colors.white.withValues(alpha: 0.8)),
+                color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.8)),
           ],
         ),
       ),
@@ -1262,7 +1262,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Theme.of(context).colorScheme.primary,
-                    foregroundColor: Colors.white,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(AppConstants.radiusSM)),
@@ -1336,7 +1336,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Theme.of(context).colorScheme.primary,
-                    foregroundColor: Colors.white,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(AppConstants.radiusSM)),
@@ -1463,7 +1463,7 @@ class _AvatarCropEditorState extends State<_AvatarCropEditor> {
       backgroundColor: Theme.of(context).colorScheme.onSurface,
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.onSurface,
-        foregroundColor: Colors.white,
+        foregroundColor: Theme.of(context).colorScheme.onPrimary,
         title: const Text('Recortar foto'),
         leading: IconButton(
           icon: const Icon(Icons.close_outlined),
@@ -1520,7 +1520,7 @@ class _AvatarCropEditorState extends State<_AvatarCropEditor> {
                   onPressed: _processing ? null : _cropAndReturn,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Theme.of(context).colorScheme.primary,
-                    foregroundColor: Colors.white,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
                     minimumSize:
                         const Size(0, AppConstants.minTouchHeight),
                     shape: RoundedRectangleBorder(
@@ -1529,12 +1529,12 @@ class _AvatarCropEditorState extends State<_AvatarCropEditor> {
                     ),
                   ),
                   child: _processing
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 20,
                           height: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onPrimary,
                           ),
                         )
                       : const Text(

@@ -212,10 +212,10 @@ class _QrScanScreenState extends State<QrScanScreen> with SingleTickerProviderSt
                                 AppConstants.radiusLG),
                           ),
                         ),
-                        child: const Text(
+                        child: Text(
                           'Vincular',
                           style: TextStyle(
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onPrimary,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -304,17 +304,17 @@ class _QrScanScreenState extends State<QrScanScreen> with SingleTickerProviderSt
     final primary = Theme.of(context).colorScheme.primary;
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: Theme.of(context).colorScheme.scrim,
       appBar: AppBar(
-        backgroundColor: Colors.black,
-        foregroundColor: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.scrim,
+        foregroundColor: Theme.of(context).colorScheme.onPrimary,
         elevation: 0,
         title: Text(
           'Vincular con la Web',
           style: GoogleFonts.poppins(
             fontSize: 20,
             fontWeight: FontWeight.w600,
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onPrimary,
           ),
         ),
         leading: IconButton(
@@ -350,7 +350,7 @@ class _QrScanScreenState extends State<QrScanScreen> with SingleTickerProviderSt
                           vertical: AppConstants.paddingMD,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.6),
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                           borderRadius: BorderRadius.circular(AppConstants.radiusMD),
                         ),
                         child: Text(
@@ -358,7 +358,7 @@ class _QrScanScreenState extends State<QrScanScreen> with SingleTickerProviderSt
                           style: GoogleFonts.nunito(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onPrimary,
                           ),
                           textAlign: TextAlign.center,
                         ),
@@ -375,7 +375,7 @@ class _QrScanScreenState extends State<QrScanScreen> with SingleTickerProviderSt
           ),
           // Bottom toggle
           Container(
-            color: Colors.black,
+            color: Theme.of(context).colorScheme.onSurface,
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
             child: SafeArea(
               top: false,
@@ -391,7 +391,7 @@ class _QrScanScreenState extends State<QrScanScreen> with SingleTickerProviderSt
                       },
                       icon: Icon(
                         _showManualEntry ? Icons.qr_code_scanner_rounded : Icons.keyboard_rounded,
-                        color: Colors.white70,
+                        color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7),
                         size: 20,
                       ),
                       label: Text(
@@ -399,11 +399,11 @@ class _QrScanScreenState extends State<QrScanScreen> with SingleTickerProviderSt
                         style: GoogleFonts.poppins(
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
-                          color: Colors.white70,
+                          color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7),
                         ),
                       ),
                       style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Colors.white24),
+                        side: BorderSide(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.24)),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                     ),
@@ -421,7 +421,7 @@ class _QrScanScreenState extends State<QrScanScreen> with SingleTickerProviderSt
     final primary = Theme.of(context).colorScheme.primary;
 
     return Container(
-      color: Colors.black,
+      color: Theme.of(context).colorScheme.onSurface,
       padding: const EdgeInsets.all(32),
       child: Center(
         child: Column(
@@ -433,7 +433,7 @@ class _QrScanScreenState extends State<QrScanScreen> with SingleTickerProviderSt
                 color: primary.withValues(alpha: 0.15),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.keyboard_rounded, color: Colors.white, size: 40),
+              child: Icon(Icons.keyboard_rounded, color: Theme.of(context).colorScheme.onPrimary, size: 40),
             ),
             const SizedBox(height: 24),
             Text(
@@ -441,7 +441,7 @@ class _QrScanScreenState extends State<QrScanScreen> with SingleTickerProviderSt
               style: GoogleFonts.nunito(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onPrimary,
               ),
               textAlign: TextAlign.center,
             ),
@@ -455,7 +455,7 @@ class _QrScanScreenState extends State<QrScanScreen> with SingleTickerProviderSt
                 style: GoogleFonts.poppins(
                   fontSize: 24,
                   fontWeight: FontWeight.w700,
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onPrimary,
                   letterSpacing: 4,
                 ),
                 decoration: InputDecoration(
@@ -464,11 +464,11 @@ class _QrScanScreenState extends State<QrScanScreen> with SingleTickerProviderSt
                   hintStyle: GoogleFonts.poppins(
                     fontSize: 24,
                     fontWeight: FontWeight.w400,
-                    color: Colors.white24,
+                    color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.24),
                     letterSpacing: 4,
                   ),
                   enabledBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.3), width: 2),
+                    borderSide: BorderSide(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.3), width: 2),
                   ),
                   focusedBorder: UnderlineInputBorder(
                     borderSide: BorderSide(color: primary, width: 2),
@@ -508,7 +508,7 @@ class _QrScanScreenState extends State<QrScanScreen> with SingleTickerProviderSt
     final onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Container(
-      color: Colors.black.withValues(alpha: 0.8),
+      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
       child: Center(
         child: Container(
           padding: const EdgeInsets.all(AppConstants.paddingXL),
@@ -516,7 +516,7 @@ class _QrScanScreenState extends State<QrScanScreen> with SingleTickerProviderSt
             horizontal: AppConstants.screenPaddingHorizontal,
           ),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onPrimary,
             borderRadius: BorderRadius.circular(AppConstants.radiusLG),
           ),
           child: Column(
@@ -534,9 +534,9 @@ class _QrScanScreenState extends State<QrScanScreen> with SingleTickerProviderSt
                     color: Colors.green.shade500,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.check_rounded,
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onPrimary,
                     size: 56,
                   ),
                 )
@@ -548,9 +548,9 @@ class _QrScanScreenState extends State<QrScanScreen> with SingleTickerProviderSt
                     color: Colors.red.shade500,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.close_rounded,
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onPrimary,
                     size: 56,
                   ),
                 ),

@@ -141,7 +141,7 @@ class _RPShellScreenState extends ConsumerState<RPShellScreen> {
               decoration: BoxDecoration(
                 color: Colors.blue.shade700,
                 shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 3),
+                border: Border.all(color: Theme.of(context).colorScheme.onPrimary, width: 3),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.blue.withValues(alpha: 0.4),
@@ -169,7 +169,7 @@ class _RPShellScreenState extends ConsumerState<RPShellScreen> {
                     decoration: BoxDecoration(
                       color: _statusColor(salon['rp_status'], salon),
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
+                      border: Border.all(color: Theme.of(context).colorScheme.onPrimary, width: 2),
                     ),
                   ),
                 ),

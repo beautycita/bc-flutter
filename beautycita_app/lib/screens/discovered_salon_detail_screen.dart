@@ -103,14 +103,14 @@ class _DiscoveredSalonDetailScreenState extends ConsumerState<DiscoveredSalonDet
         backgroundColor: kWhatsAppDarkGreen,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+          icon: Icon(Icons.arrow_back_rounded, color: Theme.of(context).colorScheme.onPrimary),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
           _sanitize(widget.salon.name),
           style: GoogleFonts.poppins(
             fontWeight: FontWeight.w600,
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onPrimary,
             fontSize: 17,
           ),
           maxLines: 1,
@@ -137,7 +137,7 @@ class _DiscoveredSalonDetailScreenState extends ConsumerState<DiscoveredSalonDet
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.3),
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
                               blurRadius: 20,
                               offset: const Offset(0, 8),
                               spreadRadius: 2,
@@ -150,7 +150,7 @@ class _DiscoveredSalonDetailScreenState extends ConsumerState<DiscoveredSalonDet
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.3),
+                              color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.3),
                               width: 3,
                             ),
                           ),
@@ -175,7 +175,7 @@ class _DiscoveredSalonDetailScreenState extends ConsumerState<DiscoveredSalonDet
                         style: GoogleFonts.poppins(
                           fontSize: 22,
                           fontWeight: FontWeight.w700,
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onPrimary,
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -184,7 +184,7 @@ class _DiscoveredSalonDetailScreenState extends ConsumerState<DiscoveredSalonDet
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.15),
+                          color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Row(
@@ -198,7 +198,7 @@ class _DiscoveredSalonDetailScreenState extends ConsumerState<DiscoveredSalonDet
                                 style: GoogleFonts.poppins(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w600,
-                                  color: Colors.white,
+                                  color: Theme.of(context).colorScheme.onPrimary,
                                 ),
                               ),
                               if (widget.salon.reviewsCount != null) ...[
@@ -207,7 +207,7 @@ class _DiscoveredSalonDetailScreenState extends ConsumerState<DiscoveredSalonDet
                                   '(${_formatReviewCount(widget.salon.reviewsCount!)})',
                                   style: GoogleFonts.nunito(
                                     fontSize: 13,
-                                    color: Colors.white70,
+                                    color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7),
                                   ),
                                 ),
                               ],
@@ -216,17 +216,17 @@ class _DiscoveredSalonDetailScreenState extends ConsumerState<DiscoveredSalonDet
                                   width: 1,
                                   height: 16,
                                   margin: const EdgeInsets.symmetric(horizontal: 12),
-                                  color: Colors.white38,
+                                  color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.38),
                                 ),
                             ],
                             if (widget.salon.distanceKm != null) ...[
-                              const Icon(Icons.location_on_outlined, size: 16, color: Colors.white70),
+                              Icon(Icons.location_on_outlined, size: 16, color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7)),
                               const SizedBox(width: 4),
                               Text(
                                 '${widget.salon.distanceKm!.toStringAsFixed(1)} km',
                                 style: GoogleFonts.nunito(
                                   fontSize: 13,
-                                  color: Colors.white,
+                                  color: Theme.of(context).colorScheme.onPrimary,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -310,11 +310,11 @@ class _DiscoveredSalonDetailScreenState extends ConsumerState<DiscoveredSalonDet
                     width: double.infinity,
                     padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onPrimary,
                       borderRadius: BorderRadius.circular(AppConstants.radiusMD),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.06),
+                          color: Theme.of(context).shadowColor.withValues(alpha: 0.06),
                           blurRadius: 10,
                           offset: const Offset(0, 3),
                         ),
@@ -392,7 +392,7 @@ class _DiscoveredSalonDetailScreenState extends ConsumerState<DiscoveredSalonDet
                             ),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: kWhatsAppGreen,
-                              foregroundColor: Colors.white,
+                              foregroundColor: Theme.of(context).colorScheme.onPrimary,
                               elevation: 4,
                               shadowColor: kWhatsAppDarkGreen,
                               padding: const EdgeInsets.symmetric(vertical: 18),
@@ -424,10 +424,10 @@ class _DiscoveredSalonDetailScreenState extends ConsumerState<DiscoveredSalonDet
       width: 104,
       height: 104,
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.2),
+        color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.2),
         shape: BoxShape.circle,
       ),
-      child: const Icon(Icons.store, color: Colors.white, size: 48),
+      child: Icon(Icons.store, color: Theme.of(context).colorScheme.onPrimary, size: 48),
     );
   }
 
@@ -523,17 +523,17 @@ class _InfoCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.onPrimary,
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
+            color: Theme.of(context).shadowColor.withValues(alpha: 0.08),
             blurRadius: 14,
             offset: const Offset(0, 4),
             spreadRadius: 0,
           ),
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
+            color: Theme.of(context).shadowColor.withValues(alpha: 0.03),
             blurRadius: 4,
             offset: const Offset(0, 2),
             spreadRadius: 0,

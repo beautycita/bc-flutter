@@ -116,7 +116,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               borderRadius: BorderRadius.circular(24),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.2),
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
                                   blurRadius: 20,
                                   offset: const Offset(0, 8),
                                 ),
@@ -133,23 +133,23 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             width: 140,
                             height: 140,
                             decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.15),
+                              color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.15),
                               shape: BoxShape.circle,
                             ),
                             child: Icon(
                               slide.icon,
                               size: 72,
-                              color: Colors.white,
+                              color: Theme.of(context).colorScheme.onPrimary,
                             ),
                           ),
                         const SizedBox(height: AppConstants.paddingXL),
                         // Title
                         Text(
                           slide.title,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 28,
                             fontWeight: FontWeight.w800,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onPrimary,
                             height: 1.2,
                           ),
                           textAlign: TextAlign.center,
@@ -161,7 +161,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           style: TextStyle(
                             fontSize: 17,
                             fontWeight: FontWeight.w400,
-                            color: Colors.white.withValues(alpha: 0.9),
+                            color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.9),
                             height: 1.5,
                           ),
                           textAlign: TextAlign.center,
@@ -184,7 +184,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               child: Text(
                 'Saltar',
                 style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.8),
+                  color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.8),
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
                 ),
@@ -211,8 +211,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       height: 8,
                       decoration: BoxDecoration(
                         color: i == _currentPage
-                            ? Colors.white
-                            : Colors.white.withValues(alpha: 0.4),
+                            ? Theme.of(context).colorScheme.onPrimary
+                            : Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.4),
                         borderRadius: BorderRadius.circular(4),
                       ),
                     ),
@@ -230,7 +230,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     child: ElevatedButton(
                       onPressed: _next,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
+                        backgroundColor: Theme.of(context).colorScheme.surface,
                         foregroundColor: const Color(0xFF9333ea),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(

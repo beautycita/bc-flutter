@@ -252,12 +252,12 @@ class _HeroSection extends StatelessWidget {
             width: 72,
             height: 72,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.15),
+              color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
-            child: const Icon(
+            child: Icon(
               Icons.help_center_rounded,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onPrimary,
               size: 38,
             ),
           ),
@@ -268,7 +268,7 @@ class _HeroSection extends StatelessWidget {
             style: GoogleFonts.poppins(
               fontSize: 22,
               fontWeight: FontWeight.w700,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onPrimary,
               height: 1.2,
             ),
           ),
@@ -278,7 +278,7 @@ class _HeroSection extends StatelessWidget {
             textAlign: TextAlign.center,
             style: GoogleFonts.nunito(
               fontSize: 14,
-              color: Colors.white.withValues(alpha: 0.85),
+              color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.85),
               height: 1.4,
             ),
           ),
@@ -339,24 +339,24 @@ class _ErosCardState extends State<_ErosCard> {
               width: 56,
               height: 56,
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.15),
+                color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(AppConstants.radiusSM),
               ),
               child: _loading
-                  ? const Center(
+                  ? Center(
                       child: SizedBox(
                         width: 24,
                         height: 24,
                         child: CircularProgressIndicator(
                           strokeWidth: 2.5,
                           valueColor:
-                              AlwaysStoppedAnimation<Color>(Colors.white),
+                              AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.onPrimary),
                         ),
                       ),
                     )
-                  : const Icon(
+                  : Icon(
                       Icons.smart_toy_rounded,
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onPrimary,
                       size: 30,
                     ),
             ),
@@ -370,7 +370,7 @@ class _ErosCardState extends State<_ErosCard> {
                     style: GoogleFonts.poppins(
                       fontSize: 17,
                       fontWeight: FontWeight.w700,
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onPrimary,
                       height: 1.2,
                     ),
                   ),
@@ -379,7 +379,7 @@ class _ErosCardState extends State<_ErosCard> {
                     'Tu forma mas rapida de obtener ayuda. Disponible 24/7.',
                     style: GoogleFonts.nunito(
                       fontSize: 13,
-                      color: Colors.white.withValues(alpha: 0.9),
+                      color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.9),
                       height: 1.4,
                     ),
                   ),
@@ -389,7 +389,7 @@ class _ErosCardState extends State<_ErosCard> {
             const SizedBox(width: AppConstants.paddingSM),
             Icon(
               Icons.arrow_forward_ios_rounded,
-              color: Colors.white.withValues(alpha: 0.7),
+              color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7),
               size: 18,
             ),
           ],
@@ -454,20 +454,20 @@ class _HumanSupportCardState extends State<_HumanSupportCard> {
                 borderRadius: BorderRadius.circular(AppConstants.radiusSM),
               ),
               child: _loading
-                  ? const Center(
+                  ? Center(
                       child: SizedBox(
                         width: 18,
                         height: 18,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
                           valueColor:
-                              AlwaysStoppedAnimation<Color>(Colors.white),
+                              AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.onPrimary),
                         ),
                       ),
                     )
-                  : const Icon(
+                  : Icon(
                       Icons.headset_mic_outlined,
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onPrimary,
                       size: 20,
                     ),
             ),

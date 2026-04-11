@@ -162,7 +162,7 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen>
           Text(
             'MI ESTILO',
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: Colors.white.withValues(alpha: 0.7),
+                  color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7),
                   letterSpacing: 1.0,
                   fontWeight: FontWeight.w600,
                 ),
@@ -171,7 +171,7 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen>
           Text(
             'Personaliza tu experiencia',
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onPrimary,
                   fontWeight: FontWeight.w800,
                 ),
           ),
@@ -517,9 +517,9 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen>
                   borderRadius:
                       BorderRadius.circular(AppConstants.radiusSM),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.my_location_outlined,
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onPrimary,
                   size: 18,
                 ),
               ),
@@ -790,12 +790,12 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen>
             border: Border.all(color: ext.cardBorderColor),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.03),
+                color: Theme.of(context).shadowColor.withValues(alpha: 0.03),
                 blurRadius: 10,
                 offset: const Offset(0, 3),
               ),
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.02),
+                color: Theme.of(context).shadowColor.withValues(alpha: 0.02),
                 blurRadius: 20,
                 offset: const Offset(0, 8),
               ),

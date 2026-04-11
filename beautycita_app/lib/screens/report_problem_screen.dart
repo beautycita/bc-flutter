@@ -349,12 +349,12 @@ class _HeroHeader extends StatelessWidget {
             height: 72,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Colors.white.withValues(alpha: 0.15),
+              color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.15),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.flag_rounded,
               size: AppConstants.iconSizeXL,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onPrimary,
             ),
           ),
           const SizedBox(height: AppConstants.paddingMD),
@@ -363,7 +363,7 @@ class _HeroHeader extends StatelessWidget {
             style: GoogleFonts.poppins(
               fontSize: 22,
               fontWeight: FontWeight.w700,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onPrimary,
               letterSpacing: -0.3,
             ),
           ),
@@ -373,7 +373,7 @@ class _HeroHeader extends StatelessWidget {
             textAlign: TextAlign.center,
             style: GoogleFonts.nunito(
               fontSize: 14,
-              color: Colors.white.withValues(alpha: 0.85),
+              color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.85),
               height: 1.5,
             ),
           ),
@@ -505,12 +505,12 @@ class _GradientSubmitButton extends StatelessWidget {
           ),
           alignment: Alignment.center,
           child: loading
-              ? const SizedBox(
+              ? SizedBox(
                   width: 22,
                   height: 22,
                   child: CircularProgressIndicator(
                     strokeWidth: 2.5,
-                    valueColor: AlwaysStoppedAnimation(Colors.white),
+                    valueColor: AlwaysStoppedAnimation(Theme.of(context).colorScheme.onPrimary),
                   ),
                 )
               : Text(
@@ -518,7 +518,7 @@ class _GradientSubmitButton extends StatelessWidget {
                   style: GoogleFonts.poppins(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onPrimary,
                     letterSpacing: 0.2,
                   ),
                 ),

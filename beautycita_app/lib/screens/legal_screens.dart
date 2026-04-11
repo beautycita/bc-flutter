@@ -209,10 +209,10 @@ class _LegalTabState extends State<_LegalTab>
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
+                  color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(widget.icon, color: Colors.white, size: 20),
+                child: Icon(widget.icon, color: Theme.of(context).colorScheme.onPrimary, size: 20),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -221,10 +221,10 @@ class _LegalTabState extends State<_LegalTab>
                   children: [
                     Text(
                       widget.subtitle,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onPrimary,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -233,7 +233,7 @@ class _LegalTabState extends State<_LegalTab>
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w500,
-                        color: Colors.white.withValues(alpha: 0.7),
+                        color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7),
                       ),
                     ),
                   ],
@@ -253,12 +253,12 @@ class _LegalTabState extends State<_LegalTab>
             border: Border.all(color: ext.cardBorderColor),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.03),
+                color: Theme.of(context).shadowColor.withValues(alpha: 0.03),
                 blurRadius: 10,
                 offset: const Offset(0, 3),
               ),
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.02),
+                color: Theme.of(context).shadowColor.withValues(alpha: 0.02),
                 blurRadius: 20,
                 offset: const Offset(0, 8),
               ),
@@ -393,12 +393,12 @@ class _ContactSection extends ConsumerWidget {
             border: Border.all(color: ext.cardBorderColor),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.03),
+                color: Theme.of(context).shadowColor.withValues(alpha: 0.03),
                 blurRadius: 10,
                 offset: const Offset(0, 3),
               ),
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.02),
+                color: Theme.of(context).shadowColor.withValues(alpha: 0.02),
                 blurRadius: 20,
                 offset: const Offset(0, 8),
               ),

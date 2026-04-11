@@ -1183,8 +1183,8 @@ class _HeroHeader extends StatelessWidget {
               Align(
                 alignment: Alignment.centerLeft,
                 child: IconButton(
-                  icon: const Icon(Icons.arrow_back_rounded,
-                      color: Colors.white, size: 24),
+                  icon: Icon(Icons.arrow_back_rounded,
+                      color: Theme.of(context).colorScheme.onPrimary, size: 24),
                   onPressed: onBack,
                 ),
               ),
@@ -1195,17 +1195,17 @@ class _HeroHeader extends StatelessWidget {
                 Container(
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 3),
+                    border: Border.all(color: Theme.of(context).colorScheme.onPrimary, width: 3),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.2),
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
                         blurRadius: 12,
                       ),
                     ],
                   ),
                   child: CircleAvatar(
                     radius: 40,
-                    backgroundColor: Colors.white.withValues(alpha: 0.2),
+                    backgroundColor: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.2),
                     backgroundImage: NetworkImage(photoUrl!),
                     onBackgroundImageError: (_, _) {},
                   ),
@@ -1216,12 +1216,12 @@ class _HeroHeader extends StatelessWidget {
                   height: 72,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.white.withValues(alpha: 0.15),
+                    color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.15),
                     border:
-                        Border.all(color: Colors.white.withValues(alpha: 0.3), width: 2),
+                        Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.3), width: 2),
                   ),
-                  child: const Icon(Icons.store_rounded,
-                      size: 36, color: Colors.white),
+                  child: Icon(Icons.store_rounded,
+                      size: 36, color: Theme.of(context).colorScheme.onPrimary),
                 ),
               const SizedBox(height: 16),
 
@@ -1230,7 +1230,7 @@ class _HeroHeader extends StatelessWidget {
                 style: GoogleFonts.poppins(
                   fontSize: 22,
                   fontWeight: FontWeight.w700,
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onPrimary,
                   height: 1.2,
                 ),
               ),
@@ -1239,7 +1239,7 @@ class _HeroHeader extends StatelessWidget {
                 'Unete a BeautyCita y recibe clientes nuevas',
                 style: GoogleFonts.nunito(
                   fontSize: 14,
-                  color: Colors.white.withValues(alpha: 0.85),
+                  color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.85),
                   height: 1.3,
                 ),
                 textAlign: TextAlign.center,
@@ -1569,8 +1569,8 @@ class _ConfirmationCardState extends State<_ConfirmationCard>
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      Colors.black.withValues(alpha: 0.15),
-                      Colors.black.withValues(alpha: 0.7),
+                      Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.15),
+                      Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                     ],
                   ),
                 ),
@@ -1592,7 +1592,7 @@ class _ConfirmationCardState extends State<_ConfirmationCard>
                         style: GoogleFonts.poppins(
                           fontSize: 24,
                           fontWeight: FontWeight.w700,
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onPrimary,
                           height: 1.2,
                         ),
                         maxLines: 2,
@@ -1602,15 +1602,15 @@ class _ConfirmationCardState extends State<_ConfirmationCard>
                         const SizedBox(height: 6),
                         Row(
                           children: [
-                            const Icon(Icons.location_on_rounded,
-                                size: 16, color: Colors.white70),
+                            Icon(Icons.location_on_rounded,
+                                size: 16, color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7)),
                             const SizedBox(width: 4),
                             Expanded(
                               child: Text(
                                 address.toString(),
                                 style: GoogleFonts.nunito(
                                   fontSize: 14,
-                                  color: Colors.white70,
+                                  color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7),
                                   height: 1.3,
                                 ),
                                 maxLines: 2,
@@ -1624,14 +1624,14 @@ class _ConfirmationCardState extends State<_ConfirmationCard>
                         const SizedBox(height: 4),
                         Row(
                           children: [
-                            const Icon(Icons.phone_rounded,
-                                size: 16, color: Colors.white70),
+                            Icon(Icons.phone_rounded,
+                                size: 16, color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7)),
                             const SizedBox(width: 4),
                             Text(
                               phone.toString(),
                               style: GoogleFonts.nunito(
                                 fontSize: 14,
-                                color: Colors.white70,
+                                color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7),
                               ),
                             ),
                           ],
@@ -1645,7 +1645,7 @@ class _ConfirmationCardState extends State<_ConfirmationCard>
                         style: GoogleFonts.poppins(
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onPrimary,
                         ),
                       ),
                       const SizedBox(height: 14),
@@ -1685,7 +1685,7 @@ class _ConfirmationCardState extends State<_ConfirmationCard>
                                     style: GoogleFonts.poppins(
                                       fontSize: 15,
                                       fontWeight: FontWeight.w700,
-                                      color: Colors.white,
+                                      color: Theme.of(context).colorScheme.onPrimary,
                                       letterSpacing: 0.5,
                                     ),
                                   ),
@@ -1705,9 +1705,9 @@ class _ConfirmationCardState extends State<_ConfirmationCard>
                             'No, registrar otro',
                             style: GoogleFonts.nunito(
                               fontSize: 14,
-                              color: Colors.white70,
+                              color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7),
                               decoration: TextDecoration.underline,
-                              decorationColor: Colors.white54,
+                              decorationColor: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.54),
                             ),
                           ),
                         ),
@@ -1995,11 +1995,11 @@ class _RegisterButton extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 16),
               child: Center(
                 child: loading
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 22,
                         height: 22,
                         child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white),
+                            strokeWidth: 2, color: Theme.of(context).colorScheme.onPrimary),
                       )
                     : Text(
                         'REGISTRARME GRATIS',
@@ -2007,7 +2007,7 @@ class _RegisterButton extends StatelessWidget {
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
                           color: enabled
-                              ? Colors.white
+                              ? Theme.of(context).colorScheme.onPrimary
                               : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                           letterSpacing: 0.5,
                         ),
@@ -2297,8 +2297,8 @@ class _MiniMapState extends State<_MiniMap>
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
                           colors: [
-                            Colors.white.withValues(alpha: 0.3),
-                            Colors.white.withValues(alpha: 0.0),
+                            Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.3),
+                            Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.0),
                           ],
                         ),
                       ),
@@ -2349,7 +2349,7 @@ class _AnimatedPin extends StatelessWidget {
                     width: 16 + (8 * shadowAnimation.value),
                     height: 6,
                     decoration: BoxDecoration(
-                      color: Colors.black,
+                      color: Theme.of(context).colorScheme.onSurface,
                       borderRadius: BorderRadius.circular(6),
                     ),
                   ),
@@ -2524,17 +2524,17 @@ class _IdentityGateSheetState extends ConsumerState<_IdentityGateSheet> {
                         await ref.read(securityProvider.notifier).linkGoogle();
                       },
                 icon: security.isLoading && !_showEmailInput
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 18,
                         height: 18,
                         child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white),
+                            strokeWidth: 2, color: Theme.of(context).colorScheme.onPrimary),
                       )
                     : const Icon(Icons.g_mobiledata_rounded, size: 24),
                 label: const Text('Continuar con Google'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: colors.primary,
-                  foregroundColor: Colors.white,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -2646,18 +2646,18 @@ class _IdentityGateSheetState extends ConsumerState<_IdentityGateSheet> {
                         },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: colors.primary,
-                    foregroundColor: Colors.white,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                   child: security.isLoading
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 18,
                           height: 18,
                           child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white),
+                              strokeWidth: 2, color: Theme.of(context).colorScheme.onPrimary),
                         )
                       : const Text('Enviar confirmacion'),
                 ),
@@ -2843,7 +2843,7 @@ class _SuccessScreenState extends State<_SuccessScreen>
                 child: Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onPrimary,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
                       color: const Color(0xFF635BFF).withValues(alpha: 0.15),
@@ -2914,12 +2914,12 @@ class _SuccessScreenState extends State<_SuccessScreen>
                         child: ElevatedButton.icon(
                           onPressed: _loadingStripe ? null : _setupStripe,
                           icon: _loadingStripe
-                              ? const SizedBox(
+                              ? SizedBox(
                                   width: 18,
                                   height: 18,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    color: Colors.white,
+                                    color: Theme.of(context).colorScheme.onPrimary,
                                   ),
                                 )
                               : const Icon(Icons.arrow_forward_rounded,
@@ -2931,7 +2931,7 @@ class _SuccessScreenState extends State<_SuccessScreen>
                           ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF635BFF),
-                            foregroundColor: Colors.white,
+                            foregroundColor: Theme.of(context).colorScheme.onPrimary,
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),

@@ -438,7 +438,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           // Cinematic question text
                           CinematicQuestionText(
                             text: 'Que buscas hoy?',
-                            primaryColor: Colors.white,
+                            primaryColor: palette.onPrimary,
                             accentColor: palette.secondary,
                             fontSize: 30,
                           ),
@@ -499,8 +499,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.notifications_active_rounded,
-                        color: Colors.white, size: 22),
+                    Icon(Icons.notifications_active_rounded,
+                        color: palette.onPrimary, size: 22),
                     const SizedBox(width: AppConstants.paddingSM),
                     Expanded(
                       child: Text(
@@ -508,7 +508,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         style: GoogleFonts.nunito(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
-                          color: Colors.white,
+                          color: palette.onPrimary,
                         ),
                       ),
                     ),
@@ -521,7 +521,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: palette.surface,
                           borderRadius: BorderRadius.circular(AppConstants.radiusFull),
                         ),
                         child: Text(
@@ -537,8 +537,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     const SizedBox(width: 4),
                     GestureDetector(
                       onTap: _dismissPushPrompt,
-                      child: const Icon(Icons.close_rounded,
-                          color: Colors.white70, size: 20),
+                      child: Icon(Icons.close_rounded,
+                          color: palette.onPrimary.withValues(alpha: 0.7), size: 20),
                     ),
                   ],
                 ),
@@ -665,9 +665,10 @@ class _ImmersiveSubcategoryPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = category.color;
     final mq = MediaQuery.of(context);
+    final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: cs.scrim,
       body: Stack(
         fit: StackFit.expand,
         children: [
@@ -679,7 +680,7 @@ class _ImmersiveSubcategoryPage extends StatelessWidget {
             ),
           ),
           // Dark overlay for legibility
-          Container(color: Colors.black.withValues(alpha: 0.45)),
+          Container(color: cs.scrim.withValues(alpha: 0.45)),
           // Color tint
           Container(color: color.withValues(alpha: 0.12)),
 
@@ -695,9 +696,9 @@ class _ImmersiveSubcategoryPage extends StatelessWidget {
                     children: [
                       IconButton(
                         onPressed: () => Navigator.of(context).pop(),
-                        icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+                        icon: Icon(Icons.arrow_back_rounded, color: cs.onPrimary),
                         style: IconButton.styleFrom(
-                          backgroundColor: Colors.white.withValues(alpha: 0.1),
+                          backgroundColor: cs.onPrimary.withValues(alpha: 0.1),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -710,7 +711,7 @@ class _ImmersiveSubcategoryPage extends StatelessWidget {
                               style: GoogleFonts.poppins(
                                 fontSize: 28,
                                 fontWeight: FontWeight.w800,
-                                color: Colors.white,
+                                color: cs.onPrimary,
                                 height: 1.1,
                               ),
                             ),
@@ -719,7 +720,7 @@ class _ImmersiveSubcategoryPage extends StatelessWidget {
                               _getCategoryQuestion(category.id),
                               style: GoogleFonts.nunito(
                                 fontSize: 15,
-                                color: Colors.white.withValues(alpha: 0.7),
+                                color: cs.onPrimary.withValues(alpha: 0.7),
                               ),
                             ),
                           ],
@@ -827,6 +828,7 @@ class _ImmersiveSubPillState extends ConsumerState<_ImmersiveSubPill> {
   @override
   Widget build(BuildContext context) {
     final color = widget.categoryColor;
+    final cs = Theme.of(context).colorScheme;
 
     return GestureDetector(
       onTapDown: (_) => setState(() => _isPressed = true),
@@ -844,11 +846,11 @@ class _ImmersiveSubPillState extends ConsumerState<_ImmersiveSubPill> {
           padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
           decoration: BoxDecoration(
             color: _isPressed
-                ? Colors.white.withValues(alpha: 0.25)
-                : Colors.white.withValues(alpha: 0.12),
+                ? cs.onPrimary.withValues(alpha: 0.25)
+                : cs.onPrimary.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: Colors.white.withValues(alpha: 0.2),
+              color: cs.onPrimary.withValues(alpha: 0.2),
               width: 1,
             ),
           ),
@@ -860,14 +862,14 @@ class _ImmersiveSubPillState extends ConsumerState<_ImmersiveSubPill> {
                 style: GoogleFonts.poppins(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
-                  color: Colors.white,
+                  color: cs.onPrimary,
                 ),
               ),
               if (_hasItems()) ...[
                 const SizedBox(width: 4),
                 Icon(
                   Icons.chevron_right_rounded,
-                  color: Colors.white.withValues(alpha: 0.5),
+                  color: cs.onPrimary.withValues(alpha: 0.5),
                   size: 20,
                 ),
               ],
@@ -902,9 +904,9 @@ class _ImmersiveItemsSheet extends ConsumerWidget {
             filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.5),
+                color: Theme.of(context).colorScheme.scrim.withValues(alpha: 0.5),
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
               ),
               child: Column(
                 children: [
@@ -912,7 +914,7 @@ class _ImmersiveItemsSheet extends ConsumerWidget {
                     margin: const EdgeInsets.only(top: 12, bottom: 8),
                     width: 40, height: 4,
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.3),
+                      color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -926,7 +928,7 @@ class _ImmersiveItemsSheet extends ConsumerWidget {
                           style: GoogleFonts.poppins(
                             fontSize: 22,
                             fontWeight: FontWeight.w700,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onPrimary,
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -934,7 +936,7 @@ class _ImmersiveItemsSheet extends ConsumerWidget {
                           'Elige el tipo exacto',
                           style: GoogleFonts.nunito(
                             fontSize: 14,
-                            color: Colors.white.withValues(alpha: 0.5),
+                            color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.5),
                           ),
                         ),
                       ],
@@ -1004,6 +1006,7 @@ class _ImmersiveItemTileState extends ConsumerState<_ImmersiveItemTile> {
   @override
   Widget build(BuildContext context) {
     final color = widget.categoryColor;
+    final cs = Theme.of(context).colorScheme;
     return GestureDetector(
       onTapDown: (_) => setState(() => _isPressed = true),
       onTapUp: (_) {
@@ -1021,17 +1024,17 @@ class _ImmersiveItemTileState extends ConsumerState<_ImmersiveItemTile> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           decoration: BoxDecoration(
             color: _isPressed
-                ? Colors.white.withValues(alpha: 0.15)
-                : Colors.white.withValues(alpha: 0.08),
+                ? cs.onPrimary.withValues(alpha: 0.15)
+                : cs.onPrimary.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+            border: Border.all(color: cs.onPrimary.withValues(alpha: 0.1)),
           ),
           child: Row(
             children: [
               Container(
                 width: 4, height: 36,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.5),
+                  color: cs.onPrimary.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -1042,11 +1045,11 @@ class _ImmersiveItemTileState extends ConsumerState<_ImmersiveItemTile> {
                   style: GoogleFonts.nunito(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: Colors.white,
+                    color: cs.onPrimary,
                   ),
                 ),
               ),
-              Icon(Icons.arrow_forward_ios_rounded, color: Colors.white.withValues(alpha: 0.35), size: 16),
+              Icon(Icons.arrow_forward_ios_rounded, color: cs.onPrimary.withValues(alpha: 0.35), size: 16),
             ],
           ),
         ),
@@ -1146,22 +1149,22 @@ class _HeaderButton extends StatelessWidget {
       clipBehavior: Clip.none,
       children: [
         Material(
-          color: Colors.white.withValues(alpha: 0.15),
+          color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.15),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
             side: BorderSide(
-              color: Colors.white.withValues(alpha: 0.2),
+              color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.2),
             ),
           ),
           child: InkWell(
             onTap: onTap,
             borderRadius: BorderRadius.circular(14),
-            splashColor: Colors.white.withValues(alpha: 0.2),
+            splashColor: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.2),
             child: Padding(
               padding: const EdgeInsets.all(12),
               child: Icon(
                 icon,
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onPrimary,
                 size: 22,
               ),
             ),
@@ -1184,7 +1187,7 @@ class _HeaderButton extends StatelessWidget {
                   style: GoogleFonts.nunito(
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onPrimary,
                     height: 1,
                   ),
                 ),
@@ -1364,8 +1367,8 @@ class _CategoryCardState extends ConsumerState<_CategoryCard>
             ),
             // Desaturate: pull most color out (brightness-aware wash)
             Container(color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.black.withValues(alpha: 0.35)
-                : Colors.white.withValues(alpha: 0.35)),
+                ? Theme.of(context).colorScheme.scrim.withValues(alpha: 0.35)
+                : Theme.of(context).colorScheme.surface.withValues(alpha: 0.35)),
             // Category color tint — this is what unifies them
             Container(
               decoration: BoxDecoration(
@@ -1387,7 +1390,7 @@ class _CategoryCardState extends ConsumerState<_CategoryCard>
                   radius: 0.85,
                   colors: [
                     Colors.transparent,
-                    Colors.black.withValues(alpha: 0.15),
+                    Theme.of(context).colorScheme.scrim.withValues(alpha: 0.15),
                   ],
                 ),
               ),
@@ -1398,7 +1401,7 @@ class _CategoryCardState extends ConsumerState<_CategoryCard>
               height: 40,
               child: Builder(builder: (context) {
                 final isDark = Theme.of(context).brightness == Brightness.dark;
-                final washColor = isDark ? Colors.black : Colors.white;
+                final washColor = isDark ? Theme.of(context).colorScheme.scrim : Theme.of(context).colorScheme.surface;
                 return Container(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
@@ -1616,7 +1619,7 @@ class _CategoryCardState extends ConsumerState<_CategoryCard>
                 spreadRadius: _isPressed ? -2 : 0,
               ),
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.03),
+                color: Theme.of(context).shadowColor.withValues(alpha: 0.03),
                 blurRadius: 4,
                 offset: const Offset(0, 1),
               ),

@@ -312,7 +312,7 @@ class _BookingConfirmationScreenState
                           color: ext.cardBorderColor),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.04),
+                          color: Theme.of(context).shadowColor.withValues(alpha: 0.04),
                           blurRadius: 12,
                           offset: const Offset(0, 4),
                         ),
@@ -484,7 +484,7 @@ class _BookingConfirmationScreenState
                       },
                       borderRadius:
                           BorderRadius.circular(AppConstants.radiusLG),
-                      splashColor: Colors.white.withValues(alpha: 0.2),
+                      splashColor: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.2),
                       child: Ink(
                         width: double.infinity,
                         padding: const EdgeInsets.symmetric(
@@ -513,7 +513,7 @@ class _BookingConfirmationScreenState
                               fontSize: 16,
                               fontWeight: FontWeight.w700,
                               letterSpacing: 1.2,
-                              color: Colors.white,
+                              color: Theme.of(context).colorScheme.onPrimary,
                             ),
                           ),
                         ),
@@ -609,14 +609,14 @@ class _BookingConfirmationScreenState
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 20, color: Colors.white),
+            Icon(icon, size: 20, color: Theme.of(context).colorScheme.onPrimary),
             const SizedBox(width: 8),
             Text(
               label,
               style: GoogleFonts.poppins(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onPrimary,
               ),
             ),
           ],
@@ -646,14 +646,14 @@ class _BookingConfirmationScreenState
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 20, color: Colors.white),
+            Icon(icon, size: 20, color: Theme.of(context).colorScheme.onPrimary),
             const SizedBox(width: 8),
             Text(
               label,
               style: GoogleFonts.poppins(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onPrimary,
               ),
             ),
           ],
@@ -841,8 +841,8 @@ class _TransportOfferCard extends StatelessWidget {
                   label: 'Uber',
                   color: palette.brightness == Brightness.dark
                       ? const Color(0xFF2A2A2A)
-                      : Colors.black,
-                  textColor: Colors.white,
+                      : Theme.of(context).colorScheme.onSurface,
+                  textColor: Theme.of(context).colorScheme.onPrimary,
                   onTap: () {
                     HapticFeedback.lightImpact();
                     onUber();
@@ -855,7 +855,7 @@ class _TransportOfferCard extends StatelessWidget {
                 child: _RideButton(
                   label: 'DiDi',
                   color: const Color(0xFFFF6611),
-                  textColor: Colors.white,
+                  textColor: Theme.of(context).colorScheme.onPrimary,
                   onTap: () {
                     HapticFeedback.lightImpact();
                     onDidi();
@@ -891,7 +891,7 @@ class _RideButton extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-        splashColor: Colors.white.withValues(alpha: 0.15),
+        splashColor: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.15),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 14),
           child: Center(

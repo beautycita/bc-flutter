@@ -823,7 +823,7 @@ class _BusinessClosuresSectionState extends ConsumerState<BusinessClosuresSectio
             child: FilledButton.icon(
               onPressed: _vacLoading ? null : () => _addVacationRange(bizId),
               icon: _vacLoading
-                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  ? SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: colors.onPrimary))
                   : const Icon(Icons.add, size: 18),
               label: Text(
                 'Agregar vacaciones',
@@ -831,7 +831,7 @@ class _BusinessClosuresSectionState extends ConsumerState<BusinessClosuresSectio
               ),
               style: FilledButton.styleFrom(
                 backgroundColor: Colors.orange,
-                foregroundColor: Colors.white,
+                foregroundColor: colors.onPrimary,
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),

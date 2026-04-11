@@ -411,7 +411,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
                     _dayAbbr(date.weekday),
                     style: textTheme.labelSmall?.copyWith(
                       color: isSelected
-                          ? Colors.white.withValues(alpha: 0.8)
+                          ? colorScheme.onPrimary.withValues(alpha: 0.8)
                           : colorScheme.onSurface.withValues(alpha: 0.5),
                       fontWeight: FontWeight.w600,
                     ),
@@ -421,7 +421,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
                     '${date.day}',
                     style: textTheme.headlineSmall?.copyWith(
                       color: isSelected
-                          ? Colors.white
+                          ? colorScheme.onPrimary
                           : colorScheme.onSurface,
                       fontWeight: FontWeight.w700,
                     ),
@@ -430,7 +430,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
                     _monthAbbr(date.month),
                     style: textTheme.labelSmall?.copyWith(
                       color: isSelected
-                          ? Colors.white.withValues(alpha: 0.8)
+                          ? colorScheme.onPrimary.withValues(alpha: 0.8)
                           : colorScheme.onSurface.withValues(alpha: 0.5),
                     ),
                   ),
@@ -525,7 +525,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
                     Text(
                       slot.timeLabel,
                       style: textTheme.bodyMedium?.copyWith(
-                        color: isSelected ? Colors.white : colorScheme.onSurface,
+                        color: isSelected ? colorScheme.onPrimary : colorScheme.onSurface,
                         fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                       ),
                     ),
@@ -533,7 +533,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
                       slot.staffName,
                       style: textTheme.labelSmall?.copyWith(
                         color: isSelected
-                            ? Colors.white.withValues(alpha: 0.8)
+                            ? colorScheme.onPrimary.withValues(alpha: 0.8)
                             : colorScheme.onSurface.withValues(alpha: 0.5),
                       ),
                     ),
@@ -604,7 +604,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
         color: Theme.of(context).scaffoldBackgroundColor,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Theme.of(context).shadowColor.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, -4),
           ),
@@ -642,19 +642,19 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
               onPressed: _isSubmitting ? null : () => _confirmBooking(service),
               style: ElevatedButton.styleFrom(
                 backgroundColor: colorScheme.primary,
-                foregroundColor: Colors.white,
+                foregroundColor: colorScheme.onPrimary,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(AppConstants.radiusLG),
                 ),
                 elevation: AppConstants.elevationMedium,
               ),
               child: _isSubmitting
-                  ? const SizedBox(
+                  ? SizedBox(
                       width: 24,
                       height: 24,
                       child: CircularProgressIndicator(
                         strokeWidth: 2.5,
-                        color: Colors.white,
+                        color: colorScheme.onPrimary,
                       ),
                     )
                   : const Text(
