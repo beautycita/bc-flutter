@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../config/constants.dart';
 import '../models/follow_up_question.dart';
 import '../providers/booking_flow_provider.dart';
+import '../widgets/booking_flow_background.dart';
 import '../widgets/cinematic_question_text.dart';
 import '../widgets/parallax_tilt.dart';
 
@@ -15,137 +16,157 @@ class FollowUpQuestionScreen extends ConsumerWidget {
     final state = ref.watch(bookingFlowProvider);
     final notifier = ref.read(bookingFlowProvider.notifier);
     final question = state.currentQuestion;
-    final palette = Theme.of(context).colorScheme;
 
     if (question == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
+    final categoryId =
+        categoryIdFromServiceType(state.serviceType ?? '') ?? 'nails';
+    // Derive accent color from category palette or use primary
+    final palette = Theme.of(context).colorScheme;
+
     final progress = state.followUpQuestions.length > 1
         ? '${state.currentQuestionIndex + 1}/${state.followUpQuestions.length}'
         : null;
 
+    final mq = MediaQuery.of(context);
+
     return Scaffold(
-      backgroundColor: palette.surface,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_rounded,
-              color: palette.onSurface, size: 24),
-          onPressed: () => notifier.goBack(),
-        ),
-        actions: [
-          if (progress != null)
-            Center(
-              child: Padding(
-                padding:
-                    const EdgeInsets.only(right: AppConstants.paddingMD),
-                child: Text(
-                  progress,
-                  style: GoogleFonts.nunito(
-                    fontSize: 14,
-                    color: palette.onSurface.withValues(alpha: 0.5),
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Progress bar
-            if (state.followUpQuestions.length > 1)
+      backgroundColor: Colors.black,
+      body: BookingFlowBackground(
+        categoryId: categoryId,
+        accentColor: palette.primary,
+        child: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── Top bar: back + progress ──
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppConstants.paddingLG),
-                child: TweenAnimationBuilder<double>(
-                  tween: Tween<double>(
-                    begin: 0,
-                    end: (state.currentQuestionIndex + 1) /
-                        state.followUpQuestions.length,
-                  ),
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeOut,
-                  builder: (context, value, _) {
-                    return ClipRRect(
-                      borderRadius: BorderRadius.circular(1.5),
-                      child: LinearProgressIndicator(
-                        value: value,
-                        minHeight: 3,
-                        backgroundColor: palette.onSurface.withValues(alpha: 0.08),
-                        valueColor: AlwaysStoppedAnimation<Color>(palette.primary),
+                padding: const EdgeInsets.fromLTRB(8, 8, 16, 0),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back_rounded,
+                          color: Colors.white, size: 24),
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.white.withValues(alpha: 0.1),
                       ),
-                    );
-                  },
+                      onPressed: () => notifier.goBack(),
+                    ),
+                    const Spacer(),
+                    if (progress != null)
+                      Text(
+                        progress,
+                        style: GoogleFonts.nunito(
+                          fontSize: 14,
+                          color: Colors.white.withValues(alpha: 0.5),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                  ],
                 ),
               ),
-            Expanded(
-              child: Padding(
+
+              // ── Progress bar ──
+              if (state.followUpQuestions.length > 1)
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: AppConstants.paddingLG, vertical: 8),
+                  child: TweenAnimationBuilder<double>(
+                    tween: Tween<double>(
+                      begin: 0,
+                      end: (state.currentQuestionIndex + 1) /
+                          state.followUpQuestions.length,
+                    ),
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeOut,
+                    builder: (context, value, _) {
+                      return ClipRRect(
+                        borderRadius: BorderRadius.circular(1.5),
+                        child: LinearProgressIndicator(
+                          value: value,
+                          minHeight: 3,
+                          backgroundColor:
+                              Colors.white.withValues(alpha: 0.08),
+                          valueColor: const AlwaysStoppedAnimation<Color>(
+                              Colors.white),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+
+              // ── Question text (upper-middle) ──
+              Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppConstants.paddingLG,
                   vertical: AppConstants.paddingMD,
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 350),
-                      switchInCurve: Curves.easeOutCubic,
-                      switchOutCurve: Curves.easeOutCubic,
-                      transitionBuilder: (child, animation) {
-                        final slideIn = Tween<Offset>(
-                          begin: const Offset(0.04, 0),
-                          end: Offset.zero,
-                        ).animate(animation);
-                        return FadeTransition(
-                          opacity: animation,
-                          child: SlideTransition(
-                            position: slideIn,
-                            child: child,
-                          ),
-                        );
-                      },
-                      child: KeyedSubtree(
-                        key: ValueKey(question.questionKey),
-                        child: CinematicQuestionText(
-                          text: question.questionTextEs,
-                          fontSize: 26,
-                        ),
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 350),
+                  switchInCurve: Curves.easeOutCubic,
+                  switchOutCurve: Curves.easeOutCubic,
+                  transitionBuilder: (child, animation) {
+                    final slideIn = Tween<Offset>(
+                      begin: const Offset(0.04, 0),
+                      end: Offset.zero,
+                    ).animate(animation);
+                    return FadeTransition(
+                      opacity: animation,
+                      child: SlideTransition(
+                        position: slideIn,
+                        child: child,
                       ),
+                    );
+                  },
+                  child: KeyedSubtree(
+                    key: ValueKey(question.questionKey),
+                    child: CinematicQuestionText(
+                      text: question.questionTextEs,
+                      fontSize: 26,
+                      primaryColor: Colors.white,
+                      accentColor: Colors.white70,
                     ),
-                    const SizedBox(height: AppConstants.paddingXL),
-                    Expanded(
-                      child: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 350),
-                        switchInCurve: Curves.easeOutCubic,
-                        switchOutCurve: Curves.easeOutCubic,
-                        transitionBuilder: (child, animation) {
-                          final slideIn = Tween<Offset>(
-                            begin: const Offset(0.04, 0),
-                            end: Offset.zero,
-                          ).animate(animation);
-                          return FadeTransition(
-                            opacity: animation,
-                            child: SlideTransition(
-                              position: slideIn,
-                              child: child,
-                            ),
-                          );
-                        },
-                        child: KeyedSubtree(
-                          key: ValueKey('answers_${question.questionKey}'),
-                          child: _buildAnswerWidget(question, notifier),
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
-            ),
-          ],
+
+              // ── Spacer to push options into bottom zone ──
+              SizedBox(height: mq.size.height * 0.05),
+
+              // ── Options/answers in bottom ~55% ──
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppConstants.paddingLG,
+                  ),
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 350),
+                    switchInCurve: Curves.easeOutCubic,
+                    switchOutCurve: Curves.easeOutCubic,
+                    transitionBuilder: (child, animation) {
+                      final slideIn = Tween<Offset>(
+                        begin: const Offset(0.04, 0),
+                        end: Offset.zero,
+                      ).animate(animation);
+                      return FadeTransition(
+                        opacity: animation,
+                        child: SlideTransition(
+                          position: slideIn,
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: KeyedSubtree(
+                      key: ValueKey('answers_${question.questionKey}'),
+                      child: _buildAnswerWidget(question, notifier),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -226,21 +247,19 @@ class _OptionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = Theme.of(context).colorScheme;
-
     return GestureDetector(
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: palette.surface,
+          color: Colors.white.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(AppConstants.radiusMD),
           border: Border.all(
-            color: palette.primary.withValues(alpha: 0.15),
+            color: Colors.white.withValues(alpha: 0.15),
             width: 1.5,
           ),
           boxShadow: [
             BoxShadow(
-              color: palette.primary.withValues(alpha: 0.06),
+              color: Colors.black.withValues(alpha: 0.15),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -258,7 +277,7 @@ class _OptionCard extends StatelessWidget {
               style: GoogleFonts.poppins(
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
-                color: palette.primary,
+                color: Colors.white,
                 height: 1.3,
               ),
               maxLines: 3,
@@ -318,18 +337,20 @@ class _BigButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = Theme.of(context).colorScheme;
-
     return GestureDetector(
       onTap: onTap,
       child: Container(
         height: 120,
         decoration: BoxDecoration(
-          color: palette.surface,
+          color: Colors.white.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.15),
+            width: 1,
+          ),
           boxShadow: [
             BoxShadow(
-              color: palette.primary.withValues(alpha: 0.08),
+              color: Colors.black.withValues(alpha: 0.15),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -338,14 +359,14 @@ class _BigButton extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 40, color: palette.primary),
+            Icon(icon, size: 40, color: Colors.white),
             const SizedBox(height: AppConstants.paddingSM),
             Text(
               label,
               style: GoogleFonts.poppins(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
-                color: palette.onSurface,
+                color: Colors.white,
               ),
             ),
           ],
@@ -362,8 +383,6 @@ class _DatePickerAnswer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = Theme.of(context).colorScheme;
-
     // Show date picker immediately
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _showPicker(context);
@@ -373,15 +392,14 @@ class _DatePickerAnswer extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.calendar_today,
-              size: 48, color: palette.primary),
+          const Icon(Icons.calendar_today, size: 48, color: Colors.white),
           const SizedBox(height: AppConstants.paddingMD),
           Text(
             'Selecciona una fecha',
             style: GoogleFonts.poppins(
               fontSize: 18,
               fontWeight: FontWeight.w500,
-              color: palette.onSurface.withValues(alpha: 0.5),
+              color: Colors.white.withValues(alpha: 0.5),
             ),
           ),
           const SizedBox(height: AppConstants.paddingLG),

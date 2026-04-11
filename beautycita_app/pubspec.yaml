@@ -54,6 +54,7 @@ dependencies:
   sentry_flutter: ^9.16.0
   image_cropper: ^12.1.1
   printing: ^5.14.3
+  video_player: ^2.9.6
 
 dev_dependencies:
   flutter_test:

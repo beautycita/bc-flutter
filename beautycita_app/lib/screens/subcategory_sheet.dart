@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:beautycita/config/app_transitions.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/category.dart';
-import '../config/constants.dart';
 import '../providers/booking_flow_provider.dart';
 import '../providers/search_history_provider.dart';
 import '../services/toast_service.dart';
+import '../widgets/booking_flow_background.dart';
 
 String _getCategoryQuestion(String categoryId) {
   switch (categoryId) {
@@ -34,7 +33,12 @@ String _getCategoryQuestion(String categoryId) {
   }
 }
 
-class SubcategorySheet extends StatelessWidget {
+/// Full-screen booking flow page for subcategory/item selection.
+///
+/// Uses [BookingFlowBackground] with a looping R2 video and gyro parallax.
+/// Chips animate in from the bottom. Tapping a chip with items transitions
+/// in-place (same screen, same background) to the item chips.
+class SubcategorySheet extends StatefulWidget {
   final ServiceCategory category;
 
   const SubcategorySheet({
@@ -43,157 +47,309 @@ class SubcategorySheet extends StatelessWidget {
   });
 
   @override
+  State<SubcategorySheet> createState() => _SubcategorySheetState();
+}
+
+class _SubcategorySheetState extends State<SubcategorySheet>
+    with TickerProviderStateMixin {
+  /// When non-null, we're showing items for this subcategory.
+  ServiceSubcategory? _selectedSub;
+
+  /// Key used to trigger AnimatedSwitcher transitions.
+  int _depth = 0;
+
+  void _selectSubcategory(ServiceSubcategory sub) {
+    setState(() {
+      _selectedSub = sub;
+      _depth++;
+    });
+  }
+
+  void _goBackToSubcategories() {
+    setState(() {
+      _selectedSub = null;
+      _depth++;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final palette = Theme.of(context).colorScheme;
+    final mq = MediaQuery.of(context);
 
-    return DraggableScrollableSheet(
-      expand: false,
-      initialChildSize: 0.65,
-      minChildSize: 0.45,
-      maxChildSize: AppConstants.bottomSheetMaxHeight,
-      builder: (context, scrollController) {
-        return Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).scaffoldBackgroundColor,
-            borderRadius: BorderRadius.vertical(
-              top: Radius.circular(AppConstants.radiusXL),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF000000).withValues(alpha: 0.1),
-                blurRadius: 20,
-                offset: const Offset(0, -4),
-              ),
-            ],
-          ),
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: BookingFlowBackground(
+        categoryId: widget.category.id,
+        accentColor: widget.category.color,
+        child: SafeArea(
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Drag handle
-              Container(
-                margin: const EdgeInsets.only(top: 12, bottom: 8),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).dividerColor,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-
-              // Header with category icon and title
+              // ── Top zone: back button + header ──
               Padding(
-                padding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
+                padding: const EdgeInsets.fromLTRB(8, 8, 16, 0),
                 child: Row(
                   children: [
-                    // Category emoji in colored circle
-                    Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: LinearGradient(
-                          colors: [
-                            category.color.withValues(alpha: 0.15),
-                            category.color.withValues(alpha: 0.08),
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        border: Border.all(
-                          color: Theme.of(context).dividerColor,
-                          width: 1,
-                        ),
-                      ),
-                      child: Center(
-                        child: Text(
-                          category.icon,
-                          style: const TextStyle(fontSize: 28),
-                        ),
+                    IconButton(
+                      onPressed: () {
+                        if (_selectedSub != null) {
+                          _goBackToSubcategories();
+                        } else {
+                          Navigator.of(context).pop();
+                        }
+                      },
+                      icon: const Icon(Icons.arrow_back_rounded,
+                          color: Colors.white),
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.white.withValues(alpha: 0.1),
                       ),
                     ),
-                    const SizedBox(width: 16),
-
-                    // Question text
+                    const SizedBox(width: 12),
                     Expanded(
-                      child: Text(
-                        _getCategoryQuestion(category.id),
-                        style: GoogleFonts.poppins(
-                          fontSize: 19,
-                          fontWeight: FontWeight.w700,
-                          color: palette.onSurface,
-                          height: 1.3,
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.category.nameEs,
+                            style: GoogleFonts.poppins(
+                              fontSize: 26,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                              height: 1.1,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 250),
+                            child: Text(
+                              _selectedSub != null
+                                  ? _selectedSub!.nameEs
+                                  : _getCategoryQuestion(widget.category.id),
+                              key: ValueKey(_selectedSub?.id ?? '__root'),
+                              style: GoogleFonts.nunito(
+                                fontSize: 15,
+                                color: Colors.white.withValues(alpha: 0.7),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
               )
                   .animate()
-                  .fadeIn(duration: 350.ms, curve: Curves.easeOut)
-                  .slideX(begin: -0.05, end: 0, duration: 350.ms, curve: Curves.easeOutCubic),
+                  .fadeIn(duration: 350.ms, delay: 100.ms)
+                  .slideY(
+                      begin: -0.1,
+                      end: 0,
+                      duration: 350.ms,
+                      curve: Curves.easeOutCubic),
 
-              // Subcategories list
+              // ── Spacer pushes chips into bottom 55% ──
+              SizedBox(height: mq.size.height * 0.15),
+
+              // ── Bottom zone: chips ──
               Expanded(
-                child: ListView(
-                  controller: scrollController,
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-                  children: [
-                    Wrap(
-                      spacing: 10,
-                      runSpacing: 10,
-                      children: category.subcategories.asMap().entries.map((entry) {
-                        final index = entry.key;
-                        final subcategory = entry.value;
-                        return _SubcategoryPill(
-                          subcategory: subcategory,
-                          categoryColor: category.color,
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  switchInCurve: Curves.easeOutCubic,
+                  switchOutCurve: Curves.easeInCubic,
+                  transitionBuilder: (child, animation) {
+                    final slide = Tween<Offset>(
+                      begin: const Offset(0, 0.15),
+                      end: Offset.zero,
+                    ).animate(animation);
+                    return FadeTransition(
+                      opacity: animation,
+                      child: SlideTransition(
+                        position: slide,
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: _selectedSub != null
+                      ? _ItemChips(
+                          key: ValueKey('items_$_depth'),
+                          subcategory: _selectedSub!,
+                          categoryColor: widget.category.color,
                         )
-                            .animate()
-                            .fadeIn(
-                              duration: 350.ms,
-                              delay: (65 * index).ms,
-                              curve: Curves.easeOut,
-                            )
-                            .slideY(
-                              begin: 0.4,
-                              end: 0,
-                              duration: 400.ms,
-                              delay: (65 * index).ms,
-                              curve: Curves.easeOutCubic,
-                            )
-                            .scale(
-                              begin: const Offset(0.92, 0.92),
-                              end: const Offset(1, 1),
-                              duration: 350.ms,
-                              delay: (65 * index).ms,
-                              curve: Curves.easeOutCubic,
-                            );
-                      }).toList(),
-                    ),
-                  ],
+                      : _SubcategoryChips(
+                          key: ValueKey('subs_$_depth'),
+                          category: widget.category,
+                          onSelect: _selectSubcategory,
+                        ),
                 ),
               ),
             ],
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 }
 
-class _SubcategoryPill extends StatefulWidget {
+// ── Subcategory chips ─────────────────────────────────────────────────────────
+
+class _SubcategoryChips extends StatelessWidget {
+  final ServiceCategory category;
+  final ValueChanged<ServiceSubcategory> onSelect;
+
+  const _SubcategoryChips({
+    super.key,
+    required this.category,
+    required this.onSelect,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+      children: [
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children:
+              category.subcategories.asMap().entries.map((entry) {
+            final index = entry.key;
+            final sub = entry.value;
+            return _GlassPill(
+              label: sub.nameEs,
+              hasChevron: sub.items != null && sub.items!.isNotEmpty,
+              onTap: () {
+                if (sub.items != null && sub.items!.isNotEmpty) {
+                  onSelect(sub);
+                } else {
+                  // Direct navigate — no items
+                  Navigator.of(context).pop();
+                  final colorValue = category.color.toARGB32();
+                  context.push(
+                    '/providers?category=${Uri.encodeComponent(sub.categoryId)}&subcategory=${Uri.encodeComponent(sub.nameEs)}&color=$colorValue',
+                  );
+                }
+              },
+            )
+                .animate()
+                .fadeIn(
+                  duration: 350.ms,
+                  delay: (65 * index).ms,
+                  curve: Curves.easeOut,
+                )
+                .slideY(
+                  begin: 0.4,
+                  end: 0,
+                  duration: 400.ms,
+                  delay: (65 * index).ms,
+                  curve: Curves.easeOutCubic,
+                )
+                .scale(
+                  begin: const Offset(0.92, 0.92),
+                  end: const Offset(1, 1),
+                  duration: 350.ms,
+                  delay: (65 * index).ms,
+                  curve: Curves.easeOutCubic,
+                );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Item chips (second depth) ─────────────────────────────────────────────────
+
+class _ItemChips extends ConsumerWidget {
   final ServiceSubcategory subcategory;
   final Color categoryColor;
 
-  const _SubcategoryPill({
+  const _ItemChips({
+    super.key,
     required this.subcategory,
     required this.categoryColor,
   });
 
   @override
-  State<_SubcategoryPill> createState() => _SubcategoryPillState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final items = subcategory.items ?? [];
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+      children: [
+        // Subtitle
+        Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: Text(
+            'Elige el tipo exacto',
+            style: GoogleFonts.nunito(
+              fontSize: 14,
+              color: Colors.white.withValues(alpha: 0.5),
+            ),
+          ),
+        ),
+        ...items.asMap().entries.map((entry) {
+          final index = entry.key;
+          final item = entry.value;
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: _ItemTile(
+              item: item,
+              categoryColor: categoryColor,
+              onTap: () {
+                final serviceType = item.serviceType;
+                if (serviceType.isEmpty) {
+                  ToastService.showWarning('Servicio no disponible');
+                  return;
+                }
+                Navigator.of(context).pop(); // pop this full-screen page
+                context.push('/book');
+                ref
+                    .read(bookingFlowProvider.notifier)
+                    .selectService(serviceType, item.nameEs);
+                ref.read(searchHistoryProvider.notifier).addEntry(
+                      serviceType: item.serviceType,
+                      serviceName: item.nameEs,
+                      category: item.subcategoryId,
+                    );
+              },
+            ),
+          )
+              .animate()
+              .fadeIn(
+                duration: 300.ms,
+                delay: (60 * index).ms,
+                curve: Curves.easeOut,
+              )
+              .slideY(
+                begin: 0.3,
+                end: 0,
+                duration: 300.ms,
+                delay: (60 * index).ms,
+                curve: Curves.easeOutCubic,
+              );
+        }),
+      ],
+    );
+  }
 }
 
-class _SubcategoryPillState extends State<_SubcategoryPill>
+// ── Glass pill (frosted chip on dark background) ──────────────────────────────
+
+class _GlassPill extends StatefulWidget {
+  final String label;
+  final bool hasChevron;
+  final VoidCallback onTap;
+
+  const _GlassPill({
+    required this.label,
+    required this.hasChevron,
+    required this.onTap,
+  });
+
+  @override
+  State<_GlassPill> createState() => _GlassPillState();
+}
+
+class _GlassPillState extends State<_GlassPill>
     with SingleTickerProviderStateMixin {
   bool _isPressed = false;
   bool _showShimmer = false;
@@ -221,103 +377,56 @@ class _SubcategoryPillState extends State<_SubcategoryPill>
     });
   }
 
-  bool _hasItems() {
-    final items = widget.subcategory.items;
-    return items != null && items.isNotEmpty;
-  }
-
-  void _handleTap(BuildContext ctx) {
-    _playShimmer();
-    final navigator = Navigator.of(ctx);
-    final router = GoRouter.of(ctx);
-    if (_hasItems()) {
-      // Short delay so shimmer is visible before sheet opens
-      Future.delayed(const Duration(milliseconds: 250), () {
-        if (mounted) _showItemsSheet(context);
-      });
-    } else {
-      // Capture values before async gap
-      final colorValue = widget.categoryColor.toARGB32();
-      final catId = widget.subcategory.categoryId;
-      final nameEs = widget.subcategory.nameEs;
-      // Short delay so shimmer is visible before navigation
-      Future.delayed(const Duration(milliseconds: 350), () {
-        if (!mounted) return;
-        navigator.pop();
-        router.push(
-            '/providers?category=${Uri.encodeComponent(catId)}&subcategory=${Uri.encodeComponent(nameEs)}&color=$colorValue');
-      });
-    }
-  }
-
-  void _showItemsSheet(BuildContext context) {
-    showBurstBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => _ServiceItemsSheet(
-        subcategory: widget.subcategory,
-        categoryColor: widget.categoryColor,
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final color = widget.categoryColor;
-
     return GestureDetector(
       onTapDown: (_) => setState(() => _isPressed = true),
       onTapUp: (_) {
         setState(() => _isPressed = false);
         HapticFeedback.selectionClick();
-        _handleTap(context);
+        _playShimmer();
+        // Short delay so shimmer is visible
+        Future.delayed(const Duration(milliseconds: 200), () {
+          if (mounted) widget.onTap();
+        });
       },
       onTapCancel: () => setState(() => _isPressed = false),
       child: AnimatedScale(
-        scale: _isPressed ? 0.96 : 1.0,
-        duration: const Duration(milliseconds: 150),
-        curve: _isPressed ? Curves.easeInCubic : Curves.elasticOut,
+        scale: _isPressed ? 0.95 : 1.0,
+        duration: const Duration(milliseconds: 120),
+        curve: _isPressed ? Curves.easeIn : Curves.elasticOut,
         child: AnimatedBuilder(
           animation: _shimmerController,
           builder: (context, child) {
-            final pillChild = AnimatedContainer(
-              duration: const Duration(milliseconds: 150),
-              curve: Curves.easeOutCubic,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            final pill = Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
               decoration: BoxDecoration(
-                color: _isPressed ? color.withValues(alpha: 0.12) : Theme.of(context).colorScheme.surface,
+                color: _isPressed
+                    ? Colors.white.withValues(alpha: 0.25)
+                    : Colors.white.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: Theme.of(context).dividerColor,
+                  color: Colors.white.withValues(alpha: 0.2),
                   width: 1,
                 ),
-                boxShadow: _isPressed
-                    ? []
-                    : [
-                        BoxShadow(
-                          color: color.withValues(alpha: 0.08),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    widget.subcategory.nameEs,
+                    widget.label,
                     style: GoogleFonts.poppins(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
-                      color: color.withValues(alpha: 0.85),
+                      color: Colors.white,
                     ),
                   ),
-                  if (_hasItems()) ...[
+                  if (widget.hasChevron) ...[
                     const SizedBox(width: 4),
                     Icon(
                       Icons.chevron_right_rounded,
-                      color: color.withValues(alpha: 0.5),
+                      color: Colors.white.withValues(alpha: 0.5),
                       size: 20,
                     ),
                   ],
@@ -325,9 +434,8 @@ class _SubcategoryPillState extends State<_SubcategoryPill>
               ),
             );
 
-            if (!_showShimmer) return pillChild;
+            if (!_showShimmer) return pill;
 
-            // Shimmer gradient sweep left to right
             final shimmerOffset = -1.0 + 2.0 * _shimmerController.value;
             return ShaderMask(
               blendMode: BlendMode.srcATop,
@@ -337,13 +445,13 @@ class _SubcategoryPillState extends State<_SubcategoryPill>
                   end: Alignment(shimmerOffset + 0.5, 0),
                   colors: [
                     Colors.white.withValues(alpha: 0.0),
-                    color.withValues(alpha: 0.35),
+                    Colors.white.withValues(alpha: 0.35),
                     Colors.white.withValues(alpha: 0.0),
                   ],
                   stops: const [0.0, 0.5, 1.0],
                 ).createShader(bounds);
               },
-              child: pillChild,
+              child: pill,
             );
           },
         ),
@@ -352,229 +460,76 @@ class _SubcategoryPillState extends State<_SubcategoryPill>
   }
 }
 
-class _ServiceItemsSheet extends StatelessWidget {
-  final ServiceSubcategory subcategory;
-  final Color categoryColor;
+// ── Item tile (for second-level items) ────────────────────────────────────────
 
-  const _ServiceItemsSheet({
-    required this.subcategory,
-    required this.categoryColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = Theme.of(context).colorScheme;
-
-    return DraggableScrollableSheet(
-      expand: false,
-      initialChildSize: 0.55,
-      minChildSize: 0.35,
-      maxChildSize: AppConstants.bottomSheetMaxHeight,
-      builder: (context, scrollController) {
-        return Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).scaffoldBackgroundColor,
-            borderRadius: BorderRadius.vertical(
-              top: Radius.circular(AppConstants.radiusXL),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF000000).withValues(alpha: 0.1),
-                blurRadius: 20,
-                offset: const Offset(0, -4),
-              ),
-            ],
-          ),
-          child: Column(
-            children: [
-              // Drag handle
-              Container(
-                margin: const EdgeInsets.only(top: 12, bottom: 8),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).dividerColor,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-
-              // Header
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      subcategory.nameEs,
-                      style: GoogleFonts.poppins(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w700,
-                        color: categoryColor,
-                        height: 1.2,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Elige el tipo exacto',
-                      style: GoogleFonts.nunito(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: palette.onSurface.withValues(alpha: 0.5),
-                      ),
-                    ),
-                  ],
-                ),
-              )
-                  .animate()
-                  .fadeIn(duration: 350.ms, curve: Curves.easeOut)
-                  .slideX(begin: -0.05, end: 0, duration: 350.ms, curve: Curves.easeOutCubic),
-
-              // Items list
-              Expanded(
-                child: ListView.builder(
-                  controller: scrollController,
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-                  itemCount: (subcategory.items ?? []).length,
-                  itemBuilder: (context, index) {
-                    final items = subcategory.items ?? [];
-                    final item = items[index];
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: _ServiceItemTile(
-                        item: item,
-                        categoryColor: categoryColor,
-                      ),
-                    )
-                        .animate()
-                        .fadeIn(
-                          duration: 300.ms,
-                          delay: (60 * index).ms,
-                          curve: Curves.easeOut,
-                        )
-                        .slideX(
-                          begin: 0.06,
-                          end: 0,
-                          duration: 300.ms,
-                          delay: (60 * index).ms,
-                          curve: Curves.easeOutCubic,
-                        );
-                  },
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _ServiceItemTile extends ConsumerStatefulWidget {
+class _ItemTile extends StatefulWidget {
   final ServiceItem item;
   final Color categoryColor;
+  final VoidCallback onTap;
 
-  const _ServiceItemTile({
+  const _ItemTile({
     required this.item,
     required this.categoryColor,
+    required this.onTap,
   });
 
   @override
-  ConsumerState<_ServiceItemTile> createState() => _ServiceItemTileState();
+  State<_ItemTile> createState() => _ItemTileState();
 }
 
-class _ServiceItemTileState extends ConsumerState<_ServiceItemTile> {
+class _ItemTileState extends State<_ItemTile> {
   bool _isPressed = false;
-
-  void _handleTap(BuildContext context) {
-    final serviceType = widget.item.serviceType;
-    if (serviceType.isEmpty) {
-      ToastService.showWarning('Servicio no disponible');
-      return;
-    }
-
-    Navigator.of(context).pop();
-    Navigator.of(context).pop();
-    context.push('/book');
-
-    ref
-        .read(bookingFlowProvider.notifier)
-        .selectService(serviceType, widget.item.nameEs);
-
-    // Save to search history
-    ref.read(searchHistoryProvider.notifier).addEntry(
-          serviceType: widget.item.serviceType,
-          serviceName: widget.item.nameEs,
-          category: widget.item.subcategoryId,
-        );
-  }
 
   @override
   Widget build(BuildContext context) {
-    final color = widget.categoryColor;
-    final palette = Theme.of(context).colorScheme;
-
     return GestureDetector(
       onTapDown: (_) => setState(() => _isPressed = true),
       onTapUp: (_) {
         setState(() => _isPressed = false);
         HapticFeedback.lightImpact();
-        _handleTap(context);
+        widget.onTap();
       },
       onTapCancel: () => setState(() => _isPressed = false),
       child: AnimatedScale(
         scale: _isPressed ? 0.97 : 1.0,
         duration: const Duration(milliseconds: 120),
-        curve: _isPressed ? Curves.easeInCubic : Curves.elasticOut,
-        child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        curve: Curves.easeOutCubic,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        decoration: BoxDecoration(
-          color: _isPressed
-              ? color.withValues(alpha: 0.06)
-              : palette.surface,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
+        curve: _isPressed ? Curves.easeIn : Curves.elasticOut,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          decoration: BoxDecoration(
             color: _isPressed
-                ? color.withValues(alpha: 0.2)
-                : Colors.transparent,
-            width: 1,
+                ? Colors.white.withValues(alpha: 0.15)
+                : Colors.white.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+                color: Colors.white.withValues(alpha: 0.1)),
           ),
-        ),
-        child: Row(
-          children: [
-            // Colored accent bar
-            Container(
-              width: 4,
-              height: 36,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.6),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(width: 14),
-
-            // Item name
-            Expanded(
-              child: Text(
-                widget.item.nameEs,
-                style: GoogleFonts.nunito(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: palette.onSurface,
+          child: Row(
+            children: [
+              Container(
+                width: 4,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
-            ),
-
-            // Chevron
-            Icon(
-              Icons.arrow_forward_ios_rounded,
-              color: color.withValues(alpha: 0.35),
-              size: 16,
-            ),
-          ],
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  widget.item.nameEs,
+                  style: GoogleFonts.nunito(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+              Icon(Icons.arrow_forward_ios_rounded,
+                  color: Colors.white.withValues(alpha: 0.35), size: 16),
+            ],
+          ),
         ),
-      ),
       ),
     );
   }
