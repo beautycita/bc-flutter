@@ -285,7 +285,54 @@ Deno.serve(async (req) => {
       })
       .eq("id", user.id);
 
-    return json({ verified: true });
+    // Check if a business exists owned by a different auth user with this phone
+    // (happens when salon registered via web invite, then owner downloads mobile app)
+    const digits = phone.replace(/[^\d]/g, "");
+    const last10 = digits.length >= 10 ? digits.slice(-10) : digits;
+    let businessTransferred = false;
+
+    if (last10.length === 10) {
+      const { data: existingBiz } = await db
+        .from("businesses")
+        .select("id, owner_id, name")
+        .or(`phone.ilike.%${last10}`)
+        .neq("owner_id", user.id)
+        .limit(1)
+        .maybeSingle();
+
+      if (existingBiz) {
+        const oldOwnerId = existingBiz.owner_id;
+        console.log(`[phone-verify] Transferring business "${existingBiz.name}" from ${oldOwnerId} to ${user.id}`);
+
+        // Transfer business ownership
+        await db
+          .from("businesses")
+          .update({ owner_id: user.id })
+          .eq("id", existingBiz.id);
+
+        // Transfer staff record
+        await db
+          .from("staff")
+          .update({ user_id: user.id })
+          .eq("business_id", existingBiz.id)
+          .eq("user_id", oldOwnerId);
+
+        // Update current user's role to salon_owner
+        await db
+          .from("profiles")
+          .update({ role: "salon_owner" })
+          .eq("id", user.id);
+
+        // Delete the orphaned web-created auth user + profile
+        await db.from("profiles").delete().eq("id", oldOwnerId);
+        await db.auth.admin.deleteUser(oldOwnerId);
+
+        businessTransferred = true;
+        console.log(`[phone-verify] Business "${existingBiz.name}" transferred successfully`);
+      }
+    }
+
+    return json({ verified: true, business_transferred: businessTransferred });
   }
 
   return json({ error: `Unknown action: ${action}` }, 400);
