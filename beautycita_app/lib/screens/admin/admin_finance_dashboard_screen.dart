@@ -62,7 +62,7 @@ class _AdminFinanceDashboardScreenState
                 'Resumen financiero de la plataforma',
                 style: GoogleFonts.nunito(
                   fontSize: 13,
-                  color: const Color(0xFF757575),
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
               ),
             ],
@@ -72,13 +72,13 @@ class _AdminFinanceDashboardScreenState
 
         // Tab bar
         Container(
-          color: Colors.white,
+          color: colors.surface,
           child: TabBar(
             controller: _tabController,
             isScrollable: true,
             tabAlignment: TabAlignment.start,
             labelColor: colors.primary,
-            unselectedLabelColor: const Color(0xFF757575),
+            unselectedLabelColor: colors.onSurface.withValues(alpha: 0.6),
             indicatorColor: colors.primary,
             indicatorWeight: 2.5,
             labelStyle: GoogleFonts.poppins(
@@ -237,7 +237,7 @@ class _ResumenTab extends ConsumerWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Total Comisiones', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w700, color: const Color(0xFF212121))),
+                      Text('Total Comisiones', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.onSurface)),
                       Text(mxnDecimal.format(c.total), style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700, color: const Color(0xFF059669))),
                     ],
                   ),
@@ -386,7 +386,7 @@ class _ComisionesTab extends ConsumerWidget {
                     const SizedBox(height: 4),
                     Text(
                       '${items.length} registros | Total: ${mxnDecimal.format(monthTotal)}',
-                      style: GoogleFonts.nunito(fontSize: 12, color: const Color(0xFF757575)),
+                      style: GoogleFonts.nunito(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
                     ),
                     const SizedBox(height: AppConstants.paddingSM),
                     ...items.take(10).map((r) => _CommissionRecordTile(record: r, mxn: mxnDecimal)),
@@ -395,7 +395,7 @@ class _ComisionesTab extends ConsumerWidget {
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         child: Text(
                           '... y ${items.length - 10} mas',
-                          style: GoogleFonts.nunito(fontSize: 12, color: const Color(0xFF9E9E9E)),
+                          style: GoogleFonts.nunito(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
                           textAlign: TextAlign.center,
                         ),
                       ),
@@ -643,7 +643,7 @@ class _SatNegociosTab extends ConsumerWidget {
                     const SizedBox(height: 4),
                     Text(
                       '${items.length} negocios | Ingresos: ${mxnDecimal.format(totalRev)}',
-                      style: GoogleFonts.nunito(fontSize: 12, color: const Color(0xFF757575)),
+                      style: GoogleFonts.nunito(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
                     ),
                     const SizedBox(height: AppConstants.paddingSM),
                     ...items.map((r) => _SatReportTile(report: r, mxn: mxnDecimal)),
@@ -755,11 +755,11 @@ class _DebtTile extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 6),
         padding: const EdgeInsets.all(AppConstants.paddingSM),
         decoration: BoxDecoration(
-          color: isPending ? const Color(0xFFFEF2F2) : Colors.white,
+          color: isPending ? const Color(0xFFFEF2F2) : Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(AppConstants.radiusSM),
           border: isPending ? Border.all(color: const Color(0xFFFCA5A5), width: 0.5) : null,
           boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 4, offset: const Offset(0, 1)),
+            BoxShadow(color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.03), blurRadius: 4, offset: const Offset(0, 1)),
           ],
         ),
         child: Column(
@@ -769,7 +769,7 @@ class _DebtTile extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(debt.businessName,
-                      style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF212121)),
+                      style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface),
                       maxLines: 1, overflow: TextOverflow.ellipsis),
                 ),
                 Container(
@@ -796,7 +796,7 @@ class _DebtTile extends StatelessWidget {
             if (debt.reason != null && debt.reason!.isNotEmpty) ...[
               const SizedBox(height: 4),
               Text(debt.reason!,
-                  style: GoogleFonts.nunito(fontSize: 11, fontStyle: FontStyle.italic, color: const Color(0xFF757575)),
+                  style: GoogleFonts.nunito(fontSize: 11, fontStyle: FontStyle.italic, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
                   maxLines: 2, overflow: TextOverflow.ellipsis),
             ],
           ],
@@ -821,7 +821,7 @@ class _DebtTile extends StatelessWidget {
           padding: const EdgeInsets.all(20),
           children: [
             Center(child: Container(width: 40, height: 4,
-                decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)))),
+                decoration: BoxDecoration(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(2)))),
             const SizedBox(height: 16),
             Text('Detalle Deuda',
                 style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700)),
@@ -859,10 +859,10 @@ class _DebtPaymentTile extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 6),
         padding: const EdgeInsets.all(AppConstants.paddingSM),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(AppConstants.radiusSM),
           boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 4, offset: const Offset(0, 1)),
+            BoxShadow(color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.03), blurRadius: 4, offset: const Offset(0, 1)),
           ],
         ),
         child: Row(
@@ -882,13 +882,13 @@ class _DebtPaymentTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(payment.businessName,
-                      style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF212121)),
+                      style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface),
                       maxLines: 1, overflow: TextOverflow.ellipsis),
                   Text(dateFmt.format(payment.createdAt.toLocal()),
-                      style: GoogleFonts.nunito(fontSize: 11, color: const Color(0xFF9E9E9E))),
+                      style: GoogleFonts.nunito(fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4))),
                   if (payment.note != null && payment.note!.isNotEmpty)
                     Text(payment.note!,
-                        style: GoogleFonts.nunito(fontSize: 11, color: const Color(0xFF757575)),
+                        style: GoogleFonts.nunito(fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
                         maxLines: 1, overflow: TextOverflow.ellipsis),
                 ],
               ),
@@ -917,7 +917,7 @@ class _DebtPaymentTile extends StatelessWidget {
           padding: const EdgeInsets.all(20),
           children: [
             Center(child: Container(width: 40, height: 4,
-                decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)))),
+                decoration: BoxDecoration(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(2)))),
             const SizedBox(height: 16),
             Text('Detalle Pago de Deuda',
                 style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700)),
@@ -955,10 +955,10 @@ class _CommissionRecordTile extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 6),
         padding: const EdgeInsets.all(AppConstants.paddingSM),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(AppConstants.radiusSM),
           boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 4, offset: const Offset(0, 1)),
+            BoxShadow(color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.03), blurRadius: 4, offset: const Offset(0, 1)),
           ],
         ),
         child: Row(
@@ -982,10 +982,10 @@ class _CommissionRecordTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(record.businessName,
-                      style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF212121)),
+                      style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface),
                       maxLines: 1, overflow: TextOverflow.ellipsis),
                   Text('${isAppt ? 'Cita' : 'Producto'} | ${_dateFmt.format(record.createdAt)}',
-                      style: GoogleFonts.nunito(fontSize: 11, color: const Color(0xFF9E9E9E))),
+                      style: GoogleFonts.nunito(fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4))),
                 ],
               ),
             ),
@@ -1013,7 +1013,7 @@ class _CommissionRecordTile extends StatelessWidget {
           padding: const EdgeInsets.all(20),
           children: [
             Center(child: Container(width: 40, height: 4,
-                decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)))),
+                decoration: BoxDecoration(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(2)))),
             const SizedBox(height: 16),
             Text('Detalle Comision',
                 style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700)),
@@ -1052,11 +1052,11 @@ class _PayoutTile extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 6),
         padding: const EdgeInsets.all(AppConstants.paddingSM),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(AppConstants.radiusSM),
           border: isPending ? Border.all(color: const Color(0xFFFDE68A), width: 0.5) : null,
           boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 4, offset: const Offset(0, 1)),
+            BoxShadow(color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.03), blurRadius: 4, offset: const Offset(0, 1)),
           ],
         ),
         child: Row(
@@ -1066,13 +1066,13 @@ class _PayoutTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(payout.businessName,
-                      style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF212121)),
+                      style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface),
                       maxLines: 1, overflow: TextOverflow.ellipsis),
                   Text('${_dateFmt.format(payout.createdAt)} | ${payout.period}',
-                      style: GoogleFonts.nunito(fontSize: 11, color: const Color(0xFF9E9E9E))),
+                      style: GoogleFonts.nunito(fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4))),
                   if (payout.referenceNumber != null && payout.referenceNumber!.isNotEmpty)
                     Text('Ref: ${payout.referenceNumber}',
-                        style: GoogleFonts.nunito(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFF757575))),
+                        style: GoogleFonts.nunito(fontSize: 11, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6))),
                 ],
               ),
             ),
@@ -1080,7 +1080,7 @@ class _PayoutTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(mxn.format(payout.amount),
-                    style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF212121))),
+                    style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface)),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
@@ -1114,7 +1114,7 @@ class _PayoutTile extends StatelessWidget {
           padding: const EdgeInsets.all(20),
           children: [
             Center(child: Container(width: 40, height: 4,
-                decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)))),
+                decoration: BoxDecoration(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(2)))),
             const SizedBox(height: 16),
             Text('Detalle Pago',
                 style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700)),
@@ -1150,10 +1150,10 @@ class _CfdiTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 6),
       padding: const EdgeInsets.all(AppConstants.paddingSM),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(AppConstants.radiusSM),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 4, offset: const Offset(0, 1)),
+          BoxShadow(color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.03), blurRadius: 4, offset: const Offset(0, 1)),
         ],
       ),
       child: InkWell(
@@ -1179,10 +1179,10 @@ class _CfdiTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(record.businessName,
-                      style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF212121)),
+                      style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface),
                       maxLines: 1, overflow: TextOverflow.ellipsis),
                   Text('${record.period}${record.folio != null ? ' | Folio: ${record.folio}' : ''}',
-                      style: GoogleFonts.nunito(fontSize: 11, color: const Color(0xFF9E9E9E))),
+                      style: GoogleFonts.nunito(fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4))),
                 ],
               ),
             ),
@@ -1190,7 +1190,7 @@ class _CfdiTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(mxn.format(record.total),
-                    style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF212121))),
+                    style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface)),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
@@ -1228,7 +1228,7 @@ class _CfdiTile extends StatelessWidget {
             padding: const EdgeInsets.all(20),
             children: [
               Center(child: Container(width: 40, height: 4,
-                  decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)))),
+                  decoration: BoxDecoration(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(2)))),
               const SizedBox(height: 16),
               Text('Detalle CFDI',
                   style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700, color: colors.onSurface)),
@@ -1279,10 +1279,10 @@ class _SatDeclarationTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(AppConstants.paddingMD),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2)),
+          BoxShadow(color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2)),
         ],
       ),
       child: Column(
@@ -1292,7 +1292,7 @@ class _SatDeclarationTile extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(declaration.period,
-                  style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w700, color: const Color(0xFF212121))),
+                  style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.onSurface)),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
@@ -1344,17 +1344,17 @@ class _SatReportTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 6),
       padding: const EdgeInsets.all(AppConstants.paddingSM),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(AppConstants.radiusSM),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 4, offset: const Offset(0, 1)),
+          BoxShadow(color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.03), blurRadius: 4, offset: const Offset(0, 1)),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(report.businessName,
-              style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF212121)),
+              style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface),
               maxLines: 1, overflow: TextOverflow.ellipsis),
           const SizedBox(height: 4),
           Row(
@@ -1372,7 +1372,8 @@ class _SatReportTile extends StatelessWidget {
 }
 
 /// Free function used in detail sheets across the finance dashboard tiles.
-Widget _FinDetailRow(String label, String? value) => Padding(
+Widget _FinDetailRow(String label, String? value, {BuildContext? ctx}) => Builder(
+  builder: (context) => Padding(
   padding: const EdgeInsets.only(bottom: 8),
   child: Row(
     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1384,7 +1385,7 @@ Widget _FinDetailRow(String label, String? value) => Padding(
           style: GoogleFonts.poppins(
             fontSize: 13,
             fontWeight: FontWeight.w600,
-            color: Colors.grey[600],
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
           ),
         ),
       ),
@@ -1396,7 +1397,7 @@ Widget _FinDetailRow(String label, String? value) => Padding(
       ),
     ],
   ),
-);
+));
 
 class _MiniLabel extends StatelessWidget {
   final String label;
@@ -1408,8 +1409,8 @@ class _MiniLabel extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: GoogleFonts.nunito(fontSize: 9, color: const Color(0xFF9E9E9E))),
-        Text(value, style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFF212121))),
+        Text(label, style: GoogleFonts.nunito(fontSize: 9, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4))),
+        Text(value, style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface)),
       ],
     );
   }
@@ -1428,10 +1429,10 @@ class _WhiteCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppConstants.paddingMD),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2)),
+          BoxShadow(color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2)),
         ],
       ),
       child: child,
@@ -1447,7 +1448,7 @@ class _SectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       title,
-      style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700, color: const Color(0xFF212121)),
+      style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.onSurface),
     );
   }
 }
@@ -1465,10 +1466,10 @@ class _KpiCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppConstants.paddingMD),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2)),
+          BoxShadow(color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2)),
         ],
       ),
       child: Column(
@@ -1481,7 +1482,7 @@ class _KpiCard extends StatelessWidget {
               const SizedBox(width: 6),
               Expanded(
                 child: Text(label,
-                    style: GoogleFonts.nunito(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF757575)),
+                    style: GoogleFonts.nunito(fontSize: 12, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
                     overflow: TextOverflow.ellipsis),
               ),
             ],
@@ -1491,7 +1492,7 @@ class _KpiCard extends StatelessWidget {
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
             child: Text(value,
-                style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700, color: const Color(0xFF212121))),
+                style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.onSurface)),
           ),
         ],
       ),
@@ -1519,8 +1520,8 @@ class _MiniStat extends StatelessWidget {
         children: [
           Icon(icon, size: 18, color: colors.primary),
           const SizedBox(height: 4),
-          Text(value, style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700, color: const Color(0xFF212121))),
-          Text(label, style: GoogleFonts.nunito(fontSize: 11, color: const Color(0xFF757575)), textAlign: TextAlign.center),
+          Text(value, style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.onSurface)),
+          Text(label, style: GoogleFonts.nunito(fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)), textAlign: TextAlign.center),
         ],
       ),
     );
@@ -1547,12 +1548,12 @@ class _CommissionRow extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, style: GoogleFonts.nunito(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF424242))),
-              Text('$count operaciones', style: GoogleFonts.nunito(fontSize: 11, color: const Color(0xFF9E9E9E))),
+              Text(label, style: GoogleFonts.nunito(fontSize: 13, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7))),
+              Text('$count operaciones', style: GoogleFonts.nunito(fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4))),
             ],
           ),
         ),
-        Text(_fmt.format(amount), style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: const Color(0xFF212121))),
+        Text(_fmt.format(amount), style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface)),
       ],
     );
   }
@@ -1574,10 +1575,10 @@ class _TaxRow extends StatelessWidget {
       children: [
         Text(label,
             style: GoogleFonts.nunito(
-                fontSize: 13, fontWeight: bold ? FontWeight.w700 : FontWeight.w500, color: bold ? const Color(0xFF212121) : const Color(0xFF616161))),
+                fontSize: 13, fontWeight: bold ? FontWeight.w700 : FontWeight.w500, color: bold ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6))),
         Text(_fmt.format(amount),
             style: GoogleFonts.poppins(
-                fontSize: 13, fontWeight: bold ? FontWeight.w700 : FontWeight.w500, color: bold ? const Color(0xFF212121) : const Color(0xFF424242))),
+                fontSize: 13, fontWeight: bold ? FontWeight.w700 : FontWeight.w500, color: bold ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7))),
       ],
     );
   }
@@ -1597,11 +1598,11 @@ class _ReconciliationTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 6),
       padding: const EdgeInsets.all(AppConstants.paddingSM),
       decoration: BoxDecoration(
-        color: hasIssue ? const Color(0xFFFEF2F2) : Colors.white,
+        color: hasIssue ? const Color(0xFFFEF2F2) : Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(AppConstants.radiusSM),
         border: hasIssue ? Border.all(color: const Color(0xFFFCA5A5), width: 0.5) : null,
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 4, offset: const Offset(0, 1)),
+          BoxShadow(color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.03), blurRadius: 4, offset: const Offset(0, 1)),
         ],
       ),
       child: Row(
@@ -1611,10 +1612,10 @@ class _ReconciliationTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(row.businessName,
-                    style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF212121)),
+                    style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface),
                     maxLines: 1, overflow: TextOverflow.ellipsis),
                 Text('${row.serviceName} - ${_dateFmt.format(row.paymentDate)}',
-                    style: GoogleFonts.nunito(fontSize: 11, color: const Color(0xFF9E9E9E)),
+                    style: GoogleFonts.nunito(fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
                     maxLines: 1, overflow: TextOverflow.ellipsis),
               ],
             ),
@@ -1623,7 +1624,7 @@ class _ReconciliationTile extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(_fmt.format(row.grossAmount),
-                  style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF212121))),
+                  style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface)),
               Text(row.paymentStatus,
                   style: GoogleFonts.nunito(
                       fontSize: 11, color: row.paymentStatus == 'succeeded' ? const Color(0xFF059669) : const Color(0xFFDC2626))),
@@ -1647,10 +1648,10 @@ class _BusinessRevenueTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 6),
       padding: const EdgeInsets.all(AppConstants.paddingSM),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(AppConstants.radiusSM),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 4, offset: const Offset(0, 1)),
+          BoxShadow(color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.03), blurRadius: 4, offset: const Offset(0, 1)),
         ],
       ),
       child: Row(
@@ -1660,10 +1661,10 @@ class _BusinessRevenueTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(row.businessName,
-                    style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF212121)),
+                    style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface),
                     maxLines: 1, overflow: TextOverflow.ellipsis),
                 Text('${row.totalBookings} citas | Este mes: ${_fmt.format(row.currentMonthRevenue)}',
-                    style: GoogleFonts.nunito(fontSize: 11, color: const Color(0xFF9E9E9E))),
+                    style: GoogleFonts.nunito(fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4))),
               ],
             ),
           ),
@@ -1671,7 +1672,7 @@ class _BusinessRevenueTile extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(_fmt.format(row.totalRevenue),
-                  style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF212121))),
+                  style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface)),
               Text('Neto: ${_fmt.format(row.netPayable)}',
                   style: GoogleFonts.nunito(fontSize: 11, color: const Color(0xFF059669))),
             ],
@@ -1689,7 +1690,7 @@ class _LoadingCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: 100,
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(AppConstants.radiusMD)),
+      decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface, borderRadius: BorderRadius.circular(AppConstants.radiusMD)),
       child: const Center(child: CircularProgressIndicator()),
     );
   }
@@ -1717,8 +1718,8 @@ class _EmptyCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(AppConstants.paddingLG),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(AppConstants.radiusMD)),
-      child: Center(child: Text(message, style: GoogleFonts.nunito(fontSize: 13, color: const Color(0xFF9E9E9E)))),
+      decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface, borderRadius: BorderRadius.circular(AppConstants.radiusMD)),
+      child: Center(child: Text(message, style: GoogleFonts.nunito(fontSize: 13, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)))),
     );
   }
 }

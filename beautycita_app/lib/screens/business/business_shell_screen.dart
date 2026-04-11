@@ -98,7 +98,7 @@ class BusinessShellScreen extends ConsumerWidget {
       data: (biz) {
         if (biz == null) {
           return Scaffold(
-            backgroundColor: const Color(0xFFF5F3FF),
+            backgroundColor: colors.surface,
             body: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -111,7 +111,7 @@ class BusinessShellScreen extends ConsumerWidget {
                     style: GoogleFonts.poppins(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
-                      color: const Color(0xFF212121),
+                      color: colors.onSurface,
                     ),
                   ),
                   const SizedBox(height: AppConstants.paddingSM),
@@ -119,7 +119,7 @@ class BusinessShellScreen extends ConsumerWidget {
                     'Registra tu salon para empezar.',
                     style: GoogleFonts.nunito(
                       fontSize: 14,
-                      color: const Color(0xFF757575),
+                      color: colors.onSurface.withValues(alpha: 0.6),
                     ),
                   ),
                   const SizedBox(height: AppConstants.paddingXL),
@@ -167,19 +167,19 @@ class BusinessShellScreen extends ConsumerWidget {
             businessName: biz['name'] as String? ?? 'Mi Negocio',
             isVerified: biz['is_verified'] as bool? ?? false);
       },
-      loading: () => const Scaffold(
-        backgroundColor: Color(0xFFF5F3FF),
-        body: Center(child: CircularProgressIndicator()),
+      loading: () => Scaffold(
+        backgroundColor: colors.surface,
+        body: const Center(child: CircularProgressIndicator()),
       ),
       error: (e, _) => Scaffold(
-        backgroundColor: const Color(0xFFF5F3FF),
+        backgroundColor: colors.surface,
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
                 'Error cargando negocio',
-                style: GoogleFonts.poppins(color: const Color(0xFF757575)),
+                style: GoogleFonts.poppins(color: colors.onSurface.withValues(alpha: 0.6)),
               ),
               const SizedBox(height: AppConstants.paddingMD),
               ElevatedButton.icon(
@@ -254,10 +254,10 @@ class _BusinessContent extends ConsumerWidget {
     // Stylists and assistants don't access the panel — show info screen
     if (allowlist != null && allowlist.isEmpty) {
       return Scaffold(
-        backgroundColor: const Color(0xFFF5F3FF),
+        backgroundColor: colors.surface,
         appBar: AppBar(
           title: Text('BeautyCita', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
-          backgroundColor: Colors.white,
+          backgroundColor: colors.surface,
           surfaceTintColor: Colors.transparent,
         ),
         body: Center(
@@ -309,9 +309,9 @@ class _BusinessContent extends ConsumerWidget {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F3FF),
+      backgroundColor: colors.surface,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: colors.surface,
         elevation: 0,
         scrolledUnderElevation: 0.5,
         shape: const RoundedRectangleBorder(
@@ -328,7 +328,7 @@ class _BusinessContent extends ConsumerWidget {
                 style: GoogleFonts.poppins(
                   fontWeight: FontWeight.w700,
                   fontSize: 18,
-                  color: const Color(0xFF000000),
+                  color: colors.onSurface,
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -385,7 +385,7 @@ class _BusinessDrawer extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
 
     return Drawer(
-      backgroundColor: const Color(0xFFF5F3FF),
+      backgroundColor: colors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.horizontal(right: Radius.circular(AppConstants.radiusLG)),
       ),
@@ -406,14 +406,14 @@ class _BusinessDrawer extends StatelessWidget {
                     style: GoogleFonts.poppins(
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
-                      color: const Color(0xFF000000),
+                      color: colors.onSurface,
                     ),
                   ),
                   Text(
                     'Portal de Negocio',
                     style: GoogleFonts.nunito(
                       fontSize: 13,
-                      color: const Color(0xFF757575),
+                      color: colors.onSurface.withValues(alpha: 0.6),
                     ),
                   ),
                 ],
@@ -482,7 +482,7 @@ class _DrawerItem extends StatelessWidget {
             tab.icon,
             color: isSelected
                 ? colors.primary
-                : const Color(0xFF757575).withValues(alpha: 0.6),
+                : colors.onSurface.withValues(alpha: 0.6),
             size: 22,
           ),
           title: Text(
@@ -490,7 +490,7 @@ class _DrawerItem extends StatelessWidget {
             style: GoogleFonts.poppins(
               fontSize: 14,
               fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-              color: isSelected ? colors.primary : const Color(0xFF212121),
+              color: isSelected ? colors.primary : colors.onSurface,
             ),
           ),
           shape: RoundedRectangleBorder(

@@ -549,7 +549,7 @@ class _ServiceFormSheetState extends ConsumerState<_ServiceFormSheet> {
       suffixText: suffixText,
       helperText: helperText,
       filled: true,
-      fillColor: Colors.white,
+      fillColor: colors.surface,
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
         borderSide: BorderSide(color: gray, width: 1),
@@ -829,14 +829,14 @@ class _ServiceFormSheetState extends ConsumerState<_ServiceFormSheet> {
 
             Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: colors.surface,
                 borderRadius: BorderRadius.circular(AppConstants.radiusMD),
                 border: Border.all(
                   color: colors.onSurface.withValues(alpha: 0.08),
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04),
+                    color: colors.shadow.withValues(alpha: 0.04),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -927,14 +927,14 @@ class _ServiceFormSheetState extends ConsumerState<_ServiceFormSheet> {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
         border: Border.all(
           color: colors.onSurface.withValues(alpha: 0.08),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: colors.shadow.withValues(alpha: 0.04),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),

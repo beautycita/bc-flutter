@@ -52,7 +52,7 @@ class AdminShellScreen extends ConsumerWidget {
       data: (admin) {
         if (!admin) {
           return Scaffold(
-            backgroundColor: const Color(0xFFF5F3FF),
+            backgroundColor: colors.surface,
             body: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -65,7 +65,7 @@ class AdminShellScreen extends ConsumerWidget {
                     style: GoogleFonts.poppins(
                       fontSize: 20,
                       fontWeight: FontWeight.w600,
-                      color: const Color(0xFF212121),
+                      color: colors.onSurface,
                     ),
                   ),
                   const SizedBox(height: AppConstants.paddingSM),
@@ -73,7 +73,7 @@ class AdminShellScreen extends ConsumerWidget {
                     'No tienes permisos de administrador.',
                     style: GoogleFonts.nunito(
                       fontSize: 14,
-                      color: const Color(0xFF757575),
+                      color: colors.onSurface.withValues(alpha: 0.6),
                     ),
                   ),
                   const SizedBox(height: AppConstants.paddingXL),
@@ -96,16 +96,16 @@ class AdminShellScreen extends ConsumerWidget {
 
         return const _AdminContent();
       },
-      loading: () => const Scaffold(
-        backgroundColor: Color(0xFFF5F3FF),
-        body: Center(child: CircularProgressIndicator()),
+      loading: () => Scaffold(
+        backgroundColor: colors.surface,
+        body: const Center(child: CircularProgressIndicator()),
       ),
       error: (_, _) => Scaffold(
-        backgroundColor: const Color(0xFFF5F3FF),
+        backgroundColor: colors.surface,
         body: Center(
           child: Text(
             'Error verificando permisos',
-            style: GoogleFonts.poppins(color: const Color(0xFF757575)),
+            style: GoogleFonts.poppins(color: colors.onSurface.withValues(alpha: 0.6)),
           ),
         ),
       ),
@@ -134,9 +134,9 @@ class _AdminContent extends ConsumerWidget {
     final safeTab = selectedTab.clamp(0, allTabs.isEmpty ? 0 : allTabs.length - 1);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F3FF),
+      backgroundColor: colors.surface,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: colors.surface,
         elevation: 0,
         scrolledUnderElevation: 0.5,
         shape: const RoundedRectangleBorder(
@@ -155,7 +155,7 @@ class _AdminContent extends ConsumerWidget {
           style: GoogleFonts.poppins(
             fontWeight: FontWeight.w700,
             fontSize: 18,
-            color: const Color(0xFF000000),
+            color: colors.onSurface,
           ),
         ),
         actions: [
@@ -249,7 +249,7 @@ class _AdminDrawer extends StatelessWidget {
     }
 
     return Drawer(
-      backgroundColor: const Color(0xFFF5F3FF),
+      backgroundColor: colors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.horizontal(left: Radius.circular(AppConstants.radiusLG)),
       ),
@@ -271,14 +271,14 @@ class _AdminDrawer extends StatelessWidget {
                     style: GoogleFonts.poppins(
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
-                      color: const Color(0xFF000000),
+                      color: colors.onSurface,
                     ),
                   ),
                   Text(
                     'BeautyCita',
                     style: GoogleFonts.nunito(
                       fontSize: 13,
-                      color: const Color(0xFF757575),
+                      color: colors.onSurface.withValues(alpha: 0.6),
                     ),
                   ),
                 ],
@@ -331,7 +331,7 @@ class _AdminDrawer extends StatelessWidget {
                               tabs[i].icon,
                               color: i == selectedIndex
                                   ? colors.primary
-                                  : const Color(0xFF757575).withValues(alpha: 0.6),
+                                  : colors.onSurface.withValues(alpha: 0.6),
                               size: 22,
                             ),
                             title: Text(
@@ -343,7 +343,7 @@ class _AdminDrawer extends StatelessWidget {
                                     : FontWeight.w500,
                                 color: i == selectedIndex
                                     ? colors.primary
-                                    : const Color(0xFF212121),
+                                    : colors.onSurface,
                               ),
                             ),
                             shape: RoundedRectangleBorder(
@@ -390,7 +390,7 @@ class _PlaceholderTab extends StatelessWidget {
             style: GoogleFonts.poppins(
               fontSize: 18,
               fontWeight: FontWeight.w600,
-              color: const Color(0xFF212121),
+              color: colors.onSurface,
             ),
           ),
           const SizedBox(height: AppConstants.paddingSM),
@@ -398,7 +398,7 @@ class _PlaceholderTab extends StatelessWidget {
             subtitle,
             style: GoogleFonts.nunito(
               fontSize: 14,
-              color: const Color(0xFF757575),
+              color: colors.onSurface.withValues(alpha: 0.6),
             ),
             textAlign: TextAlign.center,
           ),

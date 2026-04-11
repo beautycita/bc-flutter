@@ -597,7 +597,7 @@ class _AddStaffSheetState extends ConsumerState<_AddStaffSheet> {
       alignLabelWithHint: alignLabelWithHint,
       hintText: hintText,
       filled: true,
-      fillColor: Colors.white,
+      fillColor: colors.surface,
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
         borderSide: BorderSide(color: gray, width: 1),
@@ -974,14 +974,14 @@ class _AddStaffSheetState extends ConsumerState<_AddStaffSheet> {
                         width: 90,
                         height: 90,
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: colors.surface,
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(
                             color: colors.onSurface.withValues(alpha: 0.12),
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.04),
+                              color: colors.shadow.withValues(alpha: 0.04),
                               blurRadius: 8,
                               offset: const Offset(0, 2),
                             ),

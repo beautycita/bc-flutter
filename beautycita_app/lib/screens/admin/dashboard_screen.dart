@@ -141,14 +141,14 @@ class DashboardScreen extends ConsumerWidget {
               if (items.isEmpty) {
                 return Container(
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: colors.surface,
                     borderRadius: BorderRadius.circular(AppConstants.radiusMD),
                     border: Border.all(
                       color: colors.onSurface.withValues(alpha: 0.08),
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.04),
+                        color: colors.shadow.withValues(alpha: 0.04),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
@@ -169,14 +169,14 @@ class DashboardScreen extends ConsumerWidget {
               final displayItems = items.take(5).toList();
               return Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: colors.surface,
                   borderRadius: BorderRadius.circular(AppConstants.radiusMD),
                   border: Border.all(
                     color: colors.onSurface.withValues(alpha: 0.08),
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.04),
+                      color: colors.shadow.withValues(alpha: 0.04),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -248,9 +248,9 @@ class DashboardScreen extends ConsumerWidget {
         minChildSize: 0.4,
         maxChildSize: 0.92,
         builder: (ctx, scrollController) => Container(
-          decoration: const BoxDecoration(
-            color: Color(0xFFF5F3FF),
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          decoration: BoxDecoration(
+            color: colors.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
           ),
           child: Column(
             children: [
@@ -264,7 +264,7 @@ class DashboardScreen extends ConsumerWidget {
                         width: 40,
                         height: 4,
                         decoration: BoxDecoration(
-                          color: Colors.grey[300],
+                          color: colors.onSurface.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(2),
                         ),
                       ),
@@ -378,7 +378,7 @@ class _FullActivityTile extends StatelessWidget {
     }
 
     return Material(
-      color: Colors.white,
+      color: colors.surface,
       borderRadius: BorderRadius.circular(AppConstants.radiusMD),
       child: InkWell(
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
@@ -457,7 +457,7 @@ class _FullActivityTile extends StatelessWidget {
         margin: const EdgeInsets.all(16),
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: colors.surface,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Column(
@@ -470,7 +470,7 @@ class _FullActivityTile extends StatelessWidget {
                 height: 4,
                 margin: const EdgeInsets.only(bottom: 20),
                 decoration: BoxDecoration(
-                  color: Colors.grey[300],
+                  color: colors.onSurface.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -572,7 +572,7 @@ class _StatCard extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
 
     return Material(
-      color: Colors.white,
+      color: colors.surface,
       borderRadius: BorderRadius.circular(AppConstants.radiusMD),
       child: InkWell(
         onTap: onTap,
@@ -586,7 +586,7 @@ class _StatCard extends StatelessWidget {
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
+                color: colors.shadow.withValues(alpha: 0.04),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),

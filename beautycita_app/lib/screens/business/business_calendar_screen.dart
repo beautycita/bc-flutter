@@ -820,7 +820,7 @@ class _SummaryCard extends StatelessWidget {
         vertical: isLandscape ? 6 : AppConstants.paddingMD,
       ),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
         boxShadow: [
           BoxShadow(
@@ -837,7 +837,7 @@ class _SummaryCard extends StatelessWidget {
               style: GoogleFonts.poppins(
                 fontSize: isLandscape ? 20 : 28,
                 fontWeight: FontWeight.w700,
-                color: const Color(0xFF212121),
+                color: colors.onSurface,
               )),
           const SizedBox(width: 6),
           // Date label
@@ -925,7 +925,7 @@ class _StaffChip extends StatelessWidget {
           style: GoogleFonts.poppins(
             fontSize: 12,
             fontWeight: FontWeight.w500,
-            color: const Color(0xFF616161),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
       ],
@@ -2173,7 +2173,7 @@ class _CompactWeekStrip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colors.surface,
         border: Border(
           top: BorderSide(
             color: colors.onSurface.withValues(alpha: 0.08),
@@ -3807,7 +3807,7 @@ class _SheetDropdown<T> extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: colors.primary.withValues(alpha: 0.12)),
         boxShadow: [
@@ -3840,7 +3840,7 @@ class _SheetDropdown<T> extends StatelessWidget {
         ),
         items: items,
         onChanged: onChanged,
-        dropdownColor: Colors.white,
+        dropdownColor: colors.surface,
         icon: Icon(Icons.keyboard_arrow_down_rounded,
             size: 20, color: colors.onSurface.withValues(alpha: 0.4)),
       ),
@@ -3868,7 +3868,7 @@ class _SheetTextField extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: colors.primary.withValues(alpha: 0.12)),
         boxShadow: [
@@ -3883,7 +3883,7 @@ class _SheetTextField extends StatelessWidget {
         controller: controller,
         maxLines: maxLines,
         textCapitalization: TextCapitalization.sentences,
-        style: GoogleFonts.nunito(fontSize: 14, color: const Color(0xFF212121)),
+        style: GoogleFonts.nunito(fontSize: 14, color: colors.onSurface),
         decoration: InputDecoration(
           labelText: label,
           labelStyle: GoogleFonts.nunito(
@@ -3936,7 +3936,7 @@ class _SheetButton extends StatelessWidget {
                   end: Alignment.centerRight,
                 )
               : null,
-          color: enabled ? null : const Color(0xFFE0E0E0),
+          color: enabled ? null : colors.onSurface.withValues(alpha: 0.12),
           boxShadow: enabled
               ? [
                   BoxShadow(
@@ -3968,7 +3968,7 @@ class _SheetButton extends StatelessWidget {
                         style: GoogleFonts.poppins(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
-                          color: enabled ? Colors.white : const Color(0xFF9E9E9E),
+                          color: enabled ? Colors.white : colors.onSurface.withValues(alpha: 0.4),
                           letterSpacing: 0.3,
                         ),
                       ),

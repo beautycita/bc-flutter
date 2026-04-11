@@ -1471,18 +1471,19 @@ class _CfdiDetailRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: GoogleFonts.nunito(fontSize: 13, color: const Color(0xFF757575))),
+          Text(label, style: GoogleFonts.nunito(fontSize: 13, color: cs.onSurface.withValues(alpha: 0.6))),
           Flexible(
             child: Text(value,
                 style: GoogleFonts.poppins(
                   fontSize: 13,
                   fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
-                  color: const Color(0xFF212121),
+                  color: cs.onSurface,
                 ),
                 textAlign: TextAlign.end),
           ),
