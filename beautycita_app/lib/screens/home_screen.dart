@@ -3,7 +3,6 @@ import 'package:beautycita/services/gyro_parallax_service.dart';
 import 'package:beautycita/widgets/parallax_tilt.dart';
 import 'dart:async';
 import 'dart:io';
-import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -36,6 +35,7 @@ import 'business/business_shell_screen.dart' show businessTabProvider;
 import 'admin/admin_shell_screen.dart' show adminTabProvider;
 import '../providers/feature_toggle_provider.dart';
 import '../providers/review_prompt_provider.dart';
+import '../widgets/particle_rain.dart';
 import '../widgets/review_prompt_sheet.dart';
 import '../services/supabase_client.dart';
 
@@ -329,7 +329,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         error: (_, _) => null,
       ),
       endDrawerEnableOpenDragGesture: isAdmin.valueOrNull == true,
-      body: Column(
+      body: Stack(
+        children: [
+          Column(
         children: [
           // Header with gradient, decorative shapes, and curved bottom
           SizedBox(
@@ -595,6 +597,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 },
               ),
             ),
+          ),
+        ],
+      ),
+          // Particle rain — subtle ambient atmosphere overlay
+          const Positioned.fill(
+            child: ParticleRain(),
           ),
         ],
       ),
@@ -1003,11 +1011,6 @@ class _CategoryCardState extends ConsumerState<_CategoryCard>
   late Animation<double> _scaleAnimation;
   bool _isPressed = false;
 
-  // Task 25: Gyro-leveled icons — counter-rotate to stay level
-  final _gyro = GyroParallaxService.instance;
-  StreamSubscription<ParallaxOffset>? _gyroSub;
-  double _gyroX = 0;
-
   // Task 26: Animated GIF on selection before navigation
   bool _isAnimating = false;
 
@@ -1026,11 +1029,6 @@ class _CategoryCardState extends ConsumerState<_CategoryCard>
         reverseCurve: Curves.elasticOut,
       ),
     );
-    // Start listening to gyro for icon counter-rotation
-    _gyro.addListener();
-    _gyroSub = _gyro.stream.listen((offset) {
-      if (mounted) setState(() => _gyroX = offset.x);
-    });
   }
 
   // Map category IDs to asset images (null = use icon fallback)
@@ -1155,9 +1153,6 @@ class _CategoryCardState extends ConsumerState<_CategoryCard>
     final gifPath = _animatedGifs[category.id];
     final showAnimatedGif = _isAnimating && gifPath != null;
 
-    // Counter-rotation angle: max ~6 degrees, based on gyro x tilt
-    final counterAngle = -_gyroX * (6.0 * math.pi / 180.0);
-
     // Default icon-based card with subtle gyro parallax on icon
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -1187,24 +1182,20 @@ class _CategoryCardState extends ConsumerState<_CategoryCard>
                     width: 48,
                     height: 48,
                   )
-                // Task 25: Counter-rotate icon to stay level
-                : Transform.rotate(
-                    angle: counterAngle,
-                    child: animatedPath != null
-                        ? Image.asset(
-                            animatedPath,
-                            width: 40,
-                            height: 40,
-                            color: categoryColor,
-                            colorBlendMode: BlendMode.srcIn,
-                          )
-                        : getCategoryIcon(
-                            variant: widget.variant,
-                            categoryId: category.id,
-                            color: categoryColor,
-                            size: 36,
-                          ),
-                  ),
+                : animatedPath != null
+                    ? Image.asset(
+                        animatedPath,
+                        width: 40,
+                        height: 40,
+                        color: categoryColor,
+                        colorBlendMode: BlendMode.srcIn,
+                      )
+                    : getCategoryIcon(
+                        variant: widget.variant,
+                        categoryId: category.id,
+                        color: categoryColor,
+                        size: 36,
+                      ),
           ),
         ),
         ),
@@ -1230,8 +1221,6 @@ class _CategoryCardState extends ConsumerState<_CategoryCard>
 
   @override
   void dispose() {
-    _gyroSub?.cancel();
-    _gyro.removeListener();
     _controller.dispose();
     super.dispose();
   }
