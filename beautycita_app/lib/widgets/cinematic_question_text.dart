@@ -262,8 +262,8 @@ class _CinematicContent extends StatelessWidget {
                 style: GoogleFonts.poppins(
                   fontSize: fontSize,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                  height: 1.2,
+                  color: Colors.white, // ShaderMask replaces this
+                  height: 1.4,
                 ),
               ),
             ),

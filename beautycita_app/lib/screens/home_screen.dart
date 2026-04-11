@@ -1272,7 +1272,7 @@ class _BrandShimmerTextState extends State<_BrandShimmerText>
           fontWeight: FontWeight.w700,
           color: Colors.white, // ShaderMask replaces this
           letterSpacing: -0.5,
-          height: 1.1,
+          height: 1.3,
         ),
       ),
     );
