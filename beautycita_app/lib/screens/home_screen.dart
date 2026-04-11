@@ -1585,19 +1585,16 @@ class _CategoryCardState extends ConsumerState<_CategoryCard>
       },
       child: GestureDetector(
         onTapDown: (_) {
-          if (_isAnimating) return;
           setState(() => _isPressed = true);
           _controller.forward();
         },
         onTapUp: (_) {
-          if (_isAnimating) return;
           _controller.reverse();
           setState(() => _isPressed = false);
           HapticFeedback.lightImpact();
-          _handleTapWithAnimation();
+          widget.onTap();
         },
         onTapCancel: () {
-          if (_isAnimating) return;
           _controller.reverse();
           setState(() => _isPressed = false);
         },
