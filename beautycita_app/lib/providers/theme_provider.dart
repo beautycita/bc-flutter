@@ -64,12 +64,12 @@ class ThemeNotifier extends StateNotifier<ThemeState> {
 
   ThemeNotifier()
       : super(ThemeState(
-          themeId: roseGoldPalette.id,
-          lightThemeData: buildThemeFromPalette(roseGoldPalette),
-          darkThemeData: buildThemeFromPalette(darkPalettes['rose_gold']!),
-          palette: roseGoldPalette,
+          themeId: beautycitaPalette.id,
+          lightThemeData: buildThemeFromPalette(beautycitaPalette),
+          darkThemeData: buildThemeFromPalette(beautycitaDarkPalette),
+          palette: beautycitaPalette,
         )) {
-    _cacheCategoryOffsets(roseGoldPalette);
+    _cacheCategoryOffsets(beautycitaPalette);
     _load();
   }
 
@@ -107,10 +107,8 @@ class ThemeNotifier extends StateNotifier<ThemeState> {
       _customSat = savedSat;
     }
 
-    final savedId = prefs.getString(_prefKey);
-    final palette = (savedId != null && allPalettes.containsKey(savedId))
-        ? allPalettes[savedId]!
-        : state.palette;
+    // Single palette — no palette switching. Always use beautycitaPalette.
+    final palette = beautycitaPalette;
 
     // Default to lila/lilac (#C8A2C8) gradient for all installations.
     // This is the brand color — locked, not user-changeable.
@@ -125,11 +123,8 @@ class ThemeNotifier extends StateNotifier<ThemeState> {
   }
 
   Future<void> setTheme(String themeId) async {
-    final palette = allPalettes[themeId];
-    if (palette == null) return;
-    _applyPalette(palette);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_prefKey, themeId);
+    // Single palette — theme switching removed.
+    _applyPalette(beautycitaPalette);
   }
 
   Future<void> setFontScale(double scale) async {
@@ -254,7 +249,7 @@ class ThemeNotifier extends StateNotifier<ThemeState> {
       );
 
       // ── Dark theme ──
-      final darkBase = darkPalettes[palette.id] ?? palette;
+      final darkBase = beautycitaDarkPalette;
       final darkEffective = (_customHue != null && _customSat != null)
           ? _applyColorOverride(darkBase, _customHue!, _customSat!)
           : darkBase;
@@ -374,9 +369,9 @@ class ThemeNotifier extends StateNotifier<ThemeState> {
     _themeMode = ThemeMode.system;
     _customHue = null;
     _customSat = null;
-    _applyPalette(roseGoldPalette);
+    _applyPalette(beautycitaPalette);
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_prefKey, roseGoldPalette.id);
+    await prefs.setString(_prefKey, beautycitaPalette.id);
     await prefs.setDouble(_prefFontScale, 1.0);
     await prefs.setDouble(_prefRadiusScale, 1.0);
     await prefs.setDouble(_prefAnimSpeed, 1.0);
