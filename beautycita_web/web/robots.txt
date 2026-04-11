@@ -1,7 +1,3 @@
 User-agent: *
 Allow: /
-Disallow: /auth/
-Disallow: /admin/
-Disallow: /negocio/
-Disallow: /bc/
 Sitemap: https://beautycita.com/sitemap.xml

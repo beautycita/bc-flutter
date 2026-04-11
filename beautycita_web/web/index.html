@@ -8,10 +8,18 @@
   <title>BeautyCita - Registra tu salon gratis</title>
   <meta name="description" content="BeautyCita conecta clientas con tu salon. Registro en 60 segundos. Sin mensualidad. Sin cuotas de entrada.">
   <meta name="theme-color" content="#C8A2C8">
-  <meta property="og:title" content="BeautyCita - Recibe mas clientes sin esfuerzo">
-  <meta property="og:description" content="Tus clientas te encuentran. Registro en 60 segundos por WhatsApp. Sin cuotas de entrada.">
-  <meta property="og:type" content="website">
+  <!-- Open Graph -->
+  <meta property="og:title" content="BeautyCita — Tu cita de belleza en segundos">
+  <meta property="og:description" content="Reserva servicios de belleza con un solo toque. Sin llamadas, sin espera.">
+  <meta property="og:image" content="https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/media/web/img/bc_logo.png">
   <meta property="og:url" content="https://beautycita.com">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="es_MX">
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="BeautyCita — Tu cita de belleza en segundos">
+  <meta name="twitter:description" content="Reserva servicios de belleza con un solo toque.">
+  <meta name="twitter:image" content="https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/media/web/img/bc_logo.png">
   <link rel="canonical" href="https://beautycita.com/">
   <link rel="icon" type="image/png" href="/favicon.png">
   <link rel="apple-touch-icon" href="/icons/Icon-192.png">
@@ -73,7 +81,7 @@
     .hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.15);padding:8px 16px;border-radius:20px;font-size:.8rem;font-weight:600;color:rgba(255,255,255,.9);margin-bottom:24px}
     .hero-badge-dot{width:8px;height:8px;background:var(--green);border-radius:50%;animation:pulse-dot 2s infinite}
     @keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.4}}
-    .hero-text h1{font-family:var(--font-display);font-size:3.6rem;font-weight:700;color:#fff;line-height:1.08;margin-bottom:24px}
+    .hero-text h1{font-family:var(--font-display);font-size:clamp(2rem, 5vw, 3.6rem);font-weight:700;color:#fff;line-height:1.08;margin-bottom:24px}
     .hero-text h1 span{color:var(--gold)}
     .hero-sub{font-size:1.15rem;color:rgba(255,255,255,.8);line-height:1.7;margin-bottom:36px;max-width:480px}
     .hero-btns{display:flex;gap:16px;flex-wrap:wrap}
@@ -276,6 +284,18 @@
     @keyframes spin{to{transform:rotate(360deg)}}
   </style>
   <!-- Stripe.js loaded on demand by Flutter when payment is needed -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "BeautyCita",
+    "operatingSystem": "Android",
+    "applicationCategory": "LifestyleApplication",
+    "description": "Reserva servicios de belleza en segundos. 4 toques, 30 segundos, cero teclado.",
+    "url": "https://beautycita.com",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "MXN" }
+  }
+  </script>
 </head>
 <body>
 

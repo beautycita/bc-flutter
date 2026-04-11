@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:beautycita/config/app_transitions.dart';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -263,7 +264,7 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
         if (c != null && c.isNotEmpty) set.add(c);
       }
       if (mounted) setState(() => _countries = set.toList());
-    } catch (_) {}
+    } catch (e) { if (kDebugMode) debugPrint('[Pipeline] Error: $e'); }
   }
 
   Future<void> _loadStates(String country) async {
@@ -284,7 +285,7 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
         if (s != null && s.isNotEmpty) set.add(s);
       }
       if (mounted) setState(() => _states = set.toList());
-    } catch (_) {}
+    } catch (e) { if (kDebugMode) debugPrint('[Pipeline] Error: $e'); }
   }
 
   Future<void> _loadCities(String state) async {
@@ -305,7 +306,7 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
         if (c != null && c.isNotEmpty) set.add(c);
       }
       if (mounted) setState(() => _cities = set.toList());
-    } catch (_) {}
+    } catch (e) { if (kDebugMode) debugPrint('[Pipeline] Error: $e'); }
   }
 
   void _setCountryFilter(String? country) {

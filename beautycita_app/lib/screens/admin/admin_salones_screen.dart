@@ -844,7 +844,7 @@ class _IntelligenceTabState extends State<_IntelligenceTab> {
         }
       }
       if (mounted) setState(() { _states = list; _stateCounts = counts; });
-    } catch (_) {}
+    } catch (e) { if (kDebugMode) debugPrint('[Salones] Error: $e'); }
   }
 
   Future<void> _loadCities(String state) async {
@@ -867,7 +867,7 @@ class _IntelligenceTabState extends State<_IntelligenceTab> {
         }
       }
       if (mounted) setState(() { _cities = list; _cityCounts = counts; });
-    } catch (_) {}
+    } catch (e) { if (kDebugMode) debugPrint('[Salones] Error: $e'); }
   }
 
   Future<void> _fetchResults({required bool reset}) async {
@@ -1004,7 +1004,7 @@ class _IntelligenceTabState extends State<_IntelligenceTab> {
           _avgRating = ratingCount > 0 ? ratingSum / ratingCount : 0;
         });
       }
-    } catch (_) {}
+    } catch (e) { if (kDebugMode) debugPrint('[Salones] Error: $e'); }
   }
 
   void _onFilterChanged() {

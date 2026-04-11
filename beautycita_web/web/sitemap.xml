@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://beautycita.com/</loc><priority>1.0</priority><changefreq>weekly</changefreq></url>
-  <url><loc>https://beautycita.com/ayuda</loc><priority>0.7</priority><changefreq>monthly</changefreq></url>
-  <url><loc>https://beautycita.com/acerca</loc><priority>0.5</priority><changefreq>monthly</changefreq></url>
-  <url><loc>https://beautycita.com/privacidad</loc><priority>0.3</priority><changefreq>yearly</changefreq></url>
-  <url><loc>https://beautycita.com/prensa</loc><priority>0.4</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://beautycita.com/</loc><priority>1.0</priority></url>
+  <url><loc>https://beautycita.com/porque-beautycita</loc><priority>0.8</priority></url>
+  <url><loc>https://beautycita.com/privacidad</loc><priority>0.5</priority></url>
+  <url><loc>https://beautycita.com/terminos</loc><priority>0.5</priority></url>
+  <url><loc>https://beautycita.com/soporte</loc><priority>0.5</priority></url>
+  <url><loc>https://beautycita.com/invitar</loc><priority>0.7</priority></url>
+  <url><loc>https://beautycita.com/demo</loc><priority>0.6</priority></url>
 </urlset>

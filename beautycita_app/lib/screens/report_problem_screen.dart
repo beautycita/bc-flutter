@@ -78,7 +78,9 @@ class _ReportProblemScreenState extends ConsumerState<ReportProblemScreen> {
           'body':
               '[$_selectedCategory] ${description.length > 50 ? description.substring(0, 50) : description}...',
         });
-      } catch (_) {}
+      } catch (_) {
+        // Admin push failed — report was still sent successfully
+      }
 
       if (!mounted) return;
       ToastService.showSuccess('Reporte enviado. Lo revisaremos pronto.');

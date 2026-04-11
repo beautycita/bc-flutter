@@ -54,7 +54,7 @@ final availableSlotsProvider =
       .select('staff_id, staff:staff_id(id, first_name, last_name, business_id)')
       .eq('service_id', query.serviceId);
 
-  final staffList = (staffRows as List).cast<Map<String, dynamic>>();
+  final staffList = (staffRows as List).whereType<Map<String, dynamic>>().toList();
   // Filter to staff belonging to this business
   final bizStaff = staffList.where((s) {
     final staff = s['staff'] as Map<String, dynamic>?;
@@ -85,8 +85,8 @@ final availableSlotsProvider =
       allSlots.add(AvailableSlot(
         staffId: staffId,
         staffName: staffName,
-        slotStart: DateTime.parse(s['slot_start'] as String).toLocal(),
-        slotEnd: DateTime.parse(s['slot_end'] as String).toLocal(),
+        slotStart: DateTime.tryParse(s['slot_start'] as String? ?? '')?.toLocal() ?? DateTime.now(),
+        slotEnd: DateTime.tryParse(s['slot_end'] as String? ?? '')?.toLocal() ?? DateTime.now(),
       ));
     }
   }

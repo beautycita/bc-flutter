@@ -6,6 +6,7 @@ import 'package:beautycita/widgets/parallax_tilt.dart';
 import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -127,7 +128,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     await prefs.setBool('push_prompt_shown', true);
     try {
       await NotificationService().initialize();
-    } catch (_) {}
+    } catch (e) { if (kDebugMode) debugPrint('[Home] Error: $e'); }
     if (mounted) setState(() => _showPushPrompt = false);
   }
 

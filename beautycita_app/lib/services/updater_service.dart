@@ -85,7 +85,7 @@ class UpdaterService {
         try {
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString(_lastVersionCheckKey, DateTime.now().toIso8601String());
-        } catch (_) {}
+        } catch (e) { if (kDebugMode) debugPrint('[Updater] Error: $e'); }
         return;
       }
 
@@ -106,7 +106,7 @@ class UpdaterService {
       try {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString(_lastVersionCheckKey, DateTime.now().toIso8601String());
-      } catch (_) {}
+      } catch (e) { if (kDebugMode) debugPrint('[Updater] Error: $e'); }
     } catch (e) {
       if (kDebugMode) debugPrint('[Updater] APK version check failed: $e');
     }
