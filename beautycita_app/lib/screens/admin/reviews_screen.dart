@@ -76,7 +76,7 @@ class _ReviewsScreenState extends ConsumerState<ReviewsScreen> {
                     contentPadding:
                         const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
                     filled: true,
-                    fillColor: Colors.white,
+                    fillColor: Theme.of(context).colorScheme.surface,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(AppConstants.radiusSM),
                       borderSide: BorderSide(
@@ -213,7 +213,7 @@ class _ReviewsScreenState extends ConsumerState<ReviewsScreen> {
       margin: const EdgeInsets.all(AppConstants.paddingMD),
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
         border: Border.all(
           color: colors.primary.withValues(alpha: 0.08)),
@@ -402,7 +402,7 @@ class _ReviewsScreenState extends ConsumerState<ReviewsScreen> {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
         border: Border.all(
           color: colors.primary.withValues(alpha: 0.06),

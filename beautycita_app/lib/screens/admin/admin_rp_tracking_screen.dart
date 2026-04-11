@@ -91,7 +91,7 @@ class _RpCard extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: AppConstants.paddingMD),
       elevation: 0,
-      color: Colors.white,
+      color: Theme.of(context).colorScheme.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
         side: BorderSide(

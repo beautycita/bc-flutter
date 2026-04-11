@@ -81,7 +81,7 @@ class AdminShellScreen extends ConsumerWidget {
                     onPressed: () => context.go('/home'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: colors.primary,
-                      foregroundColor: Colors.white,
+                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(AppConstants.radiusLG),
                       ),
@@ -492,7 +492,7 @@ class _GoldShimmerTextState extends State<_GoldShimmerText>
           child: Text(
             widget.text,
             style: const TextStyle().copyWith(
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onPrimary,
             ),
           ),
         );

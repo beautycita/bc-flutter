@@ -312,10 +312,10 @@ class _MessageSalonsScreenState extends ConsumerState<MessageSalonsScreen> {
             onPressed: _sending ? null : () => _sendMessage(ctx, salon),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFC2185B),
-              foregroundColor: Colors.white,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
             ),
             child: _sending
-                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                ? SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).colorScheme.onPrimary))
                 : const Text('Enviar'),
           ),
         ],
@@ -586,11 +586,11 @@ class _MessageSalonsScreenState extends ConsumerState<MessageSalonsScreen> {
                       }
                     },
                     icon: saving
-                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        ? SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).colorScheme.onPrimary))
                         : const Icon(Icons.save_rounded, size: 16),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue[700],
-                      foregroundColor: Colors.white,
+                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
                     ),
                     label: Text('Guardar', style: GoogleFonts.nunito(fontSize: 13, fontWeight: FontWeight.w600)),
                   ),
@@ -703,7 +703,7 @@ class _SalonCard extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Material(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
         child: InkWell(
           borderRadius: BorderRadius.circular(AppConstants.radiusMD),
@@ -717,7 +717,7 @@ class _SalonCard extends StatelessWidget {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
+                  color: Theme.of(context).shadowColor.withValues(alpha: 0.04),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),

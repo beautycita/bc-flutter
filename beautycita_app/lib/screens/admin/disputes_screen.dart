@@ -194,7 +194,7 @@ class _SummaryChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     return Material(
-      color: selected ? color.withValues(alpha: 0.1) : Colors.white,
+      color: selected ? color.withValues(alpha: 0.1) : Theme.of(context).colorScheme.surface,
       borderRadius: BorderRadius.circular(AppConstants.radiusMD),
       child: InkWell(
         onTap: onTap,
@@ -209,7 +209,7 @@ class _SummaryChip extends StatelessWidget {
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
+                color: Theme.of(context).shadowColor.withValues(alpha: 0.04),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -272,7 +272,7 @@ class _DisputeCard extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: AppConstants.paddingSM),
       child: Material(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
         child: InkWell(
           onTap: onTap,
@@ -288,7 +288,7 @@ class _DisputeCard extends StatelessWidget {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
+                  color: Theme.of(context).shadowColor.withValues(alpha: 0.04),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -811,7 +811,7 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
                 // Refund toggle
                 Container(
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.surface,
                     borderRadius:
                         BorderRadius.circular(AppConstants.radiusMD),
                     border: Border.all(
@@ -819,7 +819,7 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.04),
+                        color: Theme.of(context).shadowColor.withValues(alpha: 0.04),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
@@ -867,7 +867,7 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
                 // Admin actions
                 Container(
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.surface,
                     borderRadius:
                         BorderRadius.circular(AppConstants.radiusMD),
                     border: Border.all(
@@ -875,7 +875,7 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.04),
+                        color: Theme.of(context).shadowColor.withValues(alpha: 0.04),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
@@ -961,17 +961,17 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
                       ),
                     ),
                     child: _saving
-                        ? const SizedBox(
+                        ? SizedBox(
                             width: 20,
                             height: 20,
                             child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.white))
+                                strokeWidth: 2, color: Theme.of(context).colorScheme.onPrimary))
                         : Text(
                             'Resolver Disputa',
                             style: GoogleFonts.poppins(
                               fontSize: 15,
                               fontWeight: FontWeight.w700,
-                              color: Colors.white,
+                              color: Theme.of(context).colorScheme.onPrimary,
                             ),
                           ),
                   ),
@@ -998,7 +998,7 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: color.withValues(alpha: 0.2)),
         boxShadow: [
@@ -1166,7 +1166,7 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
         border: Border.all(
           color: colors.onSurface.withValues(alpha: 0.08),
@@ -1174,7 +1174,7 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: Theme.of(context).shadowColor.withValues(alpha: 0.04),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -1333,8 +1333,8 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Suspender',
-                style: TextStyle(color: Colors.white)),
+            child: Text('Suspender',
+                style: TextStyle(color: Theme.of(context).colorScheme.onPrimary)),
           ),
         ],
       ),
@@ -1385,8 +1385,8 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.deepPurple),
-            child: const Text('Retener pagos',
-                style: TextStyle(color: Colors.white)),
+            child: Text('Retener pagos',
+                style: TextStyle(color: Theme.of(context).colorScheme.onPrimary)),
           ),
         ],
       ),

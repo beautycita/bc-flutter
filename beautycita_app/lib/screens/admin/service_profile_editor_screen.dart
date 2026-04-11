@@ -171,7 +171,7 @@ class _ServiceProfileEditorScreenState
 
         return Card(
           elevation: 0,
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surface,
           shape: RoundedRectangleBorder(
             borderRadius:
                 BorderRadius.circular(AppConstants.radiusMD),
@@ -553,19 +553,19 @@ class _ServiceProfileEditorScreenState
                     _weightsValid && !_saving ? _save : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: colors.primary,
-                  foregroundColor: Colors.white,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
                   minimumSize: const Size(0, 48),
                   disabledBackgroundColor:
                       colors.primary.withValues(alpha: 0.3),
                 ),
                 child: _saving
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 20,
                         height: 20,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
                           valueColor:
-                              AlwaysStoppedAnimation<Color>(Colors.white),
+                              AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.onPrimary),
                         ),
                       )
                     : const Text('GUARDAR'),

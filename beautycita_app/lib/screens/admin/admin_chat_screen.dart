@@ -108,14 +108,14 @@ class _ThreadList extends StatelessWidget {
           ),
           child: Row(
             children: [
-              const Icon(Icons.chat_rounded, color: Colors.white, size: 22),
+              Icon(Icons.chat_rounded, color: colors.onPrimary, size: 22),
               const SizedBox(width: 10),
               Text(
                 'BeautyCita Chat',
                 style: GoogleFonts.poppins(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: Colors.white,
+                  color: colors.onPrimary,
                 ),
               ),
             ],
@@ -273,7 +273,7 @@ class _ThreadTile extends StatelessWidget {
                               style: GoogleFonts.nunito(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w700,
-                                color: Colors.white,
+                                color: colors.onPrimary,
                               ),
                             ),
                           ),
@@ -400,7 +400,7 @@ class _ConversationPaneState extends ConsumerState<_ConversationPane> {
           child: Row(
             children: [
               IconButton(
-                icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 22),
+                icon: Icon(Icons.arrow_back_rounded, color: colors.onPrimary, size: 22),
                 onPressed: widget.onBack,
                 tooltip: 'Volver a chats',
               ),
@@ -411,7 +411,7 @@ class _ConversationPaneState extends ConsumerState<_ConversationPane> {
                   style: GoogleFonts.poppins(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    color: Colors.white,
+                    color: colors.onPrimary,
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -421,7 +421,7 @@ class _ConversationPaneState extends ConsumerState<_ConversationPane> {
                   thread.contactType,
                   style: GoogleFonts.nunito(
                     fontSize: 11,
-                    color: Colors.white70,
+                    color: colors.onPrimary.withValues(alpha: 0.7),
                   ),
                 ),
             ],
@@ -467,7 +467,7 @@ class _ConversationPaneState extends ConsumerState<_ConversationPane> {
             top: 8,
             bottom: MediaQuery.of(context).padding.bottom + 8,
           ),
-          color: Colors.white,
+          color: colors.surface,
           child: Row(
             children: [
               Expanded(
@@ -511,7 +511,7 @@ class _ConversationPaneState extends ConsumerState<_ConversationPane> {
                             color: colors.primary,
                           ),
                         )
-                      : const Icon(Icons.send_rounded, color: Colors.white, size: 20),
+                      : Icon(Icons.send_rounded, color: colors.onPrimary, size: 20),
                 ),
               ),
             ],
@@ -530,6 +530,7 @@ class _ChatBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     final isUser = message.isFromUser;
     final isSystem = message.senderType == 'system';
 
@@ -540,7 +541,7 @@ class _ChatBubble extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.06),
+              color: cs.onSurface.withValues(alpha: 0.06),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
@@ -554,7 +555,7 @@ class _ChatBubble extends StatelessWidget {
     }
 
     final alignment = isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start;
-    final bubbleColor = isUser ? const Color(0xFFDCF8C6) : Colors.white;
+    final bubbleColor = isUser ? const Color(0xFFDCF8C6) : cs.surface;
     final textColor = const Color(0xFF303030);
 
     return Padding(
@@ -577,7 +578,7 @@ class _ChatBubble extends StatelessWidget {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
+                  color: cs.shadow.withValues(alpha: 0.05),
                   blurRadius: 2,
                   offset: const Offset(0, 1),
                 ),

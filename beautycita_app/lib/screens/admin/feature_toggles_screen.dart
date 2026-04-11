@@ -88,7 +88,7 @@ class _FeatureTogglesScreenState
               for (final entry in groups.entries) ...[
                 Card(
                   elevation: 0,
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.surface,
                   shape: RoundedRectangleBorder(
                     borderRadius:
                         BorderRadius.circular(AppConstants.radiusMD),

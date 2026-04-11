@@ -79,7 +79,7 @@ class _TimeRulesScreenState extends ConsumerState<TimeRulesScreen> {
             icon: const Icon(Icons.add),
             label: const Text('Agregar Regla'),
             backgroundColor: colors.primary,
-            foregroundColor: Colors.white,
+            foregroundColor: Theme.of(context).colorScheme.onPrimary,
           ),
         );
       },
@@ -315,7 +315,7 @@ class _TimeRulesScreenState extends ConsumerState<TimeRulesScreen> {
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: colors.primary,
-                foregroundColor: Colors.white,
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
               ),
               child: const Text('CREAR'),
             ),
@@ -367,7 +367,7 @@ class _TimeRulesScreenState extends ConsumerState<TimeRulesScreen> {
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
             ),
             child: const Text('ELIMINAR'),
           ),
@@ -437,14 +437,14 @@ class _TimeRulesScreenState extends ConsumerState<TimeRulesScreen> {
 
     return Card(
       elevation: 0,
-      color: Colors.white,
+      color: Theme.of(context).colorScheme.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppConstants.radiusSM),
         side: BorderSide(
           color: colors.onSurface.withValues(alpha: 0.08),
         ),
       ),
-      shadowColor: Colors.black.withValues(alpha: 0.08),
+      shadowColor: Theme.of(context).shadowColor.withValues(alpha: 0.08),
       surfaceTintColor: Colors.transparent,
       margin: const EdgeInsets.only(bottom: 4),
       child: Column(
@@ -789,17 +789,17 @@ class _RuleEditorState extends State<_RuleEditor> {
               onPressed: _saving ? null : _save,
               style: ElevatedButton.styleFrom(
                 backgroundColor: colors.primary,
-                foregroundColor: Colors.white,
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
                 minimumSize: const Size(0, 44),
               ),
               child: _saving
-                  ? const SizedBox(
+                  ? SizedBox(
                       width: 18,
                       height: 18,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
                         valueColor:
-                            AlwaysStoppedAnimation<Color>(Colors.white),
+                            AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.onPrimary),
                       ),
                     )
                   : const Text('GUARDAR'),

@@ -209,14 +209,14 @@ class _MetricCard extends StatelessWidget {
 
     return Card(
       elevation: 2,
-      color: Colors.white,
+      color: Theme.of(context).colorScheme.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
         side: BorderSide(
           color: colors.onSurface.withValues(alpha: 0.08),
         ),
       ),
-      shadowColor: Colors.black.withValues(alpha: 0.12),
+      shadowColor: Theme.of(context).shadowColor.withValues(alpha: 0.12),
       surfaceTintColor: Colors.transparent,
       margin: const EdgeInsets.only(bottom: AppConstants.paddingMD),
       child: Padding(

@@ -444,7 +444,7 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.orange[700],
-              foregroundColor: Colors.white,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
             ),
             onPressed: () => Navigator.pop(ctx, true),
             child: Text('Desasignar', style: GoogleFonts.nunito()),
@@ -697,10 +697,10 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
                                 color: colors.error,
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(
+                              child: Icon(
                                 Icons.close,
                                 size: 10,
-                                color: Colors.white,
+                                color: Theme.of(context).colorScheme.onPrimary,
                               ),
                             ),
                           ),
@@ -1333,13 +1333,13 @@ class _FilterChipsRow extends StatelessWidget {
                     _statusLabel(s),
                     style: GoogleFonts.nunito(
                       fontSize: 12,
-                      color: selected ? Colors.white : colors.onSurface,
+                      color: selected ? Theme.of(context).colorScheme.onPrimary : colors.onSurface,
                     ),
                   ),
                   selected: selected,
                   onSelected: (_) => onStatusToggle(s),
                   selectedColor: color,
-                  checkmarkColor: Colors.white,
+                  checkmarkColor: Theme.of(context).colorScheme.onPrimary,
                   backgroundColor:
                       colors.surfaceContainerHighest.withValues(alpha: 0.5),
                   side: BorderSide(
@@ -1352,7 +1352,7 @@ class _FilterChipsRow extends StatelessWidget {
                     width: 8,
                     height: 8,
                     decoration: BoxDecoration(
-                      color: selected ? Colors.white : color,
+                      color: selected ? Theme.of(context).colorScheme.onPrimary : color,
                       shape: BoxShape.circle,
                     ),
                   ),
@@ -1370,13 +1370,13 @@ class _FilterChipsRow extends StatelessWidget {
                   'WhatsApp',
                   style: GoogleFonts.nunito(
                     fontSize: 12,
-                    color: hasWhatsapp == true ? Colors.white : colors.onSurface,
+                    color: hasWhatsapp == true ? Theme.of(context).colorScheme.onPrimary : colors.onSurface,
                   ),
                 ),
                 selected: hasWhatsapp == true,
                 onSelected: (_) => onWhatsappToggle(),
                 selectedColor: Colors.green[600],
-                checkmarkColor: Colors.white,
+                checkmarkColor: Theme.of(context).colorScheme.onPrimary,
                 backgroundColor:
                     colors.surfaceContainerHighest.withValues(alpha: 0.5),
                 side: BorderSide(
@@ -1390,7 +1390,7 @@ class _FilterChipsRow extends StatelessWidget {
                 avatar: Icon(
                   Icons.phone_android_outlined,
                   size: 14,
-                  color: hasWhatsapp == true ? Colors.white : Colors.green,
+                  color: hasWhatsapp == true ? Theme.of(context).colorScheme.onPrimary : Colors.green,
                 ),
               ),
             ),
@@ -1404,13 +1404,13 @@ class _FilterChipsRow extends StatelessWidget {
                   style: GoogleFonts.nunito(
                     fontSize: 12,
                     color:
-                        hasInterest == true ? Colors.white : colors.onSurface,
+                        hasInterest == true ? Theme.of(context).colorScheme.onPrimary : colors.onSurface,
                   ),
                 ),
                 selected: hasInterest == true,
                 onSelected: (_) => onInterestToggle(),
                 selectedColor: Colors.pink[400],
-                checkmarkColor: Colors.white,
+                checkmarkColor: Theme.of(context).colorScheme.onPrimary,
                 backgroundColor:
                     colors.surfaceContainerHighest.withValues(alpha: 0.5),
                 side: BorderSide(
@@ -1437,13 +1437,13 @@ class _FilterChipsRow extends StatelessWidget {
                     _sourceLabel(src),
                     style: GoogleFonts.nunito(
                       fontSize: 12,
-                      color: selected ? Colors.white : colors.onSurface,
+                      color: selected ? Theme.of(context).colorScheme.onPrimary : colors.onSurface,
                     ),
                   ),
                   selected: selected,
                   onSelected: (_) => onSourceSelect(src),
                   selectedColor: color,
-                  checkmarkColor: Colors.white,
+                  checkmarkColor: Theme.of(context).colorScheme.onPrimary,
                   backgroundColor:
                       colors.surfaceContainerHighest.withValues(alpha: 0.5),
                   side: BorderSide(
@@ -1471,13 +1471,13 @@ class _FilterChipsRow extends StatelessWidget {
                     _rpStatusLabel(rps),
                     style: GoogleFonts.nunito(
                       fontSize: 12,
-                      color: selected ? Colors.white : colors.onSurface,
+                      color: selected ? Theme.of(context).colorScheme.onPrimary : colors.onSurface,
                     ),
                   ),
                   selected: selected,
                   onSelected: (_) => onRpStatusSelect(rps),
                   selectedColor: color,
-                  checkmarkColor: Colors.white,
+                  checkmarkColor: Theme.of(context).colorScheme.onPrimary,
                   backgroundColor:
                       colors.surfaceContainerHighest.withValues(alpha: 0.5),
                   side: BorderSide(
@@ -1489,7 +1489,7 @@ class _FilterChipsRow extends StatelessWidget {
                   avatar: Icon(
                     Icons.person_outline,
                     size: 14,
-                    color: selected ? Colors.white : color,
+                    color: selected ? Theme.of(context).colorScheme.onPrimary : color,
                   ),
                 ),
               );
@@ -1520,13 +1520,13 @@ class _FilterChipsRow extends StatelessWidget {
                       rpName,
                       style: GoogleFonts.nunito(
                         fontSize: 12,
-                        color: selected ? Colors.white : colors.onSurface,
+                        color: selected ? Theme.of(context).colorScheme.onPrimary : colors.onSurface,
                       ),
                     ),
                     selected: selected,
                     onSelected: (_) => onAssignedRpSelect(rpId),
                     selectedColor: Colors.indigo,
-                    checkmarkColor: Colors.white,
+                    checkmarkColor: Theme.of(context).colorScheme.onPrimary,
                     backgroundColor:
                         colors.surfaceContainerHighest.withValues(alpha: 0.5),
                     side: BorderSide(
@@ -1586,7 +1586,7 @@ class _PipelineDropdownChip extends StatelessWidget {
     final fgColor = !enabled
         ? colors.onSurface.withValues(alpha: 0.25)
         : isActive
-            ? Colors.white
+            ? Theme.of(context).colorScheme.onPrimary
             : colors.onSurface;
 
     return GestureDetector(
@@ -1699,7 +1699,7 @@ class _BulkActionBar extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
+            color: Theme.of(context).shadowColor.withValues(alpha: 0.08),
             blurRadius: 8,
             offset: const Offset(0, -2),
           ),
@@ -1912,7 +1912,7 @@ class _LeadCard extends StatelessWidget {
       child: Material(
         color: isSelected
             ? colors.primary.withValues(alpha: 0.08)
-            : Colors.white,
+            : Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(AppConstants.radiusSM),
         child: InkWell(
           borderRadius: BorderRadius.circular(AppConstants.radiusSM),
@@ -2420,7 +2420,7 @@ class _PinDropDialogState extends State<_PinDropDialog> {
                       '${r.toInt()} km',
                       style: GoogleFonts.nunito(
                         fontSize: 12,
-                        color: selected ? Colors.white : colors.onSurface,
+                        color: selected ? Theme.of(context).colorScheme.onPrimary : colors.onSurface,
                       ),
                     ),
                     selected: selected,
@@ -2544,7 +2544,7 @@ class _RpPickerDialogState extends State<_RpPickerDialog> {
                           style: GoogleFonts.poppins(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
-                            color: isSelected ? Colors.white : Colors.indigo,
+                            color: isSelected ? Theme.of(context).colorScheme.onPrimary : Colors.indigo,
                           ),
                         ),
                       ),
@@ -2596,7 +2596,7 @@ class _RpPickerDialogState extends State<_RpPickerDialog> {
         ElevatedButton(
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.indigo,
-            foregroundColor: Colors.white,
+            foregroundColor: Theme.of(context).colorScheme.onPrimary,
           ),
           onPressed: _selectedId == null
               ? null

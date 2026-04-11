@@ -16,7 +16,7 @@ class RecentActivityScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F3FF),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
         scrolledUnderElevation: 0.5,
         title: Text(
@@ -92,7 +92,7 @@ class _ActivityTile extends StatelessWidget {
     }
 
     return Material(
-      color: Colors.white,
+      color: Theme.of(context).colorScheme.surface,
       borderRadius: BorderRadius.circular(AppConstants.radiusMD),
       child: InkWell(
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
@@ -167,7 +167,7 @@ class _ActivityTile extends StatelessWidget {
         margin: const EdgeInsets.all(16),
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Column(

@@ -1347,7 +1347,7 @@ class _StatCard extends StatelessWidget {
         vertical: AppConstants.paddingSM + 2,
       ),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(AppConstants.radiusSM),
         border: Border.all(
           color: colors.onSurface.withValues(alpha: 0.08),
@@ -1398,7 +1398,7 @@ class _SectionCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(AppConstants.paddingMD),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(AppConstants.radiusSM),
         border: Border.all(
           color: colors.onSurface.withValues(alpha: 0.08),

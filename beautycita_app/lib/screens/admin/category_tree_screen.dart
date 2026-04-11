@@ -37,7 +37,7 @@ class _CategoryTreeScreenState extends ConsumerState<CategoryTreeScreen> {
           icon: const Icon(Icons.add),
           label: const Text('Agregar Categoria'),
           backgroundColor: colors.primary,
-          foregroundColor: Colors.white,
+          foregroundColor: Theme.of(context).colorScheme.onPrimary,
         ),
       ),
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -88,7 +88,7 @@ class _CategoryTreeScreenState extends ConsumerState<CategoryTreeScreen> {
       children: [
         Card(
           elevation: 0,
-          color: indent == 0 ? Colors.white : Colors.white.withValues(alpha: 0.7),
+          color: indent == 0 ? Theme.of(context).colorScheme.surface : Theme.of(context).colorScheme.surface.withValues(alpha: 0.7),
           margin: EdgeInsets.only(
             left: indent * 16.0,
             bottom: 4,
@@ -340,7 +340,7 @@ class _CategoryTreeScreenState extends ConsumerState<CategoryTreeScreen> {
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: colors.primary,
-              foregroundColor: Colors.white,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
             ),
             child: const Text('CREAR'),
           ),
@@ -398,7 +398,7 @@ class _CategoryTreeScreenState extends ConsumerState<CategoryTreeScreen> {
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
             ),
             child: const Text('ELIMINAR'),
           ),
@@ -528,7 +528,7 @@ class _CategoryTreeScreenState extends ConsumerState<CategoryTreeScreen> {
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: colors.primary,
-                foregroundColor: Colors.white,
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
               ),
               child: const Text('GUARDAR'),
             ),

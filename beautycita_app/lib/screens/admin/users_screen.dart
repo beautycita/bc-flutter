@@ -77,7 +77,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
   Color _chipTextColor(String role) {
     switch (role) {
       case 'superadmin':
-        return Colors.white;
+        return Theme.of(context).colorScheme.onPrimary;
       case 'admin':
         return const Color(0xFFC62828);
       case 'stylist':
@@ -150,7 +150,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
           style: GoogleFonts.nunito(
             fontSize: 12,
             fontWeight: FontWeight.w600,
-            color: selected ? Colors.white : colors.onSurface.withValues(alpha: 0.6),
+            color: selected ? colors.onPrimary : colors.onSurface.withValues(alpha: 0.6),
           ),
         ),
       ),
@@ -182,7 +182,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
                       color: colors.onSurface.withValues(alpha: 0.15),
                       width: 1,
                     ),
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.surface,
                   ),
                   child: TextField(
                     onChanged: (v) => setState(() => _search = v),
@@ -207,7 +207,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
                     color: colors.onSurface.withValues(alpha: 0.15),
                     width: 1,
                   ),
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.surface,
                 ),
                 child: PopupMenuButton<String?>(
                   icon: Icon(Icons.filter_list,
@@ -272,7 +272,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
                     return Padding(
                       padding: const EdgeInsets.only(bottom: AppConstants.paddingSM),
                       child: Material(
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.surface,
                         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
                         child: InkWell(
                           borderRadius: BorderRadius.circular(AppConstants.radiusMD),
@@ -286,7 +286,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.04),
+                                  color: Theme.of(context).shadowColor.withValues(alpha: 0.04),
                                   blurRadius: 8,
                                   offset: const Offset(0, 2),
                                 ),
@@ -324,7 +324,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
                                               ? Colors.green
                                               : Colors.grey.shade400,
                                           border: Border.all(
-                                            color: Colors.white,
+                                            color: Theme.of(context).colorScheme.surface,
                                             width: 2,
                                           ),
                                         ),
@@ -431,7 +431,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
               maxHeight: MediaQuery.of(ctx).size.height * 0.85,
             ),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(20),
             ),
             child: SingleChildScrollView(
@@ -485,7 +485,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
                                     ? Colors.green
                                     : Colors.grey.shade400,
                                 border:
-                                    Border.all(color: Colors.white, width: 2),
+                                    Border.all(color: Theme.of(context).colorScheme.surface, width: 2),
                               ),
                             ),
                           ),
@@ -547,7 +547,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
                         ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF7B1038),
-                          foregroundColor: Colors.white,
+                          foregroundColor: Theme.of(context).colorScheme.onPrimary,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -910,7 +910,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
                               : null,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: colors.primary,
-                            foregroundColor: Colors.white,
+                            foregroundColor: Theme.of(context).colorScheme.onPrimary,
                             disabledBackgroundColor: Colors.grey[200],
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -1009,7 +1009,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
           TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancelar')),
           ElevatedButton(
             onPressed: () => Navigator.pop(c, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Theme.of(context).colorScheme.onPrimary),
             child: const Text('Si, eliminar'),
           ),
         ],
@@ -1048,7 +1048,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
                 ToastService.showWarning('El nombre de usuario no coincide');
               }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Theme.of(context).colorScheme.onPrimary),
             child: const Text('ELIMINAR'),
           ),
         ],
@@ -1155,7 +1155,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: colors.primary,
-              foregroundColor: Colors.white,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
             child: Text('Guardar', style: GoogleFonts.nunito(fontWeight: FontWeight.w700)),
@@ -1491,7 +1491,7 @@ class _LiveSupportSheetState extends ConsumerState<_LiveSupportSheet> {
       backgroundColor: const Color(0xFFF0ECE5),
       appBar: AppBar(
         backgroundColor: const Color(0xFF7B1038),
-        foregroundColor: Colors.white,
+        foregroundColor: Theme.of(context).colorScheme.onPrimary,
         title: Row(
           children: [
             Container(
@@ -1499,7 +1499,7 @@ class _LiveSupportSheetState extends ConsumerState<_LiveSupportSheet> {
               height: 36,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.15),
+                color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.15),
               ),
               child: Center(
                 child: Text(
@@ -1507,7 +1507,7 @@ class _LiveSupportSheetState extends ConsumerState<_LiveSupportSheet> {
                   style: GoogleFonts.poppins(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.surface,
                   ),
                 ),
               ),
@@ -1522,7 +1522,7 @@ class _LiveSupportSheetState extends ConsumerState<_LiveSupportSheet> {
                     style: GoogleFonts.poppins(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.surface,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -1541,7 +1541,7 @@ class _LiveSupportSheetState extends ConsumerState<_LiveSupportSheet> {
                         'Soporte en Vivo',
                         style: GoogleFonts.nunito(
                           fontSize: 12,
-                          color: Colors.white70,
+                          color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7),
                         ),
                       ),
                     ],
@@ -1618,7 +1618,7 @@ class _LiveSupportSheetState extends ConsumerState<_LiveSupportSheet> {
                         top: 8,
                         bottom: MediaQuery.of(context).padding.bottom + 8,
                       ),
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.surface,
                       child: Row(
                         children: [
                           Expanded(
@@ -1671,9 +1671,9 @@ class _LiveSupportSheetState extends ConsumerState<_LiveSupportSheet> {
                                         color: colors.primary,
                                       ),
                                     )
-                                  : const Icon(
+                                  : Icon(
                                       Icons.send_rounded,
-                                      color: Colors.white,
+                                      color: Theme.of(context).colorScheme.onPrimary,
                                       size: 20,
                                     ),
                             ),
@@ -1704,7 +1704,7 @@ class _SupportBubble extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.06),
+              color: Theme.of(context).shadowColor.withValues(alpha: 0.06),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
@@ -1719,7 +1719,7 @@ class _SupportBubble extends StatelessWidget {
 
     final alignment =
         isSupport ? CrossAxisAlignment.end : CrossAxisAlignment.start;
-    final bubbleColor = isSupport ? const Color(0xFFDCF8C6) : Colors.white;
+    final bubbleColor = isSupport ? const Color(0xFFDCF8C6) : Theme.of(context).colorScheme.surface;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
@@ -1741,7 +1741,7 @@ class _SupportBubble extends StatelessWidget {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
+                  color: Theme.of(context).shadowColor.withValues(alpha: 0.05),
                   blurRadius: 2,
                   offset: const Offset(0, 1),
                 ),

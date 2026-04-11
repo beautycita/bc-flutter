@@ -115,11 +115,11 @@ class _BookingsScreenState extends ConsumerState<BookingsScreen> {
               // Search bar
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.surface,
                   borderRadius: BorderRadius.circular(AppConstants.radiusMD),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.04),
+                      color: Theme.of(context).shadowColor.withValues(alpha: 0.04),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -288,7 +288,7 @@ class _BookingsScreenState extends ConsumerState<BookingsScreen> {
     showBurstBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius:
             BorderRadius.vertical(top: Radius.circular(AppConstants.radiusMD)),
@@ -384,7 +384,7 @@ class _FilterChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: selected ? colors.primary : Colors.white,
+          color: selected ? colors.primary : colors.surface,
           borderRadius: BorderRadius.circular(AppConstants.radiusFull),
           border: Border.all(
             color: selected ? colors.primary : const Color(0xFFE0E0E0),
@@ -399,7 +399,7 @@ class _FilterChip extends StatelessWidget {
           style: GoogleFonts.nunito(
             fontSize: 12,
             fontWeight: FontWeight.w600,
-            color: selected ? Colors.white : const Color(0xFF616161),
+            color: selected ? Theme.of(context).colorScheme.onPrimary : const Color(0xFF616161),
           ),
         ),
       ),
@@ -431,7 +431,7 @@ class _StatusChip extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
 
     return Material(
-      color: Colors.white,
+      color: Theme.of(context).colorScheme.surface,
       borderRadius: BorderRadius.circular(AppConstants.radiusMD),
       child: InkWell(
         onTap: onTap,
@@ -442,7 +442,7 @@ class _StatusChip extends StatelessWidget {
             border: Border.all(color: color.withValues(alpha: 0.3), width: 1),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
+                color: Theme.of(context).shadowColor.withValues(alpha: 0.04),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -515,7 +515,7 @@ class _BookingTile extends StatelessWidget {
       onTap: () => _showBookingDetail(context, booking),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(AppConstants.radiusMD),
           border: Border.all(
             color: colors.onSurface.withValues(alpha: 0.08),
@@ -523,7 +523,7 @@ class _BookingTile extends StatelessWidget {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
+              color: Theme.of(context).shadowColor.withValues(alpha: 0.04),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -657,7 +657,7 @@ class _BookingTile extends StatelessWidget {
 
     showBurstBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),

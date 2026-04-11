@@ -360,13 +360,13 @@ class _SalonesTabState extends ConsumerState<_SalonesTab> {
         label,
         style: GoogleFonts.nunito(
           fontSize: 12,
-          color: isActive ? Colors.white : colors.onSurface,
+          color: isActive ? Theme.of(context).colorScheme.onPrimary : colors.onSurface,
         ),
       ),
       selected: isActive,
       onSelected: (_) => onTap(),
       selectedColor: color,
-      checkmarkColor: Colors.white,
+      checkmarkColor: Theme.of(context).colorScheme.onPrimary,
       backgroundColor: colors.surfaceContainerHighest.withValues(alpha: 0.5),
       side: BorderSide(
         color: isActive ? color : colors.onSurface.withValues(alpha: 0.15),
@@ -534,7 +534,7 @@ class _SalonResultCard extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: AppConstants.paddingXS),
       child: Material(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(AppConstants.radiusSM),
         child: InkWell(
           borderRadius: BorderRadius.circular(AppConstants.radiusSM),
@@ -1151,7 +1151,7 @@ class _IntelligenceTabState extends State<_IntelligenceTab> {
                 const SizedBox(width: 6),
                 // Has Phone
                 FilterChip(
-                  label: Text('Con telefono', style: GoogleFonts.nunito(fontSize: 12, color: _hasPhoneFilter ? Colors.white : colors.onSurface)),
+                  label: Text('Con telefono', style: GoogleFonts.nunito(fontSize: 12, color: _hasPhoneFilter ? Theme.of(context).colorScheme.onPrimary : colors.onSurface)),
                   selected: _hasPhoneFilter,
                   onSelected: (_) {
                     setState(() => _hasPhoneFilter = !_hasPhoneFilter);
@@ -1163,12 +1163,12 @@ class _IntelligenceTabState extends State<_IntelligenceTab> {
                   padding: const EdgeInsets.symmetric(horizontal: 4),
                   visualDensity: VisualDensity.compact,
                   showCheckmark: false,
-                  avatar: Icon(Icons.phone, size: 14, color: _hasPhoneFilter ? Colors.white : Colors.blue),
+                  avatar: Icon(Icons.phone, size: 14, color: _hasPhoneFilter ? Theme.of(context).colorScheme.onPrimary : Colors.blue),
                 ),
                 const SizedBox(width: 6),
                 // Has Email
                 FilterChip(
-                  label: Text('Con email', style: GoogleFonts.nunito(fontSize: 12, color: _hasEmailFilter ? Colors.white : colors.onSurface)),
+                  label: Text('Con email', style: GoogleFonts.nunito(fontSize: 12, color: _hasEmailFilter ? Theme.of(context).colorScheme.onPrimary : colors.onSurface)),
                   selected: _hasEmailFilter,
                   onSelected: (_) {
                     setState(() => _hasEmailFilter = !_hasEmailFilter);
@@ -1180,7 +1180,7 @@ class _IntelligenceTabState extends State<_IntelligenceTab> {
                   padding: const EdgeInsets.symmetric(horizontal: 4),
                   visualDensity: VisualDensity.compact,
                   showCheckmark: false,
-                  avatar: Icon(Icons.email, size: 14, color: _hasEmailFilter ? Colors.white : Colors.purple),
+                  avatar: Icon(Icons.email, size: 14, color: _hasEmailFilter ? Theme.of(context).colorScheme.onPrimary : Colors.purple),
                 ),
                 const SizedBox(width: 6),
                 // Rating chips
@@ -1271,7 +1271,7 @@ class _IntelligenceTabState extends State<_IntelligenceTab> {
       return Padding(
         padding: const EdgeInsets.only(right: 4),
         child: FilterChip(
-          label: Text(labels[s] ?? s, style: GoogleFonts.nunito(fontSize: 12, color: selected ? Colors.white : colors.onSurface)),
+          label: Text(labels[s] ?? s, style: GoogleFonts.nunito(fontSize: 12, color: selected ? Theme.of(context).colorScheme.onPrimary : colors.onSurface)),
           selected: selected,
           onSelected: (_) {
             setState(() => _sourceFilter = selected ? null : s);
@@ -1296,7 +1296,7 @@ class _IntelligenceTabState extends State<_IntelligenceTab> {
       return Padding(
         padding: const EdgeInsets.only(right: 4),
         child: FilterChip(
-          label: Text(labels[r] ?? '$r', style: GoogleFonts.nunito(fontSize: 12, color: selected ? Colors.white : colors.onSurface)),
+          label: Text(labels[r] ?? '$r', style: GoogleFonts.nunito(fontSize: 12, color: selected ? Theme.of(context).colorScheme.onPrimary : colors.onSurface)),
           selected: selected,
           onSelected: (_) {
             setState(() => _minRating = selected ? null : r);
@@ -1308,7 +1308,7 @@ class _IntelligenceTabState extends State<_IntelligenceTab> {
           padding: const EdgeInsets.symmetric(horizontal: 4),
           visualDensity: VisualDensity.compact,
           showCheckmark: false,
-          avatar: Icon(Icons.star, size: 14, color: selected ? Colors.white : Colors.amber[700]),
+          avatar: Icon(Icons.star, size: 14, color: selected ? Theme.of(context).colorScheme.onPrimary : Colors.amber[700]),
         ),
       );
     }).toList();
@@ -1322,7 +1322,7 @@ class _IntelligenceTabState extends State<_IntelligenceTab> {
       return Padding(
         padding: const EdgeInsets.only(right: 4),
         child: FilterChip(
-          label: Text(labels[r] ?? r, style: GoogleFonts.nunito(fontSize: 12, color: selected ? Colors.white : colors.onSurface)),
+          label: Text(labels[r] ?? r, style: GoogleFonts.nunito(fontSize: 12, color: selected ? Theme.of(context).colorScheme.onPrimary : colors.onSurface)),
           selected: selected,
           onSelected: (_) {
             setState(() => _employeeRange = selected ? null : r);
@@ -1349,7 +1349,7 @@ class _IntelligenceTabState extends State<_IntelligenceTab> {
       return Padding(
         padding: const EdgeInsets.only(right: 4),
         child: FilterChip(
-          label: Text(labels[s] ?? s, style: GoogleFonts.nunito(fontSize: 12, color: selected ? Colors.white : colors.onSurface)),
+          label: Text(labels[s] ?? s, style: GoogleFonts.nunito(fontSize: 12, color: selected ? Theme.of(context).colorScheme.onPrimary : colors.onSurface)),
           selected: selected,
           onSelected: (_) {
             setState(() => _statusFilter = selected ? null : s);
@@ -1363,7 +1363,7 @@ class _IntelligenceTabState extends State<_IntelligenceTab> {
           showCheckmark: false,
           avatar: Container(
             width: 8, height: 8,
-            decoration: BoxDecoration(color: selected ? Colors.white : c, shape: BoxShape.circle),
+            decoration: BoxDecoration(color: selected ? Theme.of(context).colorScheme.onPrimary : c, shape: BoxShape.circle),
           ),
         ),
       );
@@ -1625,7 +1625,7 @@ class _IntelligenceCard extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Material(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(AppConstants.radiusSM),
         child: InkWell(
           borderRadius: BorderRadius.circular(AppConstants.radiusSM),
@@ -1994,7 +1994,7 @@ class _DropdownChip extends StatelessWidget {
     final fgColor = !enabled
         ? colors.onSurface.withValues(alpha: 0.25)
         : isActive
-            ? Colors.white
+            ? Theme.of(context).colorScheme.onPrimary
             : colors.onSurface;
 
     return GestureDetector(

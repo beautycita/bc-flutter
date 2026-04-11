@@ -173,7 +173,7 @@ class _EventGroup extends StatelessWidget {
 
     return Card(
       elevation: 0,
-      color: Colors.white,
+      color: Theme.of(context).colorScheme.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
         side: BorderSide(
@@ -282,18 +282,18 @@ class _EventGroup extends StatelessWidget {
                           onPressed: saving ? null : () => onSave(t),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: colors.primary,
-                            foregroundColor: Colors.white,
+                            foregroundColor: Theme.of(context).colorScheme.onPrimary,
                             minimumSize: const Size(80, 36),
                           ),
                           child: saving
-                              ? const SizedBox(
+                              ? SizedBox(
                                   width: 16,
                                   height: 16,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
                                     valueColor:
                                         AlwaysStoppedAnimation<Color>(
-                                            Colors.white),
+                                            colors.onPrimary),
                                   ),
                                 )
                               : const Text('GUARDAR'),

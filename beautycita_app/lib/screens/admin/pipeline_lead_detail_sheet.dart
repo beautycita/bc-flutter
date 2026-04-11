@@ -455,7 +455,7 @@ class _LeadDetailSheetState extends State<_LeadDetailSheet> {
                       vertical: 5,
                     ),
                     decoration: BoxDecoration(
-                      color: isSelected ? color : Colors.white,
+                      color: isSelected ? color : Theme.of(context).colorScheme.surface,
                       border: Border.all(
                         color: color,
                         width: isSelected ? 0 : 1.5,
@@ -467,7 +467,7 @@ class _LeadDetailSheetState extends State<_LeadDetailSheet> {
                       style: GoogleFonts.nunito(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
-                        color: isSelected ? Colors.white : color,
+                        color: isSelected ? Theme.of(context).colorScheme.onPrimary : color,
                       ),
                     ),
                   ),
@@ -1275,18 +1275,18 @@ class _LeadDetailSheetState extends State<_LeadDetailSheet> {
                       },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blue.shade700,
-                  foregroundColor: Colors.white,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
                 child: saving
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 16,
                         height: 16,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onPrimary,
                         ),
                       )
                     : Text(
@@ -1320,7 +1320,7 @@ class _LeadDetailSheetState extends State<_LeadDetailSheet> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -1379,7 +1379,7 @@ class _LeadDetailSheetState extends State<_LeadDetailSheet> {
                           onPressed: () => Navigator.pop(ctx, true),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.deepOrange,
-                            foregroundColor: Colors.white,
+                            foregroundColor: Theme.of(context).colorScheme.onPrimary,
                           ),
                           child: const Text('Desasignar'),
                         ),
@@ -1430,7 +1430,7 @@ class _LeadDetailSheetState extends State<_LeadDetailSheet> {
                     style: GoogleFonts.nunito(fontSize: 13)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blue,
-                  foregroundColor: Colors.white,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
                 ),
               ),
             ),
@@ -1558,7 +1558,7 @@ class _LeadDetailSheetState extends State<_LeadDetailSheet> {
       ),
       style: ElevatedButton.styleFrom(
         backgroundColor: disabled ? Colors.grey.shade200 : color,
-        foregroundColor: disabled ? Colors.grey.shade500 : Colors.white,
+        foregroundColor: disabled ? Colors.grey.shade500 : Theme.of(context).colorScheme.onPrimary,
         elevation: 0,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         shape: RoundedRectangleBorder(
@@ -1579,7 +1579,7 @@ class _LeadDetailSheetState extends State<_LeadDetailSheet> {
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey.shade200),
       ),

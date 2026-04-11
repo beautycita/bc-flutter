@@ -101,7 +101,7 @@ class _ApplicationCard extends ConsumerWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: AppConstants.paddingSM),
       child: Material(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
         child: InkWell(
           borderRadius: BorderRadius.circular(AppConstants.radiusMD),
@@ -115,7 +115,7 @@ class _ApplicationCard extends ConsumerWidget {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
+                  color: Theme.of(context).shadowColor.withValues(alpha: 0.04),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -430,7 +430,7 @@ class _ApplicationCard extends ConsumerWidget {
                               GoogleFonts.nunito(fontWeight: FontWeight.w700)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.green,
-                        foregroundColor: Colors.white,
+                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -451,7 +451,7 @@ class _ApplicationCard extends ConsumerWidget {
                               GoogleFonts.nunito(fontWeight: FontWeight.w700)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.red,
-                        foregroundColor: Colors.white,
+                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -597,7 +597,7 @@ class _ApplicationCard extends ConsumerWidget {
             ),
             child: Text('Rechazar',
                 style: GoogleFonts.nunito(
-                    fontWeight: FontWeight.w700, color: Colors.white)),
+                    fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.onPrimary)),
           ),
         ],
       ),
