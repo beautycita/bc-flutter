@@ -371,7 +371,7 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
       'p_transport_mode': state.transportMode,
       'p_staff_id': result.staff?.id,
       'p_idempotency_key': '${userId}_${serviceId}_${result.slot!.startTime.millisecondsSinceEpoch}',
-    });
+    }).timeout(const Duration(seconds: 15));
 
     final bookingData = rpcResult as Map<String, dynamic>;
     final bookingId = bookingData['booking_id'] as String;
@@ -404,7 +404,7 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
             'payment_type': 'full',
             'payment_method': oxxoOnly ? 'oxxo' : 'card',
           },
-        );
+        ).timeout(const Duration(seconds: 15));
 
         if (piResponse.status != 200) {
           final error = piResponse.data is Map
