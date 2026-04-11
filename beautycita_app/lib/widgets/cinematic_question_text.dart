@@ -185,7 +185,7 @@ class _CinematicContent extends StatelessWidget {
                   ),
                 ),
 
-              // Character-by-character text with 3D fly-in + gold shader per word
+              // Character-by-character text with 3D fly-in + accent shader per word
               _buildCharacterRow(context, characters, totalChars, staggerFraction),
             ],
           ),
@@ -194,7 +194,7 @@ class _CinematicContent extends StatelessWidget {
     );
   }
 
-  // Gold gradient resolved from theme extension, with fallback to palette constants
+  // Accent gradient resolved from theme extension, with fallback to palette constants
   LinearGradient _getGradient(BuildContext context) {
     final ext = Theme.of(context).extension<BCThemeExtension>();
     if (ext?.cinematicGradient != null) {
@@ -204,8 +204,8 @@ class _CinematicContent extends StatelessWidget {
         colors: ext!.cinematicGradient!,
       );
     }
-    final stops = ext?.goldGradientStops ?? kGoldStops;
-    final positions = ext?.goldGradientPositions ?? kGoldPositions;
+    final stops = ext?.accentGradientStops ?? kAccentGradientStops;
+    final positions = ext?.accentGradientPositions ?? kAccentGradientPositions;
     return LinearGradient(
       begin: Alignment.topCenter,
       end: Alignment.bottomCenter,
@@ -273,7 +273,7 @@ class _CinematicContent extends StatelessWidget {
         // Account for the space character between words
         charIndex++;
 
-        // Each word gets its own gold shader so wrapped lines look correct
+        // Each word gets its own accent shader so wrapped lines look correct
         return Padding(
           padding: const EdgeInsets.only(right: 6),
           child: ShaderMask(

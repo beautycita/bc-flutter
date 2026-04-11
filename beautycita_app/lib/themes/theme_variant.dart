@@ -3,8 +3,8 @@ import '../providers/theme_provider.dart';
 
 /// Maps each palette to a unique visual variant with different screen layouts.
 enum ThemeVariant {
-  roseGold,
-  blackGold,
+  rosePink,
+  darkAccent,
   glass,
   midnightOrchid,
   oceanNoir,
@@ -15,14 +15,16 @@ enum ThemeVariant {
 /// Maps a palette ID string to its ThemeVariant enum value.
 ThemeVariant variantFromPaletteId(String id) {
   return switch (id) {
-    'rose_gold' => ThemeVariant.roseGold,
-    'black_gold' => ThemeVariant.blackGold,
+    'rose_gold' => ThemeVariant.rosePink,
+    'rose_pink' => ThemeVariant.rosePink,
+    'black_gold' => ThemeVariant.darkAccent,
+    'dark_accent' => ThemeVariant.darkAccent,
     'glass' => ThemeVariant.glass,
     'midnight_orchid' => ThemeVariant.midnightOrchid,
     'ocean_noir' => ThemeVariant.oceanNoir,
     'cherry_blossom' => ThemeVariant.cherryBlossom,
     'emerald_luxe' => ThemeVariant.emeraldLuxe,
-    _ => ThemeVariant.roseGold,
+    _ => ThemeVariant.rosePink,
   };
 }
 

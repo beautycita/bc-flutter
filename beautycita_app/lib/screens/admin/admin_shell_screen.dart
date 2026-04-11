@@ -225,7 +225,7 @@ class _AdminContent extends ConsumerWidget {
   }
 }
 
-// -- Admin Drawer: gold shimmer header, section headers, rose-styled tiles --
+// -- Admin Drawer: brand shimmer header, section headers, rose-styled tiles --
 
 class _AdminDrawer extends StatelessWidget {
   final List<_AdminTab> tabs;
@@ -422,15 +422,15 @@ class _AdminTab {
 
 // -- Spectrum shimmer text --
 
-class _GoldShimmerText extends StatefulWidget {
+class _BrandShimmerText extends StatefulWidget {
   final String text;
-  const _GoldShimmerText({required this.text});
+  const _BrandShimmerText({required this.text});
 
   @override
-  State<_GoldShimmerText> createState() => _GoldShimmerTextState();
+  State<_BrandShimmerText> createState() => _BrandShimmerTextState();
 }
 
-class _GoldShimmerTextState extends State<_GoldShimmerText>
+class _BrandShimmerTextState extends State<_BrandShimmerText>
     with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late AnimationController _controller;
 

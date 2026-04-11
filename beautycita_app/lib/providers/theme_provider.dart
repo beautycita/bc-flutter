@@ -36,7 +36,7 @@ class ThemeState {
     this.fontScale = 1.0,
     this.radiusScale = 1.0,
     this.animationSpeed = 1.0,
-    this.themeMode = ThemeMode.system,
+    this.themeMode = ThemeMode.light,
   });
 }
 
@@ -44,7 +44,7 @@ class ThemeNotifier extends StateNotifier<ThemeState> {
   double _fontScale = 1.0;
   double _radiusScale = 1.0;
   double _animationSpeed = 1.0;
-  ThemeMode _themeMode = ThemeMode.system;
+  ThemeMode _themeMode = ThemeMode.light;
   double? _customHue;
   double? _customSat;
   List<Color>? _customGradientColors;
@@ -98,7 +98,7 @@ class ThemeNotifier extends StateNotifier<ThemeState> {
     _fontScale = prefs.getDouble(_prefFontScale) ?? 1.0;
     _radiusScale = prefs.getDouble(_prefRadiusScale) ?? 1.0;
     _animationSpeed = prefs.getDouble(_prefAnimSpeed) ?? 1.0;
-    final modeIndex = prefs.getInt(_prefThemeMode) ?? 0;
+    final modeIndex = prefs.getInt(_prefThemeMode) ?? ThemeMode.light.index;
     _themeMode = ThemeMode.values[modeIndex.clamp(0, ThemeMode.values.length - 1)];
     final savedHue = prefs.getDouble(_prefCustomHue);
     final savedSat = prefs.getDouble(_prefCustomSat);
@@ -342,8 +342,8 @@ class ThemeNotifier extends StateNotifier<ThemeState> {
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
       ),
-      goldGradientStops: base.goldGradientStops,
-      goldGradientPositions: base.goldGradientPositions,
+      accentGradientStops: base.accentGradientStops,
+      accentGradientPositions: base.accentGradientPositions,
       categoryColors: shiftedCategories,
       headingFont: base.headingFont,
       bodyFont: base.bodyFont,
@@ -366,7 +366,7 @@ class ThemeNotifier extends StateNotifier<ThemeState> {
     _fontScale = 1.0;
     _radiusScale = 1.0;
     _animationSpeed = 1.0;
-    _themeMode = ThemeMode.system;
+    _themeMode = ThemeMode.light;
     _customHue = null;
     _customSat = null;
     _applyPalette(beautycitaPalette);
@@ -375,7 +375,7 @@ class ThemeNotifier extends StateNotifier<ThemeState> {
     await prefs.setDouble(_prefFontScale, 1.0);
     await prefs.setDouble(_prefRadiusScale, 1.0);
     await prefs.setDouble(_prefAnimSpeed, 1.0);
-    await prefs.setInt(_prefThemeMode, 0);
+    await prefs.setInt(_prefThemeMode, ThemeMode.light.index);
     await prefs.remove(_prefCustomHue);
     await prefs.remove(_prefCustomSat);
   }

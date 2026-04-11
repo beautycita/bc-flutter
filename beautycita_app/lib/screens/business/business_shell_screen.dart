@@ -367,7 +367,7 @@ class _BusinessContent extends ConsumerWidget {
 
 
 
-// -- Business Drawer with gold shimmer header, rose divider, rounded tiles --
+// -- Business Drawer with brand shimmer header, rose divider, rounded tiles --
 
 class _BusinessDrawer extends StatelessWidget {
   final List<_BizTab> tabs;

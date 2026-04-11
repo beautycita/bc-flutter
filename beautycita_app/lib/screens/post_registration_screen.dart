@@ -37,7 +37,7 @@ class PostRegistrationScreen extends ConsumerWidget {
                   boxShadow: [
                     BoxShadow(
                       color:
-                          const Color(0xFFB8860B).withValues(alpha: 0.3),
+                          const Color(0xFF9333EA).withValues(alpha: 0.3),
                       blurRadius: 20,
                       offset: const Offset(0, 6),
                     ),
@@ -222,7 +222,7 @@ class _StepCard extends StatelessWidget {
                   boxShadow: [
                     BoxShadow(
                       color:
-                          const Color(0xFFB8860B).withValues(alpha: 0.25),
+                          const Color(0xFF9333EA).withValues(alpha: 0.25),
                       blurRadius: 8,
                       offset: const Offset(0, 3),
                     ),

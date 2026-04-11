@@ -18,11 +18,11 @@ Widget getCategoryIcon({
   final icon = _categoryIcon(categoryId);
 
   switch (variant) {
-    case ThemeVariant.roseGold:
+    case ThemeVariant.rosePink:
       return Icon(icon, color: color, size: size);
 
-    case ThemeVariant.blackGold:
-      return _GoldShaderIcon(icon: icon, size: size);
+    case ThemeVariant.darkAccent:
+      return _BrandShaderIcon(icon: icon, size: size);
 
     case ThemeVariant.glass:
       return _NeonGlowIcon(icon: icon, color: color, size: size);
@@ -69,24 +69,24 @@ IconData _categoryIcon(String categoryId) {
 }
 
 // ---------------------------------------------------------------------------
-// Black Gold — ShaderMask with metallic gold gradient
+// Brand Accent — ShaderMask with pink-purple gradient
 // ---------------------------------------------------------------------------
 
-class _GoldShaderIcon extends StatelessWidget {
-  const _GoldShaderIcon({required this.icon, required this.size});
+class _BrandShaderIcon extends StatelessWidget {
+  const _BrandShaderIcon({required this.icon, required this.size});
   final IconData icon;
   final double size;
 
-  static const _goldGradient = LinearGradient(
+  static const _brandGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF8B6914), Color(0xFFD4AF37), Color(0xFFFFD700)],
+    colors: [Color(0xFFEC4899), Color(0xFF9333EA), Color(0xFF7C3AED)],
   );
 
   @override
   Widget build(BuildContext context) {
     return ShaderMask(
-      shaderCallback: (bounds) => _goldGradient.createShader(bounds),
+      shaderCallback: (bounds) => _brandGradient.createShader(bounds),
       blendMode: BlendMode.srcIn,
       child: Icon(icon, color: Colors.white, size: size),
     );
@@ -266,7 +266,7 @@ class _HexBorderPainter extends CustomPainter {
     path.close();
     final gradient = LinearGradient(
       begin: Alignment.topLeft, end: Alignment.bottomRight,
-      colors: [const Color(0xFF00C853), accentColor, const Color(0xFFFFD700)],
+      colors: [const Color(0xFF00C853), accentColor, const Color(0xFF9333EA)],
     );
     final paint = Paint()
       ..shader = gradient.createShader(Rect.fromCenter(center: Offset(cx, cy), width: size, height: size))

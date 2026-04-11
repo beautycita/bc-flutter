@@ -1494,8 +1494,8 @@ class _ConfirmationCardState extends State<_ConfirmationCard>
     final address = salon['location_address'] ?? salon['address'] ?? '';
     final phone = salon['whatsapp'] ?? salon['phone'] ?? '';
     final photoUrl = salon['feature_image_url'] ?? salon['photo_url'];
-    const goldStart = Color(0xFFFFB300);
-    const goldEnd = Color(0xFFFF8F00);
+    const brandStart = Color(0xFFEC4899);
+    const brandEnd = Color(0xFF9333EA);
 
     return FadeTransition(
       opacity: _fadeAnim,
@@ -1651,20 +1651,20 @@ class _ConfirmationCardState extends State<_ConfirmationCard>
                       const SizedBox(height: 14),
 
                       // CTA buttons
-                      // Gold "Si" button
+                      // Brand "Si" button
                       SizedBox(
                         width: double.infinity,
                         child: Container(
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(14),
                             gradient: const LinearGradient(
-                              colors: [goldStart, goldEnd],
+                              colors: [brandStart, brandEnd],
                               begin: Alignment.centerLeft,
                               end: Alignment.centerRight,
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: goldStart.withValues(alpha: 0.4),
+                                color: brandStart.withValues(alpha: 0.4),
                                 blurRadius: 12,
                                 offset: const Offset(0, 4),
                               ),

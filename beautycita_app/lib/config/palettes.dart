@@ -35,8 +35,8 @@ class BCPalette {
   // Gradients
   final LinearGradient primaryGradient;
   final LinearGradient accentGradient;
-  final List<Color> goldGradientStops;
-  final List<double> goldGradientPositions;
+  final List<Color> accentGradientStops;
+  final List<double> accentGradientPositions;
 
   // Category colors (8 entries matching allCategories order)
   final List<Color> categoryColors;
@@ -91,8 +91,8 @@ class BCPalette {
     required this.info,
     required this.primaryGradient,
     required this.accentGradient,
-    required this.goldGradientStops,
-    required this.goldGradientPositions,
+    required this.accentGradientStops,
+    required this.accentGradientPositions,
     required this.categoryColors,
     this.headingFont = 'Poppins',
     this.bodyFont = 'Nunito',
@@ -113,26 +113,32 @@ class BCPalette {
 
 // ─── Shared constants ──────────────────────────────────────────────────────
 
-/// The canonical 13-stop metallic gold gradient.
-const kGoldStops = [
-  Color(0xFF8B6914),
-  Color(0xFFD4AF37),
-  Color(0xFFFFF8DC),
-  Color(0xFFFFD700),
-  Color(0xFFC19A26),
-  Color(0xFFF5D547),
-  Color(0xFFFFFFE0),
-  Color(0xFFD4AF37),
-  Color(0xFFA67C00),
-  Color(0xFFCDAD38),
-  Color(0xFFFFF8DC),
-  Color(0xFFB8860B),
-  Color(0xFF8B6914),
+/// The canonical 13-stop brand accent gradient (pink → purple).
+const kAccentGradientStops = [
+  Color(0xFFBE185D),
+  Color(0xFFEC4899),
+  Color(0xFFF9A8D4),
+  Color(0xFFD946EF),
+  Color(0xFFC026D3),
+  Color(0xFFA855F7),
+  Color(0xFFE9D5FF),
+  Color(0xFF9333EA),
+  Color(0xFF7C3AED),
+  Color(0xFF8B5CF6),
+  Color(0xFFF0ABFC),
+  Color(0xFF7E22CE),
+  Color(0xFF6B21A8),
 ];
 
-const kGoldPositions = [
+const kAccentGradientPositions = [
   0.0, 0.08, 0.15, 0.25, 0.35, 0.45, 0.50, 0.58, 0.68, 0.78, 0.85, 0.93, 1.0
 ];
+
+/// @deprecated Use [kAccentGradientStops] instead.
+const kGoldStops = kAccentGradientStops;
+
+/// @deprecated Use [kAccentGradientPositions] instead.
+const kGoldPositions = kAccentGradientPositions;
 
 /// WhatsApp brand colors — NOT themed, used as app-level constants.
 const kWhatsAppGreen = Color(0xFF25D366);
@@ -175,8 +181,8 @@ const beautycitaPalette = BCPalette(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   ),
-  goldGradientStops: kGoldStops,
-  goldGradientPositions: kGoldPositions,
+  accentGradientStops: kAccentGradientStops,
+  accentGradientPositions: kAccentGradientPositions,
   categoryColors: [
     Color(0xFFD4A0D4), // nails — lilac tint
     Color(0xFF8D6E63), // hair
@@ -233,8 +239,8 @@ const beautycitaDarkPalette = BCPalette(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   ),
-  goldGradientStops: kGoldStops,
-  goldGradientPositions: kGoldPositions,
+  accentGradientStops: kAccentGradientStops,
+  accentGradientPositions: kAccentGradientPositions,
   categoryColors: [
     Color(0xFFD4A0D4),
     Color(0xFF8D6E63),

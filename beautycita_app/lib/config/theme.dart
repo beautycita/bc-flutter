@@ -85,8 +85,8 @@ ThemeData buildThemeFromPalette(BCPalette palette, {double fontScale = 1.0, doub
   final ext = BCThemeExtension(
     primaryGradient: palette.primaryGradient,
     accentGradient: palette.accentGradient,
-    goldGradientStops: palette.goldGradientStops,
-    goldGradientPositions: palette.goldGradientPositions,
+    accentGradientStops: palette.accentGradientStops,
+    accentGradientPositions: palette.accentGradientPositions,
     categoryColors: palette.categoryColors,
     blurSigma: palette.blurSigma,
     glassTint: palette.glassTint,

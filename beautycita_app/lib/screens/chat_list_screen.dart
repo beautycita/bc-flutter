@@ -224,7 +224,7 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
   }
 }
 
-/// Aphrodite row with gold accent and special styling.
+/// Aphrodite row with brand accent and special styling.
 class _AphroditeRow extends StatelessWidget {
   final ChatThread thread;
   final VoidCallback onTap;
@@ -239,7 +239,7 @@ class _AphroditeRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
           children: [
-            // Gold gradient avatar
+            // Brand gradient avatar
             Container(
               width: 56,
               height: 56,

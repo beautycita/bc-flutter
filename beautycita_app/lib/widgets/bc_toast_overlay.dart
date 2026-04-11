@@ -185,14 +185,14 @@ class _BCToastOverlayState extends State<BCToastOverlay>
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Gold shimmer line at top
+                  // Accent shimmer line at top
                   if (ext != null)
                     Container(
                       height: 1.5,
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
-                          colors: ext.goldGradientStops,
-                          stops: ext.goldGradientPositions,
+                          colors: ext.accentGradientStops,
+                          stops: ext.accentGradientPositions,
                         ),
                       ),
                     ),

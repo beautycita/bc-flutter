@@ -265,8 +265,8 @@ class _EmailVerificationScreenState
 
                 const SizedBox(height: AppConstants.paddingMD),
 
-                // Gold gradient submit button
-                _GoldGradientButton(
+                // Brand gradient submit button
+                _BrandGradientButton(
                   label: 'Enviar recibo',
                   loading: _emailLoading,
                   gradient: const LinearGradient(colors: [Color(0xFFEC4899), Color(0xFF9333EA)], begin: Alignment.centerLeft, end: Alignment.centerRight),
@@ -508,13 +508,13 @@ class _DividerRow extends StatelessWidget {
   }
 }
 
-class _GoldGradientButton extends StatelessWidget {
+class _BrandGradientButton extends StatelessWidget {
   final String label;
   final bool loading;
   final Gradient gradient;
   final VoidCallback? onTap;
 
-  const _GoldGradientButton({
+  const _BrandGradientButton({
     required this.label,
     required this.loading,
     required this.gradient,

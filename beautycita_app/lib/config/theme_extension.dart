@@ -5,8 +5,8 @@ import 'package:flutter/material.dart';
 class BCThemeExtension extends ThemeExtension<BCThemeExtension> {
   final LinearGradient primaryGradient;
   final LinearGradient accentGradient;
-  final List<Color> goldGradientStops;
-  final List<double> goldGradientPositions;
+  final List<Color> accentGradientStops;
+  final List<double> accentGradientPositions;
   final List<Color> categoryColors;
 
   // Glass morphism (null = no glass effect)
@@ -43,8 +43,8 @@ class BCThemeExtension extends ThemeExtension<BCThemeExtension> {
   const BCThemeExtension({
     required this.primaryGradient,
     required this.accentGradient,
-    required this.goldGradientStops,
-    required this.goldGradientPositions,
+    required this.accentGradientStops,
+    required this.accentGradientPositions,
     required this.categoryColors,
     this.blurSigma,
     this.glassTint,
@@ -67,32 +67,32 @@ class BCThemeExtension extends ThemeExtension<BCThemeExtension> {
     required this.infoColor,
   });
 
-  /// Convenience: build a LinearGradient from the gold stops.
-  LinearGradient get goldGradient => LinearGradient(
+  /// Convenience: build a LinearGradient from the accent stops.
+  LinearGradient get accentShimmerGradient => LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        colors: goldGradientStops,
-        stops: goldGradientPositions,
+        colors: accentGradientStops,
+        stops: accentGradientPositions,
       );
 
-  /// Convenience: build a gold gradient in any direction.
-  LinearGradient goldGradientDirectional({
+  /// Convenience: build an accent gradient in any direction.
+  LinearGradient accentShimmerGradientDirectional({
     AlignmentGeometry begin = Alignment.topLeft,
     AlignmentGeometry end = Alignment.bottomRight,
   }) =>
       LinearGradient(
         begin: begin,
         end: end,
-        colors: goldGradientStops,
-        stops: goldGradientPositions,
+        colors: accentGradientStops,
+        stops: accentGradientPositions,
       );
 
   @override
   BCThemeExtension copyWith({
     LinearGradient? primaryGradient,
     LinearGradient? accentGradient,
-    List<Color>? goldGradientStops,
-    List<double>? goldGradientPositions,
+    List<Color>? accentGradientStops,
+    List<double>? accentGradientPositions,
     List<Color>? categoryColors,
     double? blurSigma,
     Color? glassTint,
@@ -117,8 +117,8 @@ class BCThemeExtension extends ThemeExtension<BCThemeExtension> {
     return BCThemeExtension(
       primaryGradient: primaryGradient ?? this.primaryGradient,
       accentGradient: accentGradient ?? this.accentGradient,
-      goldGradientStops: goldGradientStops ?? this.goldGradientStops,
-      goldGradientPositions: goldGradientPositions ?? this.goldGradientPositions,
+      accentGradientStops: accentGradientStops ?? this.accentGradientStops,
+      accentGradientPositions: accentGradientPositions ?? this.accentGradientPositions,
       categoryColors: categoryColors ?? this.categoryColors,
       blurSigma: blurSigma ?? this.blurSigma,
       glassTint: glassTint ?? this.glassTint,
@@ -148,8 +148,8 @@ class BCThemeExtension extends ThemeExtension<BCThemeExtension> {
     return BCThemeExtension(
       primaryGradient: t < 0.5 ? primaryGradient : other.primaryGradient,
       accentGradient: t < 0.5 ? accentGradient : other.accentGradient,
-      goldGradientStops: t < 0.5 ? goldGradientStops : other.goldGradientStops,
-      goldGradientPositions: t < 0.5 ? goldGradientPositions : other.goldGradientPositions,
+      accentGradientStops: t < 0.5 ? accentGradientStops : other.accentGradientStops,
+      accentGradientPositions: t < 0.5 ? accentGradientPositions : other.accentGradientPositions,
       categoryColors: t < 0.5 ? categoryColors : other.categoryColors,
       blurSigma: t < 0.5 ? blurSigma : other.blurSigma,
       glassTint: Color.lerp(glassTint, other.glassTint, t),

@@ -153,14 +153,14 @@ class _DiscoveredSalonConfirmScreenState
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.star, size: 18, color: Color(0xFFB8860B)),
+                    const Icon(Icons.star, size: 18, color: Color(0xFFEC4899)),
                     const SizedBox(width: 4),
                     Text(
                       _rating!.toStringAsFixed(1),
                       style: GoogleFonts.nunito(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
-                        color: const Color(0xFFB8860B),
+                        color: const Color(0xFFEC4899),
                       ),
                     ),
                     if (_reviewsCount != null) ...[
@@ -242,7 +242,7 @@ class _DiscoveredSalonConfirmScreenState
                     boxShadow: !_isCreating
                         ? [
                             BoxShadow(
-                              color: const Color(0xFFB8860B)
+                              color: const Color(0xFFEC4899)
                                   .withValues(alpha: 0.35),
                               blurRadius: 12,
                               offset: const Offset(0, 4),
