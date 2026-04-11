@@ -1200,7 +1200,7 @@ Deno.serve(async (req: Request) => {
         }
 
         // Update/create profile
-        await supabase.from("profiles").upsert(
+        const { error: profileErr } = await supabase.from("profiles").upsert(
           {
             id: userId,
             full_name: ownerName,
@@ -1208,10 +1208,11 @@ Deno.serve(async (req: Request) => {
             phone,
             phone_verified: true,
             phone_verified_at: new Date().toISOString(),
-            role: "stylist",
+            role: "salon_owner",
           },
           { onConflict: "id" },
         );
+        if (profileErr) console.error("[SALON-REG] Profile upsert error:", profileErr);
 
         // Create business
         const bizName = discoveredSalon
