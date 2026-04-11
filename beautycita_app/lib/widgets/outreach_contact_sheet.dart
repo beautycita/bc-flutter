@@ -604,11 +604,11 @@ class _ChannelChips extends StatelessWidget {
               curve: Curves.easeOut,
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
-                color: isSelected ? ch.color : Colors.white,
+                color: isSelected ? ch.color : Theme.of(context).colorScheme.surface,
                 borderRadius:
                     BorderRadius.circular(AppConstants.radiusFull),
                 border: Border.all(
-                  color: isSelected ? ch.color : Colors.black12,
+                  color: isSelected ? ch.color : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.12),
                   width: isSelected ? 0 : 1,
                 ),
                 boxShadow: isSelected
@@ -635,7 +635,7 @@ class _ChannelChips extends StatelessWidget {
                     style: GoogleFonts.poppins(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: isSelected ? Colors.white : Colors.black54,
+                      color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                   ),
                 ],
@@ -683,7 +683,7 @@ class _TemplatePicker extends StatelessWidget {
             labelText: 'Plantilla',
             labelStyle: GoogleFonts.nunito(fontSize: 13),
             filled: true,
-            fillColor: Colors.white,
+            fillColor: Theme.of(context).colorScheme.surface,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppConstants.radiusSM),
               borderSide: const BorderSide(color: Colors.black12),
@@ -843,7 +843,7 @@ class _CallComposeArea extends StatelessWidget {
             labelText: 'Resultado *',
             labelStyle: GoogleFonts.nunito(fontSize: 13),
             filled: true,
-            fillColor: Colors.white,
+            fillColor: Theme.of(context).colorScheme.surface,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppConstants.radiusSM),
               borderSide: const BorderSide(color: Colors.black12),
@@ -908,7 +908,7 @@ class _CallComposeArea extends StatelessWidget {
                   labelText: 'Duración (seg)',
                   labelStyle: GoogleFonts.nunito(fontSize: 13),
                   filled: true,
-                  fillColor: Colors.white,
+                  fillColor: Theme.of(context).colorScheme.surface,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(AppConstants.radiusSM),
                     borderSide: const BorderSide(color: Colors.black12),
@@ -973,7 +973,7 @@ class _CallComposeArea extends StatelessWidget {
             labelText: 'Notas (opcional)',
             labelStyle: GoogleFonts.nunito(fontSize: 13),
             filled: true,
-            fillColor: Colors.white,
+            fillColor: Theme.of(context).colorScheme.surface,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppConstants.radiusSM),
               borderSide: const BorderSide(color: Colors.black12),
@@ -1317,7 +1317,7 @@ class _HistoryEntryRow extends StatelessWidget {
                             child: Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFF0F4F8),
+                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
                                 borderRadius: BorderRadius.circular(
                                     AppConstants.radiusXS),
                               ),

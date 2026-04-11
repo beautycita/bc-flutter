@@ -325,7 +325,7 @@ class _BigButton extends StatelessWidget {
       child: Container(
         height: 120,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: palette.surface,
           borderRadius: BorderRadius.circular(AppConstants.radiusMD),
           boxShadow: [
             BoxShadow(

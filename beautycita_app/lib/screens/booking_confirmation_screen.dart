@@ -560,7 +560,7 @@ class _BookingConfirmationScreenState
                     fontSize: 8,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 0.5,
-                    color: const Color(0xFFAAAAAA),
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.45),
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -569,7 +569,7 @@ class _BookingConfirmationScreenState
                   style: GoogleFonts.nunito(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: const Color(0xFF1a1a1a),
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,

@@ -21,7 +21,7 @@ class ContactSalonCard extends StatelessWidget {
         width: 280,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
@@ -34,7 +34,7 @@ class ContactSalonCard extends StatelessWidget {
         child: Row(
           children: [
             // Salon photo / placeholder
-            _buildAvatar(),
+            _buildAvatar(context),
             const SizedBox(width: 10),
 
             // Info column
@@ -57,7 +57,7 @@ class ContactSalonCard extends StatelessWidget {
                     match.salonName,
                     style: theme.textTheme.bodySmall?.copyWith(
                       fontSize: 12,
-                      color: Colors.grey[600],
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -67,13 +67,13 @@ class ContactSalonCard extends StatelessWidget {
                     children: [
                       if (match.salonCity != null) ...[
                         Icon(Icons.location_on,
-                            size: 11, color: Colors.grey[400]),
+                            size: 11, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
                         const SizedBox(width: 2),
                         Flexible(
                           child: Text(
                             match.salonCity!,
                             style: TextStyle(
-                                fontSize: 11, color: Colors.grey[500]),
+                                fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -105,13 +105,13 @@ class ContactSalonCard extends StatelessWidget {
     );
   }
 
-  Widget _buildAvatar() {
+  Widget _buildAvatar(BuildContext context) {
     final photoUrl = match.salonPhoto;
     if (photoUrl != null && photoUrl.isNotEmpty) {
       return CircleAvatar(
         radius: 24,
         backgroundImage: NetworkImage(photoUrl),
-        backgroundColor: Colors.grey[200],
+        backgroundColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
       );
     }
 

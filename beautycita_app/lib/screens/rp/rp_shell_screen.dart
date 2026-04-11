@@ -226,11 +226,11 @@ class _RPShellScreenState extends ConsumerState<RPShellScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(Icons.assignment_outlined,
-                    size: 64, color: Colors.grey.shade400),
+                    size: 64, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.35)),
                 const SizedBox(height: AppConstants.paddingMD),
                 Text('No tienes salones asignados',
                     style: GoogleFonts.poppins(
-                        fontSize: 16, color: Colors.grey.shade600)),
+                        fontSize: 16, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5))),
               ],
             ),
           );
@@ -283,7 +283,7 @@ class _RPShellScreenState extends ConsumerState<RPShellScreen> {
               const SizedBox(width: AppConstants.paddingSM),
               Text('(${salons.length})',
                   style:
-                      GoogleFonts.nunito(fontSize: 14, color: Colors.grey)),
+                      GoogleFonts.nunito(fontSize: 14, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5))),
             ],
           ),
         ),
@@ -330,7 +330,7 @@ class _RPShellScreenState extends ConsumerState<RPShellScreen> {
                           .where((e) => e != null)
                           .join(', '),
                       style: GoogleFonts.nunito(
-                          fontSize: 13, color: Colors.grey.shade600),
+                          fontSize: 13, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)),
                     ),
                   ],
                 ),
@@ -347,10 +347,10 @@ class _RPShellScreenState extends ConsumerState<RPShellScreen> {
                 if (ratingCount != null)
                   Text(' ($ratingCount)',
                       style: GoogleFonts.nunito(
-                          fontSize: 11, color: Colors.grey)),
+                          fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5))),
               ],
               const SizedBox(width: AppConstants.paddingXS),
-              const Icon(Icons.chevron_right_rounded, color: Colors.grey),
+              Icon(Icons.chevron_right_rounded, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
             ],
           ),
         ),

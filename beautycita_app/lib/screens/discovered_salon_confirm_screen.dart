@@ -103,7 +103,7 @@ class _DiscoveredSalonConfirmScreenState
         Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFFF8F0),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -183,7 +183,7 @@ class _DiscoveredSalonConfirmScreenState
                 width: double.infinity,
                 padding: const EdgeInsets.all(AppConstants.paddingMD),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.surface,
                   borderRadius:
                       BorderRadius.circular(AppConstants.radiusMD),
                   boxShadow: [

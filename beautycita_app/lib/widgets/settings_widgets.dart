@@ -77,10 +77,10 @@ class SettingsTile extends StatelessWidget {
               Expanded(
                 child: Text(
                   label,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF1a1a1a),
+                    color: cs.onSurface,
                   ),
                 ),
               ),
@@ -177,7 +177,7 @@ Widget buildSheetHeader(BuildContext context, String title) {
           width: 40,
           height: 4,
           decoration: BoxDecoration(
-            color: Colors.grey.shade300,
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(2),
           ),
         ),

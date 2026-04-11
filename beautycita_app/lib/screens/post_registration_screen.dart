@@ -17,7 +17,7 @@ class PostRegistrationScreen extends ConsumerWidget {
         Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFFF8F0),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(
@@ -147,7 +147,7 @@ class _StepCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(AppConstants.paddingMD),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
         boxShadow: [
           BoxShadow(

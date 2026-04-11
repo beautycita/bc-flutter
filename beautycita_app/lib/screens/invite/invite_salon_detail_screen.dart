@@ -44,7 +44,7 @@ class _InviteSalonDetailScreenState
           Navigator.of(context).pop();
         }
       });
-      return const Scaffold(backgroundColor: Colors.white);
+      return Scaffold(backgroundColor: Theme.of(context).scaffoldBackgroundColor);
     }
 
     // Auto-generate message when bio is ready and we haven't triggered yet.
@@ -59,7 +59,7 @@ class _InviteSalonDetailScreenState
     }
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Column(
         children: [
           Expanded(
@@ -392,7 +392,7 @@ class _InviteSalonDetailScreenState
         MediaQuery.of(context).padding.bottom + 12,
       ),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.08),
@@ -457,7 +457,7 @@ class _InviteSalonDetailScreenState
         return Container(
           height: AppConstants.minTouchHeight,
           decoration: BoxDecoration(
-            color: Colors.grey[300],
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(AppConstants.radiusLG),
           ),
           child: Center(
@@ -466,7 +466,7 @@ class _InviteSalonDetailScreenState
               style: GoogleFonts.poppins(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
-                color: Colors.grey[500],
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
               ),
             ),
           ),

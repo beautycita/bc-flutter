@@ -96,7 +96,7 @@ class _AphroditeCopyFieldState extends State<AphroditeCopyField>
       children: [
         Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: colors.surface,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: colors.primary.withValues(alpha: 0.25)),
             boxShadow: [

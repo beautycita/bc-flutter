@@ -398,7 +398,7 @@ class _ChatConversationScreenState
   void _handleCamera() {
     showBurstBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -435,7 +435,7 @@ class _ChatConversationScreenState
               'Prueba un nuevo look con IA',
               style: GoogleFonts.nunito(
                 fontSize: 13,
-                color: Colors.grey,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
               ),
             ),
             const SizedBox(height: 16),

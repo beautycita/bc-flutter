@@ -357,7 +357,7 @@ class _GoogleButton extends StatelessWidget {
       child: OutlinedButton(
         onPressed: onTap,
         style: OutlinedButton.styleFrom(
-          backgroundColor: Colors.white,
+          backgroundColor: Theme.of(context).colorScheme.surface,
           foregroundColor: const Color(0xFF3C4043),
           side: BorderSide(
             color: const Color(0xFFDADCE0),

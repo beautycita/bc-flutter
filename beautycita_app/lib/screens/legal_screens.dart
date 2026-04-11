@@ -271,7 +271,7 @@ class _LegalTabState extends State<_LegalTab>
               for (int i = 0; i < widget.sections.length; i++) ...[
                 if (i > 0) ...[
                   const SizedBox(height: AppConstants.paddingSM),
-                  const Divider(height: 1, color: Color(0xFFF5F0EB)),
+                  Divider(height: 1, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08)),
                   const SizedBox(height: AppConstants.paddingSM),
                 ],
                 if (widget.sections[i].heading != null) ...[
@@ -435,9 +435,9 @@ class _ContactSection extends ConsumerWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               'Chat con Eros',
-                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF1a1a1a)),
+                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: colors.onSurface),
                             ),
                             Text(
                               'Soporte inteligente — respuesta instantanea',
@@ -462,7 +462,7 @@ class _ContactSection extends ConsumerWidget {
                 ),
               ),
 
-              const Divider(height: 1, color: Color(0xFFF5F0EB)),
+              Divider(height: 1, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08)),
 
               // ── Human support row ──
               InkWell(
@@ -493,9 +493,9 @@ class _ContactSection extends ConsumerWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               'Soporte humano',
-                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF1a1a1a)),
+                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: colors.onSurface),
                             ),
                             Text(
                               'Habla con una persona de nuestro equipo',

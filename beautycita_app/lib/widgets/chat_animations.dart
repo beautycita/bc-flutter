@@ -262,7 +262,7 @@ class DeliveryCheckmark extends StatelessWidget {
   Widget build(BuildContext context) {
     final isRead = status == 'read';
     final isDelivered = status == 'delivered' || isRead;
-    final color = isRead ? const Color(0xFF53BDEB) : Colors.grey.shade400;
+    final color = isRead ? const Color(0xFF53BDEB) : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.35);
 
     return SizedBox(
       width: isDelivered ? size * 1.4 : size,

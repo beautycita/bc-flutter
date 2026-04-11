@@ -42,9 +42,9 @@ class _CitaExpressScreenState extends ConsumerState<CitaExpressScreen> {
     final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F3FF),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: colors.surface,
         elevation: 0,
         scrolledUnderElevation: 0.5,
         shape: const RoundedRectangleBorder(
@@ -249,7 +249,7 @@ class _ServiceSelectView extends StatelessWidget {
         // Salon header card
         Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: colors.surface,
             borderRadius: BorderRadius.circular(AppConstants.radiusLG),
             border: Border.all(
               color: colors.onSurface.withValues(alpha: 0.08),
@@ -358,7 +358,7 @@ class _ServiceSelectView extends StatelessWidget {
               final duration = svc['duration_minutes'] as int?;
 
               return Material(
-                color: Colors.white,
+                color: colors.surface,
                 borderRadius: BorderRadius.circular(AppConstants.radiusMD),
                 child: InkWell(
                   onTap: () => onSelect(serviceId, name),
@@ -588,7 +588,7 @@ class _ResultCardWidget extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(AppConstants.radiusLG),
         border: Border.all(
           color: colors.onSurface.withValues(alpha: 0.08),
@@ -984,7 +984,7 @@ class _ActionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     return Material(
-      color: Colors.white,
+      color: colors.surface,
       borderRadius: BorderRadius.circular(AppConstants.radiusLG),
       child: InkWell(
         onTap: onTap,
@@ -1202,7 +1202,7 @@ class _ConfirmView extends ConsumerWidget {
         // Summary card
         Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: colors.surface,
             borderRadius: BorderRadius.circular(AppConstants.radiusLG),
             border: Border.all(
               color: colors.primary.withValues(alpha: 0.15),
@@ -1384,7 +1384,7 @@ class _PaymentMethodTile extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: colors.surface,
           borderRadius: BorderRadius.circular(AppConstants.radiusMD),
           border: Border.all(
             color: selected

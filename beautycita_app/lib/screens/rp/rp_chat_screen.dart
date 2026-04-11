@@ -44,7 +44,7 @@ class _RPChatScreenState extends ConsumerState<RPChatScreen> {
         rpChatHistoryProvider((salonId: salonId, channel: widget.channel)));
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade100,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: channelColor,
         foregroundColor: Colors.white,
@@ -90,7 +90,7 @@ class _RPChatScreenState extends ConsumerState<RPChatScreen> {
         if (messages.isEmpty) {
           return Center(
             child: Text('Sin mensajes — envía el primero',
-                style: GoogleFonts.poppins(color: Colors.grey.shade400)),
+                style: GoogleFonts.poppins(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4))),
           );
         }
         final reversed = messages.reversed.toList();
@@ -130,12 +130,12 @@ class _RPChatScreenState extends ConsumerState<RPChatScreen> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             decoration: BoxDecoration(
-              color: Colors.grey.shade300,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(DateFormat('dd MMM yyyy').format(msgDate),
                 style: GoogleFonts.poppins(
-                    fontSize: 11, color: Colors.grey.shade700)),
+                    fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6))),
           ),
         ),
       );
@@ -211,13 +211,13 @@ class _RPChatScreenState extends ConsumerState<RPChatScreen> {
       margin: const EdgeInsets.symmetric(vertical: 6),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.12)),
       ),
       child: Row(
         children: [
-          Icon(icon, size: 20, color: Colors.grey.shade500),
+          Icon(icon, size: 20, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -230,10 +230,10 @@ class _RPChatScreenState extends ConsumerState<RPChatScreen> {
                 if (notes.isNotEmpty)
                   Text(notes,
                       style: GoogleFonts.poppins(
-                          fontSize: 12, color: Colors.grey.shade600)),
+                          fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6))),
                 Text('$rpName — ${_formatTime(sentAt)}',
                     style: GoogleFonts.poppins(
-                        fontSize: 10, color: Colors.grey.shade400)),
+                        fontSize: 10, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4))),
               ],
             ),
           ),
@@ -246,7 +246,7 @@ class _RPChatScreenState extends ConsumerState<RPChatScreen> {
 
   Widget _buildInputArea() {
     return Container(
-      color: Colors.white,
+      color: Theme.of(context).colorScheme.surface,
       padding: EdgeInsets.only(
         left: 12,
         right: 12,
@@ -280,7 +280,7 @@ class _RPChatScreenState extends ConsumerState<RPChatScreen> {
               decoration: InputDecoration(
                 hintText: 'Asunto',
                 filled: true,
-                fillColor: Colors.grey.shade100,
+                fillColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
                 border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none),
@@ -299,7 +299,7 @@ class _RPChatScreenState extends ConsumerState<RPChatScreen> {
                   decoration: InputDecoration(
                     hintText: 'Escribe un mensaje...',
                     filled: true,
-                    fillColor: Colors.grey.shade100,
+                    fillColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
                     border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(24),
                         borderSide: BorderSide.none),
@@ -384,7 +384,7 @@ class _RPChatScreenState extends ConsumerState<RPChatScreen> {
                   return Center(
                       child: Text('Sin plantillas disponibles',
                           style: GoogleFonts.poppins(
-                              color: Colors.grey)));
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5))));
                 }
                 final grouped = <String, List<Map<String, dynamic>>>{};
                 for (final t in list) {
@@ -403,7 +403,7 @@ class _RPChatScreenState extends ConsumerState<RPChatScreen> {
                           style: GoogleFonts.poppins(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
-                              color: Colors.grey.shade500)),
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5))),
                       const SizedBox(height: 4),
                       ...entry.value.map((t) => ListTile(
                             title: Text(t['name'] ?? '',
@@ -415,7 +415,7 @@ class _RPChatScreenState extends ConsumerState<RPChatScreen> {
                                   60),
                               style: GoogleFonts.poppins(
                                   fontSize: 12,
-                                  color: Colors.grey.shade500),
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),

@@ -286,7 +286,7 @@ class _SubcategoryPillState extends State<_SubcategoryPill>
               curve: Curves.easeOutCubic,
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
               decoration: BoxDecoration(
-                color: _isPressed ? color.withValues(alpha: 0.12) : const Color(0xFFFFFFFF),
+                color: _isPressed ? color.withValues(alpha: 0.12) : Theme.of(context).colorScheme.surface,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: Theme.of(context).dividerColor,
@@ -336,9 +336,9 @@ class _SubcategoryPillState extends State<_SubcategoryPill>
                   begin: Alignment(shimmerOffset - 0.5, 0),
                   end: Alignment(shimmerOffset + 0.5, 0),
                   colors: [
-                    const Color(0xFFFFFFFF).withValues(alpha: 0.0),
+                    Colors.white.withValues(alpha: 0.0),
                     color.withValues(alpha: 0.35),
-                    const Color(0xFFFFFFFF).withValues(alpha: 0.0),
+                    Colors.white.withValues(alpha: 0.0),
                   ],
                   stops: const [0.0, 0.5, 1.0],
                 ).createShader(bounds);

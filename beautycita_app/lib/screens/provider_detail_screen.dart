@@ -340,7 +340,7 @@ class ProviderDetailScreen extends ConsumerWidget {
       } else if (rating >= i - 0.5) {
         stars.add(Icon(Icons.star_half, size: 20, color: colorScheme.secondary));
       } else {
-        stars.add(Icon(Icons.star_border, size: 20, color: Colors.grey.shade300));
+        stars.add(Icon(Icons.star_border, size: 20, color: colorScheme.onSurface.withValues(alpha: 0.2)));
       }
     }
     return stars;
@@ -876,7 +876,7 @@ class _ServiceCardState extends ConsumerState<_ServiceCard> {
                         Icon(
                           Icons.schedule,
                           size: 16,
-                          color: Colors.grey.shade500,
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                         ),
                         const SizedBox(width: 4),
                         Text(

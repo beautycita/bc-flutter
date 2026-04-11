@@ -269,14 +269,14 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen>
                           children: [
                             _CardTile(card: card, ref: ref),
                             if (index < pm.cards.length - 1)
-                              const Divider(height: 1, thickness: 1, color: Color(0xFFF5F0EB),
+                              Divider(height: 1, thickness: 1, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
                                 indent: AppConstants.paddingSM, endIndent: AppConstants.paddingSM),
                           ],
                         );
                       }),
 
                     // Divider before add button
-                    const Divider(height: 1, thickness: 1, color: Color(0xFFF5F0EB),
+                    Divider(height: 1, thickness: 1, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
                       indent: AppConstants.paddingSM, endIndent: AppConstants.paddingSM),
 
                     // Add card button
@@ -544,20 +544,20 @@ class _OtherMethodTile extends StatelessWidget {
                 children: [
                   Text(
                     subtitle.toUpperCase(),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 8,
                       fontWeight: FontWeight.w600,
                       letterSpacing: 0.5,
-                      color: Color(0xFFAAAAAA),
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.45),
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     label,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF1a1a1a),
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                 ],

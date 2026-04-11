@@ -327,7 +327,7 @@ class _SummaryCard extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: palette.surface,
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
         border: Border.all(color: ext.cardBorderColor),
         boxShadow: [
@@ -449,7 +449,7 @@ class _PriceBreakdown extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: palette.surface,
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
         border: Border.all(color: ext.cardBorderColor),
         boxShadow: [
@@ -741,10 +741,10 @@ class _PaymentMethodCard extends StatelessWidget {
               decoration: BoxDecoration(
                 color: isSelected
                     ? palette.primary.withValues(alpha: 0.08)
-                    : Colors.white,
+                    : palette.surface,
                 borderRadius: BorderRadius.circular(AppConstants.radiusMD),
                 border: Border.all(
-                  color: isSelected ? palette.primary : const Color(0xFFEEEEEE),
+                  color: isSelected ? palette.primary : palette.onSurface.withValues(alpha: 0.12),
                   width: isSelected ? 2 : 1,
                 ),
               ),

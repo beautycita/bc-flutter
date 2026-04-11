@@ -601,7 +601,7 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen>
             onTap: () =>
                 ref.read(tempSearchLocationProvider.notifier).state = null,
             child: Icon(Icons.close_outlined,
-                color: Colors.grey.shade500, size: 20),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5), size: 20),
           ),
         ],
       ),

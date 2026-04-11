@@ -346,7 +346,7 @@ class _SalonCard extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Material(
-      color: Colors.white,
+      color: theme.colorScheme.surface,
       borderRadius: BorderRadius.circular(AppConstants.radiusMD),
       elevation: AppConstants.elevationLow,
       shadowColor: Colors.black.withValues(alpha: 0.08),
@@ -587,12 +587,12 @@ class _ShimmerCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final shimmerColor = Theme.of(context).colorScheme.outlineVariant;
-    final highlightColor = Colors.white;
+    final highlightColor = Theme.of(context).colorScheme.surface;
 
     return Container(
       padding: const EdgeInsets.all(AppConstants.paddingSM + 4),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
         boxShadow: [
           BoxShadow(

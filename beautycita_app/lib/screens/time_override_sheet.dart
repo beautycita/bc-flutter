@@ -199,7 +199,7 @@ class _TimeOverrideSheetState extends State<TimeOverrideSheet> {
                 onPressed: _canConfirm ? _confirm : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: palette.primary,
-                  foregroundColor: Colors.white,
+                  foregroundColor: palette.onPrimary,
                   disabledBackgroundColor:
                       palette.primary.withValues(alpha: 0.3),
                   padding:
@@ -270,7 +270,7 @@ class _Pill extends StatelessWidget {
               Icon(
                 icon,
                 size: 16,
-                color: selected ? Colors.white : palette.onSurface.withValues(alpha: 0.5),
+                color: selected ? palette.onPrimary : palette.onSurface.withValues(alpha: 0.5),
               ),
               const SizedBox(width: 6),
             ],
@@ -279,7 +279,7 @@ class _Pill extends StatelessWidget {
               style: GoogleFonts.poppins(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
-                color: selected ? Colors.white : palette.onSurface,
+                color: selected ? palette.onPrimary : palette.onSurface,
               ),
             ),
           ],

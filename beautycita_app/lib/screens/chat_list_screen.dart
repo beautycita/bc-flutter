@@ -125,7 +125,7 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.error_outline, size: 48, color: Colors.grey),
+              Icon(Icons.error_outline, size: 48, color: colorScheme.onSurface.withValues(alpha: 0.4)),
               const SizedBox(height: 16),
               Text('Error cargando mensajes', style: GoogleFonts.nunito(fontSize: 16)),
             ],
@@ -153,7 +153,7 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
         margin: const EdgeInsets.all(16),
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(24),
         ),
         child: Column(
@@ -163,7 +163,7 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
               width: 40, height: 4,
               margin: const EdgeInsets.only(bottom: 20),
               decoration: BoxDecoration(
-                color: Colors.grey[300],
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),

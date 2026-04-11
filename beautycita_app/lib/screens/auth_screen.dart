@@ -131,7 +131,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                 margin: const EdgeInsets.all(16),
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(ctx).colorScheme.surface,
                   borderRadius: BorderRadius.circular(AppConstants.radiusLG),
                 ),
                 child: Column(
@@ -142,7 +142,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                       height: 4,
                       margin: const EdgeInsets.only(bottom: 20),
                       decoration: BoxDecoration(
-                        color: Colors.grey[300],
+                        color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -347,9 +347,15 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
         child: Listener(
           onPointerDown: _handlePointerDown,
           child: Container(
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [Color(0xFFFFF8F0), Color(0xFFFFF0F5), Color(0xFFFFF8F0)],
+                colors: Theme.of(context).brightness == Brightness.dark
+                    ? [
+                        Theme.of(context).scaffoldBackgroundColor,
+                        Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
+                        Theme.of(context).scaffoldBackgroundColor,
+                      ]
+                    : const [Color(0xFFFFF8F0), Color(0xFFFFF0F5), Color(0xFFFFF8F0)],
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
               ),
