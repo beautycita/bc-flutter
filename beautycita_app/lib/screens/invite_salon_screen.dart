@@ -394,18 +394,12 @@ class _InviteSalonScreenState extends ConsumerState<InviteSalonScreen> {
     // 1. Open WhatsApp with pre-filled message
     final phone = salon.whatsapp ?? salon.phone;
     if (phone != null) {
-      // Point directly to salon-registro edge function — self-contained HTML
-      // registration page that fetches all salon data server-side from the ref ID.
-      final regUrl = Uri.https(
-        'beautycita.com',
-        '/registro',
-        {'ref': salon.id},
-      );
+      final regUrl = 'https://beautycita.com/registro?ref=${salon.id}';
       final message = Uri.encodeComponent(
         'Hola! Queria hacer una cita contigo pero no te encontre '
         'en BeautyCita. Deberias estar ahi, te llegan mas clientes '
-        'y es gratis: $regUrl '
-        'Manana te busco en la app si no ando muy ocupada!',
+        'y es gratis:\n\n$regUrl\n\n'
+        'Manana te busco en la app!',
       );
       final waUrl = Uri.parse('https://wa.me/${phone.replaceAll('+', '')}?text=$message');
       launchUrl(waUrl, mode: LaunchMode.externalApplication);
@@ -425,16 +419,12 @@ class _InviteSalonScreenState extends ConsumerState<InviteSalonScreen> {
     setState(() => _invitedIds.add(match.salonId));
 
     final phone = match.matchedPhone;
-    final regUrl = Uri.https(
-      'beautycita.com',
-      '/registro',
-      {'ref': match.salonId},
-    );
+    final regUrl = 'https://beautycita.com/registro?ref=${match.salonId}';
     final message = Uri.encodeComponent(
       'Hola! Queria hacer una cita contigo pero no te encontre '
       'en BeautyCita. Deberias estar ahi, te llegan mas clientes '
-      'y es gratis: $regUrl '
-      'Manana te busco en la app si no ando muy ocupada!',
+      'y es gratis:\n\n$regUrl\n\n'
+      'Manana te busco en la app!',
     );
     final waUrl = Uri.parse('https://wa.me/${phone.replaceAll('+', '')}?text=$message');
     launchUrl(waUrl, mode: LaunchMode.externalApplication);
