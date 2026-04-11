@@ -629,7 +629,7 @@ class _SalonOnboardingScreenState
               );
           await SupabaseClientService.client
               .from('businesses')
-              .update({'license_url': licensePath})
+              .update({'municipal_license_url': licensePath})
               .eq('id', businessId);
         } catch (e) {
           if (kDebugMode) debugPrint('[SalonOnboarding] License upload failed (non-critical): $e');

@@ -127,8 +127,8 @@ serve(async (req) => {
     if (discoveredSalon) {
       if (!bizInsert.address && discoveredSalon.location_address) bizInsert.address = discoveredSalon.location_address;
       if (bizInsert.city === "Guadalajara" && discoveredSalon.location_city) bizInsert.city = discoveredSalon.location_city;
-      if (!bizInsert.lat && discoveredSalon.lat) bizInsert.lat = discoveredSalon.lat;
-      if (!bizInsert.lng && discoveredSalon.lng) bizInsert.lng = discoveredSalon.lng;
+      if (!bizInsert.lat && discoveredSalon.latitude) bizInsert.lat = discoveredSalon.latitude;
+      if (!bizInsert.lng && discoveredSalon.longitude) bizInsert.lng = discoveredSalon.longitude;
       if (discoveredSalon.feature_image_url) bizInsert.photo_url = discoveredSalon.feature_image_url;
     }
     if (photo_url) bizInsert.photo_url = photo_url;
@@ -190,9 +190,9 @@ serve(async (req) => {
     // Use discovered salon hours if available, otherwise default Mon-Sat 9am-7pm
     let defaultStart = "09:00";
     let defaultEnd = "19:00";
-    if (discoveredSalon?.hours) {
-      // hours is a text field, try to extract open/close times (e.g. "9:00-20:00" or "Lun-Sáb 10:00-19:00")
-      const hoursMatch = String(discoveredSalon.hours).match(/(\d{1,2}:\d{2})\s*[-–]\s*(\d{1,2}:\d{2})/);
+    if (discoveredSalon?.working_hours) {
+      // working_hours is a text field, try to extract open/close times (e.g. "9:00-20:00" or "Lun-Sáb 10:00-19:00")
+      const hoursMatch = String(discoveredSalon.working_hours).match(/(\d{1,2}:\d{2})\s*[-–]\s*(\d{1,2}:\d{2})/);
       if (hoursMatch) {
         defaultStart = hoursMatch[1].padStart(5, "0");
         defaultEnd = hoursMatch[2].padStart(5, "0");
@@ -226,6 +226,31 @@ serve(async (req) => {
     if (scheduleError) {
       console.error("[REGISTER-BIZ] Failed to create schedule:", scheduleError);
       // Non-critical, don't rollback
+    }
+
+    // 4b. Create default service
+    const { error: serviceError } = await supabase
+      .from("services")
+      .insert({
+        business_id: business.id,
+        name: "Servicio General",
+        duration_minutes: 30,
+        price: 0,
+        active: true,
+      });
+
+    if (serviceError) {
+      console.error("[REGISTER-BIZ] Failed to create default service:", serviceError);
+    }
+
+    // 4c. Mark business as having schedule and services
+    const { error: flagsError } = await supabase
+      .from("businesses")
+      .update({ has_schedule: true, has_services: true })
+      .eq("id", business.id);
+
+    if (flagsError) {
+      console.error("[REGISTER-BIZ] Failed to set has_schedule/has_services:", flagsError);
     }
 
     // 5. Link discovered salon if provided

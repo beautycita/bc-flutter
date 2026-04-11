@@ -19,7 +19,7 @@ const TWILIO_AUTH_TOKEN = Deno.env.get("TWILIO_AUTH_TOKEN") ?? "";
 const TWILIO_VERIFY_SID = Deno.env.get("TWILIO_VERIFY_SID") ?? "";
 const HMAC_SECRET = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!; // Reuse service key as HMAC secret
 
-const OTP_EXPIRY_MINUTES = 5;
+const OTP_EXPIRY_MINUTES = 10;
 const MAX_ATTEMPTS = 3;
 const SENTINEL_USER_ID = "00000000-0000-0000-0000-000000000000";
 const APK_URL = "https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/apk/beautycita.apk";
@@ -1127,21 +1127,17 @@ Deno.serve(async (req: Request) => {
               createErr.message.includes("already") ||
               createErr.message.includes("exists")
             ) {
-              // Search auth users by phone — paginate in small batches instead of loading all
-              let found: { id: string } | undefined;
-              let page = 1;
-              while (!found) {
-                const { data: { users }, error: listErr } =
-                  await supabase.auth.admin.listUsers({ page, perPage: 50 });
-                if (listErr || !users || users.length === 0) break;
-                found = users.find((u: { phone?: string }) => u.phone === phone);
-                if (users.length < 50) break;
-                page++;
-              }
-              if (found) {
-                userId = found.id;
+              // Fix #8: Query profiles table instead of paginating auth.users
+              const { data: foundProfile } = await supabase
+                .from("profiles")
+                .select("id")
+                .eq("phone", phone)
+                .limit(1)
+                .maybeSingle();
+              if (foundProfile) {
+                userId = foundProfile.id;
                 console.log(
-                  `[SALON-REG] Found existing auth user ${userId}`,
+                  `[SALON-REG] Found existing user via profile ${userId}`,
                 );
               } else {
                 return json(
@@ -1187,7 +1183,16 @@ Deno.serve(async (req: Request) => {
             .select("*")
             .eq("id", refId)
             .single();
-          if (ds) discoveredSalon = ds;
+          if (ds) {
+            // Fix #7: Block duplicate registration
+            if (ds.status === "registered") {
+              return json(
+                { error: "Este salon ya fue registrado." },
+                400,
+              );
+            }
+            discoveredSalon = ds;
+          }
         }
 
         // Update/create profile
@@ -1195,6 +1200,7 @@ Deno.serve(async (req: Request) => {
           {
             id: userId,
             full_name: ownerName,
+            username: "user_" + userId!.substring(0, 8),
             phone,
             phone_verified: true,
             phone_verified_at: new Date().toISOString(),
@@ -1224,8 +1230,8 @@ Deno.serve(async (req: Request) => {
             bizData.address = discoveredSalon.location_address;
           if (discoveredSalon.location_city)
             bizData.city = discoveredSalon.location_city;
-          if (discoveredSalon.lat) bizData.lat = discoveredSalon.lat;
-          if (discoveredSalon.lng) bizData.lng = discoveredSalon.lng;
+          if (discoveredSalon.latitude) bizData.lat = discoveredSalon.latitude;
+          if (discoveredSalon.longitude) bizData.lng = discoveredSalon.longitude;
           if (discoveredSalon.feature_image_url)
             bizData.photo_url = discoveredSalon.feature_image_url;
         }
@@ -1256,6 +1262,7 @@ Deno.serve(async (req: Request) => {
             is_active: true,
             accept_online_booking: true,
             sort_order: 0,
+            position: "owner",
           })
           .select()
           .single();
@@ -1266,26 +1273,57 @@ Deno.serve(async (req: Request) => {
           return json({ error: "Error al crear perfil de estilista" }, 500);
         }
 
-        // Create default schedule (Mon-Sat 9am-7pm)
+        // Create default schedule — use discovered salon working_hours if available
+        let defaultStart = "09:00";
+        let defaultEnd = "19:00";
+        if (discoveredSalon?.working_hours) {
+          const hoursMatch = String(discoveredSalon.working_hours).match(/(\d{1,2}:\d{2})\s*[-–]\s*(\d{1,2}:\d{2})/);
+          if (hoursMatch) {
+            defaultStart = hoursMatch[1].padStart(5, "0");
+            defaultEnd = hoursMatch[2].padStart(5, "0");
+            console.log(`[SALON-REG] Using discovered salon hours: ${defaultStart}-${defaultEnd}`);
+          }
+        }
+
         const schedule = [];
         for (let day = 1; day <= 6; day++) {
           schedule.push({
             staff_id: staff.id,
             day_of_week: day,
-            start_time: "09:00",
-            end_time: "19:00",
+            start_time: defaultStart,
+            end_time: defaultEnd,
             is_available: true,
           });
         }
         schedule.push({
           staff_id: staff.id,
           day_of_week: 0,
-          start_time: "09:00",
-          end_time: "19:00",
+          start_time: defaultStart,
+          end_time: defaultEnd,
           is_available: false,
         });
 
         await supabase.from("staff_schedules").insert(schedule);
+
+        // Create default service
+        const { error: serviceError } = await supabase
+          .from("services")
+          .insert({
+            business_id: business.id,
+            name: "Servicio General",
+            duration_minutes: 30,
+            price: 0,
+            active: true,
+          });
+        if (serviceError) {
+          console.error("[SALON-REG] Failed to create default service:", serviceError);
+        }
+
+        // Mark business as having schedule and services
+        await supabase
+          .from("businesses")
+          .update({ has_schedule: true, has_services: true })
+          .eq("id", business.id);
 
         // Link discovered salon
         if (refId) {
