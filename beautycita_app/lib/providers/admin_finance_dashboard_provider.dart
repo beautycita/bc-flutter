@@ -533,8 +533,8 @@ final financeDashboardKpisProvider =
       client.from('v_daily_revenue').select().limit(30),
     ]);
 
-    final healthRows = results[0] as List;
-    final dailyRows = results[1] as List;
+    final healthRows = results.isNotEmpty ? (results[0] as List) : <dynamic>[];
+    final dailyRows = results.length > 1 ? (results[1] as List) : <dynamic>[];
 
     if (healthRows.isEmpty) return FinanceDashboardKpis.placeholder;
 

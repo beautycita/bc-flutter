@@ -116,18 +116,20 @@ final businessStatsProvider =
   final results = await Future.wait<dynamic>(
       [todayAppts, weekAppts, monthRevenue, pendingQ, bizInfo]);
 
+  List safeAt(int i) => i < results.length ? (results[i] as List) : [];
+
   double revenue = 0;
-  for (final row in (results[2] as List)) {
+  for (final row in safeAt(2)) {
     revenue += ((row as Map)['price'] as num?)?.toDouble() ?? 0;
   }
 
-  final bizData = results[4] as Map<String, dynamic>;
+  final bizData = results.length > 4 ? (results[4] as Map<String, dynamic>) : <String, dynamic>{};
 
   return BusinessStats(
-    appointmentsToday: (results[0] as List).length,
-    appointmentsWeek: (results[1] as List).length,
+    appointmentsToday: safeAt(0).length,
+    appointmentsWeek: safeAt(1).length,
     revenueMonth: revenue,
-    pendingConfirmations: (results[3] as List).length,
+    pendingConfirmations: safeAt(3).length,
     averageRating: (bizData['average_rating'] as num?)?.toDouble() ?? 0,
     totalReviews: bizData['total_reviews'] as int? ?? 0,
   );

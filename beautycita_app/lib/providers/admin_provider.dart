@@ -198,19 +198,21 @@ final adminDashStatsProvider = FutureProvider<AdminStats>((ref) async {
     client.from('disputes').select('id').eq('status', 'escalated'),
   ]);
 
+  List safeAt(int i) => i < results.length ? (results[i] as List) : [];
+
   double revenue = 0;
-  for (final row in (results[3] as List)) {
+  for (final row in safeAt(3)) {
     revenue += ((row as Map)['price'] as num?)?.toDouble() ?? 0;
   }
 
   return AdminStats(
-    totalUsers: (results[0] as List).length,
-    activeStylists: (results[1] as List).length,
-    bookingsToday: (results[2] as List).length,
+    totalUsers: safeAt(0).length,
+    activeStylists: safeAt(1).length,
+    bookingsToday: safeAt(2).length,
     revenueMonth: revenue,
-    unverifiedBusinesses: (results[4] as List).length,
-    openDisputes: (results[5] as List).length,
-    escalatedDisputes: (results[6] as List).length,
+    unverifiedBusinesses: safeAt(4).length,
+    openDisputes: safeAt(5).length,
+    escalatedDisputes: safeAt(6).length,
   );
 });
 

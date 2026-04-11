@@ -730,7 +730,7 @@ class _GiftCardRedemptionTileState
         return;
       }
 
-      await SupabaseClientService.adjustSaldo(userId: userId, amount: remaining);
+      await SupabaseClientService.adjustSaldo(userId: userId, amount: remaining, reason: 'gift_card_redeem');
 
       _codeCtrl.clear();
       setState(() => _expanded = false);

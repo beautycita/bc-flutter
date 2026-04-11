@@ -374,7 +374,7 @@ class _BusinessCalendarScreenState
 
           // Customer gets full refund (salon cancelled, not their fault)
           if (userId != null) {
-            await SupabaseClientService.adjustSaldo(userId: userId, amount: price);
+            await SupabaseClientService.adjustSaldo(userId: userId, amount: price, reason: 'salon_cancellation_refund');
           }
 
           // BC still charges 3% — billed to salon (commission record)

@@ -519,7 +519,7 @@ class _ClientDetailSheetState extends State<_ClientDetailSheet> {
       });
 
       // Credit $50 saldo to user
-      await SupabaseClientService.adjustSaldo(userId: userId, amount: 50.0);
+      await SupabaseClientService.adjustSaldo(userId: userId, amount: 50.0, reason: 'loyalty_redemption');
 
       widget.onUpdated();
       if (mounted) {

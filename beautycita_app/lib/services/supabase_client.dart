@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:uuid/uuid.dart';
 
 class SupabaseClientService {
   static bool _initialized = false;
@@ -50,10 +51,18 @@ class SupabaseClientService {
 
   /// Atomically adjust a user's saldo. Use positive amount to credit, negative to deduct.
   /// Single call site for the increment_saldo RPC — all code must use this.
-  static Future<void> adjustSaldo({required String userId, required double amount}) async {
+  /// Idempotency key prevents double-credit on network retry.
+  static Future<void> adjustSaldo({
+    required String userId,
+    required double amount,
+    String reason = 'adjustment',
+    String? idempotencyKey,
+  }) async {
     await client.rpc('increment_saldo', params: {
       'p_user_id': userId,
       'p_amount': double.parse(amount.toStringAsFixed(2)),
+      'p_reason': reason,
+      'p_idempotency_key': idempotencyKey ?? const Uuid().v4(),
     });
   }
 }
