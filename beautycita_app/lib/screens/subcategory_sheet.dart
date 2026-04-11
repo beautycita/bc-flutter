@@ -156,16 +156,22 @@ class _SubcategorySheetState extends State<SubcategorySheet>
                   switchInCurve: Curves.easeOutCubic,
                   switchOutCurve: Curves.easeInCubic,
                   transitionBuilder: (child, animation) {
-                    final slide = Tween<Offset>(
-                      begin: const Offset(0, 0.15),
+                    final slideIn = Tween<Offset>(
+                      begin: const Offset(1.0, 0.0),
                       end: Offset.zero,
                     ).animate(animation);
-                    return FadeTransition(
-                      opacity: animation,
-                      child: SlideTransition(
-                        position: slide,
-                        child: child,
-                      ),
+                    return SlideTransition(
+                      position: slideIn,
+                      child: child,
+                    );
+                  },
+                  // Keep both children visible during the crossfade (prevents flash)
+                  layoutBuilder: (currentChild, previousChildren) {
+                    return Stack(
+                      children: [
+                        ...previousChildren,
+                        if (currentChild != null) currentChild,
+                      ],
                     );
                   },
                   child: _selectedSub != null

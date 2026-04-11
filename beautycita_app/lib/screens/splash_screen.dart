@@ -94,6 +94,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       if (!mounted) return;
 
       controller.addListener(_onVideoProgress);
+      controller.setPlaybackSpeed(0.5);
       controller.play();
       setState(() => _videoReady = true);
     } catch (e) {

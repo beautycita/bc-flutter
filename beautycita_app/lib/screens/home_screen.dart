@@ -2,6 +2,7 @@ import 'package:beautycita/config/app_transitions.dart';
 import 'package:beautycita/services/gyro_parallax_service.dart';
 import 'package:beautycita/widgets/parallax_tilt.dart';
 import 'dart:async';
+import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
@@ -11,8 +12,11 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:video_player/video_player.dart';
 import '../models/category.dart';
 import '../providers/category_provider.dart';
 import '../providers/business_provider.dart';
@@ -619,27 +623,165 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 // ── Immersive subcategory classes removed — unified into SubcategorySheet ──
 
 /// Hidden color picker easter egg — multi-touch:
-/// Hero gradient background — brand gradient (pink→purple→blue) overlay on video.
-class _HeroGradientBackground extends StatelessWidget {
+/// Hero gradient background — looping R2 video with gyro parallax + theme overlay.
+class _HeroGradientBackground extends StatefulWidget {
   final double height;
   final Widget child;
 
   const _HeroGradientBackground({required this.height, required this.child});
 
-  // Brand gradient colors
+  @override
+  State<_HeroGradientBackground> createState() =>
+      _HeroGradientBackgroundState();
+}
+
+class _HeroGradientBackgroundState extends State<_HeroGradientBackground> {
+  static const _videoUrl =
+      'https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/video/bcOffice.mp4';
+  static const _cacheFileName = 'hero_bcOffice.mp4';
+
+  // Brand gradient colors (fallback)
   static const _brandPink = Color(0xFFEC4899);
   static const _brandPurple = Color(0xFF9333EA);
   static const _brandBlue = Color(0xFF3B82F6);
 
+  VideoPlayerController? _controller;
+  bool _videoReady = false;
+  bool _videoFailed = false;
+  StreamSubscription<ParallaxOffset>? _gyroSub;
+  double _offsetX = 0;
+  double _offsetY = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _initVideo();
+    _initGyro();
+  }
+
+  Future<void> _initVideo() async {
+    try {
+      // Check for cached video first (same pattern as splash)
+      final cacheDir = await getApplicationCacheDirectory();
+      final cachedFile = File('${cacheDir.path}/$_cacheFileName');
+
+      VideoPlayerController controller;
+      if (cachedFile.existsSync() && cachedFile.lengthSync() > 100000) {
+        controller = VideoPlayerController.file(cachedFile);
+      } else {
+        controller = VideoPlayerController.networkUrl(Uri.parse(_videoUrl));
+        // Cache for next time (non-blocking)
+        _cacheVideo(cachedFile);
+      }
+
+      _controller = controller;
+      await controller.initialize().timeout(
+            const Duration(seconds: 6),
+            onTimeout: () => throw Exception('timeout'),
+          );
+      if (!mounted) return;
+
+      controller.setLooping(true);
+      controller.setVolume(0);
+      controller.setPlaybackSpeed(0.5);
+      controller.play();
+      setState(() => _videoReady = true);
+    } catch (e) {
+      if (kDebugMode) debugPrint('[Hero] Video failed: $e');
+      if (mounted) setState(() => _videoFailed = true);
+    }
+  }
+
+  Future<void> _cacheVideo(File target) async {
+    try {
+      final response = await http
+          .get(Uri.parse(_videoUrl))
+          .timeout(const Duration(seconds: 15));
+      if (response.statusCode == 200) {
+        await target.writeAsBytes(response.bodyBytes);
+        if (kDebugMode) debugPrint('[Hero] Video cached for next launch');
+      }
+    } catch (e) {
+      if (kDebugMode) debugPrint('[Hero] Cache failed: $e');
+    }
+  }
+
+  void _initGyro() {
+    final gyro = GyroParallaxService.instance;
+    gyro.addListener();
+    _gyroSub = gyro.stream.listen((offset) {
+      if (!mounted) return;
+      setState(() {
+        _offsetX = offset.x * 20; // ±20px — intense parallax
+        _offsetY = offset.y * 20;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _gyroSub?.cancel();
+    GyroParallaxService.instance.removeListener();
+    _controller?.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final primaryColor = Theme.of(context).colorScheme.primary;
+
     return SizedBox(
-      height: height,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          // Brand gradient overlay
-          Container(
+      height: widget.height,
+      child: ClipRect(
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // Video or gradient fallback
+            if (_videoReady && !_videoFailed)
+              _buildVideoLayer()
+            else
+              _buildGradientFallback(),
+
+            // Theme-colored overlay (primary at 0.3 opacity)
+            Container(color: primaryColor.withValues(alpha: 0.3)),
+
+            // Dark overlay for text readability
+            Container(color: Colors.black.withValues(alpha: 0.4)),
+
+            // Content
+            widget.child,
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVideoLayer() {
+    return Positioned.fill(
+      child: Transform.translate(
+        offset: Offset(_offsetX, _offsetY),
+        child: Transform.scale(
+          scale: 1.2, // oversized so edges don't show during parallax
+          child: FittedBox(
+            fit: BoxFit.cover,
+            child: SizedBox(
+              width: _controller!.value.size.width,
+              height: _controller!.value.size.height,
+              child: VideoPlayer(_controller!),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGradientFallback() {
+    return Positioned.fill(
+      child: Transform.translate(
+        offset: Offset(_offsetX, _offsetY),
+        child: Transform.scale(
+          scale: 1.2,
+          child: Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
@@ -653,9 +795,7 @@ class _HeroGradientBackground extends StatelessWidget {
               ),
             ),
           ),
-          // Content
-          child,
-        ],
+        ),
       ),
     );
   }
