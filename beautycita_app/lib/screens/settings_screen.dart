@@ -24,7 +24,7 @@ class SettingsScreen extends ConsumerWidget {
     final authState = ref.watch(authStateProvider);
     final profile = ref.watch(profileProvider);
     final ext = Theme.of(context).extension<BCThemeExtension>()!;
-    final goldGrad = ext.goldGradientDirectional();
+    final brandGrad = ext.primaryGradient;
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -35,29 +35,29 @@ class SettingsScreen extends ConsumerWidget {
           vertical: AppConstants.paddingMD,
         ),
         children: [
-          // ── Profile Card with gold gradient border ──
+          // ── Profile Card with brand gradient border ──
           GestureDetector(
             onTap: () => context.push('/settings/profile'),
             child: Container(
               decoration: BoxDecoration(
-                gradient: goldGrad,
+                gradient: brandGrad,
                 borderRadius: BorderRadius.circular(AppConstants.radiusMD),
               ),
               child: Container(
                 margin: const EdgeInsets.all(1.5),
                 padding: const EdgeInsets.all(AppConstants.paddingLG),
                 decoration: BoxDecoration(
-                  gradient: ext.primaryGradient,
+                  color: Theme.of(context).colorScheme.surface,
                   borderRadius: BorderRadius.circular(AppConstants.radiusMD - 1.5),
                 ),
                 child: Row(
                   children: [
-                    // Avatar with gold stroke
+                    // Avatar with brand gradient stroke
                     Container(
                       padding: const EdgeInsets.all(2),
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        gradient: goldGrad,
+                        gradient: brandGrad,
                       ),
                       child: CircleAvatar(
                         radius: 28,
@@ -75,18 +75,19 @@ class SettingsScreen extends ConsumerWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Username with gold shimmer
-                          _GoldShimmerText(
+                          // Username with brand shimmer
+                          _BrandShimmerText(
                             text: profile.fullName ?? authState.username ?? 'Usuario',
+                            gradient: brandGrad,
                             style: Theme.of(context).textTheme.titleLarge?.copyWith(
                               fontWeight: FontWeight.w700,
                               fontSize: 20,
                             ),
                           ),
                           const SizedBox(height: 2),
-                          // "Editar perfil" with static gold
+                          // "Editar perfil" with brand gradient
                           ShaderMask(
-                            shaderCallback: (bounds) => goldGrad.createShader(bounds),
+                            shaderCallback: (bounds) => brandGrad.createShader(bounds),
                             child: Text(
                               'Editar perfil',
                               style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -97,9 +98,9 @@ class SettingsScreen extends ConsumerWidget {
                         ],
                       ),
                     ),
-                    // Pencil icon — gold
+                    // Pencil icon — brand
                     ShaderMask(
-                      shaderCallback: (bounds) => goldGrad.createShader(bounds),
+                      shaderCallback: (bounds) => brandGrad.createShader(bounds),
                       child: Icon(
                         Icons.edit_outlined,
                         size: 18,
@@ -107,9 +108,9 @@ class SettingsScreen extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(width: 4),
-                    // Chevron — gold
+                    // Chevron — brand
                     ShaderMask(
-                      shaderCallback: (bounds) => goldGrad.createShader(bounds),
+                      shaderCallback: (bounds) => brandGrad.createShader(bounds),
                       child: Icon(
                         Icons.chevron_right_rounded,
                         color: Theme.of(context).colorScheme.onPrimary,
@@ -498,18 +499,19 @@ class SettingsScreen extends ConsumerWidget {
   }
 }
 
-/// Gold shimmer text — animates a highlight sweep across the gold gradient.
-class _GoldShimmerText extends StatefulWidget {
+/// Brand shimmer text — animates a highlight sweep across the brand gradient.
+class _BrandShimmerText extends StatefulWidget {
   final String text;
+  final LinearGradient gradient;
   final TextStyle? style;
 
-  const _GoldShimmerText({required this.text, this.style});
+  const _BrandShimmerText({required this.text, required this.gradient, this.style});
 
   @override
-  State<_GoldShimmerText> createState() => _GoldShimmerTextState();
+  State<_BrandShimmerText> createState() => _BrandShimmerTextState();
 }
 
-class _GoldShimmerTextState extends State<_GoldShimmerText>
+class _BrandShimmerTextState extends State<_BrandShimmerText>
     with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late AnimationController _controller;
 
@@ -541,6 +543,10 @@ class _GoldShimmerTextState extends State<_GoldShimmerText>
 
   @override
   Widget build(BuildContext context) {
+    final baseColors = widget.gradient.colors;
+    // Create shimmer by inserting a bright highlight into the gradient
+    final highlightColor = Color.lerp(baseColors.first, const Color(0xFFFFFFFF), 0.5)!;
+
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
@@ -550,21 +556,19 @@ class _GoldShimmerTextState extends State<_GoldShimmerText>
             return LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: const [
-                Color(0xFFD4AF37),
-                Color(0xFFFFF8DC),
-                Color(0xFFFFD700),
-                Color(0xFFFFFFE0),
-                Color(0xFFFFF8DC),
-                Color(0xFFD4AF37),
+              colors: [
+                baseColors.first,
+                highlightColor,
+                baseColors.last,
+                highlightColor,
+                baseColors.first,
               ],
               stops: [
-                (shimmerOffset - 0.3).clamp(0.0, 1.0),
-                (shimmerOffset - 0.1).clamp(0.0, 1.0),
+                (shimmerOffset - 0.2).clamp(0.0, 1.0),
                 shimmerOffset.clamp(0.0, 1.0),
-                (shimmerOffset + 0.1).clamp(0.0, 1.0),
-                (shimmerOffset + 0.3).clamp(0.0, 1.0),
-                (shimmerOffset + 0.5).clamp(0.0, 1.0),
+                (shimmerOffset + 0.2).clamp(0.0, 1.0),
+                (shimmerOffset + 0.4).clamp(0.0, 1.0),
+                (shimmerOffset + 0.6).clamp(0.0, 1.0),
               ],
             ).createShader(bounds);
           },
