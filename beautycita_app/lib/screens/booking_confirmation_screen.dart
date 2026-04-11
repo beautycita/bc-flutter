@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../widgets/parallax_tilt.dart';
 
@@ -468,6 +469,25 @@ class _BookingConfirmationScreenState
                     label: 'Ver Detalle y Ruta',
                     onTap: () =>
                         context.push('/appointment/${booking.id}'),
+                  ),
+
+                  const SizedBox(height: AppConstants.paddingMD),
+
+                  // -- Comparte tu cita (viral) --
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      final msg = 'Acabo de reservar ${booking.serviceName} en BeautyCita! '
+                          'Reserva tu cita de belleza en segundos: https://beautycita.com';
+                      Share.share(msg);
+                    },
+                    icon: const Icon(Icons.share_rounded, size: 18),
+                    label: const Text('Comparte tu cita'),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 48),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppConstants.radiusLG),
+                      ),
+                    ),
                   ),
 
                   const SizedBox(height: AppConstants.paddingLG),

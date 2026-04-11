@@ -290,6 +290,10 @@ function registrationPage(ref: string | null, salon: SalonData): string {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${hasSalon ? esc(salon.name) + " - " : ""}Registra tu salon - BeautyCita</title>
+  <meta property="og:title" content="${hasSalon ? esc(salon.name) + ' ya tiene clientes esperando' : 'Tu salon ya tiene clientes esperando'} — BeautyCita">
+  <meta property="og:description" content="Registrate gratis en 60 segundos y empieza a recibir citas. 0% comision, siempre gratis.">
+  <meta property="og:image" content="https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/media/web/img/bc_logo.png">
+  <meta property="og:type" content="website">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
