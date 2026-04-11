@@ -696,7 +696,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             onPressed: _saveName,
           ),
           IconButton(
-            icon: Icon(Icons.close_outlined, color: Colors.grey.shade500),
+            icon: Icon(Icons.close_outlined, color: cs.onSurface.withValues(alpha: 0.5)),
             onPressed: () => setState(() => _editingName = false),
           ),
         ],

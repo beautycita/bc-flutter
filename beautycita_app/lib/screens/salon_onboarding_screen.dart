@@ -868,7 +868,7 @@ class _SalonOnboardingScreenState
                             margin: const EdgeInsets.only(top: 4),
                             constraints: const BoxConstraints(maxHeight: 220),
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: colors.surface,
                               borderRadius: BorderRadius.circular(12),
                               boxShadow: [
                                 BoxShadow(
@@ -1265,7 +1265,7 @@ class _SectionCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -1819,7 +1819,7 @@ class _NearbyMatchListState extends State<_NearbyMatchList>
               child: Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: Material(
-                  color: Colors.white,
+                  color: colors.surface,
                   borderRadius: BorderRadius.circular(16),
                   elevation: 0,
                   child: InkWell(
@@ -2034,7 +2034,7 @@ class _BenefitsSection extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -2474,7 +2474,7 @@ class _IdentityGateSheetState extends ConsumerState<_IdentityGateSheet> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),

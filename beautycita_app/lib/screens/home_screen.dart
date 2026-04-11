@@ -247,7 +247,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final isAdminRole = ref.watch(isAdminProvider).valueOrNull ?? false;
     if (toggles.isEnabled('enable_maintenance_mode') && !isAdminRole) {
       return Scaffold(
-        backgroundColor: const Color(0xFFF5F3FF),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(AppConstants.paddingXL),
@@ -263,7 +263,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   style: GoogleFonts.poppins(
                     fontSize: 22,
                     fontWeight: FontWeight.w600,
-                    color: const Color(0xFF212121),
+                    color: palette.onSurface,
                   ),
                 ),
                 const SizedBox(height: AppConstants.paddingSM),
@@ -271,7 +271,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   'Estamos mejorando la app. Vuelve en unos minutos.',
                   style: GoogleFonts.nunito(
                     fontSize: 15,
-                    color: const Color(0xFF757575),
+                    color: palette.onSurface.withValues(alpha: 0.6),
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -1362,8 +1362,10 @@ class _CategoryCardState extends ConsumerState<_CategoryCard>
                 child: Image.asset(imagePath, fit: BoxFit.cover),
               ),
             ),
-            // Desaturate: pull most color out
-            Container(color: Colors.white.withValues(alpha: 0.35)),
+            // Desaturate: pull most color out (brightness-aware wash)
+            Container(color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.black.withValues(alpha: 0.35)
+                : Colors.white.withValues(alpha: 0.35)),
             // Category color tint — this is what unifies them
             Container(
               decoration: BoxDecoration(
@@ -1390,22 +1392,26 @@ class _CategoryCardState extends ConsumerState<_CategoryCard>
                 ),
               ),
             ),
-            // Frosted bottom strip
+            // Frosted bottom strip (brightness-aware wash)
             Positioned(
               left: 0, right: 0, bottom: 0,
               height: 40,
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.white.withValues(alpha: 0.0),
-                      Colors.white.withValues(alpha: 0.85),
-                    ],
+              child: Builder(builder: (context) {
+                final isDark = Theme.of(context).brightness == Brightness.dark;
+                final washColor = isDark ? Colors.black : Colors.white;
+                return Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        washColor.withValues(alpha: 0.0),
+                        washColor.withValues(alpha: 0.85),
+                      ],
+                    ),
                   ),
-                ),
-              ),
+                );
+              }),
             ),
             // Category name
             Positioned(
@@ -1596,10 +1602,10 @@ class _CategoryCardState extends ConsumerState<_CategoryCard>
           duration: const Duration(milliseconds: 200),
           curve: Curves.easeOut,
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: Colors.grey.withValues(alpha: 0.12),
+              color: ext.cardBorderColor,
               width: 0.5,
             ),
             boxShadow: [
@@ -1646,7 +1652,7 @@ class _HomeBusinessDrawer extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     return Drawer(
-      backgroundColor: const Color(0xFFF5F3FF),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       shape: const RoundedRectangleBorder(
         borderRadius:
             BorderRadius.horizontal(right: Radius.circular(AppConstants.radiusLG)),
@@ -1668,14 +1674,14 @@ class _HomeBusinessDrawer extends StatelessWidget {
                     style: GoogleFonts.poppins(
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
-                      color: const Color(0xFF000000),
+                      color: colors.onSurface,
                     ),
                   ),
                   Text(
                     'Portal de Negocio',
                     style: GoogleFonts.nunito(
                       fontSize: 13,
-                      color: const Color(0xFF757575),
+                      color: colors.onSurface.withValues(alpha: 0.6),
                     ),
                   ),
                 ],
@@ -1710,7 +1716,7 @@ class _HomeBusinessDrawer extends StatelessWidget {
                         child: ListTile(
                           leading: Icon(
                             _tabs[i].$1,
-                            color: const Color(0xFF757575).withValues(alpha: 0.6),
+                            color: colors.onSurface.withValues(alpha: 0.4),
                             size: 22,
                           ),
                           title: Text(
@@ -1718,7 +1724,7 @@ class _HomeBusinessDrawer extends StatelessWidget {
                             style: GoogleFonts.poppins(
                               fontSize: 14,
                               fontWeight: FontWeight.w500,
-                              color: const Color(0xFF212121),
+                              color: colors.onSurface,
                             ),
                           ),
                           shape: RoundedRectangleBorder(
@@ -1765,7 +1771,7 @@ class _HomeAdminDrawer extends StatelessWidget {
     }
 
     return Drawer(
-      backgroundColor: const Color(0xFFF5F3FF),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       shape: const RoundedRectangleBorder(
         borderRadius:
             BorderRadius.horizontal(left: Radius.circular(AppConstants.radiusLG)),
@@ -1787,14 +1793,14 @@ class _HomeAdminDrawer extends StatelessWidget {
                     style: GoogleFonts.poppins(
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
-                      color: const Color(0xFF000000),
+                      color: colors.onSurface,
                     ),
                   ),
                   Text(
                     'BeautyCita',
                     style: GoogleFonts.nunito(
                       fontSize: 13,
-                      color: const Color(0xFF757575),
+                      color: colors.onSurface.withValues(alpha: 0.6),
                     ),
                   ),
                 ],
@@ -1842,7 +1848,7 @@ class _HomeAdminDrawer extends StatelessWidget {
                           child: ListTile(
                             leading: Icon(
                               _tabs[i].$1,
-                              color: const Color(0xFF757575).withValues(alpha: 0.6),
+                              color: colors.onSurface.withValues(alpha: 0.4),
                               size: 22,
                             ),
                             title: Text(
@@ -1850,7 +1856,7 @@ class _HomeAdminDrawer extends StatelessWidget {
                               style: GoogleFonts.poppins(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w500,
-                                color: const Color(0xFF212121),
+                                color: colors.onSurface,
                               ),
                             ),
                             shape: RoundedRectangleBorder(

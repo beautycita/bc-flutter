@@ -782,7 +782,7 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.grey[100],
+        color: palette.onSurface.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
       ),
       child: Column(

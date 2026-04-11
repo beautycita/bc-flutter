@@ -124,12 +124,15 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     final screenWidth = MediaQuery.of(context).size.width;
     final primary = Theme.of(context).colorScheme.primary;
     final secondary = Theme.of(context).colorScheme.secondary;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFFFFF8F0), Color(0xFFFFF0F5), Color(0xFFFFF8F0)],
+            colors: isDark
+                ? [const Color(0xFF121218), const Color(0xFF1A1020), const Color(0xFF121218)]
+                : [const Color(0xFFFFF8F0), const Color(0xFFFFF0F5), const Color(0xFFFFF8F0)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
