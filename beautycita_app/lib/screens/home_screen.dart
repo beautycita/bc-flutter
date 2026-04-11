@@ -645,8 +645,8 @@ class _HeroGradientBackground extends StatefulWidget {
 
 class _HeroGradientBackgroundState extends State<_HeroGradientBackground> {
   static const _videoUrl =
-      'https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/video/bcOffice.mp4';
-  static const _cacheFileName = 'hero_bcOffice.mp4';
+      'https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/video/bcStartup.mp4';
+  static const _cacheFileName = 'hero_bcStartup.mp4';
 
   // Brand gradient colors (fallback)
   static const _brandPink = Color(0xFFEC4899);
