@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../config/constants.dart';
+import '../../config/theme_extension.dart';
 import '../../providers/business_provider.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
@@ -221,7 +222,7 @@ class _BusinessMarketingScreenState extends ConsumerState<BusinessMarketingScree
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(status, style: GoogleFonts.nunito(fontSize: 10,
-                                  color: status == 'sent' ? const Color(0xFF059669) : Colors.red,
+                                  color: status == 'sent' ? Theme.of(context).extension<BCThemeExtension>()!.successColor : colors.error,
                                   fontWeight: FontWeight.w700)),
                             ),
                             if (created != null) ...[

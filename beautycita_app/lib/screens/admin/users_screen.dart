@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../config/constants.dart';
+import '../../config/theme_extension.dart';
 import '../../models/chat_message.dart';
 import '../../providers/admin_provider.dart';
 import '../../providers/chat_provider.dart';
@@ -45,73 +46,80 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
     return list;
   }
 
-  /// Avatar accent color per role (used for initials).
+  /// Avatar accent color per role (using theme colors).
   Color _roleColor(String role) {
+    final colors = Theme.of(context).colorScheme;
     switch (role) {
       case 'superadmin':
-        return Colors.red;
+        return colors.error;
       case 'admin':
-        return Colors.deepPurple;
+        return colors.secondary;
       case 'stylist':
-        return Colors.teal;
+        return colors.primary;
       default:
-        return Colors.blueGrey;
+        return colors.onSurface.withValues(alpha: 0.5);
     }
   }
 
   /// Chip background tint per role.
   Color _chipBgColor(String role) {
+    final colors = Theme.of(context).colorScheme;
     switch (role) {
       case 'superadmin':
-        return const Color(0xFF424242); // dark gray
+        return colors.onSurface.withValues(alpha: 0.15);
       case 'admin':
-        return const Color(0xFFFCE4EC); // light pink
+        return colors.error.withValues(alpha: 0.08);
       case 'stylist':
-        return const Color(0xFFE8F5E9); // light green
+        return colors.primary.withValues(alpha: 0.08);
       default:
-        return const Color(0xFFE3F2FD); // light blue (customer)
+        return colors.secondary.withValues(alpha: 0.08);
     }
   }
 
   /// Chip text color per role.
   Color _chipTextColor(String role) {
+    final colors = Theme.of(context).colorScheme;
     switch (role) {
       case 'superadmin':
-        return Theme.of(context).colorScheme.onPrimary;
+        return colors.onPrimary;
       case 'admin':
-        return const Color(0xFFC62828);
+        return colors.error;
       case 'stylist':
-        return const Color(0xFF2E7D32);
+        return colors.primary;
       default:
-        return const Color(0xFF1565C0);
+        return colors.secondary;
     }
   }
 
   /// Status color for edit sheet chips.
   Color _statusColor(String status) {
+    final ext = Theme.of(context).extension<BCThemeExtension>()!;
+    final colors = Theme.of(context).colorScheme;
     switch (status) {
       case 'active':
-        return Colors.green;
+        return ext.successColor;
       case 'suspended':
-        return Colors.orange;
+        return ext.warningColor;
       case 'archived':
-        return Colors.grey;
+        return colors.onSurface.withValues(alpha: 0.4);
       default:
-        return Colors.blueGrey;
+        return colors.onSurface.withValues(alpha: 0.4);
     }
   }
 
   /// Chip stroke color per account status (list view).
   Color _statusStrokeColor(String status) {
+    final ext = Theme.of(context).extension<BCThemeExtension>()!;
+    final colors = Theme.of(context).colorScheme;
     switch (status) {
       case 'active':
-        return Colors.green;
+        return ext.successColor;
       case 'suspended':
-        return Colors.red;
+        return colors.error;
       case 'archived':
-        return Colors.grey;
+        return colors.onSurface.withValues(alpha: 0.4);
       default:
-        return Colors.blueGrey;
+        return colors.onSurface.withValues(alpha: 0.4);
     }
   }
 
@@ -321,8 +329,8 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
                                         decoration: BoxDecoration(
                                           shape: BoxShape.circle,
                                           color: user.isOnline
-                                              ? Colors.green
-                                              : Colors.grey.shade400,
+                                              ? Theme.of(context).extension<BCThemeExtension>()!.successColor
+                                              : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
                                           border: Border.all(
                                             color: Theme.of(context).colorScheme.surface,
                                             width: 2,
@@ -447,7 +455,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
                       height: 4,
                       margin: const EdgeInsets.only(bottom: 20),
                       decoration: BoxDecoration(
-                        color: Colors.grey[300],
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -482,8 +490,8 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 color: user.isOnline
-                                    ? Colors.green
-                                    : Colors.grey.shade400,
+                                    ? Theme.of(context).extension<BCThemeExtension>()!.successColor
+                                    : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
                                 border:
                                     Border.all(color: Theme.of(context).colorScheme.surface, width: 2),
                               ),
@@ -546,7 +554,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
                           ),
                         ),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF7B1038),
+                          backgroundColor: Theme.of(context).colorScheme.error,
                           foregroundColor: Theme.of(context).colorScheme.onPrimary,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -1490,7 +1498,7 @@ class _LiveSupportSheetState extends ConsumerState<_LiveSupportSheet> {
     return Scaffold(
       backgroundColor: const Color(0xFFF0ECE5),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF7B1038),
+        backgroundColor: Theme.of(context).colorScheme.error,
         foregroundColor: Theme.of(context).colorScheme.onPrimary,
         title: Row(
           children: [
@@ -1659,8 +1667,8 @@ class _LiveSupportSheetState extends ConsumerState<_LiveSupportSheet> {
                               height: 44,
                               decoration: BoxDecoration(
                                 color: _isSending
-                                    ? Colors.grey[300]
-                                    : const Color(0xFF7B1038),
+                                    ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.15)
+                                    : Theme.of(context).colorScheme.error,
                                 shape: BoxShape.circle,
                               ),
                               child: _isSending

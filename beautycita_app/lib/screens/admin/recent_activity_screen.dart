@@ -3,6 +3,7 @@ import 'package:beautycita/config/app_transitions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/constants.dart';
+import '../../config/theme_extension.dart';
 import '../../providers/admin_provider.dart';
 
 class RecentActivityScreen extends ConsumerWidget {
@@ -14,7 +15,7 @@ class RecentActivityScreen extends ConsumerWidget {
     final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F3FF),
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
@@ -75,16 +76,17 @@ class _ActivityTile extends StatelessWidget {
     final type = item['type'] as String;
     final colors = Theme.of(context).colorScheme;
 
+    final bcExt = Theme.of(context).extension<BCThemeExtension>()!;
     final IconData icon;
     final Color iconColor;
     switch (type) {
       case 'booking':
         icon = Icons.calendar_today;
-        iconColor = Colors.orange;
+        iconColor = bcExt.warningColor;
         break;
       case 'dispute':
         icon = Icons.gavel;
-        iconColor = Colors.red;
+        iconColor = colors.error;
         break;
       default:
         icon = Icons.person_add;

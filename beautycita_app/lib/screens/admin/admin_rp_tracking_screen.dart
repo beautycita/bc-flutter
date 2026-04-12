@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../config/constants.dart';
+import '../../config/theme_extension.dart';
 import '../../providers/admin_provider.dart';
 
 /// Admin screen showing RP (Public Relations) performance metrics.
@@ -116,7 +117,7 @@ class _RpCard extends StatelessWidget {
                           name.isNotEmpty ? name[0].toUpperCase() : '?',
                           style: GoogleFonts.poppins(
                             fontWeight: FontWeight.w700,
-                            color: const Color(0xFFEC4899),
+                            color: Theme.of(context).colorScheme.primary,
                           ),
                         )
                       : null,
@@ -143,7 +144,7 @@ class _RpCard extends StatelessWidget {
                   child: _MetricTile(
                     label: 'Asignados',
                     value: assignedCount.toString(),
-                    color: const Color(0xFF3B82F6),
+                    color: Theme.of(context).extension<BCThemeExtension>()!.infoColor,
                   ),
                 ),
                 const SizedBox(width: AppConstants.paddingSM),

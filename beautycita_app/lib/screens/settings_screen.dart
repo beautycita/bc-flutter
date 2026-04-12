@@ -61,7 +61,7 @@ class SettingsScreen extends ConsumerWidget {
                       ),
                       child: CircleAvatar(
                         radius: 28,
-                        backgroundColor: Colors.grey.shade800,
+                        backgroundColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                         backgroundImage: profile.avatarUrl != null
                             ? NetworkImage(profile.avatarUrl!)
                             : null,
@@ -250,8 +250,8 @@ class SettingsScreen extends ConsumerWidget {
               icon: const Icon(Icons.logout),
               label: const Text('Cerrar sesion'),
               style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.red.shade600,
-                side: BorderSide(color: Colors.red.shade300),
+                foregroundColor: Theme.of(context).colorScheme.error,
+                side: BorderSide(color: Theme.of(context).colorScheme.error.withValues(alpha: 0.5)),
                 padding: const EdgeInsets.symmetric(vertical: AppConstants.paddingMD),
               ),
             ),
@@ -315,13 +315,13 @@ class SettingsScreen extends ConsumerWidget {
           trailing: Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
             decoration: BoxDecoration(
-              color: Colors.red.shade50,
+              color: Theme.of(context).colorScheme.error.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
               'Rechazada',
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: Colors.red.shade700,
+                color: Theme.of(context).colorScheme.error,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -434,7 +434,7 @@ class SettingsScreen extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: AppConstants.paddingMD),
-                Icon(Icons.logout_rounded, size: AppConstants.iconSizeXL, color: Colors.red.shade400),
+                Icon(Icons.logout_rounded, size: AppConstants.iconSizeXL, color: Theme.of(ctx).colorScheme.error),
                 const SizedBox(height: AppConstants.paddingSM),
                 Text(
                   'Cerrar sesion?',
@@ -468,7 +468,7 @@ class SettingsScreen extends ConsumerWidget {
                       child: ElevatedButton(
                         onPressed: () => Navigator.pop(ctx, true),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red.shade500,
+                          backgroundColor: Theme.of(ctx).colorScheme.error,
                           minimumSize: const Size(0, AppConstants.minTouchHeight),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(AppConstants.radiusLG),

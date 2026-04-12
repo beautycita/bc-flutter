@@ -3,6 +3,7 @@ import 'package:beautycita/config/app_transitions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/constants.dart';
+import '../../config/theme_extension.dart';
 import '../../providers/admin_provider.dart';
 import 'admin_shell_screen.dart';
 
@@ -73,14 +74,14 @@ class DashboardScreen extends ConsumerWidget {
                   icon: Icons.calendar_today,
                   label: 'Citas Hoy',
                   value: '${stats.bookingsToday}',
-                  color: Colors.orange,
+                  color: Theme.of(context).extension<BCThemeExtension>()!.warningColor,
                   onTap: () => _goToTab(ref, 'Citas Hoy'),
                 ),
                 _StatCard(
                   icon: Icons.attach_money,
                   label: 'Ingresos Mes',
                   value: '\$${stats.revenueMonth.toStringAsFixed(0)}',
-                  color: Colors.green,
+                  color: Theme.of(context).extension<BCThemeExtension>()!.successColor,
                   onTap: () => _goToTab(ref, 'Ingresos Mes'),
                 ),
                 _StatCard(
@@ -94,7 +95,7 @@ class DashboardScreen extends ConsumerWidget {
                   icon: Icons.gavel,
                   label: 'Disputas',
                   value: '${stats.openDisputes}',
-                  color: Colors.red,
+                  color: Theme.of(context).colorScheme.error,
                   onTap: () => _goToTab(ref, 'Disputas'),
                 ),
               ],
@@ -363,15 +364,16 @@ class _FullActivityTile extends StatelessWidget {
     final type = item['type'] as String;
     final colors = Theme.of(context).colorScheme;
 
+    final ext = Theme.of(context).extension<BCThemeExtension>()!;
     final IconData icon;
     final Color iconColor;
     switch (type) {
       case 'booking':
         icon = Icons.calendar_today;
-        iconColor = Colors.orange;
+        iconColor = ext.warningColor;
       case 'dispute':
         icon = Icons.gavel;
-        iconColor = Colors.red;
+        iconColor = colors.error;
       default:
         icon = Icons.person_add;
         iconColor = colors.primary;

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../config/constants.dart';
+import '../../config/theme_extension.dart';
 import '../../providers/admin_provider.dart';
 import '../../services/supabase_client.dart';
 
@@ -225,7 +226,7 @@ class _BookingsScreenState extends ConsumerState<BookingsScreen> {
                     label: 'Pendiente',
                     count: pending,
                     icon: Icons.hourglass_empty,
-                    color: Colors.orange,
+                    color: Theme.of(context).extension<BCThemeExtension>()!.warningColor,
                     onTap: () => _showBookings(context, 'Pendientes',
                         filtered.where((b) => b['status'] == 'pending').toList()),
                   ),
@@ -241,7 +242,7 @@ class _BookingsScreenState extends ConsumerState<BookingsScreen> {
                     label: 'Completada',
                     count: completed,
                     icon: Icons.done_all,
-                    color: Colors.green,
+                    color: Theme.of(context).extension<BCThemeExtension>()!.successColor,
                     onTap: () => _showBookings(context, 'Completadas',
                         filtered.where((b) => b['status'] == 'completed').toList()),
                   ),
@@ -249,7 +250,7 @@ class _BookingsScreenState extends ConsumerState<BookingsScreen> {
                     label: 'Cancelada',
                     count: cancelled,
                     icon: Icons.cancel_outlined,
-                    color: Colors.red,
+                    color: Theme.of(context).colorScheme.error,
                     onTap: () => _showBookings(
                         context,
                         'Canceladas',
@@ -551,7 +552,7 @@ class _BookingTile extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      _statusBadge(status),
+                      _statusBadge(context, status),
                     ],
                   ),
                   if (businessName.isNotEmpty) ...[
@@ -598,14 +599,15 @@ class _BookingTile extends StatelessWidget {
     );
   }
 
-  Widget _statusBadge(String status) {
+  Widget _statusBadge(BuildContext context, String status) {
+    final ext = Theme.of(context).extension<BCThemeExtension>()!;
     final color = switch (status) {
-      'pending' => Colors.orange,
+      'pending' => ext.warningColor,
       'confirmed' => Colors.blue,
-      'completed' => Colors.green,
-      'cancelled_customer' || 'cancelled_business' => Colors.red,
+      'completed' => ext.successColor,
+      'cancelled_customer' || 'cancelled_business' => Theme.of(context).colorScheme.error,
       'no_show' => Colors.deepOrange,
-      _ => Colors.grey,
+      _ => Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
     };
     final label = switch (status) {
       'pending' => 'Pendiente',
@@ -687,7 +689,7 @@ class _BookingTile extends StatelessWidget {
                     child: Text('Detalle de Cita',
                         style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700, color: colors.onSurface)),
                   ),
-                  _statusBadge(status),
+                  _statusBadge(context, status),
                 ],
               ),
               const SizedBox(height: 16),
@@ -721,8 +723,8 @@ class _BookingTile extends StatelessWidget {
                           icon: const Icon(Icons.cancel_outlined, size: 18),
                           label: Text('Cancelar', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600)),
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.red,
-                            side: const BorderSide(color: Colors.red),
+                            foregroundColor: Theme.of(context).colorScheme.error,
+                            side: BorderSide(color: Theme.of(context).colorScheme.error),
                             padding: const EdgeInsets.symmetric(vertical: 10),
                           ),
                         ),
@@ -808,7 +810,7 @@ class _BookingTile extends StatelessWidget {
               Navigator.pop(ctx);
               onConfirm();
             },
-            child: Text('Si', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.red)),
+            child: Text('Si', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.error)),
           ),
         ],
       ),

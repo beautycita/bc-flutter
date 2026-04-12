@@ -521,14 +521,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             _infoRow(
               icon: Icons.badge_outlined,
               iconColor: profile.fullName != null
-                  ? Colors.green.shade600
+                  ? ext.successColor
                   : cs.primary,
               label: 'Nombre',
               value: profile.fullName ?? 'Agregar nombre',
               valueIsPlaceholder: profile.fullName == null,
               trailing: profile.fullName != null
                   ? Icon(Icons.check_circle_outlined, size: 18,
-                      color: Colors.green.shade600)
+                      color: ext.successColor)
                   : Text('Agregar', style: textTheme.bodySmall?.copyWith(
                       color: cs.primary, fontWeight: FontWeight.w600)),
               onTap: () {
@@ -542,7 +542,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           _infoRow(
             icon: Icons.cake_outlined,
             iconColor: profile.birthday != null
-                ? Colors.green.shade600
+                ? ext.successColor
                 : cs.primary,
             label: 'Fecha de nacimiento',
             value: profile.birthday != null
@@ -551,7 +551,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             valueIsPlaceholder: profile.birthday == null,
             trailing: profile.birthday != null
                 ? Icon(Icons.check_circle_outlined, size: 18,
-                    color: Colors.green.shade600)
+                    color: ext.successColor)
                 : null,
             onTap: () => _showBirthdayPicker(context),
             showDivider: true,
@@ -561,7 +561,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           _infoRow(
             icon: Icons.person_outline_rounded,
             iconColor: profile.gender != null
-                ? Colors.green.shade600
+                ? ext.successColor
                 : cs.primary,
             label: 'Genero',
             value: profile.gender != null
@@ -570,7 +570,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             valueIsPlaceholder: profile.gender == null,
             trailing: profile.gender != null
                 ? Icon(Icons.check_circle_outlined, size: 18,
-                    color: Colors.green.shade600)
+                    color: ext.successColor)
                 : null,
             onTap: () => _showGenderSheet(context),
             showDivider: false,

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/constants.dart';
+import '../../config/theme_extension.dart';
 import '../../providers/business_provider.dart';
 import '../../providers/feature_toggle_provider.dart';
 import '../../services/supabase_client.dart';
@@ -295,11 +296,11 @@ class _DisputeCard extends StatelessWidget {
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: _statusColor(status).withValues(alpha: 0.1),
+            color: _statusColor(status, context).withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(Icons.gavel_rounded,
-              color: _statusColor(status), size: 20),
+              color: _statusColor(status, context), size: 20),
         ),
         title: Row(
           children: [
@@ -312,7 +313,7 @@ class _DisputeCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            _statusBadge(status),
+            _statusBadge(status, context),
           ],
         ),
         subtitle: Column(
@@ -345,11 +346,11 @@ class _DisputeCard extends StatelessWidget {
     );
   }
 
-  Widget _statusBadge(String status) {
+  Widget _statusBadge(String status, BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: _statusColor(status).withValues(alpha: 0.1),
+        color: _statusColor(status, context).withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
@@ -357,26 +358,27 @@ class _DisputeCard extends StatelessWidget {
         style: GoogleFonts.poppins(
           fontSize: 11,
           fontWeight: FontWeight.w600,
-          color: _statusColor(status),
+          color: _statusColor(status, context),
         ),
       ),
     );
   }
 
-  static Color _statusColor(String status) {
+  static Color _statusColor(String status, BuildContext context) {
+    final ext = Theme.of(context).extension<BCThemeExtension>()!;
     switch (status) {
       case 'open':
-        return Colors.orange;
+        return ext.warningColor;
       case 'salon_responded':
         return Colors.blue;
       case 'escalated':
         return Colors.deepPurple;
       case 'resolved':
-        return Colors.green;
+        return ext.successColor;
       case 'rejected':
-        return Colors.red;
+        return Theme.of(context).colorScheme.error;
       default:
-        return Colors.grey;
+        return Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4);
     }
   }
 
@@ -503,7 +505,7 @@ class _DisputeDetailSheetState extends ConsumerState<_DisputeDetailSheet> {
 
               // Info rows
               _infoRow('Estado', _DisputeCard._statusLabel(status),
-                  _DisputeCard._statusColor(status)),
+                  _DisputeCard._statusColor(status, context)),
               _infoRow(
                   'ID', (dispute['id'] as String?)?.substring(0, 8) ?? ''),
               if (dispute['appointment_id'] != null)
@@ -604,10 +606,10 @@ class _DisputeDetailSheetState extends ConsumerState<_DisputeDetailSheet> {
                   runSpacing: 8,
                   children: [
                     _offerChip('full_refund', 'Reembolso total',
-                        Colors.green),
+                        Theme.of(context).extension<BCThemeExtension>()!.successColor),
                     _offerChip('partial_refund', 'Reembolso parcial',
-                        Colors.orange),
-                    _offerChip('denied', 'Negar reembolso', Colors.red),
+                        Theme.of(context).extension<BCThemeExtension>()!.warningColor),
+                    _offerChip('denied', 'Negar reembolso', Theme.of(context).colorScheme.error),
                   ],
                 ),
                 if (_selectedOffer == 'partial_refund') ...[
@@ -647,7 +649,7 @@ class _DisputeDetailSheetState extends ConsumerState<_DisputeDetailSheet> {
                             : null,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: colors.primary,
-                      disabledBackgroundColor: Colors.grey.shade300,
+                      disabledBackgroundColor: colors.onSurface.withValues(alpha: 0.3),
                       minimumSize:
                           const Size(0, AppConstants.minTouchHeight),
                       shape: RoundedRectangleBorder(
@@ -712,11 +714,12 @@ class _DisputeDetailSheetState extends ConsumerState<_DisputeDetailSheet> {
       'denied' => 'Reembolso negado',
       _ => offerType,
     };
+    final ext = Theme.of(context).extension<BCThemeExtension>()!;
     final offerColor = switch (offerType) {
-      'full_refund' => Colors.green,
-      'partial_refund' => Colors.orange,
-      'denied' => Colors.red,
-      _ => Colors.grey,
+      'full_refund' => ext.successColor,
+      'partial_refund' => ext.warningColor,
+      'denied' => Theme.of(context).colorScheme.error,
+      _ => Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
     };
 
     return Container(
@@ -813,7 +816,7 @@ class _DisputeDetailSheetState extends ConsumerState<_DisputeDetailSheet> {
       }
     }
 
-    final color = accepted ? Colors.green : Colors.red;
+    final color = accepted ? Theme.of(context).extension<BCThemeExtension>()!.successColor : Theme.of(context).colorScheme.error;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
@@ -866,12 +869,13 @@ class _DisputeDetailSheetState extends ConsumerState<_DisputeDetailSheet> {
     final status = dispute['status'] as String? ?? '';
 
     // Translate resolution key
+    final resExt = Theme.of(context).extension<BCThemeExtension>()!;
     final (String label, Color color, IconData icon) = switch (resolution) {
-      'favor_client' => ('A favor del cliente', Colors.green, Icons.person_rounded),
+      'favor_client' => ('A favor del cliente', resExt.successColor, Icons.person_rounded),
       'favor_provider' => ('A favor del salon', Colors.blue, Icons.store_rounded),
       'favor_both' => ('A favor de ambos', Colors.teal, Icons.handshake_rounded),
-      'dismissed' => ('Descartada', Colors.grey, Icons.cancel_outlined),
-      _ => (resolution ?? '-', Colors.grey, Icons.info_outline),
+      'dismissed' => ('Descartada', Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4), Icons.cancel_outlined),
+      _ => (resolution ?? '-', Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4), Icons.info_outline),
     };
 
     // Build a human-readable summary
@@ -985,10 +989,10 @@ class _DisputeDetailSheetState extends ConsumerState<_DisputeDetailSheet> {
                                 fontSize: 10,
                                 fontWeight: FontWeight.w600,
                                 color: refundStatus == 'processed'
-                                    ? Colors.green
+                                    ? Theme.of(context).extension<BCThemeExtension>()!.successColor
                                     : refundStatus == 'failed'
-                                        ? Colors.red
-                                        : Colors.orange,
+                                        ? Theme.of(context).colorScheme.error
+                                        : Theme.of(context).extension<BCThemeExtension>()!.warningColor,
                               )),
                         ),
                       ],

@@ -9,6 +9,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:latlong2/latlong.dart' as ll;
 
 import '../../config/constants.dart';
+import '../../config/theme_extension.dart';
 import '../../providers/admin_provider.dart';
 import '../../providers/feature_toggle_provider.dart';
 import '../../providers/rp_provider.dart';
@@ -49,36 +50,39 @@ const _allStatuses = [
 
 const _allSources = ['google_maps', 'facebook', 'bing', 'manual'];
 
-Color _statusColor(String? status) {
+Color _statusColor(BuildContext context, String? status) {
+  final colors = Theme.of(context).colorScheme;
+  final bcExt = Theme.of(context).extension<BCThemeExtension>()!;
   switch (status) {
     case 'discovered':
-      return Colors.grey;
+      return colors.onSurface.withValues(alpha: 0.4);
     case 'selected':
       return Colors.blue;
     case 'outreach_sent':
-      return Colors.orange;
+      return bcExt.warningColor;
     case 'registered':
-      return Colors.green;
+      return bcExt.successColor;
     case 'declined':
-      return Colors.red;
+      return colors.error;
     case 'unreachable':
-      return Colors.grey.shade400;
+      return colors.onSurface.withValues(alpha: 0.4);
     default:
-      return Colors.grey;
+      return colors.onSurface.withValues(alpha: 0.4);
   }
 }
 
-Color _sourceColor(String? source) {
+Color _sourceColor(BuildContext context, String? source) {
+  final colors = Theme.of(context).colorScheme;
   switch (source) {
     case 'google_maps':
-      return Colors.red;
+      return colors.error;
     case 'facebook':
       return Colors.blue;
     case 'bing':
       return Colors.teal;
     case 'manual':
     default:
-      return Colors.grey;
+      return colors.onSurface.withValues(alpha: 0.4);
   }
 }
 
@@ -127,18 +131,20 @@ const _allRpStatuses = [
   'onboarding_complete',
 ];
 
-Color _rpStatusColor(String? rpStatus) {
+Color _rpStatusColor(BuildContext context, String? rpStatus) {
+  final colors = Theme.of(context).colorScheme;
+  final bcExt = Theme.of(context).extension<BCThemeExtension>()!;
   switch (rpStatus) {
     case 'unassigned':
-      return Colors.grey;
+      return colors.onSurface.withValues(alpha: 0.4);
     case 'assigned':
       return Colors.blue;
     case 'visited':
-      return Colors.orange;
+      return bcExt.warningColor;
     case 'onboarding_complete':
-      return Colors.green;
+      return bcExt.successColor;
     default:
-      return Colors.grey;
+      return colors.onSurface.withValues(alpha: 0.4);
   }
 }
 
@@ -444,7 +450,7 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange[700],
+              backgroundColor: Theme.of(context).extension<BCThemeExtension>()!.warningColor,
               foregroundColor: Theme.of(context).colorScheme.onPrimary,
             ),
             onPressed: () => Navigator.pop(ctx, true),
@@ -506,7 +512,7 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
                         width: 10,
                         height: 10,
                         decoration: BoxDecoration(
-                          color: _statusColor(s),
+                          color: _statusColor(context, s),
                           shape: BoxShape.circle,
                         ),
                       ),
@@ -523,7 +529,7 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
                         ),
                       ),
                       if (isPickedStatus)
-                        const Icon(Icons.check, size: 18, color: Colors.green),
+                        Icon(Icons.check, size: 18, color: Theme.of(context).extension<BCThemeExtension>()!.successColor),
                     ],
                   ),
                 ),
@@ -1042,14 +1048,14 @@ class _MetricsHeader extends StatelessWidget {
                       child: _CompactStat(
                         label: 'Contactados',
                         value: outreachSent.toString(),
-                        color: Colors.orange,
+                        color: Theme.of(context).extension<BCThemeExtension>()!.warningColor,
                       ),
                     ),
                     Expanded(
                       child: _CompactStat(
                         label: 'Registrados',
                         value: registered.toString(),
-                        color: Colors.green,
+                        color: Theme.of(context).extension<BCThemeExtension>()!.successColor,
                       ),
                     ),
                     Expanded(
@@ -1176,7 +1182,7 @@ class _FunnelStatusRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final pct = total > 0 ? (count / total * 100) : 0.0;
-    final color = _statusColor(status);
+    final color = _statusColor(context, status);
 
     return SizedBox(
       width: (MediaQuery.sizeOf(context).width - 48) / 2,
@@ -1326,7 +1332,7 @@ class _FilterChipsRow extends StatelessWidget {
             // Status chips
             ..._allStatuses.map((s) {
               final selected = statusFilters.contains(s);
-              final color = _statusColor(s);
+              final color = _statusColor(context, s);
               return Padding(
                 padding: const EdgeInsets.only(right: AppConstants.paddingXS),
                 child: FilterChip(
@@ -1376,13 +1382,13 @@ class _FilterChipsRow extends StatelessWidget {
                 ),
                 selected: hasWhatsapp == true,
                 onSelected: (_) => onWhatsappToggle(),
-                selectedColor: Colors.green[600],
+                selectedColor: Theme.of(context).extension<BCThemeExtension>()!.successColor,
                 checkmarkColor: Theme.of(context).colorScheme.onPrimary,
                 backgroundColor:
                     colors.surfaceContainerHighest.withValues(alpha: 0.5),
                 side: BorderSide(
                   color: hasWhatsapp == true
-                      ? Colors.green
+                      ? Theme.of(context).extension<BCThemeExtension>()!.successColor
                       : colors.onSurface.withValues(alpha: 0.15),
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -1391,7 +1397,7 @@ class _FilterChipsRow extends StatelessWidget {
                 avatar: Icon(
                   Icons.phone_android_outlined,
                   size: 14,
-                  color: hasWhatsapp == true ? Theme.of(context).colorScheme.onPrimary : Colors.green,
+                  color: hasWhatsapp == true ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).extension<BCThemeExtension>()!.successColor,
                 ),
               ),
             ),
@@ -1430,7 +1436,7 @@ class _FilterChipsRow extends StatelessWidget {
             // Source chips
             ..._allSources.map((src) {
               final selected = sourceFilter == src;
-              final color = _sourceColor(src);
+              final color = _sourceColor(context, src);
               return Padding(
                 padding: const EdgeInsets.only(right: AppConstants.paddingXS),
                 child: FilterChip(
@@ -1464,7 +1470,7 @@ class _FilterChipsRow extends StatelessWidget {
             // RP Status chips
             ..._allRpStatuses.map((rps) {
               final selected = rpStatusFilter == rps;
-              final color = _rpStatusColor(rps);
+              final color = _rpStatusColor(context, rps);
               return Padding(
                 padding: const EdgeInsets.only(right: AppConstants.paddingXS),
                 child: FilterChip(
@@ -1757,7 +1763,7 @@ class _BulkActionBar extends StatelessWidget {
                     _ActionBtn(
                       icon: Icons.edit_outlined,
                       label: 'Estado',
-                      color: Colors.orange,
+                      color: Theme.of(context).extension<BCThemeExtension>()!.warningColor,
                       onTap: onStatus,
                     ),
                     const SizedBox(width: AppConstants.paddingSM),
@@ -1773,7 +1779,7 @@ class _BulkActionBar extends StatelessWidget {
                     _ActionBtn(
                       icon: Icons.file_download_outlined,
                       label: 'Exportar',
-                      color: Colors.green,
+                      color: Theme.of(context).extension<BCThemeExtension>()!.successColor,
                       onTap: onExport,
                     ),
                   ],
@@ -1881,8 +1887,8 @@ class _LeadCard extends StatelessWidget {
 
     final locationLine =
         [city, state].where((s) => s.isNotEmpty).join(', ');
-    final statusColor = _statusColor(status);
-    final sourceColor = _sourceColor(source);
+    final statusColor = _statusColor(context, status);
+    final sourceColor = _sourceColor(context, source);
 
     // Format last outreach date
     String? lastOutreachText;
@@ -1976,7 +1982,7 @@ class _LeadCard extends StatelessWidget {
                               const SizedBox(width: 4),
                               _SmallBadge(
                                 label: rpName,
-                                color: _rpStatusColor(rpStatus),
+                                color: _rpStatusColor(context, rpStatus),
                               ),
                             ],
                           ],
@@ -2017,10 +2023,10 @@ class _LeadCard extends StatelessWidget {
                               ),
                               if (waVerified) ...[
                                 const SizedBox(width: 6),
-                                const Icon(
+                                Icon(
                                   Icons.check_circle,
                                   size: 13,
-                                  color: Colors.green,
+                                  color: Theme.of(context).extension<BCThemeExtension>()!.successColor,
                                 ),
                               ],
                               // Interest badge
@@ -2240,7 +2246,7 @@ class _ExportBottomSheetState extends State<_ExportBottomSheet> {
                     icon: Icons.code,
                     label: 'JSON',
                     subtitle: 'Datos estructurados',
-                    color: Colors.orange[700]!,
+                    color: Theme.of(context).extension<BCThemeExtension>()!.warningColor,
                     onTap: () => _export(ExportFormat.json),
                   ),
                   _ExportOption(
@@ -2298,7 +2304,7 @@ class _ExportOption extends StatelessWidget {
         subtitle,
         style: GoogleFonts.nunito(fontSize: 12, color: Colors.grey[600]),
       ),
-      trailing: const Icon(Icons.chevron_right, size: 18, color: Colors.grey),
+      trailing: Icon(Icons.chevron_right, size: 18, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
       onTap: onTap,
     );
   }
@@ -2386,9 +2392,9 @@ class _PinDropDialogState extends State<_PinDropDialog> {
                             point: _pin!,
                             width: 30,
                             height: 30,
-                            child: const Icon(
+                            child: Icon(
                               Icons.location_on,
-                              color: Colors.red,
+                              color: Theme.of(context).colorScheme.error,
                               size: 30,
                             ),
                           ),
@@ -2562,7 +2568,7 @@ class _RpPickerDialogState extends State<_RpPickerDialog> {
                         ),
                       ),
                       if (isSelected)
-                        const Icon(Icons.check, size: 18, color: Colors.green),
+                        Icon(Icons.check, size: 18, color: Theme.of(context).extension<BCThemeExtension>()!.successColor),
                     ],
                   ),
                 ),

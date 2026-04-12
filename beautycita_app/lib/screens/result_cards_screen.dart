@@ -923,8 +923,8 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFFEC4899), Color(0xFF9333EA)],
+          gradient: LinearGradient(
+            colors: [Theme.of(context).colorScheme.primary, const Color(0xFF9333EA)],
             begin: Alignment.centerLeft,
             end: Alignment.centerRight,
           ),
@@ -1394,8 +1394,8 @@ class _NearbySalonCardState extends State<_NearbySalonCard>
                         style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600),
                       ),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: widget.invited ? Colors.grey[300] : waLightGreen,
-                        foregroundColor: widget.invited ? Colors.grey[600] : Theme.of(context).colorScheme.onPrimary,
+                        backgroundColor: widget.invited ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.25) : waLightGreen,
+                        foregroundColor: widget.invited ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5) : Theme.of(context).colorScheme.onPrimary,
                         elevation: widget.invited ? 0 : 3,
                         shadowColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../config/constants.dart';
+import '../../config/theme_extension.dart';
 import '../../providers/admin_provider.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
@@ -135,8 +136,8 @@ class _ApplicationCard extends ConsumerWidget {
                         color: Colors.orange.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: const Icon(Icons.store_rounded,
-                          color: Colors.orange, size: 20),
+                      child: Icon(Icons.store_rounded,
+                          color: Theme.of(context).extension<BCThemeExtension>()!.warningColor, size: 20),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -157,14 +158,14 @@ class _ApplicationCard extends ConsumerWidget {
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                               color: origin == 'WhatsApp outreach'
-                                  ? Colors.green
+                                  ? Theme.of(context).extension<BCThemeExtension>()!.successColor
                                   : colors.primary,
                             ),
                           ),
                         ],
                       ),
                     ),
-                    _statusChip('pendiente'),
+                    _statusChip(context, 'pendiente'),
                   ],
                 ),
 
@@ -186,7 +187,7 @@ class _ApplicationCard extends ConsumerWidget {
     );
   }
 
-  Widget _statusChip(String status) {
+  Widget _statusChip(BuildContext context, String status) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
@@ -200,7 +201,7 @@ class _ApplicationCard extends ConsumerWidget {
       child: Text(
         status,
         style: GoogleFonts.nunito(
-            fontSize: 11, fontWeight: FontWeight.w700, color: Colors.orange),
+            fontSize: 11, fontWeight: FontWeight.w700, color: Theme.of(context).extension<BCThemeExtension>()!.warningColor),
       ),
     );
   }
@@ -248,10 +249,10 @@ class _ApplicationCard extends ConsumerWidget {
                       borderRadius: BorderRadius.circular(8),
                       child: Image.network(photoUrl,
                           width: 56, height: 56, fit: BoxFit.cover,
-                          errorBuilder: (_, _, _) => _placeholderIcon()),
+                          errorBuilder: (_, _, _) => _placeholderIcon(context)),
                     )
                   else
-                    _placeholderIcon(),
+                    _placeholderIcon(context),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -262,7 +263,7 @@ class _ApplicationCard extends ConsumerWidget {
                                 fontSize: 16, fontWeight: FontWeight.w700)),
                         Row(
                           children: [
-                            _statusChip('pendiente'),
+                            _statusChip(context, 'pendiente'),
                             const SizedBox(width: 6),
                             Container(
                               padding: const EdgeInsets.symmetric(
@@ -372,7 +373,7 @@ class _ApplicationCard extends ConsumerWidget {
                   _ActionIcon(
                     icon: Icons.streetview_rounded,
                     label: 'Street View',
-                    color: hasCoords ? Colors.blue[700]! : Colors.grey[400]!,
+                    color: hasCoords ? Colors.blue[700]! : colors.onSurface.withValues(alpha: 0.4),
                     onTap: hasCoords
                         ? () {
                             final url = Uri.parse(
@@ -386,7 +387,7 @@ class _ApplicationCard extends ConsumerWidget {
                   _ActionIcon(
                     icon: Icons.map_rounded,
                     label: 'Mapa',
-                    color: hasCoords ? Colors.green[700]! : Colors.grey[400]!,
+                    color: hasCoords ? Colors.green[700]! : colors.onSurface.withValues(alpha: 0.4),
                     onTap: hasCoords
                         ? () {
                             final url = Uri.parse(
@@ -402,7 +403,7 @@ class _ApplicationCard extends ConsumerWidget {
                     label: 'Chat',
                     color: ownerId != null
                         ? colors.primary
-                        : Colors.grey[400]!,
+                        : colors.onSurface.withValues(alpha: 0.4),
                     onTap: ownerId != null
                         ? () {
                             Navigator.pop(ctx);
@@ -429,7 +430,7 @@ class _ApplicationCard extends ConsumerWidget {
                           style:
                               GoogleFonts.nunito(fontWeight: FontWeight.w700)),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
+                        backgroundColor: Theme.of(context).extension<BCThemeExtension>()!.successColor,
                         foregroundColor: Theme.of(context).colorScheme.onPrimary,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
@@ -450,7 +451,7 @@ class _ApplicationCard extends ConsumerWidget {
                           style:
                               GoogleFonts.nunito(fontWeight: FontWeight.w700)),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
+                        backgroundColor: Theme.of(context).colorScheme.error,
                         foregroundColor: Theme.of(context).colorScheme.onPrimary,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
@@ -468,7 +469,7 @@ class _ApplicationCard extends ConsumerWidget {
     );
   }
 
-  Widget _placeholderIcon() {
+  Widget _placeholderIcon(BuildContext context) {
     return Container(
       width: 56,
       height: 56,
@@ -476,7 +477,7 @@ class _ApplicationCard extends ConsumerWidget {
         color: Colors.orange.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: const Icon(Icons.store_rounded, color: Colors.orange, size: 28),
+      child: Icon(Icons.store_rounded, color: Theme.of(context).extension<BCThemeExtension>()!.warningColor, size: 28),
     );
   }
 
@@ -591,7 +592,7 @@ class _ApplicationCard extends ConsumerWidget {
           ElevatedButton(
             onPressed: () => Navigator.of(ctx).pop(true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
+              backgroundColor: Theme.of(context).colorScheme.error,
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10)),
             ),

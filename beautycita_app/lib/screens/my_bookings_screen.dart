@@ -155,20 +155,22 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
 
   /// Color for a status chip.
   Color _statusColor(String status) {
+    final cs = Theme.of(context).colorScheme;
+    final ext = Theme.of(context).extension<BCThemeExtension>()!;
     switch (status) {
       case 'pending':
         return Colors.amber.shade700;
       case 'confirmed':
-        return Colors.green.shade600;
+        return ext.successColor;
       case 'completed':
         return Colors.blue.shade600;
       case 'cancelled_customer':
       case 'cancelled_business':
-        return Colors.red.shade600;
+        return cs.error;
       case 'no_show':
-        return Colors.grey.shade600;
+        return cs.onSurface.withValues(alpha: 0.5);
       default:
-        return Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
+        return cs.onSurface.withValues(alpha: 0.5);
     }
   }
 
@@ -238,7 +240,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
                 Icon(
                   Icons.cancel_outlined,
                   size: AppConstants.iconSizeXL,
-                  color: Colors.red.shade400,
+                  color: Theme.of(context).colorScheme.error,
                 ),
                 const SizedBox(height: AppConstants.paddingSM),
                 Text(
@@ -278,7 +280,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
                       child: ElevatedButton(
                         onPressed: () => Navigator.pop(ctx, true),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red.shade500,
+                          backgroundColor: Theme.of(context).colorScheme.error,
                           minimumSize:
                               const Size(0, AppConstants.minTouchHeight),
                           shape: RoundedRectangleBorder(
@@ -450,7 +452,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
                     child: ElevatedButton(
                       onPressed: () => Navigator.pop(ctx, true),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange.shade700,
+                        backgroundColor: Theme.of(context).extension<BCThemeExtension>()!.warningColor,
                         minimumSize:
                             const Size(0, AppConstants.minTouchHeight),
                         shape: RoundedRectangleBorder(
@@ -529,7 +531,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, false),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange.shade700,
+              backgroundColor: Theme.of(context).extension<BCThemeExtension>()!.warningColor,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
             child: Text('Agregar fotos', style: TextStyle(color: Theme.of(context).colorScheme.onPrimary)),
@@ -554,11 +556,12 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
       'denied' => 'Reembolso negado',
       _ => salonOffer,
     };
+    final ext = Theme.of(context).extension<BCThemeExtension>()!;
     final offerColor = switch (salonOffer) {
-      'full_refund' => Colors.green,
-      'partial_refund' => Colors.orange,
-      'denied' => Colors.red,
-      _ => Colors.grey,
+      'full_refund' => ext.successColor,
+      'partial_refund' => ext.warningColor,
+      'denied' => Theme.of(context).colorScheme.error,
+      _ => Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
     };
 
     await showBurstBottomSheet(
@@ -667,8 +670,8 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
                                   }
                                 },
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.red.shade600,
-                            side: BorderSide(color: Colors.red.shade300),
+                            foregroundColor: Theme.of(context).colorScheme.error,
+                            side: BorderSide(color: Theme.of(context).colorScheme.error.withValues(alpha: 0.5)),
                             minimumSize:
                                 const Size(0, AppConstants.minTouchHeight),
                             shape: RoundedRectangleBorder(
@@ -700,7 +703,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
                                   }
                                 },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green.shade600,
+                            backgroundColor: Theme.of(context).extension<BCThemeExtension>()!.successColor,
                             minimumSize:
                                 const Size(0, AppConstants.minTouchHeight),
                             shape: RoundedRectangleBorder(
@@ -743,12 +746,14 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
     final status = dispute['status'] as String?;
 
     // Translate
+    final resExt = Theme.of(context).extension<BCThemeExtension>()!;
+    final resCs = Theme.of(context).colorScheme;
     final (String resLabel, Color resColor, IconData resIcon) = switch (resolution) {
-      'favor_client' => ('A favor tuyo', Colors.green, Icons.check_circle_outlined),
+      'favor_client' => ('A favor tuyo', resExt.successColor, Icons.check_circle_outlined),
       'favor_provider' => ('A favor del salon', Colors.blue, Icons.store_outlined),
       'favor_both' => ('A favor de ambos', Colors.teal, Icons.handshake_outlined),
-      'dismissed' => ('Descartada', Colors.grey, Icons.cancel_outlined),
-      _ => ('Resuelta', Colors.green, Icons.check_circle_outlined),
+      'dismissed' => ('Descartada', resCs.onSurface.withValues(alpha: 0.4), Icons.cancel_outlined),
+      _ => ('Resuelta', resExt.successColor, Icons.check_circle_outlined),
     };
 
     final offerLabel = switch (salonOffer) {
@@ -902,10 +907,10 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
                                           fontSize: 10,
                                           fontWeight: FontWeight.w600,
                                           color: refundStatus == 'processed'
-                                              ? Colors.green
+                                              ? resExt.successColor
                                               : refundStatus == 'failed'
-                                                  ? Colors.red
-                                                  : Colors.orange,
+                                                  ? resCs.error
+                                                  : resExt.warningColor,
                                         )),
                                   ),
                                 ],
@@ -1138,7 +1143,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
                   padding: const EdgeInsets.all(AppConstants.paddingLG),
                   child: Text(
                     'Error al cargar citas: $err',
-                    style: textTheme.bodyLarge?.copyWith(color: Colors.red),
+                    style: textTheme.bodyLarge?.copyWith(color: Theme.of(context).colorScheme.error),
                     textAlign: TextAlign.center,
                   ),
                 ),
@@ -1358,7 +1363,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
               Divider(height: 16, thickness: 1, color: ext.cardBorderColor),
               _buildInfoRow(
                 icon: Icons.payments_outlined,
-                iconColor: Colors.green.shade600,
+                iconColor: ext.successColor,
                 label: 'PRECIO',
                 value: '\$${booking.price!.toStringAsFixed(0)} MXN',
               ),
@@ -1382,7 +1387,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
                           ? Icons.check_circle_outlined
                           : Icons.block_outlined,
                       size: 14,
-                      color: disputeStatus == 'resolved' ? Colors.green : Colors.red,
+                      color: disputeStatus == 'resolved' ? ext.successColor : colorScheme.error,
                     ),
                     const SizedBox(width: 4),
                     Text(
@@ -1390,7 +1395,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
                           ? 'Disputa resuelta'
                           : 'Disputa rechazada',
                       style: textTheme.labelSmall?.copyWith(
-                        color: disputeStatus == 'resolved' ? Colors.green : Colors.red,
+                        color: disputeStatus == 'resolved' ? ext.successColor : colorScheme.error,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -1415,7 +1420,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
                     Icon(
                       hasSalonOffer ? Icons.local_offer_outlined : Icons.gavel_outlined,
                       size: 14,
-                      color: hasSalonOffer ? Colors.blue : Colors.orange,
+                      color: hasSalonOffer ? Colors.blue : ext.warningColor,
                     ),
                     const SizedBox(width: 4),
                     Text(
@@ -1425,7 +1430,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
                               ? 'Disputa escalada - en revision'
                               : 'Disputa abierta',
                       style: textTheme.labelSmall?.copyWith(
-                        color: hasSalonOffer ? Colors.blue : Colors.orange,
+                        color: hasSalonOffer ? Colors.blue : ext.warningColor,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -1453,7 +1458,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
                   ),
                   label: const Text('Cancelar'),
                   style: TextButton.styleFrom(
-                    foregroundColor: Colors.red.shade600,
+                    foregroundColor: colorScheme.error,
                     padding: const EdgeInsets.symmetric(
                       horizontal: AppConstants.paddingSM,
                     ),
@@ -1528,11 +1533,11 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
                             icon: Icon(
                               Icons.info_outlined,
                               size: AppConstants.iconSizeSM,
-                              color: Colors.green.shade700,
+                              color: ext.successColor,
                             ),
                             label: Text('Ver resultado',
                                 style: TextStyle(
-                                    color: Colors.green.shade700,
+                                    color: ext.successColor,
                                     fontWeight: FontWeight.w700)),
                             style: TextButton.styleFrom(
                               padding: const EdgeInsets.symmetric(
@@ -1548,11 +1553,11 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
                                 icon: Icon(
                                   Icons.flag_outlined,
                                   size: AppConstants.iconSizeSM,
-                                  color: Colors.orange.shade700,
+                                  color: ext.warningColor,
                                 ),
                                 label: Text('Reportar problema',
                                     style: TextStyle(
-                                        color: Colors.orange.shade700)),
+                                        color: ext.warningColor)),
                                 style: TextButton.styleFrom(
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: AppConstants.paddingSM,

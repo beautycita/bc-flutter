@@ -173,8 +173,8 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen>
                 child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFFEC4899), Color(0xFF9333EA)],
+                    gradient: LinearGradient(
+                      colors: [Theme.of(context).colorScheme.primary, const Color(0xFF9333EA)],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
@@ -327,7 +327,7 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen>
                   label: 'Pago en efectivo',
                   subtitle: 'OXXO, 7-Eleven, tiendas de conveniencia',
                   badgeText: 'Disponible',
-                  badgeColor: Colors.green.shade600,
+                  badgeColor: ext.successColor,
                   onTap: () => _showCashInfo(context),
                 ),
               ),
@@ -397,7 +397,7 @@ class _CardTile extends StatelessWidget {
 
     return SettingsTile(
       icon: Icons.credit_card_outlined,
-      iconColor: Colors.green.shade600,
+      iconColor: Theme.of(context).extension<BCThemeExtension>()!.successColor,
       label: '${card.displayBrand} ****${card.last4}',
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
@@ -466,7 +466,7 @@ class _CardTile extends StatelessWidget {
                       child: ElevatedButton(
                         onPressed: () => Navigator.pop(ctx, true),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red.shade500,
+                          backgroundColor: Theme.of(context).colorScheme.error,
                           minimumSize: const Size(0, AppConstants.minTouchHeight),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(AppConstants.radiusLG),
@@ -776,11 +776,11 @@ class _GiftCardRedemptionTileState
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFEC4899).withValues(alpha: 0.1),
+                    color: colors.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(Icons.card_giftcard_rounded,
-                      color: Color(0xFFEC4899), size: 20),
+                  child: Icon(Icons.card_giftcard_rounded,
+                      color: colors.primary, size: 20),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -845,7 +845,7 @@ class _GiftCardRedemptionTileState
                       child: FilledButton(
                         onPressed: _loading ? null : _redeem,
                         style: FilledButton.styleFrom(
-                          backgroundColor: const Color(0xFFEC4899),
+                          backgroundColor: colors.primary,
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(10)),
                           padding:

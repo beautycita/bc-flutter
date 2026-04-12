@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../config/constants.dart';
+import '../../config/theme_extension.dart';
 import '../../providers/business_provider.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
@@ -258,7 +259,7 @@ class _ServiceRevenueSection extends ConsumerWidget {
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Text('\$${fmt.format(s.revenue)}',
-                                style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w700, color: const Color(0xFF059669))),
+                                style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w700, color: Theme.of(context).extension<BCThemeExtension>()!.successColor)),
                             Text('${pct.toStringAsFixed(1)}%',
                                 style: GoogleFonts.nunito(fontSize: 11, color: colors.onSurface.withValues(alpha: 0.4))),
                           ],
@@ -298,8 +299,8 @@ class _CommissionsSection extends ConsumerWidget {
                 color: const Color(0xFF059669).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.percent_rounded,
-                  size: 20, color: Color(0xFF059669)),
+              child: Icon(Icons.percent_rounded,
+                  size: 20, color: Theme.of(context).extension<BCThemeExtension>()!.successColor),
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -384,7 +385,7 @@ class _CommissionsSection extends ConsumerWidget {
                       child: _CommissionSummaryCard(
                         label: 'Pagado',
                         amount: data.totalPaid,
-                        color: const Color(0xFF059669),
+                        color: Theme.of(context).extension<BCThemeExtension>()!.successColor,
                         icon: Icons.check_circle_outline_rounded,
                       ),
                     ),
@@ -536,7 +537,7 @@ class _CommissionStaffRowState
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF059669),
+                backgroundColor: Theme.of(ctx).extension<BCThemeExtension>()!.successColor,
                 foregroundColor: colors.onPrimary,
               ),
               onPressed: () => Navigator.pop(ctx, true),
@@ -630,7 +631,7 @@ class _CommissionStaffRowState
                 Text('\$${fmt.format(entry.paidAmount)} pagado',
                     style: GoogleFonts.nunito(
                         fontSize: 10,
-                        color: const Color(0xFF059669))),
+                        color: Theme.of(context).extension<BCThemeExtension>()!.successColor)),
             ],
           ),
           if (entry.pendingAmount > 0) ...[
@@ -648,7 +649,7 @@ class _CommissionStaffRowState
                             horizontal: 8, vertical: 0),
                         minimumSize: Size.zero,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        foregroundColor: const Color(0xFF059669),
+                        foregroundColor: Theme.of(context).extension<BCThemeExtension>()!.successColor,
                       ),
                       onPressed: _confirmAndMarkPaid,
                       child: Text('Pagar',

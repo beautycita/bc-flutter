@@ -242,7 +242,7 @@ class _BusinessCalendarScreenState
             ),
             error: (e, _) => Padding(
               padding: const EdgeInsets.all(8),
-              child: Center(child: Text('Error al cargar staff', style: TextStyle(color: Colors.red.shade400, fontSize: 13))),
+              child: Center(child: Text('Error al cargar staff', style: TextStyle(color: Theme.of(context).colorScheme.error, fontSize: 13))),
             ),
           ),
 
@@ -535,7 +535,7 @@ class _BusinessCalendarScreenState
               const SizedBox(height: AppConstants.paddingLG),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red.shade700),
+                    backgroundColor: Theme.of(context).colorScheme.error),
                 onPressed: () async {
                   Navigator.pop(ctx);
                   await _handleAction(appt, 'no_show');
@@ -2066,7 +2066,7 @@ void _showApptActionSheet(
                 _ActionTile(
                   icon: Icons.camera_alt_rounded,
                   label: 'Portafolio',
-                  color: const Color(0xFF7C3AED),
+                  color: Theme.of(context).colorScheme.secondary,
                   onTap: () {
                     Navigator.pop(ctx);
                     context.push('/business/portfolio-capture?staffId=${appointment['staff_id']}');

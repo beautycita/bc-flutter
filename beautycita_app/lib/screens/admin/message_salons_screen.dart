@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../config/constants.dart';
+import '../../config/theme_extension.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 import '../../widgets/outreach_contact_sheet.dart';
@@ -224,7 +225,7 @@ class _MessageSalonsScreenState extends ConsumerState<MessageSalonsScreen> {
                   return Center(
                     child: Text(
                       'No hay salones con estos filtros',
-                      style: GoogleFonts.nunito(color: Colors.grey, fontSize: 14),
+                      style: GoogleFonts.nunito(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4), fontSize: 14),
                     ),
                   );
                 }
@@ -298,7 +299,7 @@ class _MessageSalonsScreenState extends ConsumerState<MessageSalonsScreen> {
               const SizedBox(height: 8),
               Text(
                 'TEST MODE: se enviara a tu esposa, no al salon',
-                style: GoogleFonts.nunito(fontSize: 11, color: Colors.orange[700], fontStyle: FontStyle.italic),
+                style: GoogleFonts.nunito(fontSize: 11, color: Theme.of(context).extension<BCThemeExtension>()!.warningColor, fontStyle: FontStyle.italic),
               ),
             ],
           ),
@@ -386,13 +387,13 @@ class _MessageSalonsScreenState extends ConsumerState<MessageSalonsScreen> {
                         borderRadius: BorderRadius.circular(8),
                         child: Image.network(imageUrl, width: 56, height: 56, fit: BoxFit.cover,
                           errorBuilder: (_, _, _) => Container(width: 56, height: 56, color: Colors.grey[200],
-                            child: const Icon(Icons.store, color: Colors.grey))),
+                            child: Icon(Icons.store, color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.4)))),
                       )
                     else
                       Container(
                         width: 56, height: 56,
-                        decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(8)),
-                        child: const Icon(Icons.store, color: Colors.grey, size: 28),
+                        decoration: BoxDecoration(color: Theme.of(ctx).colorScheme.surfaceContainerLowest, borderRadius: BorderRadius.circular(8)),
+                        child: Icon(Icons.store, color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.4), size: 28),
                       ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -411,7 +412,7 @@ class _MessageSalonsScreenState extends ConsumerState<MessageSalonsScreen> {
                                 ),
                                 child: Text(waVerified ? 'WA Verificado' : 'Sin verificar',
                                   style: GoogleFonts.nunito(fontSize: 10, fontWeight: FontWeight.w700,
-                                    color: waVerified ? Colors.green[700] : Colors.orange[700])),
+                                    color: waVerified ? Colors.green[700] : Theme.of(ctx).extension<BCThemeExtension>()!.warningColor)),
                               ),
                               const SizedBox(width: 6),
                               Container(
@@ -508,7 +509,7 @@ class _MessageSalonsScreenState extends ConsumerState<MessageSalonsScreen> {
                 if (lastOutreach != null) ...[
                   const SizedBox(height: 12),
                   Text('Ultimo contacto: ${DateTime.tryParse(lastOutreach)?.toLocal().toString().substring(0, 16) ?? lastOutreach}',
-                    style: GoogleFonts.nunito(fontSize: 12, color: Colors.grey)),
+                    style: GoogleFonts.nunito(fontSize: 12, color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.4))),
                 ],
                 const SizedBox(height: 16),
                 // Action buttons — icons with labels below, no wrapping
@@ -549,7 +550,7 @@ class _MessageSalonsScreenState extends ConsumerState<MessageSalonsScreen> {
                       return _ActionIcon(
                         icon: Icons.map_rounded,
                         label: 'Mapa',
-                        color: hasCoords ? Colors.blue[700]! : Colors.grey[400]!,
+                        color: hasCoords ? Colors.blue[700]! : Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.4),
                         onTap: hasCoords ? () {
                           final fallback = Uri.parse(
                             'https://www.google.com/maps/search/?api=1&query=$lat,$lng');
@@ -632,7 +633,7 @@ class _MessageSalonsScreenState extends ConsumerState<MessageSalonsScreen> {
                   child: logAsync.when(
                     data: (logs) {
                       if (logs.isEmpty) {
-                        return Center(child: Text('Sin historial', style: GoogleFonts.nunito(color: Colors.grey)));
+                        return Center(child: Text('Sin historial', style: GoogleFonts.nunito(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4))));
                       }
                       return ListView.builder(
                         controller: scrollCtrl,
@@ -644,7 +645,7 @@ class _MessageSalonsScreenState extends ConsumerState<MessageSalonsScreen> {
                             dense: true,
                             leading: Icon(
                               log['test_mode'] == true ? Icons.science : Icons.send,
-                              color: log['test_mode'] == true ? Colors.orange : Colors.green,
+                              color: log['test_mode'] == true ? Theme.of(context).extension<BCThemeExtension>()!.warningColor : Theme.of(context).extension<BCThemeExtension>()!.successColor,
                               size: 20,
                             ),
                             title: Text(
@@ -655,7 +656,7 @@ class _MessageSalonsScreenState extends ConsumerState<MessageSalonsScreen> {
                             ),
                             subtitle: Text(
                               '${log['channel']} | ${sentAt != null ? "${sentAt.day}/${sentAt.month} ${sentAt.hour}:${sentAt.minute.toString().padLeft(2, '0')}" : ""}${log['test_mode'] == true ? " (TEST)" : ""}',
-                              style: GoogleFonts.nunito(fontSize: 11, color: Colors.grey),
+                              style: GoogleFonts.nunito(fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
                             ),
                           );
                         },
@@ -731,10 +732,10 @@ class _SalonCard extends StatelessWidget {
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
                     child: Image.network(imageUrl, width: 48, height: 48, fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => _buildPlaceholder(waVerified)),
+                      errorBuilder: (_, _, _) => _buildPlaceholder(context, waVerified)),
                   )
                 else
-                  _buildPlaceholder(waVerified),
+                  _buildPlaceholder(context, waVerified),
                 const SizedBox(width: 12),
                 // Info
                 Expanded(
@@ -750,7 +751,7 @@ class _SalonCard extends StatelessWidget {
                           ),
                           if (waVerified) ...[
                             const SizedBox(width: 4),
-                            Icon(Icons.verified, size: 14, color: Colors.green[600]),
+                            Icon(Icons.verified, size: 14, color: Theme.of(context).extension<BCThemeExtension>()!.successColor),
                           ],
                         ],
                       ),
@@ -832,16 +833,16 @@ class _SalonCard extends StatelessWidget {
     );
   }
 
-  Widget _buildPlaceholder(bool verified) {
+  Widget _buildPlaceholder(BuildContext context, bool verified) {
     return Container(
       width: 48, height: 48,
       decoration: BoxDecoration(
-        color: verified ? Colors.green[50] : Colors.grey[100],
+        color: verified ? Colors.green[50] : Theme.of(context).colorScheme.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Icon(
         verified ? Icons.verified : Icons.store,
-        color: verified ? Colors.green : Colors.grey,
+        color: verified ? Theme.of(context).extension<BCThemeExtension>()!.successColor : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
         size: 22,
       ),
     );

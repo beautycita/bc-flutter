@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../config/constants.dart';
+import '../../config/theme_extension.dart';
 import '../../providers/business_provider.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
@@ -140,6 +141,7 @@ class _StatsGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final bcExt = Theme.of(context).extension<BCThemeExtension>()!;
 
     return GridView.count(
       crossAxisCount: 2,
@@ -165,13 +167,13 @@ class _StatsGrid extends StatelessWidget {
           icon: Icons.attach_money_rounded,
           label: 'Ingresos Mes',
           value: '\$${stats.revenueMonth.toStringAsFixed(0)}',
-          color: Colors.green,
+          color: bcExt.successColor,
         ),
         _StatCard(
           icon: Icons.pending_actions_rounded,
           label: 'Por Confirmar',
           value: '${stats.pendingConfirmations}',
-          color: Colors.orange,
+          color: bcExt.warningColor,
         ),
         _StatCard(
           icon: Icons.star_rounded,
@@ -339,7 +341,7 @@ class _TopStaffSection extends ConsumerWidget {
                               style: GoogleFonts.poppins(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w700,
-                                color: const Color(0xFF059669),
+                                color: Theme.of(context).extension<BCThemeExtension>()!.successColor,
                               )),
                         ],
                       ),
@@ -376,7 +378,7 @@ class _AppointmentCard extends StatelessWidget {
       }
     }
 
-    final statusColor = _statusColor(status);
+    final statusColor = _statusColor(status, context);
 
     return Card(
       elevation: 0,
@@ -435,21 +437,22 @@ class _AppointmentCard extends StatelessWidget {
     );
   }
 
-  Color _statusColor(String status) {
+  Color _statusColor(String status, BuildContext context) {
+    final ext = Theme.of(context).extension<BCThemeExtension>()!;
     switch (status) {
       case 'pending':
-        return Colors.orange;
+        return ext.warningColor;
       case 'confirmed':
         return Colors.blue;
       case 'completed':
-        return Colors.green;
+        return ext.successColor;
       case 'cancelled_customer':
       case 'cancelled_business':
-        return Colors.red;
+        return Theme.of(context).colorScheme.error;
       case 'no_show':
-        return Colors.grey;
+        return Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4);
       default:
-        return Colors.grey;
+        return Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4);
     }
   }
 
@@ -491,12 +494,13 @@ class _DebtCard extends ConsumerWidget {
         final debt = (biz['outstanding_debt'] as num?)?.toDouble() ?? 0;
         if (debt <= 0) return const SizedBox.shrink();
 
+        final errorColor = Theme.of(context).colorScheme.error;
         return Card(
           elevation: 0,
-          color: Colors.red.shade50,
+          color: errorColor.withValues(alpha: 0.08),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
-            side: BorderSide(color: Colors.red.shade200),
+            side: BorderSide(color: errorColor.withValues(alpha: 0.3)),
           ),
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -505,10 +509,10 @@ class _DebtCard extends ConsumerWidget {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: Colors.red.shade100,
+                    color: errorColor.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(Icons.warning_amber_rounded, color: Colors.red.shade700, size: 24),
+                  child: Icon(Icons.warning_amber_rounded, color: errorColor, size: 24),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -517,17 +521,17 @@ class _DebtCard extends ConsumerWidget {
                     children: [
                       Text('Saldo pendiente',
                         style: GoogleFonts.poppins(
-                          fontSize: 13, fontWeight: FontWeight.w700, color: Colors.red.shade800)),
+                          fontSize: 13, fontWeight: FontWeight.w700, color: errorColor)),
                       const SizedBox(height: 2),
                       Text('\$${NumberFormat('#,##0.00', 'es_MX').format(debt)} MXN',
                         style: GoogleFonts.poppins(
-                          fontSize: 20, fontWeight: FontWeight.w800, color: Colors.red.shade700)),
+                          fontSize: 20, fontWeight: FontWeight.w800, color: errorColor)),
                       const SizedBox(height: 4),
                       Text(
                         'Se descontara hasta 50% de cada servicio hasta saldar. '
                         'Contacta soporte para detalles.',
                         style: GoogleFonts.nunito(
-                          fontSize: 11, color: Colors.red.shade600, height: 1.3),
+                          fontSize: 11, color: errorColor, height: 1.3),
                       ),
                     ],
                   ),
@@ -543,7 +547,7 @@ class _DebtCard extends ConsumerWidget {
       ),
       error: (e, _) => Padding(
         padding: const EdgeInsets.all(16),
-        child: Center(child: Text('Error al cargar', style: TextStyle(color: Colors.red.shade400, fontSize: 13))),
+        child: Center(child: Text('Error al cargar', style: TextStyle(color: Theme.of(context).colorScheme.error, fontSize: 13))),
       ),
     );
   }
@@ -685,6 +689,7 @@ class _TaxDeductionsCardState extends ConsumerState<_TaxDeductionsCard> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final bcExt = Theme.of(context).extension<BCThemeExtension>()!;
 
     if (_loading) {
       return Card(
@@ -732,7 +737,7 @@ class _TaxDeductionsCardState extends ConsumerState<_TaxDeductionsCard> {
                     color: const Color(0xFF059669).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.account_balance_outlined, size: 20, color: Color(0xFF059669)),
+                  child: Icon(Icons.account_balance_outlined, size: 20, color: bcExt.successColor),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -761,11 +766,11 @@ class _TaxDeductionsCardState extends ConsumerState<_TaxDeductionsCard> {
             const SizedBox(height: 8),
 
             // What BeautyCita already paid to SAT on their behalf
-            _TaxRow(label: 'IVA retenido por BC (50% de 16%)', value: '\$${_fmt(_ivaWithheld)}', color: const Color(0xFF059669)),
+            _TaxRow(label: 'IVA retenido por BC (50% de 16%)', value: '\$${_fmt(_ivaWithheld)}', color: bcExt.successColor),
             const SizedBox(height: 4),
-            _TaxRow(label: 'ISR retenido por BC (Art. 113-A)', value: '\$${_fmt(_isrWithheld)}', color: const Color(0xFF059669)),
+            _TaxRow(label: 'ISR retenido por BC (Art. 113-A)', value: '\$${_fmt(_isrWithheld)}', color: bcExt.successColor),
             const SizedBox(height: 4),
-            _TaxRow(label: 'Total pagado por BC a SAT', value: '\$${_fmt(totalTaxPaidByBC)}', color: const Color(0xFF059669), bold: true),
+            _TaxRow(label: 'Total pagado por BC a SAT', value: '\$${_fmt(totalTaxPaidByBC)}', color: bcExt.successColor, bold: true),
 
             Divider(height: 20, color: colors.onSurface.withValues(alpha: 0.08)),
 
@@ -782,36 +787,36 @@ class _TaxDeductionsCardState extends ConsumerState<_TaxDeductionsCard> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.warning_amber_rounded, size: 16, color: Colors.orange[700]),
+                      Icon(Icons.warning_amber_rounded, size: 16, color: bcExt.warningColor),
                       const SizedBox(width: 6),
                       Text('TU OBLIGACION DIRECTA CON SAT',
-                        style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.5, color: Colors.orange[800])),
+                        style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.5, color: bcExt.warningColor)),
                     ],
                   ),
                   const SizedBox(height: 6),
                   Text(
                     'BeautyCita retiene solo la mitad. Tu debes pagar el resto directamente al SAT.',
-                    style: GoogleFonts.nunito(fontSize: 11, color: Colors.orange[700], height: 1.3),
+                    style: GoogleFonts.nunito(fontSize: 11, color: bcExt.warningColor, height: 1.3),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 8),
-            _TaxRow(label: 'IVA que TU debes (otro 8%)', value: '\$${_fmt(salonIvaObligation)}', color: Colors.orange),
+            _TaxRow(label: 'IVA que TU debes (otro 8%)', value: '\$${_fmt(salonIvaObligation)}', color: bcExt.warningColor),
             const SizedBox(height: 4),
-            _TaxRow(label: 'ISR estimado que TU debes', value: '\$${_fmt(salonIsrEstimate)}', color: Colors.orange),
+            _TaxRow(label: 'ISR estimado que TU debes', value: '\$${_fmt(salonIsrEstimate)}', color: bcExt.warningColor),
             const SizedBox(height: 4),
-            _TaxRow(label: 'Total estimado que debes a SAT', value: '\$${_fmt(salonTotalOwed)}', color: Colors.orange, bold: true),
+            _TaxRow(label: 'Total estimado que debes a SAT', value: '\$${_fmt(salonTotalOwed)}', color: bcExt.warningColor, bold: true),
 
             Divider(height: 20, color: colors.onSurface.withValues(alpha: 0.08)),
 
             // Deductions
-            _TaxRow(label: 'Gastos deducibles registrados', value: '\$${_fmt(_expensesYtd)}', color: const Color(0xFF7C3AED)),
+            _TaxRow(label: 'Gastos deducibles registrados', value: '\$${_fmt(_expensesYtd)}', color: colors.secondary),
             const SizedBox(height: 4),
             _TaxRow(
               label: 'Presupuesto deducible disponible',
               value: '\$${_fmt(deductionBudget)}',
-              color: const Color(0xFF7C3AED),
+              color: colors.secondary,
               bold: true,
             ),
             const SizedBox(height: 8),
@@ -831,7 +836,7 @@ class _TaxDeductionsCardState extends ConsumerState<_TaxDeductionsCard> {
                     'Puedes gastar hasta \$${_fmt(deductionBudget)} mas para reducir tu ISR.\n\n'
                     'IMPORTANTE: Este calculo asume que pagas tu mitad de impuestos al SAT. '
                     'Si no pagas, las deducciones no aplican.',
-                    style: GoogleFonts.nunito(fontSize: 11, color: const Color(0xFF7C3AED), height: 1.4),
+                    style: GoogleFonts.nunito(fontSize: 11, color: colors.secondary, height: 1.4),
                   ),
                   const SizedBox(height: 8),
                   Row(
@@ -840,7 +845,7 @@ class _TaxDeductionsCardState extends ConsumerState<_TaxDeductionsCard> {
                       const SizedBox(width: 4),
                       Text(
                         'Fecha limite para deducciones ${DateTime.now().year}: 31 de Diciembre ${DateTime.now().year}',
-                        style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w700, color: const Color(0xFF7C3AED)),
+                        style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w700, color: colors.secondary),
                       ),
                     ],
                   ),
@@ -861,7 +866,7 @@ class _TaxDeductionsCardState extends ConsumerState<_TaxDeductionsCard> {
                           child: LinearProgressIndicator(
                             value: progress,
                             backgroundColor: const Color(0xFF7C3AED).withValues(alpha: 0.15),
-                            color: daysLeft < 60 ? Colors.red : const Color(0xFF7C3AED),
+                            color: daysLeft < 60 ? colors.error : colors.secondary,
                             minHeight: 6,
                           ),
                         ),
@@ -952,7 +957,7 @@ class _TaxDeductionsCardState extends ConsumerState<_TaxDeductionsCard> {
                               style: GoogleFonts.poppins(
                                 fontSize: 9,
                                 fontWeight: FontWeight.w700,
-                                color: cfdi == 'pendiente' ? Colors.orange : const Color(0xFF059669),
+                                color: cfdi == 'pendiente' ? bcExt.warningColor : bcExt.successColor,
                               ),
                             ),
                           ),
@@ -962,9 +967,9 @@ class _TaxDeductionsCardState extends ConsumerState<_TaxDeductionsCard> {
                       Row(
                         children: [
                           Expanded(child: _MiniStat(label: 'Ingreso', value: '\$${_fmt(rev)}', color: colors.onSurface)),
-                          Expanded(child: _MiniStat(label: 'IVA 8%', value: '\$${_fmt(iva)}', color: const Color(0xFF059669))),
-                          Expanded(child: _MiniStat(label: 'ISR 2.5%', value: '\$${_fmt(isr)}', color: const Color(0xFF059669))),
-                          Expanded(child: _MiniStat(label: 'Gastos', value: '\$${_fmt(exp)}', color: const Color(0xFF7C3AED))),
+                          Expanded(child: _MiniStat(label: 'IVA 8%', value: '\$${_fmt(iva)}', color: bcExt.successColor)),
+                          Expanded(child: _MiniStat(label: 'ISR 2.5%', value: '\$${_fmt(isr)}', color: bcExt.successColor)),
+                          Expanded(child: _MiniStat(label: 'Gastos', value: '\$${_fmt(exp)}', color: colors.secondary)),
                         ],
                       ),
                     ],
@@ -979,7 +984,7 @@ class _TaxDeductionsCardState extends ConsumerState<_TaxDeductionsCard> {
               TrendChart(
                 title: 'Ingresos Mensuales',
                 type: TrendChartType.bar,
-                color: const Color(0xFF059669),
+                color: bcExt.successColor,
                 height: 160,
                 valuePrefix: '\$',
                 data: _monthlyData.map((m) => TrendPoint(
@@ -1000,8 +1005,8 @@ class _TaxDeductionsCardState extends ConsumerState<_TaxDeductionsCard> {
                 label: Text('Registrar Gasto Deducible',
                   style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600)),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF7C3AED),
-                  side: const BorderSide(color: Color(0xFF7C3AED)),
+                  foregroundColor: colors.secondary,
+                  side: BorderSide(color: colors.secondary),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
@@ -1059,11 +1064,11 @@ class _TaxDeductionsCardState extends ConsumerState<_TaxDeductionsCard> {
                   decoration: InputDecoration(
                     labelText: 'Monto (MXN)',
                     prefixText: '\$ ',
-                    prefixStyle: GoogleFonts.poppins(fontSize: 22, fontWeight: FontWeight.w700, color: const Color(0xFF7C3AED)),
+                    prefixStyle: GoogleFonts.poppins(fontSize: 22, fontWeight: FontWeight.w700, color: colors.secondary),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Color(0xFF7C3AED), width: 2),
+                      borderSide: BorderSide(color: colors.secondary, width: 2),
                     ),
                   ),
                   autofocus: true,
@@ -1079,7 +1084,7 @@ class _TaxDeductionsCardState extends ConsumerState<_TaxDeductionsCard> {
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Color(0xFF7C3AED), width: 2),
+                      borderSide: BorderSide(color: colors.secondary, width: 2),
                     ),
                   ),
                 ),
@@ -1113,7 +1118,7 @@ class _TaxDeductionsCardState extends ConsumerState<_TaxDeductionsCard> {
                     }
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF7C3AED),
+                    backgroundColor: colors.secondary,
                     foregroundColor: colors.onPrimary,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     padding: const EdgeInsets.symmetric(vertical: 14),
@@ -1338,7 +1343,7 @@ class _CfdiSectionState extends ConsumerState<_CfdiSection> {
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text('APROX',
-                                style: GoogleFonts.nunito(fontSize: 9, fontWeight: FontWeight.w800, color: const Color(0xFF7C3AED))),
+                                style: GoogleFonts.nunito(fontSize: 9, fontWeight: FontWeight.w800, color: colors.secondary)),
                           ),
                         ],
                       ),
@@ -1506,27 +1511,27 @@ class _BankingBanner extends ConsumerWidget {
       data: (complete) {
         if (complete) return const SizedBox.shrink();
 
-        final colors = Theme.of(context).colorScheme;
+        final warnColor = Theme.of(context).extension<BCThemeExtension>()!.warningColor;
 
         return Padding(
           padding: const EdgeInsets.only(bottom: AppConstants.paddingMD),
           child: Container(
             padding: const EdgeInsets.all(AppConstants.paddingMD),
             decoration: BoxDecoration(
-              color: Colors.orange.shade50,
+              color: warnColor.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-              border: Border.all(color: Colors.orange.shade200),
+              border: Border.all(color: warnColor.withValues(alpha: 0.3)),
             ),
             child: Row(
               children: [
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.orange.shade100,
+                    color: warnColor.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(AppConstants.radiusSM),
                   ),
                   child: Icon(Icons.account_balance_outlined,
-                      color: Colors.orange.shade800, size: 22),
+                      color: warnColor, size: 22),
                 ),
                 const SizedBox(width: AppConstants.paddingSM),
                 Expanded(
@@ -1538,7 +1543,7 @@ class _BankingBanner extends ConsumerWidget {
                         style: GoogleFonts.nunito(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
-                          color: Colors.orange.shade900,
+                          color: warnColor,
                           height: 1.3,
                         ),
                       ),
@@ -1559,12 +1564,12 @@ class _BankingBanner extends ConsumerWidget {
                               style: GoogleFonts.poppins(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w700,
-                                color: Colors.orange.shade800,
+                                color: warnColor,
                               ),
                             ),
                             const SizedBox(width: 4),
                             Icon(Icons.arrow_forward_rounded,
-                                size: 16, color: Colors.orange.shade800),
+                                size: 16, color: warnColor),
                           ],
                         ),
                       ),

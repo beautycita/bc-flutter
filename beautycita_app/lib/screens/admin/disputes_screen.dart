@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/constants.dart';
+import '../../config/theme_extension.dart';
 import '../../providers/admin_provider.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
@@ -69,7 +70,7 @@ class _DisputesScreenState extends ConsumerState<DisputesScreen> {
                     child: _SummaryChip(
                       label: 'Abiertas',
                       count: open,
-                      color: Colors.orange,
+                      color: Theme.of(context).extension<BCThemeExtension>()!.warningColor,
                       selected: _statusFilter == 'open',
                       onTap: () => setState(() => _statusFilter = 'open'),
                     ),
@@ -105,7 +106,7 @@ class _DisputesScreenState extends ConsumerState<DisputesScreen> {
                     child: _SummaryChip(
                       label: 'Resueltas',
                       count: resolved,
-                      color: Colors.green,
+                      color: Theme.of(context).extension<BCThemeExtension>()!.successColor,
                       selected: _statusFilter == 'resolved',
                       onTap: () =>
                           setState(() => _statusFilter = 'resolved'),
@@ -301,14 +302,14 @@ class _DisputeCard extends StatelessWidget {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: _statusColor(status).withValues(alpha: 0.1),
+                    color: _statusColor(context, status).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
                       status == 'escalated'
                           ? Icons.priority_high_rounded
                           : Icons.gavel_rounded,
-                      color: _statusColor(status),
+                      color: _statusColor(context, status),
                       size: 20),
                 ),
                 const SizedBox(width: 12),
@@ -331,7 +332,7 @@ class _DisputeCard extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          _statusBadge(status),
+                          _statusBadge(context, status),
                         ],
                       ),
                       if (businessName.isNotEmpty) ...[
@@ -377,11 +378,11 @@ class _DisputeCard extends StatelessWidget {
     );
   }
 
-  Widget _statusBadge(String status) {
+  Widget _statusBadge(BuildContext context, String status) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: _statusColor(status).withValues(alpha: 0.12),
+        color: _statusColor(context, status).withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
@@ -389,20 +390,21 @@ class _DisputeCard extends StatelessWidget {
         style: GoogleFonts.nunito(
           fontSize: 11,
           fontWeight: FontWeight.w700,
-          color: _statusColor(status),
+          color: _statusColor(context, status),
         ),
       ),
     );
   }
 
-  static Color _statusColor(String status) {
+  static Color _statusColor(BuildContext context, String status) {
+    final ext = Theme.of(context).extension<BCThemeExtension>()!;
     return switch (status) {
-      'open' => Colors.orange,
+      'open' => ext.warningColor,
       'salon_responded' => Colors.blue,
       'escalated' => Colors.deepPurple,
-      'resolved' => Colors.green,
-      'rejected' => Colors.red,
-      _ => Colors.grey,
+      'resolved' => ext.successColor,
+      'rejected' => Theme.of(context).colorScheme.error,
+      _ => Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
     };
   }
 
@@ -539,7 +541,7 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: _DisputeCard._statusColor(status)
+                      color: _DisputeCard._statusColor(context, status)
                           .withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(8),
                     ),
@@ -548,7 +550,7 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
                       style: GoogleFonts.poppins(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
-                        color: _DisputeCard._statusColor(status),
+                        color: _DisputeCard._statusColor(context, status),
                       ),
                     ),
                   ),
@@ -583,10 +585,10 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
               _timelineCard(
                 stepNumber: '1',
                 title: 'Cliente reporto problema',
-                color: Colors.orange,
+                color: Theme.of(context).extension<BCThemeExtension>()!.warningColor,
                 icon: Icons.flag_rounded,
                 children: [
-                  _quoteBubble(reason, 'Cliente', Colors.orange),
+                  _quoteBubble(reason, 'Cliente', Theme.of(context).extension<BCThemeExtension>()!.warningColor),
                   if (clientEvidence != null && clientEvidence.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     Row(
@@ -606,7 +608,7 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
                       ],
                     ),
                     const SizedBox(height: 4),
-                    _quoteBubble(clientEvidence, null, Colors.grey),
+                    _quoteBubble(clientEvidence, null, Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
                   ],
                 ],
               ),
@@ -644,7 +646,7 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
                                 : Icons.monetization_on_rounded,
                             size: 14,
                             color: salonOffer == 'denied'
-                                ? Colors.red
+                                ? Theme.of(context).colorScheme.error
                                 : Colors.blue,
                           ),
                           const SizedBox(width: 6),
@@ -657,7 +659,7 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                               color: salonOffer == 'denied'
-                                  ? Colors.red
+                                  ? Theme.of(context).colorScheme.error
                                   : Colors.blue,
                             ),
                           ),
@@ -697,7 +699,7 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
                   title: clientAccepted
                       ? 'Cliente acepto la oferta'
                       : 'Cliente rechazo la oferta',
-                  color: clientAccepted ? Colors.green : Colors.red,
+                  color: clientAccepted ? Theme.of(context).extension<BCThemeExtension>()!.successColor : Theme.of(context).colorScheme.error,
                   icon: clientAccepted
                       ? Icons.check_circle_rounded
                       : Icons.cancel_rounded,
@@ -718,7 +720,7 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                           color:
-                              clientAccepted ? Colors.green : Colors.red,
+                              clientAccepted ? Theme.of(context).extension<BCThemeExtension>()!.successColor : Theme.of(context).colorScheme.error,
                         ),
                       ),
                     ),
@@ -732,7 +734,7 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
                 _timelineCard(
                   stepNumber: (clientAccepted != null ? '4' : salonOffer != null ? '3' : '2'),
                   title: 'Resolucion',
-                  color: Colors.green.shade700,
+                  color: Theme.of(context).extension<BCThemeExtension>()!.successColor,
                   icon: Icons.gavel_rounded,
                   children: [
                     _infoRow('Resultado', _outcomeLabel(resolution)),
@@ -795,13 +797,13 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
                   runSpacing: 8,
                   children: [
                     _outcomeChip('favor_client', 'A favor del cliente',
-                        Colors.green),
+                        Theme.of(context).extension<BCThemeExtension>()!.successColor),
                     _outcomeChip('favor_provider', 'A favor del estilista',
                         Colors.blue),
                     if (status != 'escalated') ...[
                       _outcomeChip(
                           'favor_both', 'A favor de ambos', Colors.teal),
-                      _outcomeChip('dismissed', 'Descartar', Colors.grey),
+                      _outcomeChip('dismissed', 'Descartar', Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
                     ],
                   ],
                 ),
@@ -895,7 +897,7 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
                             child: _actionButton(
                               'Suspender cliente',
                               Icons.person_off,
-                              Colors.red.shade600,
+                              Theme.of(context).colorScheme.error,
                               () => _suspendAccount(clientId, 'cliente'),
                             ),
                           ),
@@ -904,7 +906,7 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
                             child: _actionButton(
                               'Suspender negocio',
                               Icons.store_outlined,
-                              Colors.orange.shade700,
+                              Theme.of(context).extension<BCThemeExtension>()!.warningColor,
                               () => _suspendAccount(
                                   businessOwnerId, 'negocio'),
                             ),
@@ -951,7 +953,7 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
                             ? _resolveDispute
                             : null,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green.shade600,
+                      backgroundColor: Theme.of(context).extension<BCThemeExtension>()!.successColor,
                       disabledBackgroundColor: Colors.grey.shade300,
                       minimumSize:
                           const Size(0, AppConstants.minTouchHeight),
@@ -1332,7 +1334,7 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
               child: const Text('Cancelar')),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
             child: Text('Suspender',
                 style: TextStyle(color: Theme.of(context).colorScheme.onPrimary)),
           ),
