@@ -226,6 +226,13 @@ class _BeautyCitaAppState extends ConsumerState<BeautyCitaApp> {
         );
         ToastService.showSuccess('Stripe conectado — tus servicios estan listos');
         break;
+      case 'salon-home':
+        // beautycita://salon-home — open business panel after registration
+        if (kDebugMode) debugPrint('[DeepLink] Salon home — navigating to business panel');
+        supabaseReady.future.then((_) {
+          if (mounted) AppRoutes.router.go('/business');
+        });
+        break;
       case 'cita-express':
         // beautycita://cita-express/{bizId}
         final bizId = uri.path.replaceFirst('/', '');
@@ -254,8 +261,14 @@ class _BeautyCitaAppState extends ConsumerState<BeautyCitaApp> {
 
     if (path == '/registro' || path.startsWith('/registro')) {
       // Salon registration with optional prefill from discovered salon.
-      // Validate ref is alphanumeric/dash/underscore only — no special chars.
-      final rawRef = params['ref'] ?? '';
+      // Support both: /registro?ref=ID and /registro/{ID}
+      var rawRef = params['ref'] ?? '';
+      if (rawRef.isEmpty) {
+        // Extract UUID from path: /registro/{uuid}
+        final pathMatch = RegExp(r'/registro/([0-9a-f-]{36})$', caseSensitive: false)
+            .firstMatch(path);
+        if (pathMatch != null) rawRef = pathMatch.group(1)!;
+      }
       final safeRef = rawRef.isNotEmpty && _safeParamRegex.hasMatch(rawRef)
           ? rawRef
           : '';

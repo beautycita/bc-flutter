@@ -755,6 +755,8 @@ function qualityScore(salon: any, serviceKeywords: string[] | null): number {
 }
 
 function canSendOutreach(salon: any): boolean {
+  // Don't send if opted out (LFPDPPP compliance — "BAJA")
+  if (salon.opted_out === true) return false;
   // Don't send if declined or unreachable
   if (salon.status === "declined" || salon.status === "unreachable") return false;
   // Don't send if already registered

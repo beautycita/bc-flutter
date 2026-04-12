@@ -83,7 +83,7 @@ async function sendWhatsApp(phone: string, code: string): Promise<{ sent: boolea
     const message = `*BeautyCita* - Tu codigo de verificacion es: *${code}*\n\nValido por ${OTP_EXPIRY_MINUTES} minutos. No compartas este codigo.`;
 
     const ac2 = new AbortController();
-    const t2 = setTimeout(() => ac2.abort(), 5000);
+    const t2 = setTimeout(() => ac2.abort(), 10000);
     const sendRes = await fetch(`${BEAUTYPI_WA_URL}/api/wa/send`, {
       method: "POST",
       headers: {
@@ -165,21 +165,45 @@ Deno.serve(async (req) => {
       return json({ error: "Demasiados intentos. Espera 15 minutos." }, 429);
     }
 
-    // Try WhatsApp first — generate OTP upfront so we send the real code in one shot
+    // Generate OTP upfront — same code for all channels (no Twilio Verify, use our code everywhere)
     const otp = generateOtp();
+
+    // Check for recent send to this phone (dedup: if we sent in last 60s, don't send again)
+    const { data: recentSend } = await db
+      .from("phone_verification_codes")
+      .select("id, channel, created_at")
+      .eq("phone", phone)
+      .eq("verified", false)
+      .gte("created_at", new Date(Date.now() - 60 * 1000).toISOString())
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (recentSend) {
+      console.log(`[phone-verify] Dedup: already sent to ${phone.slice(0, 6)}*** ${Math.round((Date.now() - new Date(recentSend.created_at).getTime()) / 1000)}s ago via ${recentSend.channel}`);
+      return json({ sent: true, channel: recentSend.channel, expires_in: OTP_EXPIRY_MINUTES * 60, deduplicated: true });
+    }
+
+    // Try WhatsApp first (increased timeout: 10s)
     console.log(`[phone-verify] Trying WhatsApp for ${phone.slice(0, 6)}***`);
     let result = await sendWhatsApp(phone, otp);
 
-    // If WA failed, fall back to SMS via Twilio
-    if (!result.sent) {
-      console.log(`[phone-verify] WA failed for ${phone.slice(0, 6)}***, falling back to SMS`);
+    // If WA failed, fall back to Twilio Programmable SMS (NOT Twilio Verify — we send our OWN code)
+    if (!result.sent && TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN) {
+      console.log(`[phone-verify] WA failed for ${phone.slice(0, 6)}***, falling back to SMS with same OTP`);
       try {
-        const url = `https://verify.twilio.com/v2/Services/${TWILIO_VERIFY_SID}/Verifications`;
+        // Use Twilio Programmable SMS (Messages API) — NOT Verify — so we control the code
+        const url = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`;
         const auth = btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`);
+        const toNumber = phone.startsWith("+") ? phone : `+${phone}`;
         const smsRes = await fetch(url, {
           method: "POST",
           headers: { Authorization: `Basic ${auth}`, "Content-Type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams({ To: phone.startsWith("+") ? phone : `+${phone}`, Channel: "sms" }),
+          body: new URLSearchParams({
+            To: toNumber,
+            From: Deno.env.get("TWILIO_FROM_NUMBER") ?? "+15005550006",
+            Body: `BeautyCita - Tu codigo de verificacion es: ${otp}\n\nValido por ${OTP_EXPIRY_MINUTES} minutos. No compartas este codigo.`,
+          }),
         });
         if (smsRes.ok) {
           result = { sent: true, channel: "sms" };
@@ -193,14 +217,16 @@ Deno.serve(async (req) => {
         console.error(`[phone-verify] SMS error: ${e}`);
         return json({ error: "No se pudo enviar el codigo. Intenta de nuevo." }, 500);
       }
+    } else if (!result.sent) {
+      return json({ error: "No se pudo enviar el codigo. Intenta de nuevo." }, 500);
     }
 
-    // Store OTP in DB (for WA we store our code, for SMS Twilio manages its own)
+    // Store OTP in DB — same code for both channels now (no more TWILIO_MANAGED)
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
     await db.from("phone_verification_codes").insert({
       user_id: user.id,
       phone,
-      code: result.channel === "sms" ? "TWILIO_MANAGED" : otp,
+      code: otp,
       channel: result.channel,
       expires_at: expiresAt,
     });
@@ -245,25 +271,8 @@ Deno.serve(async (req) => {
       .update({ attempts: record.attempts + 1 })
       .eq("id", record.id);
 
-    let verified = false;
-    if (record.channel === "sms") {
-      // Verify via Twilio Verify API
-      try {
-        const url = `https://verify.twilio.com/v2/Services/${TWILIO_VERIFY_SID}/VerificationCheck`;
-        const auth = btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`);
-        const res = await fetch(url, {
-          method: "POST",
-          headers: { Authorization: `Basic ${auth}`, "Content-Type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams({ To: phone.startsWith("+") ? phone : `+${phone}`, Code: code }),
-        });
-        const data = await res.json();
-        verified = data.status === "approved";
-      } catch (e) {
-        console.error(`[phone-verify] Twilio verify error: ${e}`);
-      }
-    } else {
-      verified = record.code === code;
-    }
+    // Direct code comparison — same code for all channels (WA and SMS)
+    const verified = record.code === code;
 
     if (!verified) {
       return json({ error: "Codigo incorrecto", remaining: MAX_ATTEMPTS - record.attempts - 1 }, 400);

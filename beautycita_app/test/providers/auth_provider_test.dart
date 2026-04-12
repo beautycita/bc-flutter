@@ -1,7 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:beautycita/providers/auth_provider.dart';
+import 'package:beautycita/services/supabase_client.dart';
 import '../helpers/test_mocks.dart';
+import '../helpers/test_helpers.dart';
 import 'package:beautycita/services/username_generator.dart';
 
 void main() {
@@ -46,6 +48,8 @@ void main() {
     setUp(() {
       mockBio = MockBiometricService();
       mockSession = MockUserSession();
+      setUpSupabaseTestClient();
+
       notifier = AuthNotifier(
         biometricService: mockBio,
         userSession: mockSession,
@@ -55,11 +59,13 @@ void main() {
 
     tearDown(() {
       notifier.dispose();
+      tearDownSupabase();
     });
 
     group('checkRegistration', () {
       test('sets authenticated when already registered', () async {
         when(() => mockSession.isRegistered()).thenAnswer((_) async => true);
+        when(() => mockSession.ensureSupabaseSession()).thenAnswer((_) async => true);
         when(() => mockSession.getUsername()).thenAnswer((_) async => 'velvetRose42');
 
         await notifier.checkRegistration();

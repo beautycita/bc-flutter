@@ -225,6 +225,7 @@ class _VisualCardsAnswer extends StatelessWidget {
           perspectiveScale: 0.02,
           child: _OptionCard(
             label: option.labelEs,
+            value: option.value,
             imageUrl: option.imageUrl,
             onTap: () => onSelect(option.value),
           ),
@@ -234,55 +235,201 @@ class _VisualCardsAnswer extends StatelessWidget {
   }
 }
 
-class _OptionCard extends StatelessWidget {
+class _OptionCard extends StatefulWidget {
   final String label;
+  final String value;
   final String? imageUrl;
   final VoidCallback onTap;
 
   const _OptionCard({
     required this.label,
+    required this.value,
     this.imageUrl,
     required this.onTap,
   });
 
   @override
+  State<_OptionCard> createState() => _OptionCardState();
+}
+
+class _OptionCardState extends State<_OptionCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 80),
+      reverseDuration: const Duration(milliseconds: 250),
+    );
+    _scaleAnim = Tween<double>(begin: 1.0, end: 0.94).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Curves.easeIn,
+        reverseCurve: Curves.elasticOut,
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  // Map option values to meaningful icons
+  static const _optionIcons = <String, IconData>{
+    // Lash styles
+    'natural': Icons.spa_outlined,
+    'dramatico': Icons.auto_awesome,
+    'extremo': Icons.whatshot_outlined,
+    'mega_volumen': Icons.layers_outlined,
+    'gatita': Icons.visibility_outlined,
+    'hollywood': Icons.star_outline_rounded,
+    'muneca': Icons.face_retouching_natural,
+    // Body zones
+    'piernas_completas': Icons.accessibility_new_rounded,
+    'media_pierna': Icons.airline_seat_legroom_normal_rounded,
+    'axilas': Icons.back_hand_outlined,
+    'bikini': Icons.water_drop_outlined,
+    'brazos': Icons.fitness_center_outlined,
+    'espalda': Icons.accessibility_outlined,
+    'facial': Icons.face_outlined,
+    'cuerpo_completo': Icons.person_outline_rounded,
+    // Correction types
+    'cubrir_canas': Icons.color_lens_outlined,
+    'corregir_tono': Icons.tune_outlined,
+    'cambio_radical': Icons.auto_fix_high_outlined,
+    // Event types
+    'boda': Icons.favorite_outline_rounded,
+    'xv_anos': Icons.cake_outlined,
+    'graduacion': Icons.school_outlined,
+    'cena': Icons.restaurant_outlined,
+    'otro': Icons.celebration_outlined,
+    // Editorial types
+    'moda': Icons.checkroom_outlined,
+    'beauty': Icons.face_retouching_natural_outlined,
+    'artistico': Icons.palette_outlined,
+    // Location
+    'en_salon': Icons.storefront_outlined,
+    'a_domicilio': Icons.home_outlined,
+    // Lip effects
+    'definido': Icons.edit_outlined,
+    'rubor': Icons.gradient_outlined,
+    // Model count
+    '1': Icons.person_outline,
+    '2_3': Icons.group_outlined,
+    '4_plus': Icons.groups_outlined,
+  };
+
+  @override
   Widget build(BuildContext context) {
+    final palette = Theme.of(context).colorScheme;
+    final icon = _optionIcons[widget.value] ?? Icons.circle_outlined;
+
     return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-          border: Border.all(
-            color: Colors.white.withValues(alpha: 0.15),
-            width: 1.5,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.15),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
+      onTapDown: (_) => _controller.forward(),
+      onTapUp: (_) {
+        _controller.reverse();
+        widget.onTap();
+      },
+      onTapCancel: () => _controller.reverse(),
+      child: ScaleTransition(
+        scale: _scaleAnim,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.18),
+              width: 1.5,
             ),
-          ],
-        ),
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppConstants.paddingMD,
-              vertical: AppConstants.paddingSM,
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                palette.primary.withValues(alpha: 0.20),
+                palette.primary.withValues(alpha: 0.08),
+                Colors.white.withValues(alpha: 0.04),
+              ],
             ),
-            child: Text(
-              label,
-              textAlign: TextAlign.center,
-              style: GoogleFonts.poppins(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
-                height: 1.3,
+            boxShadow: [
+              BoxShadow(
+                color: palette.primary.withValues(alpha: 0.10),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
               ),
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-            ),
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.20),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Stack(
+            children: [
+              // Subtle radial glow behind icon
+              Positioned(
+                top: -10,
+                right: -10,
+                child: Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        palette.primary.withValues(alpha: 0.15),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              // Content
+              Padding(
+                padding: const EdgeInsets.all(AppConstants.paddingMD),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Icon with glow
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white.withValues(alpha: 0.10),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.15),
+                        ),
+                      ),
+                      child: Icon(
+                        icon,
+                        size: 24,
+                        color: Colors.white.withValues(alpha: 0.9),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    // Label
+                    Text(
+                      widget.label,
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                        height: 1.25,
+                        letterSpacing: 0.2,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -324,7 +471,7 @@ class _YesNoAnswer extends StatelessWidget {
   }
 }
 
-class _BigButton extends StatelessWidget {
+class _BigButton extends StatefulWidget {
   final String label;
   final IconData icon;
   final VoidCallback onTap;
@@ -336,40 +483,82 @@ class _BigButton extends StatelessWidget {
   });
 
   @override
+  State<_BigButton> createState() => _BigButtonState();
+}
+
+class _BigButtonState extends State<_BigButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 80),
+      reverseDuration: const Duration(milliseconds: 250),
+    );
+    _scaleAnim = Tween<double>(begin: 1.0, end: 0.94).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeIn, reverseCurve: Curves.elasticOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final palette = Theme.of(context).colorScheme;
     return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 120,
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-          border: Border.all(
-            color: Colors.white.withValues(alpha: 0.15),
-            width: 1,
+      onTapDown: (_) => _controller.forward(),
+      onTapUp: (_) {
+        _controller.reverse();
+        widget.onTap();
+      },
+      onTapCancel: () => _controller.reverse(),
+      child: ScaleTransition(
+        scale: _scaleAnim,
+        child: Container(
+          height: 120,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.18), width: 1.5),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                palette.primary.withValues(alpha: 0.18),
+                Colors.white.withValues(alpha: 0.04),
+              ],
+            ),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withValues(alpha: 0.20), blurRadius: 8, offset: const Offset(0, 2)),
+            ],
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.15),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 40, color: Colors.white),
-            const SizedBox(height: AppConstants.paddingSM),
-            Text(
-              label,
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withValues(alpha: 0.10),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                ),
+                child: Icon(widget.icon, size: 26, color: Colors.white.withValues(alpha: 0.9)),
               ),
-            ),
-          ],
+              const SizedBox(height: AppConstants.paddingSM),
+              Text(
+                widget.label,
+                style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white),
+              ),
+            ],
+          ),
         ),
       ),
     );

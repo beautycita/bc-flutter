@@ -133,7 +133,7 @@ void main() {
     group('cancelBooking', () {
       test('calls cancel with booking ID', () async {
         when(() => repo.cancelBooking(any()))
-            .thenAnswer((_) async => CancelResult(
+            .thenAnswer((_) async => const CancelResult(
                   refundAmount: 0,
                   depositForfeited: 0,
                   commissionKept: 0,
@@ -142,6 +142,100 @@ void main() {
 
         await repo.cancelBooking('booking-1');
         verify(() => repo.cancelBooking('booking-1')).called(1);
+      });
+    });
+
+    group('CancelResult scenarios', () {
+      test('free cancel: full refund minus commission', () {
+        const result = CancelResult(
+          refundAmount: 970.0,   // 1000 - 30 commission
+          depositForfeited: 0.0,
+          commissionKept: 30.0,  // 3% of 1000
+          isFreeCancel: true,
+        );
+
+        expect(result.isFreeCancel, true);
+        expect(result.refundAmount + result.commissionKept, 1000.0);
+        expect(result.depositForfeited, 0.0);
+      });
+
+      test('late cancel with deposit: deposit forfeited, remainder refunded', () {
+        const result = CancelResult(
+          refundAmount: 770.0,        // 1000 - 200 deposit - 30 commission
+          depositForfeited: 200.0,    // 20% of 1000
+          commissionKept: 30.0,       // 3% of 1000
+          isFreeCancel: false,
+        );
+
+        expect(result.isFreeCancel, false);
+        expect(result.depositForfeited, 200.0);
+        // Total adds up to original price
+        expect(
+          result.refundAmount + result.depositForfeited + result.commissionKept,
+          1000.0,
+        );
+      });
+
+      test('salon_direct cancel: 0% commission, full refund', () {
+        const result = CancelResult(
+          refundAmount: 500.0,
+          depositForfeited: 0.0,
+          commissionKept: 0.0,
+          isFreeCancel: true,
+        );
+
+        expect(result.refundAmount, 500.0);
+        expect(result.commissionKept, 0.0);
+      });
+
+      test('business-cancelled: customer gets full refund', () {
+        const result = CancelResult(
+          refundAmount: 1000.0,  // Full refund
+          depositForfeited: 0.0,
+          commissionKept: 30.0,  // Commission still charged to salon
+          isFreeCancel: false,
+        );
+
+        expect(result.refundAmount, 1000.0);
+        expect(result.commissionKept, 30.0);
+      });
+
+      test('unpaid booking cancel: no money moves', () {
+        const result = CancelResult(
+          refundAmount: 0.0,
+          depositForfeited: 0.0,
+          commissionKept: 0.0,
+          isFreeCancel: true,
+        );
+
+        expect(result.refundAmount, 0.0);
+        expect(result.depositForfeited, 0.0);
+        expect(result.commissionKept, 0.0);
+      });
+
+      test('already-cancelled: no-op return', () {
+        // Server returns zeros when booking is already cancelled
+        const result = CancelResult(
+          refundAmount: 0.0,
+          depositForfeited: 0.0,
+          commissionKept: 0.0,
+          isFreeCancel: true,
+        );
+
+        expect(result.refundAmount, 0.0);
+      });
+
+      test('late cancel, no deposit policy: full minus commission', () {
+        const result = CancelResult(
+          refundAmount: 485.0,   // 500 - 15 commission
+          depositForfeited: 0.0,
+          commissionKept: 15.0,  // 3% of 500
+          isFreeCancel: false,
+        );
+
+        expect(result.isFreeCancel, false);
+        expect(result.depositForfeited, 0.0);
+        expect(result.refundAmount + result.commissionKept, 500.0);
       });
     });
 

@@ -114,7 +114,7 @@ BEGIN
   v_iva_withheld := ROUND(v_iva_portion * v_iva_rate, 2);
   v_commission   := ROUND(p_price * v_commission_rate, 2);
   v_platform_fee := v_commission;
-  v_provider_net := ROUND(p_price - v_isr_withheld - v_iva_withheld, 2);
+  v_provider_net := GREATEST(ROUND(p_price - v_isr_withheld - v_iva_withheld, 2), 0);
 
   -- =========================================================================
   -- 3. Read remaining business tax info for withholding snapshot
@@ -177,7 +177,7 @@ BEGIN
     transport_mode, staff_id, notes, paid_at, booking_source,
     tax_base, isr_withheld, iva_withheld, provider_net, platform_fee
   ) VALUES (
-    p_user_id, p_business_id, p_service_id, p_service_name, p_service_type,
+    p_user_id, p_business_id, NULLIF(p_service_id, '')::uuid, p_service_name, p_service_type,
     p_starts_at, p_ends_at, p_price, v_status, v_payment_status, p_payment_method,
     p_transport_mode, p_staff_id, p_notes, v_paid_at, p_booking_source,
     v_tax_base, v_isr_withheld, v_iva_withheld, v_provider_net, v_platform_fee

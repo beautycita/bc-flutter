@@ -91,8 +91,9 @@ export function calculateWithholding(
   // IVA is withheld on the IVA portion
   const ivaWithheld = round2(ivaPortion * ivaRate);
 
-  // Provider receives what's left
-  const providerNet = round2(grossAmount - platformFee - isrWithheld - ivaWithheld);
+  // Provider receives what's left (clamped to 0 — never go negative)
+  const rawNet = grossAmount - platformFee - isrWithheld - ivaWithheld;
+  const providerNet = Math.max(round2(rawNet), 0);
 
   return {
     jurisdiction: "MX",

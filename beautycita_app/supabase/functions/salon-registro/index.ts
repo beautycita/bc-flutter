@@ -552,15 +552,46 @@ function registrationPage(ref: string | null, salon: SalonData): string {
         </div>
       </div>
 
-      <a href="${APK_URL}" class="btn btn-green" style="display:block;text-align:center;text-decoration:none;margin-top:24px">
-        DESCARGAR LA APP
-      </a>
-      <p class="note" style="margin-top:8px">Gestiona reservas, servicios y pagos desde la app</p>
+      <!-- Smart app launch: tries deep link first, falls back to download -->
+      <div id="appLaunch">
+        <a href="beautycita://salon-home" id="openAppLink" class="btn btn-green" style="display:block;text-align:center;text-decoration:none;margin-top:24px">
+          ABRIR LA APP
+        </a>
+        <p class="note" style="margin-top:8px" id="appNote">Si ya tienes la app instalada, se abrira automaticamente</p>
+        <a href="${APK_URL}" id="downloadLink" class="btn" style="display:none;text-align:center;text-decoration:none;margin-top:12px;background:#555">
+          DESCARGAR LA APP
+        </a>
+      </div>
 
-      <!-- Optional: web access setup -->
+      <script>
+      (function() {
+        // Detect if on mobile
+        var isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
+        var openBtn = document.getElementById('openAppLink');
+        var downloadBtn = document.getElementById('downloadLink');
+        var note = document.getElementById('appNote');
+
+        if (isMobile) {
+          // Show both: try to open app, show download as backup after 2s
+          setTimeout(function() {
+            downloadBtn.style.display = 'block';
+            note.textContent = 'No se abrio? Descarga la app aqui';
+          }, 2000);
+        } else {
+          // Desktop: show web panel setup prominently, download secondary
+          openBtn.style.display = 'none';
+          note.textContent = 'Configura acceso web abajo o descarga la app en tu telefono';
+          downloadBtn.style.display = 'block';
+          downloadBtn.textContent = 'DESCARGAR APP (ANDROID)';
+          downloadBtn.style.background = '#888';
+        }
+      })();
+      </script>
+
+      <!-- Web access setup -->
       <div class="web-access" id="webAccess">
-        <h3>Acceso al panel web (opcional)</h3>
-        <p>Configura email y contrasena para entrar desde tu computadora</p>
+        <h3>Acceso al panel web</h3>
+        <p>Configura email y contrasena para gestionar tu salon desde la computadora</p>
         <label class="field">
           <span class="label">Email</span>
           <input type="email" id="webEmail" placeholder="tu@email.com" autocomplete="email">
@@ -841,7 +872,13 @@ Deno.serve(async (req: Request) => {
   }
 
   const url = new URL(req.url);
-  const ref = url.searchParams.get("ref");
+  // Support both: /registro?ref=ID and /registro/ID (clean URL)
+  let ref = url.searchParams.get("ref");
+  if (!ref) {
+    // Extract from path: /functions/v1/salon-registro/{id} or /registro/{id}
+    const pathMatch = url.pathname.match(/\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
+    if (pathMatch) ref = pathMatch[1];
+  }
 
   // ─── GET: Serve registration page ─────────────────────────────────
   if (req.method === "GET") {
@@ -1374,17 +1411,36 @@ Deno.serve(async (req: Request) => {
           );
         }
 
-        // Find most recent user by phone
-        const { data: profile } = await supabase
+        // Find most recent user by phone (try normalized + raw)
+        let profile = null;
+        const { data: p1 } = await supabase
           .from("profiles")
           .select("id")
           .eq("phone", phone)
           .order("created_at", { ascending: false })
           .limit(1)
           .maybeSingle();
+        profile = p1;
+
+        // Fallback: try without country code prefix
+        if (!profile) {
+          const digits = phone.replace(/[^\d]/g, "");
+          const last10 = digits.slice(-10);
+          if (last10.length === 10) {
+            const { data: p2 } = await supabase
+              .from("profiles")
+              .select("id")
+              .ilike("phone", `%${last10}`)
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            profile = p2;
+          }
+        }
 
         if (!profile) {
-          return json({ error: "Usuario no encontrado" }, 404);
+          console.error(`[SALON-REG] set_web_access: no profile for phone ${phone.slice(0, 6)}***`);
+          return json({ error: "Usuario no encontrado. Intenta de nuevo o contacta soporte." }, 404);
         }
 
         // Update auth user with email + password

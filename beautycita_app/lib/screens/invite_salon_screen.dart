@@ -394,7 +394,7 @@ class _InviteSalonScreenState extends ConsumerState<InviteSalonScreen> {
     // 1. Open WhatsApp with pre-filled message
     final phone = salon.whatsapp ?? salon.phone;
     if (phone != null) {
-      final regUrl = 'https://beautycita.com/registro?ref=${salon.id}';
+      final regUrl = 'https://beautycita.com/registro/${salon.id}';
       final message = Uri.encodeComponent(
         'Hola! Queria hacer una cita contigo pero no te encontre '
         'en BeautyCita. Deberias estar ahi, te llegan mas clientes '
@@ -419,7 +419,7 @@ class _InviteSalonScreenState extends ConsumerState<InviteSalonScreen> {
     setState(() => _invitedIds.add(match.salonId));
 
     final phone = match.matchedPhone;
-    final regUrl = 'https://beautycita.com/registro?ref=${match.salonId}';
+    final regUrl = 'https://beautycita.com/registro/${match.salonId}';
     final message = Uri.encodeComponent(
       'Hola! Queria hacer una cita contigo pero no te encontre '
       'en BeautyCita. Deberias estar ahi, te llegan mas clientes '

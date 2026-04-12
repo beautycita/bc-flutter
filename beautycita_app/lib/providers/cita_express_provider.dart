@@ -66,11 +66,14 @@ class CitaExpressState {
     String? selectedServiceType,
     String? selectedServiceName,
     CurateResponse? curateResponse,
+    bool clearCurateResponse = false,
     ResultCard? selectedResult,
+    bool clearSelectedResult = false,
     String? bookingId,
     String? error,
     String? paymentMethod,
     List<ResultCard>? nearbyAlternatives,
+    bool clearNearbyAlternatives = false,
   }) {
     return CitaExpressState(
       step: step ?? this.step,
@@ -80,12 +83,12 @@ class CitaExpressState {
       selectedServiceId: selectedServiceId ?? this.selectedServiceId,
       selectedServiceType: selectedServiceType ?? this.selectedServiceType,
       selectedServiceName: selectedServiceName ?? this.selectedServiceName,
-      curateResponse: curateResponse ?? this.curateResponse,
-      selectedResult: selectedResult ?? this.selectedResult,
+      curateResponse: clearCurateResponse ? null : (curateResponse ?? this.curateResponse),
+      selectedResult: clearSelectedResult ? null : (selectedResult ?? this.selectedResult),
       bookingId: bookingId ?? this.bookingId,
       error: error,
       paymentMethod: paymentMethod ?? this.paymentMethod,
-      nearbyAlternatives: nearbyAlternatives ?? this.nearbyAlternatives,
+      nearbyAlternatives: clearNearbyAlternatives ? null : (nearbyAlternatives ?? this.nearbyAlternatives),
     );
   }
 }
@@ -219,8 +222,8 @@ class CitaExpressNotifier extends StateNotifier<CitaExpressState> {
   void backToServices() {
     state = state.copyWith(
       step: CitaExpressStep.serviceSelect,
-      curateResponse: null,
-      selectedResult: null,
+      clearCurateResponse: true,
+      clearSelectedResult: true,
     );
   }
 
@@ -229,7 +232,7 @@ class CitaExpressNotifier extends StateNotifier<CitaExpressState> {
     final prevStep = state.curateResponse != null
         ? CitaExpressStep.results
         : CitaExpressStep.serviceSelect;
-    state = state.copyWith(step: prevStep, selectedResult: null);
+    state = state.copyWith(step: prevStep, clearSelectedResult: true);
   }
 
   /// Set payment method.
@@ -305,7 +308,7 @@ class CitaExpressNotifier extends StateNotifier<CitaExpressState> {
   void backToNoSlots() {
     state = state.copyWith(
       step: CitaExpressStep.noSlotsToday,
-      nearbyAlternatives: null,
+      clearNearbyAlternatives: true,
     );
   }
 

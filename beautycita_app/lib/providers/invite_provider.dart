@@ -235,7 +235,7 @@ class InviteNotifier extends StateNotifier<InviteState> {
     final userName = await _getCurrentUserName();
     final salonName = salon.name;
     final service = state.serviceFilter;
-    final regUrl = 'https://beautycita.com/registro?ref=${salon.id}';
+    final regUrl = 'https://beautycita.com/registro/${salon.id}';
 
     final templates = <String>[
       'Hola $salonName! Soy $userName.${service != null && service.isNotEmpty ? ' Estaba buscando $service y' : ''} Me encantaría poder reservar contigo desde BeautyCita. Es gratis para ti y tus clientas reservan en segundos. $regUrl',

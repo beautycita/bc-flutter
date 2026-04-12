@@ -177,6 +177,8 @@ Deno.serve(async (req: Request) => {
         buyer_id,
         business_id,
         product_name,
+        total_amount,
+        payment_method,
         stripe_payment_intent_id,
         created_at,
         status,
@@ -286,14 +288,29 @@ Deno.serve(async (req: Request) => {
       const productName = order.product_name ?? "producto";
 
       try {
-        // 5a. Refund via Stripe
-        if (order.stripe_payment_intent_id) {
+        // 5a. Refund — route by payment method
+        if (order.payment_method === "saldo") {
+          // Saldo purchase: credit buyer's saldo back
+          const { error: saldoErr } = await supabase.rpc("increment_saldo", {
+            p_user_id: order.buyer_id,
+            p_amount: order.total_amount,
+            p_reason: `refund_order_${order.id}`,
+            p_idempotency_key: `order-saldo-refund-${order.id}`,
+          });
+          if (saldoErr) {
+            console.error(`[ORDER-FOLLOWUP] Saldo refund failed for ${shortId}:`, saldoErr.message);
+            refundErrors++;
+            continue;
+          }
+          console.log(`[ORDER-FOLLOWUP] Saldo refund $${order.total_amount} for order ${shortId}`);
+        } else if (order.stripe_payment_intent_id) {
+          // Card/OXXO: Stripe refund
           await stripe.refunds.create({
             payment_intent: order.stripe_payment_intent_id,
           }, { idempotencyKey: `order-refund-${order.id}` });
-          console.log(`[ORDER-FOLLOWUP] Refunded PI ${order.stripe_payment_intent_id} for order ${shortId}`);
+          console.log(`[ORDER-FOLLOWUP] Stripe refund PI ${order.stripe_payment_intent_id} for order ${shortId}`);
         } else {
-          console.warn(`[ORDER-FOLLOWUP] Order ${shortId} has no stripe_payment_intent_id, skipping Stripe refund`);
+          console.warn(`[ORDER-FOLLOWUP] Order ${shortId} has no payment_method or stripe PI, skipping refund`);
         }
 
         // 5b. Update order status

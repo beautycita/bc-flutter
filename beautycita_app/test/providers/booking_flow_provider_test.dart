@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:beautycita/models/curate_result.dart';
 import 'package:beautycita/models/follow_up_question.dart';
@@ -6,6 +7,8 @@ import 'package:beautycita/providers/booking_flow_provider.dart';
 import 'package:beautycita/providers/user_preferences_provider.dart';
 import '../helpers/test_mocks.dart';
 import '../helpers/model_fixtures.dart';
+
+class MockRef extends Mock implements Ref {}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -96,12 +99,14 @@ void main() {
     late MockCurateService mockCurate;
     late MockFollowUpService mockFollowUp;
     late MockBookingRepository mockBookingRepo;
+    late MockRef mockRef;
     late BookingFlowNotifier notifier;
 
     setUp(() {
       mockCurate = MockCurateService();
       mockFollowUp = MockFollowUpService();
       mockBookingRepo = MockBookingRepository();
+      mockRef = MockRef();
 
       notifier = BookingFlowNotifier(
         mockCurate,
@@ -109,6 +114,7 @@ void main() {
         mockBookingRepo,
         const UserPrefsState(), // default prefs
         const LatLng(lat: 20.65, lng: -105.22), // temp location (bypasses GPS)
+        mockRef,
       );
     });
 
@@ -387,7 +393,10 @@ void main() {
     });
 
     group('error handling', () {
-      test('curate failure transitions to error step', () async {
+      test('curate failure shows results with empty list (invite flow)', () async {
+        // When curate fails, the notifier intentionally shows results screen
+        // with empty results → triggers discovered salons invite flow
+        // instead of a dead-end error screen.
         when(() => mockFollowUp.getQuestions(any()))
             .thenAnswer((_) async => []);
         when(() => mockCurate.curateResults(any()))
@@ -395,18 +404,19 @@ void main() {
 
         await notifier.selectService('manicure_gel', 'Manicure');
 
-        expect(notifier.state.step, BookingFlowStep.error);
-        expect(notifier.state.error, isNotNull);
+        expect(notifier.state.step, BookingFlowStep.results);
+        expect(notifier.state.curateResponse, isNotNull);
+        expect(notifier.state.curateResponse!.results, isEmpty);
       });
 
-      test('from error → goBack to categorySelect', () async {
+      test('from empty results → goBack to categorySelect', () async {
         when(() => mockFollowUp.getQuestions(any()))
             .thenAnswer((_) async => []);
         when(() => mockCurate.curateResults(any()))
             .thenThrow(Exception('Server error'));
 
         await notifier.selectService('manicure_gel', 'Manicure');
-        expect(notifier.state.step, BookingFlowStep.error);
+        expect(notifier.state.step, BookingFlowStep.results);
 
         notifier.goBack();
 

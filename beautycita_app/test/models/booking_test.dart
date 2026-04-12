@@ -87,6 +87,110 @@ void main() {
       });
     });
 
+    group('financial fields', () {
+      test('parses ISR/IVA/providerNet from JSON', () {
+        final booking = Booking.fromJson(bookingJson(
+          price: 350.0,
+          isrWithheld: 8.75,
+          ivaWithheld: 3.86,
+          providerNet: 337.39,
+        ));
+
+        expect(booking.isrWithheld, 8.75);
+        expect(booking.ivaWithheld, 3.86);
+        expect(booking.providerNet, 337.39);
+      });
+
+      test('financial fields are null when not present', () {
+        final booking = Booking.fromJson(bookingJson());
+
+        expect(booking.isrWithheld, isNull);
+        expect(booking.ivaWithheld, isNull);
+        expect(booking.providerNet, isNull);
+      });
+
+      test('parses paymentMethod', () {
+        final card = Booking.fromJson(bookingJson(paymentMethod: 'card'));
+        expect(card.paymentMethod, 'card');
+
+        final saldo = Booking.fromJson(bookingJson(paymentMethod: 'saldo'));
+        expect(saldo.paymentMethod, 'saldo');
+
+        final cash = Booking.fromJson(bookingJson(paymentMethod: 'cash_direct'));
+        expect(cash.paymentMethod, 'cash_direct');
+
+        final oxxo = Booking.fromJson(bookingJson(paymentMethod: 'oxxo'));
+        expect(oxxo.paymentMethod, 'oxxo');
+      });
+
+      test('parses staffId and staffName', () {
+        final booking = Booking.fromJson(bookingJson(
+          staffId: 'staff-1',
+          staffName: 'Maria L.',
+        ));
+
+        expect(booking.staffId, 'staff-1');
+        expect(booking.staffName, 'Maria L.');
+      });
+
+      test('parses cancellationReason', () {
+        final booking = Booking.fromJson(bookingJson(
+          status: 'cancelled_customer',
+          cancellationReason: 'Changed my mind',
+        ));
+
+        expect(booking.cancellationReason, 'Changed my mind');
+      });
+
+      test('parses business detail fields from nested join', () {
+        final booking = Booking.fromJson(bookingJson(
+          businesses: {
+            'name': 'Salon Rosa',
+            'phone': '3221234567',
+            'lat': 20.6534,
+            'lng': -105.2253,
+            'address': 'Av. Mexico 123',
+          },
+        ));
+
+        expect(booking.providerName, 'Salon Rosa');
+        expect(booking.businessPhone, '3221234567');
+        expect(booking.businessLat, 20.6534);
+        expect(booking.businessLng, -105.2253);
+        expect(booking.businessAddress, 'Av. Mexico 123');
+      });
+
+      test('financial fields preserved through toJson round-trip', () {
+        final booking = Booking.fromJson(bookingJson(
+          isrWithheld: 8.75,
+          ivaWithheld: 3.86,
+          providerNet: 337.39,
+          staffId: 'staff-1',
+          staffName: 'Maria L.',
+        ));
+        final json = booking.toJson();
+
+        expect(json['isr_withheld'], 8.75);
+        expect(json['iva_withheld'], 3.86);
+        expect(json['provider_net'], 337.39);
+        expect(json['staff_id'], 'staff-1');
+        expect(json['staff_name'], 'Maria L.');
+      });
+
+      test('copyWith preserves financial fields', () {
+        final booking = Booking.fromJson(bookingJson(
+          isrWithheld: 8.75,
+          ivaWithheld: 3.86,
+          providerNet: 337.39,
+        ));
+        final updated = booking.copyWith(status: 'cancelled_customer');
+
+        expect(updated.isrWithheld, 8.75);
+        expect(updated.ivaWithheld, 3.86);
+        expect(updated.providerNet, 337.39);
+      });
+    });
+
     group('toJson', () {
       test('round-trips through fromJson', () {
         final original = bookingJson();

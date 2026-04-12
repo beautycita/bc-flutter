@@ -63,6 +63,36 @@ Deno.serve(async (req) => {
   try {
     const { thread_prefix, message, from_phone } = await req.json();
 
+    // ── BAJA opt-out handler (LFPDPPP compliance) ──
+    // If the incoming message is just "BAJA" or "baja", mark sender as opted out
+    if (message && message.trim().toLowerCase() === "baja" && from_phone) {
+      const digits = from_phone.replace(/[^\d]/g, "");
+      const last10 = digits.slice(-10);
+
+      // Opt out in discovered_salons (by phone match)
+      const { data: optedOut } = await db
+        .from("discovered_salons")
+        .update({ opted_out: true, opted_out_at: new Date().toISOString() })
+        .or(`phone.ilike.%${last10},whatsapp.ilike.%${last10}`)
+        .eq("opted_out", false)
+        .select("id");
+
+      // Also opt out in profiles (by phone match)
+      await db
+        .from("profiles")
+        .update({ opted_out_marketing: true })
+        .ilike("phone", `%${last10}`);
+
+      const count = optedOut?.length ?? 0;
+      console.log(`[WA-IN] BAJA from ${from_phone}: ${count} discovered_salons opted out`);
+
+      return json({
+        action: "opt_out",
+        opted_out_count: count,
+        message: "Listo, no recibiras mas mensajes de BeautyCita. Si cambias de opinion, visita beautycita.com",
+      });
+    }
+
     if (!thread_prefix || !message) {
       return json({ error: "thread_prefix and message required" }, 400);
     }

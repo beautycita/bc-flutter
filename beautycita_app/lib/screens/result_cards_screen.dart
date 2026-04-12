@@ -1197,7 +1197,7 @@ class _NoResultsWithNearbySalonsState
 
     final phone = salon.whatsapp ?? salon.phone;
     if (phone != null) {
-      final regUrl = 'https://beautycita.com/registro?ref=${salon.id}';
+      final regUrl = 'https://beautycita.com/registro/${salon.id}';
       final message = Uri.encodeComponent(
         'Hola! Queria hacer una cita contigo pero no te encontre '
         'en BeautyCita. Deberias estar ahi, te llegan mas clientes '

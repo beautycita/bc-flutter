@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:uuid/uuid.dart';
 import 'package:beautycita/config/app_transitions.dart';
 import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/services/supabase_client.dart';
@@ -318,6 +319,7 @@ class _ProductCheckoutSheetState extends State<ProductCheckoutSheet> {
       'p_quantity': widget.quantity,
       'p_total_amount': _total,
       'p_shipping_address': shippingAddress,
+      'p_idempotency_key': const Uuid().v4(),
     }) as Map<String, dynamic>;
 
     _orderId = result['order_id'] as String;

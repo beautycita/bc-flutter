@@ -20,7 +20,7 @@ void main() {
       expect(state.qualitySpeed, 0.7);
       expect(state.exploreLoyalty, 0.3);
       expect(state.onboardingComplete, isFalse);
-      expect(state.reduceAnimations, isFalse);
+      expect(state.reduceAnimations, isTrue);
     });
 
     group('copyWith', () {

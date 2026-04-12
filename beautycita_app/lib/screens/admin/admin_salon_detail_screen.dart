@@ -98,6 +98,101 @@ class _AdminSalonDetailScreenState
   }
 
   // ---------------------------------------------------------------------------
+  // Verify toggle
+  // ---------------------------------------------------------------------------
+
+  Future<void> _setVerified(bool value) async {
+    try {
+      await SupabaseClientService.client
+          .from('businesses')
+          .update({'is_verified': value}).eq('id', widget.businessId);
+      ref.invalidate(adminSalonDetailProvider(widget.businessId));
+      ToastService.showSuccess(value ? 'Salon verificado' : 'Verificacion removida');
+    } catch (e, stack) {
+      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Reset onboarding
+  // ---------------------------------------------------------------------------
+
+  Future<void> _resetOnboarding() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Reiniciar Onboarding', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+        content: Text(
+          'El salon debera completar onboarding nuevamente (servicios, horario, Stripe). ¿Continuar?',
+          style: GoogleFonts.nunito(fontSize: 14),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Cancelar', style: GoogleFonts.nunito())),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.orange[700]),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('Reiniciar', style: GoogleFonts.nunito()),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) {
+      try {
+        await SupabaseClientService.client.from('businesses').update({
+          'onboarding_complete': false,
+          'onboarding_step': 'services',
+          'has_services': false,
+          'has_schedule': false,
+        }).eq('id', widget.businessId);
+        ref.invalidate(adminSalonDetailProvider(widget.businessId));
+        ToastService.showSuccess('Onboarding reiniciado');
+      } catch (e, stack) {
+        ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Edit field dialog
+  // ---------------------------------------------------------------------------
+
+  Future<void> _editField(String fieldName, String label, String? currentValue) async {
+    final controller = TextEditingController(text: currentValue ?? '');
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Editar $label', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: InputDecoration(
+            labelText: label,
+            border: const OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancelar', style: GoogleFonts.nunito())),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+            child: Text('Guardar', style: GoogleFonts.nunito()),
+          ),
+        ],
+      ),
+    );
+    if (result != null && mounted) {
+      try {
+        await SupabaseClientService.client
+            .from('businesses')
+            .update({fieldName: result.isEmpty ? null : result}).eq('id', widget.businessId);
+        ref.invalidate(adminSalonDetailProvider(widget.businessId));
+        ToastService.showSuccess('$label actualizado');
+      } catch (e, stack) {
+        ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------------------
   // URL launchers
   // ---------------------------------------------------------------------------
 
@@ -182,6 +277,9 @@ class _AdminSalonDetailScreenState
             onLaunchWhatsApp: _launchWhatsApp,
             onLaunchMaps: _launchMaps,
             onLaunchUrl: _launchUrl,
+            onVerifiedChanged: _setVerified,
+            onResetOnboarding: _resetOnboarding,
+            onEditField: _editField,
           );
         },
       ),
@@ -205,6 +303,9 @@ class _SalonDetailBody extends ConsumerWidget {
   final ValueChanged<String> onLaunchWhatsApp;
   final ValueChanged<String> onLaunchMaps;
   final ValueChanged<String> onLaunchUrl;
+  final ValueChanged<bool> onVerifiedChanged;
+  final VoidCallback onResetOnboarding;
+  final void Function(String field, String label, String? current) onEditField;
 
   const _SalonDetailBody({
     required this.salon,
@@ -218,6 +319,9 @@ class _SalonDetailBody extends ConsumerWidget {
     required this.onLaunchWhatsApp,
     required this.onLaunchMaps,
     required this.onLaunchUrl,
+    required this.onVerifiedChanged,
+    required this.onResetOnboarding,
+    required this.onEditField,
   });
 
   @override
@@ -362,8 +466,10 @@ class _SalonDetailBody extends ConsumerWidget {
         // ----------------------------------------------------------------
         _actionButtons(
           context: context,
+          salon: salon,
           owner: owner,
           isActive: isActive,
+          isVerified: salon['is_verified'] as bool? ?? false,
           colors: colors,
         ),
       ],
@@ -1147,84 +1253,122 @@ class _SalonDetailBody extends ConsumerWidget {
 
   Widget _actionButtons({
     required BuildContext context,
+    required Map<String, dynamic> salon,
     required Map<String, dynamic>? owner,
     required bool isActive,
+    required bool isVerified,
     required ColorScheme colors,
   }) {
     final ownerPhone = owner?['phone'] as String?;
 
+    Widget actionBtn({
+      required String label,
+      required IconData icon,
+      required VoidCallback onPressed,
+      Color? bg,
+      Color? fg,
+      bool outlined = false,
+    }) {
+      final style = outlined
+          ? OutlinedButton.styleFrom(
+              foregroundColor: fg ?? colors.primary,
+              side: BorderSide(color: fg ?? colors.primary),
+              minimumSize: const Size.fromHeight(AppConstants.minTouchHeight),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppConstants.radiusSM)),
+            )
+          : FilledButton.styleFrom(
+              backgroundColor: bg ?? colors.primary,
+              minimumSize: const Size.fromHeight(AppConstants.minTouchHeight),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppConstants.radiusSM)),
+            );
+
+      final child = Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 20),
+          const SizedBox(width: 8),
+          Text(label, style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600)),
+        ],
+      );
+
+      return outlined
+          ? OutlinedButton(style: style, onPressed: onPressed, child: child)
+          : FilledButton(style: style, onPressed: onPressed, child: child);
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (ownerPhone != null && ownerPhone.isNotEmpty)
-          FilledButton.icon(
-            style: FilledButton.styleFrom(
-              backgroundColor: Colors.green[600],
-              minimumSize: const Size.fromHeight(AppConstants.minTouchHeight),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppConstants.radiusSM),
-              ),
-            ),
+        // -- Contact owner --
+        if (ownerPhone != null && ownerPhone.isNotEmpty) ...[
+          actionBtn(
+            label: 'Contactar Propietario',
+            icon: Icons.chat,
+            bg: Colors.green[600],
             onPressed: () => onLaunchWhatsApp(ownerPhone),
-            icon: const Icon(Icons.chat, size: 20),
-            label: Text(
-              'Contactar Propietario',
-              style: GoogleFonts.poppins(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
           ),
-
-        if (ownerPhone != null && ownerPhone.isNotEmpty)
           const SizedBox(height: AppConstants.paddingSM),
+        ],
 
+        // -- Verify / Unverify --
+        actionBtn(
+          label: isVerified ? 'Remover Verificacion' : 'Verificar Salon',
+          icon: isVerified ? Icons.verified_outlined : Icons.verified,
+          bg: isVerified ? Colors.orange[700] : Colors.blue[700],
+          onPressed: () => onVerifiedChanged(!isVerified),
+        ),
+        const SizedBox(height: AppConstants.paddingSM),
+
+        // -- Edit RFC --
+        actionBtn(
+          label: 'Editar RFC',
+          icon: Icons.receipt_long_outlined,
+          outlined: true,
+          fg: colors.primary,
+          onPressed: () => onEditField('rfc', 'RFC', salon['rfc'] as String?),
+        ),
+        const SizedBox(height: AppConstants.paddingSM),
+
+        // -- Edit Email --
+        actionBtn(
+          label: 'Editar Email',
+          icon: Icons.email_outlined,
+          outlined: true,
+          fg: colors.primary,
+          onPressed: () => onEditField('email', 'Email', salon['email'] as String?),
+        ),
+        const SizedBox(height: AppConstants.paddingSM),
+
+        // -- Reset Onboarding --
+        actionBtn(
+          label: 'Reiniciar Onboarding',
+          icon: Icons.restart_alt_rounded,
+          outlined: true,
+          fg: Colors.orange[700],
+          onPressed: onResetOnboarding,
+        ),
+        const SizedBox(height: AppConstants.paddingSM),
+
+        // -- Suspend / Reactivate --
         if (isActive)
-          OutlinedButton.icon(
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.red[600],
-              side: BorderSide(color: Colors.red[600]!),
-              minimumSize:
-                  const Size.fromHeight(AppConstants.minTouchHeight),
-              shape: RoundedRectangleBorder(
-                borderRadius:
-                    BorderRadius.circular(AppConstants.radiusSM),
-              ),
-            ),
+          actionBtn(
+            label: 'Suspender Salon',
+            icon: Icons.block,
+            outlined: true,
+            fg: Colors.red[600],
             onPressed: onSuspend,
-            icon: const Icon(Icons.block, size: 20),
-            label: Text(
-              'Suspender Salon',
-              style: GoogleFonts.poppins(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
           )
         else
-          FilledButton.icon(
-            style: FilledButton.styleFrom(
-              backgroundColor: Colors.green[700],
-              minimumSize:
-                  const Size.fromHeight(AppConstants.minTouchHeight),
-              shape: RoundedRectangleBorder(
-                borderRadius:
-                    BorderRadius.circular(AppConstants.radiusSM),
-              ),
-            ),
+          actionBtn(
+            label: 'Reactivar Salon',
+            icon: Icons.check_circle_outline,
+            bg: Colors.green[700],
             onPressed: () => onActiveChanged(true),
-            icon: const Icon(Icons.check_circle_outline, size: 20),
-            label: Text(
-              'Reactivar Salon',
-              style: GoogleFonts.poppins(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
           ),
       ],
     );
   }
+
 }
 
 // ---------------------------------------------------------------------------

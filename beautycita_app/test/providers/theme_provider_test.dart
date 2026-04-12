@@ -21,9 +21,9 @@ void main() {
       notifier.dispose();
     });
 
-    test('initial state uses roseGoldPalette', () {
-      expect(notifier.state.themeId, roseGoldPalette.id);
-      expect(notifier.state.palette.id, roseGoldPalette.id);
+    test('initial state uses beautycitaPalette', () {
+      expect(notifier.state.themeId, beautycitaPalette.id);
+      expect(notifier.state.palette.id, beautycitaPalette.id);
     });
 
     test('initial fontScale is 1.0', () {
@@ -38,8 +38,8 @@ void main() {
       expect(notifier.state.animationSpeed, 1.0);
     });
 
-    test('initial themeMode is system', () {
-      expect(notifier.state.themeMode, ThemeMode.system);
+    test('initial themeMode is light', () {
+      expect(notifier.state.themeMode, ThemeMode.light);
     });
 
     group('setFontScale', () {
@@ -88,32 +88,23 @@ void main() {
     });
 
     group('setTheme', () {
-      test('switches to a different palette', () async {
-        final otherPalette = allPalettes.values.firstWhere(
-          (p) => p.id != roseGoldPalette.id,
-        );
+      test('single palette — setTheme is no-op, stays on beautycitaPalette', () async {
+        final originalId = notifier.state.themeId;
 
-        // Run inside guarded zone: setTheme → _rebuild → GoogleFonts.getFont
-        // schedules async font loading that fails in test env (HTTP returns 400).
-        // The guarded zone catches the async exception.
         await runZonedGuarded(() async {
-          notifier.setTheme(otherPalette.id);
+          notifier.setTheme('any_id');
           await Future<void>.delayed(const Duration(milliseconds: 200));
         }, (_, _) {});
 
-        expect(notifier.state.themeId, otherPalette.id);
-      });
-
-      test('ignores unknown theme IDs', () async {
-        final originalId = notifier.state.themeId;
-        await notifier.setTheme('nonexistent_theme');
+        // Single palette — always stays on beautycitaPalette
         expect(notifier.state.themeId, originalId);
       });
     });
 
     group('custom color', () {
-      test('hasCustomColor is false initially', () {
-        expect(notifier.hasCustomColor, isFalse);
+      test('hasCustomColor is true initially (lila default)', () {
+        // _load() sets _customHue/_customSat to lila defaults when no prefs saved
+        expect(notifier.hasCustomColor, isTrue);
       });
 
       test('setCustomColorLive updates state without persistence', () async {
@@ -179,9 +170,9 @@ void main() {
         expect(notifier.state.fontScale, 1.0);
         expect(notifier.state.radiusScale, 1.0);
         expect(notifier.state.animationSpeed, 1.0);
-        expect(notifier.state.themeMode, ThemeMode.system);
+        expect(notifier.state.themeMode, ThemeMode.light);
         expect(notifier.hasCustomColor, isFalse);
-        expect(notifier.state.themeId, roseGoldPalette.id);
+        expect(notifier.state.themeId, beautycitaPalette.id);
       });
 
       test('clears SharedPreferences custom color keys', () async {
